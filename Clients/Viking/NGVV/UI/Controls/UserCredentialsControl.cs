@@ -98,7 +98,7 @@ namespace Viking.UI.Controls
 
                     fs.Close();
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     System.IO.File.Delete(folderPath + keyFile);
                 }
@@ -202,8 +202,6 @@ namespace Viking.UI.Controls
             }
         }
 
-        private string encryptString(string content, string passkey) => throw new NotImplementedException();
-
         async void Handle_Anonymmous(object sender, System.EventArgs e)
         {
             try
@@ -273,7 +271,7 @@ namespace Viking.UI.Controls
                 this.update_label.Text = "Network error: " + ex.Message;
                 return "Exit";
             }
-            catch (TaskCanceledException ex)
+            catch (TaskCanceledException)
             {
                 this.update_label.Text = "Request timed out";
                 return "Exit";

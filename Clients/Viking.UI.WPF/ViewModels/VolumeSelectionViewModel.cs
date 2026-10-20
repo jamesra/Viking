@@ -206,6 +206,104 @@ namespace Viking.UI.WPF.ViewModels
             }
         }
 
+        /// <summary>
+        /// Selects a volume from the Identity tree or recent list by resource name (e.g. RC1).
+        /// Used when a launch code carries volumeName but not a usable endpoint URL yet.
+        /// </summary>
+        public bool TrySelectVolumeByName(string volumeName)
+        {
+            if (string.IsNullOrWhiteSpace(volumeName))
+                return false;
+
+            VolumeInfo recent = RecentVolumes.FirstOrDefault(v =>
+                string.Equals(v.Name, volumeName, StringComparison.OrdinalIgnoreCase));
+            if (recent != null)
+            {
+                SelectedVolume = new VolumeTreeNode
+                {
+                    Volume = recent,
+                    Name = recent.Name,
+                    IsOrganization = false
+                };
+                return true;
+            }
+
+            VolumeTreeNode match = FindVolumeNodeByName(OrganizationNodes, volumeName);
+            if (match == null)
+                return false;
+
+            SelectedVolume = match;
+            return true;
+        }
+
+        /// <summary>
+        /// Finds the volume Identity listed for <paramref name="url"/>, so a selection made from the recent list,
+        /// a launch code or manual entry still carries the correction service and annotation database Identity
+        /// assigned. Recent entries hold only a URL and a name, so without this lookup they lose both.
+        /// </summary>
+        /// <param name="url">Volume URL being opened; matched ignoring case and a missing default file name.</param>
+        /// <param name="name">Volume name from the selection, used when no URL matches; may be null.</param>
+        /// <returns>The Identity tree entry, or null when the tree is not loaded or has no match. UI thread only.</returns>
+        private VolumeInfo FindIdentityTreeVolume(string url, string name)
+        {
+            string wanted = AppendDefaultVolumeFilenameIfMissing(url);
+            VolumeInfo byName = null;
+            foreach (VolumeInfo candidate in EnumerateTreeVolumes(OrganizationNodes))
+            {
+                if (candidate.VolumeXmlUrl != null
+                    && string.Equals(AppendDefaultVolumeFilenameIfMissing(candidate.VolumeXmlUrl), wanted, StringComparison.OrdinalIgnoreCase))
+                {
+                    return candidate;
+                }
+
+                if (byName is null && !string.IsNullOrWhiteSpace(name)
+                    && string.Equals(candidate.Name, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    byName = candidate;
+                }
+            }
+
+            return byName;
+        }
+
+        private static IEnumerable<VolumeInfo> EnumerateTreeVolumes(IEnumerable<VolumeTreeNode> nodes)
+        {
+            foreach (VolumeTreeNode node in nodes ?? [])
+            {
+                if (node?.Volume != null)
+                    yield return node.Volume;
+
+                if (node?.Children != null)
+                {
+                    foreach (VolumeInfo child in EnumerateTreeVolumes(node.Children))
+                        yield return child;
+                }
+            }
+        }
+
+        private static VolumeTreeNode FindVolumeNodeByName(IEnumerable<VolumeTreeNode> nodes, string volumeName)
+        {
+            foreach (VolumeTreeNode node in nodes)
+            {
+                if (node == null)
+                    continue;
+                if (node.Volume != null
+                    && string.Equals(node.Volume.Name, volumeName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return node;
+                }
+
+                if (node.Children != null)
+                {
+                    VolumeTreeNode child = FindVolumeNodeByName(node.Children, volumeName);
+                    if (child != null)
+                        return child;
+                }
+            }
+
+            return null;
+        }
+
         private string ExtractVolumeName(string url)
         {
             try
@@ -244,7 +342,7 @@ namespace Viking.UI.WPF.ViewModels
 
                 // Debug logging
                 Trace.WriteLine($"[VolumeSelection] Identity Server URL: {identityUri}");
-                Trace.WriteLine($"[VolumeSelection] Identity API URL (port 6001): {identityApiUri}");
+                Trace.WriteLine($"[VolumeSelection] Identity API URL: {identityApiUri}");
                 Trace.WriteLine($"[VolumeSelection] Full endpoint will be: {new Uri(identityApiUri, "Permissions/UserAccessibleVolumeTree")}");
 
                 IdentityApiHelper helper = new()
@@ -373,6 +471,7 @@ namespace Viking.UI.WPF.ViewModels
             {
                 volumeInfo.VolumeXmlUrl = TryGetMetadataString(resourcePermissions.Metadata, "Endpoint");
                 volumeInfo.Description = TryGetMetadataString(resourcePermissions.Metadata, "Description");
+                // Present only when Identity assigned a correction service to the context.
                 volumeInfo.CorrectionServiceUrl = TryGetMetadataString(resourcePermissions.Metadata, "CorrectionServiceUrl");
                 volumeInfo.AnnotationDatabaseName = TryGetMetadataString(resourcePermissions.Metadata, "AnnotationDatabaseName");
             }
@@ -428,6 +527,17 @@ namespace Viking.UI.WPF.ViewModels
             else
             {
                 System.Diagnostics.Trace.WriteLine($"[VolumeSelection] No volume selected (SelectedVolume={SelectedVolume}, Volume={SelectedVolume?.Volume})");
+            }
+
+            if (!string.IsNullOrWhiteSpace(selectedUrl) && string.IsNullOrWhiteSpace(correctionServiceUrl))
+            {
+                VolumeInfo treeVolume = FindIdentityTreeVolume(selectedUrl, selectedName);
+                if (treeVolume != null)
+                {
+                    correctionServiceUrl = treeVolume.CorrectionServiceUrl;
+                    annotationDatabaseName = treeVolume.AnnotationDatabaseName;
+                    System.Diagnostics.Trace.WriteLine($"[VolumeSelection] Selection had no correction service; took it from Identity volume '{treeVolume.Name}': CorrectionServiceUrl={correctionServiceUrl ?? "(null)"}, AnnotationDatabaseName={annotationDatabaseName ?? "(null)"}");
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(selectedUrl))
@@ -612,6 +722,7 @@ namespace Viking.UI.WPF.ViewModels
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
     }
 
     public class VolumeSelectedEventArgs : EventArgs

@@ -119,24 +119,48 @@ namespace WebAnnotation.ViewModel
             if (!LocationLinkView.TryCreate(key, SectionNumber, Transforms, out LocationLinkView? lv) || lv is null)
                 return false;
 
-            KnownLinks.TryAdd(key, () =>
+            // KnownLinks is the source of truth for membership. This action runs under its write lock,
+            // so it must not Debug.Assert (a modal dialog here blocks every reader of the tracker and
+            // freezes the UI) and must not leave a half-added entry: KeyTracker rolls the key back when
+            // the action throws, but LocationLinks is ours to clean up. A leftover entry would otherwise
+            // make every later add of the same link fail.
+            try
             {
-                bool added = LocationLinks.TryAdd(key, lv);
-                Debug.Assert(added);
+                KnownLinks.TryAdd(key, () =>
+                {
+                    LocationLinks[key] = lv;
 
-                if (lv.LinksOverlap())
-                {
-                    OverlappedLinkKeys.TryAdd(key, () =>
+                    try
                     {
-                        OverlappedAdjacentLocationIDs.AddRef(key.A);
-                        OverlappedAdjacentLocationIDs.AddRef(key.B);
-                    });
-                }
-                else
-                {
-                    NonOverlappedLinksSearch.Add(lv.BoundingBox.ToRTreeRect(lv.Z), key);
-                }
-            });
+                        if (lv.LinksOverlap())
+                        {
+                            OverlappedLinkKeys.TryAdd(key, () =>
+                            {
+                                OverlappedAdjacentLocationIDs.AddRef(key.A);
+                                OverlappedAdjacentLocationIDs.AddRef(key.B);
+                            });
+                        }
+                        else
+                        {
+                            NonOverlappedLinksSearch.Add(lv.BoundingBox.ToRTreeRect(lv.Z), key);
+                        }
+                    }
+                    catch (System.Exception ex)
+                    {
+                        LocationLinks.TryRemove(key, out _);
+                        Trace.WriteLine($"AddLocationLink {key.A}-{key.B} on section {SectionNumber} failed and was rolled back: {ex}");
+                        throw;
+                    }
+                });
+            }
+            catch (KeyNotFoundException)
+            {
+                // An endpoint was deleted after the TryGetObjectByID checks above (LinksOverlap re-reads the store).
+                // The tracker and LocationLinks are already rolled back, and the link is gone with its location,
+                // so skip it rather than abort the caller's loop over the remaining links. Report it handled so it
+                // is not parked in PendingLinks waiting for a location that no longer exists.
+                return true;
+            }
 
             return KnownLinks.Contains(key);
         }
@@ -145,9 +169,9 @@ namespace WebAnnotation.ViewModel
         {
             KnownLinks.TryRemove(key, () =>
             {
-                Debug.Assert(LocationLinks.ContainsKey(key));
-                bool removed = LocationLinks.TryRemove(key, out LocationLinkView lv);
-                Debug.Assert(removed);
+                // No Debug.Assert here: this runs under the tracker's write lock, and a stale or already-cleaned
+                // entry is harmless on removal.
+                LocationLinks.TryRemove(key, out _);
 
                 if (OverlappedLinkKeys.Contains(key))
                 {
@@ -167,25 +191,17 @@ namespace WebAnnotation.ViewModel
 
         public List<HitTestResult> GetAnnotationsAtPosition(Vector2 WorldPosition)
         {
-            IEnumerable<LocationLinkKey> intersecting_IDs = NonOverlappedLinksSearch.Intersects(WorldPosition.ToRTreeRect(SectionNumber));
-            IEnumerable<LocationLinkView> intersecting_objs = intersecting_IDs.Select(id => LocationLinks[id]).Where(l => l.Contains(WorldPosition));
+            IEnumerable<LocationLinkView> intersecting_objs = KeysToViews(NonOverlappedLinksSearch.Intersects(WorldPosition.ToRTreeRect(SectionNumber))).Where(l => l.Contains(WorldPosition));
 
             return [.. intersecting_objs.Select(l => new HitTestResult(l, SectionNumber, ((ICanvasView)l).VisualHeight, l.DistanceFromCenterNormalized(WorldPosition)))];
         }
 
-        private List<LocationLinkView> KeysToViews(ICollection<LocationLinkKey> listKeys)
-        {
-            List<LocationLinkView> listLocLinkView = new(listKeys.Count);
-            foreach (LocationLinkKey linkKey in listKeys)
-            {
-                if (LocationLinks.TryGetValue(linkKey, out LocationLinkView locLinkView))
-                {
-                    listLocLinkView.Add(locLinkView);
-                }
-            }
-
-            return listLocLinkView;
-        }
+        /// <summary>
+        /// Maps R-tree keys to their views, skipping keys whose link was removed since the R-tree was read.
+        /// <see cref="RemoveLocationLink"/> drops the <see cref="LocationLinks"/> entry before the R-tree entry
+        /// and readers take no lock, so a key from the tree can already be gone from the dictionary.
+        /// </summary>
+        private List<LocationLinkView> KeysToViews(ICollection<LocationLinkKey> listKeys) => LocationLinks.ValuesForKeys(listKeys);
 
         public ICollection<LocationLinkView> NonOverlappedLinks => KeysToViews(NonOverlappedLinksSearch.Items);
 
@@ -197,47 +213,17 @@ namespace WebAnnotation.ViewModel
 
         public ICollection<LocationLinkView> GetLocationLinks(Vector2 point)
         {
-            List<LocationLinkKey> intersectingIDs = NonOverlappedLinksSearch.Intersects(point.ToRTreeRect((float)SectionNumber));
-            return [.. intersectingIDs.Select(id =>
-            {
-                if (LocationLinks.ContainsKey(id))
-                {
-                    return LocationLinks[id];
-                }
-
-                return null;
-            }
-            ).Where(l => l != null && l.Contains(point))];
+            return [.. KeysToViews(NonOverlappedLinksSearch.Intersects(point.ToRTreeRect((float)SectionNumber))).Where(l => l.Contains(point))];
         }
 
         public ICollection<LocationLinkView> GetLocationLinks(LineSegment line)
         {
-            List<LocationLinkKey> intersectingIDs = NonOverlappedLinksSearch.Intersects(line.BoundingBox.ToRTreeRect((float)SectionNumber));
-            return [.. intersectingIDs.Select(id =>
-            {
-                if (LocationLinks.ContainsKey(id))
-                {
-                    return LocationLinks[id];
-                }
-
-                return null;
-            }
-            ).Where(l => l != null && l.Intersects(line))];
+            return [.. KeysToViews(NonOverlappedLinksSearch.Intersects(line.BoundingBox.ToRTreeRect((float)SectionNumber))).Where(l => l.Intersects(line))];
         }
 
         public ICollection<LocationLinkView> GetLocationLinks(Rectangle rect)
         {
-            List<LocationLinkKey> intersectingIDs = NonOverlappedLinksSearch.Intersects(rect.ToRTreeRect((float)SectionNumber));
-            return [.. intersectingIDs.Select(id =>
-            {
-                if (LocationLinks.ContainsKey(id))
-                {
-                    return LocationLinks[id];
-                }
-
-                return null;
-            }
-            ).Where(l => l != null)];
+            return KeysToViews(NonOverlappedLinksSearch.Intersects(rect.ToRTreeRect((float)SectionNumber)));
         }
     }
 }

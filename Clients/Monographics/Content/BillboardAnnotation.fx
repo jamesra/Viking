@@ -20,6 +20,18 @@ uniform const float borderStartSquared = 0.475 * 0.475;
 uniform const float borderBlendStartRadius = 0.45;
 uniform const float borderBlendStartSquared = 0.45 * 0.45;
 
+//Ring effect (CircleRingOverlayEffect). Radii are fractions of the circle radius (0 = center, 1 = rim).
+//The outer band [ringSolidStart, 1] is fully opaque; the fade band [ringFadeStart, ringSolidStart] ramps to clear;
+//everything inside ringFadeStart is clipped so the image underneath stays visible.
+uniform const float ringSolidStart = 0.75;
+uniform const float ringFadeStart = 0.625;
+//How far (in luma, 0..1) the ring sits from the average background luma: darker over bright tissue, lighter over dark.
+uniform const float ringContrast = 0.30;
+//Average background luma above which the ring goes darker than the background, otherwise lighter.
+uniform const float ringAdaptMid = 0.5;
+//Overall ring opacity (0..1), multiplied with the annotation color's alpha.
+uniform const float ringOpacity = 0.85;
+
 //The convention for annotation textures is that they built from two 8-bit images, one image is loaded to the RGB coordinates of the texture.
 //The other image is loaded into the alpha channel.
 //The verticies contain an RGB color which is converted to HSL space. 
@@ -336,6 +348,82 @@ PixelShaderOutput CircleGrayscaleTexturePixelShaderFunction(LumaTexturePixelShad
 	return output;
 }
 
+
+//Output of the ring vertex shader. ScreenCenterAxes holds the circle center and its half-radius
+//x/y axes, in render-target pixels, so the pixel shader can sample the background under the whole circle.
+struct RingVertexShaderOutput
+{
+	float4 Position : POSITION0;
+	float4 HSLColor : COLOR0;
+	float2 CenterDistance : TEXCOORD0;
+	float4 ScreenCenterAxes : TEXCOORD1;
+	float2 ScreenAxisY : TEXCOORD2;
+};
+
+//Converts a clip-space position to render-target pixels (y down), matching how the other luma shaders address the background.
+float2 ClipToPixel(float4 clip)
+{
+	float2 ndc = clip.xy / clip.w;
+	return float2(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5) * RenderTargetSize;
+}
+
+RingVertexShaderOutput RingVertexShaderFunction(VertexShaderInput input)
+{
+	RingVertexShaderOutput output;
+	output.CenterDistance = input.Position.xy;
+	output.Position = mul(input.Position, mWorldViewProj);
+	output.HSLColor = AnnotationHSLColor;
+
+	float2 center = ClipToPixel(mul(float4(0, 0, 0, 1), mWorldViewProj));
+	output.ScreenCenterAxes = float4(center, ClipToPixel(mul(float4(0.5, 0, 0, 1), mWorldViewProj)) - center);
+	output.ScreenAxisY = ClipToPixel(mul(float4(0, 0.5, 0, 1), mWorldViewProj)) - center;
+	return output;
+}
+
+float BackgroundLumaAtPixel(float2 pixel)
+{
+	return CalculatePerceptualLumaFromRGB(tex2D(BackgroundTextureSampler, pixel / RenderTargetSize));
+}
+
+//Draws a procedural ring whose luma adapts to the image underneath: ringContrast darker than bright tissue, ringContrast lighter than dark tissue.
+//No texture. CenterDistance is in unit-circle space (-1..1) so the rim is at distance 1.
+//The background is averaged at the center and at half radius along both axes (the area the ring encloses) so the
+//ring color is constant around a circle instead of flickering with per-pixel texture noise.
+//The rim is anti-aliased with the screen-space derivative so it stays crisp at any zoom.
+//Uses the graphics device alpha blend settings
+PixelShaderOutput CircleRingPixelShaderFunction(RingVertexShaderOutput input)
+{
+	PixelShaderOutput output;
+	float dist = length(input.CenterDistance);
+	float rimCoverage = saturate((1.0 - dist) / max(fwidth(dist), 0.0001));
+	float ring = smoothstep(ringFadeStart, ringSolidStart, dist);
+	float alpha = ring * rimCoverage;
+	clip(alpha <= 0.002 ? -1 : 1);
+
+	float2 center = input.ScreenCenterAxes.xy;
+	float2 axisX = input.ScreenCenterAxes.zw;
+	float2 axisY = input.ScreenAxisY;
+	float backgroundLuma = (BackgroundLumaAtPixel(center)
+		+ BackgroundLumaAtPixel(center + axisX) + BackgroundLumaAtPixel(center - axisX)
+		+ BackgroundLumaAtPixel(center + axisY) + BackgroundLumaAtPixel(center - axisY)) * 0.2;
+
+	float ringLuma = backgroundLuma > ringAdaptMid ? backgroundLuma - ringContrast : backgroundLuma + ringContrast;
+	ringLuma = clamp(ringLuma, 0.05, 0.95);
+
+	float chroma = input.HSLColor.g;
+	if (chroma > 0.0)
+	{
+		chroma = min(chroma, GetMaxChromaAtLuma(input.HSLColor.r, ringLuma));
+	}
+
+	float4 hcl = { input.HSLColor.r, chroma, ringLuma, 1.0 };
+	output.Color = HCLToRGB(hcl);
+	output.Color.a = alpha * ringOpacity * input.HSLColor.a;
+	//Deliberately the full 0..1 range (not the textured circles' 0..0.25): rings lose the depth test to the polygon fill and draw behind it.
+	//Vertex clicks are hit-tested geometrically, so this does not affect selection.
+	output.Depth = dist * dist;
+	return output;
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //The pixel shaders below this point blend with the background texture by using my HSL blending technique
@@ -658,5 +746,93 @@ technique CircleVertexColorTextureLumaOverlayEffect
 	{
 		VertexShader = compile VS_SHADERMODEL VertexColorLumaTextureVertexShaderFunction();
 		PixelShader = compile PS_SHADERMODEL CircleGrayscaleTextureOverBackgroundLumaPixelShaderFunction();
+	}
+}
+
+
+////////////////////////////////////////
+// Ring circle effect
+////////////////////////////////////////
+
+technique CircleRingOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_4_0 RingVertexShaderFunction();
+		PixelShader = compile ps_4_0 CircleRingPixelShaderFunction();
+	}
+}
+
+
+////////////////////////////////////////
+// Stripe effect (StripeOverlayEffect)
+////////////////////////////////////////
+
+//White diagonal stripes inside a clip mask, worked out per pixel so stripe and clip edges stay smooth at any zoom.
+//Positions are measured in mask texels (TexCoord * stripeTexelCount), so the stripes are tied to the image and scale with zoom.
+uniform const texture StripeClipTexture;
+
+//Linear filtering makes the clip edge a smooth curve through the mask instead of texel-sized steps.
+uniform const sampler StripeClipSampler : register(s2) = sampler_state
+{
+    Texture = (StripeClipTexture);
+    MipFilter = POINT;
+    MinFilter = LINEAR;
+    MagFilter = LINEAR;
+    AddressU = CLAMP;
+    AddressV = CLAMP;
+};
+
+//Mask texels across and down the quad. Every other stripe size below is in these texels.
+uniform const float2 stripeTexelCount = float2(1, 1);
+//The stripes run perpendicular to this direction, e.g. (1, 1) or (1, -1).
+uniform const float2 stripeDirection = float2(1, 1);
+//Distance along stripeDirection from one stripe to the next: a lit stripe and a clear gap of equal width.
+uniform const float stripePeriod = 4;
+//Optional band across x + y that limits the lit stripes: x is its centre, y its half width. y <= 0 lights them all.
+uniform const float2 stripeBand = float2(0, 0);
+//Clip texture alpha (0..1) at the edge of the clipped area.
+uniform const float stripeClipLevel = 0.5;
+//Alpha of a fully lit stripe.
+uniform const float stripeAlpha = 1;
+
+PixelShaderOutput StripePixelShaderFunction(TexturePixelShaderInput input)
+{
+	PixelShaderOutput output;
+	output.Depth = saturate((input.CenterDistance.x + input.CenterDistance.y) * 0.5 + 0.5);
+
+	float2 texel = input.TexCoord * stripeTexelCount;
+
+	//Clip edge, faded over about one screen pixel.
+	float clipValue = tex2D(StripeClipSampler, input.TexCoord).a - stripeClipLevel;
+	float clipCoverage = saturate(clipValue / max(fwidth(clipValue), 1e-5) + 0.5);
+
+	//Stripes: edge is the distance to the nearest stripe edge in periods, positive on a stripe and negative in a gap.
+	float u = dot(texel, stripeDirection) / stripePeriod;
+	float uWidth = max(fwidth(u), 1e-5);
+	float edge = 0.25 - abs(frac(u + 0.25) - 0.5);
+	float stripe = saturate(edge / uWidth + 0.5);
+	//Stripes only a few pixels apart would alias, so fade them toward their average coverage.
+	stripe = lerp(stripe, 0.5, saturate((uWidth * 4.0) - 1.0));
+
+	float band = 1;
+	if (stripeBand.y > 0)
+	{
+		band = 1 - saturate(abs(texel.x + texel.y - stripeBand.x) / stripeBand.y);
+		band = band * band * (3 - (2 * band));
+	}
+
+	float alpha = stripeAlpha * clipCoverage * stripe * band;
+	clip(alpha <= 0.0 ? -1.0 : 1.0);
+	output.Color = float4(1, 1, 1, alpha);
+	return output;
+}
+
+technique StripeOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_4_0 TextureShaderFunction();
+		PixelShader = compile ps_4_0 StripePixelShaderFunction();
 	}
 }

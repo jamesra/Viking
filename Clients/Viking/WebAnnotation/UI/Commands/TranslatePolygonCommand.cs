@@ -2,6 +2,7 @@ using Geometry;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
@@ -179,11 +180,18 @@ namespace WebAnnotation.UI.Commands
             return [.. transformedPoints];
         }
 
+        /// <summary>
+        /// Rebuilds the preview mesh and markers for the current rotation, scale and translation.
+        /// When a vertex of the transformed polygon falls outside the section's mapping, the previous
+        /// mesh is kept (none on the first call) so dragging across a mapping gap does not throw.
+        /// </summary>
         protected void CreateUpdateView()
         {
             Polygon TransformedVolumePolygon = mapping.TryMapShapeSectionToVolume(TransformedMosaicPolygon);
-            TransformedVolumePolygon = TransformedVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
-            _mesh = TransformedVolumePolygon.CreateMeshForPolygon2D(Color.ConvertToHCL());
+            if (TransformedVolumePolygon is not null)
+            {
+                _mesh = TransformedVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints).CreateMeshForPolygon2D(Color.ConvertToHCL());
+            }
 
             OriginalVolumePositionView = new CircleView(new Circle(OriginalVolumePosition, 16), Microsoft.Xna.Framework.Color.Red);
             TranslatedVolumePositionView = new CircleView(new Circle(TranslatedVolumePosition, 16), Microsoft.Xna.Framework.Color.Green);
@@ -197,23 +205,22 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
+        /// <summary>
+        /// Passes the transformed polygon to the success callback, unless part of it lies outside the
+        /// section's mapping; then the callback is skipped (the location keeps its shape) and a trace line is written.
+        /// </summary>
         protected override void Execute()
         {
             if (success_callback != null)
             {
-                /*
-                Polygon VolumeShape = null;
-                try
+                if (mapping.TryMapShapeSectionToVolume(TransformedMosaicPolygon) is null)
                 {
-                    VolumeShape = mapping.TryMapShapeSectionToVolume(this.TransformedMosaicPolygon);
+                    Trace.WriteLine("TranslatePolygonCommand: polygon released over an unmapped region at " + TranslatedVolumePosition.ToString() + "; not applied.", "Command");
                 }
-                catch(ArgumentOutOfRangeException)
+                else
                 {
-                    Trace.WriteLine("TranslateSmoothedPolygonCommand: Could not map polygon on Execute: " + TranslatedVolumePosition.ToString(), "Command");
-                    return;
+                    success_callback(TransformedMosaicPolygon, TransformedExtraMosaicPoints);
                 }
-                */
-                success_callback(TransformedMosaicPolygon, TransformedExtraMosaicPoints);
             }
 
             base.Execute();

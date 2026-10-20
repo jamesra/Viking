@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Diagnostics;
 using System.Windows.Forms;
@@ -11,8 +11,6 @@ namespace WebAnnotation.UI.Commands
         private readonly Polygon OriginalMosaicPolygon;
         private readonly Polygon OriginalVolumePolygon;
         private Polygon UpdatedVolumePolygon;
-
-        private readonly int iNewControlPoint = -1;
 
         /// <summary>
         /// Returns unsmoothed mosaic and volume polygons with the new point
@@ -57,20 +55,21 @@ namespace WebAnnotation.UI.Commands
             Parent.BeginInvoke((Action)delegate () { Execute(); });
         }
 
+        /// <summary>
+        /// Passes the polygon with the new vertex to the success callback and ends the command.
+        /// When part of it lies outside the section's mapping, the callback is skipped and the location keeps its shape.
+        /// </summary>
         protected override void Execute()
         {
-            Polygon mosaic_polygon;
             try
             {
-                mosaic_polygon = mapping.TryMapShapeVolumeToSection(UpdatedVolumePolygon);
+                TryApplyInSection(mapping, UpdatedVolumePolygon, mosaic_polygon => success_callback(mosaic_polygon, UpdatedVolumePolygon), nameof(AddPolygonVertexCommand));
             }
             catch (ArgumentOutOfRangeException)
             {
                 Trace.WriteLine("TranslateLocationCommand: Could not map polygon to section on Execute", "Command");
                 return;
             }
-
-            success_callback(mosaic_polygon, UpdatedVolumePolygon);
 
             base.Execute();
         }
@@ -124,9 +123,13 @@ namespace WebAnnotation.UI.Commands
             Parent.BeginInvoke((Action)delegate () { Execute(); });
         }
 
+        /// <summary>
+        /// Passes the polygon without the removed vertex to the success callback and ends the command.
+        /// When no vertex could be removed, or part of the polygon lies outside the section's mapping,
+        /// the callback is skipped and the location keeps its shape.
+        /// </summary>
         protected override void Execute()
         {
-            Polygon mosaic_polygon;
             if (UpdatedVolumePolygon is null)
             {
                 base.Execute();
@@ -135,15 +138,13 @@ namespace WebAnnotation.UI.Commands
 
             try
             {
-                mosaic_polygon = mapping.TryMapShapeVolumeToSection(UpdatedVolumePolygon);
+                TryApplyInSection(mapping, UpdatedVolumePolygon, mosaic_polygon => success_callback(mosaic_polygon, UpdatedVolumePolygon), nameof(RemovePolygonVertexCommand));
             }
             catch (ArgumentOutOfRangeException)
             {
                 Trace.WriteLine("TranslateLocationCommand: Could not map polygon to section on Execute", "Command");
                 return;
             }
-
-            success_callback(mosaic_polygon, UpdatedVolumePolygon);
 
             base.Execute();
         }

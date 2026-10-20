@@ -34,5 +34,12 @@ namespace WebAnnotationModel
         /// Drop warm region cells after the object store evicts a section so a return visit re-fetches.
         /// </summary>
         void InvalidateSection(int sectionNumber);
+
+        /// <summary>
+        /// True when every grid cell covering <paramref name="volumeBounds"/> at the level
+        /// <see cref="GetObjectsInRegionAsync"/> uses for <paramref name="screenPixelSizeInVolume"/> has finished a server query
+        /// and none is still running. Missing bounds, an unvisited section, unqueried cells or in-flight queries return false.
+        /// </summary>
+        bool AreRegionQueriesComplete(Rectangle? volumeBounds, double screenPixelSizeInVolume, int sectionNumber);
     }
 }

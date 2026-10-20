@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using VikingXNAGraphics;
 
 namespace WebAnnotation
@@ -33,16 +33,6 @@ namespace WebAnnotation
         IRenderable Active { get; set; }
     }
 
-
-
-    /// <summary>
-    /// Binds an action to a clickable view
-    /// </summary>
-    public class ViewActionBinding
-    {
-        private readonly VikingXNAGraphics.Controls.IClickable ClickableAction;
-        private readonly IActionView View;
-    }
 
 
     /// <summary>
@@ -98,6 +88,7 @@ namespace WebAnnotation
 
                 try
                 {
+                    WebAnnotation.View.PolygonViewTimingLog.MarkBoundaryChange(loc.ID, "CutHole");
                     loc.SetShapeFromGeometryInSection(transform, updatedMosaicShape);
                 }
                 catch (ArgumentException e)

@@ -1,14 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Windows.Forms.Integration;
 using Viking.Common;
+using Viking.UI;
+using Viking.UI.WPF;
 using VikingXNAGraphics;
 using WebAnnotation.UI;
+using WebAnnotation.UI.Commands.Segmentation;
 using WebAnnotation.View;
 using WebAnnotation.ViewModel;
 using WebAnnotation.WPF.Forms;
@@ -22,8 +25,11 @@ namespace WebAnnotation
         private static WebAnnotation.WPF.Forms.AnnotationPreferencesDialog? _preferencesDialog = null;
         private static ToolStripMenuItem menuPenMode;
         private static ToolStripMenuItem menuShowPenActionButtons;
-        private static CancellationTokenSource _opacityUpdateCancellationTokenSource;
-        private static System.Threading.Timer _circleOpacityUpdateTimer;
+        private static ToolStripMenuItem menuAutoPolygonizeCircles;
+        /// <summary>Cancels the running opacity preview pass. Read and replaced only under <see cref="_circleOpacityUpdateLock"/>.</summary>
+        private static CancellationTokenSource? _opacityUpdateCancellationTokenSource;
+        private static System.Threading.Timer? _circleOpacityUpdateTimer;
+        /// <summary>Guards the circle debounce timer and pending values, and <see cref="_opacityUpdateCancellationTokenSource"/>.</summary>
         private static readonly object _circleOpacityUpdateLock = new();
         private static double _pendingCircleOpacityParentless;
         private static double _pendingCircleOpacityWithParent;
@@ -57,7 +63,8 @@ namespace WebAnnotation
 
             menuPenMode = new ToolStripMenuItem("Pen Mode")
             {
-                Checked = WebAnnotation.Global.PenMode
+                Checked = WebAnnotation.Global.PenMode,
+                ShortcutKeyDisplayString = "*"
             };
             menuPenMode.Click += OnPenMode;
             menuRoot.DropDownItems.Add(menuPenMode);
@@ -68,6 +75,38 @@ namespace WebAnnotation
             };
             menuShowPenActionButtons.Click += OnShowPenActionButtons;
             menuRoot.DropDownItems.Add(menuShowPenActionButtons);
+
+            menuAutoPolygonizeCircles = new ToolStripMenuItem("Auto Polygonize Circles")
+            {
+                Checked = Global.AnnotationSettings.AutoPolygonizeCircles
+            };
+            menuAutoPolygonizeCircles.Click += OnAutoPolygonizeCircles;
+            menuRoot.DropDownItems.Add(menuAutoPolygonizeCircles);
+
+            ToolStripMenuItem menuRandomizeColors = new("Randomize All Colors")
+            {
+                ToolTipText = "Gives every cell a new random display color. Only changes what you see; nothing is saved and reloading restores the original colors."
+            };
+            menuRandomizeColors.Click += OnRandomizeAllColors;
+            menuRoot.DropDownItems.Add(menuRandomizeColors);
+
+            ToolStripMenuItem menuSelectSegmentation = new("Select Segmentation Service…");
+            menuSelectSegmentation.Click += OnSelectSegmentationService;
+            menuRoot.DropDownItems.Add(menuSelectSegmentation);
+
+            ToolStripMenuItem menuUpdateVolumePositions = new("Update Volume Positions…");
+            menuUpdateVolumePositions.Click += OnUpdateVolumePositions;
+            ToolStripSeparator menuUpdateVolumePositionsSeparator = new();
+            menuUpdateVolumePositions.Visible = VolumeAccessRoles.HasReviewAccess();
+            menuUpdateVolumePositionsSeparator.Visible = menuUpdateVolumePositions.Visible;
+            menuRoot.DropDownOpening += (_, _) =>
+            {
+                bool canReview = VolumeAccessRoles.HasReviewAccess();
+                menuUpdateVolumePositions.Visible = canReview;
+                menuUpdateVolumePositionsSeparator.Visible = canReview;
+            };
+            menuRoot.DropDownItems.Add(menuUpdateVolumePositionsSeparator);
+            menuRoot.DropDownItems.Add(menuUpdateVolumePositions);
 
 
             return menuRoot;
@@ -94,6 +133,22 @@ namespace WebAnnotation
             Annotation.ViewModels.FavoriteStructureIDsViewModel favorite_view_model = new(Global.UserFavoriteStructureTypes);
             StructureIDChoiceForm.DataContext = favorite_view_model;
             StructureIDChoiceForm.Show();
+        }
+
+        /// <summary>
+        /// Annotation menu: re-rolls the random display color of every loaded cell. Display only, see <see cref="StructureColors"/>.
+        /// </summary>
+        private static void OnRandomizeAllColors(object sender, EventArgs e)
+        {
+            try
+            {
+                int recolored = StructureColors.RandomizeAll();
+                Debug.WriteLine($"Randomized the display color of {recolored} cells");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error randomizing colors: {ex.Message}");
+            }
         }
 
         public static void OnPreferences(object sender, EventArgs e)
@@ -127,33 +182,95 @@ namespace WebAnnotation
                 Global.AnnotationSettings.CircleOpacityParentless,
                 Global.AnnotationSettings.CircleOpacityWithParent,
                 Global.AnnotationSettings.SegmentationPointRadius,
-                Global.AnnotationSettings.PolygonPointDiameter,
-                Global.AnnotationSettings.SmallestRenderedSize,
-                Global.AnnotationSettings.PolygonVertexPointsVisibleAtWidthFraction,
-                Global.AnnotationSettings.PolygonVertexPointsHiddenAtWidthFraction,
-                sceneWidth,
-                sceneDownsample,
-                Global.AnnotationSettings.CorrectionShimEnabled,
-                Global.AnnotationSettings.CorrectionShimFadeStartDownsample,
-                Global.AnnotationSettings.CorrectionShimFadeEndDownsample,
-                Global.AnnotationSettings.CorrectionShimShowOffset
+                // Named from here on: both lines added preferences, so the positional order is not shared.
+                segmentationHoleDropFraction: Global.AnnotationSettings.SegmentationHoleDropFraction,
+                segmentationEdgeCleanupRadius: Global.AnnotationSettings.SegmentationEdgeCleanupRadius,
+                polygonPointDiameter: Global.AnnotationSettings.PolygonPointDiameter,
+                smallestRenderedSize: Global.AnnotationSettings.SmallestRenderedSize,
+                polygonVertexPointsVisibleAtWidthFraction: Global.AnnotationSettings.PolygonVertexPointsVisibleAtWidthFraction,
+                polygonVertexPointsHiddenAtWidthFraction: Global.AnnotationSettings.PolygonVertexPointsHiddenAtWidthFraction,
+                autoPolygonizeCircles: Global.AnnotationSettings.AutoPolygonizeCircles,
+                autoPolygonizeMinRadiusNanometers: Global.AnnotationSettings.AutoPolygonizeMinRadiusNanometers,
+                autoPolygonizeMaxDownsample: Global.AnnotationSettings.AutoPolygonizeMaxDownsample,
+                autoPolygonizeOverlayMasks: Global.AnnotationSettings.AutoPolygonizeOverlayMasks,
+                autoPolygonizeOverlayPrompts: Global.AnnotationSettings.AutoPolygonizeOverlayPrompts,
+                autoPolygonizeHideSegmentationRings: Global.AnnotationSettings.AutoPolygonizeHideSegmentationRings,
+                segmentationMaskThreshold: Global.AnnotationSettings.SegmentationMaskThreshold,
+                segmentationUseMaskInput: Global.AnnotationSettings.SegmentationUseMaskInput,
+                sceneWidthPixels: sceneWidth,
+                sceneDownsample: sceneDownsample,
+                correctionShimEnabled: Global.AnnotationSettings.CorrectionShimEnabled,
+                correctionShimFadeStartDownsample: Global.AnnotationSettings.CorrectionShimFadeStartDownsample,
+                correctionShimFadeEndDownsample: Global.AnnotationSettings.CorrectionShimFadeEndDownsample,
+                correctionShimShowOffset: Global.AnnotationSettings.CorrectionShimShowOffset,
+                polygonPointOpacity: Global.AnnotationSettings.PolygonPointOpacity,
+                hidePolygonPointsInPenMode: Global.AnnotationSettings.HidePolygonPointsInPenMode,
+                segmentationEdgeSnapEnabled: Global.AnnotationSettings.SegmentationEdgeSnapEnabled,
+                segmentationSmoothingSigma: Global.AnnotationSettings.SegmentationSmoothingSigma,
+                segmentationMinFeatureNanometers: Global.AnnotationSettings.SegmentationMinFeatureNanometers,
+                autoPolygonizeShimmerEnabled: Global.AnnotationSettings.AutoPolygonizeShimmerEnabled,
+                autoPolygonizeShimmerBrightness: Global.AnnotationSettings.AutoPolygonizeShimmerBrightness,
+                autoPolygonizeShimmerDurationMs: Global.AnnotationSettings.AutoPolygonizeShimmerDurationMs,
+                segmentLinkedAnnotations: Global.AnnotationSettings.SegmentLinkedAnnotations,
+                locationLinkWaistPixels: Global.AnnotationSettings.LocationLinkWaistPixels,
+                locationLinkDrawUnderMarkers: Global.AnnotationSettings.LocationLinkDrawUnderMarkers
             );
+
+            VikingXNA.Scene scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
+            if (scene != null)
+                viewModel.NanometersPerPixel = scene.ScreenPixelSizeInVolume * Global.Scale.X;
 
             // Initialize static accessor properties
             CircleView.SmallestRenderedSizeAccessor = () => Global.AnnotationSettings.SmallestRenderedSize;
             LocationCanvasView.SmallestRenderedSizeAccessor = () => Global.AnnotationSettings.SmallestRenderedSize;
 
+            viewModel.PropertyChanged += (_, e) =>
+            {
+                bool refreshAll = string.IsNullOrEmpty(e.PropertyName);
+
+                // Apply max downsample as the slider moves so a view that is now allowed can
+                // start auto-segment without waiting for Apply/OK (Global setter restarts idle).
+                if (refreshAll || e.PropertyName == nameof(viewModel.AutoPolygonizeMaxDownsample))
+                    Global.AnnotationSettings.AutoPolygonizeMaxDownsample = viewModel.AutoPolygonizeMaxDownsample;
+
+                // Live-apply the SAM2 request settings. The Global setters debounce and re-segment the
+                // active command and the auto-polygonize view, so a slider drag sends one request.
+                if (refreshAll || e.PropertyName == nameof(viewModel.SegmentationMaskThreshold))
+                    Global.AnnotationSettings.SegmentationMaskThreshold = viewModel.SegmentationMaskThreshold;
+                if (refreshAll || e.PropertyName == nameof(viewModel.SegmentationUseMaskInput))
+                    Global.AnnotationSettings.SegmentationUseMaskInput = viewModel.SegmentationUseMaskInput;
+                // Client-side: the setter retraces what is on screen from the stored masks, so no request is sent.
+                if (refreshAll || e.PropertyName == nameof(viewModel.SegmentationEdgeSnapEnabled))
+                    Global.AnnotationSettings.SegmentationEdgeSnapEnabled = viewModel.SegmentationEdgeSnapEnabled;
+                if (refreshAll || e.PropertyName == nameof(viewModel.SegmentationMinFeatureNanometers))
+                    Global.AnnotationSettings.SegmentationMinFeatureNanometers = viewModel.SegmentationMinFeatureNanometers;
+
+                if (AnnotationOverlay.CurrentOverlay?.Parent?.CurrentCommand is not SegmentationCommand command)
+                    return;
+
+                if (refreshAll ||
+                    e.PropertyName == nameof(viewModel.SegmentationHoleDropFraction) ||
+                    e.PropertyName == nameof(viewModel.SegmentationEdgeCleanupRadius))
+                {
+                    command.RefreshPolygonsFromLastMask(
+                        viewModel.SegmentationHoleDropFraction,
+                        viewModel.SegmentationEdgeCleanupRadius);
+                }
+                if (refreshAll || e.PropertyName == nameof(viewModel.SegmentationPointRadius))
+                    command.RefreshPromptPointViews(viewModel.SegmentationPointRadius);
+            };
+
+            // Set once a slider has rewritten in-memory opacity, so Cancel knows a preview needs undoing.
+            bool opacityPreviewed = false;
+
             // Wire up real-time preview for polygon opacity changes
             viewModel.PolygonOpacityChanged += (parentlessOpacity, withParentOpacity) =>
             {
-                // Cancel previous task if running
-                _opacityUpdateCancellationTokenSource?.Cancel();
-                _opacityUpdateCancellationTokenSource?.Dispose();
+                opacityPreviewed = true;
 
-                // Create new cancellation token source
-                _opacityUpdateCancellationTokenSource = new CancellationTokenSource();
+                // Cancel the previous pass; this pass keeps its own token with its own values.
+                CancellationToken token = StartNewOpacityPreviewPass();
 
-                // Start async update task
                 _ = Task.Run(() =>
                 {
                     try
@@ -161,7 +278,7 @@ namespace WebAnnotation
                         UpdateVisibleSectionPolygonOpacity(
                             parentlessOpacity,
                             withParentOpacity,
-                            _opacityUpdateCancellationTokenSource.Token);
+                            token);
                     }
                     catch (OperationCanceledException)
                     {
@@ -177,6 +294,8 @@ namespace WebAnnotation
             // Wire up real-time preview for circle opacity changes
             viewModel.CircleOpacityChanged += (parentlessOpacity, withParentOpacity) =>
             {
+                opacityPreviewed = true;
+
                 // Use the same throttling mechanism as polygon opacity
                 lock (_circleOpacityUpdateLock)
                 {
@@ -184,13 +303,17 @@ namespace WebAnnotation
                     _pendingCircleOpacityWithParent = withParentOpacity;
 
                     _circleOpacityUpdateTimer?.Dispose();
-                    _circleOpacityUpdateTimer = new System.Threading.Timer(_ =>
+                    System.Threading.Timer? timer = null;
+                    timer = new System.Threading.Timer(_ =>
                     {
                         lock (_circleOpacityUpdateLock)
                         {
-                            _opacityUpdateCancellationTokenSource?.Cancel();
-                            _opacityUpdateCancellationTokenSource?.Dispose();
-                            _opacityUpdateCancellationTokenSource = new CancellationTokenSource();
+                            // Disposing a timer does not stop a callback already queued; skip one that was
+                            // replaced by a newer slider change or stopped by Cancel.
+                            if (!ReferenceEquals(timer, _circleOpacityUpdateTimer))
+                                return;
+
+                            CancellationToken token = StartNewOpacityPreviewPass();
 
                             double parentless = _pendingCircleOpacityParentless;
                             double withParent = _pendingCircleOpacityWithParent;
@@ -202,7 +325,7 @@ namespace WebAnnotation
                                     UpdateVisibleSectionCircleOpacity(
                                         parentless,
                                         withParent,
-                                        _opacityUpdateCancellationTokenSource.Token);
+                                        token);
                                 }
                                 catch (OperationCanceledException) { }
                                 catch (Exception ex)
@@ -212,6 +335,7 @@ namespace WebAnnotation
                             });
                         }
                     }, null, 100, Timeout.Infinite);
+                    _circleOpacityUpdateTimer = timer;
                 }
             };
 
@@ -220,6 +344,19 @@ namespace WebAnnotation
             // Wire up event handlers to save settings
             _preferencesDialog.ApplyClicked += (s, args) => SaveSettingsFromViewModel(viewModel);
             _preferencesDialog.OkClicked += (s, args) => SaveSettingsFromViewModel(viewModel);
+            // Live max-downsample writes Global before Cancel; restore the dialog's original value.
+            _preferencesDialog.CancelClicked += (s, args) =>
+            {
+                Global.AnnotationSettings.AutoPolygonizeMaxDownsample = viewModel.AutoPolygonizeMaxDownsample;
+                Global.AnnotationSettings.SegmentationMaskThreshold = viewModel.SegmentationMaskThreshold;
+                Global.AnnotationSettings.SegmentationUseMaskInput = viewModel.SegmentationUseMaskInput;
+                Global.AnnotationSettings.SegmentationEdgeSnapEnabled = viewModel.SegmentationEdgeSnapEnabled;
+                Global.AnnotationSettings.SegmentationMinFeatureNanometers = viewModel.SegmentationMinFeatureNanometers;
+
+                // Opacity sliders preview by rewriting in-memory views; Global keeps the last applied values.
+                if (opacityPreviewed)
+                    RestoreOpacityPreview();
+            };
 
             // When user confirms Reset to Defaults: persist defaults and reload ViewModel from Global
             _preferencesDialog.ResetToDefaultsRequested += (s, args) =>
@@ -257,6 +394,49 @@ namespace WebAnnotation
             _preferencesDialog.Show(); // Modeless dialog
         }
 
+        /// <summary>
+        /// Undoes the Annotation Preferences opacity preview: stops a pending circle debounce and any running
+        /// preview pass, then puts every polygon and circle in memory back to the opacities in
+        /// <see cref="Global.AnnotationSettings"/>. Called on the UI thread when the dialog is cancelled.
+        /// </summary>
+        private static void RestoreOpacityPreview()
+        {
+            lock (_circleOpacityUpdateLock)
+            {
+                _circleOpacityUpdateTimer?.Dispose();
+                _circleOpacityUpdateTimer = null;
+                // Cancel without replacing: the running pass holds this token. Under the lock, so it cannot
+                // race StartNewOpacityPreviewPass disposing the same source.
+                _opacityUpdateCancellationTokenSource?.Cancel();
+            }
+
+            UpdateAllPolygonOpacityInMemory(
+                Global.AnnotationSettings.PolygonOpacityParentless,
+                Global.AnnotationSettings.PolygonOpacityWithParent);
+            UpdateAllCircleOpacityInMemory(
+                Global.AnnotationSettings.CircleOpacityParentless,
+                Global.AnnotationSettings.CircleOpacityWithParent);
+        }
+
+        /// <summary>
+        /// Cancels the running opacity preview pass and returns the token for a new one. Swaps the shared
+        /// source under <see cref="_circleOpacityUpdateLock"/> so the polygon handler (UI thread) and the circle
+        /// debounce timer (threadpool) never cancel a source the other just disposed. Callers capture the
+        /// returned token before starting their task, so a task queued earlier cannot pick up a newer token
+        /// and then write its older opacity values after the newer pass.
+        /// </summary>
+        /// <returns>An uncancelled token owned by the caller's preview pass.</returns>
+        private static CancellationToken StartNewOpacityPreviewPass()
+        {
+            lock (_circleOpacityUpdateLock)
+            {
+                _opacityUpdateCancellationTokenSource?.Cancel();
+                _opacityUpdateCancellationTokenSource?.Dispose();
+                _opacityUpdateCancellationTokenSource = new CancellationTokenSource();
+                return _opacityUpdateCancellationTokenSource.Token;
+            }
+        }
+
         private static void SaveSettingsFromViewModel(WebAnnotation.WPF.Forms.AnnotationPreferencesDialogViewModel viewModel)
         {
             Global.AnnotationSettings.NumSectionsInMemory = viewModel.NumSectionsInMemory;
@@ -266,11 +446,38 @@ namespace WebAnnotation
             Global.AnnotationSettings.DefaultClosedLineWidth = viewModel.DefaultClosedLineWidth;
             Global.AnnotationSettings.DefaultLocationJumpDownsample = viewModel.DefaultLocationJumpDownsample;
             Global.AnnotationSettings.AdjacentLocationRadiusScalar = viewModel.AdjacentLocationRadiusScalar;
+            Global.AnnotationSettings.LocationLinkWaistPixels = viewModel.LocationLinkWaistPixels;
+            Global.AnnotationSettings.LocationLinkDrawUnderMarkers = viewModel.LocationLinkDrawUnderMarkers;
             Global.AnnotationSettings.NumClosedCurveInterpolationPointsForDisplay = viewModel.NumClosedCurveInterpolationPointsForDisplay;
             Global.AnnotationSettings.PenSimplifyThreshold = viewModel.PenSimplifyThreshold;
             Global.AnnotationSettings.MinRadius = viewModel.MinRadius;
             Global.AnnotationSettings.SegmentationPointRadius = viewModel.SegmentationPointRadius;
             Global.AnnotationSettings.PolygonPointDiameter = viewModel.PolygonPointDiameter;
+            Global.AnnotationSettings.SegmentationHoleDropFraction = viewModel.SegmentationHoleDropFraction;
+            Global.AnnotationSettings.SegmentationEdgeCleanupRadius = viewModel.SegmentationEdgeCleanupRadius;
+            Global.AnnotationSettings.SegmentationMaskThreshold = viewModel.SegmentationMaskThreshold;
+            Global.AnnotationSettings.SegmentationUseMaskInput = viewModel.SegmentationUseMaskInput;
+            Global.AnnotationSettings.SegmentationEdgeSnapEnabled = viewModel.SegmentationEdgeSnapEnabled;
+            Global.AnnotationSettings.SegmentationSmoothingSigma = viewModel.SegmentationSmoothingSigma;
+            Global.AnnotationSettings.SegmentationMinFeatureNanometers = viewModel.SegmentationMinFeatureNanometers;
+            Global.AnnotationSettings.AutoPolygonizeCircles = viewModel.AutoPolygonizeCircles;
+            Global.AnnotationSettings.AutoPolygonizeMinRadiusNanometers = viewModel.AutoPolygonizeMinRadiusNanometers;
+            Global.AnnotationSettings.AutoPolygonizeMaxDownsample = viewModel.AutoPolygonizeMaxDownsample;
+            Global.AnnotationSettings.AutoPolygonizeOverlayMasks = viewModel.AutoPolygonizeOverlayMasks;
+            Global.AnnotationSettings.AutoPolygonizeOverlayPrompts = viewModel.AutoPolygonizeOverlayPrompts;
+            Global.AnnotationSettings.AutoPolygonizeHideSegmentationRings = viewModel.AutoPolygonizeHideSegmentationRings;
+            Global.AnnotationSettings.AutoPolygonizeShimmerEnabled = viewModel.AutoPolygonizeShimmerEnabled;
+            Global.AnnotationSettings.SegmentLinkedAnnotations = viewModel.SegmentLinkedAnnotations;
+            Global.AnnotationSettings.AutoPolygonizeShimmerBrightness = viewModel.AutoPolygonizeShimmerBrightness;
+            Global.AnnotationSettings.AutoPolygonizeShimmerDurationMs = viewModel.AutoPolygonizeShimmerDurationMs;
+            // Setter no-ops when the value is unchanged (e.g. already live-applied from the slider).
+            // Always re-arm idle so a view that is now in range starts without a camera nudge.
+            if (Global.AnnotationSettings.AutoPolygonizeCircles)
+                AnnotationOverlay.CurrentOverlay?.RequestAutoPolygonizeIdlePass();
+            if (menuAutoPolygonizeCircles != null)
+                menuAutoPolygonizeCircles.Checked = viewModel.AutoPolygonizeCircles;
+            Global.AnnotationSettings.PolygonPointOpacity = viewModel.PolygonPointOpacity;
+            Global.AnnotationSettings.HidePolygonPointsInPenMode = viewModel.HidePolygonPointsInPenMode;
             Global.AnnotationSettings.SmallestRenderedSize = viewModel.SmallestRenderedSize;
             Global.AnnotationSettings.PolygonVertexPointsVisibleAtWidthFraction = viewModel.PolygonVertexPointsVisibleAtWidthFraction;
             Global.AnnotationSettings.PolygonVertexPointsHiddenAtWidthFraction = viewModel.PolygonVertexPointsHiddenAtWidthFraction;
@@ -590,10 +797,14 @@ namespace WebAnnotation
         [MenuItem("Open Last Modified Location")]
         public static void GoToLastModifiedLocation(object sender, EventArgs e) => AnnotationOverlay.GotoLastModifiedLocation();
 
+        /// <summary>
+        /// Toggles Pen Mode (menu, toolbar, status chip, and the <c>*</c> hotkey in
+        /// <see cref="AnnotationOverlay.OnKeyDown"/>). Refreshes chips/toolbar/menu checkmarks.
+        /// </summary>
         public static void OnPenMode(object sender, EventArgs e)
         {
             Global.PenMode = !Global.PenMode;
-            menuPenMode.Checked = Global.PenMode;
+            AnnotationStatusChips.Refresh();
         }
 
         /// <summary>
@@ -603,6 +814,76 @@ namespace WebAnnotation
         {
             Global.ShowPenActionButtons = !Global.ShowPenActionButtons;
             menuShowPenActionButtons.Checked = Global.ShowPenActionButtons;
+        }
+
+        public static void OnAutoPolygonizeCircles(object sender, EventArgs e)
+        {
+            Global.AnnotationSettings.AutoPolygonizeCircles = !Global.AnnotationSettings.AutoPolygonizeCircles;
+            AnnotationStatusChips.Refresh();
+        }
+
+        /// <summary>
+        /// Keeps Annotation menu checkmarks aligned with toolbar buttons and status chips.
+        /// Called after toggles and from <see cref="UI.AnnotationModeToolbar.SyncFromSettings"/>.
+        /// </summary>
+        internal static void SyncModeMenuChecked(bool penMode, bool autoPolygonize)
+        {
+            if (menuPenMode != null)
+                menuPenMode.Checked = penMode;
+            if (menuAutoPolygonizeCircles != null)
+                menuAutoPolygonizeCircles.Checked = autoPolygonize;
+        }
+
+        /// <summary>
+        /// Opens the login-stage segmentation picker mid-session and applies Select or None.
+        /// </summary>
+        public static void OnSelectSegmentationService(object sender, EventArgs e)
+        {
+            if (State.UserBearerToken == null || string.IsNullOrEmpty(State.UserBearerToken.AccessToken))
+            {
+                MessageBox.Show(
+                    "A signed-in bearer token is required to list segmentation services.\n\nSign in again, then retry.",
+                    "Select Segmentation Service",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            string identityUrl = State.IdentityServerUrl
+                ?? Viking.Tokens.TokenStore.BearerTokenAuthority;
+            if (string.IsNullOrWhiteSpace(identityUrl))
+            {
+                MessageBox.Show(
+                    "The Identity Server URL for this session is unknown.\n\nSign in again, then retry.",
+                    "Select Segmentation Service",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            IntPtr ownerHandle = IntPtr.Zero;
+            if (State.Appwindow != null && State.Appwindow.IsHandleCreated)
+                ownerHandle = State.Appwindow.Handle;
+
+            bool? confirmed = SegmentationServiceSelectionWindow.ShowDialog(
+                ownerHandle,
+                State.UserBearerToken,
+                identityUrl,
+                SegmentationServiceSession.CurrentEndpoint(),
+                State.RecentSegmentationServiceUrls,
+                out string? selectedEndpoint,
+                SegmentationServiceHealth.LastError);
+
+            if (confirmed == true)
+                SegmentationServiceSession.ApplyEndpoint(selectedEndpoint);
+        }
+
+        private static void OnUpdateVolumePositions(object sender, EventArgs e)
+        {
+            if (!VolumeAccessRoles.HasReviewAccess())
+                return;
+
+            _ = VolumePositionUpdateLauncher.RunAsync();
         }
 
         [MenuItem("Open Structure")]
@@ -650,5 +931,12 @@ namespace WebAnnotation
         public static void Export(object sender, EventArgs e) => Debug.Print("Export");
 
 
+    }
+
+    [MenuAttribute("menuEdit")]
+    internal class AnnotationEditMenu
+    {
+        [MenuItem("Annotation Preferences")]
+        public static void OnAnnotationPreferences(object sender, EventArgs e) => AnnotationMenu.OnPreferences(sender, e);
     }
 }

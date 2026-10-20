@@ -3,6 +3,9 @@ using Viking.Tokens;
 
 namespace Viking.UI.WPF
 {
+    /// <summary>
+    /// Reads the Identity client secret from appSettings (ApiClientSecret) with env/fallback via <see cref="IdentityClientSecret"/>.
+    /// </summary>
     internal static class IdentityAppSettings
     {
         public static string ClientSecret =>

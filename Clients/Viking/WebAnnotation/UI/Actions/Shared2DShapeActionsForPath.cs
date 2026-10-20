@@ -26,14 +26,14 @@ namespace WebAnnotation.UI.Actions
 
             if (StartEntry.Index == 0)
             {
-                return output;
+                return Rejected(output, locID, "the start event is at path index 0");
             }
 
             Vector2[] subpath = path.PathBetween(StartEntry.Index - 2 < 0 ? 0 : StartEntry.Index - 2, NextEntry.Index + 1 < path.Count ? NextEntry.Index + 1 : NextEntry.Index); //path.PathBetween(StartEntry.Index - 1 < 0 ? 0 : StartEntry.Index - 1, path.Count-1); //path.PathBetween(StartEntry.Index - 1 < 0 ? 0 : StartEntry.Index - 1, NextEntry.Index);
 
             if (subpath.Length <= 1)
             {
-                return output;
+                return Rejected(output, locID, $"sub-path has {subpath.Length} point(s)");
             }
 
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -49,7 +49,7 @@ namespace WebAnnotation.UI.Actions
 
                 if (intersectedSegments.Count < 2)
                 {
-                    return output;
+                    return Rejected(output, locID, $"path crosses the polygon outline {intersectedSegments.Count} time(s), need 2 (events {StartEntry.Interaction}@{StartEntry.Index} to {NextEntry.Interaction}@{NextEntry.Index})");
                 }
             }
 
@@ -61,17 +61,18 @@ namespace WebAnnotation.UI.Actions
             //We cannot cut across rings, so check that
             if (FirstIntersection.AreOnSameRing(SecondIntersection) == false)
             {
-                return output;
+                return Rejected(output, locID, "the first two crossings are on different rings");
             }
 
             ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             //The view can outlive its store entry (deleted or replaced by a poll), so a missing location rejects the cut instead of throwing out of the mouse-up handler.
-            LocationObj locObj = Store.Locations.GetObjectByID(locID);
-            if (locObj is null)
+            if (!Store.Locations.TryGetObjectByID(locID, out LocationObj locObj) || locObj is null)
             {
-                return output;
+                return Rejected(output, locID, "the location is no longer in the store");
             }
-            IVolumeToSectionTransform Transform = AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+
+            // Cuts near or past the edge of the registration grid have vertices a discrete grid cannot map; the RBF fallback extrapolates them.
+            IVolumeToSectionTransform Transform = AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform.WithContinuousFallback();
 
             Polygon PolyToCut = OriginalVolumePolygon.Clone() as Polygon;
             if (FirstIntersection.IsInner)
@@ -95,40 +96,40 @@ namespace WebAnnotation.UI.Actions
             //Condition Check to make sure pen path exists and is valid
             if (subpath is null || subpath.Length < 2 || OriginalVolumePolygon.TotalVertices <= 3)
             {
-                return output;
+                return Rejected(output, locID, "the polygon has 3 or fewer vertices");
             }
 
             PolyBeingCut = FirstIntersection;
-            Polygon clockwise_poly = null;
-            Polygon counter_clockwise_poly = null;
 
-            try
+            // The walk follows the smoothed display ring, so it carries every interpolated sample.
+            // Drop samples that sit on the chord between neighbors before this piece is saved.
+            // The choice fill still draws from the cached cell, not from this reduced ring.
+            double downsample = AnnotationOverlay.CurrentOverlay.Parent.Downsample;
+            double reduceTolerance = downsample < 2 ? 4 : downsample * 4;
+
+            // Each side is cut on its own: a self-intersecting source ring only spoils the side that carries the fold,
+            // and the broken side is never offered or rendered.
+            Polygon clockwise_poly = TryCutSide(PolyToCut, RotationDirection.Clockwise, subpath, reduceTolerance, out string clockwiseProblem);
+            Polygon counter_clockwise_poly = TryCutSide(PolyToCut, RotationDirection.Counterclockwise, subpath, reduceTolerance, out string counterClockwiseProblem);
+
+            if (clockwise_poly is null && counter_clockwise_poly is null)
             {
-                // The walk follows the smoothed display ring, so it carries every interpolated sample.
-                // Drop samples that sit on the chord between neighbors before this piece is saved.
-                // The choice fill still draws from the cached cell, not from this reduced ring.
-                clockwise_poly = Polygon.WalkPolygonCut(PolyToCut, RotationDirection.Clockwise, subpath);
-                counter_clockwise_poly = Polygon.WalkPolygonCut(PolyToCut, RotationDirection.Counterclockwise, subpath);
-                double downsample = AnnotationOverlay.CurrentOverlay.Parent.Downsample;
-                double tolerance = downsample < 2 ? 4 : downsample * 4;
-                clockwise_poly = clockwise_poly.ReduceExteriorRing(tolerance);
-                counter_clockwise_poly = counter_clockwise_poly.ReduceExteriorRing(tolerance);
-            }
-            catch (ArgumentException)
-            {
-                //Thrown when the polygon cannot be cut using the path
-                return output;
+                string sourceProblem = PolyToCut.DescribeInvalidity();
+                string sourceNote = sourceProblem is null ? string.Empty : $" (the location's own outline is invalid: {sourceProblem})";
+                return Rejected(output, locID, $"the polygon could not be cut along the path: {clockwiseProblem}{sourceNote}");
             }
 
-
-
+            if (clockwise_poly is null || counter_clockwise_poly is null)
+            {
+                Trace.WriteLine($"Pen retrace of location {locID}: one side of the cut is invalid and is not offered ({(clockwise_poly is null ? "clockwise" : "counterclockwise")}: {(clockwise_poly is null ? clockwiseProblem : counterClockwiseProblem)}).");
+            }
 
             RetraceCommandAction cutType = GetRetraceCommandAction(FirstIntersection.IsInner, StartEntry.Interaction == AnnotationRegionInteraction.ENTER);
 
 
 
-            Polygon mosaic_clockwise_poly = Transform.TryMapShapeVolumeToSection(clockwise_poly);
-            Polygon mosaic_counter_clockwise_poly = Transform.TryMapShapeVolumeToSection(counter_clockwise_poly);
+            Polygon mosaic_clockwise_poly = clockwise_poly is null ? null : Transform.TryMapShapeVolumeToSection(clockwise_poly);
+            Polygon mosaic_counter_clockwise_poly = counter_clockwise_poly is null ? null : Transform.TryMapShapeVolumeToSection(counter_clockwise_poly);
 
 
 
@@ -145,48 +146,121 @@ namespace WebAnnotation.UI.Actions
                 switch (cutType)
                 {
                     case RetraceCommandAction.NONE:
-                        return output;
+                        return Rejected(output, locID, "no retrace action applies");
                     case RetraceCommandAction.GROW_EXTERIOR_RING:
-                        UseCCW = counter_clockwise_poly.Area > clockwise_poly.Area;
+                        if (TryChooseGrownSide(PolyToCut, clockwise_poly, counter_clockwise_poly, out UseCCW) == false)
+                            return Rejected(output, locID, "the only valid side of the cut does not enlarge the outline");
                         Polygon outputVolumePoly = UseCCW ? counter_clockwise_poly : clockwise_poly;
                         Polygon outputMosaicPoly = UseCCW ? mosaic_counter_clockwise_poly : mosaic_clockwise_poly;
                         Polygon growthLobe = UseCCW ? clockwise_poly : counter_clockwise_poly;
-                        grow_action = new Change2DContourAction(locObj, cutType, outputMosaicPoly, outputVolumePoly);
+                        // Only the kept piece is saved, so an unmappable discarded lobe must not block the cut.
+                        if (outputMosaicPoly is null)
+                            return Rejected(output, locID, "the grown outline has a vertex outside the section's mapped area");
+                        grow_action = new Change2DContourAction(locObj, cutType, outputMosaicPoly, outputVolumePoly, transform: Transform);
                         AttachCachedPreview(grow_action, OriginalVolumePolygon, subpath, addedPatch: growthLobe, excludedPatch: null);
                         output.Add(grow_action);
                         break;
                     case RetraceCommandAction.SHRINK_EXTERIOR_RING:
-                        counter_clockwise_action = new Change2DContourAction(locObj, cutType, mosaic_counter_clockwise_poly, counter_clockwise_poly);
-                        clockwise_action = new Change2DContourAction(locObj, cutType, mosaic_clockwise_poly, clockwise_poly, true);
-                        AttachShrinkPreview(counter_clockwise_action, clockwise_action, OriginalVolumePolygon, subpath, counter_clockwise_poly, clockwise_poly);
-                        output.Add(counter_clockwise_action);
-                        output.Add(clockwise_action);
+                        // TryMapShapeVolumeToSection returns null when any vertex is outside the section's mapped area.
+                        // Both pieces are offered as choices, so one that cannot be saved means no valid pair.
+                        // A side that is invalid (null) is simply not offered.
+                        if ((counter_clockwise_poly is not null && mosaic_counter_clockwise_poly is null) || (clockwise_poly is not null && mosaic_clockwise_poly is null))
+                            return Rejected(output, locID, "a cut piece has a vertex outside the section's mapped area");
+                        counter_clockwise_action = counter_clockwise_poly is null ? null : new Change2DContourAction(locObj, cutType, mosaic_counter_clockwise_poly, counter_clockwise_poly, transform: Transform);
+                        clockwise_action = clockwise_poly is null ? null : new Change2DContourAction(locObj, cutType, mosaic_clockwise_poly, clockwise_poly, true, Transform);
+                        if (counter_clockwise_action is not null && clockwise_action is not null)
+                        {
+                            AttachShrinkPreview(counter_clockwise_action, clockwise_action, OriginalVolumePolygon, subpath, counter_clockwise_poly, clockwise_poly);
+                        }
+
+                        // A lone piece has no cached preview, so the choice view draws that piece itself and never the broken side.
+                        if (counter_clockwise_action is not null)
+                            output.Add(counter_clockwise_action);
+                        if (clockwise_action is not null)
+                            output.Add(clockwise_action);
                         break;
                     case RetraceCommandAction.GROW_INTERNAL_RING:
-                        UseCCW = counter_clockwise_poly.Area > clockwise_poly.Area;
+                        if (TryChooseGrownSide(PolyToCut, clockwise_poly, counter_clockwise_poly, out UseCCW) == false)
+                            return Rejected(output, locID, "the only valid side of the cut does not enlarge the hole");
                         Polygon mosaic_shape_clone = locObj.MosaicShape.ToPolygon();
                         inner_ring_replacement = UseCCW ? mosaic_counter_clockwise_poly : mosaic_clockwise_poly;
+                        if (inner_ring_replacement is null)
+                            return output;
                         mosaic_shape_clone.ReplaceInteriorRing(PolyBeingCut.Value.InnerShapeIndex.Value, inner_ring_replacement);
-                        grow_action = new Change2DContourAction(locObj, cutType, mosaic_shape_clone);
+                        grow_action = new Change2DContourAction(locObj, cutType, mosaic_shape_clone, transform: Transform);
                         output.Add(grow_action);
                         break;
                     case RetraceCommandAction.SHRINK_INTERNAL_RING:
-                        //Counterclockwise action
-                        input_poly_clone = locObj.MosaicShape.ToPolygon(); //(Polygon)OriginalVolumePolygon.Clone();
-                        input_poly_clone.ReplaceInteriorRing(PolyBeingCut.Value.InnerShapeIndex.Value, mosaic_counter_clockwise_poly);
-                        counter_clockwise_action = new Change2DContourAction(locObj, cutType, input_poly_clone);
+                        if ((counter_clockwise_poly is not null && mosaic_counter_clockwise_poly is null) || (clockwise_poly is not null && mosaic_clockwise_poly is null))
+                            return output;
 
-                        //Clockwise action
-                        input_poly_clone = locObj.MosaicShape.ToPolygon(); //(Polygon)OriginalVolumePolygon.Clone();
-                        input_poly_clone.ReplaceInteriorRing(PolyBeingCut.Value.InnerShapeIndex.Value, mosaic_clockwise_poly);
-                        clockwise_action = new Change2DContourAction(locObj, cutType, input_poly_clone, ClockwiseContour: true);
+                        if (mosaic_counter_clockwise_poly is not null)
+                        {
+                            //Counterclockwise action
+                            input_poly_clone = locObj.MosaicShape.ToPolygon(); //(Polygon)OriginalVolumePolygon.Clone();
+                            input_poly_clone.ReplaceInteriorRing(PolyBeingCut.Value.InnerShapeIndex.Value, mosaic_counter_clockwise_poly);
+                            output.Add(new Change2DContourAction(locObj, cutType, input_poly_clone, transform: Transform));
+                        }
 
-                        output.Add(counter_clockwise_action);
-                        output.Add(clockwise_action);
+                        if (mosaic_clockwise_poly is not null)
+                        {
+                            //Clockwise action
+                            input_poly_clone = locObj.MosaicShape.ToPolygon(); //(Polygon)OriginalVolumePolygon.Clone();
+                            input_poly_clone.ReplaceInteriorRing(PolyBeingCut.Value.InnerShapeIndex.Value, mosaic_clockwise_poly);
+                            output.Add(new Change2DContourAction(locObj, cutType, input_poly_clone, ClockwiseContour: true, transform: Transform));
+                        }
+
                         return output;
                 }
             }
 
+            return output;
+        }
+
+        /// <summary>
+        /// Cuts one side of the polygon along the path and reduces its exterior ring.
+        /// </summary>
+        /// <returns>The piece, or null with <paramref name="problem"/> set when that side is not a valid polygon
+        /// (for example because the source ring crosses itself on that side).</returns>
+        internal static Polygon TryCutSide(Polygon polyToCut, RotationDirection direction, Vector2[] subpath, double reduceTolerance, out string problem)
+        {
+            try
+            {
+                problem = null;
+                return Polygon.WalkPolygonCut(polyToCut, direction, subpath).ReduceExteriorRing(reduceTolerance);
+            }
+            catch (ArgumentException ex)
+            {
+                problem = $"{direction}: {ex.Message}";
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Grow cuts keep the larger piece. A side that failed validation has no area to compare, so a lone valid
+        /// piece is only taken when it is larger than the polygon being grown (the discarded lobe never is).
+        /// </summary>
+        internal static bool TryChooseGrownSide(Polygon source, Polygon clockwise, Polygon counterClockwise, out bool useCounterClockwise)
+        {
+            useCounterClockwise = false;
+            if (clockwise is not null && counterClockwise is not null)
+            {
+                useCounterClockwise = counterClockwise.Area > clockwise.Area;
+                return true;
+            }
+
+            Polygon only = clockwise ?? counterClockwise;
+            useCounterClockwise = counterClockwise is not null;
+            return only.Area > source.Area;
+        }
+
+        /// <summary>
+        /// Logs why a pen path produced no retrace choice and returns the (empty) result, so a stroke that offers no
+        /// polygon change can be explained from the log.
+        /// </summary>
+        private static List<Change2DContourAction> Rejected(List<Change2DContourAction> output, long locID, string reason)
+        {
+            Trace.WriteLine($"Pen retrace of location {locID} offered no change: {reason}.");
             return output;
         }
 
@@ -377,8 +451,10 @@ namespace WebAnnotation.UI.Actions
 
                 IVolumeToSectionTransform Transform = WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
                 Polygon mosaic_shape = Transform.TryMapShapeVolumeToSection(newShape);
+                if (mosaic_shape is null)
+                    return actions;
 
-                Change2DContourAction action = new(origin_loc, RetraceCommandAction.REPLACE_EXTERIOR_RING, mosaic_shape, newShape);
+                Change2DContourAction action = new(origin_loc, RetraceCommandAction.REPLACE_EXTERIOR_RING, mosaic_shape, newShape, transform: Transform);
                 actions.Add(action);
             }
             else if (origin_loc.TypeCode.AllowsOpen2DShape() && path.HasSelfIntersection == false)//1-D Case
@@ -418,6 +494,7 @@ namespace WebAnnotation.UI.Actions
 
             //Check for retrace and replace contour actions
             //We retrace if we enter/exit the shape and there is not a loop
+            Trace.WriteLine($"Pen path over location {locID}: {shapeEntryExitEntries.Length} enter/exit event(s), self-intersecting={path.HasSelfIntersection}.");
             if (path.HasSelfIntersection == false)
             {
                 if (shapeEntryExitEntries.Length >= 2)

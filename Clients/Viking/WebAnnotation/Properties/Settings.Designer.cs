@@ -139,7 +139,7 @@ namespace WebAnnotation.Properties {
                 this["DefaultLocationJumpDownsample"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -202,7 +202,7 @@ namespace WebAnnotation.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("4")]
+        [global::System.Configuration.DefaultSettingValueAttribute("3")]
         public uint NumClosedCurveInterpolationPointsForDisplay {
             get {
                 return ((uint)(this["NumClosedCurveInterpolationPointsForDisplay"]));
@@ -214,7 +214,7 @@ namespace WebAnnotation.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("12")]
+        [global::System.Configuration.DefaultSettingValueAttribute("3")]
         public int PenSimplifyThreshold {
             get {
                 return ((int)(this["PenSimplifyThreshold"]));
@@ -344,6 +344,30 @@ namespace WebAnnotation.Properties {
             }
         }
         
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.75")]
+        public double PolygonPointOpacity {
+            get {
+                return ((double)(this["PolygonPointOpacity"]));
+            }
+            set {
+                this["PolygonPointOpacity"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool HidePolygonPointsInPenMode {
+            get {
+                return ((bool)(this["HidePolygonPointsInPenMode"]));
+            }
+            set {
+                this["HidePolygonPointsInPenMode"] = value;
+            }
+        }
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("10")]

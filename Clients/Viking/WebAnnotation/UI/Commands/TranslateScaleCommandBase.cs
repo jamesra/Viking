@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Diagnostics;
 using System.Threading;

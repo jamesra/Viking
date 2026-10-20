@@ -29,7 +29,6 @@ namespace Viking.UI.WPF.ViewModels
         private SegmentationServiceTreeNode _selectedService;
         private string _manualServiceEndpoint;
         private bool _showManualEntry;
-        private readonly bool _isSelectionMade = false;
         private readonly TaskCompletionSource<bool> _loadCompletedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public SegmentationServiceSelectionViewModel(TokenResponse bearerToken, string identityServerUrl, string preselectedEndpoint = null, Dictionary<long, object> preloadedServices = null)
@@ -282,7 +281,7 @@ namespace Viking.UI.WPF.ViewModels
                 var identityApiUri = IdentityEndpoints.FromIdentityServer(identityUri);
 
                 Trace.WriteLine($"[SegmentationSelection] Identity Server URL: {identityUri}");
-                Trace.WriteLine($"[SegmentationSelection] Identity API URL (port 6001): {identityApiUri}");
+                Trace.WriteLine($"[SegmentationSelection] Identity API URL: {identityApiUri}");
                 Trace.WriteLine($"[SegmentationSelection] Endpoint: {new Uri(identityApiUri, "Permissions/AccessibleSegmentationServices")}");
 
                 IdentityApiHelper helper = new()
@@ -725,6 +724,7 @@ namespace Viking.UI.WPF.ViewModels
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
     }
 
     public class SegmentationServiceSelectedEventArgs : EventArgs

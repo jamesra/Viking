@@ -16,11 +16,16 @@ namespace WebAnnotation.UI.Commands
             _ = ExecuteAsync();
         }
 
+        /// <summary>
+        /// Toggles Terminal and saves; when the save fails the error is shown and the previous value is restored.
+        /// </summary>
         async Task ExecuteAsync()
         {
+            bool previous = target.Terminal;
             target.Terminal = !target.Terminal;
             if (!await AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
-                target.Terminal = !target.Terminal;
+                target.Terminal = previous;
+
             base.Execute();
         }
     }

@@ -18,10 +18,11 @@ namespace WebAnnotationModel.Objects
     {
         public override PermittedStructureLinkKey ID => new PermittedStructureLinkKey(SourceTypeID, TargetTypeID, Bidirectional);
 
-        protected override int GenerateHashCode()
-        {
-            return (int)(SourceTypeID % int.MaxValue);
-        }
+        /// <summary>
+        /// Hashes through <see cref="ID"/>, so objects whose keys compare equal (including a bidirectional link stored
+        /// the other way round) hash alike.
+        /// </summary>
+        protected override int GenerateHashCode() => ID.GetHashCode();
 
         public long SourceTypeID { get; private set; }
 

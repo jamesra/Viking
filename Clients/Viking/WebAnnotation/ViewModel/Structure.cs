@@ -200,6 +200,17 @@ namespace WebAnnotation.ViewModel
                 if (cellId.HasValue)
                     SbfsemToolsLauncher.AddOpenMenuItem(menu, cellId.Value, locationId: null);
 
+                // Only cells draw with a color of their own; other structures use their type's color.
+                if (modelObj.TypeID == 1)
+                {
+                    ToolStripMenuItem newColorItem = new("New Color")
+                    {
+                        ToolTipText = "Gives this cell a new random display color. Only changes what you see; it is not saved."
+                    };
+                    newColorItem.Click += ContextMenu_OnNewColor;
+                    menu.Items.Add(newColorItem);
+                }
+
                 menu.Items.Add(new ToolStripSeparator());
                 ToolStripMenuItem deleteItem = new("Delete");
                 deleteItem.Click += ContextMenu_OnDelete;
@@ -247,6 +258,8 @@ namespace WebAnnotation.ViewModel
         protected void ContextMenu_OnProperties(object sender, EventArgs e) => Viking.UI.Forms.PropertySheetForm.Show(this);
 
         protected void ContextMenu_OnDelete(object sender, EventArgs e) => Delete();
+
+        protected void ContextMenu_OnNewColor(object sender, EventArgs e) => WebAnnotation.UI.StructureColors.NewColor(modelObj);
 
         public ContextMenuStrip ContextMenu_AddUnverifiedBranchTerminals(ContextMenuStrip menu)
         {

@@ -119,7 +119,7 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Sorted by X coordinante of control point, using Y coordinate as tie-breaker
+        /// Sorted by X coordinate of the mapped point, using the mapped Y coordinate as tie-breaker
         /// </summary>
         /// <param name="Obj"></param>
         /// <returns></returns>

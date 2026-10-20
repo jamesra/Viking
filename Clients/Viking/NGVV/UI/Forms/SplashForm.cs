@@ -14,10 +14,6 @@ namespace Viking.UI.Forms
         int Progress = 0;
         int MaxProgress = 100;
         DateTime startTime;
-        readonly DateTime endVolumeLoadTime;
-        readonly DateTime endExtensionLoadTime;
-
-        readonly string VolumePath;
 
         private Task? _Task = null;
 

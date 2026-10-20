@@ -33,8 +33,41 @@ namespace Viking.ViewModels
         [Column("Number")]
         public int Number => section.Number;
 
-        [Column("Notes")]
+        /// <summary>
+        /// Section notes for the Sections list. VikingXML often stores RTF; show plain text.
+        /// </summary>
+        [Column("Comments")]
+        public string Comments => ToPlainTextNotes(section.Notes);
+
+        /// <summary>Raw notes (may be RTF) for property pages and editors.</summary>
         public string Notes => section.Notes;
+
+        /// <summary>
+        /// Converts RTF notes to plain text for list columns. Non-RTF strings pass through.
+        /// </summary>
+        internal static string ToPlainTextNotes(string notes)
+        {
+            if (string.IsNullOrWhiteSpace(notes))
+                return "";
+
+            string trimmed = notes.TrimStart();
+            if (!trimmed.StartsWith(@"{\rtf", StringComparison.OrdinalIgnoreCase))
+                return notes.Trim();
+
+            try
+            {
+                using var box = new RichTextBox { Rtf = notes };
+                return (box.Text ?? "").Trim();
+            }
+            catch (ArgumentException)
+            {
+                return notes.Trim();
+            }
+            catch (System.Runtime.InteropServices.ExternalException)
+            {
+                return notes.Trim();
+            }
+        }
 
         public string Path => section.Path;
 

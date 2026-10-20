@@ -9,49 +9,22 @@ namespace WebAnnotation.UI
 {
     public partial class SplitStructuresForm : Form
     {
+        /// <summary>
+        /// Location ID in the Keep box, or -1 when the box is empty or not a number. Setting a value of 0 or less empties the box.
+        /// </summary>
         public long KeepID
         {
-            get
-            {
-                try
-                {
-                    return long.Parse(textKeepID.Text);
-                }
-                catch (FormatException)
-                {
-                    return -1;
-                }
-            }
-            set
-            {
-                textKeepID.Text = value > 0 ? value.ToString() : "";
-            }
+            get => StructureIdText.TryParse(textKeepID.Text, out long id) ? id : -1;
+            set => textKeepID.Text = StructureIdText.ToText(value);
         }
 
+        /// <summary>
+        /// Location ID in the Split box, or -1 when the box is empty or not a number. Setting a value of 0 or less empties the box.
+        /// </summary>
         public long SplitID
         {
-            get
-            {
-                try
-                {
-                    return long.Parse(textSplitID.Text);
-                }
-                catch (FormatException)
-                {
-                    return -1;
-                }
-            }
-            set
-            {
-                if (value > 0)
-                {
-                    textSplitID.Text = value.ToString();
-                }
-                else
-                {
-                    textKeepID.Text = "";
-                }
-            }
+            get => StructureIdText.TryParse(textSplitID.Text, out long id) ? id : -1;
+            set => textSplitID.Text = StructureIdText.ToText(value);
         }
 
         public SplitStructuresForm()
@@ -61,34 +34,24 @@ namespace WebAnnotation.UI
 
         private async Task<(bool Valid, string Reason)> IsIDValidAsync(string Input)
         {
-            try
-            {
-                if (Input.Length == 0)
-                    return (true, null);
+            //Check if the string is empty, that is OK
+            if (Input.Length == 0)
+                return (true, null);
 
-                int ID = int.Parse(Input);
-                LocationObj obj = await Store.Locations.GetObjectByID(ID);
-                if (obj is null)
-                    return (true, "No Location found");
-
-                return (true, obj.Parent.Label);
-            }
-            catch (FormatException)
-            {
+            //If string is not empty it needs to be a number
+            if (!StructureIdText.TryParse(Input, out long ID))
                 return (false, null);
-            }
+
+            LocationObj obj = await Store.Locations.GetObjectByID(ID);
+            if (obj is null)
+                return (false, "No Location found");
+
+            return (true, obj.Parent?.Label);
         }
 
         private async Task<(bool Valid, string Reason)> VerifyStructureMatchAsync()
         {
-            long KeepID;
-            long SplitID;
-            try
-            {
-                KeepID = int.Parse(textKeepID.Text);
-                SplitID = int.Parse(textSplitID.Text);
-            }
-            catch (FormatException)
+            if (!StructureIdText.TryParse(textKeepID.Text, out long KeepID) || !StructureIdText.TryParse(textSplitID.Text, out long SplitID))
             {
                 return (false, "Input ID must be a number");
             }
@@ -110,14 +73,7 @@ namespace WebAnnotation.UI
 
         private async Task<(bool Valid, string Reason)> IsAllInputValidAsync()
         {
-            long KeepID;
-            long SplitID;
-            try
-            {
-                KeepID = long.Parse(textKeepID.Text);
-                SplitID = long.Parse(textSplitID.Text);
-            }
-            catch (FormatException)
+            if (!StructureIdText.TryParse(textKeepID.Text, out long KeepID) || !StructureIdText.TryParse(textSplitID.Text, out long SplitID))
             {
                 return (false, "Input ID is not a number");
             }
@@ -159,15 +115,7 @@ namespace WebAnnotation.UI
 
         private async void btnSplit_Click(object sender, EventArgs e)
         {
-            int KeepLocID;
-            int MergeLocID;
-
-            try
-            {
-                KeepLocID = int.Parse(textKeepID.Text);
-                MergeLocID = int.Parse(textSplitID.Text);
-            }
-            catch (FormatException)
+            if (!StructureIdText.TryParse(textKeepID.Text, out long KeepLocID) || !StructureIdText.TryParse(textSplitID.Text, out long MergeLocID))
             {
                 return;
             }
@@ -194,7 +142,7 @@ namespace WebAnnotation.UI
             {
                 if (except.Message != null)
                 {
-                    MessageBox.Show("Split error", except.Message.ToString());
+                    MessageBox.Show(except.Message, "Split error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
 
                 return;

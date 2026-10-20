@@ -127,6 +127,15 @@ namespace Viking.VolumeModel
 
     public static class VolumeToSectionMappingExtensions
     {
+        /// <summary>
+        /// Wraps a grid/mesh mapper so points outside its hull are extrapolated by an RBF instead of failing.
+        /// Mappers that are not <see cref="VolumeToSectionTransform"/> (tile mappings) are returned unchanged.
+        /// Use for edits such as pen cuts where a hole in the mapping would otherwise drop the whole shape.
+        /// Do not use for hit-testing or visibility, where "cannot map" is the intended answer.
+        /// </summary>
+        public static Viking.VolumeModel.IVolumeToSectionTransform WithContinuousFallback(this Viking.VolumeModel.IVolumeToSectionTransform mapper) =>
+            mapper is VolumeToSectionTransform v ? v.WithContinuousFallback() : mapper;
+
         public static bool[] TrySectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points, out Vector2[] output) => mapper.TrySectionToVolume([.. points.Select(p => new Vector2(p.X, p.Y))], out output);
 
         public static Vector2[] SectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points) => mapper.SectionToVolume([.. points.Select(p => new Vector2(p.X, p.Y))]);
@@ -135,50 +144,48 @@ namespace Viking.VolumeModel
 
         public static Vector2[] VolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, IEnumerable<IPoint2D> points) => mapper.VolumeToSection([.. points.Select(p => new Vector2(p.X, p.Y))]);
 
+        /// <summary>
+        /// Maps a section-space polygon, including its holes, into volume space.
+        /// </summary>
+        /// <returns>The volume-space polygon, or null when any vertex of the exterior ring or of any interior ring cannot be mapped.</returns>
         public static Polygon TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Polygon shape)
         {
             bool[] mappedPosition = mapper.TrySectionToVolume(shape.ExteriorRing, out var VolumePositions);
             if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
             {
-                Trace.WriteLine("MapShapeSectionToVolume: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
+                Trace.WriteLine("TryMapShapeSectionToVolume: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
                 return null;
             }
 
-            Polygon transformed_polygon = new(VolumePositions);
-
-            if (shape.HasInteriorRings)
-            {
-                IEnumerable<Polygon> transformedPolygons = shape.InteriorPolygons.Select(ip => mapper.TryMapShapeSectionToVolume(ip));
-                foreach (Polygon inner_poly in transformedPolygons)
-                {
-                    transformed_polygon.AddInteriorRing(inner_poly);
-                }
-            }
-
-            return transformed_polygon;
+            Polygon[] innerPolygons = [.. shape.InteriorPolygons.Select(ip => mapper.TryMapShapeSectionToVolume(ip))];
+            return innerPolygons.Any(ip => ip is null) ? null : WithInteriorRings(new Polygon(VolumePositions), innerPolygons);
         }
 
+        /// <summary>
+        /// Maps a volume-space polygon, including its holes, into section space.
+        /// </summary>
+        /// <returns>The section-space polygon, or null when any vertex of the exterior ring or of any interior ring cannot be mapped.</returns>
         public static Polygon TryMapShapeVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Polygon shape)
         {
             bool[] mappedPosition = mapper.TryVolumeToSection(shape.ExteriorRing, out var SectionPositions);
             if (mappedPosition.Any(success => success == false)) //Remove locations we can't map
             {
-                Trace.WriteLine("MapShapeSectionToVolume: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
+                Trace.WriteLine("TryMapShapeVolumeToSection: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
                 return null;
             }
 
-            Polygon transformed_polygon = new(SectionPositions);
+            Polygon[] innerPolygons = [.. shape.InteriorPolygons.Select(ip => mapper.TryMapShapeVolumeToSection(ip))];
+            return innerPolygons.Any(ip => ip is null) ? null : WithInteriorRings(new Polygon(SectionPositions), innerPolygons);
+        }
 
-            if (shape.HasInteriorRings)
+        private static Polygon WithInteriorRings(Polygon exterior, Polygon[] innerPolygons)
+        {
+            foreach (Polygon inner_poly in innerPolygons)
             {
-                IEnumerable<Polygon> transformedPolygons = shape.InteriorPolygons.Select(ip => mapper.TryMapShapeVolumeToSection(ip));
-                foreach (Polygon inner_poly in transformedPolygons)
-                {
-                    transformed_polygon.AddInteriorRing(inner_poly);
-                }
+                exterior.AddInteriorRing(inner_poly);
             }
 
-            return transformed_polygon;
+            return exterior;
         }
 
         public static Polyline TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Polyline shape)

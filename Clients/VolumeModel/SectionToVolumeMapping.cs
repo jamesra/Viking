@@ -253,13 +253,31 @@ namespace Viking.VolumeModel
                 if (cacheFileInfo.LastWriteTimeUtc >= VolumeTransformInfo.LastModified &&
                     cacheFileInfo.LastWriteTimeUtc >= SourceMapping.LastModified)
                 {
-                    ITransform[] cachedTransforms;
-                    using (LoadStageTimings.Start(LoadStageTimings.WarpCacheRead, sectionDetail))
-                        cachedTransforms = LoadFromCache();
-                    if (cachedTransforms != null)
-                        return cachedTransforms;
+                    try
+                    {
+                        ITransform[] cached;
+                        using (LoadStageTimings.Start(LoadStageTimings.WarpCacheRead, sectionDetail))
+                            cached = LoadFromCache();
 
-                    // LoadFromCache deletes corrupt entries; fall through to rebuild from source mapping.
+                        //LoadFromCache returns null, and deletes the file, when it cannot read it. Warp instead of
+                        //returning null, which would leave the section with no tiles.
+                        if (cached != null)
+                            return cached;
+                    }
+                    catch (Exception)
+                    {
+                        //On any error, use the traditional path
+                        this._TileTransforms = null;
+                        Trace.WriteLine("Deleting invalid cache file: " + this.CachedTransformsFileName);
+                        try
+                        {
+                            System.IO.File.Delete(this.CachedTransformsFileName);
+                        }
+                        catch (System.IO.IOException)
+                        {
+                            Trace.WriteLine("Could not delete invalid cache file: " + this.CachedTransformsFileName);
+                        }
+                    }
                 }
                 else
                 {

@@ -6,12 +6,6 @@ using System.Reflection;
 
 namespace Viking.Common
 {
-    public static class Extensions
-    {
-
-
-    }
-
     public class Util
     {
         /// <summary>
@@ -69,21 +63,6 @@ namespace Viking.Common
             }
 
             return url;
-        }
-
-        private string TryAddVikingXMLExtension(string URL)
-        {
-            string NewURL = URL;
-
-            if (!NewURL.ToLower().EndsWith(".vikingxml"))
-            {
-                if (NewURL.EndsWith("/") == false)
-                    NewURL += '/';
-
-                NewURL += "volume.vikingxml";
-            }
-
-            return NewURL;
         }
     }
 }

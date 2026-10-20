@@ -18,7 +18,7 @@
 		<DebugType>full</DebugType>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-		<DefineConstants></DefineConstants>
+		<DefineConstants>TRACE</DefineConstants>
 		<Optimize>true</Optimize> 
 		<DebugType>pdbonly</DebugType>
 	</PropertyGroup>
@@ -118,6 +118,7 @@
 		<ProjectReference Include="..\..\Viking.Input\Viking.Input.csproj" />
 		<ProjectReference Include="..\..\Viking.Scene\Viking.Scene.csproj" />
 		<ProjectReference Include="..\..\Viking.Tokens\Viking.Tokens.csproj" />
+		<ProjectReference Include="..\..\Viking.UI.WPF\Viking.UI.WPF.csproj" />
 		<ProjectReference Include="..\NGVV\VikingCore.csproj" Condition="'$(TargetFramework)' == 'net48'" />
 		<ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj" Condition="'$(TargetFramework)' == 'net48'" />
 	</ItemGroup>

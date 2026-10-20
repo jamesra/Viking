@@ -10,3 +10,4 @@ using Viking.Common;
 [assembly: ComVisible(false)]
 
 [assembly: VikingExtension("Measurement")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("VikingCoreTests")]

@@ -14,33 +14,6 @@ namespace Viking.UI
     }
 
     /// <summary>
-    /// GC_ZOOM* flags
-    /// </summary>
-    [Flags]
-    public enum GestureRotateConfig
-    {
-        Rotate = 0x01
-    }
-
-    /// <summary>
-    /// GC_ZOOM* flags
-    /// </summary>
-    [Flags]
-    public enum GestureTwoFingerTapConfig
-    {
-        TwoFingerTap = 0x01
-    }
-
-    /// <summary>
-    /// GC_ZOOM* flags
-    /// </summary>
-    [Flags]
-    public enum GesturePressAndTapConfig
-    {
-        PressAndTap = 0x01
-    }
-
-    /// <summary>
     /// GC_PAN* flags
     /// </summary>
     [Flags]

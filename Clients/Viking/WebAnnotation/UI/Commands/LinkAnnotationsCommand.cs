@@ -233,45 +233,6 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        public static async Task<bool> TryCreateLink(SectionAnnotationsView sectionView, Geometry.Vector2 WorldPos, LocationObj OriginObj)
-        {
-            IViewLocation nearest = FindBestLinkCandidate(sectionView, WorldPos, OriginObj, out Rectangle _);
-            LocationObj NearestTarget = nearest != null ? Store.Locations[nearest.ID] : null;
-            if (NearestTarget is null)
-            {
-                return false;
-            }
-
-            if (LocationLinkView.IsValidLocationLinkTarget(NearestTarget, OriginObj))
-            {
-                try
-                {
-                    await Store.LocationLinks.CreateLink(OriginObj.ID, NearestTarget.ID);
-                    return true;
-                }
-                catch (Exception except)
-                {
-                    ExceptionReport.Show("Could not create link between locations.", except);
-                }
-            }
-            else if (StructureLinkViewModelBase.IsValidStructureLinkTarget(NearestTarget, OriginObj))
-            {
-                try
-                {
-                    bool Bidirectional = NearestTarget.Parent.Type.ID == OriginObj.Parent.Type.ID;
-                    StructureLinkObj linkStruct = new(OriginObj.ParentID.Value, NearestTarget.ParentID.Value, Bidirectional);
-                    await Store.StructureLinks.Create(linkStruct);
-                    return true;
-                }
-                catch (Exception except)
-                {
-                    ExceptionReport.Show("Could not create link between structures.", except);
-                }
-            }
-
-            return false;
-        }
-
         protected override void Execute()
         {
             try

@@ -44,14 +44,14 @@ namespace WebAnnotation.UI.Actions
 
         public IRenderable? Active { get; set; } = null;
 
-        public BuiltinTexture Icon { get; set; } = BuiltinTexture.Minus;
+        public BuiltinTexture Icon { get; set; } = BuiltinTexture.Scissors;
 
         public CutHoleAction(LocationObj location, Polygon newVolumeInteriorPolygon, IVolumeToSectionTransform? transform = null)
         {
             Location = location;
             Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
             NewVolumeInteriorPolygon = newVolumeInteriorPolygon;
-            NewSmoothVolumeInteriorPolygon = NewVolumeInteriorPolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
+            NewSmoothVolumeInteriorPolygon = NewVolumeInteriorPolygon.Smooth(Global.NumClosedCurveInterpolationPoints, Global.PenSimplifyThreshold);
 
             CreateDefaultVisuals();
         }
@@ -62,11 +62,13 @@ namespace WebAnnotation.UI.Actions
             Geometry.Vector2[] mosaic_points = Transform.VolumeToSection(NewVolumeInteriorPolygon.ExteriorRing);
             SqlGeometry updatedMosaicShape = Location.MosaicShape.AddInteriorPolygon(mosaic_points);
 
+            WebAnnotation.View.PolygonViewTimingLog.MarkBoundaryChange(Location.ID, "CutHole");
             Location.SetShapeFromGeometryInSection(Transform, updatedMosaicShape);
 
             try
             {
                 await Store.Locations.Save();
+                UndoManager.PushLocationShape("Cut Hole", Location, Transform, original_mosaic_shape, Location.TypeCode);
             }
             catch (System.ServiceModel.FaultException e)
             {

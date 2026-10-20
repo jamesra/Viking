@@ -1,5 +1,5 @@
 ﻿
-namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd
+namespace rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd
 {
     using System;
 #if NETFRAMEWORK
@@ -10,13 +10,29 @@ namespace rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd
     public partial class Hotkey
     {
 #if NETFRAMEWORK
+        /// <summary>
+        /// The key named by <see cref="KeyName"/>, or <see cref="Keys.None"/> when the name is missing or unreadable.
+        /// Called for every hotkey on each key press by <c>AnnotationOverlay</c>; <c>UserSettings.xml</c> is
+        /// hand-edited, so one bad name must not throw and disable all hotkeys.
+        /// </summary>
         public System.Windows.Forms.Keys KeyCode
         {
             get
             {
-                KeysConverter conv = new();
-                return (Keys)conv.ConvertFrom(KeyName);
+                string name = KeyName;
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    return Keys.None;
+                }
 
+                try
+                {
+                    return (Keys)new KeysConverter().ConvertFrom(name);
+                }
+                catch (Exception ex) when (ex is ArgumentException || ex is NotSupportedException || ex is FormatException)
+                {
+                    return Keys.None;
+                }
             }
         }
 #endif

@@ -12,6 +12,7 @@ using System.Linq;
 using VikingXNA;
 using VikingXNAGraphics;
 using WebAnnotation.UI;
+using WebAnnotation.UI.Actions;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
@@ -53,7 +54,10 @@ namespace WebAnnotation.View
 
         public double lineWidth = 32;
 
-        public static uint NumInterpolationPoints = Global.NumClosedCurveInterpolationPoints;
+        /// <summary>
+        /// Interpolation count for new closed-curve views. Read when a view is constructed so loading the type does not touch volume settings.
+        /// </summary>
+        public static uint NumInterpolationPoints => Global.NumClosedCurveInterpolationPoints;
         public LocationClosedCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
         {
             _ControlPointRadius = Global.DefaultClosedLineWidth / 2.0;
@@ -237,7 +241,25 @@ namespace WebAnnotation.View
             }
         }
 
-        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID) => throw new NotImplementedException();
+        /// <summary>
+        /// Unmodified contact returns <see cref="LocationAction.NONE"/> so pen free-draw starts.
+        /// Shift over the inner half of the inscribed circle still translates, matching the mouse path.
+        /// Called from <see cref="LocationActionDispatch"/> and the pen cursor.
+        /// </summary>
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
+        {
+            LocationID = ID;
+            if (modifierKeys.ShiftPressed())
+            {
+                Circle translateTargetCircle = new(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
+                if (translateTargetCircle.Covers(WorldPosition))
+                {
+                    return LocationAction.TRANSLATE;
+                }
+            }
+
+            return LocationAction.NONE;
+        }
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
@@ -253,7 +275,7 @@ namespace WebAnnotation.View
 
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            if (args.PropertyName == "Label" || args.PropertyName == "Attributes")
+            if (IsParentPropertyAffectingLabels(args.PropertyName))
             {
                 CreateLabelObjects();
             }
@@ -272,6 +294,32 @@ namespace WebAnnotation.View
             }
         }
 
-        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new NotImplementedException();
+        /// <summary>
+        /// Offers contour replace and links when a pen stroke ends on this curve, the same family as open curves and polygons.
+        /// A stroke with no loop and no border crossings only checks links and does not rebuild the rendered polygon.
+        /// Called by the pen free-draw command when the path completes.
+        /// </summary>
+        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
+        {
+            List<IAction> listActions = [];
+            if (path is null || interaction_log is null)
+            {
+                return listActions;
+            }
+
+            bool borderCrossings = interaction_log.Any(entry =>
+                entry.Annotation == this &&
+                (entry.Interaction == AnnotationRegionInteraction.ENTER || entry.Interaction == AnnotationRegionInteraction.EXIT));
+
+            if (path.HasSelfIntersection || borderCrossings)
+            {
+                Polygon smoothed = VolumeShapeAsRendered.ToPolygon();
+                listActions.AddRange(Shared2DShapeActionsForPath.GetPenActionsForShapeAnnotation(
+                    this, smoothed, path, interaction_log, VisibleSectionNumber));
+            }
+
+            listActions.AddRange(interaction_log.IdentifyPossibleLinkActions(ID));
+            return listActions;
+        }
     }
 }

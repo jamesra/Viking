@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using static Viking.Common.MathUtils;
 
 namespace Viking.UI.WPF.Forms
 {
@@ -578,7 +579,9 @@ namespace Viking.UI.WPF.Forms
         }
 
         /// <summary>
-        /// Revert to original values (for Cancel)
+        /// Revert every value to the one captured by <see cref="LoadCurrentSettings"/> or the last <see cref="Apply"/> (for Cancel).
+        /// Does not raise <see cref="SectionNumberOverlaySettingsChanged"/>; the host re-applies the live preview from this
+        /// view model when the dialog's Cancel event fires.
         /// </summary>
         public void RevertToOriginal()
         {
@@ -630,20 +633,6 @@ namespace Viking.UI.WPF.Forms
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
-        private static int Clamp(int value, int min, int max)
-        {
-            if (value < min) return min;
-            if (value > max) return max;
-            return value;
-        }
-
-        private static double Clamp(double value, double min, double max)
-        {
-            if (value < min) return min;
-            if (value > max) return max;
-            return value;
         }
     }
 

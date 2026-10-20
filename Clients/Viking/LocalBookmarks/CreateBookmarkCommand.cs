@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System;
 using System.Windows.Forms;
 
@@ -7,7 +7,7 @@ namespace LocalBookmarks
     [Viking.Common.Command()]
     class CreateBookmarkCommand : Viking.UI.Commands.Command
     {
-        Vector2 bookmarkPosition;
+        Geometry.Vector2 bookmarkPosition;
         readonly FolderUIObj ParentFolder;
 
         VikingXNAGraphics.TextureCircleView? circleView;
@@ -34,7 +34,7 @@ namespace LocalBookmarks
 
         protected override void OnMouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
         {
-            Vector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
+            Geometry.Vector2 NewPosition = Parent.ScreenToWorld(e.X, e.Y);
 
             //Figure out if we are starting a rectangle
             if (e.Button == MouseButtons.Left)
@@ -50,11 +50,11 @@ namespace LocalBookmarks
         {
             BookmarkUIObj bookmark = new(ParentFolder);
             System.Drawing.Point ControlPostion = Viking.UI.State.ViewerForm.PointToClient(Cursor.Position);
-            Vector2 WorldPosition = Viking.UI.State.ViewerControl.ScreenToWorld(ControlPostion.X, ControlPostion.Y);
+            Geometry.Vector2 WorldPosition = Viking.UI.State.ViewerControl.ScreenToWorld(ControlPostion.X, ControlPostion.Y);
 
             Viking.VolumeModel.IVolumeToSectionTransform mapping = Parent.Section.ActiveSectionToVolumeTransform;
 
-            bool mappedToSection = mapping.TryVolumeToSection(WorldPosition, out Vector2 SectionPosition);
+            bool mappedToSection = mapping.TryVolumeToSection(WorldPosition, out Geometry.Vector2 SectionPosition);
 
             bookmark.X = WorldPosition.X;
             bookmark.Y = WorldPosition.Y;

@@ -96,6 +96,11 @@ namespace WebAnnotationModel
         bool TryGetObjectByID(KEY key, [NotNullWhen(true)] out OBJECT obj);
 
         /// <summary>
+        /// Snapshot of every object in the local cache. Does not contact the server; safe to enumerate while the store changes.
+        /// </summary>
+        IReadOnlyCollection<OBJECT> CachedObjects { get; }
+
+        /// <summary>
         /// Cache-only bulk lookup. Does not contact the server.
         /// <paramref name="found"/> and <paramref name="missing"/> are in request order.
         /// </summary>

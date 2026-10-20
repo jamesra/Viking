@@ -3,6 +3,7 @@ using Geometry;
 using GeometryTests.FSCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace GeometryTests
@@ -84,6 +85,64 @@ namespace GeometryTests
                     return p.GetRelation(inner) == ShapeRelation.Contained && p.Contains(inner);
                 }),
                 nameof(NestedScaleIsContained));
+
+        /// <summary>
+        /// A ring around a hole, inside the solid part, covers the hole's area, which is outside this polygon:
+        /// Intersecting, not covered. The same ring with that hole cut out of it is still covered.
+        /// </summary>
+        [TestMethod]
+        public void RingEnclosingAHoleIsNotCovered() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbHoledPolygon(), Arb.From(Gen.Choose(40, 90)), (p, percent) =>
+                {
+                    Polygon hole = p.InteriorPolygons[0];
+                    Polygon enclosing = new Polygon(p.ExteriorRing).Scale(percent / 100.0, p.Centroid);
+                    Polygon annulus = new(enclosing.ExteriorRing, [hole.ExteriorRing]);
+                    return p.GetRelation(enclosing) == ShapeRelation.Intersecting
+                        && !p.Covers(enclosing) && !p.Contains(enclosing)
+                        && p.Covers(annulus);
+                }),
+                nameof(RingEnclosingAHoleIsNotCovered));
+
+        [TestMethod]
+        public void BoxAroundAHoleIsNotCovered()
+        {
+            Polygon holed = new(Square(0, 10), [Square(4, 6)]);
+            Polygon aroundHole = new(Square(2, 8));
+            Assert.AreEqual(ShapeRelation.Intersecting, holed.GetRelation(aroundHole));
+            Assert.IsFalse(holed.Covers(aroundHole));
+            Assert.IsFalse(holed.Covers((IShape2D)aroundHole));
+            Assert.IsFalse(holed.Contains(aroundHole));
+            Assert.IsTrue(holed.Covers(new Polygon(Square(2, 8), [Square(4, 6)])), "Same hole cut out");
+            Assert.IsTrue(holed.Covers(new Polygon(Square(1, 3))), "Beside the hole");
+        }
+
+        /// <summary>Every hole corner sits on the enclosing ring, so no hole vertex is strictly inside it.</summary>
+        [TestMethod]
+        public void BoxWithHoleCornersOnItsEdgesIsNotCovered()
+        {
+            Vector2[] diamond = [new(5, 3), new(7, 5), new(5, 7), new(3, 5), new(5, 3)];
+            Polygon holed = new(Square(0, 10), [diamond]);
+            Polygon aroundHole = new(Square(3, 7));
+            Assert.AreEqual(ShapeRelation.Intersecting, holed.GetRelation(aroundHole));
+            Assert.IsFalse(holed.Covers(aroundHole));
+        }
+
+        /// <summary>
+        /// Reaches halfway into the hole along the hole's top and bottom edges, so no ring crosses another and
+        /// no vertex is inside the hole; only the overlap of the two areas shows it.
+        /// </summary>
+        [TestMethod]
+        public void BoxReachingIntoAHoleAlongItsEdgesIsNotCovered()
+        {
+            Polygon holed = new(Square(0, 10), [Square(4, 6)]);
+            Polygon intoHole = new([new(2, 4), new(5, 4), new(5, 6), new(2, 6), new(2, 4)]);
+            Assert.AreEqual(ShapeRelation.Intersecting, holed.GetRelation(intoHole));
+            Assert.IsFalse(holed.Covers(intoHole));
+        }
+
+        static Vector2[] Square(double min, double max) =>
+            [new(min, min), new(max, min), new(max, max), new(min, max), new(min, min)];
 
         [TestMethod]
         public void DisjointTranslateIsNone() =>
@@ -210,6 +269,98 @@ namespace GeometryTests
                     return cut.IsValid() && cut.Area > 0 && cut.Area < p.Area;
                 }),
                 nameof(WalkPolygonCutHorizontalThroughBoxCenter));
+
+        /// <summary>
+        /// A cut line through the middle of a convex polygon crosses its outline exactly twice, so both walk directions
+        /// must yield valid pieces that together cover the original. Mirrors the pen retrace, which cuts both ways.
+        /// </summary>
+        [TestMethod]
+        public void WalkPolygonCutConvexRandomLineSplitsIntoTwoValidPieces() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbConvexPolygon(), Arb.From(Gen.Choose(0, 359)), (p, degrees) =>
+                {
+                    Rectangle bb = p.BoundingBox;
+                    Vector2 center = bb.Center;
+                    double reach = Math.Max(bb.Width, bb.Height) * 2;
+                    double radians = degrees * Math.PI / 180.0;
+                    Vector2 direction = new(Math.Cos(radians) * reach, Math.Sin(radians) * reach);
+                    Vector2[] cutLine = [center - direction, center + direction];
+
+                    Polygon clockwise = Polygon.WalkPolygonCut(p, RotationDirection.Clockwise, cutLine);
+                    Polygon counter = Polygon.WalkPolygonCut(p, RotationDirection.Counterclockwise, cutLine);
+
+                    return (clockwise.IsValid() && counter.IsValid()).Label("pieces are valid")
+                        .And(() => Math.Abs(clockwise.Area + counter.Area - p.Area) < p.Area * 1e-6).Label("areas sum to the original");
+                }),
+                nameof(WalkPolygonCutConvexRandomLineSplitsIntoTwoValidPieces));
+
+        /// <summary>
+        /// Random concave polygons with holes from the shared generator, cut by a line through the bounding box center.
+        /// Only lines that cross the exterior outline exactly twice are cut, since WalkPolygonCut takes the first two crossings.
+        /// Any generated polygon that is itself invalid is reported with <see cref="Polygon.DescribeInvalidity"/>.
+        /// </summary>
+        [TestMethod]
+        public void WalkPolygonCutConcaveRandomPolygonsGiveValidPieces()
+        {
+            Arb.Register<Vector2Generators>();
+            CoreCheck.Run(
+                Prop.ForAll<Vector2[], int>((points, nLines) =>
+                {
+                    if (points.Length < 3)
+                        return true.ToProperty();
+
+                    Polygon p = LineSegmentGenerators.GenConcavePolygonWithInteriorHolesFromPoints(points, Math.Max(nLines, 3));
+                    string sourceProblem = p.DescribeInvalidity();
+                    if (sourceProblem is not null)
+                        return false.Label($"generated polygon invalid: {sourceProblem}");
+
+                    Rectangle bb = p.BoundingBox;
+                    if (bb.Height < 1 || bb.Width < 1)
+                        return true.ToProperty();
+
+                    Vector2[] cutLine = [new(bb.Left - 1, bb.Center.Y), new(bb.Right + 1, bb.Center.Y)];
+                    if (p.IntersectingSegmentIndices(cutLine.ToLineSegments()).Count != 2)
+                        return true.ToProperty();
+
+                    Polygon clockwise = Polygon.WalkPolygonCut(p, RotationDirection.Clockwise, cutLine);
+                    Polygon counter = Polygon.WalkPolygonCut(p, RotationDirection.Counterclockwise, cutLine);
+
+                    return (clockwise.IsValid() && counter.IsValid()).Label("pieces are valid")
+                        .And(() => Math.Abs(clockwise.Area + counter.Area - p.Area) < p.Area * 1e-6).Label("areas sum to the original");
+                }),
+                nameof(WalkPolygonCutConcaveRandomPolygonsGiveValidPieces));
+        }
+
+        /// <summary>
+        /// A ring that crosses itself along its top edge, cut by a vertical line left of the fold, leaves one clean side and one
+        /// side that inherits the fold. Only the clean side may be produced; the pen retrace relies on the other side throwing.
+        /// </summary>
+        [TestMethod]
+        public void WalkPolygonCutSelfIntersectingSourceOnlyYieldsTheCleanSide()
+        {
+            Polygon source = new(
+            [
+                new(0, 0), new(10, 0), new(10, 10), new(8, 10), new(5, 11), new(6, 10), new(7, 11), new(4, 10), new(0, 10), new(0, 0)
+            ]);
+            Assert.IsNotNull(source.DescribeInvalidity(), "the fixture ring must cross itself");
+
+            Vector2[] cutLine = [new(2, -1), new(2, 11)];
+            List<Polygon> pieces = [];
+            foreach (RotationDirection direction in new[] { RotationDirection.Clockwise, RotationDirection.Counterclockwise })
+            {
+                try
+                {
+                    pieces.Add(Polygon.WalkPolygonCut(source, direction, cutLine));
+                }
+                catch (ArgumentException)
+                {
+                }
+            }
+
+            Assert.AreEqual(1, pieces.Count, "exactly one side of the cut is free of the fold");
+            Assert.IsTrue(pieces[0].IsValid());
+            Assert.AreEqual(20.0, pieces[0].Area, 1e-6);
+        }
 
         static bool RingsClose(Vector2[] a, Vector2[] b)
         {

@@ -10,6 +10,10 @@ using VikingXNAWinForms;
 
 namespace Viking.UI
 {
+    /// <summary>
+    /// The edit <see cref="PenInputHelper.ApplyVertexAction"/> applies to the path being drawn.
+    /// <see cref="PenInputHelper.GetActionForFullResolutionPath"/> chooses ADD, REPLACE or NONE for a pen move.
+    /// </summary>
     public enum PathVertexAction
     {
         REMOVE, //Remove the newest vertex
@@ -19,15 +23,11 @@ namespace Viking.UI
         CUT_ERASE //Remove all verticies after a vertex
     };
 
-    [Flags]
-    public enum PenInputCompletionTriggers
-    {
-        None, //Never fire the OnPathComplete event
-        Closure, //Signal the path is complete when a closed path is formed
-        Tap, //Signal the path is complete when the pen is removed from the surface and contacts the path
-    }
 
-
+    /// <summary>
+    /// Collection-changed arguments for a pen path edit that also carry the pen state at the time of the change.
+    /// Mirrors every <see cref="NotifyCollectionChangedEventArgs"/> constructor with a leading <c>penState</c>.
+    /// </summary>
     public class PenPathChangedEventArgs : NotifyCollectionChangedEventArgs
     {
         readonly PenEventArgs PenState;
@@ -91,6 +91,15 @@ namespace Viking.UI
     public delegate void PenPathChangedEventHandler(object sender, PenPathChangedEventArgs e);
 
 
+    /// <summary>
+    /// Builds a freehand path in world coordinates from mouse and pen events on a <see cref="Viking.UI.Controls.SectionViewerControl"/>.
+    /// Raises collection-changed, loop and completion events as the path grows, is erased, or is finished.
+    /// </summary>
+    /// <remarks>
+    /// Not thread safe: all members must be used on the UI thread that raises the viewer's input events.
+    /// The live constructor subscribes to the viewer's events; the owner must call <see cref="UnsubscribeEvents"/>
+    /// when done or the viewer keeps this helper alive.
+    /// </remarks>
     public class PenInputHelper : System.Collections.Specialized.INotifyCollectionChanged
     {
         /// <summary>
@@ -113,22 +122,17 @@ namespace Viking.UI
         public static double interactDistance = 50;
 
         /// <summary>
-        /// The distance we can erase in pixels at max pressure
-        /// </summary>
-        public static double maxEraseDistance = 50;
-
-        /// <summary>
-        /// The distance we can erase in pixels at min pressure
-        /// </summary>
-        public static double minEraseDistance = 5;
-
-
-        /// <summary>
         /// When set to true this property informs callers that the PenInputHelper will all ignore pen input until the pen is removed from the surface and touches within the interact distance.  
         /// 
         /// This allows other UI interactions to occur without affecting our path.
         /// </summary>
         public bool IgnoringThisPenContact { get; private set; }
+
+        /// <summary>
+        /// Optional test of a screen point (viewer pixels). Input on a point it blocks is not part of the stroke, so
+        /// on-screen buttons over the viewer can be pressed without extending the path.
+        /// </summary>
+        public Func<int, int, bool> IsScreenPointBlocked { get; set; }
 
         public Path path = new();
 
@@ -174,6 +178,13 @@ namespace Viking.UI
         /// <param name="Path"></param>
         public delegate void OnPathCompleteEventHandler(object sender, Vector2[] Path);
         public event OnPathCompleteEventHandler OnPathCompleted;
+
+        /// <summary>
+        /// Raised when the left button is released with fewer than two points in the path, so the stroke can never
+        /// complete. Without it the owning command stays current with nothing to finish it. The owner should end
+        /// the command. Raised on the UI thread from the viewer's MouseUp.
+        /// </summary>
+        public event EventHandler OnPathAbandoned;
 
         public event System.Collections.Specialized.NotifyCollectionChangedEventHandler OnPathChanged
         {
@@ -297,9 +308,10 @@ namespace Viking.UI
         }
 
         /// <summary>
-        /// This constructor is used for test cases
+        /// This constructor is used for test cases. Default tolerance matches the
+        /// WebAnnotation Pen Simplify Threshold preference default (4 screen pixels).
         /// </summary>
-        /// <param name="simplifiedPathToleranceInPixels"></param>
+        /// <param name="simplifiedPathToleranceInPixels">Max screen-pixel drift from the stroke.</param>
         internal PenInputHelper(double simplifiedPathToleranceInPixels = 4.0)
         {
             AssignID();
@@ -307,6 +319,12 @@ namespace Viking.UI
             NumCurveInterpolations = Geometry.Global.NumCurveInterpolationPoints(false);
         }
 
+        /// <summary>
+        /// Live pen input. Pass the annotation Pen Simplify Threshold so stroke simplify
+        /// matches context-menu Simplify Shape and saved mask contours.
+        /// </summary>
+        /// <param name="Parent">Viewer that owns mouse/pen events and camera scale.</param>
+        /// <param name="simplifiedPathToleranceInPixels">Max screen-pixel drift from the stroke.</param>
         public PenInputHelper(Viking.UI.Controls.SectionViewerControl Parent, double simplifiedPathToleranceInPixels = 4.0) : this()
         {
             this.Parent = Parent;
@@ -326,6 +344,9 @@ namespace Viking.UI
                 System.Diagnostics.Trace.WriteLine(string.Format("PenInputHelper {0} Subscribed to events", this.ID));
         }
 
+        /// <summary>
+        /// Detaches this helper from the viewer's mouse, camera and pen events. Call when the owning command ends.
+        /// </summary>
         public void UnsubscribeEvents()
         {
             Parent.MouseMove -= this.OnMouseMove;
@@ -376,6 +397,9 @@ namespace Viking.UI
 
         private void OnMouseMove(object sender, MouseEventArgs e)
         {
+            if (IsScreenPointBlocked?.Invoke(e.X, e.Y) == true)
+                return;
+
             Vector2 cursor_position = Parent.ScreenToWorld(e.X, e.Y);
 
             bool EraseButtonDown = e.Button.Middle(); ;
@@ -420,8 +444,11 @@ namespace Viking.UI
         /// </summary>
         /// <param name="action">ADD: Adds the input to the currrent path
         ///                      REPLACE: Replaces the newest vertex in the path with the input
-        ///                      REMOVE: If there is input, finds the nearest path vertex and removes all verticies in the path placed after that vertex.  If there is no input, removes the most recently placed vertex/param>
-        /// <param name="input"></param>
+        ///                      REMOVE: Removes the most recently placed vertex; input is ignored
+        ///                      CUT_ERASE: Removes the path vertices placed after the point nearest the input
+        ///                      NONE: Does nothing</param>
+        /// <param name="input">World position for ADD, REPLACE and CUT_ERASE; required (null throws) for those actions.</param>
+        /// <exception cref="ArgumentException">The action is not a defined <see cref="PathVertexAction"/>.</exception>
         public void ApplyVertexAction(PathVertexAction action, Vector2? input)
         {
             switch (action)
@@ -459,10 +486,14 @@ namespace Viking.UI
 
         private void OnMouseUp(object sender, MouseEventArgs e)
         {
+            System.Diagnostics.Trace.WriteLine($"PenInput: mouse up button={e.Button} points={Points.Count}");
             if (e.Button.LeftOnly())
             {
                 if (Points.Count <= 1)
+                {
+                    OnPathAbandoned?.Invoke(this, EventArgs.Empty);
                     return;
+                }
 
                 OnPathCompleted?.Invoke(this, [.. this.Points]);
             }
@@ -472,8 +503,14 @@ namespace Viking.UI
         {
         }
 
+        /// <summary>
+        /// The pen left hover range of the tablet, which is the pen's "finished drawing" signal: lifting from the
+        /// surface alone only pauses the stroke (see <see cref="OnPenLeaveContact"/>). Completes the path unless the
+        /// last touch was unrelated to it.
+        /// </summary>
         protected virtual void OnPenLeaveRange(object sender, PenEventArgs e)
         {
+            System.Diagnostics.Trace.WriteLine($"PenInput: leave range points={Points.Count} ignoringContact={IgnoringThisPenContact}");
             if (IgnoringThisPenContact)
                 return;
 
@@ -488,6 +525,12 @@ namespace Viking.UI
         /// <param name="e"></param>
         protected virtual void OnPenContact(object sender, PenEventArgs e)
         {
+            if (IsScreenPointBlocked?.Invoke(e.X, e.Y) == true)
+            {
+                IgnoringThisPenContact = true;
+                return;
+            }
+
             if (Points.Count == 0)
             {
                 IgnoringThisPenContact = false;
@@ -496,6 +539,7 @@ namespace Viking.UI
 
             Vector2 cursor_position = Parent.ScreenToWorld(e.X, e.Y);
             IgnoringThisPenContact = this.path.Distance(cursor_position) > MaxInteractDistanceInPixels(Parent.Camera.Downsample);
+            System.Diagnostics.Trace.WriteLine($"PenInput: contact points={Points.Count} ignoringContact={IgnoringThisPenContact}");
 
             if (IgnoringThisPenContact)
                 return;
@@ -529,8 +573,16 @@ namespace Viking.UI
             }
         }
 
+        /// <summary>
+        /// The pen lifted from the surface. The stroke is paused, not finished: the next touch resumes it if it lands
+        /// within the resume distance of the last point. A touch that was ignored as unrelated ends with its
+        /// contact, otherwise <see cref="OnPenLeaveRange"/> would never complete the stroke after one stray touch
+        /// far from the path.
+        /// </summary>
         protected virtual void OnPenLeaveContact(object sender, PenEventArgs e)
         {
+            System.Diagnostics.Trace.WriteLine($"PenInput: leave contact points={Points.Count} ignoringContact={IgnoringThisPenContact}");
+            IgnoringThisPenContact = false;
             MustCheckResumeDistance = true;
             LastPenPosition = new Vector2?();
         }
@@ -543,12 +595,6 @@ namespace Viking.UI
                 return downsample * resumeDistance.Value;
 
             return double.PositiveInfinity;
-        }
-
-        private static double EraseDistanceInPixels(double NormalizedPressure, double downsample)
-        {
-            double scalar = (minEraseDistance + ((maxEraseDistance - minEraseDistance) * NormalizedPressure));
-            return downsample * scalar;
         }
 
         private static double CompletionDistanceInPixels(double downsample) => downsample * completionDistance;

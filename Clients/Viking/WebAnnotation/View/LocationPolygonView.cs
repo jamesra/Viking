@@ -142,7 +142,7 @@ namespace WebAnnotation.View
                 (byte)(newR * 255f),
                 (byte)(newG * 255f),
                 (byte)(newB * 255f),
-                _Color.A
+                (byte)(Global.AnnotationSettings.PolygonPointOpacity * 255.0)
             );
         }
 
@@ -151,13 +151,23 @@ namespace WebAnnotation.View
             get => polygonMesh.Alpha;
             set
             {
+                // Control points use PolygonPointOpacity, not the polygon fill alpha; see SyncControlPointOpacity.
                 polygonMesh.Alpha = value;
-                if (ControlPointView != null)
-                {
-                    ControlPointView.Alpha = value;
-                    ControlPointView.UpdateViews();
-                }
             }
+        }
+
+        /// <summary>
+        /// Rebuilds the control point circles when <c>PolygonPointOpacity</c> changed since they were last built.
+        /// Called from <see cref="Draw"/> on the render thread each frame, like the radius sync.
+        /// </summary>
+        private void SyncControlPointOpacity()
+        {
+            float opacity = (float)Global.AnnotationSettings.PolygonPointOpacity;
+            if (Math.Abs(ControlPointView.Alpha - opacity) < 1f / 512f)
+                return;
+
+            ControlPointView.Alpha = opacity;
+            ControlPointView.UpdateViews();
         }
 
         private double _ControlPointRadius;
@@ -183,8 +193,16 @@ namespace WebAnnotation.View
         public double lineWidth = 32;
 
         public static uint NumInterpolationPoints = Global.NumClosedCurveInterpolationPoints;
+        /// <summary>
+        /// Non-null only when this view was built because a pen command changed the boundary of an existing
+        /// polygon; collects the timings written by <see cref="PolygonViewTimingLog"/>.
+        /// </summary>
+        private readonly PolygonViewTiming timing;
+
         public LocationPolygonView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {
+            long constructionStart = Stopwatch.GetTimestamp();
+            timing = PolygonViewTimingLog.TryBegin(obj.ID);
             _ControlPointRadius = Global.AnnotationSettings.PolygonPointRadius;
             var mappedShape = mapper.TryMapShapeSectionToVolume(obj.MosaicShape.ToSqlGeometry());
             if (mappedShape is null)
@@ -208,9 +226,15 @@ namespace WebAnnotation.View
 
             ControlPointView = new PointSetView(GetControlPointColor(), Global.AnnotationSettings.PolygonPointRadius)
             {
-                Points = GetAllPolygonVertices(VolumePolygon)
+                Points = GetAllPolygonVertices(VolumePolygon),
+                UseBorderedCircles = true
             };
             ControlPointView.UpdateViews();
+
+            timing?.RecordConstruction(
+                Stopwatch.GetTimestamp() - constructionStart,
+                VolumePolygon.TotalUniqueVertices,
+                VolumePolygon.InteriorPolygons.Count);
 
             //polygonMesh = TriangleNetExtensions.CreateMeshForPolygon2D(SmoothedVolumePolygon, this.HSLColor);
             //polygonMesh = SmoothedVolumePolygon.CreateMeshForPolygon2D(this.HSLColor);
@@ -225,6 +249,16 @@ namespace WebAnnotation.View
                     SmoothedVolumePolygon.InteriorPolygons[iInner]);
             }
             */
+        }
+
+        /// <summary>
+        /// Called when the background <see cref="Initialize"/> task faults. The view stays uninitialized and is skipped by
+        /// every draw, so the failure is traced and, for pen-edit views, written to <see cref="PolygonViewTimingLog"/>.
+        /// </summary>
+        internal void ReportInitializeFailure(Exception ex)
+        {
+            Trace.WriteLine($"LocationPolygonView.Initialize failed for location {ID}: {ex}");
+            timing?.RecordInitializeFailure(ex);
         }
 
         private int _Initializing = 0;
@@ -244,10 +278,12 @@ namespace WebAnnotation.View
                 return Task.CompletedTask;
             }
 
+            long initializeStart = Stopwatch.GetTimestamp();
             ControlPointView.Points = GetAllPolygonVertices(VolumePolygon);
             ControlPointView.PointRadius = Global.AnnotationSettings.PolygonPointRadius;
             ControlPointView.UpdateViews();
 
+            long smoothStart = Stopwatch.GetTimestamp();
             try
             {
                 SmoothedVolumePolygon = VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPointsForDisplay);
@@ -258,9 +294,16 @@ namespace WebAnnotation.View
                 SmoothedVolumePolygon = VolumePolygon;
             }
 
-            polygonMesh = new SolidPolygonView(SmoothedVolumePolygon, HSLColor);
+            long smoothTicks = Stopwatch.GetTimestamp() - smoothStart;
+
             // Warm the cut-fill cache while the cell is on screen so a later retrace does not triangulate it on the pen thread.
-            WebAnnotation.UI.Commands.PolygonCutFillCache.Begin(SmoothedVolumePolygon);
+            // The render mesh is built from this same triangulation, so the ring is triangulated once.
+            Task<Geometry.Meshing.PolygonCutFill> triangulation = WebAnnotation.UI.Commands.PolygonCutFillCache.Begin(SmoothedVolumePolygon);
+            SolidPolygonView mesh = new(SmoothedVolumePolygon, HSLColor, sharedTriangulation: triangulation);
+            // Must be set before polygonMesh is published: the mesh build starts on the first draw.
+            mesh.MeshBuildCompleted = timing is null ? null : timing.RecordTriangulation;
+            mesh.MeshBuildStarted = timing is null ? null : timing.RecordTriangulationStarted;
+            polygonMesh = mesh;
             CreateLabelObjects();
 
             InteriorHoleViews = new LocationInteriorHoleView[VolumePolygon.InteriorPolygons.Count];
@@ -271,6 +314,10 @@ namespace WebAnnotation.View
                     SmoothedVolumePolygon.InteriorPolygons[iInner]);
             }
 
+            timing?.RecordInitialization(
+                smoothTicks,
+                Stopwatch.GetTimestamp() - initializeStart - smoothTicks,
+                SmoothedVolumePolygon.TotalUniqueVertices);
 
             Interlocked.Exchange(ref _Initialized, 1);
             Interlocked.Exchange(ref _Initializing, 0);
@@ -302,7 +349,7 @@ namespace WebAnnotation.View
         public void CreateLabelObjects() => curveLabels = new StructureCircleLabels(modelObj, InscribedCircle);
 
         /// <summary>
-        /// Return a collection of GridVector2s containing the location of every vertex
+        /// Return a collection of Geometry.Vector2s containing the location of every vertex
         /// </summary>
         /// <param name="polygon"></param>
         /// <returns></returns>
@@ -356,8 +403,17 @@ namespace WebAnnotation.View
                           LocationPolygonView[] listToDraw)
         {
 
-            listToDraw = [.. listToDraw.Where(l => l.Initialized)];
-            OverlappedLinkCircleView[] overlappedLocations = [.. listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene))];
+            listToDraw = InitializedViews(listToDraw);
+
+            List<OverlappedLinkCircleView>? overlappedList = null;
+            for (int i = 0; i < listToDraw.Length; i++)
+            {
+                OverlappedLinkCircleView overlapped = listToDraw[i].OverlappedLinkView;
+                if (overlapped != null && overlapped.IsVisible(scene))
+                    (overlappedList ??= []).Add(overlapped);
+            }
+
+            OverlappedLinkCircleView[] overlappedLocations = overlappedList is null ? [] : [.. overlappedList];
             OverlappedLinkCircleView.Draw(device, scene, basicEffect, overlayEffect, overlappedLocations);
 
             double radius_scalar = Math.Sqrt((double)scene.Camera.Downsample);
@@ -367,48 +423,62 @@ namespace WebAnnotation.View
             double visibleThresholdPx = sceneWidthPixels * Global.AnnotationSettings.PolygonVertexPointsVisibleAtWidthFraction;
             double hiddenThresholdPx = sceneWidthPixels * Global.AnnotationSettings.PolygonVertexPointsHiddenAtWidthFraction;
 
+            // Control points draw at PolygonPointOpacity (SyncControlPointOpacity), not the polygon fill alpha, and fade
+            // out as they shrink on screen between the visible and hidden width thresholds.
             void DrawControlPoints(LocationPolygonView lpv, OverlayStyle overlayStyle)
             {
                 if (lpv.ControlPointView == null) return;
-                 
+
                 double pointRadiusWorld = lpv.ControlPointRadius;
                 double renderedPointDiameterPx = (2 * pointRadiusWorld) / scene.Camera.Downsample;
 
-                float visibilityAlpha;
                 if (renderedPointDiameterPx <= hiddenThresholdPx)
                 {
                     return; // Skip draw entirely—do not render as transparent
                 }
+
+                lpv.SyncControlPointOpacity();
                 if (renderedPointDiameterPx >= visibleThresholdPx)
                 {
-                    visibilityAlpha = 1f;
+                    lpv.ControlPointView.Draw(device, scene, overlayStyle);
+                    return;
                 }
-                else
-                {
-                    double range = visibleThresholdPx - hiddenThresholdPx;
-                    visibilityAlpha = (float)((renderedPointDiameterPx - hiddenThresholdPx) / range);
-                } 
 
-                float baseAlpha = lpv.Alpha;
-                float effectiveAlpha = baseAlpha * visibilityAlpha;
-                lpv.ControlPointView.Alpha = effectiveAlpha;
+                double range = visibleThresholdPx - hiddenThresholdPx;
+                float visibilityAlpha = (float)((renderedPointDiameterPx - hiddenThresholdPx) / range);
+
+                float baseAlpha = lpv.ControlPointView.Alpha;
+                lpv.ControlPointView.Alpha = baseAlpha * visibilityAlpha;
                 lpv.ControlPointView.Draw(device, scene, overlayStyle);
                 lpv.ControlPointView.Alpha = baseAlpha;
             }
 
+            //Todo: Check if control points will be visible.
+            bool hidePoints = Global.PenMode && Global.AnnotationSettings.HidePolygonPointsInPenMode;
 #if DEBUG
-            foreach (var lpv in listToDraw.Where(lpv => lpv.ControlPointView != null))
+            if (!hidePoints)
             {
-                if (Math.Abs(lpv.ControlPointRadius - expected_radius) > 0.001)
-                    lpv.ControlPointRadius = expected_radius;
+                for (int i = 0; i < listToDraw.Length; i++)
+                {
+                    LocationPolygonView lpv = listToDraw[i];
+                    if (lpv.ControlPointView is null)
+                        continue;
 
-                DrawControlPoints(lpv, OverlayStyle.Alpha);
+                    if (Math.Abs(lpv.ControlPointRadius - expected_radius) > 0.001)
+                        lpv.ControlPointRadius = expected_radius;
+
+                    DrawControlPoints(lpv, OverlayStyle.Alpha);
+                }
             }
 #else
-            if (!Global.PenMode)
+            if (!hidePoints)
             {
-                foreach (var lpv in listToDraw.Where(lpv => lpv.ControlPointView != null))
+                for (int i = 0; i < listToDraw.Length; i++)
                 {
+                    LocationPolygonView lpv = listToDraw[i];
+                    if (lpv.ControlPointView is null)
+                        continue;
+
                     if (lpv.ControlPointRadius != Global.AnnotationSettings.PolygonPointRadius)
                         lpv.ControlPointRadius = Global.AnnotationSettings.PolygonPointRadius;
 
@@ -419,8 +489,48 @@ namespace WebAnnotation.View
             //CurveView.Draw(device, scene, lineManager, basicEffect, overlayEffect, 0, listToDraw.Select(l => l.curveView).ToArray());
 
             //MeshView<VertexPositionColor>.Draw(device, scene, DeviceEffectsStore<PolygonOverlayEffect>.TryGet(device), meshmodels: listToDraw.Select(l => l.polygonMesh));
-            SolidPolygonView.Draw(device, scene, OverlayStyle.Luma, listToDraw.Select(l => l.polygonMesh));
+            SolidPolygonView[] meshes = new SolidPolygonView[listToDraw.Length];
+            for (int i = 0; i < meshes.Length; i++)
+                meshes[i] = listToDraw[i].polygonMesh;
+
+            SolidPolygonView.Draw(device, scene, OverlayStyle.Luma, meshes);
             //FilledClosedCurvePolygonView.Draw(device, scene, listToDraw.Select(l => l.polyView));
+        }
+
+        /// <summary>
+        /// The views that have finished initializing, in their original order. Returns the same array when all of them have,
+        /// which is the usual case.
+        /// </summary>
+        /// <remarks>
+        /// Views initialize on other threads, so each view's state is read once per pass and the result is never sized from an
+        /// earlier read.
+        /// </remarks>
+        private static LocationPolygonView[] InitializedViews(LocationPolygonView[] views)
+        {
+            int firstUninitialized = -1;
+            for (int i = 0; i < views.Length; i++)
+            {
+                if (!views[i].Initialized)
+                {
+                    firstUninitialized = i;
+                    break;
+                }
+            }
+
+            if (firstUninitialized < 0)
+                return views;
+
+            List<LocationPolygonView> initialized = new(views.Length);
+            for (int i = 0; i < firstUninitialized; i++)
+                initialized.Add(views[i]);
+
+            for (int i = firstUninitialized + 1; i < views.Length; i++)
+            {
+                if (views[i].Initialized)
+                    initialized.Add(views[i]);
+            }
+
+            return [.. initialized];
         }
 
         public override bool Contains(Geometry.Vector2 Position)
@@ -560,47 +670,7 @@ namespace WebAnnotation.View
 
 
         public LocationAction GetMouseClickActionForPositionOnAnnotationWithPen(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
-        {
-            LocationID = ID;
-
-            if (modifierKeys.ShiftPressed())
-            {
-                if (VisibleSectionNumber == (int)modelObj.Z)
-                {
-                    if (SmoothedVolumePolygon.Covers(WorldPosition))
-                    {
-                        Circle TranslateTargetCircle = new(InscribedCircle.Center, InscribedCircle.Radius / 2.0);
-                        if (TranslateTargetCircle.Covers(WorldPosition))
-                        {
-                            LocationID = ID;
-                            return LocationAction.TRANSLATE;
-                        }
-
-                        return LocationAction.CREATELINK;
-                    }
-                }
-            }
-            else if (modifierKeys.CtrlPressed())
-            {
-                //Check to see if we are on a line segment to add/remove control points.  Otherwise cut a hole
-                if (SmoothedVolumePolygon.Covers(WorldPosition))
-                {
-                    LocationID = ID;
-                    return LocationAction.CUTHOLE;
-                }
-                else if (SmoothedVolumePolygon.InteriorPolygonContains(WorldPosition))
-                {
-                    LocationID = ID;
-                    return LocationAction.REMOVEHOLE;
-                }
-            }
-            else if (!modifierKeys.ShiftOrCtrlPressed())
-            {
-                return LocationAction.CHANGEBOUNDARY;
-            }
-
-            return LocationAction.NONE;
-        }
+            => PolygonPenModeContact.Action(SmoothedVolumePolygon, InscribedCircle, ID, modelObj.Z, WorldPosition, VisibleSectionNumber, modifierKeys, out LocationID);
 
         public LocationAction GetMouseClickActionForPositionOnAnnotationWithoutPen(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
@@ -683,7 +753,6 @@ namespace WebAnnotation.View
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
-
             if (Global.PenMode)
             {
                 return GetMouseClickActionForPositionOnAnnotationWithPen(WorldPosition, VisibleSectionNumber, modifierKeys, out LocationID);
@@ -698,7 +767,7 @@ namespace WebAnnotation.View
 
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            if (args.PropertyName == "Label" || args.PropertyName == "Attributes")
+            if (IsParentPropertyAffectingLabels(args.PropertyName))
             {
                 CreateLabelObjects();
             }
@@ -749,6 +818,23 @@ namespace WebAnnotation.View
             }
         }
 
+        /// <summary>
+        /// The cut-hole choice for a closed pen loop drawn entirely inside this polygon's exterior ring
+        /// and clear of every existing interior hole. Returns an empty list otherwise, including when the
+        /// loop touches a hole (that case is a replace-hole choice, not a new hole).
+        /// Called by the overlay after a stroke because the stroke log only names annotations the path crossed,
+        /// and a loop wholly inside a polygon crosses nothing.
+        /// </summary>
+        public IReadOnlyList<CutHoleAction> GetCutHoleActionsForLoop(Path path)
+        {
+            if (Initialized == false || Z != AnnotationOverlay.CurrentOverlay.CurrentSectionNumber || !TypeCode.AllowsInteriorHoles())
+            {
+                return [];
+            }
+
+            return [.. Shared2DShapeActionsForPath.IdentifyPossibleInteriorActions(ID, VolumePolygon, SmoothedVolumePolygon, path).OfType<CutHoleAction>()];
+        }
+
         public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
         {
             if (Initialized == false)
@@ -783,6 +869,60 @@ namespace WebAnnotation.View
             //Check for links to create
             listActions.AddRange(interaction_log.IdentifyPossibleLinkActions(modelObj.ID));
             return listActions;
+        }
+    }
+
+    /// <summary>
+    /// Pen Mode mouse and hardware-pen contact for a polygon.
+    /// Unmodified hits return <see cref="LocationAction.NONE"/> so the overlay starts free-draw;
+    /// retrace is chosen on the confirmation ring after the stroke.
+    /// Ctrl still cuts or fills holes. Shift still translates or links.
+    /// Kept off <see cref="LocationPolygonView"/> so callers can evaluate a hit without loading that view's type initializer.
+    /// </summary>
+    internal static class PolygonPenModeContact
+    {
+        public static LocationAction Action(
+            Polygon smoothedVolumePolygon,
+            Circle inscribedCircle,
+            long locationId,
+            double sectionZ,
+            Geometry.Vector2 worldPosition,
+            int visibleSectionNumber,
+            Viking.Input.ModifierKeys modifierKeys,
+            out long actionLocationId)
+        {
+            actionLocationId = locationId;
+
+            if (modifierKeys.ShiftPressed())
+            {
+                if (visibleSectionNumber == (int)sectionZ)
+                {
+                    if (smoothedVolumePolygon.Covers(worldPosition))
+                    {
+                        Circle translateTargetCircle = new(inscribedCircle.Center, inscribedCircle.Radius / 2.0);
+                        if (translateTargetCircle.Covers(worldPosition))
+                        {
+                            return LocationAction.TRANSLATE;
+                        }
+
+                        return LocationAction.CREATELINK;
+                    }
+                }
+            }
+            else if (modifierKeys.CtrlPressed())
+            {
+                if (smoothedVolumePolygon.Covers(worldPosition))
+                {
+                    return LocationAction.CUTHOLE;
+                }
+
+                if (smoothedVolumePolygon.InteriorPolygonContains(worldPosition))
+                {
+                    return LocationAction.REMOVEHOLE;
+                }
+            }
+
+            return LocationAction.NONE;
         }
     }
 }

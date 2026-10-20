@@ -126,6 +126,9 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnMouseDown(object sender, MouseEventArgs e)
         {
+            if (TryCancelOnCancelButton(e.X, e.Y))
+                return;
+
             PenInput.Points.Clear();
             PenInput.Push(Parent.ScreenToWorld(e.X, e.Y));
             base.OnMouseDown(sender, e);
@@ -225,6 +228,8 @@ namespace WebAnnotation.UI.Commands
 
         protected PolyLineView PathView;
 
+        private PenCancelButton? cancelButton;
+
         public Path Path => PenInput.path;
 
         public PlaceGeometryWithPenCommandBase(Viking.UI.Controls.SectionViewerControl parent,
@@ -241,13 +246,16 @@ namespace WebAnnotation.UI.Commands
 #endif
 
             parent.Cursor = Cursors.Cross;
-            PenInput = new Viking.UI.PenInputHelper(parent);
+            PenInput = new Viking.UI.PenInputHelper(parent, Global.PenSimplifyThreshold);
             //Ensure any pen subscriptions are released in the OnDeactivate call
             System.Diagnostics.Trace.WriteLine($"PlaceCurveWithPenCommand {ID} Subscribed to events");
             PenInput.OnPathChanged += OnPenPathChanged;
             PenInput.OnPathCompleted += OnPenPathComplete;
+            PenInput.OnPathAbandoned += OnPenPathAbandoned;
             PenInput.OnProposedNextSegmentChanged += OnPenProposedNextSegmentChanged;
             PenInput.OnPathLoop += OnPathLoop;
+            // A touch on the red X must cancel, not extend the stroke.
+            PenInput.IsScreenPointBlocked = (x, y) => (cancelButton ??= new PenCancelButton(Parent)).HitTest(x, y);
             this.success_callback = success_callback;
 
             SetPathViewForDownsample(Parent.Camera.Downsample);
@@ -297,11 +305,23 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute() => Execute(PenInput.SimplifiedPath);
 
+        /// <summary>
+        /// The button was released before the stroke grew past its first point (a click with no drag). There is
+        /// nothing to place and nothing will complete the command, so end it instead of leaving the pen tool
+        /// current with the dot on screen.
+        /// </summary>
+        private void OnPenPathAbandoned(object sender, EventArgs e)
+        {
+            System.Diagnostics.Trace.WriteLine($"PlaceCurveWithPenCommand {ID} stroke abandoned before a second point; deactivating");
+            Deactivated = true;
+        }
+
         protected override void OnDeactivate()
         {
             System.Diagnostics.Trace.WriteLine($"PlaceCurveWithPenCommand {ID} Unubscribed to events");
             PenInput.OnPathChanged -= OnPenPathChanged;
             PenInput.OnPathCompleted -= OnPenPathComplete;
+            PenInput.OnPathAbandoned -= OnPenPathAbandoned;
             PenInput.OnProposedNextSegmentChanged -= OnPenProposedNextSegmentChanged;
             PenInput.OnPathLoop -= OnPathLoop;
             PenInput.UnsubscribeEvents();
@@ -388,9 +408,39 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
+        /// <summary>
+        /// Cancels the command like Escape when the screen point is on the red X. Returns true when it was, so the
+        /// caller can stop handling the input.
+        /// </summary>
+        protected bool TryCancelOnCancelButton(double screenX, double screenY)
+        {
+            if (!(cancelButton ??= new PenCancelButton(Parent)).HitTest(screenX, screenY))
+                return false;
+
+            CancelCommand();
+            return true;
+        }
+
+        protected override void OnMouseDown(object sender, MouseEventArgs e)
+        {
+            if (TryCancelOnCancelButton(e.X, e.Y))
+                return;
+
+            base.OnMouseDown(sender, e);
+        }
+
+        protected override void OnPenContact(object sender, PenEventArgs e)
+        {
+            if (TryCancelOnCancelButton(e.X, e.Y))
+                return;
+
+            base.OnPenContact(sender, e);
+        }
+
         public override void OnDraw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect)
         {
             PolyLineView.Draw(graphicsDevice, scene, OverlayStyle.Luma, [PathView]);
+            (cancelButton ??= new PenCancelButton(Parent)).Draw(graphicsDevice, scene);
 
 #if DEBUG
             if (PenInput.ProposedNextSegment.HasValue)

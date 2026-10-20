@@ -1,5 +1,6 @@
 using Geometry;
 using Rectangle = Geometry.Rectangle;
+using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
 using SqlGeometryUtils;
 using System;
@@ -9,6 +10,7 @@ using System.Linq;
 using System.Windows.Forms;
 #endif
 using Viking.AnnotationServiceTypes;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.Common;
 using Viking.VolumeModel;
 using VikingXNA;
@@ -127,12 +129,8 @@ namespace WebAnnotation.ViewModel
         {
             get => _Color.GetAlpha();
 
-            set
-            {
-                _Color.SetAlpha(value);
-                if (lineView != null)
-                    lineView.Color = lineView.Color.SetAlpha(value);
-            }
+            // SetAlpha returns a new colour, so assign it back; the mouse-over effect halves the link's alpha here.
+            set => Color = _Color.SetAlpha(value);
         }
 
         public int MinSection { get; private set; }
@@ -140,7 +138,121 @@ namespace WebAnnotation.ViewModel
 
         protected int LinkDirection => MinSection == MaxSection ? 0 : MinSection < Z ? -1 : 1;
 
-        public Rectangle BoundingBox => Rectangle.Pad(LineSegment.BoundingBox, LineRadius);
+        public Geometry.Rectangle BoundingBox => Geometry.Rectangle.Pad(LineSegment.BoundingBox, MaxRadius);
+
+        /// <summary>The larger endpoint radius: the widest the pinched link gets.</summary>
+        public double MaxRadius => Math.Max(A.Radius, B.Radius);
+
+        /// <summary>
+        /// Opacity at the link's waist as a fraction of its opacity at full width. The shader fades alpha linearly
+        /// with how far the local width has narrowed from full width toward the waist.
+        /// </summary>
+        internal const float WaistOpacity = 0.5f;
+
+        /// <summary>
+        /// Waist half width in world units at the zoom links were last drawn at. Hit tests have no scene, and every
+        /// link is drawn with the same camera, so they use this.
+        /// </summary>
+        internal static double LastDrawnWaistRadius { get; private set; } = Global.AnnotationSettings.DEFAULT_LOCATION_LINK_WAIST_PIXELS / 2.0;
+
+        /// <summary>
+        /// Half width of a pinched link <paramref name="x"/> world units from A's centre along a link of
+        /// <paramref name="length"/>. Each side eases on a raised cosine from its radius down to the neck, flat at
+        /// both ends of the curve. Far apart, the neck is <paramref name="waist"/>, reached one diameter from each
+        /// centre. Close together, the neck is where straight tapers at that rate would meet, so the link barely
+        /// narrows and the two curves meet smoothly. The waist is never wider than the smaller radius.
+        /// Matches PinchedHalfWidth in PinchedLineShaders.fx.
+        /// </summary>
+        internal static double HalfWidthAt(double x, double length, double radiusA, double radiusB, double waist)
+        {
+            double w = Math.Min(waist, Math.Min(radiusA, radiusB));
+            double kA = (radiusA - w) / (2 * radiusA);
+            double kB = (radiusB - w) / (2 * radiusB);
+
+            double neck = w;
+            double taperA = 2 * radiusA;
+            double taperB = 2 * radiusB;
+            if (kA + kB > 0)
+            {
+                double m = Math.Max(0, Math.Min(length, (radiusA - radiusB + (kB * length)) / (kA + kB)));
+                double meet = radiusA - (kA * m);
+                if (meet > w)
+                {
+                    neck = meet;
+                    taperA = m;
+                    taperB = length - m;
+                }
+            }
+
+            if (x < taperA)
+                return neck + ((radiusA - neck) * Ease(x / taperA));
+            if (x > length - taperB)
+                return neck + ((radiusB - neck) * Ease((length - x) / taperB));
+            return neck;
+        }
+
+        /// <summary>1 at <paramref name="t"/> = 0 and 0 at 1, with zero slope at both ends.</summary>
+        private static double Ease(double t) => 0.5 * (1 + Math.Cos(Math.PI * Math.Max(0, Math.Min(1, t))));
+
+        /// <summary>
+        /// <paramref name="position"/> in the link's own frame: <paramref name="along"/> from A's centre toward B,
+        /// <paramref name="across"/> the unsigned distance from the centre line.
+        /// </summary>
+        private void ToLinkFrame(Geometry.Vector2 position, out double along, out double across, out double length)
+        {
+            Geometry.Vector2 delta = B.Center - A.Center;
+            length = Math.Sqrt((delta.X * delta.X) + (delta.Y * delta.Y));
+            Geometry.Vector2 offset = position - A.Center;
+            if (length <= 0)
+            {
+                along = 0;
+                across = Math.Sqrt((offset.X * offset.X) + (offset.Y * offset.Y));
+                return;
+            }
+
+            along = ((offset.X * delta.X) + (offset.Y * delta.Y)) / length;
+            across = Math.Abs((offset.X * delta.Y) - (offset.Y * delta.X)) / length;
+        }
+
+        /// <summary>
+        /// Distance from <paramref name="position"/> to the drawn outline (0 inside), and the half width the
+        /// position is measured against for <see cref="DistanceFromCenterNormalized"/>.
+        /// </summary>
+        private double DistanceToOutline(Geometry.Vector2 position, double waist, bool drawCaps, out double normalized)
+        {
+            ToLinkFrame(position, out double along, out double across, out double length);
+            if (!drawCaps)
+            {
+                // Nothing is drawn inside the markers, so a point there is not on the link.
+                foreach (Circle end in new[] { A, B })
+                {
+                    double fromCentre = Geometry.Vector2.Distance(position, end.Center);
+                    if (fromCentre < end.Radius)
+                    {
+                        normalized = double.MaxValue;
+                        return end.Radius - fromCentre;
+                    }
+                }
+            }
+
+            if (drawCaps && (along < 0 || along > length))
+            {
+                Circle end = along < 0 ? A : B;
+                double fromCentre = Geometry.Vector2.Distance(position, end.Center);
+                normalized = fromCentre / end.Radius;
+                return Math.Max(0, fromCentre - end.Radius);
+            }
+
+            double clamped = Math.Max(0, Math.Min(length, along));
+            double halfWidth = HalfWidthAt(clamped, length, A.Radius, B.Radius, waist);
+            double beyondEnd = along - clamped;
+            double beyondSide = Math.Max(0, across - halfWidth);
+            normalized = Math.Sqrt((beyondEnd * beyondEnd) + (across * across)) / halfWidth;
+            return Math.Sqrt((beyondEnd * beyondEnd) + (beyondSide * beyondSide));
+        }
+
+        private double DistanceToOutline(Geometry.Vector2 position, out double normalized) =>
+            DistanceToOutline(position, LastDrawnWaistRadius, Global.AnnotationSettings.LocationLinkDrawUnderMarkers, out normalized);
 
         public Geometry.LineSegment LineSegment => new(A.Center, B.Center);
 
@@ -211,8 +323,6 @@ namespace WebAnnotation.ViewModel
             lineView = CreateView();
         }
 
-        private readonly bool _LocationsOverlapped;
-
         /// <summary>
         /// Maps both link endpoints into volume space. Returns false if either point cannot be mapped.
         /// </summary>
@@ -264,8 +374,11 @@ namespace WebAnnotation.ViewModel
             minSection = (int)Math.Round(locA.Z < locB.Z ? locA.Z : locB.Z);
             maxSection = (int)Math.Round(locA.Z < locB.Z ? locB.Z : locA.Z);
 
-            uint typeColor = locA.Parent?.Type?.Color ?? locB.Parent?.Type?.Color ?? 0x808080u;
-            color = GetLocationLinkColor(typeColor.ToXNAColor(), maxSection - minSection, minSection < displayZ ? -1 : 1, false);
+            // Cells use their own color, other structures their type's (LocationCanvasView.ColorForStructure).
+            // Gray when neither endpoint's parent structure is loaded yet.
+            StructureObj? parent = locA.Parent?.Type is not null ? locA.Parent : locB.Parent?.Type is not null ? locB.Parent : null;
+            Color structureColor = parent is null ? Color.Gray : LocationCanvasView.ColorForStructure(parent, 1f);
+            color = GetLocationLinkColor(structureColor, maxSection - minSection, minSection < displayZ ? -1 : 1, false);
             return true;
         }
 
@@ -304,7 +417,7 @@ namespace WebAnnotation.ViewModel
         /// <param name="section_span_distance">Number of sections the location link crosses</param>
         /// <param name="direction">Direction the link is in from the current section</param>
         /// <returns></returns>
-        private static Microsoft.Xna.Framework.Color GetLocationLinkColor(Color structure_type_color, int section_span_distance, double direction, bool IsMouseOver)
+        internal static Microsoft.Xna.Framework.Color GetLocationLinkColor(Color structure_type_color, int section_span_distance, double direction, bool IsMouseOver)
         {
             if (section_span_distance == 0)
             {
@@ -336,10 +449,20 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// Return true if the locations overlap when viewed from the passed section
+        /// True when the two linked locations overlap as seen from <see cref="Z"/>. An overlapped link is not drawn
+        /// as a line; the section shows the small up/down circle symbol instead.
         /// </summary>
-        /// <param name="sectionNumber"></param>
-        /// <returns></returns>
+        /// <remarks>
+        /// Any overlap counts, including touching. Each endpoint is tested with the shape it is drawn with, except that
+        /// an endpoint on an adjacent section which is a polygon (polygon, curve polygon or closed curve) is tested
+        /// with its real outline, mapped into volume space, and not with the inscribed circle that stands in for it on
+        /// screen. A polygon whose circle is clear of the other location can still overlap it. Links whose
+        /// endpoints are on the same section never overlap.
+        /// Called while the link is added to a section, under the tracker's lock, so it must stay cheap and must not
+        /// throw for a bad polygon: that case falls back to the circle. An endpoint that cannot be mapped into the
+        /// volume at all (the factory throws <see cref="ArgumentException"/>) leaves the answer unknown, and the
+        /// link is reported as not overlapped so its line is drawn.
+        /// </remarks>
         public bool LinksOverlap()
         {
             if (LinkDirection == 0) //Links on the same section never overlap, this is to ensure they are displayed and because the convention of Viking is annotations of the same structure do not overlap
@@ -347,31 +470,56 @@ namespace WebAnnotation.ViewModel
                 return false;
             }
 
-            GetCanvasViews(Key, mapProvider, out LocationCanvasView AView, out LocationCanvasView BView);
+            SqlGeometry? shapeA = OverlapShape(Store.Locations[Key.A]);
+            SqlGeometry? shapeB = OverlapShape(Store.Locations[Key.B]);
+            return shapeA is not null && shapeB is not null && shapeA.STIntersects(shapeB).IsTrue;
+        }
 
-            return AView.Intersects(BView.VolumeShapeAsRendered);
-            /*
-            this.Key.A 
-            int sectionNumber = Z; 
-            return A.Intersects(B);
-            */
-            /*
-            //Don't draw if the link falls within the radius of the location we are drawing
-            if (A.Section == sectionNumber)
+        /// <summary>
+        /// The shape one endpoint is tested with in <see cref="LinksOverlap"/>, in volume space, or null when the
+        /// location cannot be mapped into the volume.
+        /// </summary>
+        private SqlGeometry? OverlapShape(LocationObj location)
+        {
+            IVolumeToSectionTransform mapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(location.Z));
+            bool onViewedSection = location.Z == Z;
+            // On the viewed section a polygon view reports its mapped polygon as VolumeShapeAsRendered, so map the
+            // shape directly and skip a view that smooths and triangulates the ring in the background. A closed
+            // curve view builds its rendered shape from its own control points, so it still goes through the view.
+            bool mapDirectly = onViewedSection
+                ? location.TypeCode is LocationType.POLYGON or LocationType.CURVEPOLYGON
+                : IsPolygonType(location.TypeCode);
+            if (mapDirectly)
             {
-                return A.VolumeShape.STIntersects(B.VolumeShape).IsTrue;
-                //return Geometry.Vector2.Distance(A.VolumePosition, B.VolumePosition) <= A.Radius + LocationCanvasView.CalcOffSectionRadius((float)B.Radius);
+                try
+                {
+                    // gRPC LocationObj.MosaicShape is an IShape2D; convert it so the SQL mapper and STIntersects
+                    // see the same polygon the WCF client tested.
+                    SqlGeometry? mapped = mapper.TryMapShapeSectionToVolume(location.MosaicShape.ToSqlGeometry());
+                    if (mapped is not null)
+                        return mapped;
+                }
+                catch (ArgumentException)
+                {
+                    // A polygon SQL cannot represent is tested by its circle, the shape it is drawn with.
+                }
             }
 
-            if (B.Section == sectionNumber)
+            try
             {
-                return B.VolumeShape.STIntersects(A.VolumeShape).IsTrue;
-                //return Geometry.Vector2.Distance(A.VolumePosition, B.VolumePosition) <= B.Radius + LocationCanvasView.CalcOffSectionRadius((float)A.Radius);
-            } 
-            
-            return false; 
-            */
+                LocationCanvasView view = onViewedSection
+                    ? AnnotationViewFactory.Create(location, mapper)
+                    : AnnotationViewFactory.CreateAdjacent(location, mapper);
+                return view.VolumeShapeAsRendered;
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
         }
+
+        private static bool IsPolygonType(LocationType type) =>
+            type is LocationType.POLYGON or LocationType.CURVEPOLYGON or LocationType.CLOSEDCURVE;
 
         #region IUIObjectBasic Members
 
@@ -438,23 +586,19 @@ namespace WebAnnotation.ViewModel
 
         public bool IsVisible(Scene scene) => Math.Min(LineSegment.Length, LineWidth) / scene.Camera.Downsample > 2.0;
 
-        public bool Contains(Geometry.Vector2 Position)
-        {
-            double d = LineSegment.DistanceToPoint(Position);
-            return (d - LineRadius) <= 0;
-        }
+        public bool Contains(Geometry.Vector2 Position) => DistanceToOutline(Position, out _) <= 0;
 
         public bool Intersects(LineSegment line) => LineSegment.Intersects(line);
 
-        public double Distance(Geometry.Vector2 Position)
-        {
-            double d = LineSegment.DistanceToPoint(Position) - LineRadius;
-            return d < 0 ? 0 : d;
-        }
+        public double Distance(Geometry.Vector2 Position) => DistanceToOutline(Position, out _);
 
         public double Distance(Microsoft.SqlServer.Types.SqlGeometry shape) => LineSegment.ToSqlGeometry().STDistance(shape).Value;
 
-        public double DistanceFromCenterNormalized(Geometry.Vector2 Position) => LineSegment.DistanceToPoint(Position) / LineRadius;
+        public double DistanceFromCenterNormalized(Geometry.Vector2 Position)
+        {
+            DistanceToOutline(Position, out double normalized);
+            return normalized;
+        }
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
                           VikingXNA.Scene scene,
@@ -463,9 +607,35 @@ namespace WebAnnotation.ViewModel
                           OverlayShaderEffect overlayEffect,
                           IEnumerable<LocationLinkView> listToDraw)
         {
-            LineView[] linesToDraw = [.. listToDraw.Select(l => l.lineView)];
+            LocationLinkView[] links = [.. listToDraw.Where(l => l is not null)];
+            if (links.Length == 0)
+                return;
 
-            LineView.Draw(device, scene, lineManager, linesToDraw);
+            if (!lineManager.SupportsPinched)
+            {
+                LineView.Draw(device, scene, lineManager, [.. links.Select(l => l.lineView)]);
+                return;
+            }
+
+            // The waist is a fixed number of screen pixels, so convert it to world units at this zoom.
+            double waistRadius = Global.AnnotationSettings.LocationLinkWaistPixels / 2.0 * scene.Camera.Downsample;
+            LastDrawnWaistRadius = waistRadius;
+            bool drawCaps = Global.AnnotationSettings.LocationLinkDrawUnderMarkers;
+            float time = (float)(DateTime.UtcNow.Millisecond / 1000.0);
+
+            foreach (IGrouping<Color, LocationLinkView> group in links.GroupBy(l => lineManager.UseHSLColor ? l.Color.ConvertToHCL() : l.Color))
+            {
+                RoundLineCode.RoundLine[] lines = [.. group.Select(l => new RoundLineCode.RoundLine(
+                    new Vector2((float)l.A.Center.X, (float)l.A.Center.Y),
+                    new Vector2((float)l.B.Center.X, (float)l.B.Center.Y)))];
+                Vector4[] shapes = [.. group.Select(l => new Vector4(
+                    (float)l.A.Radius,
+                    (float)l.B.Radius,
+                    (float)Math.Min(waistRadius, Math.Min(l.A.Radius, l.B.Radius)),
+                    0f))];
+
+                lineManager.DrawPinched(lines, shapes, group.Key, scene.ViewProj, time, drawCaps, WaistOpacity);
+            }
         }
 
         public bool Equals(LocationLinkView other)

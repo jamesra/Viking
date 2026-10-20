@@ -74,7 +74,7 @@ namespace LocalBookmarks
         /// <summary>
         /// Called when the selected node is null
         /// </summary>
-        public ContextMenuStrip ContextMenu
+        public new ContextMenuStrip ContextMenu
         {
             get
             {

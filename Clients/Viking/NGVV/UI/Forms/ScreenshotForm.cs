@@ -41,12 +41,16 @@ namespace Viking.UI.Forms
         public string Filename
         {
             get => Environment.ExpandEnvironmentVariables(System.IO.Path.Combine(textFolder.Text, textFilename.Text));
-            set
-            {
-                textFolder.Text = System.IO.Path.GetDirectoryName(value);
-                textFilename.Text = System.IO.Path.GetFileName(value);
-            }
+            set => (textFolder.Text, textFilename.Text) = SplitPath(value);
         }
+
+        /// <summary>
+        /// Splits a full screenshot path into the dialog's Folder and File boxes.
+        /// </summary>
+        /// <param name="path">Full path of the image, for example the file picked with Browse.</param>
+        /// <returns>The containing folder, and the file name with its extension (the PNG export and the meta .txt both use it).</returns>
+        internal static (string Folder, string FileName) SplitPath(string path) =>
+            (System.IO.Path.GetDirectoryName(path), System.IO.Path.GetFileName(path));
 
         /// <summary>
         /// Set to true if overlays are to be included in screenshot
@@ -129,14 +133,6 @@ namespace Viking.UI.Forms
             this.IncludeOverlays = this.checkOverlays.Checked;
 
             //Write down the filename and remove the automatically appended number if needed
-            ScreenshotForm.LastFileNamePrefix = System.IO.Path.GetFileNameWithoutExtension(textFilename.Text);
-            string CaptureNumberString = NextCaptureNumberString;
-            if (ScreenshotForm.LastFileNamePrefix.EndsWith(CaptureNumberString))
-            {
-                int i = ScreenshotForm.LastFileNamePrefix.LastIndexOf(CaptureNumberString);
-                ScreenshotForm.LastFileNamePrefix = ScreenshotForm.LastFileNamePrefix.Remove(i);
-            }
-
             ScreenshotForm.LastFileNamePrefix = StringCaptureNumberFromName(this.textFilename.Text);
             ScreenshotForm.NextCaptureNumber++;
 
@@ -186,9 +182,7 @@ namespace Viking.UI.Forms
             DialogResult result = browserDlg.ShowDialog(this);
             if (result == DialogResult.OK)
             {
-                this.textFilename.Text = System.IO.Path.GetFileNameWithoutExtension(browserDlg.FileName);
-
-                this.textFilename.Text = System.IO.Path.GetDirectoryName(browserDlg.FileName);
+                (this.textFolder.Text, this.textFilename.Text) = SplitPath(browserDlg.FileName);
             }
         }
 

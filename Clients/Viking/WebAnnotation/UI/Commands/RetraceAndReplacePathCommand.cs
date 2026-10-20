@@ -1,40 +1,30 @@
 using Geometry;
+using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.Common;
 using Viking.Input;
 using Viking.UI;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
+using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.UI.Commands
 {
-
-    public enum DrawWhichPoly
-    {
-        PREVPOLY,
-        NEXTPOLY
-    }
-
     internal class RetraceAndReplacePathCommand : PlaceGeometryWithPenCommandBase, IHelpStrings, IObservableHelpStrings
     {
-        //Variables:
-
-        //If we make a wrong intersection, this will track the index of that wrong intersection
-        private readonly int WrongIntersectionPoint;
-
         //Original Polygons
         private readonly Polygon OriginalMosaicPolygon;
         private readonly Polygon OriginalVolumePolygon;
         public Polygon OriginalSmoothedVolumePolygon;
-
-        //Our original polygon plus the origin of retrace and replace and the origin point index
-        private readonly Polygon VolumePolygonPlusOrigin;
 
         public PolygonIndex OriginIndex;
 
@@ -45,11 +35,21 @@ namespace WebAnnotation.UI.Commands
         private PositionColorMeshModel _choiceCapMesh;
         private Task<Geometry.Meshing.PolygonCutFill> _fillTask;
         private Geometry.Meshing.PolygonCutFill _fill;
-        private Vector2[] _cutPath;
+        private Geometry.Vector2[] _cutPath;
         private Polygon _viewSmall;
         private Task _choiceFallback;
+
+        // Temporary fill: the visible part of each cut piece, meshed while the full-polygon triangulation is still running.
+        // Display only. The cut and the saved shape always use the full polygon.
+        private sealed record TemporaryFillRequest(Func<Polygon> LargePiece, Polygon CapPiece, Microsoft.Xna.Framework.Color LargeColor, Microsoft.Xna.Framework.Color CapColor, Geometry.Rectangle ClipArea);
+        private PositionColorMeshModel[] _tempBaseMeshes;
+        private PositionColorMeshModel[] _tempCapMeshes;
+        private Polygon _tempFor;
+        private TemporaryFillRequest _tempLatest;
+        private int _tempRunning;
         private RetraceCommandAction _viewAction = RetraceCommandAction.NONE;
         private bool _viewSwitch;
+        private bool _viewKeepBoth;
         private RetraceCommandAction CutAction = RetraceCommandAction.NONE;
         //Each of the cut pieces in polygon forms
         private Polygon? CounterClockwiseCutPolygon = null;
@@ -60,18 +60,36 @@ namespace WebAnnotation.UI.Commands
         public Polygon OutputVolumePolygon;
 
         /// <summary>
-        /// True if we want to use the opposite polygon as normal
+        /// The piece that is not written onto the original location.
+        /// Set only when Shift is held on a shrink cut, so the caller can save it as a second annotation.
+        /// </summary>
+        public Polygon SplitOffMosaicPolygon;
+
+        /// <summary>
+        /// True when Ctrl is held. Swaps which cut piece replaces the original location.
+        /// Composes with <see cref="KeepBothPieces"/>: Ctrl still chooses which piece stays on the original.
         /// </summary>
         protected bool SwitchSide => ModifierKeysConverter.FromWinFormsKeys((int)Control.ModifierKeys).CtrlPressed();
 
         /// <summary>
-        /// Pen help for a retrace cut. Ctrl swaps the kept side.
+        /// True when Shift is held on a finished exterior shrink, so both cut pieces are saved.
+        /// Shift is the pen modifier that is free during this command; Ctrl already picks the kept side.
+        /// </summary>
+        protected bool KeepBothPieces =>
+            ModifierKeysConverter.FromWinFormsKeys((int)Control.ModifierKeys).ShiftPressed() &&
+            CutAction == RetraceCommandAction.SHRINK_EXTERIOR_RING &&
+            ClockwiseCutPolygon is not null &&
+            CounterClockwiseCutPolygon is not null;
+
+        /// <summary>
+        /// Pen help for a retrace cut. Ctrl swaps the kept side. Shift keeps both sides as two annotations.
         /// View keys stay. The freehand control-point lines are not included.
         /// </summary>
         public new string[] HelpStrings =>
         [
             .. DefaultKeyHelpStrings,
-            "Ctrl: Keep the other side of the cut"
+            "Ctrl: Keep the other side of the cut",
+            "Shift: Keep both sides as two annotations"
         ];
 
         public new ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
@@ -85,9 +103,6 @@ namespace WebAnnotation.UI.Commands
             RetraceCommandAction.GROW_EXTERIOR_RING or RetraceCommandAction.GROW_INTERNAL_RING or RetraceCommandAction.SHRINK_EXTERIOR_RING or RetraceCommandAction.SHRINK_INTERNAL_RING or RetraceCommandAction.CREATE_INTERNAL_RING => true,
             _ => throw new ArgumentException("Unknown state, cannot determine if the command can complete."),
         };
-
-        //False draws the PrevWalkPolygon, true draws the NextWalkPolygon
-        private readonly DrawWhichPoly DrawPoly;
 
         private bool? _CommandExpandsArea;
         private bool CommandExpandsArea
@@ -144,7 +159,7 @@ namespace WebAnnotation.UI.Commands
         public RetraceAndReplacePathCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Polygon mosaic_polygon,
                                         System.Drawing.Color color,
-                                        IReadOnlyList<Vector2> path,
+                                        IReadOnlyList<Geometry.Vector2> path,
                                         double LineWidth,
                                         OnCommandSuccess success_callback)
             : this(parent, mosaic_polygon, color.ToXNAColor(), LineWidth, success_callback)
@@ -172,11 +187,17 @@ namespace WebAnnotation.UI.Commands
             try
             {
                 OutputVolumePolygon = original_copy;
-                OutputMosaicPolygon = mapping.TryMapShapeVolumeToSection(OutputVolumePolygon).Simplify(PenInput.SimplifiedPathToleranceInPixels * Parent.Downsample);
+                OutputMosaicPolygon = MapToSectionSimplified(mapping, OutputVolumePolygon, PenInput.SimplifiedPathToleranceInPixels * Parent.Downsample);
             }
             catch (ArgumentException)
             {
                 Console.WriteLine("TranslateLocationCommand: Could not map polygon to section on Execute", "Command");
+                return;
+            }
+
+            if (OutputMosaicPolygon is null)
+            {
+                System.Diagnostics.Trace.WriteLine("RetraceAndReplacePathCommand: polygon with the new hole lies partly outside the section mapping; not applied.", "Command");
                 return;
             }
 
@@ -195,14 +216,17 @@ namespace WebAnnotation.UI.Commands
         /// <param name="e"></param>
         protected override void OnPenPathChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            //List<Vector2> path = PenInput.Path.InflectionPointIndices().Select(i => PenInput.Path[i]).ToList();
+            //List<Geometry.Vector2> path = PenInput.Path.InflectionPointIndices().Select(i => PenInput.Path[i]).ToList();
             //Update our view of the pen path
             base.OnPenPathChanged(sender, e);
 
             if (!IsCutComplete && e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
             {
                 //See if the addition to the path finished the cut
-                CutAction = GetRetraceActionForPath(PenInput.SimplifiedPath, out ClockwiseCutPolygon, out CounterClockwiseCutPolygon);
+                using (WebAnnotation.View.PolygonViewTimingLog.Measure("retrace-cut", $"verts={OriginalVolumePolygon.TotalVertices}"))
+                {
+                    CutAction = GetRetraceActionForPath(PenInput.SimplifiedPath, out ClockwiseCutPolygon, out CounterClockwiseCutPolygon);
+                }
             }
             else if (IsCutComplete && e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Remove || e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Replace)
             {
@@ -211,6 +235,7 @@ namespace WebAnnotation.UI.Commands
 
             if (CutAction == RetraceCommandAction.NONE)
             {
+                PathView.Style = LineStyle.Tubular;
                 return;
             }
 
@@ -222,51 +247,110 @@ namespace WebAnnotation.UI.Commands
 
         protected override void OnMouseUp(object sender, MouseEventArgs e)
         {
-            //If the command is in a valid state populate the output poly and call execute. Otherwise deactive the command.
             if (IsReadyToComplete)
-            {
-                OutputVolumePolygon = GenerateOutputVolumePolygon();
-
-                try
-                {
-                    OutputMosaicPolygon = mapping.TryMapShapeVolumeToSection(OutputVolumePolygon).Simplify(PenInput.SimplifiedPathToleranceInPixels * Parent.Downsample);
-                }
-                catch (ArgumentOutOfRangeException)
-                {
-                    Console.WriteLine("TranslateLocationCommand: Could not map polygon to section on Execute", "Command");
-                    return;
-                }
-
-                Execute();
-            }
+                FinishCut();
 
             base.OnMouseUp(sender, e);
         }
 
         protected override void OnPenLeaveRange(object sender, PenEventArgs e)
         {
-            //If the command is in a valid state populate the output poly and call execute. Otherwise deactive the command.
             if (IsReadyToComplete)
-            {
-                OutputVolumePolygon = GenerateOutputVolumePolygon();
-
-                try
-                {
-                    OutputMosaicPolygon = mapping.TryMapShapeVolumeToSection(OutputVolumePolygon).Simplify(PenInput.SimplifiedPathToleranceInPixels * Parent.Downsample);
-                }
-                catch (ArgumentOutOfRangeException)
-                {
-                    Console.WriteLine("TranslateLocationCommand: Could not map polygon to section on Execute", "Command");
-                    return;
-                }
-
-                Execute();
-            }
+                FinishCut();
 
             base.OnPenLeaveRange(sender, e);
         }
 
-        private RetraceCommandAction GetRetraceActionForPath(IList<Vector2> path, out Polygon clockwise_poly, out Polygon counter_clockwise_poly)
+        /// <summary>
+        /// Maps the kept piece, and the other piece when <see cref="KeepBothPieces"/> is set, then completes.
+        /// Called from mouse-up and pen-up on a finished cut.
+        /// When either piece has a vertex outside the section's mapping, nothing is applied and the command stays active.
+        /// </summary>
+        private void FinishCut()
+        {
+            using WebAnnotation.View.PolygonViewTimingLog.PenStepTimer timer = WebAnnotation.View.PolygonViewTimingLog.Measure("finish-cut", $"verts={OriginalVolumePolygon.TotalVertices}");
+            OutputVolumePolygon = GenerateOutputVolumePolygon();
+            Polygon discardedVolume = KeepBothPieces ? DiscardedVolumePolygon() : null;
+
+            try
+            {
+                double tolerance = PenInput.SimplifiedPathToleranceInPixels * Parent.Downsample;
+                OutputMosaicPolygon = MapToSectionSimplified(mapping, OutputVolumePolygon, tolerance);
+                SplitOffMosaicPolygon = discardedVolume is null
+                    ? null
+                    : MapToSectionSimplified(mapping, discardedVolume, tolerance);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                Console.WriteLine("TranslateLocationCommand: Could not map polygon to section on Execute", "Command");
+                return;
+            }
+
+            // A missing split-off piece would silently drop the part the user asked to keep, so it aborts the cut too.
+            if (OutputMosaicPolygon is null || (discardedVolume is not null && SplitOffMosaicPolygon is null))
+            {
+                System.Diagnostics.Trace.WriteLine("RetraceAndReplacePathCommand: cut lies partly outside the section mapping; not applied.", "Command");
+                return;
+            }
+
+            Execute();
+        }
+
+        /// <summary>
+        /// Maps <paramref name="volumePolygon"/> to section space and simplifies it to <paramref name="tolerance"/>.
+        /// </summary>
+        /// <returns>Null when any exterior or hole vertex falls outside <paramref name="mapping"/>.</returns>
+        internal static Polygon MapToSectionSimplified(IVolumeToSectionTransform mapping, Polygon volumePolygon, double tolerance) =>
+            mapping.TryMapShapeVolumeToSection(volumePolygon)?.Simplify(tolerance);
+
+        /// <summary>
+        /// Writes the kept piece onto <paramref name="location"/>. When Shift was held, also creates
+        /// an unlinked location on the same structure and section for the other piece.
+        /// Location links cannot join two polygons on one section, so the sibling is not linked.
+        /// Called by the pen retrace success callbacks before the location save.
+        /// </summary>
+        /// <returns>
+        /// An action that records the edit for Ctrl+Z; the caller invokes it once the save succeeded.
+        /// Null when a sibling was created, because restoring only the original's shape would leave the sibling overlapping it.
+        /// </returns>
+        public Action ApplyCut(LocationObj location)
+        {
+            Microsoft.SqlServer.Types.SqlGeometry oldShape = location.MosaicShape.ToSqlGeometry();
+            LocationType oldType = location.TypeCode;
+            WebAnnotation.View.PolygonViewTimingLog.MarkBoundaryChange(location.ID, "Retrace");
+            using (WebAnnotation.View.PolygonViewTimingLog.Measure("apply-cut"))
+            {
+                location.SetShapeFromGeometryInSection(mapping, OutputMosaicPolygon.ToSqlGeometry());
+            }
+
+            if (SplitOffMosaicPolygon is null)
+                return () => UndoManager.PushLocationShape("Change Boundary", location, mapping, oldShape, oldType);
+
+            LocationObj sibling = new(location.Parent, (int)location.Section, location.TypeCode);
+            if (location.Width.HasValue)
+                sibling.Width = location.Width;
+
+            sibling.SetShapeFromGeometryInSection(mapping, SplitOffMosaicPolygon.ToSqlGeometry());
+            _ = CreateSplitOffLocationAsync(sibling);
+            return null;
+        }
+
+        /// <summary>
+        /// Creates the split-off sibling on the server without blocking the pen callback; a failure is reported, not thrown.
+        /// </summary>
+        private static async Task CreateSplitOffLocationAsync(LocationObj sibling)
+        {
+            try
+            {
+                await Store.Locations.Create(sibling);
+            }
+            catch (Exception e)
+            {
+                ExceptionReport.Show("Could not create the split-off annotation.", e);
+            }
+        }
+
+        private RetraceCommandAction GetRetraceActionForPath(IList<Geometry.Vector2> path, out Polygon clockwise_poly, out Polygon counter_clockwise_poly)
         {
             clockwise_poly = null;
             counter_clockwise_poly = null;
@@ -350,22 +434,30 @@ namespace WebAnnotation.UI.Commands
             return null;
         }
 
+        /// <summary>
+        /// The exterior piece <see cref="GenerateOutputVolumePolygon"/> does not keep.
+        /// Null unless this is a shrink cut with both pieces.
+        /// </summary>
+        private Polygon DiscardedVolumePolygon()
+        {
+            if (CutAction != RetraceCommandAction.SHRINK_EXTERIOR_RING)
+                return null;
+
+            return SwitchSide ? CounterClockwiseCutPolygon : ClockwiseCutPolygon;
+        }
+
         protected override void OnKeyUp(object sender, KeyEventArgs e)
         {
-            if (e.Control)
-            {
+            if (e.Control || e.Shift)
                 UpdateViews();
-            }
 
             base.OnKeyUp(sender, e);
         }
 
         protected override void OnKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Control)
-            {
+            if (e.Control || e.Shift)
                 UpdateViews();
-            }
 
             base.OnKeyDown(sender, e);
         }
@@ -375,10 +467,16 @@ namespace WebAnnotation.UI.Commands
         /// <returns></returns>
         private void UpdateViews()
         {
+            PathView.Style = KeepBothPieces ? LineStyle.Dashed : LineStyle.Tubular;
+
             Microsoft.Xna.Framework.Color kept = Microsoft.Xna.Framework.Color.Green.ConvertToHCL(0.5f);
             Microsoft.Xna.Framework.Color dropped = Microsoft.Xna.Framework.Color.Magenta.ConvertToHCL(0.5f);
-            Microsoft.Xna.Framework.Color CCW_Color = SwitchSide ? dropped : kept;
-            Microsoft.Xna.Framework.Color CW_Color = SwitchSide ? kept : dropped;
+            Microsoft.Xna.Framework.Color CCW_Color = KeepBothPieces
+                ? kept
+                : SwitchSide ? dropped : kept;
+            Microsoft.Xna.Framework.Color CW_Color = KeepBothPieces
+                ? kept
+                : SwitchSide ? kept : dropped;
             Microsoft.Xna.Framework.Color Grow_Color = Microsoft.Xna.Framework.Color.Green.ConvertToHCL(0.5f);
 
             if (CutAction == RetraceCommandAction.NONE || ClockwiseCutPolygon is null || CounterClockwiseCutPolygon is null)
@@ -402,17 +500,32 @@ namespace WebAnnotation.UI.Commands
             }
 
             bool sameCut = ReferenceEquals(_viewSmall, small) && _viewAction == CutAction;
-            if (sameCut && _choiceBaseMesh is not null)
+            if (sameCut && (_choiceBaseMesh is not null || _choiceCapMesh is not null))
             {
-                if (_viewSwitch != SwitchSide)
+                // The full-polygon meshes are ready, so the temporary fill is no longer needed.
+                _tempBaseMeshes = null;
+                _tempCapMeshes = null;
+                if (_viewSwitch != SwitchSide || _viewKeepBoth != KeepBothPieces)
                 {
-                    _choiceBaseMesh.Color = largeColor;
+                    if (_choiceBaseMesh is not null)
+                        _choiceBaseMesh.Color = largeColor;
                     if (_choiceCapMesh is not null)
                         _choiceCapMesh.Color = smallColor;
                     _viewSwitch = SwitchSide;
+                    _viewKeepBoth = KeepBothPieces;
                 }
 
                 return;
+            }
+
+            if (sameCut && (_tempBaseMeshes is not null || _tempCapMeshes is not null) && (_viewSwitch != SwitchSide || _viewKeepBoth != KeepBothPieces))
+            {
+                foreach (PositionColorMeshModel m in _tempBaseMeshes ?? [])
+                    m.Color = largeColor;
+                foreach (PositionColorMeshModel m in _tempCapMeshes ?? [])
+                    m.Color = smallColor;
+                _viewSwitch = SwitchSide;
+                _viewKeepBoth = KeepBothPieces;
             }
 
             if (!sameCut)
@@ -420,11 +533,16 @@ namespace WebAnnotation.UI.Commands
                 _choiceBaseMesh = null;
                 _choiceCapMesh = null;
                 _choiceFallback = null;
+                _tempBaseMeshes = null;
+                _tempCapMeshes = null;
+                _tempFor = null;
+                _tempLatest = null;
             }
 
             _viewSmall = small;
             _viewAction = CutAction;
             _viewSwitch = SwitchSide;
+            _viewKeepBoth = KeepBothPieces;
             TryBuildChoiceMeshes(small, largeColor, smallColor, grow);
         }
 
@@ -449,6 +567,12 @@ namespace WebAnnotation.UI.Commands
                 return;
             }
 
+            if (!ReferenceEquals(_tempFor, small))
+            {
+                _tempFor = small;
+                RequestTemporaryFill(small, largeColor, smallColor, grow);
+            }
+
             if ((interior || _fillTask is { IsFaulted: true }) && _choiceFallback is null)
             {
                 // The cached cell has no triangles inside a hole. Mesh off the pen thread, without a Steiner budget.
@@ -466,7 +590,115 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        protected override void OnPenPathComplete(object sender, Vector2[] Path)
+        /// <summary>
+        /// Starts meshing only the part of each cut piece near the visible scene. The pieces were already computed by the cut;
+        /// this clips them to the view (flat edges along the clip border) so the triangulation is small.
+        /// </summary>
+        private void RequestTemporaryFill(Polygon small, Microsoft.Xna.Framework.Color largeColor, Microsoft.Xna.Framework.Color smallColor, bool grow)
+        {
+            Polygon cw = ClockwiseCutPolygon;
+            Polygon ccw = CounterClockwiseCutPolygon;
+            RetraceCommandAction action = CutAction;
+            PolygonIndex? cutIndex = PolyBeingCut;
+            Polygon original = OriginalVolumePolygon;
+            Polygon bigger = ccw.Area > cw.Area ? ccw : cw;
+
+            Func<Polygon> largePiece = () =>
+            {
+                if (action == RetraceCommandAction.GROW_INTERNAL_RING && cutIndex.HasValue)
+                {
+                    Polygon grown = (Polygon)original.Clone();
+                    grown.ReplaceInteriorRing(cutIndex.Value.InnerShapeIndex.Value, bigger);
+                    return grown;
+                }
+
+                return bigger;
+            };
+
+            QueueTemporaryFill(new TemporaryFillRequest(largePiece, grow ? null : small, largeColor, smallColor, PolygonViewportClip.ClipAreaForScene(Parent.Scene)));
+        }
+
+        private void QueueTemporaryFill(TemporaryFillRequest request)
+        {
+            _tempLatest = request;
+            if (Interlocked.CompareExchange(ref _tempRunning, 1, 0) != 0)
+                return;
+
+            Task.Run(RunTemporaryFill);
+        }
+
+        /// <summary>
+        /// Meshes the newest request; if a newer one arrives while meshing, the older result is dropped and the newer one is built.
+        /// </summary>
+        private void RunTemporaryFill()
+        {
+            TemporaryFillRequest request = _tempLatest;
+            TemporaryFillRequest handled = null;
+            using (WebAnnotation.View.PolygonViewTimingLog.Measure("temporary-fill"))
+            {
+                try
+                {
+                    while (request is not null)
+                    {
+                        PositionColorMeshModel[] baseMeshes = MeshClippedPieces(request.LargePiece(), request.ClipArea, request.LargeColor);
+                        PositionColorMeshModel[] capMeshes = MeshClippedPieces(request.CapPiece, request.ClipArea, request.CapColor);
+
+                        TemporaryFillRequest newest = _tempLatest;
+                        if (ReferenceEquals(newest, request))
+                        {
+                            _tempBaseMeshes = baseMeshes;
+                            _tempCapMeshes = capMeshes;
+                            handled = request;
+                            break;
+                        }
+
+                        // Superseded or cleared while meshing; null means the cut changed and nothing should be shown.
+                        request = newest;
+                    }
+                }
+                catch (ArgumentException)
+                {
+                    // A piece the triangulation rejects simply gets no temporary fill. Do not retry the same request.
+                    handled = request;
+                }
+                finally
+                {
+                    Volatile.Write(ref _tempRunning, 0);
+                }
+            }
+
+            // A request queued after the last check but before the flag was cleared saw the flag set and returned, so pick it up here.
+            TemporaryFillRequest pending = _tempLatest;
+            if (pending is not null && !ReferenceEquals(pending, handled) && Interlocked.CompareExchange(ref _tempRunning, 1, 0) == 0)
+                Task.Run(RunTemporaryFill);
+        }
+
+        private static PositionColorMeshModel[] MeshClippedPieces(Polygon piece, Geometry.Rectangle area, Microsoft.Xna.Framework.Color color)
+        {
+            if (piece is null)
+                return [];
+
+            return [.. PolygonViewportClip.Clip(piece, area)
+                .Select(p => PolygonCutMeshBuilder.FromPatch(p, color))
+                .Where(m => m is not null)];
+        }
+
+        /// <summary>
+        /// The pan or zoom has left the area the temporary fill was clipped to, so clip again around the new view.
+        /// </summary>
+        private void RefreshTemporaryFillIfViewMoved(VikingXNA.Scene scene)
+        {
+            TemporaryFillRequest latest = _tempLatest;
+            if (latest is null || (_tempBaseMeshes is null && _tempCapMeshes is null))
+                return;
+
+            if (PolygonViewportClip.Covers(latest.ClipArea, PolygonViewportClip.ClipAreaForScene(scene, 0)))
+                return;
+
+            QueueTemporaryFill(latest with { ClipArea = PolygonViewportClip.ClipAreaForScene(scene) });
+        }
+
+        protected override void OnPenPathComplete(object sender, Geometry.Vector2[] Path)
         {
 
         }
@@ -515,15 +747,28 @@ return false;
             if (CutAction != RetraceCommandAction.NONE && _choiceBaseMesh is null)
                 UpdateViews();
 
+            PositionColorMeshModel[] meshes = null;
             if (_choiceBaseMesh is not null || _choiceCapMesh is not null)
             {
-                float originalAlphaLuma = Parent.PolygonOverlayEffect.InputLumaAlphaValue;
-                Parent.PolygonOverlayEffect.InputLumaAlphaValue = 0.5f;
-                PositionColorMeshModel[] meshes = _choiceCapMesh is null
+                meshes = _choiceCapMesh is null
                     ? [_choiceBaseMesh]
                     : _choiceBaseMesh is null
                         ? [_choiceCapMesh]
                         : [_choiceBaseMesh, _choiceCapMesh];
+            }
+            else
+            {
+                RefreshTemporaryFillIfViewMoved(scene);
+                PositionColorMeshModel[] tempBase = _tempBaseMeshes;
+                PositionColorMeshModel[] tempCap = _tempCapMeshes;
+                if (tempBase is { Length: > 0 } || tempCap is { Length: > 0 })
+                    meshes = [.. tempBase ?? [], .. tempCap ?? []];
+            }
+
+            if (meshes is not null)
+            {
+                float originalAlphaLuma = Parent.PolygonOverlayEffect.InputLumaAlphaValue;
+                Parent.PolygonOverlayEffect.InputLumaAlphaValue = 0.5f;
                 MeshView<Microsoft.Xna.Framework.Graphics.VertexPositionColor>.Draw(graphicsDevice, scene, Parent.PolygonOverlayEffect, meshmodels: meshes);
                 Parent.PolygonOverlayEffect.InputLumaAlphaValue = originalAlphaLuma;
             }

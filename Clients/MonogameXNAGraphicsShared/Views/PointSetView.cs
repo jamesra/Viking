@@ -109,6 +109,13 @@ namespace VikingXNAGraphics
                 ? _PointColors[index]
                 : LabelColor;
 
+        /// <summary>
+        /// When true each point is a <see cref="RingCircleView"/>: a dark ring over the outer quarter of the radius
+        /// fading to clear, drawn by a procedural shader instead of a flat disc. Needs no texture, but the host must
+        /// have loaded <see cref="OverlayShaderEffect"/>. Takes effect on the next <see cref="UpdateViews"/>.
+        /// </summary>
+        public bool UseBorderedCircles { get; set; }
+
         public PointSetView(double defaultRadius = 1.0) : this(Color.Gold, defaultRadius)
         {
         }
@@ -129,7 +136,9 @@ namespace VikingXNAGraphics
             }
 
             Geometry.Vector2[] point_array = [.. Points];
-            PointViews = [.. point_array.Select((p, i) => new CircleView(new Circle(p, PointRadius), ColorForPoint(i)))];
+            PointViews = UseBorderedCircles
+                ? [.. point_array.Select((p, i) => (CircleView)new RingCircleView(new Circle(p, PointRadius), ColorForPoint(i)))]
+                : [.. point_array.Select((p, i) => new CircleView(new Circle(p, PointRadius), ColorForPoint(i)))];
 
             if (!LabelIndex && !LabelPosition)
             {

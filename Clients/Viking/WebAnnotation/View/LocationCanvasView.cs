@@ -41,10 +41,12 @@ namespace WebAnnotation.View
         public static Func<double> SmallestRenderedSizeAccessor { get; set; }
 
         /// <summary>
-        /// Cells (type 1) use <see cref="StructureObj.Color"/>. Other types keep the structure-type color. Location views call this.
+        /// Cells (type 1) use <see cref="StructureObj.Color"/>, the same hash polygons already use. Other types keep the structure-type color. Location views and the linked-placement preview call this.
         /// </summary>
         public static Microsoft.Xna.Framework.Color ColorForStructure(StructureObj parent, float alpha) =>
-            (parent.TypeID == 1 ? parent.Color : parent.Type.Color).ToXNAColor(alpha);
+            parent.TypeID == 1
+                ? parent.Color.ToXNAColor(alpha)
+                : parent.Type.Color.ToXNAColor(alpha);
 
         /// <summary>
         /// Return true if a polygon with the given bounding box would be visible if rendered into the scene.
@@ -239,6 +241,14 @@ namespace WebAnnotation.View
                 PropertyName == "Terminal" ||
                 PropertyName == "OffEdge" ||
                 PropertyName == "Attributes";
+        }
+
+        protected static bool IsParentPropertyAffectingLabels(string PropertyName)
+        {
+            return string.IsNullOrEmpty(PropertyName) ||
+                PropertyName == "Label" ||
+                PropertyName == "Attributes" ||
+                PropertyName == "ParentID";
         }
 
         public override int GetHashCode() => modelObj.GetHashCode();

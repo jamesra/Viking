@@ -32,6 +32,7 @@
             // 
             // ListItems
             // 
+            this.ListItems.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Clickable;
             this.ListItems.Objects = new Viking.Common.IUIObject[0];
             //this.ListItems.SelectedObjects = new Viking.Common.IUIObject[0];
             // 

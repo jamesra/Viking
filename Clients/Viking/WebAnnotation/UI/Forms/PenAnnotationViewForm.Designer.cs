@@ -1,4 +1,4 @@
-﻿namespace WebAnnotation.UI.Forms
+namespace WebAnnotation.UI.Forms
 {
     partial class PenAnnotationViewForm
     {

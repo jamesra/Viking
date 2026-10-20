@@ -106,7 +106,7 @@ namespace Viking.Properties
                 }
 
                 Properties.Add(property);
-                Reload();
+                // Do not Reload(): it replaces every in-memory setting with the file and drops unsaved recents.
             }
 
             var value = this[key];

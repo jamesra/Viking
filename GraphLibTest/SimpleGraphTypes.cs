@@ -18,6 +18,16 @@ namespace GraphLibTest
 
     public class SimpleGraph : GraphLib.Graph<long, SimpleNode, SimpleEdge>
     {
+        public SimpleGraph()
+        { }
+
+        /// <summary>
+        /// Exposes the base deserialization constructor so tests can rebuild a graph from
+        /// <c>_Nodes</c> and <c>_Edges</c> entries without a formatter.
+        /// </summary>
+        public SimpleGraph(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) : base(info, context)
+        { }
+
         public void AddNode(long ID) => this.AddNode(new SimpleNode(ID));
 
         public void AddEdge(long Source, long Target) => this.AddEdge(new SimpleEdge(Source, Target));

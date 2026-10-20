@@ -1,4 +1,4 @@
-using rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
+using rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 using Geometry;
 using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;
@@ -24,12 +24,12 @@ using Viking.ViewModels;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
-using Viking.DependencyInjection;
-using Viking.Services.Grpc;
 using WebAnnotation.Actions;
 using WebAnnotation.UI;
 using WebAnnotation.UI.Commands;
 using WebAnnotation.UI.Commands.Segmentation;
+using WebAnnotation.UI.AutoPolygonize;
+using WebAnnotation.ReviewFeed;
 using WebAnnotation.View;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
@@ -40,24 +40,61 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 namespace WebAnnotation
 {
     /// <summary>
+    /// Chooses stroke placement versus click-to-place for structure placement commands.
+    /// Pen Mode still treats the mouse as a pen except when a hotkey started placement.
+    /// </summary>
+    internal static class PlacementInput
+    {
+        /// <summary>
+        /// True when Pen Mode is on and the placement command was not started by a hotkey.
+        /// Called by the structure placement queues; canvas free-draw does not use this.
+        /// </summary>
+        internal static bool UsePenStroke(bool penMode, bool startedByHotkey) => penMode && !startedByHotkey;
+    }
+
+    /// <summary>
     /// WinForms annotation overlay. Views report LocationAction; this class creates commands.
     /// GetAnnotations filters to LocationCanvasView; ObjectAtPosition also walks links and ICanvasViewContainer children.
     /// Hit-test positions are volume/world, not screen. IsCommandDefault false means a command owns input — skip overlay handlers.
     /// </summary>
     [Viking.Common.SectionOverlay("Annotation")]
-    internal class AnnotationOverlay : Viking.Common.ISectionOverlayExtension, Viking.Common.IHelpStrings, IPenActionSupport, ICanvasViewHitTesting
+    internal class AnnotationOverlay : Viking.Common.ISectionOverlayExtension, Viking.Common.IHelpStrings, Viking.Common.IHandleOverlayMouseDoubleClick, ICanvasViewHitTesting
     {
         public static float LocationTextScaleFactor => Global.AnnotationSettings.LocationTextScaleFactor;
         public static float ReferenceLocationTextScaleFactor => Global.AnnotationSettings.ReferenceLocationTextScaleFactor;
         private Viking.UI.Controls.SectionViewerControl _Parent;
         public Viking.UI.Controls.SectionViewerControl Parent => _Parent;
 
+        /// <summary>
+        /// Volume whose <see cref="VolumeViewModel.TransformChanged"/> <see cref="SetParent"/> subscribed to; <see cref="Shutdown"/> unsubscribes it.
+        /// </summary>
+        private VolumeViewModel? _subscribedVolume;
+
+        /// <summary>
+        /// Section whose <see cref="SectionViewModel.TransformChanged"/> <see cref="OnSectionChanged"/> last subscribed to; the only
+        /// section subscribed, kept equal to the parent's current section until <see cref="Shutdown"/>.
+        /// Written on the section-change worker and read by <see cref="Shutdown"/> on the UI thread; guarded by <see cref="_transformSubscriptionLock"/>.
+        /// </summary>
+        private SectionViewModel? _transformSubscribedSection;
+
+        /// <summary>
+        /// Guards <see cref="_transformSubscribedSection"/> and <see cref="_isShutdown"/> so a section-change worker cannot
+        /// subscribe to a section after <see cref="Shutdown"/> has unsubscribed. Only event add/remove runs under it; never raise
+        /// events or marshal to the UI thread while holding it.
+        /// </summary>
+        private readonly object _transformSubscriptionLock = new();
+
+        /// <summary>
+        /// Set by <see cref="Shutdown"/>; once true, <see cref="OnSectionChanged"/> no longer subscribes to section transforms.
+        /// Guarded by <see cref="_transformSubscriptionLock"/>.
+        /// </summary>
+        private bool _isShutdown;
+
         protected TransformChangedEventHandler SectionChangedEventHandler;
         private readonly EventHandler AnnotationChangedEventHandler;
 
         //private static SectionLocationViewModelCache cacheSectionAnnotations = new SectionLocationViewModelCache(); 
         private static readonly SectionAnnotationsViewModelCache cacheSectionAnnotations = new();
-        //private static LocationLinksViewModel linksView;
 
         private static AnnotationOverlay _CurrentOverlay = null;
         public static AnnotationOverlay CurrentOverlay => _CurrentOverlay;
@@ -72,10 +109,21 @@ namespace WebAnnotation
         internal static ICanvasView LastMouseOverObject = null;
         private Viking.UI.PenInputHelper PenPath = null;
 
-        /// <summary>Unused leftover. Hover and click use LastMouseOverObject.</summary>
-        internal static ICanvasGeometryView LastIntersectedObject = null;
-
         private readonly MouseOverLocationCanvasViewEffect mouseOverEffect = new();
+        private AutoCirclePolygonizeController autoPolygonizeController;
+
+        /// <summary>SAM2 image holds shared by auto-polygonize and segmentation commands.</summary>
+        internal AutoPolygonizeCache? PolygonizeImageCache => autoPolygonizeController?.ImageCache;
+
+        /// <summary>Latest viewport upload, reused when bounds and downsample still match.</summary>
+        internal SharedViewportImageLease? SharedViewportImages => autoPolygonizeController?.ViewportImages;
+
+        /// <summary>
+        /// True when auto-polygonize is hovering a proposal ring for this location.
+        /// Used by circle draw to cut the annotation's alpha in half as a linked highlight.
+        /// </summary>
+        internal bool IsAutoPolygonizeHoverSource(long locationId)
+            => autoPolygonizeController?.IsHoveredSourceLocation(locationId) == true;
 
         /// <summary>
         /// Per-section cancellation for annotation loads. When section changes we only cancel loads for sections outside the keep set (current ± radius from Global.NumSectionsInMemory).
@@ -106,13 +154,37 @@ namespace WebAnnotation
         private readonly CancellationTokenSource _annotationLoadWorkerCts = new();
 
         /// <summary>
-        /// Idle poll for locations changed on the visible section(s) since Store.Locations last section watermark.
+        /// Idle poll for locations changed on the visible section(s) since <see cref="Store.Locations"/> last section watermark.
         /// </summary>
         private System.Windows.Forms.Timer _sectionLocationPollTimer;
 
         static AnnotationOverlay()
         {
             cacheSectionAnnotations.MaxCacheSize = Global.NumSectionsInMemory;
+
+            // Same-volume deep-link activation in the running instance (Viking.exe has no compile-time WebAnnotation ref).
+            Viking.UI.State.GoToAnnotationLocation = async locId =>
+            {
+                LocationObj loc;
+                Exception fetchError = null;
+                try
+                {
+                    loc = await Store.Locations.GetObjectByID(locId);
+                }
+                catch (Exception ex)
+                {
+                    loc = null;
+                    fetchError = ex;
+                }
+
+                if (loc is null)
+                {
+                    ShowLocationLookupFailure(locId, fetchError);
+                    return;
+                }
+
+                GoToLocation(loc);
+            };
         }
 
         public AnnotationOverlay()
@@ -129,8 +201,15 @@ namespace WebAnnotation
             Viking.UI.State.GoToLocationIdHandler = locationId => GoToLocation(locationId);
         }
 
+        private System.Windows.Forms.Timer _startupLocationRetryTimer;
+        private int _startupLocationAttempts;
+        private const int MaxStartupLocationAttempts = 20;
+
         /// <summary>
         /// After the viewer is ready, navigate to a Location ID from viking://open?location=... if present.
+        /// Retries while ViewerForm or the annotation store is not ready yet; does not consume the
+        /// Location argument until the jump succeeds so a later default-camera recenter cannot win a race
+        /// against a lost ID.
         /// </summary>
         private async void TryApplyStartupLocation()
         {
@@ -141,24 +220,122 @@ namespace WebAnnotation
             if (!long.TryParse(locStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out long locID))
                 return;
 
-            // Consume so we do not re-apply if overlays are recreated
-            Viking.UI.State.StartupArguments.Remove("Location");
-
-            LocationObj loc = await Store.Locations.GetObjectByID(locID);
-            if (loc is null)
+            if (Viking.UI.State.ViewerForm is null || !Store.IsInitialized)
             {
-                string volumeLabel = Viking.UI.State.IdentityVolumeName
-                    ?? Viking.UI.State.volume?.Name
-                    ?? "(unknown volume)";
-                MessageBox.Show(
-                    $"Location ID {locID} was not found in volume {volumeLabel}.\n\nStructure and Location IDs are numbered per volume.",
-                    "Goto Location",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
+                ScheduleStartupLocationRetry();
                 return;
             }
 
+            LocationObj loc;
+            Exception fetchError = null;
+            try
+            {
+                loc = await Store.Locations.GetObjectByID(locID);
+            }
+            catch (Exception ex)
+            {
+                // The gRPC store logs and swallows most fetch faults (returning null); keep any that escape.
+                loc = null;
+                fetchError = ex;
+            }
+
+            if (loc is null)
+            {
+                if (IsAnnotationAccessDenied(fetchError))
+                {
+                    Viking.UI.State.StartupArguments.Remove("Location");
+                    StopStartupLocationRetry();
+                    ShowLocationLookupFailure(locID, fetchError);
+                    return;
+                }
+
+                if (_startupLocationAttempts < MaxStartupLocationAttempts)
+                {
+                    ScheduleStartupLocationRetry();
+                    return;
+                }
+
+                Viking.UI.State.StartupArguments.Remove("Location");
+                ShowLocationLookupFailure(locID, fetchError);
+                return;
+            }
+
+            Viking.UI.State.StartupArguments.Remove("Location");
+            StopStartupLocationRetry();
             GoToLocation(loc);
+        }
+
+        /// <summary>
+        /// Tells a deep-link user why a Location ID did not load.
+        /// A denied GetLocationByID used to share the missing-ID text, which reads as a bad link.
+        /// </summary>
+        /// <param name="locId">Location ID that did not load.</param>
+        /// <param name="fetchError">The failure from the lookup, when one reached the caller; null for a plain miss.</param>
+        private static void ShowLocationLookupFailure(long locId, Exception fetchError = null)
+        {
+            string volumeLabel = Viking.UI.State.IdentityVolumeName
+                ?? Viking.UI.State.volume?.Name
+                ?? "(unknown volume)";
+            if (IsAnnotationAccessDenied(fetchError))
+            {
+                MessageBox.Show(
+                    $"Location ID {locId} could not be loaded in volume {volumeLabel} because the annotation service denied access.\n\nThe ID may still exist. This is not a missing location.",
+                    "Goto Location",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            MessageBox.Show(
+                $"Location ID {locId} was not found in volume {volumeLabel}.\n\nStructure and Location IDs are numbered per volume.",
+                "Goto Location",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+
+        /// <summary>
+        /// True when a store fetch failed because the annotation service denied access (gRPC PermissionDenied or
+        /// Unauthenticated), including wrapped inner exceptions.
+        /// </summary>
+        private static bool IsAnnotationAccessDenied(Exception error)
+        {
+            for (Exception current = error; current != null; current = current.InnerException)
+            {
+                if (current is Grpc.Core.RpcException rpc &&
+                    (rpc.StatusCode == Grpc.Core.StatusCode.PermissionDenied || rpc.StatusCode == Grpc.Core.StatusCode.Unauthenticated))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private void ScheduleStartupLocationRetry()
+        {
+            _startupLocationAttempts++;
+            if (_Parent == null || _Parent.IsDisposed)
+                return;
+
+            if (_startupLocationRetryTimer == null)
+            {
+                _startupLocationRetryTimer = new System.Windows.Forms.Timer { Interval = 300 };
+                _startupLocationRetryTimer.Tick += (_, _) =>
+                {
+                    _startupLocationRetryTimer.Stop();
+                    TryApplyStartupLocation();
+                };
+            }
+
+            _startupLocationRetryTimer.Stop();
+            _startupLocationRetryTimer.Start();
+        }
+
+        private void StopStartupLocationRetry()
+        {
+            if (_startupLocationRetryTimer == null)
+                return;
+            _startupLocationRetryTimer.Stop();
+            _startupLocationRetryTimer.Dispose();
+            _startupLocationRetryTimer = null;
         }
 
         /// <summary>
@@ -195,8 +372,11 @@ namespace WebAnnotation
         {
             try
             {
-                if (await save())
-                    return true;
+                using (WebAnnotation.View.PolygonViewTimingLog.Measure("save"))
+                {
+                    if (await save())
+                        return true;
+                }
 
                 ShowSaveFailedMsgBox();
             }
@@ -351,6 +531,14 @@ namespace WebAnnotation
 
                 helpstrings.AddRange(DefaultKeyHelpStrings());
 
+                if (autoPolygonizeController?.IsEnabled == true)
+                {
+                    helpstrings.Add("Double-click result polyline: Accept auto polygonalization");
+                    helpstrings.Add("Double right-click result polyline: Accept / Reject menu");
+                }
+
+                helpstrings.Add("Checkbox \"Auto polygonize circles in view\" turns idle segmentation off");
+
                 return [.. helpstrings];
             }
         }
@@ -405,23 +593,28 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Best hit including links and ICanvasViewContainer children. Position is volume/world, not screen pixels.
+        /// Nearest annotation at the point for hover, cursor, and single-click edit, including links and
+        /// ICanvasViewContainer children. Position is volume/world, not screen pixels.
+        /// Auto-polygonize rings are returned only when no annotation is hit so hollow
+        /// proposals do not block translate/scale on the circle underneath. Double-click
+        /// accept/dismiss uses <see cref="IHandleOverlayMouseDoubleClick"/> instead.
         /// </summary>
         public object ObjectAtPosition(Geometry.Vector2 position, out double distance)
         {
             distance = double.MaxValue;
+
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView == null)
             {
                 _ = GetOrCreateAnnotationsForSectionAsync(CurrentSectionNumber);
-                return null;
+                return TryProposalAtPosition(position, out distance);
             }
 
             ICanvasGeometryView bestObj = null;
 
             List<HitTestResult> listObjects = locView.GetAnnotations(position);
 
-            HitTestResult bestHit = listObjects.NearestObjectOnCurrentSectionThenAdjacent(CurrentSectionNumber);
+            HitTestResult bestHit = listObjects.NearestObjectOnCurrentSectionThenAdjacent(CurrentSectionNumber, preferCloserLocationLinks: true);
 
             //Use objects on our section, then other sections 
             if (bestHit != null)
@@ -441,7 +634,70 @@ namespace WebAnnotation
                 }
             }
 
-            return bestObj;
+            // PreferAnnotationForSingleClick: annotation wins for hover/cursor/edit;
+            // proposal only on a miss. Double-click accept/dismiss is preferential.
+            return AutoPolygonizeSelection.PreferAnnotationForSingleClick(
+                bestObj,
+                bestObj is null ? TryProposalAtPosition(position, out distance) : null);
+        }
+
+
+        /// <summary>
+        /// Proposal ring hit when idle auto-polygonize is showing overlays. Used after
+        /// annotation miss in <see cref="ObjectAtPosition"/> and by preferential double-click.
+        /// </summary>
+        private object TryProposalAtPosition(Geometry.Vector2 position, out double distance)
+        {
+            distance = double.MaxValue;
+            if (!IsCommandDefault() ||
+                autoPolygonizeController is null ||
+                !autoPolygonizeController.TryHit(position, out AutoPolygonizeProposal proposal, out double proposalDistance))
+            {
+                return null;
+            }
+
+            distance = proposalDistance;
+            return proposal;
+        }
+
+        /// <summary>
+        /// Accept on left double-click, or open the proposal Accept/Reject menu on right/middle,
+        /// even when an annotation owns the same point for single-click edit via
+        /// <see cref="ObjectAtPosition"/>.
+        /// </summary>
+        bool Viking.Common.IHandleOverlayMouseDoubleClick.TryHandleMouseDoubleClick(
+            MouseButtons button,
+            Geometry.Vector2 worldPosition)
+        {
+            // #region agent log
+            {
+                bool dbgDefault = IsCommandDefault();
+                AutoPolygonizeProposal dbgProposal = null;
+                double dbgDistance = double.NaN;
+                bool dbgHit = dbgDefault && autoPolygonizeController?.TryHit(worldPosition, out dbgProposal, out dbgDistance) == true;
+                WebAnnotation.UI.Commands.Segmentation.SegmentationDiag.Log(
+                    $"DIAG H14 TryHandleMouseDoubleClick button={button} isDefault={dbgDefault} command={_Parent.CurrentCommand?.GetType().Name} " +
+                    $"queueDepth={Parent.CommandQueue.QueueDepth} controllerNull={autoPolygonizeController is null} " +
+                    $"hit={dbgHit} distance={dbgDistance} world={worldPosition}");
+            }
+            // #endregion
+
+            if (!IsCommandDefault() ||
+                autoPolygonizeController?.TryHit(worldPosition, out AutoPolygonizeProposal proposal, out _) != true)
+            {
+                return false;
+            }
+
+            if (button == MouseButtons.Left)
+                return proposal.HandleMouseDoubleClick(button, worldPosition);
+
+            if (button == MouseButtons.Right || button == MouseButtons.Middle)
+            {
+                proposal.ShowContextMenuAtCursor();
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -483,6 +739,53 @@ namespace WebAnnotation
             return (ICanvasView)bestHit.obj;
         }
 
+        /// <summary>
+        /// Finds the circle annotations on one section whose volume circle intersects <paramref name="bounds"/> or lies inside it.
+        /// </summary>
+        /// <param name="CurrentSectionNumber">Section whose cached annotations are searched.</param>
+        /// <param name="bounds">Closed pen loop in volume coordinates.</param>
+        /// <returns>The matching circles, or null when the section's annotations are not loaded.</returns>
+        public static List<LocationCircleView> IntersectedCirclesOnSection(int CurrentSectionNumber, Polygon bounds)
+        {
+            SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
+            if (locView is null)
+            {
+                return null;
+            }
+
+            IEnumerable<LocationCanvasView> listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode == LocationType.CIRCLE);
+
+            IEnumerable<LocationCircleView> listCircles = listObjects.Select(o => o as LocationCircleView).Where(o => o != null);
+
+            return [.. listCircles.Where(o => o.VolumeCircle.Intersects(bounds) || bounds.Contains(o.VolumeCircle))];
+        }
+
+        /// <summary>
+        /// Finds the polygon annotations on one section that allow interior holes and whose rendered volume shape
+        /// intersects or covers <paramref name="bounds"/>.
+        /// </summary>
+        /// <param name="CurrentSectionNumber">Section whose cached annotations are searched.</param>
+        /// <param name="bounds">Closed pen loop in volume coordinates.</param>
+        /// <returns>The matching polygons, or null when the section's annotations are not loaded.</returns>
+        public static List<LocationPolygonView> IntersectedPolygonsOnSection(int CurrentSectionNumber, Polygon bounds)
+        {
+            SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
+            if (locView is null)
+            {
+                return null;
+            }
+
+            IEnumerable<LocationCanvasView> listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode.AllowsInteriorHoles());
+
+            IEnumerable<LocationPolygonView> listPolygons = listObjects.Select(o => o as LocationPolygonView).Where(o => o != null);
+
+            return [.. listPolygons.Where(o =>
+            {
+                Polygon poly = o.VolumeShapeAsRendered.ToPolygon();
+                return poly.Intersects(bounds) || poly.Covers(bounds);
+            })];
+        }
+
         public static List<HitTestResult> GetAnnotations(LineSegment line, int CurrentSectionNumber)
         {
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
@@ -507,7 +810,10 @@ namespace WebAnnotation
 
             //Load the locations for the current sections
             _Parent.OnSectionChanged += new SectionChangedEventHandler(OnSectionChanged);
-            Viking.UI.State.volume.TransformChanged += new TransformChangedEventHandler(OnVolumeTransformChanged);
+            if (_subscribedVolume is not null)
+                _subscribedVolume.TransformChanged -= OnVolumeTransformChanged;
+            _subscribedVolume = Viking.UI.State.volume;
+            _subscribedVolume.TransformChanged += new TransformChangedEventHandler(OnVolumeTransformChanged);
             _Parent.OnReferenceSectionChanged += new ReferenceSectionChangedEventHandler(OnReferenceSectionChanged);
 
             _Parent.MouseDown += new MouseEventHandler(OnMouseDown);
@@ -524,13 +830,21 @@ namespace WebAnnotation
 
 
             _Parent.Camera.PropertyChanged += new System.ComponentModel.PropertyChangedEventHandler(OnCameraPropertyChanged);
-            //linksView = new LocationLinksViewModel(parent); 
+
+            autoPolygonizeController = new AutoCirclePolygonizeController(_Parent, RequestCurrentSectionAnnotationsLoad);
+            cacheSectionAnnotations.EntryEvicted -= OnSectionAnnotationsViewEvicted;
+            cacheSectionAnnotations.EntryEvicted += OnSectionAnnotationsViewEvicted;
+            if (Global.AnnotationSettings.AutoPolygonizeCircles)
+                autoPolygonizeController.SetEnabled(true);
+
+            AnnotationStatusChips.Attach(_Parent);
+
+            _Parent.Disposed += OnParentDisposed;
 
             _currentSectionNumber = _Parent.Section?.Number ?? 0;
             if (_annotationLoadWorkerTask is null || _annotationLoadWorkerTask.IsCompleted)
                 _annotationLoadWorkerTask = Task.Run(() => RunAnnotationLoadWorkerAsync(), _annotationLoadWorkerCts.Token);
             RequestSectionAnnotationsLoad(_currentSectionNumber);
-            _Parent.Disposed += OnParentDisposed;
             StartSectionLocationPollTimer();
 
             // ViewerForm is assigned after SectionViewerForm construction; defer until the message pump runs.
@@ -540,11 +854,134 @@ namespace WebAnnotation
                 _Parent.HandleCreated += (_, _) => _Parent.BeginInvoke(new System.Action(TryApplyStartupLocation));
         }
 
+        private void OnCameraPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            autoPolygonizeController?.OnCameraChanged();
+            if (!ShouldLoadAnnotationsForCameraChange())
+                return;
+            RequestCurrentSectionAnnotationsLoad();
+        }
+
+        /// <summary>
+        /// Starts or stops the auto-polygonize controller. Creates it on first enable.
+        /// </summary>
+        public void SetAutoPolygonizeEnabled(bool enabled)
+        {
+            autoPolygonizeController ??= new AutoCirclePolygonizeController(_Parent, RequestCurrentSectionAnnotationsLoad);
+            autoPolygonizeController.SetEnabled(enabled);
+            AnnotationStatusChips.Refresh();
+        }
+
+        /// <summary>
+        /// True while idle auto-polygonize holds an in-flight batch. Status chips read this.
+        /// </summary>
+        internal bool IsAutoPolygonizeBusy => autoPolygonizeController?.IsBusy == true;
+
+        /// <summary>
+        /// True while auto-polygonize is on but the camera is coarser than the max-downsample preference,
+        /// so no batch will start until the user zooms in. Status chips read this.
+        /// </summary>
+        internal bool IsAutoPolygonizePausedByZoom => autoPolygonizeController?.IsPausedByZoom == true;
+
+        /// <summary>
+        /// Restarts the auto-segment idle wait when it is already on.
+        /// Called after the max-downsample preference changes.
+        /// </summary>
+        public void RequestAutoPolygonizeIdlePass()
+        {
+            autoPolygonizeController?.RequestIdlePass();
+        }
+
+        /// <summary>
+        /// Asks auto-polygonize to drop the previous server's screen image and, when the new
+        /// endpoint can accept work, segment the current view again.
+        /// </summary>
+        internal void OnSegmentationEndpointChanged(bool newEndpointIsUsable)
+        {
+            autoPolygonizeController?.OnSegmentationEndpointChanged(newEndpointIsUsable);
+        }
+
+        /// <summary>
+        /// Re-segments the current view after a SAM2 request setting (mask threshold, mask_input) changes.
+        /// </summary>
+        public void OnSegmentationRequestSettingsChanged()
+        {
+            autoPolygonizeController?.OnSegmentationRequestSettingsChanged();
+        }
+
+        /// <summary>
+        /// Forwards the debug mask-overlay preference so existing proposals attach or dispose GPU textures.
+        /// </summary>
+        public void SetAutoPolygonizeOverlayMasksEnabled(bool enabled)
+        {
+            autoPolygonizeController?.OnOverlayMasksChanged(enabled);
+        }
+
+        /// <summary>
+        /// Forwards the debug prompt-dot preference. Points are already stored on each proposal;
+        /// the next draw shows or hides them.
+        /// </summary>
+        public void SetAutoPolygonizeOverlayPromptsEnabled(bool enabled)
+        {
+            autoPolygonizeController?.OnOverlayPromptsChanged(enabled);
+        }
+
+        /// <summary>
+        /// Redraws auto-polygonize proposals after a preference that only changes what is painted,
+        /// such as hiding rings while the mask overlay is on.
+        /// </summary>
+        public void RefreshAutoPolygonizeOverlay()
+        {
+            autoPolygonizeController?.InvalidateOverlay();
+        }
+
+        /// <summary>
+        /// Retraces auto-segment rings and mask overlays from the raw server masks
+        /// after an edge-cleanup or hole-drop change. No new SegmentImage call.
+        /// </summary>
+        public void RefreshAutoPolygonizeFromStoredMasks()
+        {
+            autoPolygonizeController?.RefreshFromStoredMasks();
+        }
+
         private void OnParentDisposed(object sender, EventArgs e)
+        {
+            Shutdown();
+        }
+
+        /// <summary>
+        /// Stops auto-polygonize timers, the section location poller, and the annotation-load worker when the viewer is disposed.
+        /// Also removes this overlay's handlers from publishers that outlive the viewer (<see cref="Store.Locations"/>,
+        /// <see cref="Store.LocationLinks"/>, the volume and the last section subscribed); without this, every closed viewer
+        /// stays rooted and keeps processing each location add or remove.
+        /// </summary>
+        public void Shutdown()
         {
             if (_Parent != null)
                 _Parent.Disposed -= OnParentDisposed;
+
+            Store.Locations.OnCollectionChanged -= OnLocationCollectionChanged;
+            Store.LocationLinks.OnCollectionChanged -= OnLocationLinksCollectionChanged;
+            if (_subscribedVolume is not null)
+            {
+                _subscribedVolume.TransformChanged -= OnVolumeTransformChanged;
+                _subscribedVolume = null;
+            }
+
+            lock (_transformSubscriptionLock)
+            {
+                _isShutdown = true;
+                if (_transformSubscribedSection is not null)
+                {
+                    _transformSubscribedSection.TransformChanged -= OnSectionTransformChanged;
+                    _transformSubscribedSection = null;
+                }
+            }
+
+            StopStartupLocationRetry();
             StopSectionLocationPollTimer();
+            cacheSectionAnnotations.EntryEvicted -= OnSectionAnnotationsViewEvicted;
+            autoPolygonizeController?.Stop();
             try
             {
                 _annotationLoadWorkerCts.Cancel();
@@ -585,7 +1022,7 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Incremental Store.Locations.GetObjectsForSectionAsynch for the current section and loaded adjacent sections.
+        /// Incremental <see cref="ILocationStore.RefreshSectionLocationsAsync"/> for the current section and loaded adjacent sections.
         /// Skips sections whose watermark is not seeded yet or that already have a query/load in flight.
         /// </summary>
         private void OnSectionLocationPollTick(object sender, EventArgs e)
@@ -611,7 +1048,7 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// One incremental location change query for sectionNumber when policy allows.
+        /// One incremental location change query for <paramref name="sectionNumber"/> when policy allows.
         /// </summary>
         private void PollSectionLocations(int sectionNumber)
         {
@@ -644,61 +1081,85 @@ namespace WebAnnotation
                     return;
                 // Objects already in the store do not raise CollectionChanged; AddLocations is how they enter the canvas.
                 view.AddLocations(locations);
+                // Poll returns the whole incremental section set; only rows newer than the Review seed floor
+                // (or lookback) enter the change feed so a section dump cannot bury the newest-N list.
+                ReviewChangeFeedIngress.PushUpsertsFromPoll(locations);
             });
         }
 
-        private void OnCameraPropertyChanged(object sender, PropertyChangedEventArgs e)
+        /// <summary>
+        /// Records store deletes in the Review feed. Called from <see cref="OnLocationCollectionChanged"/>.
+        /// </summary>
+        static void PushReviewFeedDeletes(NotifyCollectionChangedEventArgs e)
         {
-            if (!ShouldLoadAnnotationsForCameraChange())
+            if (e is null || e.Action != NotifyCollectionChangedAction.Remove || e.OldItems is null)
                 return;
-            RequestCurrentSectionAnnotationsLoad();
+            if (!VolumeAccessRoles.HasReviewAccess())
+                return;
+
+            var ids = new List<long>(e.OldItems.Count);
+            foreach (object item in e.OldItems)
+            {
+                if (item is LocationObj loc)
+                    ids.Add(loc.ID);
+            }
+
+            if (ids.Count > 0)
+                ReviewChangeFeed.Session.ApplyDeletes(ids, DateTime.UtcNow);
         }
 
+        /// <summary>
+        /// Local creates/updates (accept autosegment, new structures, replaces) do not go through the
+        /// section poll; push NewItems into the Review feed when CollectionChanged reports them.
+        /// </summary>
+        static void PushReviewFeedLocalUpserts(NotifyCollectionChangedEventArgs e)
+        {
+            if (e is null || e.NewItems is null || e.NewItems.Count == 0)
+                return;
+            if (e.Action != NotifyCollectionChangedAction.Add
+                && e.Action != NotifyCollectionChangedAction.Replace)
+            {
+                return;
+            }
+
+            var locations = new List<LocationObj>(e.NewItems.Count);
+            foreach (object item in e.NewItems)
+            {
+                if (item is LocationObj loc)
+                    locations.Add(loc);
+            }
+
+            ReviewChangeFeedIngress.PushUpserts(locations);
+        }
+
+        /// <summary>
+        /// Sets the mouse cursor from the hit under the pointer via
+        /// <see cref="LocationActionDispatch"/> so unimplemented action methods cannot throw on hover.
+        /// </summary>
         protected void UpdateMouseCursor()
         {
-            // GetNearestLocation(WorldPosition, out distance);
-            if (LastMouseOverObject is IMouseActionSupport loc)
-            {
-                try
-                {
-                    Geometry.Vector2 WorldPosition = LastMouseMoveVolumeCoords;
-                    LocationAction action = loc.GetMouseClickActionForPositionOnAnnotation(WorldPosition, CurrentSectionNumber, Viking.Input.ModifierKeysConverter.FromWinFormsKeys((int)Control.ModifierKeys), out long locID);
-                    _Parent.Cursor = action.GetCursor();
-                }
-                catch (Exception ex)
-                {
-                    Trace.WriteLine($"{nameof(AnnotationOverlay)}.{nameof(UpdateMouseCursor)}: {ex}");
-                    _Parent.Cursor = Cursors.Default;
-                }
-            }
-            else
-            {
-                _Parent.Cursor = Cursors.Default;
-            }
+            LocationAction action = LocationActionDispatch.GetActionForCursor(
+                LastMouseOverObject,
+                LastMouseMoveVolumeCoords,
+                CurrentSectionNumber,
+                Control.ModifierKeys,
+                penContact: false);
+            _Parent.Cursor = action.GetCursor();
         }
 
-
+        /// <summary>
+        /// Sets the pen cursor from the hit under the stylus via
+        /// <see cref="LocationActionDispatch"/> so unimplemented action methods cannot throw on hover.
+        /// </summary>
         protected void UpdatePenCursor()
         {
-            // GetNearestLocation(WorldPosition, out distance);
-            if (LastMouseOverObject is IPenActionSupport loc)
-            {
-                try
-                {
-                    Geometry.Vector2 WorldPosition = LastMouseMoveVolumeCoords;
-                    LocationAction action = loc.GetPenContactActionForPositionOnAnnotation(WorldPosition, CurrentSectionNumber, Viking.Input.ModifierKeysConverter.FromWinFormsKeys((int)Control.ModifierKeys), out long locID);
-                    _Parent.Cursor = action.GetCursor();
-                }
-                catch (Exception ex)
-                {
-                    Trace.WriteLine($"{nameof(AnnotationOverlay)}.{nameof(UpdatePenCursor)}: {ex}");
-                    _Parent.Cursor = Cursors.Default;
-                }
-            }
-            else
-            {
-                _Parent.Cursor = Cursors.Default;
-            }
+            LocationAction action = LocationActionDispatch.GetActionForCursor(
+                LastMouseOverObject,
+                LastMouseMoveVolumeCoords,
+                CurrentSectionNumber,
+                Control.ModifierKeys,
+                penContact: true);
+            _Parent.Cursor = action.GetCursor();
         }
 
         /// <summary>False when a non-default command owns input — overlay must not start a competing command.</summary>
@@ -712,6 +1173,40 @@ namespace WebAnnotation
             //Check if there is a non-default command. we don't want to mess with another active command
             return _Parent.CurrentCommand.GetType() == typeof(Viking.UI.Commands.DefaultCommand) &&
              Parent.CommandQueue.QueueDepth == 0;
+        }
+
+        /// <summary>
+        /// Start the location action advertised by the cursor at <paramref name="worldPosition"/>.
+        /// Hole views are not <see cref="LocationCanvasView"/>; dispatch uses the action interfaces.
+        /// Called from mouse-down (including Pen Mode) and pen contact.
+        /// </summary>
+        /// <returns>True when a command was assigned.</returns>
+        private bool TryStartLocationActionCommand(Geometry.Vector2 worldPosition, bool penContact)
+        {
+            object obj = ObjectAtPosition(worldPosition, out _);
+
+            if (!LocationActionDispatch.TryGetAction(
+                    obj,
+                    worldPosition,
+                    CurrentSectionNumber,
+                    Control.ModifierKeys,
+                    penContact,
+                    out LocationAction action,
+                    out long locationId))
+            {
+                return false;
+            }
+
+            if (!Store.Locations.TryGetObjectByID(locationId, out LocationObj loc) || loc is null)
+                return false;
+
+            Viking.UI.Commands.Command command = action.CreateCommand(Parent, loc, worldPosition);
+            if (command is null)
+                return false;
+
+            Viking.UI.State.SelectedObject = obj as IUIObjectBasic;
+            _Parent.CurrentCommand = command;
+            return true;
         }
 
         private bool RetraceAndReplaceDisabled = false;
@@ -750,6 +1245,7 @@ namespace WebAnnotation
 
             Geometry.Vector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
             LastMouseMoveVolumeCoords = WorldPosition;
+            autoPolygonizeController?.UpdateHover(WorldPosition);
 
             ICanvasView NextMouseOverObject = ObjectAtPosition(WorldPosition, out double distance) as ICanvasView;
             if (NextMouseOverObject != LastMouseOverObject)
@@ -788,60 +1284,37 @@ namespace WebAnnotation
             Geometry.Vector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
             LastMouseDownCoords = WorldPosition;
 
-            //Left mouse button selects objects
+            //Left mouse button selects objects. In Pen Mode the mouse still emulates a pen
+            //after location actions (fill-bucket, etc.) have had a chance to start.
+            // Proposal rings do not swallow this path; ObjectAtPosition prefers annotations
+            // so translate/scale still start under a ring. Double-click accept/dismiss is separate.
             if (e.Button == MouseButtons.Left)
             {
+                if (TryStartLocationActionCommand(WorldPosition, penContact: false))
+                    return;
+
                 // A type chosen in the Structure Types list is an explicit place command.
                 // Pen Mode must not turn that click into a one-point stroke that is discarded.
                 if (Viking.UI.State.SelectedObject is StructureType st)
                 {
-                    OnCreateStructure(st.ID, Array.Empty<string>(), LocationType.OPENCURVE);
+                    OnCreateStructure(st.ID, Array.Empty<string>(), LocationType.OPENCURVE, startedByHotkey: true);
                     return;
                 }
 
                 if (Global.PenMode)
                 {
-                    //Id we don't have a command to start, begin creating a path
+                    // Starting a stroke here would make the free-draw command current for the second click,
+                    // so the ring's double-click accept would go to it instead of DefaultCommand.
+                    if (autoPolygonizeController?.TryHit(WorldPosition, out _, out _) == true)
+                        return;
+
                     StartPenPath(WorldPosition);
                     return;
                 }
 
+                if (CanContinueLastTrace)
                 {
-                    object obj = ObjectAtPosition(WorldPosition, out double distance);
-                    //Figure out if it is resizing a location circle
-                    //If the loc is on this section we check if we are close to the edge and we are resizing.  Everyone else gets standard location command
-                    Viking.UI.State.SelectedObject = obj as IUIObjectBasic;
-
-                    /*If we select a link, find the location off the section and assume we have selected that*/
-
-                    if (obj is IMouseActionSupport actionSupportedObj)
-                    {
-                        try
-                        {
-                            LocationAction action =
-                                actionSupportedObj.GetMouseClickActionForPositionOnAnnotation(WorldPosition,
-                                    CurrentSectionNumber, Viking.Input.ModifierKeysConverter.FromWinFormsKeys((int)Control.ModifierKeys), out long LocationID);
-
-                            if (!Store.Locations.TryGetObjectByID(LocationID, out LocationObj clickedLoc))
-                                return;
-
-                            Viking.UI.Commands.Command command = action.CreateCommand(Parent,
-                                clickedLoc, WorldPosition);
-                            if (command != null)
-                            {
-                                _Parent.CurrentCommand = command;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Trace.WriteLine($"{nameof(AnnotationOverlay)}.OnMouseDown GetMouseClickActionForPositionOnAnnotation: {ex}");
-                        }
-                    }
-                    else if (CanContinueLastTrace)
-                    {
-                        //Check if we can continue another annotation, if not, check if we are in pen mode.  If we are start a new place polygon command.
-                        OnContinueLastTrace(LastMouseDownCoords);
-                    }
+                    OnContinueLastTrace(LastMouseDownCoords);
                 }
             }
         }
@@ -882,42 +1355,8 @@ namespace WebAnnotation
 
             if (PenPath == null)
             {
-                object obj = ObjectAtPosition(WorldPosition, out double distance);
-                //Figure out if it is resizing a location circle
-                //If the loc is on this section we check if we are close to the edge and we are resizing.  Everyone else gets standard location command
-                Viking.UI.State.SelectedObject = obj as IUIObjectBasic;
-
-                /*If we select a link, find the location off the section and assume we have selected that*/
-
-
-                if (obj is IPenActionSupport actionSupportedObj)
-                {
-                    try
-                    {
-                        LocationAction action = actionSupportedObj.GetPenContactActionForPositionOnAnnotation(WorldPosition,
-                            CurrentSectionNumber, Viking.Input.ModifierKeysConverter.FromWinFormsKeys((int)Control.ModifierKeys), out long LocationID);
-
-                        if (actionSupportedObj is LocationCanvasView viewObj)
-                        {
-                            if (!Store.Locations.TryGetObjectByID(LocationID, out LocationObj clickedLoc))
-                                return;
-
-                            Viking.UI.Commands.Command command =
-                                action.CreateCommand(Parent, clickedLoc, WorldPosition);
-                            if (command != null)
-                            {
-                                _Parent.CurrentCommand = command;
-                                return;
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Trace.WriteLine($"{nameof(AnnotationOverlay)}.OnPenContact GetPenContactActionForPositionOnAnnotation: {ex}");
-                    }
-                    //var command = new AnnotationPenFreeDrawCommand(Parent, viewObj, Color.Green, Global.DefaultClosedLineWidth * Parent.Downsample, null);
-                    //Viking.UI.Commands.Command command = action.CreateCommand(Parent, Store.Locations.GetObjectByID(LocationID), WorldPosition);
-                }
+                if (TryStartLocationActionCommand(WorldPosition, penContact: true))
+                    return;
             }
 
             /*
@@ -1025,7 +1464,7 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// This is called when a AnnotationOverlayPenFreeDrawCommand is completed.  The overlay checks all of the shapes 
+        /// This is called when a AnnotationOverlayPenFreeDrawCommandV2 is completed.  The overlay checks all of the shapes 
         /// intersected to determine the possible interactions.  We then present the options to the user to confirm.
         /// </summary>
         /// <param name="path"></param>
@@ -1037,6 +1476,9 @@ namespace WebAnnotation
                 //If we have a point and not a line just return
                 return;
             }
+
+            AddConvertCircleActions(sender_cmd, actions);
+            AddCutHoleActions(sender_cmd, actions);
 
             //Check if we should add actions to create new structures
             foreach (ulong favoriteStructureID in Global.UserFavoriteStructureTypes)
@@ -1096,6 +1538,64 @@ namespace WebAnnotation
 
         }
 
+        /// <summary>
+        /// Adds a convert-to-polygon choice for each circle on this section that the closed
+        /// pen loop overlaps. The stroke log only includes circles the path entered, so a
+        /// loop drawn around a circle would otherwise have no convert button.
+        /// Called from <see cref="OnPenPathCompleted"/> before the choice buttons are shown.
+        /// Skips a circle that already has a <see cref="WebAnnotation.UI.Actions.ChangeToPolygonAction"/>.
+        /// </summary>
+        private void AddConvertCircleActions(AnnotationOverlayPenFreeDrawCommandV2 sender, List<IAction> actions)
+        {
+            if (!sender.Path.HasSelfIntersection)
+                return;
+
+            Polygon loop = new(sender.Path.SimplifiedFirstLoop);
+            List<LocationCircleView> circles = IntersectedCirclesOnSection(CurrentSectionNumber, loop);
+            if (circles is null)
+                return;
+
+            foreach (LocationCircleView circle in circles)
+            {
+                if (actions.OfType<WebAnnotation.UI.Actions.ChangeToPolygonAction>().Any(existing => existing.Location.ID == circle.ID))
+                    continue;
+
+                if (!Store.Locations.TryGetObjectByID(circle.ID, out LocationObj location) || location is null || location.TypeCode != LocationType.CIRCLE)
+                    continue;
+
+                actions.Add(new WebAnnotation.UI.Actions.ChangeToPolygonAction(location, loop));
+            }
+        }
+
+        /// <summary>
+        /// Adds a cut-hole (scissors) choice for each polygon on this section that wholly contains the closed pen loop
+        /// without touching one of its interior holes. The stroke log only includes annotations the path crossed,
+        /// so a loop drawn entirely inside a polygon would otherwise offer no cut-hole button.
+        /// Called from <see cref="OnPenPathCompleted"/> before the choice buttons are shown.
+        /// Skips a hole already offered from the stroke log.
+        /// </summary>
+        private void AddCutHoleActions(AnnotationOverlayPenFreeDrawCommandV2 sender, List<IAction> actions)
+        {
+            if (!sender.Path.HasSelfIntersection)
+                return;
+
+            Polygon loop = new(sender.Path.SimplifiedFirstLoop);
+            List<LocationPolygonView> polygons = IntersectedPolygonsOnSection(CurrentSectionNumber, loop);
+            if (polygons is null)
+                return;
+
+            foreach (LocationPolygonView polygon in polygons)
+            {
+                foreach (WebAnnotation.UI.Actions.CutHoleAction cutHole in polygon.GetCutHoleActionsForLoop(sender.Path))
+                {
+                    if (actions.OfType<WebAnnotation.UI.Actions.CutHoleAction>().Any(existing => existing.Equals(cutHole)))
+                        continue;
+
+                    actions.Add(cutHole);
+                }
+            }
+        }
+
         protected void OnMouseUp(object sender, MouseEventArgs e)
         {
         }
@@ -1110,7 +1610,7 @@ namespace WebAnnotation
 * TODO: If the path is a valid shape for the last editted annotation we should continue the last trace. 
 if(CanContinueLastTrace)
 {
-LocationObj lastLoc = Store.Locations.GetObjectByID(Global.LastEditedAnnotationID.Value, false);
+LocationObj lastLoc = Store.Locations.GetCachedObject(Global.LastEditedAnnotationID.Value);
 switch(lastLoc.TypeCode)
 {
 case LocationType.CURVEPOLYGON:
@@ -1138,7 +1638,9 @@ break;
                 "F5 Key: Reload section annotations",
                 "Back Key: Return to last edited location",
                 "F12: Open goto location ID dialog",
-                "F11: Open goto structure ID dialog"
+                "F11: Open goto structure ID dialog",
+                "SHIFT + F8: Send the circles in view to auto-polygonize again",
+                "Numpad * or SHIFT + 8: Toggle Pen Mode"
             };
         }
 
@@ -1295,32 +1797,25 @@ break;
             }
         }
 
-        protected void OnKeyDown(object sender, KeyEventArgs e)
+        /// <summary>
+        /// Runs the overlay's own action for a key that <see cref="OverlayHotkeys.IsReserved"/> accepted.
+        /// Called only from <see cref="OnKeyDown"/>, which skips the user settings shortcuts afterwards.
+        /// </summary>
+        private void OnReservedKeyDown(object sender, KeyEventArgs e)
         {
             switch (e.KeyCode)
             {
                 case Keys.Tab:
                     e.Handled = true;
                     e.SuppressKeyPress = true;
-
-                    if (_Parent.CurrentCommand is null || _Parent.CurrentCommand is DefaultCommand)
-                    {
-                        var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                        long structureTypeId = (Viking.UI.State.SelectedObject is WebAnnotation.ViewModel.StructureType st)
-                            ? st.modelObj.ID
-                            : Store.StructureTypes[1].ID;
-                        _Parent.CurrentCommand = new SegmentationCommand(this.Parent,
-                            null,
-                            null,
-                            new SegmentationCommand.OnCommandSuccess((outputPolygon) => SegmentationCommand.CreateAnnotationFromPolygon(this.Parent, null, outputPolygon)),
-                            channelManager,
-                            new long[]{structureTypeId });
-                    }
+                    StartNewStructureSegmentation();
                     return;
+                //Refresh the annotations on F5
                 case Keys.F5:
                     ResetAnnotations();
                     return;
                 case Keys.F3:
+                case Keys.Enter:
                     OnContinueLastTrace();
                     return;
                 case Keys.F6:
@@ -1330,6 +1825,10 @@ break;
                     System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(StructureIDChoiceForm);
                     StructureIDChoiceForm.Show();
                     return;
+                // Shift+F8: send every circle in view to auto-segmentation again, discarding what is shown for this section.
+                case Keys.F8:
+                    autoPolygonizeController?.ResubmitVisible();
+                    return;
                 case Keys.F7:
                     WPF.Forms.StructureTypeManagementForm StructureTypeManagementForm = new()
                     {
@@ -1338,26 +1837,40 @@ break;
                     System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(StructureTypeManagementForm);
                     StructureTypeManagementForm.Show();
                     return;
-                case Keys.Enter:
-                    OnContinueLastTrace();
-                    return;
                 case Keys.Back:
                     if (Global.LastEditedAnnotationID.HasValue)
-                    {
-                        if (!Store.Locations.TryGetObjectByID(Global.LastEditedAnnotationID.Value, out LocationObj loc) || loc == null)
-                            return;
-
-                        Parent.GoToLocation(new Microsoft.Xna.Framework.Vector2((float)loc.Position.X,
-                                                                                (float)loc.Position.Y),
-                                                                                (int)loc.Z,
-                                                                                true,
-                                                                                (double)((loc.VolumeShape.BoundingBox.Width) / Parent.Width) * 2);
-                    }
+                        _ = GoToLocation(Global.LastEditedAnnotationID.Value);
                     else
-                    {
                         GotoLastModifiedLocation();
-                    }
                     return;
+                // Ctrl+Z: undo the last recorded annotation edit, unless another command (drag, pen stroke) is active.
+                case Keys.Z:
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    if (IsCommandDefault())
+                        UndoManager.UndoLast();
+                    return;
+                // Pen Mode toggle: main-keyboard * (Shift+8) and numpad *.
+                case Keys.Multiply:
+                case Keys.D8:
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    AnnotationMenu.OnPenMode(sender, EventArgs.Empty);
+                    return;
+            }
+        }
+
+        protected void OnKeyDown(object sender, KeyEventArgs e)
+        {
+            // Keys the overlay owns never reach the user settings shortcuts (see OverlayHotkeys).
+            if (OverlayHotkeys.IsReserved(e.KeyData))
+            {
+                OnReservedKeyDown(sender, e);
+                return;
+            }
+
+            switch (e.KeyCode)
+            {
                 case Keys.ShiftKey:
                 case Keys.ControlKey:
                     //TODO: Track if the last input was from pen or mouse and update accordingly
@@ -1390,7 +1903,7 @@ break;
                             return;
                         }
 
-                        rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Action a = Global.UserSettings.Actions.Action.SingleOrDefault(action => action.Name == h.Action);
+                        rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.Action a = Global.UserSettings.Actions.Action.SingleOrDefault(action => action.Name == h.Action);
                         if (a != null)
                         {
 
@@ -1406,7 +1919,7 @@ break;
                         CreateStructureCommandAction comAction = Global.UserSettings.Actions.CreateStructureCommandAction.SingleOrDefault(action => action.Name == h.Action);
                         if (comAction != null)
                         {
-                            OnCreateStructure(System.Convert.ToInt64(comAction.TypeID), comAction.AttributeList, comAction.GetLocationType());
+                            OnCreateStructure(System.Convert.ToInt64(comAction.TypeID), comAction.AttributeList, comAction.GetLocationType(), startedByHotkey: true);
 
                             return;
                         }
@@ -1498,10 +2011,45 @@ break;
 
 
 
-        protected void OnCreateStructure(long TypeID, IEnumerable<string> attributes, LocationType AnnotationType) =>
-            _ = OnCreateStructureAsync(TypeID, attributes, AnnotationType);
+        /// <summary>
+        /// Tab starts <see cref="SegmentationCommand"/> so clicks place a new structure.
+        /// Called from <see cref="OnKeyDown"/> when the default command is active.
+        /// The saved type is the structure selected in the list, or cell type 1.
+        /// Accepting the mask saves through <see cref="SegmentationCommand.CreateAnnotationFromPolygon"/>.
+        /// </summary>
+        private void StartNewStructureSegmentation()
+        {
+            if (!IsCommandDefault())
+                return;
 
-        protected async Task OnCreateStructureAsync(long TypeID, IEnumerable<string> attributes, LocationType AnnotationType)
+            if (!Global.IsSegmentationServiceAvailable)
+            {
+                MessageBox.Show(Parent, "No segmentation service is selected.", "Segmentation", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            long structureTypeId = Viking.UI.State.SelectedObject is StructureType selected
+                ? selected.ID
+                : Store.StructureTypes[1].ID;
+
+            Parent.CurrentCommand = new SegmentationCommand(
+                Parent,
+                outputPolygon => SegmentationCommand.CreateAnnotationFromPolygon(Parent, null, outputPolygon),
+                structureTypeId: structureTypeId);
+        }
+
+        /// <summary>
+        /// Queues a new structure and its placement command. Hotkey callers pass
+        /// <paramref name="startedByHotkey"/> so Pen Mode uses click-to-place instead of a stroke.
+        /// </summary>
+        /// <param name="startedByHotkey">
+        /// True when a shortcut started this command. The mouse then uses click-to-place
+        /// even if Pen Mode is on. Canvas mouse-as-pen is unchanged.
+        /// </param>
+        protected void OnCreateStructure(long TypeID, IEnumerable<string> attributes, LocationType AnnotationType, bool startedByHotkey = false) =>
+            _ = OnCreateStructureAsync(TypeID, attributes, AnnotationType, startedByHotkey);
+
+        protected async Task OnCreateStructureAsync(long TypeID, IEnumerable<string> attributes, LocationType AnnotationType, bool startedByHotkey = false)
         {
             if (!Store.StructureTypes.TryGetObjectByID(TypeID, out StructureTypeObj typeObj) || typeObj == null)
             {
@@ -1542,14 +2090,14 @@ break;
                         break;
                     case LocationType.OPENCURVE:
                         newLocation.Width = 8.0;
-                        QueuePlacementCommandForOpenCurveStructure(Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), LocationType.OPENCURVE, false);
+                        QueuePlacementCommandForOpenCurveStructure(Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), LocationType.OPENCURVE, false, startedByHotkey);
                         break;
                     case LocationType.CLOSEDCURVE:
                         newLocation.Width = 8.0;
-                        QueuePlacementCommandForClosedCurveStructure(Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), AnnotationType, false);
+                        QueuePlacementCommandForClosedCurveStructure(Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), AnnotationType, false, startedByHotkey);
                         break;
                     case LocationType.CURVEPOLYGON:
-                        QueuePlacementCommandForPolygonStructure(Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), AnnotationType, false);
+                        QueuePlacementCommandForPolygonStructure(Parent, newLocation, WorldPos, type.Color.SetAlpha(0.5f), AnnotationType, false, startedByHotkey);
                         break;
                     default:
                         Trace.WriteLine("Could not find commands for annotation type: " + AnnotationType.ToString());
@@ -1566,6 +2114,13 @@ break;
             }
         }
 
+        /// <summary>
+        /// Stroke placement when Pen Mode is on, unless a hotkey started the placement command.
+        /// Called by the structure placement queues.
+        /// </summary>
+        internal static bool UsePenStrokePlacement(bool startedByHotkey = false)
+            => PlacementInput.UsePenStroke(Global.PenMode, startedByHotkey);
+
         public static void QueuePlacementCommandForCircleStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, Geometry.Vector2 worldPos, Geometry.Vector2 sectionPos, System.Drawing.Color typecolor, bool SaveToStore)
         {
             Parent.CommandQueue.EnqueueCommand(typeof(ResizeCircleCommand), new object[] { Parent,
@@ -1581,10 +2136,17 @@ break;
                                     if(SaveToStore) { _ = SaveLocationsWithMessageBoxOnError(); } })});
         }
 
-        public static void QueuePlacementCommandForOpenCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, Geometry.Vector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
+        /// <summary>
+        /// Queues open-curve placement. Stroke if Pen Mode is on, unless a hotkey started the command.
+        /// </summary>
+        /// <param name="startedByHotkey">
+        /// When true, Pen Mode uses click-to-place instead of a stroke. Only the hotkey
+        /// structure-placement path sets this.
+        /// </param>
+        public static void QueuePlacementCommandForOpenCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, Geometry.Vector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore, bool startedByHotkey = false)
         {
             double LineWidth = 16.0;
-            if (Global.PenMode)
+            if (UsePenStrokePlacement(startedByHotkey))
             {
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceOpenCurveWithPenCommand), new object[] { Parent, typecolor, origin,  LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((object sender, Geometry.Vector2[] points) => {
@@ -1605,10 +2167,17 @@ break;
             }
         }
 
-        public static void QueuePlacementCommandForClosedCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, Geometry.Vector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
+        /// <summary>
+        /// Queues closed-curve placement. Stroke if Pen Mode is on, unless a hotkey started the command.
+        /// </summary>
+        /// <param name="startedByHotkey">
+        /// When true, Pen Mode uses click-to-place instead of a stroke. Only the hotkey
+        /// structure-placement path sets this.
+        /// </param>
+        public static void QueuePlacementCommandForClosedCurveStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, Geometry.Vector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore, bool startedByHotkey = false)
         {
             double LineWidth = 16.0;
-            if (Global.PenMode)//Parent.FindForm() is WebAnnotation.UI.Forms.PenAnnotationViewForm)
+            if (UsePenStrokePlacement(startedByHotkey))
             {
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveWithPenCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((object sender, Geometry.Vector2[] points) => {
@@ -1629,10 +2198,17 @@ break;
 
         }
 
-        public static void QueuePlacementCommandForPolygonStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, Geometry.Vector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore)
+        /// <summary>
+        /// Queues polygon placement. Stroke if Pen Mode is on, unless a hotkey started the command.
+        /// </summary>
+        /// <param name="startedByHotkey">
+        /// When true, Pen Mode uses click-to-place instead of a stroke. Only the hotkey
+        /// structure-placement path sets this.
+        /// </param>
+        public static void QueuePlacementCommandForPolygonStructure(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, Geometry.Vector2 origin, System.Drawing.Color typecolor, LocationType typecode, bool SaveToStore, bool startedByHotkey = false)
         {
             double LineWidth = 16.0;
-            if (Global.PenMode)//Parent.FindForm() is WebAnnotation.UI.Forms.PenAnnotationViewForm)
+            if (UsePenStrokePlacement(startedByHotkey))
             {
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveWithPenCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((object sender, Geometry.Vector2[] points) => {
@@ -1792,6 +2368,10 @@ break;
 
         protected bool CanContinueLastTrace => Global.CanContinueLastTrace(CurrentSectionNumber);
 
+        /// <summary>
+        /// Starts a linked-location command at the cursor for <see cref="Global.LastEditedAnnotationID"/>.
+        /// Called from left-click, F3, and Enter. The id stays set until the new location is saved, so a failed place (bad section between the discs, cancelled drag) can be retried.
+        /// </summary>
         protected void OnContinueLastTrace()
         {
             System.Drawing.Point ClientPoint = _Parent.PointToClient(System.Windows.Forms.Control.MousePosition);
@@ -1799,6 +2379,10 @@ break;
             OnContinueLastTrace(WorldPos);
         }
 
+        /// <summary>
+        /// Starts a linked-location command at <paramref name="WorldPos"/>.
+        /// Loads the last location from the server when it is no longer in the section cache.
+        /// </summary>
         protected void OnContinueLastTrace(Geometry.Vector2 WorldPos)
         {
             _ = ContinueLastTraceAsync(WorldPos);
@@ -1840,11 +2424,31 @@ break;
             if (token.IsCancellationRequested)
                 return;
 
-            e.OldSection.TransformChanged -= OnSectionTransformChanged;
-            e.NewSection.TransformChanged += OnSectionTransformChanged;
+            // The entry token check alone cannot stop a worker that is already past it when Shutdown runs; re-check under the lock
+            // Shutdown takes so the subscription is either tracked (and removed by Shutdown) or never made.
+            // The parent cancels but never awaits the previous worker, so workers can reach this block out of order. Sync to the
+            // parent's current section rather than e.Old/NewSection: the newest worker starts after the last Section write and
+            // always gets here, and any later stale worker sees the same section, so exactly that section stays subscribed.
+            // The section number and keep window below use the same current section: a stale worker trusting e.NewSection would
+            // overwrite _currentSectionNumber and cancel the newest section's loads as outside its old window, leaving the
+            // displayed section empty until the next camera or transform event.
+            SectionViewModel? current;
+            lock (_transformSubscriptionLock)
+            {
+                current = _Parent.Section;
+                if (!_isShutdown && _transformSubscribedSection != current)
+                {
+                    if (_transformSubscribedSection is not null)
+                        _transformSubscribedSection.TransformChanged -= OnSectionTransformChanged;
+                    if (current is not null)
+                        current.TransformChanged += OnSectionTransformChanged;
+                    _transformSubscribedSection = current;
+                }
+            }
 
-            int B = e.NewSection?.Number ?? 0;
+            int B = current?.Number ?? 0;
             _currentSectionNumber = B;
+            autoPolygonizeController?.OnSectionChanged();
 
             if (!_Parent.ShowOverlays || B <= 0)
                 return;
@@ -1998,6 +2602,9 @@ break;
         /// <param name="e"></param>
         protected void OnLocationCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
+            PushReviewFeedDeletes(e);
+            PushReviewFeedLocalUpserts(e);
+
             SortedSet<int> changedSections = ChangedSectionsInLocationCollection(e);
 
             SortedSet<int> AdjacentSections = new();
@@ -2137,6 +2744,14 @@ break;
             ResetAnnotations();
         }
 
+        /// <summary>
+        /// Forwards section-view eviction to auto-polygonize so that Z's proposals and SAM2 image leases are released.
+        /// </summary>
+        private void OnSectionAnnotationsViewEvicted(int sectionNumber)
+        {
+            autoPolygonizeController?.ClearSection(sectionNumber);
+        }
+
         private void ResetAnnotations()
         {
             cacheSectionAnnotations.Clear();
@@ -2152,13 +2767,6 @@ break;
         /// </summary>
         private Rectangle? LastLoadVisibleWorldBounds;
         private double LastLoadDownsample;
-
-        /// <summary>
-        /// Return true if we should reload our annotations for a scene movement
-        /// </summary>
-        /// <param name="scene"></param>
-        /// <returns></returns>
-        private bool ShouldLoadAnnotationsForSceneMovement(VikingXNA.Scene scene) => (LastVisibleWorldBounds != scene.VisibleWorldBounds);// &&//(LastCameraDownsample == scene.Camera.Downsample);
 
         /// <summary>
         /// Return true if annotations should be loaded: never loaded yet, visible area changed, or magnification changed by a factor of 2 or more.
@@ -2350,66 +2958,8 @@ break;
                 RequestSectionAnnotationsLoad(current);
         }
 
-        /*
-        protected void LoadSectionAnnotations()
-        {
-            if (Parent.Scene == null)
-               return;
-            
-            int StartingSectionNumber = _Parent.Section.Number;
-            SectionAnnotationsView SectionAnnotations;
-            SectionAnnotationsView SectionAnnotationsAbove;
-            SectionAnnotationsView SectionAnnotationsBelow;
-            SectionAnnotations = GetOrCreateAnnotationsForSection(_Parent.Section.Number, _Parent);
-            SectionAnnotations.LoadSectionAnnotationsInRegion(Parent.Scene);
-            //Task.Factory.StartNew(() => SectionAnnotations.LoadSectionAnnotationsInRegion(Parent.Scene));
-
-            int refSectionNumberAbove=0;
-            int refSectionNumberBelow=-1;
-            if (_Parent.Section.ReferenceSectionAbove != null)
-            {
-                refSectionNumberAbove = _Parent.Section.ReferenceSectionAbove.Number;
-                SectionAnnotationsAbove = GetOrCreateAnnotationsForSection(refSectionNumberAbove, _Parent);
-                SectionAnnotationsAbove.LoadSectionAnnotationsInRegion(Parent.Scene);
-            //    Task.Factory.StartNew(() => SectionAnnotationsAbove.LoadSectionAnnotations(false));
-                //Task.Factory.StartNew(() => SectionAnnotationsAbove.LoadSectionAnnotationsInRegion(Parent.Scene));
-            }
-
-            if (_Parent.Section.ReferenceSectionBelow != null)
-            {
-                refSectionNumberBelow = _Parent.Section.ReferenceSectionBelow.Number;
-                SectionAnnotationsBelow = GetOrCreateAnnotationsForSection(refSectionNumberBelow, _Parent);
-                SectionAnnotationsBelow.LoadSectionAnnotationsInRegion(Parent.Scene);
-                //Task.Factory.StartNew(() => SectionAnnotationsBelow.LoadSectionAnnotations(false));
-                //Task.Factory.StartNew(() => SectionAnnotationsBelow.LoadSectionAnnotationsInRegion(Parent.Scene));
-            }
-
-            int EndingSectionNumber = _Parent.Section.Number; 
-            Debug.Assert(refSectionNumberAbove != refSectionNumberBelow);
-            Debug.Assert(StartingSectionNumber == EndingSectionNumber);
-            Debug.Assert(SectionAnnotations.Section.Number == StartingSectionNumber); 
-            
-            linksView.LoadSection(_Parent.Section.Number);
-
-            //Task.Factory.StartNew(() => Store.Locations.FreeExcessSections(Global.NumSectionsInMemory, Global.NumSectionsLoading));
-
-            //AnnotationCache.LoadSectionAnnotations(_Parent.Section); 
-        }
-        */
-
         private static BasicEffect basicEffect = null;
         private static BlendState defaultBlendState = null;
-
-        private static BasicEffect CreateBasicEffect(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
-        {
-            basicEffect = new BasicEffect(graphicsDevice)
-            {
-                Projection = scene.Projection,
-                View = scene.Camera.View,
-                World = scene.World
-            };
-            return basicEffect;
-        }
 
         public void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice graphicsDevice,
                          VikingXNA.Scene scene,
@@ -2481,10 +3031,13 @@ break;
 
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, StartingStencilValue);
 
+            // While a pen stroke retraces a cell its child structures are hidden so they do not obscure the contour.
+            ISet<long>? hiddenStructures = (_Parent.CurrentCommand as AnnotationOverlayPenFreeDrawCommandV2)?.HiddenStructureIDs;
+
             ICollection<LocationCanvasView> Locations = currentSectionAnnotations.GetLocations(scene.VisibleWorldBounds);
-            List<LocationCanvasView> listLocationsToDraw = FindVisibleLocations(Locations, scene);
+            List<LocationCanvasView> listLocationsToDraw = HiddenStructures.ExcludeLocations(FindVisibleLocations(Locations, scene), hiddenStructures);
             ICollection<LocationCanvasView> RefLocations = currentSectionAnnotations.AdjacentLocationsNotOverlappedInRegion(Bounds);
-            List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = FindVisibleAdjacentLocations(RefLocations, scene); //Find the locations on the adjacent sections
+            List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = HiddenStructures.ExcludeLocations(FindVisibleAdjacentLocations(RefLocations, scene), hiddenStructures); //Find the locations on the adjacent sections
 
             //Draw all of the locations on the current section
             WebAnnotation.LocationObjRenderer.DrawBackgrounds(listLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, Parent.LumaOverlayCurveManager, scene, SectionNumber);
@@ -2499,7 +3052,10 @@ break;
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, StartingStencilValue);
 
             //Get all the lines to draw first so the text and geometric shapes are over top of them
-            LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, currentSectionAnnotations.NonOverlappedLocationLinksInRegion(scene.VisibleWorldBounds));
+            LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, HiddenStructures.ExcludeLocationLinks(
+                currentSectionAnnotations.NonOverlappedLocationLinksInRegion(scene.VisibleWorldBounds),
+                hiddenStructures,
+                locationId => Store.Locations.TryGetObjectByID(locationId, out LocationObj linkEnd) ? linkEnd?.ParentID : null));
 
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, 1, 0);
 
@@ -2524,7 +3080,7 @@ break;
             //Draw structure links over any annotations
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
-            List<StructureLinkViewModelBase> VisibleStructureLinks = currentSectionAnnotations.VisibleStructureLinks(scene);
+            List<StructureLinkViewModelBase> VisibleStructureLinks = HiddenStructures.ExcludeStructureLinks(currentSectionAnnotations.VisibleStructureLinks(scene), hiddenStructures);
             StructureLinkCirclesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, [.. VisibleStructureLinks.Where(l => l as StructureLinkCirclesView != null).Cast<StructureLinkCirclesView>()]);
             StructureLinkCurvesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, [.. VisibleStructureLinks.Where(l => l as StructureLinkCurvesView != null).Cast<StructureLinkCurvesView>()]);
 
@@ -2534,6 +3090,8 @@ break;
             DrawLocationLabels(listLocationsToDraw, scene);
 
             DrawLocationLabels(listVisibleNonOverlappingLocationsOnAdjacentSections, scene);
+
+            autoPolygonizeController?.Draw(graphicsDevice, scene);
 
             if (OriginalRasterState != null && !OriginalRasterState.IsDisposed)
             {
@@ -2602,62 +3160,6 @@ break;
         private static List<LocationCanvasView> FindVisibleLocations(IEnumerable<LocationCanvasView> locations, VikingXNA.Scene scene) => [.. locations.Where(l => l != null && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene))];
 
         private static List<LocationCanvasView> FindVisibleAdjacentLocations(IEnumerable<LocationCanvasView> locations, VikingXNA.Scene scene) => [.. locations.Where(l => l != null && l.Parent != null && l.Parent.Type != null && l.IsVisible(scene))];
-        /*
-        /// <summary>
-        /// Return all locations which overlap the passed locations
-        /// </summary>
-        /// <param name="locations"></param>
-        /// <returns></returns>
-        private static List<LocationCanvasView> FindOverlappedAdjacentLocations(List<LocationCanvasView> locations)
-        {
-            return locations.SelectMany(l => l.OverlappingLinks).OrderBy(l => l.ID).ToList();
-        }
-
-        /// <summary>
-        /// Remove all locations from the collection which overlap locations on the specified section
-        /// </summary>
-        /// <param name="locations">The collection to remove overlapping locations from</param>
-        /// <returns>The removed locations which overlap</returns>
-        private static List<LocationCanvasView> FindNonOverlappedAdjacentLocations(List<LocationCanvasView> locations, List<LocationCanvasView> adjacentLocations, int section_number)
-        {
-            List<LocationCanvasView> listOverlappingLocations = FindOverlappedAdjacentLocations(locations);
-
-            adjacentLocations = adjacentLocations.OrderBy(l => l.ID).ToList();
-
-            locations = locations.OrderBy(l => l.ID).ToList();
-
-            int iOverlapping = listOverlappingLocations.Count - 1;
-            for (int i = adjacentLocations.Count - 1; i >= 0; i--)
-            {
-                LocationCanvasView loc = adjacentLocations.ElementAt(i);
-                while (iOverlapping >= 0)
-                {
-                    LocationCanvasView overlappingLoc = listOverlappingLocations[iOverlapping];
-                    if (overlappingLoc.ID < loc.ID)
-                    {
-                        break;
-                    }
-                    else if (overlappingLoc.ID == loc.ID)
-                    {
-                        adjacentLocations.RemoveAt(i);
-                        break;
-                    }
-                    else
-                    {
-                        iOverlapping--;
-                    }
-                }
-
-                if (iOverlapping < 0)
-                    break;
-            }
-
-            //List<LocationCanvasView> listOverlappingLocations = new List<LocationCanvasView>(locations.Count);
-            //return adjacentLocations.Where(l => !listOverlappingLocations.Contains(l)).ToList();
-            
-            return adjacentLocations;
-        }
-        */
         /// <summary>
         /// 
         /// </summary>
@@ -2691,10 +3193,6 @@ break;
                 (byte)(blue),
                 (byte)(alpha));
         }
-
-        public LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID) => throw new NotImplementedException();
-
-        public List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new NotImplementedException();//If we didn't overlap an existing annotation then create a new structure/*if(interaction_log.All(e => e.Annotation == null))
 
         #endregion
 

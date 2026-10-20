@@ -47,6 +47,24 @@ namespace VikingXNAGraphics
             ];
         }
 
+        /// <summary>
+        /// Releases the instance mesh buffers and the circle texture atlas. The effect itself belongs to the ContentManager.
+        /// </summary>
+        public void Dispose()
+        {
+            _vb?.Dispose();
+            _vb = null;
+            _ib?.Dispose();
+            _ib = null;
+            _vdecl?.Dispose();
+            _vdecl = null;
+            lock (_atlasLock)
+            {
+                _circleTextureAtlas?.Dispose();
+                _circleTextureAtlas = null;
+            }
+        }
+
         public void Init(GraphicsDevice device, ContentManager content)
         {
             _device = device;

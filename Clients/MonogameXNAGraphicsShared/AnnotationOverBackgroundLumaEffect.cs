@@ -105,6 +105,13 @@ namespace VikingXNAGraphics
             this.Technique = Techniques.RGBTextureOverBackgroundValueOverlayEffect;
         }
 
+        /// <summary>
+        /// Content-loaded Effect stays with ContentManager.
+        /// </summary>
+        public void Dispose()
+        {
+        }
+
         private void LoadParameters(Effect effect)
         {
             _WorldViewProjMatrix = effect.Parameters["mWorldViewProj"];

@@ -11,9 +11,9 @@
     <SignAssembly>False</SignAssembly>
     <ProductName>Viking</ProductName>
     <PublisherName>Marc Lab</PublisherName>
-    <ApplicationVersion>1.2.60.0</ApplicationVersion>
-    <FileVersion>1.2.60.0</FileVersion>
-    <AssemblyVersion>1.2.60.0</AssemblyVersion>
+    <ApplicationVersion>1.2.111.0</ApplicationVersion>
+    <FileVersion>1.2.111.0</FileVersion>
+    <AssemblyVersion>1.2.111.0</AssemblyVersion>
     <Deterministic>True</Deterministic>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <NoWarn>$(NoWarn);CS0436;CA1014;CS3009</NoWarn>
@@ -22,6 +22,14 @@
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <!-- Unsigned side-by-side "Viking Test" channel (pack id VikingTest, viking-test://, separate update feed). -->
+  <PropertyGroup Condition="'$(VikingTestChannel)' == 'true'">
+    <DefineConstants>$(DefineConstants);VIKING_TEST_CHANNEL</DefineConstants>
+    <ApplicationIcon>VikingTest.ico</ApplicationIcon>
+    <ProductName>Viking Test</ProductName>
+    <Title>Viking Test</Title>
+    <AssemblyTitle>Viking Test</AssemblyTitle>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
@@ -34,6 +42,9 @@
     <PackageReference Include="protobuf-net.ServiceModel" Version="3.2.52" />
     <PackageReference Include="Velopack" Version="0.0.1298" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\..\Servers\Shared\ProductVersion.cs" Link="ProductVersion.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\NGVV\VikingCore.csproj" />

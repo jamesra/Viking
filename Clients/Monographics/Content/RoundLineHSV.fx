@@ -18,6 +18,7 @@
 #include "../../MonogameXNAGraphicsShared/Content/LineCurveCommon.fx"
 #include "../../MonogameXNAGraphicsShared/Content/LineVertexShader.fx"
 #include "../../MonogameXNAGraphicsShared/Content/LineCurveHSVPixelShaders.fx"
+#include "../../MonogameXNAGraphicsShared/Content/PinchedLineShaders.fx"
     
 technique Standard
 {
@@ -367,3 +368,33 @@ technique Glow
 	}
 }
 
+technique Pinched
+{
+	pass ZWrite
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = Zero;
+		DestBlend = One;
+		BlendOp = Add;
+		ZEnable = true;
+		ZFunc = LessEqual;
+		ZWriteEnable = true;
+		StencilFunc = GreaterEqual;
+		vertexShader = compile vs_4_0 PinchedLineVertexShader();
+		pixelShader = compile ps_4_0 DepthOnlyPinchedShader();
+	}
+	pass P0
+	{
+		CullMode = CW;
+		AlphaBlendEnable = true;
+		SrcBlend = SrcAlpha;
+		DestBlend = InvSrcAlpha;
+		BlendOp = Add;
+		ZFunc = LessEqual;
+		ZEnable = true;
+		StencilFunc = Equal;
+		vertexShader = compile vs_4_0 PinchedLineVertexShader();
+		pixelShader = compile ps_4_0 MyPSPinchedHSV();
+	}
+}

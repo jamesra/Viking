@@ -1,6 +1,7 @@
 using Viking.AnnotationServiceTypes.Interfaces;
 using Geometry; 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -91,31 +92,6 @@ namespace WebAnnotationModel.Objects
 
         public override long ID => _ID;
 
-        /// <summary>
-        /// True when a PropertyChanged name should trigger a spatial redraw. Empty name means all properties in this category.
-        /// </summary>
-        public static bool IsPositionProperty(string propertyName)
-        {
-            if (string.IsNullOrEmpty(propertyName))
-                return true;
-
-            switch (propertyName)
-            {
-                case nameof(Position):
-                    return true;
-                case nameof(VolumePosition):
-                    return true;
-                //case "VolumePosition":
-                //    return true;
-                //case "VolumeShape":
-                //  return true;
-                case nameof(MosaicShape):
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
         /// <summary>True when the change affects MosaicShape / Radius / Width (not just centroid).</summary>
         public static bool IsGeometryProperty(string propertyName)
         {
@@ -128,28 +104,9 @@ namespace WebAnnotationModel.Objects
                 //  return true;
                 case nameof(MosaicShape):
                     return true;
-                case nameof(Radius):
-                    return true;
+                // Radius is derived from the shape and always changes together with MosaicShape, which already
+                // reported the geometry change. Counting it here made every shape edit rebuild each view twice.
                 case nameof(Width):
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
-        /// <summary>True when Terminal / OffEdge / Attributes changed (branch styling, not geometry).</summary>
-        public static bool IsTerminalProperty(string propertyName)
-        {
-            if (string.IsNullOrEmpty(propertyName))
-                return true;
-
-            switch (propertyName)
-            {
-                case nameof(Terminal):
-                    return true;
-                case nameof(OffEdge):
-                    return true;
-                case nameof(Attributes):
                     return true;
                 default:
                     return false;
@@ -189,9 +146,41 @@ namespace WebAnnotationModel.Objects
         private StructureObj _Parent;
 
         /// <summary>
-        /// Structure this location belongs to. Resolved from <see cref="Store.Structures"/>
-        /// using <see cref="ParentID"/> when not already assigned (gRPC/WCF region loads
-        /// set ParentID but not this object).
+        /// Parent structure IDs with a background server fetch running. Shared by every location, so many
+        /// locations on one missing parent, each read several times while its views are built, ask the server once.
+        /// </summary>
+        private static readonly ConcurrentDictionary<long, byte> ParentFetchesInFlight = new();
+
+        /// <summary>
+        /// Runs <paramref name="fetch"/> for <paramref name="parentID"/> on the thread pool unless a fetch for the same ID is still running.
+        /// The ID is released when the fetch returns or throws, so a read after a miss or a failure asks again.
+        /// </summary>
+        /// <param name="parentID">Structure ID to fetch.</param>
+        /// <param name="fetch">Fetches the structure into the store. <see cref="Parent"/> passes the structure store's server lookup.</param>
+        /// <returns>The started fetch, or null when a fetch for <paramref name="parentID"/> is already running.</returns>
+        internal static Task RequestParentOnce(long parentID, Action<long> fetch)
+        {
+            if (!ParentFetchesInFlight.TryAdd(parentID, 0))
+                return null;
+
+            return Task.Run(() =>
+            {
+                try
+                {
+                    fetch(parentID);
+                }
+                finally
+                {
+                    ParentFetchesInFlight.TryRemove(parentID, out _);
+                }
+            });
+        }
+
+        /// <summary>
+        /// Structure this location belongs to. Resolved from <see cref="Store.Structures"/> using <see cref="ParentID"/>
+        /// when not already assigned (region loads set ParentID but not this object).
+        /// Null when the parent is not in the local store; a null result with a <see cref="ParentID"/> starts a background
+        /// fetch of the parent, at most one per ID at a time.
         /// </summary>
         public StructureObj Parent
         {
@@ -203,8 +192,13 @@ namespace WebAnnotationModel.Objects
                 if (ParentID.HasValue == false)
                     return null;
 
-                Store.Structures.TryGetObjectByID(ParentID.Value, out _Parent);
-                return _Parent;
+                if (Store.Structures.TryGetObjectByID(ParentID.Value, out _Parent))
+                    return _Parent;
+
+                //Queue a request for later. The fetch runs on a pool thread, so waiting for the store's async lookup there
+                //keeps the ID marked in flight until the structure has arrived.
+                RequestParentOnce(ParentID.Value, id => Store.Structures.GetObjectByID(id).GetAwaiter().GetResult());
+                return null;
             }
             internal set => _Parent = value;
         }
@@ -343,10 +337,11 @@ namespace WebAnnotationModel.Objects
 
                 //Data.MosaicShape = newValue;
                 _MosaicShape = value;
+                // Update the radius before the shape change is announced: the views built in response read it.
+                _Radius = CalculateRadius(value);
                 OnPropertyChanged(nameof(MosaicShape));
 
                 OnPropertyChanging(nameof(Radius));
-                _Radius = CalculateRadius(value);
                 OnPropertyChanged(nameof(Radius));
 
                 SetDBActionForChange();

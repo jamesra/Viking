@@ -428,7 +428,8 @@ namespace WebAnnotation.UI
         {
             HitTestResult[] candidates = [.. Overlay.GetAnnotations(_Path.Points[0])];
             HitTestResult[] point_intersect_candidates = [.. candidates.Where(o => o.obj.Contains(_Path.Points[0]))];
-            point_intersect_candidates = [.. point_intersect_candidates.ExpandICanvasViewContainers(_Path.Points[0])];
+            //Expanding a container yields null when nothing nested is under the point (e.g. a polygon hole), which counts as empty space
+            point_intersect_candidates = [.. point_intersect_candidates.ExpandICanvasViewContainers(_Path.Points[0]).Where(c => c != null)];
 
             if (point_intersect_candidates.Length > 0)
             {

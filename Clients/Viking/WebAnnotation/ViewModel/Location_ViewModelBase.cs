@@ -25,7 +25,7 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.ViewModel
 {
-    public class Location_ViewModelBase : Viking.Objects.UIObjBase, IEqualityComparer<Location_ViewModelBase>, IEqualityComparer<LocationObj>, IComparable<Location_ViewModelBase>, System.Windows.IWeakEventListener, IContextMenu
+    public class Location_ViewModelBase : Viking.Objects.UIObjBase, IEqualityComparer<Location_ViewModelBase>, IEqualityComparer<LocationObj>, System.Windows.IWeakEventListener, IContextMenu
     {
         public readonly LocationObj modelObj;
 
@@ -332,6 +332,14 @@ namespace WebAnnotation.ViewModel
                 menuShape.DropDownItems.Add(menuCircle);
             }
 
+            // Manual conversion needs no segmentation service or review role, so every annotator with write access gets it.
+            if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE)
+            {
+                ToolStripMenuItem menuConvertCircle = new("Convert to Polygon");
+                menuConvertCircle.Click += ContextMenu_ConvertCircleToPolygon;
+                menuShape.DropDownItems.Add(menuConvertCircle);
+            }
+
             // Add segmentation option for circles
             if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE &&
                 Global.IsSegmentationServiceAvailable)
@@ -349,6 +357,14 @@ namespace WebAnnotation.ViewModel
                 ToolStripMenuItem menuSegmentPoly = new("Resegment...");
                 menuSegmentPoly.Click += ContextMenu_SegmentPolygon;
                 menuShape.DropDownItems.Add(menuSegmentPoly);
+            }
+
+            if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON ||
+                TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON)
+            {
+                ToolStripMenuItem menuEditMask = new("Dilate/erode mask...");
+                menuEditMask.Click += ContextMenu_EditPolygonMask;
+                menuShape.DropDownItems.Add(menuEditMask);
             }
 
             menu.Items.Add(menuShape);
@@ -413,8 +429,12 @@ namespace WebAnnotation.ViewModel
 
         protected async void ContextMenu_OnTerminal(object sender, EventArgs e)
         {
+            bool oldTerminal = modelObj.Terminal;
+            bool oldOffEdge = modelObj.OffEdge;
             modelObj.Terminal = !modelObj.Terminal;
-            if (!await AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
+            if (await AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
+                UndoManager.PushLocationFlags("Toggle Terminal", modelObj, oldTerminal, oldOffEdge);
+            else
                 modelObj.Terminal = !modelObj.Terminal;
         }
 
@@ -534,58 +554,104 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
+        /// Number of vertices in the polygon that replaces a circle in <see cref="ContextMenu_ConvertCircleToPolygon"/>.
+        /// </summary>
+        private const int ManualCirclePolygonVertexCount = 24;
+
+        /// <summary>
+        /// Replaces this circle with a polygon that traces its outline, with no segmentation service involved.
+        /// The ring is built in mosaic space, mapped to volume space, and saved through
+        /// <see cref="LocationShapeUpdate.ApplyVolumePolygon"/> like Segment to Polygon, so the user can then
+        /// reshape it with the normal polygon vertex tools. Runs on the UI thread from the Change Shape menu.
+        /// </summary>
+        protected void ContextMenu_ConvertCircleToPolygon(object sender, EventArgs e)
+        {
+            try
+            {
+                var parent = AnnotationOverlay.CurrentOverlay?.Parent;
+                if (parent?.Section is null)
+                {
+                    MessageBox.Show("There is no open section viewer to convert in.", "Convert to Polygon", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                Circle mosaicCircle = GetCircleFromLocation();
+                Geometry.Vector2[] mosaicRing = new Geometry.Vector2[ManualCirclePolygonVertexCount + 1];
+                for (int i = 0; i < ManualCirclePolygonVertexCount; i++)
+                {
+                    double angle = 2.0 * Math.PI * i / ManualCirclePolygonVertexCount;
+                    mosaicRing[i] = new Geometry.Vector2(
+                        mosaicCircle.Center.X + mosaicCircle.Radius * Math.Cos(angle),
+                        mosaicCircle.Center.Y + mosaicCircle.Radius * Math.Sin(angle));
+                }
+
+                mosaicRing[ManualCirclePolygonVertexCount] = mosaicRing[0];
+
+                IReadOnlyList<Geometry.Vector2> volumeRing = CircleSegmentationPrompts.ToVolumePoints(
+                    mosaicRing,
+                    parent.Section.ActiveSectionToVolumeTransform);
+                if (volumeRing.Count != mosaicRing.Length)
+                {
+                    MessageBox.Show("This circle could not be mapped onto the volume.", "Convert to Polygon", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                UpdateLocationShapeFromVolumePolygon(new Polygon(volumeRing.ToArray()));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error converting circle to polygon: {ex.Message}");
+                MessageBox.Show($"Failed to convert to polygon: {ex.Message}",
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
         /// Launch segmentation command to convert a circle location to a polygon using AI segmentation
         /// </summary>
         protected void ContextMenu_SegmentCircleToPolygon(object sender, EventArgs e)
         {
             try
             {
-                var parent = AnnotationOverlay.CurrentOverlay.Parent;
+                var parent = AnnotationOverlay.CurrentOverlay?.Parent;
+                if (parent is null)
+                {
+                    MessageBox.Show("There is no open section viewer to segment in.", "Segment", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
                 // Get the circle geometry
+                // The same starting prompt auto-polygonize sends: the inscribed square and four axis clicks.
                 Circle mosaic_circle = GetCircleFromLocation();
-
-                // Generate foreground points: center + 8 points at radius/2
-                List<Geometry.Vector2> foregroundPoints = [mosaic_circle.Center];
-
-                double innerRadius = mosaic_circle.Radius / 2.0;
-                for (int i = 0; i < 8; i++)
+                if (!CircleSegmentationPrompts.TryCreateStartingPrompt(
+                        CircleSegmentationPrompts.ToVolumePoints(
+                            CircleSegmentationPrompts.CreateMosaicRadiusPoints(mosaic_circle),
+                            parent.Section.ActiveSectionToVolumeTransform),
+                        out CircleSegmentationPrompts.StartingPrompt startingPrompt))
                 {
-                    double angle = (2.0 * Math.PI * i) / 8.0;
-                    double x = mosaic_circle.Center.X + innerRadius * Math.Cos(angle);
-                    double y = mosaic_circle.Center.Y + innerRadius * Math.Sin(angle);
-                    foregroundPoints.Add(new Geometry.Vector2(x, y));
+                    MessageBox.Show("This circle could not be mapped onto the volume.", "Segment", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
                 }
 
-                innerRadius = 3 * mosaic_circle.Radius / 4.0;
-                for (int i = 0; i < 8; i++)
-                {
-                    double angle = (2.0 * Math.PI * i) / 8.0;
-                    double x = mosaic_circle.Center.X + innerRadius * Math.Cos(angle);
-                    double y = mosaic_circle.Center.Y + innerRadius * Math.Sin(angle);
-                    foregroundPoints.Add(new Geometry.Vector2(x, y));
-                }
+                IReadOnlyList<Geometry.Vector2> volume_points = startingPrompt.Points;
 
-                var success = parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume([.. foregroundPoints], out var volume_points);
-                //Remove points that did not map
-                volume_points = [.. volume_points.Where((p, i) => success[i])];
-
-                // Create callback to update location shape
                 void callback(Polygon outputPolygon)
                 {
-                    _ = UpdateLocationShapeFromVolumePolygon(outputPolygon);
+                    UpdateLocationShapeFromVolumePolygon(outputPolygon);
                 }
 
                 // Launch segmentation command
                 var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                long[]? includeStructureIds = modelObj.ParentID.HasValue ? [modelObj.ParentID.Value] : null;
                 SegmentationCommand segmentCommand = new(
                     parent,
                     volume_points,
                     Array.Empty<Geometry.Vector2>(), // no background points initially
                     callback,
                     channelManager,
-                    [modelObj.Parent.TypeID],
-                    includeStructureIds);
+                    modelObj.Parent.TypeID,
+                    modelObj.ID,
+                    modelObj.ParentID,
+                    startingBoxes: [startingPrompt.Seed]);
 
                 parent.CurrentCommand = segmentCommand;
             }
@@ -598,7 +664,7 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// Launch segmentation command to convert a circle location to a polygon using AI segmentation
+        /// Resegment this polygon. Clicks are the unsmoothed mosaic triangle centroids, the same set linked placement sends.
         /// </summary>
         protected void ContextMenu_SegmentPolygon(object sender, EventArgs e)
         {
@@ -609,29 +675,34 @@ namespace WebAnnotation.ViewModel
                    this.modelObj.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON)
                     return;
 
-                // Get the circle geometry
-                Polygon poly = modelObj.VolumeShape.ToPolygon();
-                var medial_axis = Geometry.MedialAxisFinder.ApproximateMedialAxis(poly);
-                var medial_axis_points = medial_axis.Points;
-
-                // Create callback to update location shape
-                void callback(Polygon volume_poly)
+                var parent = AnnotationOverlay.CurrentOverlay?.Parent;
+                if (parent is null)
                 {
-                    _ = UpdateLocationShapeFromVolumePolygon(volume_poly);
+                    MessageBox.Show("There is no open section viewer to segment in.", "Segment", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
                 }
 
-                // Launch segmentation command
-                var parent = AnnotationOverlay.CurrentOverlay.Parent;
+                Polygon controlRing = modelObj.MosaicShape.ToPolygon();
+                IReadOnlyList<Geometry.Vector2> foregroundPoints =
+                    PolygonSegmentationPrompts.CreateVolumeForegroundPoints(
+                        controlRing,
+                        parent.Section.ActiveSectionToVolumeTransform);
+
+                void callback(Polygon volume_poly)
+                {
+                    UpdateLocationShapeFromVolumePolygon(volume_poly);
+                }
+
                 var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                long[]? includeStructureIds = modelObj.ParentID.HasValue ? [modelObj.ParentID.Value] : null;
                 SegmentationCommand segmentCommand = new(
                     parent,
-                    medial_axis_points,
+                    foregroundPoints,
                     Array.Empty<Geometry.Vector2>(), // no background points initially
                     callback,
                     channelManager,
-                    [modelObj.Parent.TypeID],
-                    includeStructureIds);
+                    modelObj.Parent.TypeID,
+                    modelObj.ID,
+                    modelObj.ParentID);
 
                 parent.CurrentCommand = segmentCommand;
             }
@@ -640,6 +711,133 @@ namespace WebAnnotation.ViewModel
                 Debug.WriteLine($"Error launching segmentation: {ex.Message}");
                 MessageBox.Show($"Failed to launch segmentation: {ex.Message}",
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Rasterizes this polygon and starts <see cref="SegmentationMaskEditCommand"/> on it so the mask can be grown and
+        /// shrunk with the wheel. When the user accepts the edited mask it is sent to the segmentation server as the
+        /// starting mask by a new <see cref="SegmentationCommand"/>, whose result the user accepts or declines; only an
+        /// accepted result changes this location. Cancelling the edit changes nothing.
+        /// </summary>
+        /// <summary>Raster pixels left free around a polygon when it is rasterized for dilate/erode.</summary>
+        private const int EditMaskMarginPixels = 128;
+
+        protected void ContextMenu_EditPolygonMask(object sender, EventArgs e)
+        {
+            try
+            {
+                var parent = AnnotationOverlay.CurrentOverlay?.Parent;
+                if (parent is null)
+                {
+                    MessageBox.Show("There is no open section viewer.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                Polygon mosaicPolygon = modelObj.MosaicShape.ToPolygon();
+                List<Geometry.Vector2[]> volumeRings = [];
+                foreach (Geometry.Vector2[] ring in new[] { mosaicPolygon.ExteriorRing }.Concat(mosaicPolygon.InteriorRings))
+                {
+                    bool[] mapped = parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(ring, out Geometry.Vector2[] volumeRing);
+                    if (mapped.Any(ok => !ok))
+                    {
+                        MessageBox.Show("This polygon could not be mapped onto the volume.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+
+                    volumeRings.Add(volumeRing);
+                }
+
+                // The raster has the resolution of the view (a mosaic pixel is at least one volume unit), whatever the segmentation tile level.
+                int downsample = Math.Max(1, (int)Math.Ceiling(parent.Camera?.Downsample ?? parent.Downsample));
+
+                // The raster is edited in memory and drawn as one texture, so only the GPU limits it: a polygon too big for the
+                // texture is downsampled until it fits. The server's limits apply when the mask is sent (SubmitEditedMask).
+                Geometry.Rectangle polygonBounds = RasterMask.BoundsOf(volumeRings[0]);
+                SegmentationDiag.Log($"EditMask start ds={downsample} polygon={polygonBounds.Width:0}x{polygonBounds.Height:0} maxTexture={parent.MaxTextureSide}");
+                RasterMask mask = RasterMask.FromRings(
+                    volumeRings, downsample, marginPixels: EditMaskMarginPixels, maxRasterSide: parent.MaxTextureSide);
+                SegmentationDiag.Log(mask is null
+                    ? "EditMask raster is null: the polygon covers no pixel centre"
+                    : $"EditMask raster {mask.Width}x{mask.Height} scale={mask.Scale}");
+
+                if (mask is null)
+                {
+                    MessageBox.Show("This polygon is too small to make a mask.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                parent.CurrentCommand = new SegmentationMaskEditCommand(parent, mask, edited =>
+                {
+                    if (edited is null)
+                    {
+                        Trace.WriteLine("Mask edit cancelled");
+                        return;
+                    }
+
+                    Trace.WriteLine($"Mask edit accepted at downsample {edited.Downsample}: {edited.Pixels.Count(p => p != 0)} pixels");
+
+                    // The edit command finishes itself right after this callback returns, so start the next one afterwards.
+                    parent.BeginInvoke(() => SubmitEditedMask(parent, edited));
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error launching mask edit: {ex.Message}");
+                SegmentationDiag.Log($"EditMask failed: {ex}");
+                MessageBox.Show($"Failed to launch mask edit: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Starts a <see cref="SegmentationCommand"/> that sends <paramref name="edited"/> to the segmentation server as
+        /// the starting mask. The user accepts or declines the resulting segmentation; accepting replaces this location's
+        /// shape, declining leaves it as it was.
+        /// </summary>
+        private void SubmitEditedMask(Viking.UI.Controls.SectionViewerControl parent, RasterMask edited)
+        {
+            try
+            {
+                SegmentationSeed? seed = SegmentationSeed.FromMask(edited);
+                if (seed is null || !edited.TryGetSetWorldBounds(out Geometry.Rectangle setBounds))
+                {
+                    MessageBox.Show("The edited mask is empty, so there is nothing to segment from.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                if (!Global.IsSegmentationServiceAvailable)
+                {
+                    MessageBox.Show("There is no segmentation service to send the edited mask to.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // The mask reaches the server as grid tiles, and the server accepts at most MaxForegroundTiles of them.
+                long spanned = SegmentationMaskTiles.TilesSpanned(setBounds, edited.Downsample);
+                if (spanned > SegmentationMaskTiles.MaxForegroundTiles)
+                {
+                    MessageBox.Show(
+                        $"The edited mask spans {spanned} tiles. The segmentation server accepts a mask of at most {SegmentationMaskTiles.MaxForegroundTiles} tiles (about {(int)Math.Sqrt(SegmentationMaskTiles.MaxForegroundTiles) * SegmentationTileGrid.TileSize} pixels across).",
+                        "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // The bitmap itself is the foreground mask; one click inside it tells the server which object is meant.
+                var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
+                parent.CurrentCommand = new SegmentationCommand(
+                    parent,
+                    [seed.Value.Center],
+                    Array.Empty<Geometry.Vector2>(),
+                    UpdateLocationShapeFromVolumePolygon,
+                    channelManager,
+                    modelObj.Parent.TypeID,
+                    modelObj.ID,
+                    modelObj.ParentID,
+                    startingBoxes: [seed.Value]);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error submitting edited mask: {ex.Message}");
+                MessageBox.Show($"Failed to segment the edited mask: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -662,64 +860,20 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Update the location's shape from the segmented polygon and save
         /// </summary>
-        /// <summary>Writes mosaic geometry, then stos-maps volume. Use this when the editor produced section-space points.</summary>
-        private async Task UpdateLocationShapeFromMosaicPolygon(Polygon mosaic_poly)
+        private async void UpdateLocationShapeFromVolumePolygon(Polygon volume_poly)
         {
-            try
-            {
-                // Convert location type to POLYGON
-                var parent = AnnotationOverlay.CurrentOverlay.Parent;
-                modelObj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON;
-
-                modelObj.SetShapeFromGeometryInSection(parent.Section.ActiveSectionToVolumeTransform, mosaic_poly.ToSqlGeometry());
-                // Save the location
-                await Store.Locations.Save();
-
-                Debug.WriteLine($"Successfully converted circle location {modelObj.ID} to polygon");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error updating location shape: {ex.Message}");
-                MessageBox.Show($"Failed to update location shape: {ex.Message}",
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        /// <summary>
-        /// Update the location's shape from the segmented polygon and save
-        /// </summary>
-        /// <summary>Writes volume geometry, then inverse-maps mosaic. Use this when the editor produced world-space points.</summary>
-        private async Task UpdateLocationShapeFromVolumePolygon(Polygon volume_poly)
-        {
-            try
-            {
-                // Convert location type to POLYGON
-                modelObj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON;
-
-                var parent = AnnotationOverlay.CurrentOverlay.Parent;
-                var mosaic_poly = parent.Section.ActiveSectionToVolumeTransform.TryMapShapeVolumeToSection(volume_poly);
-
-                modelObj.SetShapeFromGeometryInVolume(parent.Section.ActiveSectionToVolumeTransform, volume_poly.ToSqlGeometry());
-
-                // Save the location
-                await Store.Locations.Save();
-
-                Debug.WriteLine($"Successfully converted circle location {modelObj.ID} to polygon");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error updating location shape: {ex.Message}");
-                MessageBox.Show($"Failed to update location shape: {ex.Message}",
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            await LocationShapeUpdate.ApplyVolumePolygon(modelObj, volume_poly, AnnotationOverlay.CurrentOverlay.Parent);
         }
 
         protected async void ContextMenu_OnOffEdge(object sender, EventArgs e)
         {
+            bool oldTerminal = modelObj.Terminal;
+            bool oldOffEdge = modelObj.OffEdge;
             modelObj.OffEdge = !modelObj.OffEdge;
             try
             {
                 await Store.Locations.Save();
+                UndoManager.PushLocationFlags("Toggle OffEdge", modelObj, oldTerminal, oldOffEdge);
             }
             catch (System.ServiceModel.FaultException ex)
             {
@@ -804,16 +958,6 @@ namespace WebAnnotation.ViewModel
         }
 
         public int GetHashCode(LocationObj obj) => obj.GetHashCode();
-
-        int IComparable<Location_ViewModelBase>.CompareTo(Location_ViewModelBase other)
-        {
-            if (other is null)
-            {
-                return 1;
-            }
-
-            return (int)(ID - other.ID);
-        }
 
         #region WeakEvents
 

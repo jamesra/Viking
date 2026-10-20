@@ -84,5 +84,9 @@ namespace WebAnnotationModel.gRPC
 
         /// <inheritdoc />
         public void InvalidateSection(int sectionNumber) => _cells.InvalidateSection(sectionNumber);
+
+        /// <inheritdoc />
+        public bool AreRegionQueriesComplete(Geometry.Rectangle? volumeBounds, double screenPixelSizeInVolume, int sectionNumber) =>
+            _cells.AreRegionQueriesComplete(volumeBounds, screenPixelSizeInVolume, sectionNumber);
     }
 }

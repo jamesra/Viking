@@ -70,10 +70,44 @@ namespace WebAnnotationModel.Objects
         }
 
         /// <summary>
-        /// Packed ARGB for a cell, stable for one structure id. The mask forces opaque alpha and a little blue so a zero hash stays visible.
+        /// Packed ARGB for a cell, stable for one structure id. Location views, segmentation, and autoseg call this so a cell and its mask share one hue. The mask forces opaque alpha and a little blue so a zero hash stays visible.
         /// </summary>
         public static uint ColorForId(long structureId) =>
             (uint)structureId.ToString().GetHashCode() | 0xFF0707FF;
+
+        /// <summary>
+        /// A random opaque packed ARGB color for display. The hue is uniform; saturation and brightness stay high so
+        /// the color shows against grayscale TEM. Used to re-roll a cell's <see cref="Color"/>; it is never saved.
+        /// </summary>
+        /// <param name="random">Source of randomness. Not thread safe, so callers pass their own.</param>
+        public static uint RandomColor(Random random)
+        {
+            if (random is null)
+                throw new ArgumentNullException(nameof(random));
+
+            const double saturation = 0.75;
+            const double value = 0.95;
+            double sector = random.NextDouble() * 6.0;
+            int index = (int)sector % 6;
+            double fraction = sector - Math.Floor(sector);
+            double low = value * (1.0 - saturation);
+            double falling = value * (1.0 - (saturation * fraction));
+            double rising = value * (1.0 - (saturation * (1.0 - fraction)));
+            (double r, double g, double b) = index switch
+            {
+                0 => (value, rising, low),
+                1 => (falling, value, low),
+                2 => (low, value, rising),
+                3 => (low, falling, value),
+                4 => (rising, low, value),
+                _ => (value, low, falling),
+            };
+            return 0xFF000000u
+                | ((uint)Math.Round(r * 255.0) << 16)
+                | ((uint)Math.Round(g * 255.0) << 8)
+                | (uint)Math.Round(b * 255.0);
+        }
+
 
         /// <summary>
         /// The ID for newo bjects can change from a negative number to the number in the database.

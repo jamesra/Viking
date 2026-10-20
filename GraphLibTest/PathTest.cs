@@ -1,6 +1,8 @@
 using GraphLib;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace GraphLibTest
 {
@@ -39,6 +41,21 @@ namespace GraphLibTest
             }
 
             return true;
+        }
+
+        [TestMethod]
+        public void ShortestPathStaticOverloadAgreesWithExtension()
+        {
+            SimpleGraph graph = SimpleGraph.CreateGraphWithCycle();
+
+            CollectionAssert.AreEqual(
+                graph.ShortestPath(1, 8).ToArray(),
+                SimpleGraph.ShortestPath(graph, 1, 8).ToArray());
+
+            Func<SimpleNode, bool> isMatch = n => n.Key == 8;
+            CollectionAssert.AreEqual(
+                graph.ShortestPath(1, isMatch).ToArray(),
+                SimpleGraph.ShortestPath(graph, 1, isMatch).ToArray());
         }
 
         [TestMethod]
@@ -92,6 +109,57 @@ namespace GraphLibTest
 
             IList<long> path = SimpleGraph.ShortestPath(graph, 1, 9);
             Assert.IsNull(path);
+        }
+
+        /// <summary>
+        /// Builds a graph with two routes of equal hop count from 1 to 4 (via 2 and via 3) by adding edges in
+        /// the given order, so tests can show that the tie-break does not depend on insertion order.
+        /// </summary>
+        private static SimpleGraph CreateDiamond(params (long Source, long Target)[] edges)
+        {
+            SimpleGraph graph = new();
+            foreach (long id in new long[] { 1, 2, 3, 4 })
+                graph.AddNode(id);
+
+            foreach ((long source, long target) in edges)
+                graph.AddEdge(source, target);
+
+            return graph;
+        }
+
+        /// <summary>
+        /// Pins the tie-break of <see cref="SimpleGraph.ShortestPath(SimpleGraph, long, long)"/>: among equal-length
+        /// routes the one through the lowest neighbor key wins, because RecursePath enumerates a sorted key set.
+        /// Callers that display or cache the path rely on it being the same on every run.
+        /// </summary>
+        [TestMethod]
+        public void TestEqualLengthPathsPickLowestNeighborKey()
+        {
+            SimpleGraph graph = CreateDiamond((1, 2), (2, 4), (1, 3), (3, 4));
+
+            IList<long> path = SimpleGraph.ShortestPath(graph, 1, 4);
+
+            Assert.IsTrue(IsPathEqual(path, [1, 2, 4]));
+        }
+
+        [TestMethod]
+        public void TestEqualLengthPathsIgnoreEdgeInsertionOrder()
+        {
+            SimpleGraph graph = CreateDiamond((1, 3), (3, 4), (1, 2), (2, 4));
+
+            IList<long> path = SimpleGraph.ShortestPath(graph, 1, 4);
+
+            Assert.IsTrue(IsPathEqual(path, [1, 2, 4]));
+        }
+
+        [TestMethod]
+        public void TestEqualLengthPathsBreakTieFromOtherEnd()
+        {
+            SimpleGraph graph = CreateDiamond((1, 2), (2, 4), (1, 3), (3, 4));
+
+            IList<long> path = SimpleGraph.ShortestPath(graph, 4, 1);
+
+            Assert.IsTrue(IsPathEqual(path, [4, 2, 1]));
         }
 
         [TestMethod]

@@ -21,7 +21,6 @@ namespace Viking.UI.Forms
         private int Progress = 0;
         private int MaxProgress = 100;
         private DateTime startTime;
-        private readonly DateTime endLoadTime;
         private readonly string VolumePath;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private Task _loadingTask;

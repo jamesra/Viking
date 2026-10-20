@@ -17,6 +17,7 @@ using VikingXNAWinForms;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
+
 namespace Viking.UI.Commands
 {
 
@@ -48,7 +49,9 @@ namespace Viking.UI.Commands
         public readonly System.Type CommandType = type;
         public readonly Object[] Args = args ?? [];
 
-        public Command GetOrCreateCommand() => Activator.CreateInstance(CommandType, Args) as Command ?? throw new NullReferenceException($"Failed to create command of type {CommandType}");
+        public Command GetOrCreateCommand() =>
+            CommandConstructorBinder.Create(CommandType, Args) as Command
+            ?? throw new NullReferenceException($"Failed to create command of type {CommandType}");
 
     }
 
@@ -96,6 +99,18 @@ namespace Viking.UI.Commands
         public void EnqueueCommand<T>(params object[] Args)
         {
             ICommandQueueEntry entry = new CommandConstructorQueueEntry(typeof(T), Args);
+            _CommandQueue.Enqueue(entry);
+            OnQueueChanged(this, new System.Collections.Specialized.NotifyCollectionChangedEventArgs(System.Collections.Specialized.NotifyCollectionChangedAction.Add, entry));
+        }
+
+        /// <summary>
+        /// Queue an already-constructed command to run after the current command completes.
+        /// Prefer this over <see cref="EnqueueCommand(Type, object[])"/> when the caller
+        /// can bind a constructor at compile time (optional parameters, interface vs array).
+        /// </summary>
+        public void EnqueueCommand(Command command)
+        {
+            ICommandQueueEntry entry = new CommandQueueEntry(command);
             _CommandQueue.Enqueue(entry);
             OnQueueChanged(this, new System.Collections.Specialized.NotifyCollectionChangedEventArgs(System.Collections.Specialized.NotifyCollectionChangedAction.Add, entry));
         }
@@ -297,11 +312,37 @@ namespace Viking.UI.Commands
                 Parent.Invalidate();
         }
 
+        // #region agent log
+        private static void DebugCommandLog(string message)
+        {
+            try
+            {
+                System.IO.File.AppendAllText(
+                    System.IO.Path.Combine(System.IO.Path.GetTempPath(), "viking-seg-diag.log"),
+                    $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} DIAG H14 {message}{System.Environment.NewLine}");
+            }
+            catch
+            {
+            }
+        }
+        // #endregion
+
         public void SubscribeToInterfaceEvents()
         {
             MyMouseClick = new MouseEventHandler(this.OnMouseClick);
-            MyMouseDoubleClick = new MouseEventHandler(this.OnMouseDoubleClick);
-            MyMouseDown = new MouseEventHandler(this.OnMouseDown);
+            // #region agent log
+            DebugCommandLog($"Command subscribed type={GetType().Name}");
+            MyMouseDoubleClick = new MouseEventHandler((s, e) =>
+            {
+                DebugCommandLog($"viewer MouseDoubleClick button={e.Button} routed to type={GetType().Name}");
+                OnMouseDoubleClick(s, e);
+            });
+            MyMouseDown = new MouseEventHandler((s, e) =>
+            {
+                DebugCommandLog($"viewer MouseDown button={e.Button} routed to type={GetType().Name}");
+                OnMouseDown(s, e);
+            });
+            // #endregion
             MyMouseUp = new MouseEventHandler(this.OnMouseUp);
             MyMouseWheel = new MouseEventHandler(this.OnMouseWheel);
             MyMouseMove = new MouseEventHandler(this.OnMouseMove);

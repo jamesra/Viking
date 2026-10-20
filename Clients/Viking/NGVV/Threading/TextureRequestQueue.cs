@@ -82,6 +82,24 @@ namespace Viking
         }
 
         /// <summary>
+        /// True if any TileView of <paramref name="section"/> has a request queued or being downloaded.
+        /// Requests whose section was left are dropped by the workers, so they do not count once cancelled.
+        /// </summary>
+        internal static bool HasPendingForSection(int section)
+        {
+            lock (_lock)
+            {
+                foreach (TileView tileView in _pendingTileViews)
+                {
+                    if (tileView.Section == section && !tileView.SectionLoadingCancelled)
+                        return true;
+                }
+
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Enqueue a texture load request. Returns the Task to await. Both HTTP and local paths go through the queue.
         /// </summary>
         public static Task<Texture2D> EnqueueRequest(TileView tileView, GraphicsDevice graphicsDevice, CancellationToken sectionToken)
@@ -116,7 +134,7 @@ namespace Viking
                     RequestItem candidate = _requests[0];
                     _requests.RemoveAt(0);
 
-                    if (candidate.TileView.SectionLoadingCancelled)
+                    if (candidate.SectionToken.IsCancellationRequested || candidate.TileView.SectionLoadingCancelled)
                     {
                         Trace.WriteLine($"{candidate.TileView} cancelled and dropped from Queue");
                         //Must remove from the pending set here, otherwise EnqueueRequest will believe this TileView
@@ -151,11 +169,11 @@ namespace Viking
             {
                 if (_requests.Count < TextureRequestQueue.MaxWorkers)
                     return;
-                var sorted = _requests
-                    .OrderBy(r => r.TileView.Bounds.Intersects(visibleBounds) ? 0 : 1)
-                    .ThenBy(r => Math.Abs(r.TileView.Section - currentSectionZ))
-                    .ThenByDescending(r => r.TileView.Downsample)
-                    .ToList();
+                var sorted = TextureLoadQueueSort.SortToList(
+                    _requests,
+                    visibleBounds,
+                    currentSectionZ,
+                    r => r.TileView);
                 _requests.Clear();
                 _requests.AddRange(sorted);
             }
@@ -179,6 +197,38 @@ namespace Viking
         public static void StartWorkers()
         {
             EnsureWorkersStarted();
+        }
+
+        /// <summary>
+        /// Cancels the worker loops so they do not keep pulling after the viewer is closing.
+        /// </summary>
+        public static void StopWorkers()
+        {
+            CancellationTokenSource? cts;
+            lock (_lock)
+            {
+                cts = _workerCts;
+                _workerCts = null;
+                _started = false;
+            }
+
+            try
+            {
+                cts?.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+
+            try
+            {
+                _gate.Release();
+            }
+            catch (SemaphoreFullException)
+            {
+            }
+
+            cts?.Dispose();
         }
 
         private static void EnsureWorkersStarted()

@@ -2,13 +2,16 @@ using Geometry;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using System;
+using System.Collections.Generic;
 #if NETFRAMEWORK
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using VikingXNAWinForms;
 using Viking.DependencyInjection;
 using Viking.Services.Grpc;
 using WebAnnotation.UI.Commands;
 using WebAnnotation.UI.Commands.Segmentation;
+using WebAnnotation.ViewModel;
 #endif
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
@@ -120,7 +123,7 @@ namespace WebAnnotation
         public static Viking.UI.Commands.Command CreateCommand(this LocationAction action,
                                                                Viking.UI.Controls.SectionViewerControl Parent,
                                                                LocationObj loc,
-                                                               Vector2 volumePosition)
+                                                               Geometry.Vector2 volumePosition)
         {
             Viking.UI.State.SelectedObject = null;
             //            CreateNewLinkedLocationCommand.LastEditedLocation = null; 
@@ -141,11 +144,11 @@ namespace WebAnnotation
         public static Viking.UI.Commands.Command CreateCommandForCircles(LocationAction action,
                                                                          Viking.UI.Controls.SectionViewerControl Parent,
                                                                          LocationObj loc,
-                                                                         Vector2 volumePosition)
+                                                                         Geometry.Vector2 volumePosition)
         {
             //I had to calculate this on the fly because if the databases VolumeShape was out of date it could cause large movements of the annotation during the command.
             IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number);
-            Vector2 VolumeCircleCenter;
+            Geometry.Vector2 VolumeCircleCenter;
 
             switch (action)
             {
@@ -196,7 +199,7 @@ namespace WebAnnotation
         public static Viking.UI.Commands.Command CreateCommandForlineOrOpenCurve(LocationAction action,
                                                                          Viking.UI.Controls.SectionViewerControl Parent,
                                                                          LocationObj loc,
-                                                                         Vector2 volumePosition)
+                                                                         Geometry.Vector2 volumePosition)
         {
             switch (action)
             {
@@ -236,11 +239,11 @@ namespace WebAnnotation
                     // 2. Warp the volume shape back to our section using the current transform
 
                     IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
-                    Vector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
+                    Geometry.Vector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
 
-                    SqlGeometry VolumeShape;
-                    SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition).ToSqlGeometry(), (int)loc.Z, Parent.Section.Number, out VolumeShape);
-
+                    SqlGeometry MosaicShape = TryTransformMosaicShapeToSection(mapper, Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number), loc.MosaicShape.MoveTo(MosaicPosition).ToSqlGeometry(), out SqlGeometry VolumeShape);
+                    if (MosaicShape is null)
+                        return null;
 
                     return new TranslateOpenCurveCommand(Parent,
                                                              volumePosition,
@@ -278,7 +281,7 @@ namespace WebAnnotation
         public static Viking.UI.Commands.Command CreateCommandForClosedCurve(LocationAction action,
                                                                          Viking.UI.Controls.SectionViewerControl Parent,
                                                                          LocationObj loc,
-                                                                         Vector2 volumePosition)
+                                                                         Geometry.Vector2 volumePosition)
         {
             switch (action)
             {
@@ -318,10 +321,11 @@ namespace WebAnnotation
                     // 2. Warp the volume shape back to our section using the current transform
 
                     IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
-                    Vector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
+                    Geometry.Vector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
 
-                    SqlGeometry VolumeShape;
-                    SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition).ToSqlGeometry(), (int)loc.Z, Parent.Section.Number, out VolumeShape);
+                    SqlGeometry MosaicShape = TryTransformMosaicShapeToSection(mapper, Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number), loc.MosaicShape.MoveTo(MosaicPosition).ToSqlGeometry(), out SqlGeometry VolumeShape);
+                    if (MosaicShape is null)
+                        return null;
 
                     return new TranslateClosedCurveCommand(Parent,
                                                              MosaicShape.Centroid(),
@@ -360,7 +364,7 @@ namespace WebAnnotation
         public static Viking.UI.Commands.Command CreateCommandForPolygon(LocationAction action,
                                                                          Viking.UI.Controls.SectionViewerControl Parent,
                                                                          LocationObj loc,
-                                                                         Vector2 volumePosition)
+                                                                         Geometry.Vector2 volumePosition)
         {
             switch (action)
             {
@@ -373,8 +377,9 @@ namespace WebAnnotation
                                                                loc.Parent.Type.Color.ToXNAColor().SetAlpha(0.5f),
                                                                (mosaicPolygon, points) =>
                                                                     {
+                                                                        SqlGeometry undoShape = loc.MosaicShape.ToSqlGeometry();
                                                                         loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, mosaicPolygon.ToSqlGeometry());
-                                                                        _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                                                                        _ = SaveThen(() => UndoManager.PushLocationShape("Move", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode));
                                                                     });
                 case LocationAction.SCALE:
                     return null;
@@ -385,8 +390,9 @@ namespace WebAnnotation
                                                                        {
                                                                            try
                                                                            {
+                                                                               SqlGeometry undoShape = loc.MosaicShape.ToSqlGeometry();
                                                                                loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
-                                                                               _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                                                                               _ = SaveThen(() => UndoManager.PushLocationShape("Edit Shape", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode));
                                                                            }
                                                                            catch (ArgumentException e)
                                                                            {
@@ -406,8 +412,9 @@ namespace WebAnnotation
                                                       {
                                                           try
                                                           {
+                                                              SqlGeometry undoShape = loc.MosaicShape.ToSqlGeometry();
                                                               loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
-                                                              _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                                                              _ = SaveThen(() => UndoManager.PushLocationShape("Edit Shape", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode));
                                                           }
                                                           catch (ArgumentException e)
                                                           {
@@ -425,8 +432,9 @@ namespace WebAnnotation
                                                       {
                                                           try
                                                           {
+                                                              SqlGeometry undoShape = loc.MosaicShape.ToSqlGeometry();
                                                               loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
-                                                              _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                                                              _ = SaveThen(() => UndoManager.PushLocationShape("Edit Shape", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode));
                                                           }
                                                           catch (ArgumentException e)
                                                           {
@@ -449,8 +457,9 @@ namespace WebAnnotation
                                                                 loc.Width ?? Global.DefaultClosedLineWidth,
                                                                 (sender, volume_points) =>
                                                                 {
-                                                                    Vector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
+                                                                    Geometry.Vector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
                                                                     SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
+                                                                    SqlGeometry undoShape = loc.MosaicShape.ToSqlGeometry();
 
                                                                     try
                                                                     {
@@ -461,7 +470,7 @@ namespace WebAnnotation
                                                                         MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                                                     }
 
-                                                                    _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                                                                    _ = SaveThen(() => UndoManager.PushLocationShape("Cut Hole", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode));
                                                                 }
                                                                 );
 
@@ -470,8 +479,9 @@ namespace WebAnnotation
                         {
                             return new PlaceClosedCurveCommand(Parent, Microsoft.Xna.Framework.Color.White, volumePosition, Global.DefaultClosedLineWidth, (sender, volume_points) =>
                             {
-                                Vector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
+                                Geometry.Vector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
                                 SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
+                                SqlGeometry undoShape = loc.MosaicShape.ToSqlGeometry();
 
                                 try
                                 {
@@ -482,7 +492,7 @@ namespace WebAnnotation
                                     MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                 }
 
-                                _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                                _ = SaveThen(() => UndoManager.PushLocationShape("Cut Hole", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode));
                             }
                             );
                         }
@@ -493,10 +503,12 @@ namespace WebAnnotation
                                                         Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volumePosition),
                                                         (MosaicPolygon, VolumePolygon) =>
                                                         {
+                                                            SqlGeometry undoShape = loc.MosaicShape.ToSqlGeometry();
                                                             loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
-                                                            _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
-                                                        }
-                                                        );
+                                                            _ = SaveThen(() => UndoManager.PushLocationShape("Edit Shape", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode));
+                                                        },
+                                                        loc.VolumeShape?.ToPolygon(),
+                                                        volumePosition);
                 case LocationAction.CREATELINKEDLOCATION:
                     {
                         //The section we are linking from is on another section, so we have to:
@@ -505,76 +517,98 @@ namespace WebAnnotation
                         // 2. Warp the volume shape back to our section using the current transform
 
                         IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
-                        Vector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
+                        Geometry.Vector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
 
-                        SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition).ToSqlGeometry(), (int)loc.Z, Parent.Section.Number, out SqlGeometry VolumeShape);
+                        SqlGeometry MosaicShape = TryTransformMosaicShapeToSection(mapper, Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number), loc.MosaicShape.MoveTo(MosaicPosition).ToSqlGeometry(), out _);
+                        if (MosaicShape is null)
+                            return null;
 
-                        if (Global.IsSegmentationServiceAvailable)
+                        Polygon mosaicPolygon = MosaicShape.ToPolygon();
+                        Microsoft.Xna.Framework.Color color = WebAnnotation.View.LocationCanvasView.ColorForStructure(loc.Parent, 0.25f);
+
+                        void PlaceLinkedMosaicPolygon(Polygon placedMosaicPolygon)
                         {
-                            //Fetch the medial axis of the polygon.  Pass those points to the translation algorithm.  Extract the medial axis points and pass them to the segmentation command. 
-                            var mosaic_shape_poly = MosaicShape.ToPolygon();
-
-                            var mosaic_centroid = mosaic_shape_poly.Centroid; //TODO:  I am temporarily using the mosaic shape centroid instead of the medial axis until the Medial Axis code improves
-
-                            return new TranslatePolygonCommand(Parent,
-                                mosaic_shape_poly,
-                                volumePosition,
-                                [mosaic_centroid], //medial_axis_points,
-                                WebAnnotation.View.LocationCanvasView.ColorForStructure(loc.Parent, 0.25f),
-                                (polygon, points) =>
-                                {
-                                    var medial_axis = Geometry.MedialAxisFinder.ApproximateMedialAxis(mosaic_shape_poly);
-                                    var mosaic_medial_axis_points = medial_axis.Points;
-                                    var transformed = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(points, out Vector2[] volume_points);
-                                    var volume_medial_axis = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(mosaic_medial_axis_points, out Vector2[] volume_medial_axis_points);
-                                    var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                                    Parent.CommandQueue.EnqueueCommand(typeof(SegmentationCommand),
-                                        [Parent, volume_medial_axis_points, Array.Empty<Vector2>(), new SegmentationCommand.OnCommandSuccess( (segmentedVolumePolygon) =>
-                                            {
-                                                LocationObj newLoc = new(loc.Parent,
-                                                    Parent.Section.Number,
-                                                    loc.TypeCode);
-                                                try
-                                                {
-                                                    newLoc.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, segmentedVolumePolygon.ToSqlGeometry());
-                                                    Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [Parent, loc, newLoc]);
-                                                }
-                                                catch (ArgumentException e)
-                                                {
-                                                    MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                                }
-                                            }), channelManager, new long[] { loc.Parent.TypeID }, null]);
-
-                                }
-                            );
+                            LocationObj newLoc = new(loc.Parent,
+                                Parent.Section.Number,
+                                loc.TypeCode);
+                            try
+                            {
+                                newLoc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, placedMosaicPolygon.ToSqlGeometry());
+                                Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [Parent, loc, newLoc]);
+                            }
+                            catch (ArgumentException e)
+                            {
+                                MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
                         }
-                        else
+
+                        if (!Global.AnnotationSettings.SegmentLinkedAnnotations || !Global.IsSegmentationServiceAvailable)
+                        {
                             return new TranslatePolygonCommand(Parent,
-                                                                 MosaicShape.ToPolygon(),
-                                                                 volumePosition,
-                                                                 WebAnnotation.View.LocationCanvasView.ColorForStructure(loc.Parent, 0.25f),
-                                                                 (mosaicPolygon, points) =>
-                                                                 {
-                                                                     LocationObj newLoc = new(loc.Parent,
-                                                                        Parent.Section.Number,
-                                                                        loc.TypeCode);
-                                                                     try
-                                                                     {
-                                                                         newLoc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, mosaicPolygon.ToSqlGeometry());
-                                                                         Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [Parent, loc, newLoc]);
-                                                                     }
-                                                                     catch (ArgumentException e)
-                                                                     {
-                                                                         MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                                                     }
-                                                                 }
-                                                                 );
+                                mosaicPolygon,
+                                volumePosition,
+                                color,
+                                (placedMosaicPolygon, _) => PlaceLinkedMosaicPolygon(placedMosaicPolygon));
+                        }
+
+                        Geometry.Vector2[] previewCentroids = [.. PolygonSegmentationPrompts.CreateMosaicForegroundPoints(mosaicPolygon)];
+                        return new TranslatePolygonCommand(Parent,
+                            mosaicPolygon,
+                            volumePosition,
+                            previewCentroids,
+                            color,
+                            (polygon, _) =>
+                            {
+                                IReadOnlyList<Geometry.Vector2> foreground = PolygonSegmentationPrompts.CreateVolumeForegroundPoints(
+                                    polygon,
+                                    Parent.Section.ActiveSectionToVolumeTransform);
+
+                                if (foreground.Count == 0)
+                                {
+                                    PlaceLinkedMosaicPolygon(polygon);
+                                    return;
+                                }
+
+                                Polygon volumeFallback = Parent.Section.ActiveSectionToVolumeTransform.TryMapShapeSectionToVolume(polygon);
+                                var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
+                                Parent.CommandQueue.EnqueueCommand(new SegmentationCommand(
+                                    Parent,
+                                    foreground,
+                                    Array.Empty<Geometry.Vector2>(),
+                                    segmentedVolumePolygon =>
+                                    {
+                                        LocationObj newLoc = new(loc.Parent,
+                                            Parent.Section.Number,
+                                            loc.TypeCode);
+                                        try
+                                        {
+                                            LocationShapeUpdate.AssignSimplifiedVolumePolygon(
+                                                newLoc,
+                                                segmentedVolumePolygon,
+                                                Parent.Section.ActiveSectionToVolumeTransform,
+                                                Parent.Downsample);
+                                            Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [Parent, loc, newLoc]);
+                                        }
+                                        catch (ArgumentException e)
+                                        {
+                                            MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                        }
+                                    },
+                                    channelManager,
+                                    loc.Parent.TypeID,
+                                    loc.ID,
+                                    loc.ParentID,
+                                    volumeFallback)
+                                {
+                                    ShowPenButtons = true
+                                });
+                            });
                     }
                 case LocationAction.CHANGEBOUNDARY:
                     {
                         IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
-                        Vector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
-                        //SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition).ToSqlGeometry(), (int)loc.Z, Parent.Section.Number, out VolumeShape);
+                        Geometry.Vector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
+                        //SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
 
                         RetraceAndReplacePathCommand retracecmd = new(Parent,
                                                                  loc.MosaicShape.ToPolygon(),
@@ -585,9 +619,10 @@ namespace WebAnnotation
                                                                      //Drawing from inside to outside:
                                                                      RetraceAndReplacePathCommand cmd = (RetraceAndReplacePathCommand)sender;
 
+                                                                     Action recordUndo = null;
                                                                      try
                                                                      {
-                                                                         loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, cmd.OutputMosaicPolygon.ToSqlGeometry());
+                                                                         recordUndo = cmd.ApplyCut(loc);
                                                                      }
                                                                      catch (ArgumentException e)
                                                                      {
@@ -595,11 +630,11 @@ namespace WebAnnotation
                                                                      }
 
 
-                                                                     _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                                                                     _ = SaveThen(recordUndo);
 
                                                                  }
                                                                  );
-                        retracecmd.InitPath(new Vector2[] { volumePosition });
+                        retracecmd.InitPath(new Geometry.Vector2[] { volumePosition });
                         return retracecmd;
                     }
 
@@ -613,13 +648,13 @@ namespace WebAnnotation
         /// Called when the user releases a continue-last-trace or adjacent-disc drag.
         /// The click is mapped with the open section's transform only. A bad or missing section between <paramref name="source"/> and the open section does not have to inverse-map the point.
         /// </summary>
-        private static void QueueLinkedCircle(Viking.UI.Controls.SectionViewerControl parent, LocationObj source, Vector2 newVolumePosition, double newRadius)
+        private static void QueueLinkedCircle(Viking.UI.Controls.SectionViewerControl parent, LocationObj source, Geometry.Vector2 newVolumePosition, double newRadius)
         {
             if (source?.Parent is null || parent?.Section is null)
                 return;
 
             IVolumeToSectionTransform destination = parent.Volume.GetSectionToVolumeTransform(parent.Section.Number);
-            if (!destination.TryVolumeToSection(newVolumePosition, out Vector2 mosaic))
+            if (!destination.TryVolumeToSection(newVolumePosition, out Geometry.Vector2 mosaic))
             {
                 MessageBox.Show(parent, "The chosen point is outside mappable volume space, location not created", "Recoverable Error");
                 return;
@@ -631,32 +666,24 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Warp a shape from the source section's mosaic space to the destination sections mosaic space
+        /// Saves pending location edits, then runs <paramref name="onSaved"/> only if the save succeeded. Lets a command's
+        /// synchronous completion callback record its undo entry after the asynchronous gRPC save without blocking the UI thread.
         /// </summary>
-        /// <param name="SourceShape"></param>
-        /// <param name="SourceSection"></param>
-        /// <param name="DestinationSection"></param>
-        private static Microsoft.SqlServer.Types.SqlGeometry TransformMosaicShapeToSection(Viking.ViewModels.VolumeViewModel volume,
-                                                                                           Microsoft.SqlServer.Types.SqlGeometry SourceShape,
-                                                                                           int SourceSection,
-                                                                                           int DestinationSection,
-                                                                                           out Microsoft.SqlServer.Types.SqlGeometry VolumeShape)
+        private static async Task SaveThen(Action onSaved)
         {
-            Viking.VolumeModel.IVolumeToSectionTransform SourceSectionTransform = volume.GetSectionToVolumeTransform(SourceSection);
-            Viking.VolumeModel.IVolumeToSectionTransform DestinationSectionTransform = volume.GetSectionToVolumeTransform(DestinationSection);
-            VolumeShape = SourceSectionTransform.TryMapShapeSectionToVolume(SourceShape);
-            return DestinationSectionTransform.TryMapShapeVolumeToSection(VolumeShape);
+            if (await AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
+                onSaved?.Invoke();
         }
 
         private static bool IsClosedCurve(LocationObj loc) => loc.TypeCode == LocationType.CLOSEDCURVE;
 
-        private static void UpdateLineLocationCallback(LocationObj loc, Vector2[] VolumeControlPoints, Vector2[] MosaicControlPoints)
+        private static void UpdateLineLocationCallback(LocationObj loc, Geometry.Vector2[] VolumeControlPoints, Geometry.Vector2[] MosaicControlPoints)
         {
             UpdateLineLocationNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints);
             _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
-        private static void UpdateLineLocationNoSaveCallback(LocationObj loc, Vector2[] VolumeControlPoints, Vector2[] MosaicControlPoints)
+        private static void UpdateLineLocationNoSaveCallback(LocationObj loc, Geometry.Vector2[] VolumeControlPoints, Geometry.Vector2[] MosaicControlPoints)
         {
             SqlGeometry updatedMosaicShape = loc.TypeCode.GetShape(MosaicControlPoints);
             SqlGeometry updatedVolumeShape = loc.TypeCode.GetSmoothedShape(VolumeControlPoints);
@@ -665,25 +692,25 @@ namespace WebAnnotation
             loc.MosaicShape = updatedMosaicShape.ToShape2D();
         }
 
-        private static void UpdateLineLocationCallback(LocationObj loc, Vector2[] VolumeControlPoints, Vector2[] MosaicControlPoints, double NewWidth)
+        private static void UpdateLineLocationCallback(LocationObj loc, Geometry.Vector2[] VolumeControlPoints, Geometry.Vector2[] MosaicControlPoints, double NewWidth)
         {
             UpdateLineLocationNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints, NewWidth);
             _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
-        private static void UpdateLineLocationNoSaveCallback(LocationObj loc, Vector2[] VolumeControlPoints, Vector2[] MosaicControlPoints, double NewWidth)
+        private static void UpdateLineLocationNoSaveCallback(LocationObj loc, Geometry.Vector2[] VolumeControlPoints, Geometry.Vector2[] MosaicControlPoints, double NewWidth)
         {
             UpdateLineLocationNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints);
             loc.Width = NewWidth;
         }
 
-        public static void UpdateCircleLocationCallback(LocationObj loc, Vector2 WorldPosition, Vector2 MosaicPosition, double NewRadius)
+        public static void UpdateCircleLocationCallback(LocationObj loc, Geometry.Vector2 WorldPosition, Geometry.Vector2 MosaicPosition, double NewRadius)
         {
             UpdateCircleLocationNoSaveCallback(loc, WorldPosition, MosaicPosition, NewRadius);
             _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
-        public static void UpdateCircleLocationCallback(LocationObj loc, Vector2 WorldPosition, Vector2 MosaicPosition)
+        public static void UpdateCircleLocationCallback(LocationObj loc, Geometry.Vector2 WorldPosition, Geometry.Vector2 MosaicPosition)
         {
             UpdateCircleLocationNoSaveCallback(loc, WorldPosition, MosaicPosition);
             _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
@@ -691,7 +718,29 @@ namespace WebAnnotation
 
 #endif
 
-        public static void UpdateCircleLocationNoSaveCallback(LocationObj loc, Vector2 WorldPosition, Vector2 MosaicPosition)
+        /// <summary>
+        /// Warps a shape from the source section's mosaic space to the destination section's mosaic space, through volume space.
+        /// Returns null, with a trace line, when any vertex of the shape lies outside either mapping, so a linked-location command is not created for a shape it cannot place.
+        /// </summary>
+        /// <param name="source">Section-to-volume transform of the section the shape comes from.</param>
+        /// <param name="destination">Section-to-volume transform of the section the linked location is placed on.</param>
+        /// <param name="sourceShape">The shape in the source section's mosaic space.</param>
+        /// <param name="volumeShape">The shape in volume space, or null when <paramref name="sourceShape"/> lies partly outside <paramref name="source"/>.</param>
+        /// <returns>The shape in the destination section's mosaic space, or null when it cannot be mapped.</returns>
+        internal static SqlGeometry TryTransformMosaicShapeToSection(IVolumeToSectionTransform source,
+                                                                     IVolumeToSectionTransform destination,
+                                                                     SqlGeometry sourceShape,
+                                                                     out SqlGeometry volumeShape)
+        {
+            volumeShape = source.TryMapShapeSectionToVolume(sourceShape);
+            SqlGeometry mosaicShape = volumeShape is null ? null : destination.TryMapShapeVolumeToSection(volumeShape);
+            if (mosaicShape is null)
+                System.Diagnostics.Trace.WriteLine("Linked location: shape lies partly outside the section mapping; no command created.", "WebAnnotation");
+
+            return mosaicShape;
+        }
+
+        public static void UpdateCircleLocationNoSaveCallback(LocationObj loc, Geometry.Vector2 WorldPosition, Geometry.Vector2 MosaicPosition)
         {
             loc.MosaicShape = loc.MosaicShape.MoveTo(MosaicPosition);
             loc.VolumeShape = loc.VolumeShape.MoveTo(WorldPosition);
@@ -699,7 +748,7 @@ namespace WebAnnotation
 
         }
 
-        public static void UpdateCircleLocationNoSaveCallback(LocationObj loc, Vector2 WorldPosition, Vector2 MosaicPosition, double NewRadius)
+        public static void UpdateCircleLocationNoSaveCallback(LocationObj loc, Geometry.Vector2 WorldPosition, Geometry.Vector2 MosaicPosition, double NewRadius)
         {
             if (NewRadius < WebAnnotation.Global.MinRadius)
             {

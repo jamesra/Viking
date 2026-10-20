@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -49,5 +49,28 @@ namespace Viking.Common
         /// <param name="BackgroundLuma">Texture matching size of client with Luma value of each pixel</param>
         /// <param name="BackgroundColors">Texture matching size of client window with RGB values for each pixel.  May be null of no color data available</param>
         void Draw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Texture BackgroundLuma, Texture BackgroundColors, ref int NextStencilValue);
+    }
+
+    /// <summary>
+    /// Overlay objects that consume a mouse double-click so DefaultCommand can skip the context menu.
+    /// Return true if the event was handled.
+    /// </summary>
+    public interface IHandleMouseDoubleClick
+    {
+        bool HandleMouseDoubleClick(System.Windows.Forms.MouseButtons button, Geometry.Vector2 worldPosition);
+    }
+
+    /// <summary>
+    /// Overlay-level double-click that runs before <see cref="ISectionOverlayExtension.ObjectAtPosition"/>.
+    /// Used when a hollow hit target (auto-polygonize rings) must accept/dismiss on double-click
+    /// without winning single-click hover, cursor, or translate/scale against the annotation underneath.
+    /// </summary>
+    public interface IHandleOverlayMouseDoubleClick
+    {
+        /// <summary>
+        /// Called by <c>DefaultCommand</c> before nearest-object double-click dispatch.
+        /// </summary>
+        /// <returns>True when the overlay consumed the double-click.</returns>
+        bool TryHandleMouseDoubleClick(System.Windows.Forms.MouseButtons button, Geometry.Vector2 worldPosition);
     }
 }

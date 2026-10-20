@@ -57,7 +57,11 @@ namespace VikingXNAGraphics
         /// <summary>
         /// A large X, typically indicates a cancel action
         /// </summary>
-        X
+        X,
+        /// <summary>
+        /// Scissors, used by the pen "Cut hole" choice.
+        /// </summary>
+        Scissors
     }
 
     public interface IIconTexture
@@ -75,6 +79,7 @@ namespace VikingXNAGraphics
         public static Texture2D ChainTexture;
         public static Texture2D ConnectTexture;
         public static Texture2D CircleXTexture;
+        public static Texture2D ScissorsTexture;
 
         public static Texture2D GetTexture(this BuiltinTexture tex)
         {
@@ -89,6 +94,7 @@ namespace VikingXNAGraphics
                 BuiltinTexture.Chain => ChainTexture,
                 BuiltinTexture.Connect => ConnectTexture,
                 BuiltinTexture.X => CircleXTexture,
+                BuiltinTexture.Scissors => ScissorsTexture ?? MinusTexture,
                 _ => throw new NotImplementedException(string.Format("Missing texture for CircleIcon enumeration value {0}", tex)),
             };
         }

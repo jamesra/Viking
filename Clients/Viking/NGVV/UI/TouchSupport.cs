@@ -4,6 +4,9 @@ using System.Text;
 
 namespace Viking.UI
 {
+    /// <summary>
+    /// Win32 touch hit-testing modes for WM_TOUCHHITTESTING (see the Default/Client/None member comments). Interop value; only referenced by commented-out registration code in VikingMain.
+    /// </summary>
     [Flags]
     public enum TouchHitTesting
     {
@@ -12,6 +15,9 @@ namespace Viking.UI
         None = 2 //messages are not sent to the target window or child windows.
     };
 
+    /// <summary>
+    /// Options for registering a window for touch input (Win32 RegisterTouchWindow flags). Interop value; currently only referenced by commented-out registration code in VikingMain.
+    /// </summary>
     [Flags]
     public enum TouchRegisterOptions
     {
@@ -21,6 +27,9 @@ namespace Viking.UI
     }
 
 
+    /// <summary>
+    /// Win32 POINTER_INPUT_TYPE: the device class (pointer, touch, pen, mouse, touchpad) that produced a WM_POINTER message. Values mirror WinUser.h and must not be renumbered.
+    /// </summary>
     public enum PointerType : System.UInt32
     {
         /// <summary>
@@ -33,6 +42,9 @@ namespace Viking.UI
         Touchpad = 0x05
     }
 
+    /// <summary>
+    /// Win32 PEN_FLAGS: barrel button, inverted pen and eraser state reported in <see cref="PointerPenInfo.flags"/>. Values mirror WinUser.h.
+    /// </summary>
     [Flags]
     public enum PenFlags : System.UInt32
     {
@@ -52,6 +64,9 @@ namespace Viking.UI
     }
 
 
+    /// <summary>
+    /// Win32 POINTER_FLAGS bit set carried in the high word of a WM_POINTER message wParam and in <see cref="PointerInfo.pointerFlags"/>. Values mirror WinUser.h and must not be renumbered.
+    /// </summary>
     [Flags]
     public enum PointerFlags : System.UInt32
     {
@@ -118,6 +133,9 @@ namespace Viking.UI
         HasTransform = 0x400000
     }
 
+    /// <summary>
+    /// Win32 PEN_MASK: which optional fields (pressure, rotation, tilt) of <see cref="PointerPenInfo"/> hold valid data. Check the mask before reading a field.
+    /// </summary>
     [Flags]
     public enum PenMask : System.UInt32
     {
@@ -128,6 +146,9 @@ namespace Viking.UI
         TiltY = 0b1000
     }
 
+    /// <summary>
+    /// Win32 POINTER_BUTTON_CHANGE_TYPE: which pointer button changed state in this message. WinUser.h assigns no explicit values, so the order here must match the native declaration.
+    /// </summary>
     public enum PointerButtonChangeType : System.UInt32
     {
         //I don't like not defining these, but they did not have values assigned in WinUser.h
@@ -144,6 +165,9 @@ namespace Viking.UI
         FifthButtonUp
     }
 
+    /// <summary>
+    /// Typed view over the <see cref="PointerFlags"/> carried in a WM_POINTER message wParam. Immutable value type, safe to copy across threads.
+    /// </summary>
     public readonly struct PointerMessageFlags
     {
         public bool New => (Flags & PointerFlags.New) > 0;
@@ -180,6 +204,9 @@ namespace Viking.UI
         public override string ToString() => string.Format("{0}", Flags);
     }
 
+    /// <summary>
+    /// Decoded WM_POINTER window message: flags, client coordinates and pointer ID. Retains the original <see cref="System.Windows.Forms.Message"/> so callers can query the full pointer info. Valid only for the message it was built from.
+    /// </summary>
     public readonly struct PointerMessageData(System.Windows.Forms.Message message)
     {
         public readonly PointerMessageFlags Flags = new(message.WParam);
@@ -194,6 +221,9 @@ namespace Viking.UI
         public override string ToString() => string.Format("ID: {0} X: {1} Y: {2}", this.PointerID, this.X, this.Y);
     }
 
+    /// <summary>
+    /// Managed layout of the native POINT (two 32-bit LONG values) used inside <see cref="PointerInfo"/>. Must keep sequential layout and field order for marshaling.
+    /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct TouchPoint(System.Int32 x, System.Int32 y) : IEquatable<TouchPoint>
     {
@@ -220,6 +250,9 @@ namespace Viking.UI
 
     }
 
+    /// <summary>
+    /// Managed layout of the native POINTER_INFO structure filled by GetPointerInfo. Field order and types must match WinUser.h for marshaling; do not reorder or retype.
+    /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct PointerInfo
     {
@@ -241,6 +274,9 @@ namespace Viking.UI
         public readonly PointerButtonChangeType ButtonChange;
     }
 
+    /// <summary>
+    /// Managed layout of the native POINTER_PEN_INFO structure filled by GetPointerPenInfo. Check <see cref="mask"/> before using pressure, rotation or tilt. Field order must match WinUser.h.
+    /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct PointerPenInfo
     {
@@ -298,6 +334,9 @@ namespace Viking.UI
         }
     }
 
+    /// <summary>
+    /// Window message IDs for gesture, touch hit-testing and pointer messages that the viewer handles in its WndProc.
+    /// </summary>
     public enum TouchMessageType : int
     {
         WM_GESTURE = 0x0119,
@@ -346,6 +385,9 @@ namespace Viking.UI
         }
     }
 
+    /// <summary>
+    /// Managed layout of a pair of 16-bit coordinates as packed in a window message; converts implicitly to <see cref="System.Drawing.Point"/>.
+    /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct WinMsgPoints
     {
@@ -360,6 +402,9 @@ namespace Viking.UI
         }
     }
 
+    /// <summary>
+    /// Win32 window-message constants and pen/pointer logging helpers used by the viewer's input handling (<see cref="PenEventManager"/>, SectionViewerControl).
+    /// </summary>
     public static class WinMsgInput
     {
         public const int WM_MOUSEMOVE = 0x0200;
@@ -384,8 +429,18 @@ namespace Viking.UI
 
         public static TouchConfig Config = new();
 
-        public static System.UInt16 HiWord(this IntPtr param) => (System.UInt16)(param.ToInt32() >> 16);  //Shift away the low word
-        public static System.UInt16 LowWord(this IntPtr param) => (System.UInt16)(param.ToInt32() & 0xFFFF);
+        /// <summary>
+        /// Low 32 bits of a window-message parameter. <c>IntPtr.ToInt32()</c> throws <see cref="OverflowException"/> on
+        /// 64-bit processes when the value exceeds <see cref="int.MaxValue"/>, and Win32 <c>MAKELPARAM</c> zero-extends,
+        /// so a negative Y coordinate (pen above the primary monitor) arrives as 0x8000xxxx.
+        /// </summary>
+        private static uint LowDWord(IntPtr param) => unchecked((uint)(long)param);
+
+        /// <summary>HIWORD of a message parameter (flags in WM_POINTER wParam, Y in lParam).</summary>
+        public static System.UInt16 HiWord(this IntPtr param) => (System.UInt16)(LowDWord(param) >> 16);
+
+        /// <summary>LOWORD of a message parameter (pointer ID in WM_POINTER wParam, X in lParam).</summary>
+        public static System.UInt16 LowWord(this IntPtr param) => (System.UInt16)(LowDWord(param) & 0xFFFF);
 
 
         public static System.Int16 SignedHiWord(this IntPtr param)

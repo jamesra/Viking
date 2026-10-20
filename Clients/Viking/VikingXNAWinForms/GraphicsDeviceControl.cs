@@ -115,6 +115,20 @@ namespace VikingXNAWinForms
 
         #region Initialization
 
+        /// <summary>
+        /// Keep WinForms chrome (status bar, F1 help ElementHost, tool strips) from being
+        /// overwritten each frame when DirectX presents to this control's full client area.
+        /// </summary>
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                const int WS_CLIPCHILDREN = 0x02000000;
+                CreateParams cp = base.CreateParams;
+                cp.Style |= WS_CLIPCHILDREN;
+                return cp;
+            }
+        }
 
         /// <summary>
         /// Initializes the control.
@@ -163,11 +177,32 @@ namespace VikingXNAWinForms
                 return;
 
             if (_trackedForm != null)
+            {
                 _trackedForm.LocationChanged -= OnFormLocationChanged;
+                _trackedForm.ResizeEnd -= OnFormMoveEnded;
+            }
 
             _trackedForm = form;
             if (_trackedForm != null)
+            {
                 _trackedForm.LocationChanged += OnFormLocationChanged;
+                _trackedForm.ResizeEnd += OnFormMoveEnded;
+            }
+        }
+
+        /// <summary>
+        /// Re-reads HDR once a window drag finishes. DWM can still report the previous monitor's
+        /// state while the window is mid-drag, and <see cref="OnFormLocationChanged"/> ignores
+        /// further moves once the monitor handle has been noted.
+        /// </summary>
+        void OnFormMoveEnded(object? sender, EventArgs e)
+        {
+            if (!IsHandleCreated || graphicsDeviceService is null)
+                return;
+            if (graphicsDeviceService.DeviceWindowHandle != Handle)
+                return;
+
+            NoteOutput(MonitorFromWindow(Handle, MonitorDefaultToNearest));
         }
 
         /// <summary>
@@ -222,9 +257,14 @@ namespace VikingXNAWinForms
             if (monitor == IntPtr.Zero)
                 return;
 
-            _outputMonitor = monitor;
+            // Record the monitor only after a successful read, so a failed read is retried on the next move.
             if (!MonitorAdvancedColor.TryGetEnabled(monitor, out bool enabled))
+            {
+                Trace.WriteLine("HDR state of the output monitor could not be read; swap chain left alone.");
                 return;
+            }
+
+            _outputMonitor = monitor;
 
             if (!_knownAdvancedColor)
             {
@@ -236,6 +276,7 @@ namespace VikingXNAWinForms
             if (enabled == _advancedColorEnabled)
                 return;
 
+            Trace.WriteLine($"Advanced color (HDR) changed to {enabled}; recreating swap chain.");
             _advancedColorEnabled = enabled;
             ResetSwapChainForOutputChange();
         }
@@ -275,6 +316,7 @@ namespace VikingXNAWinForms
             if (_trackedForm != null)
             {
                 _trackedForm.LocationChanged -= OnFormLocationChanged;
+                _trackedForm.ResizeEnd -= OnFormMoveEnded;
                 _trackedForm = null;
             }
 
@@ -329,6 +371,11 @@ namespace VikingXNAWinForms
                     Draw();
                     EndDraw();
 #if !DEBUG
+                }
+                catch (Exception except) when (GpuDeviceRemovedDiagnostics.IsDeviceRemovedError(except))
+                {
+                    GpuDeviceRemovedDialog.LogAndShowOnce(except, Device);
+                    PaintUsingSystemDrawing(e.Graphics, GpuDeviceRemovedDiagnostics.FormatOverlayMessage(Device, except));
                 }
                 catch (Exception except)
                 {
@@ -422,6 +469,10 @@ namespace VikingXNAWinForms
                     Device.Present(); //(sourceRectangle, null, this.Handle);
 #if !DEBUG
             }
+            catch (Exception ex) when (GpuDeviceRemovedDiagnostics.IsDeviceRemovedError(ex))
+            {
+                GpuDeviceRemovedDialog.LogAndShowOnce(ex, Device);
+            }
             catch
             {
                 // Present might throw if the device became lost while we were
@@ -449,6 +500,14 @@ namespace VikingXNAWinForms
             {
                 case GraphicsDeviceStatus.Lost:
                     // If the graphics device is lost, we cannot use it at all.
+                    if (GpuDeviceRemovedDiagnostics.TryGetDeviceRemovedReason(Device, out int lostReason))
+                    {
+                        return "Graphics device lost\n\nGetDeviceRemovedReason: "
+                            + GpuDeviceRemovedDiagnostics.NameForHResult(lostReason)
+                            + $" (0x{lostReason:X8})\n"
+                            + GpuDeviceRemovedDiagnostics.DescribeHResult(lostReason);
+                    }
+
                     return "Graphics device lost";
 
                 case GraphicsDeviceStatus.NotReset:
@@ -478,6 +537,12 @@ namespace VikingXNAWinForms
                 }
                 catch (Exception e)
                 {
+                    if (GpuDeviceRemovedDiagnostics.IsDeviceRemovedError(e))
+                    {
+                        GpuDeviceRemovedDialog.LogAndShowOnce(e, Device);
+                        return GpuDeviceRemovedDiagnostics.FormatOverlayMessage(Device, e);
+                    }
+
                     return "Graphics device reset failed\n\n" + e;
                 }
             }

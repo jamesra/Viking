@@ -151,6 +151,11 @@ namespace Viking.VolumeModel
 
         #region CacheIO
 
+        /// <summary>
+        /// Writes <paramref name="transforms"/> to the cache file atomically, then reads the file back and deletes it if it
+        /// cannot be loaded, so a broken cache is never left for the next session. Never throws: a cache that cannot be
+        /// written is only logged, and the transforms are rebuilt next time.
+        /// </summary>
         protected static Task SaveToCache(in string CachedTransformsFileName, in ITransform[] transforms)
         {
             //Replaced BinaryFormatter with modern JSON serialization to avoid security vulnerabilities
@@ -167,7 +172,7 @@ namespace Viking.VolumeModel
                 // Reject caches that cannot be read back (e.g. RBFTransform ctor/param mismatch).
                 ITransform[] roundTrip = TransformCacheFileIO.TryLoad(
                     cacheFile, JsonTransformSerializer.DeserializeArray, out Exception verifyError);
-                if (roundTrip is null)
+                if (roundTrip is null || roundTrip.Length != transformsCopy.Length)
                 {
                     TransformCacheFileIO.TryDelete(cacheFile);
                     Trace.WriteLine($"Transform cache not saved (round-trip failed): {cacheFile}: {verifyError?.GetType().Name} - {verifyError?.Message}");
@@ -175,12 +180,17 @@ namespace Viking.VolumeModel
             }
             catch (Exception e)
             {
+                TransformCacheFileIO.TryDelete(cacheFile);
                 Trace.WriteLine($"Unable to save transform cache {cacheFile}: {e.GetType().Name} - {e.Message}");
             }
 
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Loads the cache file, or returns null when it is missing or unreadable. An unreadable file (including the
+        /// older formats) is deleted so it is rebuilt.
+        /// </summary>
         protected virtual ITransform[] LoadFromCache()
         {
             //Replaced BinaryFormatter with modern JSON deserialization to avoid security vulnerabilities

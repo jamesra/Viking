@@ -1,7 +1,4 @@
 using Geometry;
-using Rectangle = Geometry.Rectangle;
-using Grpc.Core;
-using Microsoft.SqlServer.Types;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using SqlGeometryUtils;
@@ -10,9 +7,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Configuration;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -23,16 +18,14 @@ using VikingXNA;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
 using WebAnnotation;
+using WebAnnotation.UI;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 using WebAnnotation.ViewModel;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
-using Viking.DependencyInjection;
 using Viking.Services.Grpc;
-using Viking.gRPC.SegmentationServiceTypes.V1;
-using Polygon = Geometry.Polygon;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
+using WebAnnotation.UI.AutoPolygonize;
+
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -47,62 +40,129 @@ namespace WebAnnotation.UI.Commands.Segmentation
     internal class SegmentationCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
         #region Constants
-        private const double SIMPLIFICATION_TOLERANCE = 2.0; // pixels
         private const int DEFAULT_DEBOUNCE_MS = 500;
-        private const int DEFAULT_MAX_TILE_ROUNDS = 4;
+
+        /// <summary>
+        /// Screen-pixel width of the resegment preview outline. World width is this times
+        /// <c>Parent.Downsample</c> so a rebuilt ring stays the same size on screen.
+        /// Four times the previous two-pixel stroke, which was too thin to see.
+        /// </summary>
+        private const double PreviewRingWidthPixels = 8.0;
         #endregion
 
         #region Fields
         // Point collections
         private readonly List<Geometry.Vector2> foregroundPoints = [];
+
+        /// <summary>
+        /// The box the command was started with (the square inscribed in a circle), sent with every request
+        /// for the life of the command. Clicks the user adds or removes change the points but not the box:
+        /// the circle it was drawn from has not changed.
+        /// </summary>
+        private IReadOnlyList<SegmentationSeed> startingBoxes = [];
         private readonly List<Geometry.Vector2> backgroundPoints = [];
+
+        /// <summary>
+        /// Subset of <see cref="backgroundPoints"/> generated from other visible structures. Everything else
+        /// in <see cref="backgroundPoints"/> was placed by the user and must not be cleared by a view refresh.
+        /// </summary>
+        private readonly List<Geometry.Vector2> derivedBackgroundPoints = [];
+
+        /// <summary>
+        /// The other structures' circles and polygons derived for the current view, sent as the background
+        /// mask with every request. Replaced with the points whenever the view changes.
+        /// </summary>
+        private SegmentationMaskUnion? derivedBackgroundMask;
 
         // Monographics views for rendering
         private PointSetView foregroundPointsView;
         private PointSetView backgroundPointsView;
         private TextureOverlayView maskOverlayView;
         private readonly List<SolidPolygonView> segmentPolygonViews = [];
+        private readonly List<CurveView> segmentPolygonRingViews = [];
+        private SolidPolygonView hoveredPolygonView;
 
-        // gRPC client - channel is now shared via Global.SegmentationChannelManager
-        private SegmentationServiceTypes.SegmentationService.SegmentationServiceClient grpcClient;
+        private readonly SegmentationViewportSession viewportSession;
 
         // Segmentation state
         private byte[] currentMaskData;
         private Texture2D maskTexture;
-        private Rectangle viewportBounds;
         private int maskWidth;
         private int maskHeight;
         private Polygon selectedPolygon; // Track the polygon clicked for finalization
+        private SegmentationServiceTypes.SegmentationResponse lastSegmentationResponse;
+
+        /// <summary>
+        /// Prompt snapshots that produced <see cref="lastSegmentationResponse"/>. A settings-driven
+        /// repolygonize must restrict the mask to the same clicked blobs and keep the same holes,
+        /// even if the live lists changed since. UI thread only.
+        /// </summary>
+        private IReadOnlyList<Geometry.Vector2> lastSegmentationForeground = [];
+        private IReadOnlyList<Geometry.Vector2> lastSegmentationBackground = [];
+        private readonly SegmentationRequestCoalescer requestCoalescer = new();
+        private CancellationTokenSource processResponseCts;
 
         // Pan/zoom tracking
-        private Rectangle lastViewBounds;
-        private System.Timers.Timer panZoomDebounceTimer;
+        private Geometry.Rectangle lastViewBounds;
+        private PanZoomDebouncer panZoomDebouncer;
 
-        private CancellationTokenSource renderCancellationTokenSource;
-        private CancellationTokenSource linkedRenderCancellationTokenSource;
-
-        // Tile uploads accepted by the server for this command. Pan reuses them.
-        private readonly HashSet<string> uploadedTileKeys = [];
-        private CancellationTokenSource uploadCancellationTokenSource;
-        private int segmentGeneration;
-        private int mosaicDownsample = 1;
+        /// <summary>
+        /// <see cref="SegmentationCameraPolicy.PromptSignature"/> of the prompts in the newest request, or null
+        /// when that request returned nothing. Lets a settled pan skip a resubmit whose answer cannot change.
+        /// </summary>
+        private string? lastSentPrompts;
 
         // Rendering
         private readonly Color maskColor = new(255, 128, 0, 128); // Orange with transparency
 
         // Configuration 
         private readonly int debounceMs;
-        private readonly int maxTileRounds;
 
         // Structure type for created annotations
         //private readonly StructureTypeObj structureType;
 
         /// <summary>
-        /// When set, background points are computed from visible same-type annotations in OnActivate and on pan/zoom.
+        /// When set, OnActivate and pan/zoom fill avoid marks from other structures in view
+        /// (any type except this location, this structure, and this structure's child structures
+        /// at any depth). The numeric type id is only a
+        /// flag that auto-background is wanted; it is not used as a type filter.
         /// </summary>
-        private readonly long[]? structureTypeIdsForBackgroundPoints;
+        private readonly long? structureTypeIdForBackgroundPoints;
 
-        private readonly HashSet<long> includedStructureIds;
+        /// <summary>
+        /// Location being converted must not receive an avoid (background) mark; those marks are for other annotations in view.
+        /// </summary>
+        private readonly long? locationIdToExcludeFromBackgroundPoints;
+
+        /// <summary>
+        /// Adjacent-section members of the same structure sit on the selected circle's center.
+        /// They must not get an avoid mark or SAM2 sees a red+green stack at the same pixel.
+        /// </summary>
+        private readonly long? structureIdToExcludeFromBackgroundPoints;
+
+        /// <summary>
+        /// Volume polygon to save when Escape is pressed before a mask arrives.
+        /// Null for resegment and circle-to-polygon, which still cancel without saving.
+        /// </summary>
+        private readonly Polygon? placementFallback;
+
+        /// <summary>True after a mask click or Escape placement so a late mask cannot save again.</summary>
+        private bool placementFinished;
+
+        /// <summary>Cancels the in-flight SegmentImage so Escape can place the fallback before a late mask arrives.</summary>
+        private CancellationTokenSource segmentRequestCts = new();
+
+        private SegmentationPenButtons? penButtons;
+        private PenCancelButton? cancelButton;
+
+        /// <summary>
+        /// True shows accept, skip and cancel buttons down the right edge for pen use. Skip appears only when the
+        /// command was given a <c>placementFallback</c> to place. Set before the command is queued; used by the linked
+        /// annotation drag, where the user can step past segmentation and keep the polygon as dragged.
+        /// </summary>
+        public bool ShowPenButtons { get; set; }
+
+        private bool PenButtonsIncludeSkip => placementFallback is not null;
 
         /// <summary>
         /// Set to the segmented polygon if the command completes successfully
@@ -131,7 +191,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             get
             {
-                List<string> s = [.. DefaultMouseHelpStrings, .. Viking.UI.Commands.Command.DefaultKeyHelpStrings];
+                List<string> s = [.. DefaultMouseHelpStrings];
+                foreach (string line in Viking.UI.Commands.Command.DefaultKeyHelpStrings)
+                {
+                    if (placementFallback is not null && line.StartsWith("Escape", StringComparison.Ordinal))
+                        s.Add("Escape: Place the dragged polygon without waiting");
+                    else
+                        s.Add(line);
+                }
+
                 return [.. s];
             }
         }
@@ -146,55 +214,79 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public delegate void OnCommandSuccess(Polygon output);
         private readonly OnCommandSuccess success_callback;
 
+        /// <summary>
+        /// Invoked from <see cref="OnDeactivate"/> when the command ends without a successful
+        /// accept (Escape / queue clear). Not called after <see cref="Execute"/> or
+        /// <see cref="AcceptPlacementFallback"/>, which set <see cref="placementFinished"/> first.
+        /// </summary>
+        private readonly Action? onAbandoned;
+
         #endregion
 
-        #region Constructor
         /// <summary>
-        /// 
+        /// True while upload or a coalesced SegmentImage attempt is in flight.
+        /// Status chips use this for Seg Busy.
         /// </summary>
-        /// <param name="parent"></param>
-        /// <param name="success_callback"></param>
-        /// <param name="grpcChannelManager"></param>
-        /// <param name="excludestructureTypeIds">Structures of this type are excluded from the segmentation by adding background points</param>
-        /// <param name="excludeStructureIds">Structures of this type are included in the segmentation by including foreground points.
-        /// If they are of a type also included in excludeStructureTypeIds then that structure instance is not included in the set of background points contributed by that type.</param>
+        internal bool IsBusy => requestCoalescer.IsBusy || viewportSession.IsUploading;
+
+        /// <summary>
+        /// Count of server responses being decoded and polygonized. Separate from <see cref="IsBusy"/>
+        /// because the coalescer is released as soon as the RPC returns, while polygonizing a large mask
+        /// can take seconds more; without this the status chip reads ready before any outline exists.
+        /// </summary>
+        private int processingResponses;
+
+        /// <summary>
+        /// True while a segmentation response is being converted into outlines. Status chips show Seg Processing.
+        /// </summary>
+        internal bool IsProcessingResults => Volatile.Read(ref processingResponses) > 0;
+
+        #region Constructor
         public SegmentationCommand(SectionViewerControl parent,
             OnCommandSuccess? success_callback = null,
             IGrpcChannelManager? grpcChannelManager = null,
-            long[]? excludestructureTypeIds = null,
-            long[]? includeStructureIds = null) : base(parent)
+            long? structureTypeId = null,
+            long? excludeLocationId = null,
+            long? excludeStructureId = null,
+            Polygon? placementFallback = null,
+            Action? onAbandoned = null) : base(parent)
         {
             this.success_callback = success_callback;
+            this.placementFallback = placementFallback;
+            this.onAbandoned = onAbandoned;
 
             // Load configuration from AppSettings
             debounceMs = int.TryParse(ConfigurationManager.AppSettings["SegmentationDebounceMs"], out var ms) ? ms : DEFAULT_DEBOUNCE_MS;
-            maxTileRounds = int.TryParse(ConfigurationManager.AppSettings["SegmentationMaxTileRounds"], out var rounds) && rounds >= 0
-                ? rounds
-                : DEFAULT_MAX_TILE_ROUNDS;
 
             Parent.Cursor = Cursors.Cross;
 
-            // Initialize viewport bounds
-            viewportBounds = GetCurrentViewportBounds();
+            viewportSession = new SegmentationViewportSession(parent, grpcChannelManager);
 
-            structureTypeIdsForBackgroundPoints = excludestructureTypeIds;
-            includedStructureIds = new HashSet<long>();
-            if (includeStructureIds != null) {
-                includedStructureIds.UnionWith(includeStructureIds);
-            }
+            structureTypeIdForBackgroundPoints = structureTypeId;
+            locationIdToExcludeFromBackgroundPoints = excludeLocationId;
+            structureIdToExcludeFromBackgroundPoints = excludeStructureId;
         }
 
         /// <summary>
-        /// Constructor that accepts initial foreground and background points for automated segmentation
+        /// Constructor that accepts initial foreground and background points for automated segmentation.
+        /// <paramref name="placementFallback"/> is the dragged volume polygon Escape saves when the mask has not arrived.
+        /// <paramref name="startingBoxes"/> are volume-space boxes sent as the foreground Feature's mask (<c>foreground_feature.mask</c>) with every request,
+        /// for example a circle's disc (see <see cref="CircleSegmentationPrompts.TryCreateStartingPrompt"/>).
+        /// <paramref name="onAbandoned"/> runs when the command deactivates without accepting a mask.
         /// </summary>
         public SegmentationCommand(SectionViewerControl parent,
             IEnumerable<Geometry.Vector2> initialForegroundPoints,
             IEnumerable<Geometry.Vector2> initialBackgroundPoints,
             OnCommandSuccess? success_callback = null,
             IGrpcChannelManager? grpcChannelManager = null,
-            long[]? excludestructureTypeIds = null, 
-            long[]? includeStructureIds = null) : this(parent, success_callback, grpcChannelManager, excludestructureTypeIds, includeStructureIds)
+            long? structureTypeId = null,
+            long? excludeLocationId = null,
+            long? excludeStructureId = null,
+            Polygon? placementFallback = null,
+            IReadOnlyList<SegmentationSeed>? startingBoxes = null,
+            Action? onAbandoned = null) : this(parent, success_callback, grpcChannelManager, structureTypeId, excludeLocationId, excludeStructureId, placementFallback, onAbandoned)
         {
+            this.startingBoxes = startingBoxes ?? [];
             // Populate initial points
             if (initialForegroundPoints != null)
             {
@@ -206,41 +298,59 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        private void AddBackgroundPointsFromStructureType(long structureTypeId, HashSet<long> exemptStructureIds, VikingXNA.Scene scene)
+        /// <summary>
+        /// Avoid marks for every visible annotation that is not this location or this structure.
+        /// Called from OnActivate and after the view settles. Same filter as auto-polygonize.
+        /// </summary>
+        private void AddBackgroundPointsFromOtherStructures(VikingXNA.Scene scene)
         {
             var sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
             if (sectionAnnotations is null)
                 return;
 
-            var locationsInView = sectionAnnotations.GetLocations(scene.VisibleWorldBounds);
-            var visibleSameType = locationsInView
-                .Where(loc => loc != null && loc.Parent != null && loc.Parent.Type != null
-                    && loc.Parent.Type.modelObj.ID == structureTypeId
-                    && !exemptStructureIds.Contains(loc.Parent.ID) 
-                    && loc.IsVisible(scene));
+            List<LocationObj> visible = [.. sectionAnnotations.GetLocations(scene.VisibleWorldBounds)
+                .Where(loc => loc is not null && loc.IsVisible(scene))
+                .Select(loc => Store.Locations.TryGetObjectByID(loc.ID, out LocationObj o) ? o : null)
+                .OfType<LocationObj>()];
 
-            var locationObjs = visibleSameType
-                .Select(loc => Store.Locations.TryGetObjectByID(loc.ID, out var o) ? o : null)
-                .OfType<LocationObj>();
-
-            var mosaicPoints = AnnotationPointExtensions.GetAnnotationRepresentativePoints(locationObjs);
-            if (mosaicPoints.Count == 0)
-                return;
-
-            var success = Parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume([.. mosaicPoints], out var volumePoints);
-            var validVolumePoints = volumePoints.Where((p, i) => i < success.Length && success[i]).ToList();
-            backgroundPoints.AddRange(validVolumePoints);
+            double minDistance = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
+            IReadOnlyCollection<long> excludeIds = locationIdToExcludeFromBackgroundPoints is long id
+                ? [id]
+                : [];
+            List<Geometry.Vector2> derived = [.. CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
+                visible,
+                Parent.Section.ActiveSectionToVolumeTransform,
+                foregroundPoints,
+                minDistance,
+                excludeIds,
+                structureIdToExcludeFromBackgroundPoints)];
+            SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
+                "context-menu", excludeIds, structureIdToExcludeFromBackgroundPoints, visible, foregroundPoints, derived));
+            derivedBackgroundPoints.AddRange(derived);
+            backgroundPoints.AddRange(derived);
+            derivedBackgroundMask = CircleSegmentationPrompts.CreateOtherStructureBackgroundMask(
+                visible,
+                Parent.Section.ActiveSectionToVolumeTransform,
+                excludeIds,
+                structureIdToExcludeFromBackgroundPoints);
         }
 
-        private void AddBackgroundPointsFromStructureTypes(long[]? structureTypeIds, HashSet<long> exemptStructureIds, VikingXNA.Scene scene)
+        /// <summary>
+        /// Removes only the avoid marks this command derived from other structures, so red points the user
+        /// placed survive a pan or zoom. Callers then re-derive for the new view.
+        /// </summary>
+        private void RemoveDerivedBackgroundPoints()
         {
-            if(structureTypeIds is null)
+            derivedBackgroundMask = null;
+            if (derivedBackgroundPoints.Count == 0)
                 return;
 
-            foreach(long id in structureTypeIds)
-            {
-                AddBackgroundPointsFromStructureType(id, exemptStructureIds, scene);
-            }
+            // One removal per derived entry (not RemoveAll by value) so a user point that happens to
+            // equal a derived coordinate keeps its own entry.
+            foreach (Geometry.Vector2 point in derivedBackgroundPoints)
+                backgroundPoints.Remove(point);
+
+            derivedBackgroundPoints.Clear();
         }
         #endregion
 
@@ -249,28 +359,18 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             base.OnActivate();
 
-            if (structureTypeIdsForBackgroundPoints is not null && Parent.Scene is not null)
+            if (structureTypeIdForBackgroundPoints.HasValue && Parent.Scene != null)
             {
-                AddBackgroundPointsFromStructureTypes(structureTypeIdsForBackgroundPoints, includedStructureIds, Parent.Scene);
+                AddBackgroundPointsFromOtherStructures(Parent.Scene);
             }
 
-            try
+            if (!viewportSession.TryInitializeClient())
             {
-                // Use shared gRPC channel from service locator
-                var channel = ServiceLocator.GrpcChannelManager?.GetOrCreateChannel();
-                if (channel is null)
-                {
-                    throw new InvalidOperationException("Segmentation service URL is not configured");
-                }
-
-                grpcClient = new SegmentationServiceTypes.SegmentationService.SegmentationServiceClient(channel);
-
-                Debug.WriteLine($"SegmentationCommand activated. Using shared channel to {channel.ResolvedTarget}");
+                SegmentationDiag.Log("SegmentationCommand.OnActivate: TryInitializeClient failed");
+                Debug.WriteLine("Failed to initialize segmentation gRPC client");
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Failed to initialize gRPC client: {ex.Message}");
-            }
+            else
+                SegmentationDiag.Log("SegmentationCommand.OnActivate: client ready");
 
             // Check if we have initial points from constructor
             bool hasInitialPoints = foregroundPoints.Count > 0 || backgroundPoints.Count > 0;
@@ -298,46 +398,37 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 };
             }
 
-            lastViewBounds = GetCurrentViewportBounds();
+            lastViewBounds = viewportSession.GetCurrentViewportBounds();
+            viewportSession.ViewportBounds = lastViewBounds;
             UpdatePointViews();
 
             // Initialize pan/zoom debounce timer
-            panZoomDebounceTimer = new System.Timers.Timer(debounceMs);
-            panZoomDebounceTimer.Elapsed += OnPanZoomDebounceElapsed;
-            panZoomDebounceTimer.AutoReset = false;
+            panZoomDebouncer = new PanZoomDebouncer(debounceMs, SettlePromptsOnUiThread, PostToUi);
 
-            // If we have initial points, automatically upload image and request segmentation
+            // If we have initial points, segment immediately; SegmentAsync uploads tiles first.
             if (hasInitialPoints)
             {
                 Debug.WriteLine($"SegmentationCommand activated with {foregroundPoints.Count} foreground and {backgroundPoints.Count} background points");
-                UploadThenRequestSegmentationAsync();
+                _ = RequestSegmentation();
             }
         }
 
         protected override void OnDeactivate()
         {
-            // Cancel any ongoing upload. Leave encoded tiles cached for the next command.
-            uploadCancellationTokenSource?.Cancel();
+            bool abandoned = !placementFinished;
 
-            // Clean up resources
+            viewportSession.CancelPendingWork();
+            CancelSegmentRequest();
+            ReleaseHeldImage();
+
             CleanupCommand();
 
-            // Note: We no longer shut down the channel here - it's shared!
-            // Just null out the client reference
-            grpcClient = null;
-
-            if (panZoomDebounceTimer is not null)
-            {
-                panZoomDebounceTimer.Stop();
-                panZoomDebounceTimer.Elapsed -= OnPanZoomDebounceElapsed;
-                panZoomDebounceTimer.Dispose();
-                panZoomDebounceTimer = null;
-            }
-
-            uploadCancellationTokenSource?.Dispose();
-            uploadCancellationTokenSource = null;
+            panZoomDebouncer?.Dispose();
+            panZoomDebouncer = null;
 
             Parent.Cursor = Cursors.Default;
+            if (abandoned)
+                onAbandoned?.Invoke();
             base.OnDeactivate();
         }
         #endregion
@@ -345,6 +436,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #region Mouse Input Handling
         protected override void OnMouseDown(object sender, MouseEventArgs e)
         {
+            if (!placementFinished && e.Button.Left() && (cancelButton ??= new PenCancelButton(Parent)).HitTest(e.X, e.Y))
+            {
+                CancelCommand();
+                return;
+            }
+
+            if (ShowPenButtons && !placementFinished && e.Button.Left() &&
+                SegmentationPenButtons.HitTest(PenButtonsIncludeSkip, Parent.ClientSize.Width, e.X, e.Y, Parent.DockedChromeInsets) is SegmentationPenButton pressed)
+            {
+                HandlePenButton(pressed);
+                return;
+            }
+
             Geometry.Vector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
             bool ctrlHeld = Control.ModifierKeys.HasFlag(Keys.Control);
 
@@ -374,6 +478,39 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             base.OnMouseDown(sender, e);
+        }
+
+        /// <summary>
+        /// Runs the action behind a pen button. Accept saves the segmented polygon, skip places the dragged polygon
+        /// without segmentation (see <see cref="AcceptPlacementFallback"/>). Cancel is the shared
+        /// <see cref="PenCancelButton"/>, handled in <see cref="OnMouseDown"/>.
+        /// </summary>
+        private void HandlePenButton(SegmentationPenButton button)
+        {
+            switch (button)
+            {
+                case SegmentationPenButton.Accept:
+                    AcceptBestPolygon();
+                    break;
+                case SegmentationPenButton.Skip:
+                    AcceptPlacementFallback();
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Accepts the segmented polygon a pen user most likely means: among the polygons holding a foreground point,
+        /// the largest; if none holds one, the largest of all. Does nothing while no polygon exists yet.
+        /// </summary>
+        private void AcceptBestPolygon()
+        {
+            List<Polygon> candidates = [.. segmentPolygonViews.Select(view => view?.InputPolygon).OfType<Polygon>()];
+            if (candidates.Count == 0)
+                return;
+
+            List<Polygon> withPoint = [.. candidates.Where(polygon => foregroundPoints.Any(point => polygon.Covers(point)))];
+            selectedPolygon = (withPoint.Count > 0 ? withPoint : candidates).OrderByDescending(polygon => polygon.Area).First();
+            Execute();
         }
 
         private void HandlePointDeletion(List<Geometry.Vector2> pointList, Geometry.Vector2 worldPos)
@@ -415,10 +552,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
         {
-            if (e.Button.Left() && !Control.ModifierKeys.HasFlag(Keys.Control))
+            if (!placementFinished && e.Button.Left() && !Control.ModifierKeys.HasFlag(Keys.Control))
             {
                 Geometry.Vector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
-                Polygon clickedPolygon = ForegroundPointsContain(worldPos) ? FindPolygonContainingPoint(worldPos) : null;
+                Polygon clickedPolygon = ForegroundPointsContain(worldPos)
+                    ? FindPolygonViewContainingPoint(worldPos)?.InputPolygon
+                    : null;
                 if (clickedPolygon is not null)
                 {
                     selectedPolygon = clickedPolygon;
@@ -451,23 +590,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Uploads any missing grid cells and requests segmentation. A new call cancels the previous round.
+        /// Uploads any missing grid cells and requests segmentation. Matches VikingLegacy:
+        /// SegmentAsync owns tile upload, so clicks do not wait on a separate UploadImage phase.
         /// </summary>
         private void UploadImageAndRequestSegmentation()
         {
             _ = RequestSegmentation();
-        }
-
-        private async void UploadThenRequestSegmentationAsync()
-        {
-            try
-            {
-                await RequestSegmentation().ConfigureAwait(true);
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine($"SegmentationCommand UploadThenRequestSegmentation failed: {ex}", "SegmentationCommand");
-            }
         }
 
         /// <summary>
@@ -477,6 +605,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             if (foregroundPoints.Count == 0)
             {
+                requestCoalescer.Invalidate();
+                CancelProcessSegmentationResponse();
                 ClearSegmentationResults();
             }
             else
@@ -501,6 +631,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             double pointRadiusInScreen = pointRadiusInWorld;
             Geometry.Vector2? foregroundPoint = FindPointWithinRadius(foregroundPoints, worldPos, pointRadiusInScreen);
             Geometry.Vector2? backgroundPoint = FindPointWithinRadius(backgroundPoints, worldPos, pointRadiusInScreen);
+            hoveredPolygonView = foregroundPoint.HasValue
+                ? FindPolygonViewContainingPoint(worldPos)
+                : null;
             
             // Ctrl + button held: delete points under cursor (left = foreground, right = background)
             if (ctrlHeld)
@@ -524,6 +657,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 // Ctrl held over a point indicates deletion intent
                 Parent.Cursor = Cursors.No;
             }
+            else if (hoveredPolygonView != null)
+            {
+                Parent.Cursor = Cursors.Hand;
+            }
             else if (foregroundPoint.HasValue || backgroundPoint.HasValue)
             {
                 // Hovering over a point indicates adjustment intent
@@ -541,6 +678,21 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Parent.Invalidate();
         }
 
+        /// <summary>
+        /// Escape places <see cref="placementFallback"/> and leaves the command queue intact.
+        /// Callers that passed no fallback keep the base cancel, which clears the queue.
+        /// </summary>
+        protected override void OnKeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (e.KeyChar == (char)Keys.Escape && placementFallback is not null)
+            {
+                AcceptPlacementFallback();
+                return;
+            }
+
+            base.OnKeyPress(sender, e);
+        }
+
 #if DEBUG
         protected override void OnKeyDown(object sender, KeyEventArgs e)
         {
@@ -554,63 +706,56 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #endregion
 
         #region Pan/Zoom Handling
+        /// <summary>
+        /// Restarts the settle timer when the view moves more than 1%. When the model's profile says a
+        /// move can stale its result (a full-viewport model, or fixed tiles whose level follows zoom) the
+        /// request is also cancelled and this command's image hold dropped. For fixed tiles at a single
+        /// level the result does not depend on the camera, so the request in flight is left to finish
+        /// (<see cref="SegmentationCameraPolicy.ViewMoveInvalidatesRequest"/>). The shared lease
+        /// releases its own hold so DeleteImage runs only when auto-polygonize is not still using the id.
+        /// </summary>
         private void CheckForViewportChange()
         {
-            Rectangle currentBounds = GetCurrentViewportBounds();
+            Geometry.Rectangle currentBounds = viewportSession.GetCurrentViewportBounds();
 
-            // Check if viewport has changed significantly
-            if (!AreViewportBoundsSimilar(lastViewBounds, currentBounds))
+            if (!SegmentationViewportSession.AreViewportBoundsSimilar(lastViewBounds, currentBounds))
             {
                 lastViewBounds = currentBounds;
-                viewportBounds = currentBounds;
-
-                // Cancel any ongoing render operation
-                linkedRenderCancellationTokenSource?.Cancel();
-                linkedRenderCancellationTokenSource?.Dispose();
-                linkedRenderCancellationTokenSource = null;
-
-                renderCancellationTokenSource?.Cancel();
-
-                // Cancel any ongoing image upload. Cached tiles stay on the server.
-                uploadCancellationTokenSource?.Cancel();
+                viewportSession.ViewportBounds = currentBounds;
+                if (SegmentationCameraPolicy.ViewMoveInvalidatesRequest(SegmentationViewportSession.ModelProfile))
+                {
+                    requestCoalescer.Invalidate();
+                    CancelProcessSegmentationResponse();
+                    CancelSegmentRequest();
+                    viewportSession.CancelPendingWork();
+                    AnnotationOverlay.CurrentOverlay?.SharedViewportImages?.ForgetIfViewMoved(currentBounds, Parent.Downsample);
+                    ReleaseHeldImage();
+                }
 
                 // Restart debounce timer
-                panZoomDebounceTimer?.Stop();
-                panZoomDebounceTimer?.Start();
+                panZoomDebouncer?.Restart();
             }
         }
 
-        private bool AreViewportBoundsSimilar(Rectangle a, Rectangle b)
-        {
-            // Check if bounds are within 1% of each other
-            double tolerance = Math.Max(a.Width, a.Height) * 0.01;
-            return Math.Abs(a.LowerLeft.X - b.LowerLeft.X) < tolerance &&
-                   Math.Abs(a.LowerLeft.Y - b.LowerLeft.Y) < tolerance &&
-                   Math.Abs(a.UpperRight.X - b.UpperRight.X) < tolerance &&
-                   Math.Abs(a.UpperRight.Y - b.UpperRight.Y) < tolerance;
-        }
-
-        private void OnPanZoomDebounceElapsed(object sender, System.Timers.ElapsedEventArgs e)
-        {
-            // System.Timers.Timer raises Elapsed on a thread-pool thread. The point lists, point views and camera
-            // are UI-thread state, so the whole settle runs as one queued UI action.
-            Viking.UI.State.MainThreadDispatcher?.BeginInvoke(new Action(SettlePromptsOnUiThread));
-        }
+        /// <summary>Queues an action on the UI dispatcher; dropped when there is no dispatcher.</summary>
+        private static void PostToUi(Action action) => Viking.UI.State.MainThreadDispatcher?.BeginInvoke(action);
 
         /// <summary>
-        /// UI-thread body of the pan/zoom settle. Skips quietly when the command was deactivated between the timer
-        /// firing and this action running: cleanup disposes the timer but cannot recall a queued action.
+        /// After the view settles, refreshes structure-type background prompts and resubmits when the prompts changed.
+        /// Does not re-upload until the next point. Runs on the UI thread through <see cref="PanZoomDebouncer"/>. Skips quietly when the command was deactivated between the
+        /// timer firing and this action running, because cleanup disposes the timer but cannot recall a queued action.
         /// </summary>
         private void SettlePromptsOnUiThread()
         {
-            if (panZoomDebounceTimer is null || Deactivated || foregroundPointsView is null || backgroundPointsView is null)
+            if (panZoomDebouncer is null || Deactivated || placementFinished ||
+                foregroundPointsView is null || backgroundPointsView is null)
                 return;
 
             // Recompute structure-type background points when the visible set changes (replaces any previously derived points)
-            if (structureTypeIdsForBackgroundPoints is not null && Parent.Scene is not null)
+            if (structureTypeIdForBackgroundPoints.HasValue && Parent.Scene != null)
             {
-                backgroundPoints.Clear();
-                AddBackgroundPointsFromStructureTypes(structureTypeIdsForBackgroundPoints, includedStructureIds, Parent.Scene);
+                RemoveDerivedBackgroundPoints();
+                AddBackgroundPointsFromOtherStructures(Parent.Scene);
                 UpdatePointViews();
             }
 
@@ -623,26 +768,38 @@ namespace WebAnnotation.UI.Commands.Segmentation
             double pointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
             backgroundPointsView.PointRadius = pointRadius;
             foregroundPointsView.PointRadius = pointRadius;
-            Debug.WriteLine("Viewport settled with existing points, re-requesting segmentation");
-            RequestSegmentation();
+
+            string current = SegmentationCameraPolicy.PromptSignature(foregroundPoints, backgroundPoints);
+            if (SegmentationCameraPolicy.SettleNeedsResubmit(
+                    SegmentationViewportSession.ModelProfile, lastSentPrompts, current))
+            {
+                Debug.WriteLine("Viewport settled with existing points, re-requesting segmentation");
+                _ = RequestSegmentation();
+            }
+            else
+            {
+                Debug.WriteLine("Viewport settled, prompts unchanged at the fixed tile level - keeping the result");
+            }
         }
         #endregion
 
         #region Point Management
         private void UpdatePointViews()
         {
-            // Update foreground points view (always exists, never null)
-            double pointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
+            UpdatePointViews(WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample);
+        }
+
+        private void UpdatePointViews(double pointRadius)
+        {
             foregroundPointsView.PointRadius = pointRadius;
             foregroundPointsView.Points = [.. foregroundPoints];
             foregroundPointsView.UpdateViews();
 
-            // Update background points view (always exists, never null)
             backgroundPointsView.PointRadius = pointRadius;
             backgroundPointsView.Points = [.. backgroundPoints];
             backgroundPointsView.UpdateViews();
 
-            Parent.Invalidate(); // Trigger redraw
+            Parent.Invalidate();
         }
 
         private Geometry.Vector2? FindPointWithinRadius(List<Geometry.Vector2> points, Geometry.Vector2 worldPos, double radiusInScreenUnits)
@@ -706,9 +863,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        private Polygon FindPolygonContainingPoint(Geometry.Vector2 worldPos) =>
-            // Check each segment polygon to see if the point is inside
-            segmentPolygonViews.FirstOrDefault(polygonView => polygonView?.InputPolygon != null && polygonView.InputPolygon.Covers(worldPos))?.InputPolygon;
+        private SolidPolygonView FindPolygonViewContainingPoint(Geometry.Vector2 worldPos) =>
+            segmentPolygonViews.FirstOrDefault(polygonView =>
+                polygonView?.InputPolygon != null && polygonView.InputPolygon.Covers(worldPos));
 
         /// <summary>
         /// Returns the point that contains the worldPos parameter.  Otherwise null
@@ -720,999 +877,492 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         #region Color Generation
         /// <summary>
-        /// Generates a distinct color for a segment based on its index
+        /// Overlay color for one mask polygon. A known cell uses that structure's hue at the overlay alpha. Called from <see cref="ApplyPolygonViews"/>.
         /// </summary>
-        /// <param name="index">Index of the segment</param>
-        /// <param name="total">Total number of segments</param>
-        /// <returns>A color with distinct hue</returns>
-        private Color GenerateDistinctColor(int index, int total)
+        private Color ColorForSegment(int index, int total)
         {
-            // Distribute hues evenly across the color spectrum
-            float hue = (float)index / Math.Max(total, 1);
-            return ColorFromHSL(hue, 0.8f, 0.5f, 0.25f);
-        }
-
-        /// <summary>
-        /// Converts HSL color values to RGB Color
-        /// </summary>
-        /// <param name="hue">Hue value from 0.0 to 1.0</param>
-        /// <param name="saturation">Saturation value from 0.0 to 1.0</param>
-        /// <param name="lightness">Lightness value from 0.0 to 1.0</param>
-        /// <param name="alpha">Alpha value from 0.0 to 1.0</param>
-        /// <returns>RGB Color</returns>
-        private Color ColorFromHSL(float hue, float saturation, float lightness, float alpha)
-        {
-            // Ensure hue wraps around
-            hue = hue - (float)Math.Floor(hue);
-
-            float r, g, b;
-
-            if (saturation == 0)
+            if (structureIdToExcludeFromBackgroundPoints is long structureId)
             {
-                // Achromatic (gray)
-                r = g = b = lightness;
-            }
-            else
-            {
-                float q = lightness < 0.5f
-                    ? lightness * (1 + saturation)
-                    : lightness + saturation - lightness * saturation;
-                float p = 2 * lightness - q;
-
-                r = HueToRGB(p, q, hue + 1f / 3f);
-                g = HueToRGB(p, q, hue);
-                b = HueToRGB(p, q, hue - 1f / 3f);
+                StructureObj? structure = Store.Structures.TryGetObjectByID(structureId, out StructureObj s) ? s : null;
+                uint packed = structure?.Color ?? StructureObj.ColorForId(structureId);
+                return packed.ToXNAColor(0.25f);
             }
 
-            return new Color(r, g, b, alpha);
+            return SegmentationDistinctColors.GenerateDistinctColor(index, total);
         }
 
-        /// <summary>
-        /// Helper function for HSL to RGB conversion
-        /// </summary>
-        private float HueToRGB(float p, float q, float t)
-        {
-            if (t < 0f) t += 1f;
-            if (t > 1f) t -= 1f;
-            if (t < 1f / 6f) return p + (q - p) * 6f * t;
-            if (t < 1f / 2f) return q;
-            if (t < 2f / 3f) return p + (q - p) * (2f / 3f - t) * 6f;
-            return p;
-        }
         #endregion
 
         #region Server Image Upload/Delete
-
-        private readonly struct TileSignature
+        /// <summary>
+        /// Drops the server image this command's session still owns. Deletes it only when the auto-polygonize cache holds no reference and nobody leased it.
+        /// </summary>
+        private void ReleaseHeldImage()
         {
-            public TileSignature(string volume, int section, string channel, string transform, int downsample)
+            AutoPolygonizeCache? cache = AnnotationOverlay.CurrentOverlay?.PolygonizeImageCache;
+            if (viewportSession.CurrentImageId is not ulong currentId)
+                return;
+
+            if (cache is not null && cache.IsImageHeld(currentId))
             {
-                Volume = volume;
-                Section = section;
-                Channel = channel;
-                Transform = transform;
-                Downsample = downsample;
+                viewportSession.ClearImageId();
+                return;
             }
 
-            public string Volume { get; }
-            public int Section { get; }
-            public string Channel { get; }
-            public string Transform { get; }
-            public int Downsample { get; }
+            _ = viewportSession.DeleteCurrentImageAsync();
         }
-        /// <summary>
-        /// Uploads cells that contain foreground points, plus any cells the server asked for, then segments.
-        /// Does not upload or name every visible cell: the server embedding cache is smaller than a DS1 view,
-        /// and listing those cells returns TILE_NOT_FOUND.
-        /// Shows each response immediately, including a partial mask that still needs tiles.
-        /// Called from point clicks, auto-segmentation activation, and the pan/zoom debounce.
-        /// </summary>
 
-        private async Task RequestSegmentation()
+        private void CancelSegmentRequest()
         {
-            if (grpcClient is null)
-                return;
-            if (foregroundPoints.Count == 0 && backgroundPoints.Count == 0)
-                return;
-            int generation = Interlocked.Increment(ref segmentGeneration);
-            uploadCancellationTokenSource?.Cancel();
-            uploadCancellationTokenSource?.Dispose();
-            uploadCancellationTokenSource = new CancellationTokenSource();
-            CancellationToken token = uploadCancellationTokenSource.Token;
+            CancellationTokenSource previous = segmentRequestCts;
+            segmentRequestCts = new CancellationTokenSource();
             try
             {
-                List<TileCell> extras = [];
-                for (int round = 0; round <= maxTileRounds; round++)
-                {
-                    token.ThrowIfCancellationRequested();
-                    if (generation != Volatile.Read(ref segmentGeneration))
-                        return;
-                    (int downsample, TileSignature signature, _, bool grayscale) =
-                        await ReadViewTilesAsync().ConfigureAwait(false);
-                    mosaicDownsample = downsample;
-                    List<TileCell> needed = TilesForRound(foregroundPoints, downsample, extras);
-                    if (needed.Count == 0)
-                        return;
-                    if (!await UploadMissingTilesAsync(signature, needed, grayscale, token).ConfigureAwait(false))
-                    {
-                        Debug.WriteLine("No segmentation tiles could be uploaded");
-                        return;
-                    }
-                    if (generation != Volatile.Read(ref segmentGeneration))
-                        return;
-                    SegmentationResponse? response = await SegmentWithMissingTileRetriesAsync(
-                        signature, needed, grayscale, token).ConfigureAwait(false);
-                    if (response is null || generation != Volatile.Read(ref segmentGeneration))
-                        return;
-                    await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
-                    {
-                        if (generation == Volatile.Read(ref segmentGeneration))
-                            ProcessSegmentationResponse(response);
-                    }).Task.ConfigureAwait(false);
-                    if (response.RequestedTiles.Count == 0 || round == maxTileRounds)
-                        break;
-                    extras.Clear();
-                    foreach (TileCoord tile in response.RequestedTiles)
-                    {
-                        if (tile.Downsample != downsample)
-                            continue;
+                previous.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
 
-                        uploadedTileKeys.Remove(TileKey(signature, tile.Row, tile.Col));
-                        extras.Add(new TileCell(tile.Row, tile.Col));
-                    }
-                    if (extras.Count == 0)
-                        break;
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                Debug.WriteLine("Tile segmentation cancelled");
-            }
-            catch (RpcException rpcEx)
-            {
-                Debug.WriteLine($"gRPC error: {rpcEx.Status.Detail}");
-#if DEBUG
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() =>
-                    MessageBox.Show($"Segmentation service error: {rpcEx.Status.Detail}",
-                        "Service Error", MessageBoxButtons.OK, MessageBoxIcon.Error)));
-#endif
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Segmentation error: {ex.Message}");
-            }
-        }
-
-        private async Task<(int downsample, TileSignature signature, List<TileCell> visible, bool grayscale)> ReadViewTilesAsync()
-        {
-            return await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
-            {
-                int downsample = CurrentPyramidDownsample();
-                TileSignature signature = CurrentTileSignature(downsample);
-                Rectangle bounds = GetCurrentViewportBounds();
-                viewportBounds = bounds;
-                List<TileCell> visible = SegmentationTileGrid.CellsCovering(
-                    bounds.LowerLeft.X,
-                    bounds.LowerLeft.Y,
-                    bounds.UpperRight.X,
-                    bounds.UpperRight.Y,
-                    downsample);
-                bool grayscale = Parent.CurrentChannelset.Length == 1;
-                return (downsample, signature, visible, grayscale);
-            }).Task.ConfigureAwait(false);
+            previous.Dispose();
         }
 
         /// <summary>
-        /// Ceiling for submitted tile downsample from appSettings SegmentationTileDownsample (default 2).
+        /// Cancels upload and SegmentImage, then saves the dragged polygon through the same callback as a finished mask.
+        /// Does not call <see cref="Viking.UI.Commands.Command.CancelCommand"/> because that clears the queue.
         /// </summary>
-        private static int MaxTileDownsample =>
-            int.TryParse(ConfigurationManager.AppSettings["SegmentationTileDownsample"], out int max) && max >= 1
-                ? max
-                : 2;
-
-        /// <summary>
-        /// Maps camera downsample to UploadTile/SegmentTiles pyramid level: ≤1 → 1, else ceil and clamp to max.
-        /// </summary>
-        private static int ResolveTileDownsample(double cameraDownsample)
+        private void AcceptPlacementFallback()
         {
-            if (double.IsNaN(cameraDownsample) || double.IsInfinity(cameraDownsample) || cameraDownsample <= 0)
-                return 1;
+            if (placementFinished || placementFallback is null)
+                return;
 
-            int roundedUp = (int)Math.Ceiling(cameraDownsample);
-            if (roundedUp < 1)
-                roundedUp = 1;
-
-            return Math.Min(MaxTileDownsample, roundedUp);
-        }
-
-        /// <summary>
-        /// Pyramid level for UploadTile/SegmentTiles from the live camera via
-        /// <see cref="ResolveTileDownsample"/>.
-        /// </summary>
-        private int CurrentPyramidDownsample()
-            => ResolveTileDownsample(Parent.Camera?.Downsample ?? Parent.Downsample);
-
-        private TileSignature CurrentTileSignature(int downsample)
-        {
-            string volume = Parent.Section?.VolumeViewModel?.Name ?? string.Empty;
-            int section = Parent.Section?.Number ?? 0;
-            string channel = Parent.CurrentChannel ?? string.Empty;
-            string volumeTransform = Parent.Section?.VolumeViewModel?.ActiveVolumeTransform ?? string.Empty;
-            string sectionTransform = Parent.CurrentTransform ?? string.Empty;
-            return new TileSignature(volume, section, channel, volumeTransform + "|" + sectionTransform, downsample);
-        }
-
-        private static string TileKey(TileSignature signature, int row, int col) =>
-            $"{signature.Volume}\n{signature.Section}\n{signature.Channel}\n{signature.Transform}\n{signature.Downsample}\n{row}\n{col}";
-
-        private TileCoord ToCoord(TileSignature signature, TileCell cell) => new()
-        {
-            Volume = signature.Volume,
-            Section = signature.Section,
-            Channel = signature.Channel,
-            Transform = signature.Transform,
-            Downsample = signature.Downsample,
-            Row = cell.Row,
-            Col = cell.Col
-        };
-        /// <summary>
-        /// Renders and uploads cells that this command has not yet had accepted.
-        /// Returns false when every needed cell failed to capture.
-        /// </summary>
-
-        private async Task<bool> UploadMissingTilesAsync(
-            TileSignature signature,
-            IReadOnlyList<TileCell> cells,
-            bool grayscale,
-            CancellationToken token)
-        {
-            if (grpcClient is null)
-                return false;
-            bool anyReady = false;
-            HashSet<(int Row, int Col)> seen = [];
-            foreach (TileCell cell in cells)
-            {
-                token.ThrowIfCancellationRequested();
-                if (!seen.Add((cell.Row, cell.Col)))
-                    continue;
-                string key = TileKey(signature, cell.Row, cell.Col);
-                if (uploadedTileKeys.Contains(key))
-                {
-                    anyReady = true;
-                    continue;
-                }
-                var (png, width, height) = await CaptureTileImage(cell, signature.Downsample, grayscale, token).ConfigureAwait(false);
-                if (png is null || png.Length == 0)
-                {
-                    Debug.WriteLine($"Failed to capture tile row={cell.Row} col={cell.Col}");
-                    continue;
-                }
-                UploadTileRequest upload = new()
-                {
-                    Coord = ToCoord(signature, cell),
-                    ImageData = Google.Protobuf.ByteString.CopyFrom(png),
-                    Width = width,
-                    Height = height
-                };
-                CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(30), cancellationToken: token);
-                Debug.WriteLine(
-                    $"UploadTile key=vol={signature.Volume}|sec={signature.Section}|ch={signature.Channel}|" +
-                    $"xf={signature.Transform}|ds={signature.Downsample}|row={cell.Row}|col={cell.Col} bytes={png.Length}");
-                UploadTileResponse response = await grpcClient.UploadTileAsync(upload, callOptions).ResponseAsync.ConfigureAwait(false);
-                uploadedTileKeys.Add(key);
-                anyReady = true;
-                Debug.WriteLine(
-                    $"UploadTile accepted key=ds={signature.Downsample}|row={cell.Row}|col={cell.Col} " +
-                    $"alreadyCached={response.AlreadyCached}");
-            }
-            return anyReady;
-        }
-
-        /// <summary>
-        /// Foreground cells plus growth neighbors. Background clicks do not add cells;
-        /// they can span the viewport and overflow the server embedding cache.
-        /// </summary>
-        private static List<TileCell> TilesForRound(
-            IReadOnlyList<Geometry.Vector2> foregroundPoints,
-            int downsample,
-            IReadOnlyList<TileCell> extras)
-        {
-            List<TileCell> cells = SegmentationTileGrid.CellsContainingPoints(foregroundPoints, downsample);
-            if (extras is null || extras.Count == 0)
-                return cells;
-
-            HashSet<(int Row, int Col)> seen = new(cells.Select(cell => (cell.Row, cell.Col)));
-            foreach (TileCell extra in extras)
-            {
-                if (seen.Add((extra.Row, extra.Col)))
-                    cells.Add(extra);
-            }
-
-            return cells;
-        }
-
-        /// <summary>
-        /// Re-uploads each TILE_NOT_FOUND cell and retries. A single retry used to abort
-        /// when the next evicted cell was still named in the request.
-        /// </summary>
-        private async Task<SegmentationResponse?> SegmentWithMissingTileRetriesAsync(
-            TileSignature signature,
-            List<TileCell> needed,
-            bool grayscale,
-            CancellationToken token)
-        {
-            const int maxNotFoundRetries = 16;
-            string? lastMissingKey = null;
-            int sameTileMisses = 0;
-            for (int attempt = 0; attempt <= maxNotFoundRetries; attempt++)
-            {
-                try
-                {
-                    return await SegmentUploadedTilesAsync(signature, needed, token).ConfigureAwait(false);
-                }
-                catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound &&
-                    TryParseMissingTile(rpcEx.Status.Detail, out int missingRow, out int missingCol))
-                {
-                    string missingKey = TileKey(signature, missingRow, missingCol);
-                    if (missingKey == lastMissingKey)
-                    {
-                        sameTileMisses++;
-                        if (sameTileMisses >= 2)
-                            throw;
-                    }
-                    else
-                    {
-                        lastMissingKey = missingKey;
-                        sameTileMisses = 0;
-                    }
-
-                    uploadedTileKeys.Remove(missingKey);
-                    TileCell missing = new(missingRow, missingCol);
-                    if (!needed.Any(cell => cell.Row == missingRow && cell.Col == missingCol))
-                        needed.Add(missing);
-                    if (!await UploadMissingTilesAsync(signature, [missing], grayscale, token).ConfigureAwait(false))
-                        return null;
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// SegmentTiles for <paramref name="cells"/> that this command has already uploaded.
-        /// </summary>
-        private async Task<SegmentationResponse> SegmentUploadedTilesAsync(
-            TileSignature signature,
-            IReadOnlyList<TileCell> cells,
-            CancellationToken token)
-        {
-            if (grpcClient is null)
-                throw new InvalidOperationException("Segmentation client is not connected.");
-            SegmentTilesRequest request = new()
-            {
-                MultimaskOutput = false,
-                OmitLabeledImage = true
-            };
-            foreach (TileCell cell in cells)
-            {
-                string key = TileKey(signature, cell.Row, cell.Col);
-                if (!uploadedTileKeys.Contains(key))
-                    continue;
-
-                request.Tiles.Add(new TileCoord
-                {
-                    Volume = signature.Volume,
-                    Section = signature.Section,
-                    Channel = signature.Channel,
-                    Transform = signature.Transform,
-                    Downsample = signature.Downsample,
-                    Row = cell.Row,
-                    Col = cell.Col
-                });
-            }
-
-            if (request.Tiles.Count == 0)
-                throw new InvalidOperationException("No uploaded tiles cover the segmentation prompts.");
-            foreach (Geometry.Vector2 point in foregroundPoints)
-            {
-                (int x, int y) = SegmentationTileGrid.WorldToMosaicPixel(point.X, point.Y, signature.Downsample);
-                request.Foreground.Add(new SegmentationServiceTypes.Point { X = x, Y = y });
-            }
-            foreach (Geometry.Vector2 point in backgroundPoints)
-            {
-                (int x, int y) = SegmentationTileGrid.WorldToMosaicPixel(point.X, point.Y, signature.Downsample);
-                request.Background.Add(new SegmentationServiceTypes.Point { X = x, Y = y });
-            }
-            CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(60), cancellationToken: token);
-            return await grpcClient.SegmentTilesAsync(request, callOptions).ResponseAsync.ConfigureAwait(false);
-        }
-
-        private static bool TryParseMissingTile(string detail, out int row, out int col)
-        {
-            row = 0;
-            col = 0;
-            if (string.IsNullOrEmpty(detail))
-                return false;
-            Match match = Regex.Match(detail, @"row=(-?\d+)\s+col=(-?\d+)");
-            if (!match.Success)
-                return false;
-            row = int.Parse(match.Groups[1].Value);
-            col = int.Parse(match.Groups[2].Value);
-            return true;
-        }
-
-        private async Task<(byte[]? data, int width, int height)> CaptureTileImage(
-            TileCell cell,
-            int downsample,
-            bool grayscale,
-            CancellationToken cancellationToken)
-        {
+            placementFinished = true;
+            requestCoalescer.Invalidate();
+            CancelSegmentRequest();
+            viewportSession.CancelPendingWork();
+            CancelProcessSegmentationResponse();
+            ReleaseHeldImage();
             try
             {
-                CancellationToken renderToken = PrepareCancellationToken(cancellationToken);
-                double cellWorld = SegmentationTileGrid.TileSize * (double)downsample;
-                float centerX = (float)((cell.Col + 0.5) * cellWorld);
-                float centerY = (float)((cell.Row + 0.5) * cellWorld);
-                Camera camera = new() { Downsample = downsample };
-                VikingXNA.Scene tileScene = new(
-                    new Viewport(0, 0, SegmentationTileGrid.TileSize, SegmentationTileGrid.TileSize),
-                    camera);
-                RenderTarget2D renderTarget = await Parent.RenderSceneToTexture(
-                    tileScene,
-                    centerX,
-                    centerY,
-                    Parent.Section.Number,
-                    showOverlays: false,
-                    asyncTextureLoad: false,
-                    renderToken).ConfigureAwait(false);
-                if (renderTarget is null)
-                    return (null, 0, 0);
-                try
-                {
-                    int width = SegmentationTileGrid.TileSize;
-                    int height = SegmentationTileGrid.TileSize;
-                    Color[] pixels = await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
-                    {
-                        Color[] buffer = new Color[width * height];
-                        renderTarget.GetData(buffer);
-                        return buffer;
-                    }).Task.ConfigureAwait(false);
-                    byte[] pngData = EncodeToPng(renderTarget, pixels, width, height, grayscale);
-                    var (isValid, errorMessage) = ValidateCapturedImage(pngData, width, height);
-                    if (!isValid)
-                    {
-                        Debug.WriteLine($"Tile capture failed validation: {errorMessage}");
-                        return (null, 0, 0);
-                    }
-                    return (pngData, width, height);
-                }
-                finally
-                {
-                    Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() => renderTarget.Dispose()));
-                }
+                success_callback?.Invoke(placementFallback);
             }
-            catch (OperationCanceledException)
+            finally
             {
-                return (null, 0, 0);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error capturing tile row={cell.Row} col={cell.Col}: {ex.Message}");
-                return (null, 0, 0);
+                Deactivated = true;
             }
         }
-
         #endregion
 
         #region gRPC Segmentation
-        private void ProcessSegmentationResponse(SegmentationServiceTypes.SegmentationResponse response)
+        /// <summary>
+        /// Sends one SegmentImage with the current prompt lists. Extra clicks while busy or uploading
+        /// set a follow-up so the next attempt uses every point collected so far.
+        /// </summary>
+        private async Task RequestSegmentation()
+        {
+            if (placementFinished || Deactivated)
+            {
+                SegmentationDiag.Log("RequestSegmentation skip: finished/deactivated");
+                return;
+            }
+
+            if (!viewportSession.HasClient)
+            {
+                SegmentationDiag.Log("RequestSegmentation skip: no gRPC client");
+                SegmentationUserFeedback.NotifySkip(Parent, SegmentationSkipKind.NoClient);
+                return;
+            }
+
+            if (foregroundPoints.Count == 0 && backgroundPoints.Count == 0)
+            {
+                SegmentationDiag.Log("RequestSegmentation skip: no points");
+                return;
+            }
+
+            if (viewportSession.IsUploading)
+            {
+                requestCoalescer.MarkDirty();
+                SegmentationDiag.Log("RequestSegmentation defer: upload in progress");
+                Debug.WriteLine("Upload in progress, segmentation will be requested after upload completes");
+                return;
+            }
+
+            if (!requestCoalescer.TryStart(out int generation))
+            {
+                SegmentationDiag.Log("RequestSegmentation skip: coalescer busy");
+                return;
+            }
+
+            AnnotationStatusChips.Refresh();
+            // The request awaits tile capture and upload before it reads its prompts, and the polygonize
+            // step runs on a worker; both must see the lists as they were when this attempt started.
+            Geometry.Vector2[] foregroundSnapshot = [.. foregroundPoints];
+            Geometry.Vector2[] backgroundSnapshot = [.. backgroundPoints];
+            string sentPrompts = SegmentationCameraPolicy.PromptSignature(foregroundSnapshot, backgroundSnapshot);
+            lastSentPrompts = sentPrompts;
+            bool delivered = false;
+            try
+            {
+                SegmentationDiag.Log(
+                    $"RequestSegmentation start gen={generation} fg={foregroundPoints.Count} bg={backgroundPoints.Count} " +
+                    $"(derived={derivedBackgroundPoints.Count} user={backgroundPoints.Count - derivedBackgroundPoints.Count}) " +
+                    $"fg0={(foregroundPoints.Count > 0 ? $"({foregroundPoints[0].X:F0},{foregroundPoints[0].Y:F0})" : "none")} " +
+                    $"loc={locationIdToExcludeFromBackgroundPoints?.ToString() ?? "-"} " +
+                    $"structure={structureIdToExcludeFromBackgroundPoints?.ToString() ?? "-"} " +
+                    $"tilesReady={viewportSession.HasUploadedTiles}");
+                Debug.WriteLine(
+                    $"Sending SegmentTiles request: tilesReady={viewportSession.HasUploadedTiles}, " +
+                    $"{viewportSession.UploadedImageWidth}x{viewportSession.UploadedImageHeight}, " +
+                    $"{foregroundPoints.Count} fg, {backgroundPoints.Count} bg points");
+                CancellationToken segmentToken = segmentRequestCts.Token;
+                var response = await viewportSession.SegmentAsync(
+                    foregroundSnapshot, backgroundSnapshot, segmentToken, startingBoxes,
+                    backgroundMask: derivedBackgroundMask).ConfigureAwait(false);
+                SegmentationDiag.Log(
+                    $"RequestSegmentation done responseNull={response is null} segments={response?.Segments.Count ?? -1}");
+                delivered = response is not null;
+                if (!placementFinished && response is not null && requestCoalescer.ShouldApply(generation))
+                {
+                    // A box's center is inside the object by construction, so it keeps the main piece of the mask
+                    // even when every click sits on a fragment near the edge.
+                    Geometry.Vector2[] keepSnapshot =
+                    [
+                        .. foregroundSnapshot,
+                        .. startingBoxes.Select(seed => seed.Center),
+                    ];
+                    StartProcessSegmentationResponse(response, generation, keepSnapshot, backgroundSnapshot);
+                }
+                else if (response is null && !placementFinished && !Deactivated && !segmentToken.IsCancellationRequested)
+                {
+                    SegmentationSkipKind kind = SegmentationUserFeedback.KindForMissingResponse(
+                        viewportSession.ConsumeLastSkip(out string? detail));
+                    SegmentationUserFeedback.NotifySkip(Parent, kind, detail);
+                }
+            }
+            catch (Exception ex)
+            {
+                SegmentationDiag.Log($"RequestSegmentation error: {ex.Message}");
+                Debug.WriteLine($"Segmentation error: {ex.Message}");
+                if (!placementFinished && !Deactivated)
+                {
+                    SegmentationSkipKind kind = viewportSession.ConsumeLastSkip(out string? detail);
+                    if (kind == SegmentationSkipKind.None || kind == SegmentationSkipKind.Cancelled)
+                        kind = SegmentationSkipKind.Error;
+                    SegmentationUserFeedback.NotifySkip(Parent, kind, detail ?? ex.Message);
+                }
+            }
+            finally
+            {
+                // A request that produced nothing (camera beyond the DS cutoff, cancelled, error) must not
+                // make the next settle think these prompts were already answered.
+                if (!delivered)
+                    Interlocked.CompareExchange(ref lastSentPrompts, null, sentPrompts);
+
+                bool retry = requestCoalescer.OnFinishedShouldRetry();
+                AnnotationStatusChips.Refresh();
+                if (retry)
+                    ScheduleFollowUpSegmentation();
+            }
+        }
+
+        /// <summary>
+        /// Starts the coalesced follow-up on the UI dispatcher so prompt lists are read on that thread.
+        /// </summary>
+        private void ScheduleFollowUpSegmentation()
+        {
+            var dispatcher = Viking.UI.State.MainThreadDispatcher;
+            if (dispatcher is null)
+                return;
+
+            dispatcher.BeginInvoke(new Action(() => _ = RequestSegmentation()));
+        }
+
+        /// <summary>
+        /// Cancels an in-flight polygonize and starts one for this response on a worker.
+        /// A newer result replaces the previous process token so stale marching squares stop applying.
+        /// </summary>
+        private void StartProcessSegmentationResponse(
+            SegmentationServiceTypes.SegmentationResponse response,
+            int generation,
+            IReadOnlyList<Geometry.Vector2> foreground,
+            IReadOnlyList<Geometry.Vector2> background)
+        {
+            CancellationTokenSource previous = processResponseCts;
+            CancellationTokenSource next = new();
+            processResponseCts = next;
+            try
+            {
+                previous?.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+
+            previous?.Dispose();
+            _ = ProcessSegmentationResponseAsync(response, generation, foreground, background, next.Token);
+        }
+
+        /// <summary>
+        /// Runs <see cref="ProcessSegmentationResponseCoreAsync"/> while keeping the processing count, and the
+        /// status chip, accurate on every exit path including cancellation and failure.
+        /// </summary>
+        private async Task ProcessSegmentationResponseAsync(
+            SegmentationServiceTypes.SegmentationResponse response,
+            int generation,
+            IReadOnlyList<Geometry.Vector2> foreground,
+            IReadOnlyList<Geometry.Vector2> background,
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref processingResponses);
+            AnnotationStatusChips.Refresh();
+            try
+            {
+                await ProcessSegmentationResponseCoreAsync(response, generation, foreground, background, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref processingResponses);
+                AnnotationStatusChips.Refresh();
+            }
+        }
+
+        /// <summary>
+        /// Polygonizes off the UI thread. Applies views only if this generation still owns the overlay.
+        /// </summary>
+        private async Task ProcessSegmentationResponseCoreAsync(
+            SegmentationServiceTypes.SegmentationResponse response,
+            int generation,
+            IReadOnlyList<Geometry.Vector2> foreground,
+            IReadOnlyList<Geometry.Vector2> background,
+            CancellationToken cancellationToken)
         {
             if (response.Segments.Count == 0)
             {
                 Debug.WriteLine("No segments returned");
+                SegmentationUserFeedback.NotifySkip(Parent, SegmentationSkipKind.EmptyMask);
                 return;
             }
 
-            ConvertSegmentsToPolygonViews(response);
+            IReadOnlyList<Polygon> polygons;
+            try
+            {
+                polygons = await Task.Run(
+                    () => viewportSession.CreatePolygonsFromResponse(
+                        response,
+                        preserveHolesContainingWorldPoints: background,
+                        cancellationToken: cancellationToken,
+                        keepComponentsContainingWorldPoints: foreground),
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine($"Segmentation process generation={generation} cancelled");
+                return;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Segmentation process generation={generation} failed: {ex}");
+                SegmentationUserFeedback.NotifySkip(Parent, SegmentationSkipKind.Error, ex.Message);
+                return;
+            }
 
+            if (polygons is null || polygons.Count == 0)
+            {
+                Debug.WriteLine($"Segmentation process generation={generation} produced no polygons");
+                SegmentationUserFeedback.NotifySkip(Parent, SegmentationSkipKind.EmptyMask);
+                return;
+            }
+
+            polygons = SimplifyPreviewRings(polygons);
+
+            if (cancellationToken.IsCancellationRequested || !requestCoalescer.ShouldApply(generation))
+                return;
+
+            var dispatcher = Viking.UI.State.MainThreadDispatcher;
+            if (dispatcher is null)
+                return;
+
+            await dispatcher.InvokeAsync(() =>
+            {
+                if (!requestCoalescer.TryApply(generation))
+                    return;
+
+                lastSegmentationResponse = response;
+                lastSegmentationForeground = foreground;
+                lastSegmentationBackground = background;
+                ApplyPolygonViews(polygons, response.Segments.Count);
 #if DEBUG
-            CreateDebugMaskOverlay(response);
+                CreateDebugMaskOverlay(response);
 #endif
+                Parent.Invalidate();
+            }).Task.ConfigureAwait(false);
+        }
 
-            // Invalidate to trigger redraw
+        /// <summary>
+        /// Converts protobuf segments to Polygons and creates colored polygon views
+        /// </summary>
+        public void RefreshPolygonsFromLastMask(double? holeDropFraction = null, int? edgeCleanupRadius = null)
+        {
+            if (lastSegmentationResponse is null)
+                return;
+
+            ConvertSegmentsToPolygonViews(lastSegmentationResponse, holeDropFraction, edgeCleanupRadius);
             Parent.Invalidate();
         }
 
         /// <summary>
-        /// Converts protobuf segments to GridPolygons and creates colored polygon views
+        /// Asks the server again for the prompts already placed after a SAM2 request setting
+        /// (mask threshold, mask_input) changed. Does nothing before the first click. UI thread only,
+        /// because it reads the prompt lists.
         /// </summary>
-        private void ConvertSegmentsToPolygonViews(SegmentationServiceTypes.SegmentationResponse response)
+        public void ResegmentAfterRequestSettingsChange()
         {
-            // Clear existing polygon views
+            if (placementFinished || Deactivated || foregroundPoints.Count == 0)
+                return;
+
+            Interlocked.Exchange(ref lastSentPrompts, null);
+            _ = RequestSegmentation();
+        }
+
+        public void RefreshPromptPointViews(double? pointRadiusPixels = null)
+        {
+            if (foregroundPointsView is null || backgroundPointsView is null)
+                return;
+
+            double radius = (pointRadiusPixels ?? WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius) * Parent.Downsample;
+            UpdatePointViews(radius);
+        }
+
+        private void ConvertSegmentsToPolygonViews(
+            SegmentationServiceTypes.SegmentationResponse response,
+            double? holeDropFraction = null,
+            int? edgeCleanupRadius = null)
+        {
+            IReadOnlyList<Polygon> polygons = SimplifyPreviewRings(viewportSession.CreatePolygonsFromResponse(
+                response,
+                holeDropFraction,
+                lastSegmentationBackground,
+                edgeCleanupRadius,
+                keepComponentsContainingWorldPoints: lastSegmentationForeground));
+            ApplyPolygonViews(polygons, response.Segments.Count);
+#if DEBUG
+            CreateDebugMaskOverlay(response, edgeCleanupRadius);
+#endif
+        }
+
+        /// <summary>
+        /// One mask pixel-travel fit (<see cref="AutoPolygonizeSelection.SimplifyForCreatedShape"/>)
+        /// before the ring is drawn. Persist fits again in <see cref="LocationShapeUpdate"/>.
+        /// </summary>
+        private IReadOnlyList<Polygon> SimplifyPreviewRings(IReadOnlyList<Polygon> polygons)
+        {
+            if (polygons is null || polygons.Count == 0)
+                return polygons;
+
+            return [.. polygons.Select(polygon =>
+                AutoPolygonizeSelection.SimplifyForCreatedShape(polygon, Parent.Downsample))];
+        }
+
+        /// <summary>
+        /// Replaces the live overlay with already-built polygons. Must run on the UI thread.
+        /// </summary>
+        private void ApplyPolygonViews(IReadOnlyList<Polygon> polygons, int totalPolygons)
+        {
             segmentPolygonViews.Clear();
+            segmentPolygonRingViews.Clear();
+            hoveredPolygonView = null;
 
-            // Count total polygons for color distribution
-            int totalPolygons = response.Segments.Sum(s => s.Polygons?.Count ?? 0);
             int polygonIndex = 0;
-
-            // Process all segments and their polygons
-            foreach (var segment in response.Segments.OrderByDescending(s => s.Score))
+            foreach (Polygon gridPolygon in polygons)
             {
-                if (segment.Polygons is null)
-                    continue;
-
-                Debug.WriteLine($"Processing segment with score: {segment.Score:F3}, {segment.Polygons.Count} polygons");
-
-                // Convert each protobuf polygon to Polygon and create a view
-                foreach (var protoPolygon in segment.Polygons)
-                {
-                    Polygon gridPolygon = ConvertProtoPolygonToGridPolygon(protoPolygon, response);
-
-                    if (gridPolygon != null && gridPolygon.ExteriorRing.Length >= 3)
-                    {
-                        // Generate a distinct color for this polygon
-                        Color polygonColor = GenerateDistinctColor(polygonIndex, totalPolygons);
-
-                        // Create a SolidPolygonView
-                        SolidPolygonView polygonView = new(gridPolygon, polygonColor);
-                        segmentPolygonViews.Add(polygonView);
-
-                        polygonIndex++;
-                    }
-                    else
-                    {
-                        Debug.WriteLine("Skipped invalid polygon (less than 3 points)");
-                    }
-                }
+                Color polygonColor = ColorForSegment(polygonIndex, totalPolygons);
+                segmentPolygonViews.Add(new SolidPolygonView(gridPolygon, polygonColor));
+                segmentPolygonRingViews.Add(CreateRingView(gridPolygon.ExteriorRing, polygonColor));
+                segmentPolygonRingViews.AddRange(gridPolygon.InteriorRings.Select(ring => CreateRingView(ring, polygonColor)));
+                polygonIndex++;
             }
 
             Debug.WriteLine($"Created {segmentPolygonViews.Count} polygon views");
         }
 
         /// <summary>
-        /// Converts a protobuf polygon to Polygon with Y-axis inversion
+        /// Closed outline for one mask ring. Called from <see cref="ApplyPolygonViews"/> while resegment is active.
+        /// Stroke is <see cref="PreviewRingWidthPixels"/> screen pixels, with a world-unit floor so a zoomed-in ring stays visible.
         /// </summary>
-        private Polygon ConvertProtoPolygonToGridPolygon(
-            SegmentationServiceTypes.Polygon protoPolygon,
-            SegmentationServiceTypes.SegmentationResponse response)
-        {
-            try
-            {
-                // Server polygons are top-left. MosaicPixelToWorld flips Y into Viking world space.
-                List<Geometry.Vector2> worldPoints = new(protoPolygon.Points.Count);
-                foreach (var point in protoPolygon.Points)
-                {
-                    worldPoints.Add(SegmentationTileGrid.MosaicPixelToWorld(
-                        response.OriginX,
-                        response.OriginY,
-                        point.X,
-                        point.Y,
-                        response.Height,
-                        mosaicDownsample));
-                }
-                return new Polygon(worldPoints.EnsureClosedRing().RemoveAdjacentDuplicates());
-            }
-            catch (ArgumentException)
-            {
-                return null;
-            }
-        }
+        private CurveView CreateRingView(IEnumerable<Geometry.Vector2> ring, Color color) =>
+            new(
+                [.. ring],
+                color.SetAlpha(0.65f),
+                TryToClose: true,
+                numInterpolations: 0,
+                lineWidth: Math.Max(PreviewRingWidthPixels * 0.5, Parent.Downsample * PreviewRingWidthPixels),
+                lineStyle: LineStyle.Tubular,
+                ShowControlPoints: false);
 
 #if DEBUG
         /// <summary>
-        /// Creates a debug mask overlay texture for visualization (DEBUG only)
+        /// Builds the debug SAM2 texture for the pen command from the stored server mask.
+        /// Edge cleanup is applied to the texture only; the response bytes stay original so the
+        /// next radius change can retrace. The rectangle is the fused mosaic bounds from
+        /// <see cref="SegmentationViewportSession.GetSegmentWorldBounds"/>, the same mapping the
+        /// polygon and the prompt clicks use. Camera-rectangle mapping shifts the texture off
+        /// the points. <see cref="OnDraw"/> shows it only when the overlay preference is on.
         /// </summary>
-        private void CreateDebugMaskOverlay(SegmentationServiceTypes.SegmentationResponse response)
+        private void CreateDebugMaskOverlay(
+            SegmentationServiceTypes.SegmentationResponse response,
+            int? edgeCleanupRadius = null)
         {
-            var bestSegment = response.Segments.OrderByDescending(s => s.Score).First();
-            
-            // Decode PNG mask to get dimensions and pixel data
-            byte[] pngBytes = bestSegment.Mask.ToByteArray();
-            var (decodedMaskData, decodedWidth, decodedHeight) = DecodePngMask(pngBytes);
-            
-            // Store mask data
+            var bestSegment = response.GetHighestScoringSegment();
+            if (bestSegment is null)
+            {
+                maskOverlayView = null;
+                return;
+            }
+
+            SegmentField field = viewportSession.DecodeSegmentField(bestSegment);
+            byte[]? decodedMaskData = field.Data;
+            int decodedWidth = field.Width;
+            int decodedHeight = field.Height;
+            if (decodedMaskData is null || decodedWidth <= 0 || decodedHeight <= 0)
+            {
+                maskOverlayView = null;
+                return;
+            }
+
+            int radius = edgeCleanupRadius ?? WebAnnotation.Global.AnnotationSettings.SegmentationEdgeCleanupRadius;
+            if (radius > 0)
+            {
+                decodedMaskData = SegmentationMaskPolygonizer.ApplyEdgeCleanup(
+                    decodedMaskData,
+                    decodedWidth,
+                    decodedHeight,
+                    SegmentationMaskPolygonizer.ScaleCleanupRadius(radius, field.Scale));
+            }
+
             currentMaskData = decodedMaskData;
             maskWidth = decodedWidth;
             maskHeight = decodedHeight;
 
-            // Create texture for rendering
             maskTexture?.Dispose();
             maskTexture = CreateMaskTexture(currentMaskData, maskWidth, maskHeight);
-
-            // Create TextureOverlayView for rendering
-            if (maskTexture != null)
+            if (maskTexture is null)
             {
-                // Transform segment bounds from viewport coordinates to world coordinates
-                Geometry.Vector2 topLeft = SegmentationTileGrid.MosaicPixelToWorld(
-                    response.OriginX, response.OriginY, bestSegment.X, bestSegment.Y, response.Height, mosaicDownsample);
-                Geometry.Vector2 bottomRight = SegmentationTileGrid.MosaicPixelToWorld(
-                    response.OriginX,
-                    response.OriginY,
-                    bestSegment.X + decodedWidth,
-                    bestSegment.Y + decodedHeight,
-                    response.Height,
-                    mosaicDownsample);
-                Rectangle segmentBounds = new(topLeft, bottomRight);
-                maskOverlayView = new TextureOverlayView(maskTexture, segmentBounds, maskColor);
+                maskOverlayView = null;
+                return;
             }
+
+            Geometry.Rectangle segmentBounds = viewportSession.GetSegmentWorldBounds(
+                response,
+                field.X,
+                field.Y,
+                field.PixelWidth,
+                field.PixelHeight);
+            maskOverlayView = new TextureOverlayView(maskTexture, segmentBounds, maskColor);
         }
 #endif
-        #endregion
-
-        #region Image Capture
-        private async Task<(byte[]? data, int width, int height)> CaptureViewportImage(CancellationToken cancellationToken)
-        {
-            try
-            {
-                CancellationToken renderToken = PrepareCancellationToken(cancellationToken);
-
-                var (graphicsDevice, scene, width, height) = ValidateRenderingContext();
-                if (graphicsDevice is null || scene is null)
-                {
-                    return (null, 0, 0);
-                }
-
-                var (renderTarget, isGrayscale) = await RenderViewportToTexture(scene, width, height, renderToken).ConfigureAwait(false);
-                if (renderTarget is null)
-                {
-                    return (null, 0, 0);
-                }
-
-                try
-                {
-                    // GetData must run on the UI/Graphics thread (GraphicsDevice affinity)
-                    Color[] pixels = await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
-                    {
-                        Color[] p = new Color[width * height];
-                        renderTarget.GetData(p);
-                        return p;
-                    }).Task.ConfigureAwait(false);
-
-                    byte[] pngData = EncodeToPng(renderTarget, pixels, width, height, isGrayscale);
-
-                    // Validate the captured image
-                    var (isValid, errorMessage) = ValidateCapturedImage(pngData, width, height);
-                    if (!isValid)
-                    {
-                        Debug.WriteLine($"Captured image failed validation: {errorMessage}");
-                        return (null, 0, 0);
-                    }
-
-                    Debug.WriteLine($"Viewport image captured and validated as PNG ({pngData.Length} bytes, {width}x{height})");
-
-#if DEBUG
-                    // Save captured image to disk for debugging
-                    SaveCapturedImageToDisk(pngData, width, height);
-#endif
-
-                    return (pngData, width, height);
-                }
-                finally
-                {
-                    Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() => renderTarget?.Dispose()));
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                Debug.WriteLine("Viewport image capture was cancelled");
-                return (null, 0, 0);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error capturing viewport: {ex.Message}");
-                return (null, 0, 0);
-            }
-        }
-
-        /// <summary>
-        /// Validates that captured PNG image data is valid and can be fully decoded.
-        /// Uses ImageSharp so validation can run on any thread without requiring the graphics device.
-        /// </summary>
-        /// <param name="pngData">The PNG image data to validate</param>
-        /// <param name="expectedWidth">Expected width in pixels</param>
-        /// <param name="expectedHeight">Expected height in pixels</param>
-        /// <returns>Tuple with validation result and error message if invalid</returns>
-        private (bool isValid, string errorMessage) ValidateCapturedImage(byte[] pngData, int expectedWidth, int expectedHeight)
-        {
-            if (pngData is null || pngData.Length == 0)
-            {
-                return (false, "Image validation failed: null or empty data");
-            }
-
-            // Check PNG magic bytes (89 50 4E 47 0D 0A 1A 0A)
-            if (pngData.Length < 8 ||
-                pngData[0] != 0x89 || pngData[1] != 0x50 || pngData[2] != 0x4E || pngData[3] != 0x47 ||
-                pngData[4] != 0x0D || pngData[5] != 0x0A || pngData[6] != 0x1A || pngData[7] != 0x0A)
-            {
-                return (false, "Image validation failed: invalid PNG signature");
-            }
-
-            // Verify minimum size constraints
-            if (expectedWidth <= 0 || expectedHeight <= 0)
-            {
-                return (false, $"Image validation failed: invalid dimensions {expectedWidth}x{expectedHeight}");
-            }
-
-            try
-            {
-                using MemoryStream stream = new(pngData);
-                using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(stream);
-
-                int decodedWidth = image.Width;
-                int decodedHeight = image.Height;
-
-                // Verify dimensions match expectations
-                if (decodedWidth != expectedWidth || decodedHeight != expectedHeight)
-                {
-                    return (false, $"Image validation failed: dimension mismatch. Expected {expectedWidth}x{expectedHeight}, got {decodedWidth}x{decodedHeight}");
-                }
-
-                // Check pixel content for suspicious patterns (warnings only)
-                bool isAllBlack = true;
-                bool isAllSame = true;
-                Rgba32 firstPixel = image[0, 0];
-                int nonTransparentPixels = 0;
-                int pixelCount = decodedWidth * decodedHeight;
-
-                image.ProcessPixelRows(accessor =>
-                {
-                    for (int y = 0; y < accessor.Height; y++)
-                    {
-                        Span<Rgba32> row = accessor.GetRowSpan(y);
-                        for (int x = 0; x < row.Length; x++)
-                        {
-                            Rgba32 pixel = row[x];
-
-                            if (pixel.R > 0 || pixel.G > 0 || pixel.B > 0)
-                                isAllBlack = false;
-                            if (pixel.A > 0)
-                                nonTransparentPixels++;
-                            if (pixel.R != firstPixel.R || pixel.G != firstPixel.G ||
-                                pixel.B != firstPixel.B || pixel.A != firstPixel.A)
-                                isAllSame = false;
-                        }
-                    }
-                });
-
-                if (isAllBlack && nonTransparentPixels > 0)
-                    Debug.WriteLine($"Warning: Captured image appears to be completely black ({nonTransparentPixels} non-transparent pixels)");
-                else if (isAllSame && pixelCount > 0)
-                    Debug.WriteLine($"Warning: Captured image appears to be a solid color (R:{firstPixel.R}, G:{firstPixel.G}, B:{firstPixel.B}, A:{firstPixel.A})");
-
-                Debug.WriteLine($"Image validation passed: {expectedWidth}x{expectedHeight}, {pngData.Length} bytes");
-                return (true, string.Empty);
-            }
-            catch (Exception ex)
-            {
-                return (false, $"Image validation failed: PNG decode error - {ex.Message}");
-            }
-        }
-
-        private CancellationToken PrepareCancellationToken(CancellationToken? externalToken = null)
-        {
-            // Cancel and dispose any existing linked token source
-            linkedRenderCancellationTokenSource?.Cancel();
-            linkedRenderCancellationTokenSource?.Dispose();
-            linkedRenderCancellationTokenSource = null;
-
-            // Cancel and recreate render cancellation token source
-            renderCancellationTokenSource?.Cancel();
-            renderCancellationTokenSource?.Dispose();
-            renderCancellationTokenSource = new CancellationTokenSource();
-
-            // If external token provided, create linked token source
-            if (externalToken.HasValue)
-            {
-                linkedRenderCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
-                    externalToken.Value,
-                    renderCancellationTokenSource.Token);
-                return linkedRenderCancellationTokenSource.Token;
-            }
-
-            // Otherwise return the render token
-            return renderCancellationTokenSource.Token;
-        }
-
-#if DEBUG
-        /// <summary>
-        /// Saves captured image to disk for debugging purposes
-        /// </summary>
-        /// <param name="pngData">The PNG image data to save</param>
-        /// <param name="width">Image width in pixels</param>
-        /// <param name="height">Image height in pixels</param>
-        private void SaveCapturedImageToDisk(byte[] pngData, int width, int height)
-        {
-            try
-            {
-                // Create directory in temp folder
-                string debugDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "VikingSegmentation");
-                if (!Directory.Exists(debugDir))
-                {
-                    Directory.CreateDirectory(debugDir);
-                }
-
-                // Create filename with timestamp
-                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                string filename = $"segmentation_capture_{timestamp}_{width}x{height}.png";
-                string filepath = System.IO.Path.Combine(debugDir, filename);
-
-                // Save the image
-                File.WriteAllBytes(filepath, pngData);
-
-                Debug.WriteLine($"Captured image saved to: {filepath}");
-            }
-            catch (Exception ex)
-            {
-                // Don't fail capture if save fails - just log the error
-                Debug.WriteLine($"Failed to save captured image to disk: {ex.Message}");
-            }
-        }
-#endif
-
-        private (GraphicsDevice device, VikingXNA.Scene scene, int width, int height) ValidateRenderingContext()
-        {
-            var graphicsDevice = Parent.Device;
-            if (graphicsDevice is null)
-            {
-                Debug.WriteLine("GraphicsDevice is null");
-                return (null, null, 0, 0);
-            }
-
-            var scene = Parent.Scene;
-            if (scene is null)
-            {
-                Debug.WriteLine("Scene is null");
-                return (null, null, 0, 0);
-            }
-
-            int width = scene.Viewport.Width;
-            int height = scene.Viewport.Height;
-
-            if (width <= 0 || height <= 0)
-            {
-                Debug.WriteLine($"Invalid viewport dimensions: {width}x{height}");
-                return (null, null, 0, 0);
-            }
-
-            return (graphicsDevice, scene, width, height);
-        }
-
-        private async Task<(RenderTarget2D? renderTarget, bool isGrayscale)> RenderViewportToTexture(VikingXNA.Scene scene, int width, int height, CancellationToken cancellationToken)
-        {
-            float centerX = scene.Camera.LookAt.X;
-            float centerY = scene.Camera.LookAt.Y;
-            int sectionZ = Parent.Section.Number;
-
-            Debug.WriteLine($"Rendering scene to texture: {width}x{height}, center: ({centerX}, {centerY}), section: {sectionZ}");
-
-            try
-            {
-                bool isGrayscale = Parent.CurrentChannelset.Length == 1;
-                RenderTarget2D renderTarget = await Parent.RenderSceneToTexture(
-                    scene,
-                    centerX,
-                    centerY,
-                    sectionZ,
-                    showOverlays: false,
-                    asyncTextureLoad: false,
-                    cancellationToken).ConfigureAwait(false);
-
-                if (renderTarget is null)
-                {
-                    Debug.WriteLine("RenderSceneToTexture returned null");
-                }
-
-                return (renderTarget, isGrayscale);
-            }
-            catch (OperationCanceledException)
-            {
-                Debug.WriteLine("RenderSceneToTexture was cancelled");
-                return (null, false);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"RenderSceneToTexture failed: {ex.Message}");
-                return (null, false);
-            }
-        }
-
-        private byte[] EncodeToPng(RenderTarget2D renderTarget, Color[] pixels, int width, int height, bool isGrayscale)
-        {
-            using MemoryStream pngStream = new();
-            if (isGrayscale)
-            {
-                EncodeGrayscalePng(pngStream, pixels, width, height);
-            }
-            else
-            {
-                EncodeColorPng(pngStream, pixels, width, height);
-            }
-
-            return pngStream.ToArray();
-        }
-
-        private void EncodeGrayscalePng(MemoryStream pngStream, Color[] pixels, int width, int height)
-        {
-            // Build Rgba32 buffer: grayscale R=G=B from pixels[i].R, A from pixels[i].A
-            byte[] buffer = new byte[width * height * 4];
-            for (int i = 0; i < pixels.Length; i++)
-            {
-                byte g = pixels[i].R;
-                int off = i * 4;
-                buffer[off] = g;
-                buffer[off + 1] = g;
-                buffer[off + 2] = g;
-                buffer[off + 3] = pixels[i].A;
-            }
-            using var image = SixLabors.ImageSharp.Image.LoadPixelData<Rgba32>(buffer, width, height);
-            image.Save(pngStream, new PngEncoder());
-            Debug.WriteLine("Image detected as grayscale, encoded as single-channel PNG");
-        }
-
-        private void EncodeColorPng(MemoryStream pngStream, Color[] pixels, int width, int height)
-        {
-            byte[] buffer = new byte[width * height * 4];
-            for (int i = 0; i < pixels.Length; i++)
-            {
-                int off = i * 4;
-                buffer[off] = pixels[i].R;
-                buffer[off + 1] = pixels[i].G;
-                buffer[off + 2] = pixels[i].B;
-                buffer[off + 3] = pixels[i].A;
-            }
-            using var image = SixLabors.ImageSharp.Image.LoadPixelData<Rgba32>(buffer, width, height);
-            image.Save(pngStream, new PngEncoder());
-            Debug.WriteLine("Image detected as color, encoded as full-color PNG");
-        }
-
         #endregion
 
         #region Mask Processing
-        private (byte[] maskData, int width, int height) DecodePngMask(byte[] pngBytes)
-        {
-            try
-            {
-                if (pngBytes is null || pngBytes.Length == 0)
-                {
-                    Debug.WriteLine("Empty PNG mask data");
-                    return (null, 0, 0);
-                }
-
-                // Load PNG using Texture2D.FromStream
-                using MemoryStream stream = new(pngBytes);
-                var graphicsDevice = Parent.Device;
-                if (graphicsDevice is null)
-                {
-                    Debug.WriteLine("Graphics device is null");
-                    return (null, 0, 0);
-                }
-
-                Texture2D pngTexture = Texture2D.FromStream(graphicsDevice, stream);
-                int width = pngTexture.Width;
-                int height = pngTexture.Height;
-
-                // Extract pixel data as grayscale
-                Color[] pixels = new Color[width * height];
-                pngTexture.GetData(pixels);
-
-                // Convert to grayscale byte array (0 or 255)
-                byte[] maskData = new byte[width * height];
-                for (int i = 0; i < pixels.Length; i++)
-                {
-                    // Use R channel since PNG is grayscale (R=G=B)
-                    maskData[i] = pixels[i].R;
-                }
-
-                pngTexture.Dispose();
-                return (maskData, width, height);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error decoding PNG mask: {ex.Message}");
-                return (null, 0, 0);
-            }
-        }
-
         private Texture2D CreateMaskTexture(byte[] maskData, int width, int height)
         {
             try
@@ -1726,8 +1376,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
                 for (int i = 0; i < maskData.Length; i++)
                 {
-                    // Non-zero mask values become the mask color
-                    pixels[i] = maskData[i] > 0 ? maskColor : Color.Transparent;
+                    pixels[i] = maskData[i] >= SegmentationMaskPolygonizer.SoftMaskForeground
+                        ? maskColor
+                        : Color.Transparent;
                 }
 
                 texture.SetData(pixels);
@@ -1740,31 +1391,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        private bool IsPointInsideMask(Geometry.Vector2 worldPos)
-        {
-            if (currentMaskData is null || maskWidth == 0 || maskHeight == 0)
-                return false;
-
-            try
-            {
-                // Convert world position to viewport pixel coordinates
-                var screenPt = WorldToViewport(worldPos, maskWidth, maskHeight);
-                int x = (int)screenPt.X;
-                int y = (int)screenPt.Y;
-
-                // Check bounds
-                if (x < 0 || x >= maskWidth || y < 0 || y >= maskHeight)
-                    return false;
-
-                // Check mask value
-                int idx = y * maskWidth + x;
-                return idx < currentMaskData.Length && currentMaskData[idx] > 0;
-            }
-            catch
-            {
-                return false;
-            }
-        }
         #endregion
 
         #region Coordinate Transforms
@@ -1784,63 +1410,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Converts world coordinates to screen pixel coordinates
         /// </summary>
         private Geometry.Vector2 WorldToScreen(Geometry.Vector2 worldPos) => Parent.WorldToScreen(worldPos.X, worldPos.Y);
-
-        /// <summary>
-        /// Gets the current viewport bounds in world coordinates
-        /// </summary>
-        private Rectangle GetCurrentViewportBounds()
-        {
-            Geometry.Vector2 topLeft = Parent.ScreenToWorld(0, 0);
-            Geometry.Vector2 bottomRight = Parent.ScreenToWorld(Parent.Width, Parent.Height);
-            return new Rectangle(topLeft, bottomRight);
-        }
-
-        /// <summary>
-        /// Transforms world coordinates to viewport pixel coordinates (for sending to server)
-        /// </summary>
-        /// <param name="worldPos">Position in world coordinates</param>
-        /// <param name="viewportWidth">Width of captured viewport image in pixels</param>
-        /// <param name="viewportHeight">Height of captured viewport image in pixels</param>
-        /// <returns>Position in viewport pixel coordinates</returns>
-        private Geometry.Vector2 WorldToViewport(Geometry.Vector2 worldPos, int viewportWidth, int viewportHeight)
-        {
-            Geometry.Vector2 boundsMin = viewportBounds.LowerLeft;
-            Geometry.Vector2 boundsMax = viewportBounds.UpperRight;
-
-            // Normalize to [0,1] range within viewport bounds
-            double normalizedX = (worldPos.X - boundsMin.X) / (boundsMax.X - boundsMin.X);
-            double normalizedY = (worldPos.Y - boundsMin.Y) / (boundsMax.Y - boundsMin.Y);
-
-            // Scale to viewport pixel dimensions
-            return new Geometry.Vector2(
-                normalizedX * viewportWidth,
-                normalizedY * viewportHeight
-            );
-        }
-
-        /// <summary>
-        /// Transforms viewport pixel coordinates to world coordinates (for receiving from server)
-        /// </summary>
-        /// <param name="pixelX">X coordinate in viewport pixels</param>
-        /// <param name="pixelY">Y coordinate in viewport pixels</param>
-        /// <param name="viewportWidth">Width of captured viewport image in pixels</param>
-        /// <param name="viewportHeight">Height of captured viewport image in pixels</param>
-        /// <returns>Position in world coordinates</returns>
-        private Geometry.Vector2 ViewportToWorld(int pixelX, int pixelY, int viewportWidth, int viewportHeight)
-        {
-            // Normalize from pixel coordinates to [0,1] range
-            double normalizedX = (double)pixelX / viewportWidth;
-            double normalizedY = (double)pixelY / viewportHeight;
-
-            Geometry.Vector2 boundsMin = viewportBounds.LowerLeft;
-            Geometry.Vector2 boundsMax = viewportBounds.UpperRight;
-
-            // Scale to world coordinates within viewport bounds
-            return new Geometry.Vector2(
-                boundsMin.X + normalizedX * (boundsMax.X - boundsMin.X),
-                boundsMin.Y + normalizedY * (boundsMax.Y - boundsMin.Y)
-            );
-        }
         #endregion
 
         #region Rendering
@@ -1853,15 +1422,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
             var previousDepthStencilState = graphicsDevice.DepthStencilState;
 
 #if DEBUG
-            // Draw mask overlay if available (using TextureOverlayView) - DEBUG only
-            maskOverlayView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+            if (Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
+                maskOverlayView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
 #endif
 
-            // Draw segment polygons first (underneath points)
-            foreach (var polygonView in segmentPolygonViews)
-            {
-                polygonView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
-            }
+            hoveredPolygonView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+
+            foreach (CurveView ringView in segmentPolygonRingViews)
+                ringView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
 
             // Disable depth testing to ensure points always draw on top of polygons
             graphicsDevice.DepthStencilState = DepthStencilState.None;
@@ -1890,7 +1458,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 foregroundPointsView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
             }
 
-            
+            if (ShowPenButtons && !placementFinished)
+            {
+                penButtons ??= new SegmentationPenButtons(Parent);
+                penButtons.Draw(graphicsDevice, scene, PenButtonsIncludeSkip);
+            }
+
+            if (!placementFinished)
+            {
+                cancelButton ??= new PenCancelButton(Parent);
+                cancelButton.Draw(graphicsDevice, scene);
+            }
 
             // Restore previous depth buffer state
             graphicsDevice.DepthStencilState = previousDepthStencilState;
@@ -1900,6 +1478,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #region Command Execution
         protected override void Execute()
         {
+            if (placementFinished)
+                return;
+
             if (selectedPolygon is null)
             {
                 MessageBox.Show("No polygon selected. Please click inside a segmented polygon to finalize.",
@@ -1917,10 +1498,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     return;
                 }
 
+                // Preview rings are already fit for display. LocationShapeUpdate fits once more
+                // when persisting so mosaic control points stay CreatedShapeSimplify-sized after
+                // any path that handed us a denser ring.
                 this.Output = selectedPolygon;
+                placementFinished = true;
                 this?.success_callback(selectedPolygon);
-                // Create structure and location using the selected polygon
-                //CreateAnnotationFromPolygon(selectedPolygon);
 
                 // Clean up and deactivate
                 CleanupCommand();
@@ -1936,89 +1519,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
             base.Execute();
         }
 
-        private Polygon MaskToPolygon(byte[] maskData, int width, int height)
-        {
-            // Extract contour points from binary mask
-            List<Geometry.Vector2> contourPoints = ExtractContourFromMask(maskData, width, height);
-
-            if (contourPoints.Count < 3)
-            {
-                Debug.WriteLine("Not enough contour points extracted");
-                return null;
-            }
-
-            // Simplify using Douglas-Peucker algorithm from Geometry package
-            var simplifiedPoints = contourPoints.DouglasPeuckerReduction(SIMPLIFICATION_TOLERANCE);
-
-            Debug.WriteLine($"Contour: {contourPoints.Count} points simplified to {simplifiedPoints.Count} points");
-
-            // Create polygon
-            return new Polygon(simplifiedPoints.EnsureClosedRing().RemoveAdjacentDuplicates());
-        }
-
-        private List<Geometry.Vector2> ExtractContourFromMask(byte[] maskData, int width, int height)
-        {
-            // Simple boundary extraction: find pixels on the edge of the mask
-            List<Geometry.Vector2> boundaryPixels = [];
-
-            for (int y = 1; y < height - 1; y++)
-            {
-                for (int x = 1; x < width - 1; x++)
-                {
-                    int idx = y * width + x;
-                    if (maskData[idx] > 0 && IsBoundaryPixel(maskData, x, y, width, height))
-                    {
-                        // Transform from pixel to world coordinates
-                        Geometry.Vector2 worldPt = ViewportToWorld(x, y, width, height);
-                        boundaryPixels.Add(worldPt);
-                    }
-                }
-            }
-
-            // Order points to form a coherent contour (simplified approach)
-            // For production, use a proper contour tracing algorithm (marching squares)
-            return OrderContourPoints(boundaryPixels);
-        }
-
-        private bool IsBoundaryPixel(byte[] mask, int x, int y, int width, int height)
-        {
-            int idx = y * width + x;
-            if (mask[idx] == 0) return false;
-
-            // Check 4-connectivity neighbors
-            return mask[(y - 1) * width + x] == 0 ||     // top
-                   mask[(y + 1) * width + x] == 0 ||     // bottom
-                   mask[y * width + (x - 1)] == 0 ||     // left
-                   mask[y * width + (x + 1)] == 0;       // right
-        }
-
-        private List<Geometry.Vector2> OrderContourPoints(List<Geometry.Vector2> points)
-        {
-            if (points.Count < 3)
-                return points;
-
-            // Simple ordering: start from leftmost point and find nearest unvisited neighbors
-            // For production, implement proper contour following
-            List<Geometry.Vector2> ordered = [];
-            HashSet<Geometry.Vector2> remaining = [.. points];
-
-            // Start with leftmost point
-            Geometry.Vector2 current = points.OrderBy(p => p.X).First();
-            ordered.Add(current);
-            remaining.Remove(current);
-
-            while (remaining.Count > 0)
-            {
-                // Find nearest remaining point
-                Geometry.Vector2 nearest = remaining.OrderBy(p => Geometry.Vector2.DistanceSquared(current, p)).First();
-                ordered.Add(nearest);
-                remaining.Remove(nearest);
-                current = nearest;
-            }
-
-            return ordered;
-        }
-
+        /// <summary>
+        /// Saves <paramref name="polygon"/> as a new polygon location. Called when Tab
+        /// segmentation accepts a mask. Fits once and maps control points to mosaic via
+        /// <see cref="ViewModel.LocationShapeUpdate.AssignSimplifiedVolumePolygon"/>.
+        /// <paramref name="type"/> null uses the structure selected in the list, or cell type 1.
+        /// A type that requires a parent enqueues <see cref="LinkStructureToParentCommand"/> before the save.
+        /// </summary>
         public static void CreateAnnotationFromPolygon(Viking.UI.Controls.SectionViewerControl Parent, StructureType? type, Polygon polygon)
         {
             StructureTypeObj typeObj = GetDefaultStructureType(type);
@@ -2033,10 +1540,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             try
             {
-                // Set the polygon geometry
-                // SetShapeFromGeometryInSection will transform the mosaic shape to volume coordinates
-                SqlGeometry mosaicGeometry = polygon.ToSqlGeometry();
-                newLocation.SetShapeFromGeometryInVolume(Parent.Section.ActiveSectionToVolumeTransform, mosaicGeometry);
+                LocationShapeUpdate.AssignSimplifiedVolumePolygon(
+                    newLocation,
+                    polygon,
+                    Parent.Section.ActiveSectionToVolumeTransform,
+                    Parent.Downsample);
 
                 if (typeObj.ParentID.HasValue)
                 {
@@ -2087,11 +1595,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             // Clear rendered mesh and polygons
             segmentPolygonViews.Clear();
+            segmentPolygonRingViews.Clear();
+            hoveredPolygonView = null;
             maskOverlayView = null;
             currentMaskData = null;
             maskTexture?.Dispose();
             maskTexture = null;
             selectedPolygon = null;
+            lastSegmentationResponse = null;
+            lastSegmentationForeground = [];
+            lastSegmentationBackground = [];
 
             // Trigger redraw to update display
             Parent.Invalidate();
@@ -2099,10 +1612,31 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Debug.WriteLine("Segmentation results cleared (no foreground points remaining)");
         }
 
+        /// <summary>
+        /// Aborts decode/polygonize for the last SegmentImage result. Does not cancel the RPC itself.
+        /// </summary>
+        private void CancelProcessSegmentationResponse()
+        {
+            try
+            {
+                processResponseCts?.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+
+            processResponseCts?.Dispose();
+            processResponseCts = null;
+        }
+
         private void CleanupCommand()
         {
+            requestCoalescer.Invalidate();
+            CancelProcessSegmentationResponse();
             foregroundPoints.Clear();
             backgroundPoints.Clear();
+            derivedBackgroundPoints.Clear();
+            derivedBackgroundMask = null;
             // Clear point views but keep them initialized (never null)
             foregroundPointsView.Points = [];
             backgroundPointsView.Points = [];
@@ -2111,23 +1645,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
             maskTexture = null;
             maskOverlayView = null;
             segmentPolygonViews.Clear();
+            segmentPolygonRingViews.Clear();
+            hoveredPolygonView = null;
             selectedPolygon = null;
+            lastSegmentationResponse = null;
+            lastSegmentationForeground = [];
+            lastSegmentationBackground = [];
 
-            uploadedTileKeys.Clear();
-            mosaicDownsample = 1;
-
-            // Cancel and dispose of cancellation token sources
-            linkedRenderCancellationTokenSource?.Cancel();
-            linkedRenderCancellationTokenSource?.Dispose();
-            linkedRenderCancellationTokenSource = null;
-
-            renderCancellationTokenSource?.Cancel();
-            renderCancellationTokenSource?.Dispose();
-            renderCancellationTokenSource = null;
-
-            uploadCancellationTokenSource?.Cancel();
-            uploadCancellationTokenSource?.Dispose();
-            uploadCancellationTokenSource = null;
+            viewportSession.CancelPendingWork();
+            viewportSession.ClearImageId();
         }
         #endregion
     }

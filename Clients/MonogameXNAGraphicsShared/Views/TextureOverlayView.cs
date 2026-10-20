@@ -11,13 +11,6 @@ namespace VikingXNAGraphics
 {
     public class TextureOverlayView : BillboardViewBase
     {
-        #region static
-
-        static readonly double BeginFadeCutoff = 0.1;
-        static readonly double InvisibleCutoff = 1f;
-
-        #endregion
-
         public Texture2D Texture;
         //bool FlipTexture = false;
 
@@ -92,17 +85,46 @@ namespace VikingXNAGraphics
             TextureOverlayView.Draw(device, scene, overlayEffect, [this]);
         }
 
+        /// <summary>
+        /// Same as <see cref="Draw(GraphicsDevice, IScene, OverlayStyle)"/>, then forces
+        /// <paramref name="depthStencilAfterPass"/> after each effect pass. Compiled passes
+        /// can replace the depth state on Apply, which drops a texture whose shader writes depth.
+        /// </summary>
+        public void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay, DepthStencilState depthStencilAfterPass)
+        {
+            OverlayShaderEffect overlayEffect = VikingXNAGraphics.DeviceEffectsStore<OverlayShaderEffect>.TryGet(device);
+            if (overlayEffect is null)
+                return;
+
+            overlayEffect.Technique = Overlay == OverlayStyle.Alpha ?
+                    OverlayShaderEffect.Techniques.TextureAlphaOverlayEffect :
+                    OverlayShaderEffect.Techniques.TextureLumaOverlayEffect;
+
+            TextureOverlayView.Draw(device, scene, overlayEffect, [this], depthStencilAfterPass);
+        }
+
         public static void Draw(GraphicsDevice device,
                           VikingXNA.IScene scene,
                           OverlayShaderEffect overlayEffect,
                           TextureOverlayView[] listToDraw)
+        {
+            Draw(device, scene, overlayEffect, listToDraw, null);
+        }
+
+        public static void Draw(GraphicsDevice device,
+                          VikingXNA.IScene scene,
+                          OverlayShaderEffect overlayEffect,
+                          TextureOverlayView[] listToDraw,
+                          DepthStencilState depthStencilAfterPass)
         {
             if (listToDraw.Length == 0)
                 return;
 
             device.Indices = GlobalPrimitives.GetUnitSquareIndexBuffer(device);
             device.SetVertexBuffer(GlobalPrimitives.GetUnitSquareVertexBuffer(device));
-            BlendState originalState = device.BlendState;
+            BlendState originalBlend = device.BlendState;
+            DepthStencilState originalDepth = device.DepthStencilState;
+            RasterizerState originalRaster = device.RasterizerState;
             device.BlendState = BlendState.NonPremultiplied;
 
             Matrix worldViewProj = scene.World * scene.ViewProj;
@@ -116,6 +138,9 @@ namespace VikingXNAGraphics
 
                 foreach (TextureOverlayView rv in views)
                 {
+                    if (rv.Texture is null)
+                        continue;
+
                     overlayEffect.AnnotationColorHSL = rv.HSLColor;
                     overlayEffect.WorldViewProjMatrix = rv.ModelMatrix * worldViewProj;
                     //TODO: Use GlobalPrimitives and model matricies instead of verticies
@@ -123,18 +148,28 @@ namespace VikingXNAGraphics
                     foreach (EffectPass pass in overlayEffect.CurrentTechnique.Passes)
                     {
                         pass.Apply();
+                        if (depthStencilAfterPass is not null)
+                        {
+                            device.DepthStencilState = depthStencilAfterPass;
+                            device.RasterizerState = RasterizerState.CullNone;
+                            device.BlendState = BlendState.NonPremultiplied;
+                        }
 
                         device.DrawIndexedPrimitives(PrimitiveType.TriangleList,
                             0,
-                            0,
-                            6,
                             0,
                             2);
                     }
                 }
             }
 
-            device.BlendState = originalState;
+            device.BlendState = originalBlend;
+            if (depthStencilAfterPass is not null)
+            {
+                device.DepthStencilState = originalDepth;
+                if (originalRaster is not null && !originalRaster.IsDisposed)
+                    device.RasterizerState = originalRaster;
+            }
         }
 
     }

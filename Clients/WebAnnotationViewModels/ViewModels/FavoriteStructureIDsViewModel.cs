@@ -69,8 +69,6 @@ namespace Annotation.ViewModels
             {
                 return FavoriteStructureTypeIDs.Contains(System.Convert.ToUInt64(item));
             }
-
-            return FavoriteStructureTypeIDs.Contains(System.Convert.ToUInt64(item));
         }
 
         public void DeleteFavorite(object item)

@@ -28,11 +28,12 @@ namespace WebAnnotation.ViewModel
         private readonly ConcurrentDictionary<StructureLinkKey, StructureLinkViewModelBase> StructureLinks = new();
 
         /// <summary>
-        /// Return all the line segments visible in the passed bounds
+        /// Return all the line segments visible in the passed bounds. A link removed on another thread leaves the
+        /// spatial index after the dictionary, so a key it returns can already be gone; those are skipped.
         /// </summary>
-        /// <param name="bounds"></param>
-        /// <returns></returns>
-        public List<StructureLinkViewModelBase> VisibleStructureLinks(VikingXNA.Scene scene) => [.. StructureLinksSearch.Intersects(scene.VisibleWorldBounds.ToRTreeRect(PrimarySection.SectionNumber)).Select((sl_key) => StructureLinks[sl_key]).Where(sl => sl != null && sl.IsVisible(scene))];
+        /// <param name="scene">The scene whose visible world bounds are queried.</param>
+        public List<StructureLinkViewModelBase> VisibleStructureLinks(VikingXNA.Scene scene) => [.. StructureLinks.ValuesForKeys(StructureLinksSearch.Intersects(scene.VisibleWorldBounds.ToRTreeRect(PrimarySection.SectionNumber)))
+            .Where(sl => sl.IsVisible(scene))];
 
         internal void AddStructureLinks(IEnumerable<LocationObj> locations)
         {
@@ -112,6 +113,31 @@ namespace WebAnnotation.ViewModel
                 }
             }
         }
+
+        /// <summary>
+        /// Re-creates the link views that <see cref="RemoveStructureLinks(IEnumerable{LocationObj})"/> dropped when
+        /// <paramref name="removedLocations"/> left the section. That removal drops every link of each location's
+        /// structure, so call this after the locations are gone: a link whose structures both still have locations on
+        /// this section comes back between their nearest remaining locations, and a structure whose last location here
+        /// was removed creates no view.
+        /// </summary>
+        /// <param name="removedLocations">Locations just removed from the section's view; others are ignored.</param>
+        internal void RestoreStructureLinksAfterRemoval(IEnumerable<LocationObj> removedLocations)
+        {
+            AddStructureLinks(StructureIDsToRefreshAfterRemoval(removedLocations, PrimarySection.SectionNumber)
+                .Select(id => Store.Structures.TryGetObjectByID(id, out StructureObj structure) ? structure : null)
+                .Where(s => s is not null));
+        }
+
+        /// <summary>
+        /// The parents of the <paramref name="removedLocations"/> on <paramref name="sectionNumber"/>, once each, so a
+        /// batch delete of many locations of one structure rebuilds its links once. Removing a location on another
+        /// section drops no structure link here, so those locations are skipped.
+        /// </summary>
+        /// <param name="removedLocations">Locations removed from the store.</param>
+        /// <param name="sectionNumber">The section whose structure links are shown.</param>
+        internal static IEnumerable<long> StructureIDsToRefreshAfterRemoval(IEnumerable<LocationObj> removedLocations, int sectionNumber) =>
+            removedLocations.Where(l => l.Z == sectionNumber && l.ParentID.HasValue).Select(l => l.ParentID.Value).Distinct();
 
         internal void RemoveStructureLinks(IEnumerable<StructureObj> structures)
         {
@@ -200,23 +226,18 @@ namespace WebAnnotation.ViewModel
 
         public ICollection<StructureLinkViewModelBase> GetStructureLinks() => StructureLinks.Values;
 
-        public ICollection<StructureLinkViewModelBase> GetStructureLinks(Rectangle bounds)
-        {
-            List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(bounds.ToRTreeRect((float)PrimarySection.SectionNumber));
-            return [.. intersectingIDs.Select(id => StructureLinks[id])];
-        }
+        /// <summary>
+        /// Links whose bounding box intersects <paramref name="bounds"/>. Like every query here, it skips links
+        /// removed on another thread between the R-tree read and the dictionary lookup.
+        /// </summary>
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks(Rectangle bounds) =>
+            StructureLinks.ValuesForKeys(StructureLinksSearch.Intersects(bounds.ToRTreeRect((float)PrimarySection.SectionNumber)));
 
-        public ICollection<StructureLinkViewModelBase> GetStructureLinks(Vector2 point)
-        {
-            List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(point.ToRTreeRect((float)PrimarySection.SectionNumber));
-            return [.. intersectingIDs.Select(id => StructureLinks[id]).Where(sl => sl != null && sl.Contains(point))];
-        }
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks(Vector2 point) =>
+            [.. StructureLinks.ValuesForKeys(StructureLinksSearch.Intersects(point.ToRTreeRect((float)PrimarySection.SectionNumber))).Where(sl => sl.Contains(point))];
 
-        public ICollection<StructureLinkViewModelBase> GetStructureLinks(LineSegment line)
-        {
-            List<StructureLinkKey> intersectingIDs = StructureLinksSearch.Intersects(line.BoundingBox.ToRTreeRect((float)PrimarySection.SectionNumber));
-            return [.. intersectingIDs.Select(id => StructureLinks[id]).Where(sl => sl != null && sl.Intersects(line))];
-        }
+        public ICollection<StructureLinkViewModelBase> GetStructureLinks(LineSegment line) =>
+            [.. StructureLinks.ValuesForKeys(StructureLinksSearch.Intersects(line.BoundingBox.ToRTreeRect((float)PrimarySection.SectionNumber))).Where(sl => sl.Intersects(line))];
     }
 
 

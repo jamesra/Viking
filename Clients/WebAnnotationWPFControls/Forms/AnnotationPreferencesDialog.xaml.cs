@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Windows;
 
 namespace WebAnnotation.WPF.Forms
@@ -10,6 +11,12 @@ namespace WebAnnotation.WPF.Forms
     {
         public AnnotationPreferencesDialogViewModel ViewModel { get; private set; }
         public bool IsClosed { get; private set; }
+
+        /// <summary>
+        /// Set once OK or Cancel has decided how this dialog ends, so closing the window afterwards does not
+        /// run the Cancel path again. Apply leaves it unset: the dialog stays open and can still be cancelled.
+        /// </summary>
+        private bool _resolved;
 
         // Event to notify when Apply is clicked
         public event EventHandler ApplyClicked;
@@ -37,6 +44,17 @@ namespace WebAnnotation.WPF.Forms
             IsClosed = false;
         }
 
+        /// <summary>
+        /// Closing the window without OK or Cancel (title bar X, Alt+F4, or the app closing it) cancels, so the live
+        /// preview is reverted to the values from opening or the last Apply, exactly as the Cancel button does.
+        /// </summary>
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            base.OnClosing(e);
+            if (!e.Cancel)
+                CancelOnce();
+        }
+
         protected override void OnClosed(EventArgs e)
         {
             base.OnClosed(e);
@@ -51,15 +69,29 @@ namespace WebAnnotation.WPF.Forms
 
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
+            _resolved = true;
             OkClicked?.Invoke(this, EventArgs.Empty);
             Close();
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
+            CancelOnce();
+            Close();
+        }
+
+        /// <summary>
+        /// Reverts the view model to its last snapshot and raises <see cref="CancelClicked"/> so the host restores
+        /// its live preview. Runs at most once per dialog; does nothing after OK.
+        /// </summary>
+        private void CancelOnce()
+        {
+            if (_resolved)
+                return;
+
+            _resolved = true;
             ViewModel.RevertToOriginal();
             CancelClicked?.Invoke(this, EventArgs.Empty);
-            Close();
         }
 
         private void ResetToDefaultsButton_Click(object sender, RoutedEventArgs e)

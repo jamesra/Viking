@@ -79,14 +79,6 @@ namespace WebAnnotationModel.Objects
             */
         }
 
-        public int CompareTo(LocationLinkKey other)
-        {
-            if (A != other.A)
-                return (int)(other.A - A);
-            else
-                return (int)(other.B - B);
-        }
-
         internal Task<LocationLinkObj> CreateFromServer(ILocationLink newdata)
         {
             LocationLinkObj obj = new LocationLinkObj((long)newdata.A, (long)newdata.B);
@@ -158,10 +150,11 @@ namespace WebAnnotationModel.Objects
 
         int IComparable<ILocationLinkKey>.CompareTo(ILocationLinkKey other)
         {
+            //Same ordering as the subtraction this replaced, without the int cast that could wrap
             if ((ulong)_A != other.A)
-                return (int)(other.A - (ulong)_A);
+                return other.A.CompareTo((ulong)_A);
             else
-                return (int)(other.B - (ulong)_B);
+                return other.B.CompareTo((ulong)_B);
         }
 
         ulong ILocationLink.OtherKey(ulong key)

@@ -113,6 +113,66 @@ namespace VikingXNAGraphics
     }
 
 
+    /// <summary>
+    /// A circle drawn by the procedural <see cref="OverlayShaderEffect.Techniques.CircleRingOverlayEffect"/>:
+    /// a band over the outer quarter of the radius (dark over bright tissue, light over dark) that fades to clear over the next eighth, so the image
+    /// under a polygon vertex stays visible. Needs no texture. Drawn through <see cref="OverlayShaderEffect"/>
+    /// by the overlay-effect overload of <see cref="CircleView.Draw(GraphicsDevice, IScene, OverlayShaderEffect, CircleView[])"/>
+    /// whatever the overlay style; the BasicEffect overload falls back to a flat disc.
+    /// </summary>
+    public class RingCircleView(Circle circle, Color color) : CircleView(circle, color)
+    {
+        /// <summary>
+        /// Overrides <see cref="OverlayShaderEffect.RingSolidStart"/> (radius fraction where the opaque band begins) for
+        /// this ring only. Null keeps the effect's value, which polygon vertices use.
+        /// </summary>
+        public float? SolidStart { get; set; }
+
+        /// <summary>Overrides <see cref="OverlayShaderEffect.RingFadeStart"/> for this ring only. Null keeps the effect's value.</summary>
+        public float? FadeStart { get; set; }
+
+        /// <summary>
+        /// Draws the rings with <paramref name="overlayEffect"/>. Changes the effect's technique and the device's
+        /// vertex/index buffers; call on the render thread.
+        /// </summary>
+        public static void Draw(GraphicsDevice device, IScene scene, OverlayShaderEffect overlayEffect, RingCircleView[] listToDraw)
+        {
+            if (listToDraw.Length == 0)
+                return;
+
+            device.Indices = GlobalPrimitives.GetUnitCircleIndexBuffer(device);
+            device.SetVertexBuffer(GlobalPrimitives.GetUnitCircleVertexBuffer(device));
+            overlayEffect.Technique = OverlayShaderEffect.Techniques.CircleRingOverlayEffect;
+
+            // The band parameters are shared effect state, so put back what the polygon vertices expect.
+            float defaultSolidStart = overlayEffect.RingSolidStart;
+            float defaultFadeStart = overlayEffect.RingFadeStart;
+            try
+            {
+                Matrix worldViewProj = scene.World * scene.ViewProj;
+                foreach (RingCircleView cv in listToDraw)
+                {
+                    overlayEffect.RingSolidStart = cv.SolidStart ?? defaultSolidStart;
+                    overlayEffect.RingFadeStart = cv.FadeStart ?? defaultFadeStart;
+                    overlayEffect.AnnotationColorHSL = cv.HSLColor;
+                    overlayEffect.WorldViewProjMatrix = cv.ModelMatrix * worldViewProj;
+
+                    foreach (EffectPass pass in overlayEffect.CurrentTechnique.Passes)
+                    {
+                        pass.Apply();
+                        device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, 2);
+                    }
+                }
+            }
+            finally
+            {
+                overlayEffect.RingSolidStart = defaultSolidStart;
+                overlayEffect.RingFadeStart = defaultFadeStart;
+            }
+        }
+    }
+
+
     public class CircleView : IColorView, IViewPosition2D, IRenderable
     {
         #region static
@@ -354,6 +414,10 @@ namespace VikingXNAGraphics
             if (listToDraw.Length == 0)
                 return;
 
+            // Rings switch the effect technique, so they are drawn last.
+            RingCircleView[] arrayRingCircles = [.. listToDraw.OfType<RingCircleView>()];
+            listToDraw = [.. listToDraw.Where(c => c is not RingCircleView)];
+
             device.Indices = GlobalPrimitives.GetUnitCircleIndexBuffer(device);
             device.SetVertexBuffer(GlobalPrimitives.GetUnitCircleVertexBuffer(device));
 
@@ -364,7 +428,10 @@ namespace VikingXNAGraphics
             //Draw untextured circles in the array
             listToDraw = [.. listToDraw.Where(c => c as TextureCircleView is null)];
             if (listToDraw.Length == 0)
+            {
+                RingCircleView.Draw(device, scene, overlayEffect, arrayRingCircles);
                 return;
+            }
 
             CircleView[] arraySolidCircles = [.. listToDraw.Where(c => c as TextureCircleView is null)];
 
@@ -385,6 +452,9 @@ namespace VikingXNAGraphics
                             2);
                 }
             }
+
+            RingCircleView.Draw(device, scene, overlayEffect, arrayRingCircles);
+            //CircleView.RestoreGraphicsDevice(device, overlayEffect);
         }
 
 
@@ -424,7 +494,15 @@ namespace VikingXNAGraphics
                         }
                     }
                 }
-                CircleView.Draw(device, scene, instancedEffect, allCircles, rtSize, backgroundTexture, inputLumaAlpha);
+                // Rings use the procedural CircleRingOverlayEffect technique of OverlayShaderEffect, which the
+                // instanced shader does not implement, so they are drawn separately and last.
+                RingCircleView[] ringCircles = [.. allCircles.OfType<RingCircleView>()];
+                CircleView[] instancedCircles = ringCircles.Length == 0 ? allCircles : [.. allCircles.Where(c => c is not RingCircleView)];
+                if (instancedCircles.Length > 0)
+                    CircleView.Draw(device, scene, instancedEffect, instancedCircles, rtSize, backgroundTexture, inputLumaAlpha);
+
+                if (ringCircles.Length > 0 && overlayEffect != null)
+                    RingCircleView.Draw(device, scene, overlayEffect, ringCircles);
                 return;
             }
 

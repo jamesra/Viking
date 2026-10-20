@@ -11,6 +11,66 @@ namespace GeometryTests
     public class CurveFitting
     {
         [TestMethod]
+        public void SmoothPolygonWithClusteredControlPointsDoesNotThrow()
+        {
+            foreach (double gap in new[] { 1e-12, 1e-9, 1e-6, 1e-4 })
+            {
+                Polygon loop;
+                try
+                {
+                    loop = new(new Vector2[]
+                    {
+                        new(0, 0),
+                        new(100, 0),
+                        new(100 + gap, 0 + gap),
+                        new(100 + gap, 100),
+                        new(0, 100),
+                        new(0, 0)
+                    });
+                }
+                catch (System.ArgumentException)
+                {
+                    // Gap below the vector tolerance: the polygon itself is rejected, so Smooth is never reached.
+                    continue;
+                }
+
+                Polygon smoothed = loop.Smooth(4);
+
+                Assert.IsNotNull(smoothed, $"gap {gap}");
+                Assert.IsTrue(smoothed.ExteriorRing.Length >= 4, $"gap {gap}");
+            }
+        }
+
+        [TestMethod]
+        public void SmoothDropsControlPointsCloserThanMinimumSpacing()
+        {
+            Polygon loop = new(new Vector2[]
+            {
+                new(0, 0),
+                new(100, 0),
+                new(101, 1),
+                new(102, 0.5),
+                new(100, 100),
+                new(0, 100),
+                new(0.5, 50),
+                new(0, 0)
+            });
+
+            Polygon smoothed = loop.Smooth(0, 5);
+
+            Vector2[] ring = smoothed.ExteriorRing;
+            for (int i = 0; i < ring.Length - 1; i++)
+            {
+                double next = Vector2.Distance(ring[i], ring[i + 1]);
+                Assert.IsTrue(next >= 5, $"points {i} and {i + 1} are {next} apart");
+            }
+
+            Assert.IsTrue(Vector2.Distance(ring[ring.Length - 2], ring[0]) >= 5);
+            Assert.AreEqual(loop.ExteriorRing.Length, loop.Smooth(0).ExteriorRing.Length, "spacing 0 keeps every point");
+            Assert.IsTrue(ring.Length < loop.ExteriorRing.Length);
+        }
+
+        [TestMethod]
         public void ZeroInterpolationClosedCurveRepeatsFirstPoint()
         {
             Vector2[] points =

@@ -174,7 +174,8 @@ namespace GeometryTests
                     for (int rep = 0; rep < 8; rep++)
                     {
                         Vector2[] p = ControlPoints(random, variant, scale, rep % 2 == 0 ? 0 : 400000);
-                        foreach (uint count in new uint[] { 0, 1, 2, 3, 5, 8, 12 })
+                        // 1 is left out: the reference keeps the old 0 / 0 = NaN result; see NumInterpolationsOfOneKeepsEveryControlPoint.
+                        foreach (uint count in new uint[] { 0, 2, 3, 5, 8, 12 })
                         {
                             uint n = count;
                             AssertSameCurve(
@@ -183,6 +184,38 @@ namespace GeometryTests
                                 $"scale {scale} variant {variant} rep {rep} count {n}");
                         }
                     }
+                }
+            }
+        }
+
+        /// <summary>
+        /// NumInterpolations = 1 used to evaluate the curve at t = 0 / 0 = NaN, so the closed and open curves came back all
+        /// NaN and missing every control point. It now behaves like 2: endpoints kept, curvature refinement still runs.
+        /// </summary>
+        [TestMethod]
+        public void NumInterpolationsOfOneKeepsEveryControlPoint()
+        {
+            Random random = new(37);
+            for (int rep = 0; rep < 20; rep++)
+            {
+                int count = random.Next(3, 40);
+                Vector2[] ring = new Vector2[count];
+                for (int i = 0; i < count; i++)
+                {
+                    double angle = 2 * Math.PI * i / count;
+                    double r = 800 * (1 + (0.3 * random.NextDouble()));
+                    ring[i] = new Vector2(100000 + (r * Math.Cos(angle)), 100000 + (r * Math.Sin(angle)));
+                }
+
+                foreach (bool closed in new[] { true, false })
+                {
+                    Vector2[] curve = CatmullRom.FitCurve(ring, 1, closed);
+                    Assert.IsFalse(curve.Any(p => double.IsNaN(p.X) || double.IsNaN(p.Y)), $"NaN in curve rep {rep} closed {closed}");
+                    foreach (Vector2 cp in ring)
+                        Assert.IsTrue(curve.Contains(cp), $"missing control point {cp} rep {rep} closed {closed}");
+
+                    Vector2[] two = CatmullRom.FitCurve(ring, 2, closed);
+                    Phase7MeshCurveTests.AssertBitIdentical(two, curve, $"1 vs 2 rep {rep} closed {closed}");
                 }
             }
         }

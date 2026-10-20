@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Viking.AnnotationServiceTypes.Interfaces;
@@ -45,13 +46,31 @@ namespace WebAnnotationModel
         public static bool IsInitialized => _current != null;
 
         /// <summary>
+        /// Set when startup could not load the annotation stores; null after a successful <see cref="InitializeAsync"/>.
+        /// The stores stay assigned, so later store use returns empty results instead of throwing on every touch.
+        /// Callers (WebAnnotation module init) show it once.
+        /// </summary>
+        public static Exception InitializationError { get; private set; }
+
+        /// <summary>
         /// Async composition-root entry used by WPF (Jotunn) so splash/UI can keep pumping
         /// while structure types and permitted links load over gRPC.
+        /// A failure is recorded in <see cref="InitializationError"/> and rethrown.
         /// </summary>
         public static async Task InitializeAsync(IAnnotationStores stores, CancellationToken token = default)
         {
             _current = stores ?? throw new ArgumentNullException(nameof(stores));
-            await stores.InitializeAsync(token).ConfigureAwait(false);
+            try
+            {
+                await stores.InitializeAsync(token).ConfigureAwait(false);
+                InitializationError = null;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                InitializationError = ex;
+                Trace.WriteLine("[WebAnnotationModel] Store startup failed; annotations stay empty. " + ex);
+                throw;
+            }
         }
 
         private static IAnnotationStores Current =>

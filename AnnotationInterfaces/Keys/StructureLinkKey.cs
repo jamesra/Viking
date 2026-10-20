@@ -96,6 +96,11 @@ namespace Viking.AnnotationServiceTypes
             return CompareTo((IStructureLinkKey)other);
         }
 
+        /// <summary>
+        /// Orders by the canonical endpoint pair (lower ID first for a bidirectional key), then directional before
+        /// bidirectional. Returns 0 exactly when the keys are the same link, including reversed bidirectional keys, so a
+        /// SortedSet of keys (KeyTracker) keeps two bidirectional links that share their lower ID.
+        /// </summary>
         public static int Compare(IStructureLinkKey A, IStructureLinkKey B)
         {
             if (A is null && B is null)
@@ -107,35 +112,22 @@ namespace Viking.AnnotationServiceTypes
             if (B is null)
                 return -1;
 
-            if (A.Directional.Equals(B.Directional) && !A.Directional)
-            {
-                var A_Low = Math.Min(A.SourceID, A.TargetID);
-                var A_High = Math.Max(A.SourceID, A.TargetID);
+            int firstCompare = First(A).CompareTo(First(B));
+            if (firstCompare != 0)
+                return firstCompare;
 
-                var B_Low = Math.Min(B.SourceID, B.TargetID);
-                var B_High = Math.Max(B.SourceID, B.TargetID);
-
-                int lowCompare = A_Low.CompareTo(B_Low);
-                if (lowCompare != 0)
-                    return lowCompare;
-
-                int highCompare = B_High.CompareTo(B_High);
-                if (highCompare != 0)
-                    return highCompare;
-            }
-            else
-            {
-                int sourceCompare = A.SourceID.CompareTo(B.SourceID);
-                if (sourceCompare != 0)
-                    return sourceCompare;
-
-                int targetCompare = A.TargetID.CompareTo(B.TargetID);
-                if (targetCompare != 0)
-                    return targetCompare;
-            }
+            int secondCompare = Second(A).CompareTo(Second(B));
+            if (secondCompare != 0)
+                return secondCompare;
 
             return A.Directional.CompareTo(B.Directional);
         }
+
+        /// <summary>The first endpoint in canonical order: the lower ID of a bidirectional key, else the source.</summary>
+        private static ulong First(IStructureLinkKey key) => key.Directional ? key.SourceID : Math.Min(key.SourceID, key.TargetID);
+
+        /// <summary>The second endpoint in canonical order: the higher ID of a bidirectional key, else the target.</summary>
+        private static ulong Second(IStructureLinkKey key) => key.Directional ? key.TargetID : Math.Max(key.SourceID, key.TargetID);
 
         public int CompareTo(IStructureLinkKey other)
         {
@@ -164,38 +156,8 @@ namespace Viking.AnnotationServiceTypes
                    other.Directional == !this.Bidirectional;
         }
 
-        public static bool operator ==(StructureLinkKey A, StructureLinkKey B)
-        {
-            if (A.Bidirectional == B.Bidirectional && A.Bidirectional)
-            {
-                if (A.SourceID == B.SourceID &&
-                    A.TargetID == B.TargetID)
-                    return true;
-                else if (A.SourceID == B.TargetID &&
-                         A.TargetID == B.SourceID)
-                    return true;
+        public static bool operator ==(StructureLinkKey A, StructureLinkKey B) => A.Equals(B);
 
-                return false;
-            }
-            else
-                return (A.SourceID == B.SourceID) && (A.TargetID == B.TargetID) && (A.Bidirectional == B.Bidirectional);
-        }
-
-        public static bool operator !=(StructureLinkKey A, StructureLinkKey B)
-        {
-            if (A.Bidirectional == B.Bidirectional && A.Bidirectional)
-            {
-                if (A.SourceID == B.SourceID &&
-                    A.TargetID == B.TargetID)
-                    return false;
-                else if (A.SourceID == B.TargetID &&
-                         A.TargetID == B.SourceID)
-                    return false;
-
-                return true;
-            }
-            else
-                return !((A.SourceID == B.SourceID) && (A.TargetID == B.TargetID) && (A.Bidirectional == B.Bidirectional));
-        }
+        public static bool operator !=(StructureLinkKey A, StructureLinkKey B) => !A.Equals(B);
     }
 }

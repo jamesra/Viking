@@ -1,10 +1,12 @@
 using Geometry;
+using Geometry.Meshing;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
+using rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
@@ -52,11 +54,18 @@ namespace WebAnnotation
         /// 2. Locations on adjacent section
         /// 3. Locations who have a distance greater than 1
         /// 3. Location Links
+        /// When <paramref name="preferCloserLocationLinks"/> is true, a location link the mouse is over (distance &lt;= 1)
+        /// beats the step 1 result if its normalized distance is strictly smaller, so a link arrow drawn under a larger
+        /// circle stays selectable. Only hover/select callers opt in; link-target pickers keep the circle-first order.
         /// </summary>
         /// <param name="listHitTestObjects"></param>
         /// <param name="SectionNumber"></param>
+        /// <param name="preferCloserLocationLinks">Opt in to the closer-location-link rule above.</param>
         /// <returns></returns>
-        public static HitTestResult NearestObjectOnCurrentSectionThenAdjacent(this ICollection<HitTestResult> listHitTestObjects, int SectionNumber)
+        public static HitTestResult NearestObjectOnCurrentSectionThenAdjacent(
+            this ICollection<HitTestResult> listHitTestObjects,
+            int SectionNumber,
+            bool preferCloserLocationLinks = false)
         {
             if (listHitTestObjects.Count == 0)
             {
@@ -74,7 +83,21 @@ namespace WebAnnotation
             if (listLocationsOnSectionContainingPointAndStructureLinks.Count > 0)
             {
                 listLocationsOnSectionContainingPointAndStructureLinks.Sort(new HitTest_Z_Depth_Distance_Sorter());
-                return listLocationsOnSectionContainingPointAndStructureLinks.First();
+                HitTestResult primary = listLocationsOnSectionContainingPointAndStructureLinks.First();
+
+                // Depth ordering alone hides a location link drawn under a current-section circle. Link distance is
+                // normalized by the link's own line radius, so a link that is genuinely closer to the mouse wins,
+                // and only if the mouse is over it (<= 1). Adjacent-section circles never take this path.
+                if (preferCloserLocationLinks)
+                {
+                    HitTestResult closerLink = NearestLocationLinkContainingPoint(listHitTestObjects);
+                    if (closerLink != null && closerLink.Distance < primary.Distance)
+                    {
+                        return closerLink;
+                    }
+                }
+
+                return primary;
             }
 
             List<HitTestResult> listObjectsOnAdjacentSection = [.. listLocations.Where(l => l.Z != SectionNumber)];
@@ -102,6 +125,23 @@ namespace WebAnnotation
             List<HitTestResult> remaining = [.. listHitTestObjects];
             remaining.Sort(new HitTest_Z_Distance_Sorter());
             return remaining.First();
+        }
+
+        /// <summary>
+        /// The closest location link that the mouse is actually over
+        /// (<see cref="HitTestResult.Distance"/> &lt;= 1, normalized by the link's own radius).
+        /// Returns null when none qualifies.
+        /// </summary>
+        internal static HitTestResult NearestLocationLinkContainingPoint(IEnumerable<HitTestResult> hits)
+        {
+            List<HitTestResult> links = [.. hits.Where(h => h.Distance <= 1.0 && h.obj is IViewLocationLink)];
+            if (links.Count == 0)
+            {
+                return null;
+            }
+
+            links.Sort(new HitTest_Distance_Sorter());
+            return links[0];
         }
 
         /// <summary>
@@ -139,21 +179,6 @@ namespace WebAnnotation
         }
     }
 
-    public static class RectangleExtensions
-    {
-        public static Rectangle ToMosaicSpace(this in Rectangle volumeRect, Viking.VolumeModel.IVolumeToSectionTransform mapper)
-        {
-            Vector2[] MosaicCorners = mapper.VolumeToSection([volumeRect.LowerLeft, volumeRect.LowerRight, volumeRect.UpperLeft, volumeRect.UpperRight]);
-
-            double MinX = MosaicCorners.Min(p => p.X);
-            double MaxX = MosaicCorners.Max(p => p.X);
-            double MinY = MosaicCorners.Min(p => p.Y);
-            double MaxY = MosaicCorners.Max(p => p.Y);
-
-            return new Rectangle(MinX, MaxX, MinY, MaxY);
-        }
-    }
-
     public static class AnnotationExtensions
     {
         private static Viking.AnnotationServiceTypes.Interfaces.LocationType StringToLocationType(string annotationType)
@@ -173,9 +198,9 @@ namespace WebAnnotation
             throw new ArgumentException("Unknown annotation type " + annotationType);
         }
 
-        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command) => StringToLocationType(command.AnnotationType);
+        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.CreateStructureCommandAction command) => StringToLocationType(command.AnnotationType);
 
-        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command) => StringToLocationType(command.AnnotationType);
+        public static Viking.AnnotationServiceTypes.Interfaces.LocationType GetLocationType(this rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd.ChangeLocationAnnotationTypeAction command) => StringToLocationType(command.AnnotationType);
 
         public static void SubscribeToPropertyChangeEvents(this WebAnnotationModel.Objects.LocationObj loc, System.Windows.IWeakEventListener listener)
         {
@@ -260,16 +285,44 @@ namespace WebAnnotation
     }
 
     /// <summary>
+    /// Centroid of one constrained Delaunay triangle and that triangle's area.
+    /// Area is Heron's formula from <see cref="Triangle.Area"/>, so it is never negative.
+    /// </summary>
+    internal readonly struct PolygonTriangleCentroid
+    {
+        public PolygonTriangleCentroid(Vector2 point, double area)
+        {
+            Point = point;
+            Area = area;
+        }
+
+        public Vector2 Point { get; }
+
+        public double Area { get; }
+    }
+
+    /// <summary>
     /// Extensions for generating representative points from annotations for segmentation background prompts.
     /// </summary>
     public static class AnnotationPointExtensions
     {
+        internal static readonly PolygonNegativePromptCache PolygonPromptCache = new();
+
         /// <summary>
         /// Returns representative points for a collection of annotations.
-        /// For polygons: centroid if inside polygon, else skipped. For lines/points: vertices. For circles/ellipses: center.
+        /// For polygons: one centroid per constrained-triangulation face of the
+        /// unsmoothed control-point ring (<see cref="LocationObj.MosaicShape"/>).
+        /// <see cref="LocationObj.VolumeShape"/> is <c>GetSmoothedShape</c> for
+        /// CURVEPOLYGON and must not be meshed here — interpolation multiplies
+        /// faces. Polygon avoid marks are the centroid of the largest MosaicShape
+        /// Delaunay triangle (one point), not every face. Falls back to the polygon
+        /// centroid if meshing fails and that centroid is inside. For lines/points:
+        /// vertices. For circles/ellipses: center.
+        /// Polygon samples are cached by location ID and LastModified so a batch of
+        /// SegmentImage calls does not retriangulate the same neighbors.
         /// </summary>
         /// <param name="annotations">Annotations to extract points from</param>
-        /// <returns>List of points in section/mosaic coordinates</returns>
+        /// <returns>Points in section/mosaic coordinates.</returns>
         public static IReadOnlyList<Vector2> GetAnnotationRepresentativePoints(IEnumerable<LocationObj> annotations)
         {
             if (annotations is null)
@@ -289,9 +342,11 @@ namespace WebAnnotation
                     case LocationType.POLYGON:
                     case LocationType.CURVEPOLYGON:
                     case LocationType.CLOSEDCURVE:
-                        Vector2? polygonPoint = TryGetPolygonRepresentativePoint(shape);
-                        if (polygonPoint.HasValue)
-                            result.Add(polygonPoint.Value);
+                        result.AddRange(PolygonPromptCache.GetOrAdd(
+                            loc.ID,
+                            loc.LastModified,
+                            typeCode,
+                            () => TryGetUnsmoothedPolygonRepresentativePoints(loc)));
                         break;
                     case LocationType.POLYLINE:
                     case LocationType.OPENCURVE:
@@ -313,36 +368,238 @@ namespace WebAnnotation
             return result;
         }
 
-        private static Vector2? TryGetPolygonRepresentativePoint(SqlGeometry shape)
+        /// <summary>
+        /// One interior point per constrained Delaunay triangle, in mesh order. Triangulate is
+        /// centroid-relative, so each face centroid is translated back. SAM2 foreground clicks
+        /// decimate this set in <see cref="WebAnnotation.UI.Commands.Segmentation.PolygonSegmentationPrompts"/>.
+        /// Neighbor avoid marks use <see cref="GetLargestTriangleCentroidPoint"/> instead.
+        /// </summary>
+        internal static IReadOnlyList<Vector2> GetPolygonTriangleCentroidPoints(Polygon polygon)
+            => [.. GetPolygonTriangleCentroidSamples(polygon).Select(sample => sample.Point)];
+
+        /// <summary>
+        /// Same centroids as <see cref="GetPolygonTriangleCentroidPoints"/>, each with its triangle area.
+        /// Mesh order is preserved so a later stable sort can keep ties in that order. The fallback
+        /// polygon centroid, when meshing fails and the point is inside, has area 0.
+        /// </summary>
+        internal static IReadOnlyList<PolygonTriangleCentroid> GetPolygonTriangleCentroidSamples(Polygon polygon)
         {
+            if (polygon is null)
+                return [];
+
             try
             {
-                if (shape.GeometryType() != SupportedGeometryType.POLYGON && shape.GeometryType() != SupportedGeometryType.CURVEPOLYGON)
-                    return null;
+                TriangulationMesh<IVertex2D<PolygonIndex>> mesh = polygon.Triangulate();
+                if (mesh?.Faces.Count > 0)
+                {
+                    Vector2 origin = polygon.Centroid;
+                    List<PolygonTriangleCentroid> samples = [];
+                    foreach (IFace face in mesh.Faces)
+                    {
+                        if (!face.IsTriangle())
+                            continue;
 
-                Polygon polygon = shape.ToPolygon();
-                Vector2 centroid = polygon.Centroid;
-                return polygon.Contains(centroid) ? centroid : null;
+                        try
+                        {
+                            Vector2 centroid = mesh.Centroid(face) + origin;
+                            if (!polygon.Contains(centroid))
+                                continue;
+
+                            samples.Add(new PolygonTriangleCentroid(centroid, mesh.ToTriangle(face).Area));
+                        }
+                        catch (ArgumentException)
+                        {
+                        }
+                    }
+
+                    if (samples.Count > 0)
+                        return samples;
+                }
+            }
+            catch (EdgesIntersectTriangulationException)
+            {
+            }
+            catch (NonconformingTriangulationException)
+            {
             }
             catch (ArgumentException)
             {
-                return null;
+            }
+
+            Vector2 fallback = polygon.Centroid;
+            return polygon.Contains(fallback) ? [new PolygonTriangleCentroid(fallback, 0)] : [];
+        }
+
+        /// <summary>
+        /// Centroid of the largest constrained Delaunay face whose centroid is inside
+        /// the ring. Called from the polygon negative-prompt factory so dense neighbors
+        /// send one avoid mark, not one per triangle. Fallback is the polygon centroid
+        /// when meshing fails and that point is inside.
+        /// </summary>
+        internal static IReadOnlyList<Vector2> GetLargestTriangleCentroidPoint(Polygon polygon)
+        {
+            if (polygon is null)
+                return [];
+
+            try
+            {
+                TriangulationMesh<IVertex2D<PolygonIndex>> mesh = polygon.Triangulate();
+                if (mesh?.Faces.Count > 0)
+                {
+                    Vector2 origin = polygon.Centroid;
+                    Vector2 best = default;
+                    double bestArea = double.NegativeInfinity;
+                    bool found = false;
+                    foreach (IFace face in mesh.Faces)
+                    {
+                        if (!face.IsTriangle())
+                            continue;
+
+                        try
+                        {
+                            Vector2 centroid = mesh.Centroid(face) + origin;
+                            if (!polygon.Contains(centroid))
+                                continue;
+
+                            double area = mesh.ToTriangle(face).Area;
+                            if (area <= bestArea)
+                                continue;
+
+                            bestArea = area;
+                            best = centroid;
+                            found = true;
+                        }
+                        catch (ArgumentException)
+                        {
+                        }
+                    }
+
+                    if (found)
+                        return [best];
+                }
+            }
+            catch (EdgesIntersectTriangulationException)
+            {
+            }
+            catch (NonconformingTriangulationException)
+            {
+            }
+            catch (ArgumentException)
+            {
+            }
+
+            Vector2 fallback = polygon.Centroid;
+            return polygon.Contains(fallback) ? [fallback] : [];
+        }
+
+        /// <summary>
+        /// Largest MosaicShape Delaunay-face centroid of the stored control-point ring.
+        /// Called from the polygon cache factory. Do not mesh VolumeShape here.
+        /// </summary>
+        private static IReadOnlyList<Vector2> TryGetUnsmoothedPolygonRepresentativePoints(LocationObj loc)
+        {
+            try
+            {
+                SqlGeometry mosaic = loc?.MosaicShape?.ToSqlGeometry();
+                if (mosaic is null)
+                    return [];
+
+                if (mosaic.GeometryType() != SupportedGeometryType.POLYGON &&
+                    mosaic.GeometryType() != SupportedGeometryType.CURVEPOLYGON)
+                {
+                    return [];
+                }
+
+                return GetLargestTriangleCentroidPoint(mosaic.ToPolygon());
+            }
+            catch (ArgumentException)
+            {
+                return [];
             }
         }
     }
 
+    /// <summary>
+    /// Caches polygon negative-prompt points by location ID. Entries are reused until
+    /// LastModified or TypeCode changes, then dropped when the cache exceeds a cap so
+    /// unused IDs from earlier sections do not grow without bound.
+    /// </summary>
+    internal sealed class PolygonNegativePromptCache
+    {
+        internal const int MaxEntries = 2048;
+
+        private readonly ConcurrentDictionary<long, (DateTime LastModified, LocationType TypeCode, IReadOnlyList<Vector2> Points)> entries = new();
+
+        public IReadOnlyList<Vector2> GetOrAdd(
+            long locationId,
+            DateTime lastModified,
+            LocationType typeCode,
+            Func<IReadOnlyList<Vector2>> factory)
+        {
+            if (entries.TryGetValue(locationId, out var cached) &&
+                cached.LastModified == lastModified &&
+                cached.TypeCode == typeCode)
+            {
+                return cached.Points;
+            }
+
+            IReadOnlyList<Vector2> points = factory?.Invoke() ?? [];
+            if (entries.Count >= MaxEntries)
+                entries.Clear();
+
+            entries[locationId] = (lastModified, typeCode, points);
+            return points;
+        }
+
+        public void Remove(long locationId) => entries.TryRemove(locationId, out _);
+
+        public void Clear() => entries.Clear();
+    }
+
+    /// <summary>
+    /// Lookups that map spatial-index keys to the views stored for them.
+    /// </summary>
+    internal static class ConcurrentDictionaryExtensions
+    {
+        /// <summary>
+        /// Returns the values stored for <paramref name="keys"/>, in key order, skipping keys that are not in
+        /// <paramref name="dictionary"/>. The section link view models remove a link from their dictionary before
+        /// its R-tree entry and readers take no lock, so a key just read from the tree can already be gone; the
+        /// indexer would throw <see cref="KeyNotFoundException"/> there.
+        /// </summary>
+        /// <param name="dictionary">The views by key.</param>
+        /// <param name="keys">Keys to look up, usually an R-tree query result.</param>
+        /// <returns>A new list holding the value of each key still present.</returns>
+        internal static List<TValue> ValuesForKeys<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dictionary, IEnumerable<TKey> keys)
+        {
+            List<TValue> values = keys is ICollection<TKey> collection ? new(collection.Count) : [];
+            foreach (TKey key in keys)
+            {
+                if (dictionary.TryGetValue(key, out TValue value))
+                {
+                    values.Add(value);
+                }
+            }
+
+            return values;
+        }
+    }
+
+    /// <summary>
+    /// <c>ForEach</c> helpers for sequences. Arrays use the <see cref="IEnumerable{T}"/> overloads; the indexed overload passes a zero-based position. A null <c>source</c> or <c>action</c> throws <see cref="ArgumentNullException"/>.
+    /// </summary>
     public static class LINQLikeExtensions
     {
         public static void ForEach<T>(this IEnumerable<T> source, Action<T> action)
         {
             if (source is null)
             {
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
             }
 
             if (action is null)
             {
-                throw new ArgumentNullException("action");
+                throw new ArgumentNullException(nameof(action));
             }
 
             foreach (T item in source)
@@ -355,12 +612,12 @@ namespace WebAnnotation
         {
             if (source is null)
             {
-                throw new ArgumentNullException("source");
+                throw new ArgumentNullException(nameof(source));
             }
 
             if (action is null)
             {
-                throw new ArgumentNullException("action");
+                throw new ArgumentNullException(nameof(action));
             }
 
             int i = 0;
@@ -368,24 +625,6 @@ namespace WebAnnotation
             {
                 action(item, i);
                 i++;
-            }
-        }
-
-        public static void ForEach<T>(this T[] source, Action<T, int> action)
-        {
-            if (source is null)
-            {
-                throw new ArgumentNullException("source");
-            }
-
-            if (action is null)
-            {
-                throw new ArgumentNullException("action");
-            }
-
-            for (int i = 0; i < source.Length; i++)
-            {
-                action(source[i], i);
             }
         }
     }

@@ -26,6 +26,7 @@ using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 
+
 namespace Viking.UI.Controls
 {
     public partial class SectionViewerControl : VikingXNAWinForms.ViewerControl, IHelpStrings, IPenEvents, IGestureEvents
@@ -206,6 +207,8 @@ namespace Viking.UI.Controls
                     value = [new()];
                 }
 
+                bool itemsAddedOrRemoved = false;
+
                 //Update the channels we have
                 for (int i = 0; i < value.Length; i++)
                 {
@@ -226,6 +229,7 @@ namespace Viking.UI.Controls
                         // Keep channel values directly after the "Channels:" label, ahead of the Corrections item.
                         StatusBar.Items.Insert(StatusBar.Items.IndexOf(tsChannels) + 1 + _StatusChannels.Count, tsChannelItem);
                         _StatusChannels.Add(tsChannelItem);
+                        itemsAddedOrRemoved = true;
                     }
 
                     tsChannelItem.Text = channelName;
@@ -244,8 +248,13 @@ namespace Viking.UI.Controls
                     ToolStripItem tsChannelItem = _StatusChannels[i];
                     StatusBar.Items.Remove(tsChannelItem);
                     _StatusChannels.RemoveAt(i);
+                    itemsAddedOrRemoved = true;
                 }
 
+                // Draw assigns StatusChannels every frame. Re-arranging unconditionally
+                // removes/re-adds every status item each frame and starves the bar of repaints.
+                if (itemsAddedOrRemoved)
+                    ArrangeStatusBarTrailingItems();
             }
         }
 
@@ -277,17 +286,11 @@ namespace Viking.UI.Controls
                     StatusSection = value.Number;
                 }
 
-                if (OldSection != null)
-                {
-                    OldSection.OnReferenceSectionChanged -= this.InternalReferenceSectionChanged;
-                    OldSection.VolumeViewModel.TransformChanged -= this.OnVolumeTransformChanged;
-                    OldSection.TransformChanged -= this.OnSectionTransformChanged;
-                    OldSection.PropertyChanged -= this.OnSectionPropertyChanged;
-                }
+                UnsubscribeSection(OldSection);
 
                 _Section = value;
                 InvalidateSectionTextureCache();
-                UpdateCorrectionShim();
+                UpdateCorrectionShimSnapped();
                 if (_Section != null)
                 {
                     //NOTE: We have to update the section before we ask for the reference section
@@ -476,7 +479,9 @@ namespace Viking.UI.Controls
             StatusBar = new System.Windows.Forms.StatusStrip
             {
                 Parent = this,
-                Dock = System.Windows.Forms.DockStyle.Bottom
+                Dock = System.Windows.Forms.DockStyle.Bottom,
+                // A StatusStrip hides item tooltips by default; the Pen/AutoPoly/Seg chips and service-error text rely on them.
+                ShowItemToolTips = true
             };
 
             tsSection = new System.Windows.Forms.ToolStripLabel("Section: ");
@@ -498,6 +503,36 @@ namespace Viking.UI.Controls
             CommandQueue.OnCommandInjected += this.OnCommandInjected;
             CommandQueue.OnQueueChanged += this.OnCommandQueueChanged;
             PendingTextureQueue.QueueBecameEmpty += this.OnPendingTextureQueueBecameEmpty;
+
+            this.Disposed += (_, _) => UnsubscribeLongLivedEvents();
+        }
+
+        /// <summary>
+        /// Removes this control's handlers from publishers that outlive it: the static
+        /// <see cref="State.ItemSelected"/> and <see cref="PendingTextureQueue.QueueBecameEmpty"/> events and the
+        /// current section and volume view models. Without this, every viewer window the user closes stays rooted
+        /// and keeps receiving Invalidate calls.
+        /// </summary>
+        private void UnsubscribeLongLivedEvents()
+        {
+            State.ItemSelected -= ObjectSelectedHandler;
+            PendingTextureQueue.QueueBecameEmpty -= this.OnPendingTextureQueueBecameEmpty;
+            UnsubscribeSection(_Section);
+        }
+
+        /// <summary>
+        /// Removes the handlers the <see cref="Section"/> setter adds to <paramref name="section"/> and its volume view model.
+        /// </summary>
+        /// <param name="section">Section previously shown by this control; null does nothing.</param>
+        private void UnsubscribeSection(SectionViewModel? section)
+        {
+            if (section is null)
+                return;
+
+            section.OnReferenceSectionChanged -= this.InternalReferenceSectionChanged;
+            section.VolumeViewModel.TransformChanged -= this.OnVolumeTransformChanged;
+            section.TransformChanged -= this.OnSectionTransformChanged;
+            section.PropertyChanged -= this.OnSectionPropertyChanged;
         }
 
         protected override void OnHandleCreated(EventArgs e)
@@ -562,6 +597,34 @@ namespace Viking.UI.Controls
             {
                 timer.Enabled = true;
                 Invalidate();
+            }
+        }
+
+        /// <summary>
+        /// Pixels of the client area covered by visible docked child controls (the viewer toolstrip, the status bar and
+        /// the F1 help bar). The render surface runs underneath them, so on-screen buttons drawn into the scene must stay
+        /// clear of these insets or they are hidden.
+        /// </summary>
+        public Padding DockedChromeInsets
+        {
+            get
+            {
+                int left = 0, top = 0, right = 0, bottom = 0;
+                foreach (Control child in Controls)
+                {
+                    if (!child.Visible)
+                        continue;
+
+                    switch (child.Dock)
+                    {
+                        case DockStyle.Left: left += child.Width; break;
+                        case DockStyle.Top: top += child.Height; break;
+                        case DockStyle.Right: right += child.Width; break;
+                        case DockStyle.Bottom: bottom += child.Height; break;
+                    }
+                }
+
+                return new Padding(left, top, right, bottom);
             }
         }
 
@@ -744,6 +807,21 @@ namespace Viking.UI.Controls
             if (!DesignMode)
             {
                 this.menuStrip.Parent = this.Parent;
+                if (this.Parent is Form hostForm)
+                    hostForm.MainMenuStrip = this.menuStrip;
+
+                // Zoom / Home live on the viewer tool strip; create it before overlays so
+                // annotation toggles append after the magnification buttons.
+                EnsureViewerToolStrip();
+
+                // Re-home a tool strip created before Parent existed (overlay attach race).
+                if (_viewerToolStrip is not null && this.Parent is not null &&
+                    _viewerToolStrip.Parent != this.Parent)
+                {
+                    _viewerToolStrip.Parent = this.Parent;
+                }
+
+                EnsureViewerChromeZOrder();
 
                 // Zoom / Home live on the viewer tool strip; create it before overlays so
                 // annotation toggles append after the magnification buttons.
@@ -1200,116 +1278,58 @@ namespace Viking.UI.Controls
         }
 
         /// <summary>
-        /// Swaps the current section for the section above it
+        /// Moves up <paramref name="nSections"/> sections, skipping missing section numbers, and stops at the last
+        /// section when fewer than <paramref name="nSections"/> remain. See <see cref="SectionStepper.Target"/>.
         /// </summary>
-        public void StepUpNSections(int nSections)
+        public void StepUpNSections(int nSections) => StepNSections(nSections);
+
+        /// <summary>
+        /// Moves down <paramref name="nSections"/> sections, skipping missing section numbers, and stops at the first
+        /// section when fewer than <paramref name="nSections"/> remain. See <see cref="SectionStepper.Target"/>.
+        /// </summary>
+        public void StepDownNSections(int nSections) => StepNSections(-nSections);
+
+        /// <summary>Shows the section <see cref="SectionStepper.Target"/> picks for a signed step from the current section.</summary>
+        private void StepNSections(int signedSteps)
         {
             if (Section is null || State.volume == null)
                 return;
             SortedList<int, SectionViewModel> sections = UI.State.volume.SectionViewModels;
+            int current = this.Section.Number;
 
-            /* find the next section */
-            int iStart = this.Section.Number + nSections;
-            while (iStart <= sections.Keys.Max())
-            {
-                if (sections.ContainsKey(iStart))
-                {
-                    this.Section = sections[iStart];
-                    break;
-                }
-                iStart++;
-            }
+            int target = SectionStepper.Target(sections.Keys, current, signedSteps);
+            if (target != current)
+                this.Section = sections[target];
         }
 
-        public void StepDownNSections(int nSections)
-        {
-            if (Section is null || State.volume == null)
-                return;
-            SortedList<int, SectionViewModel> sections = UI.State.volume.SectionViewModels;
+        /// <summary>
+        /// The largest texture side this viewer's graphics device can create: 4096 for the HiDef profile, 2048 for Reach. Anything drawn
+        /// as one texture, such as a mask being edited, is downsampled to fit.
+        /// </summary>
+        public int MaxTextureSide =>
+            graphicsDeviceService?.GraphicsDevice?.GraphicsProfile == GraphicsProfile.HiDef ? 4096 : 2048;
 
-            /* find the next section */
-            int iStart = this.Section.Number - nSections;
-            while (iStart >= sections.Keys.Min())
-            {
-                if (sections.ContainsKey(iStart))
-                {
-                    this.Section = sections[iStart];
-                    break;
-                }
-                iStart--;
-            }
-        }
-
+        /// <summary>
+        /// Exports the volume-space rectangle <paramref name="MyRect"/> of section <paramref name="Z"/> as PNG tiles next to
+        /// <paramref name="Filename"/>, rendered with <see cref="Viking.Common.FrameExportPlan"/>: one tile when the frame fits, otherwise a grid
+        /// whose tile size is capped at 4096 pixels on HiDef devices and 2048 otherwise. Each tile file name appends the section, tile center,
+        /// and downsample to the base name. A tile whose file already exists is skipped, not re-rendered. At most two tiles render and
+        /// save at a time. Called by the frame capture export.
+        /// </summary>
+        /// <param name="Downsample">Volume-space pixels per output pixel.</param>
+        /// <param name="IncludeOverlays">True to draw annotation overlays on each tile.</param>
         public async Task ExportImage(string Filename, Geometry.Rectangle MyRect, int Z, double Downsample, bool IncludeOverlays)
         {
             Debug.Assert(MyRect.Left < MyRect.Right);
             Debug.Assert(MyRect.Bottom < MyRect.Top);
 
-            //Image Dimensions
-            int RequestedWorldX = (int)Math.Floor(MyRect.Center.X);
-            int RequestedWorldY = (int)Math.Floor(MyRect.Center.Y);
-            int RequestedWorldWidth = (int)Math.Round(MyRect.Width);
-            int RequestedWorldHeight = (int)Math.Round(MyRect.Height);
-
-            //Image dimensions on screen
-            int CapturedTileSizeX = (int)(Math.Round(MyRect.Width / Downsample));
-            int CapturedTileSizeY = (int)(Math.Round(MyRect.Height / Downsample));
-
-            int FinalImageWidth = CapturedTileSizeX;
-            int FinalImageHeight = CapturedTileSizeY;
-
-            int AdjustedWorldX = RequestedWorldX;
-            int AdjustedWorldY = RequestedWorldY;
-            int AdjustedWorldWidth = RequestedWorldWidth;
-            int AdjustedWorldHeight = RequestedWorldHeight;
-
-            int WorldTileSizeX = RequestedWorldWidth;
-            int WorldTileSizeY = RequestedWorldHeight;
-
-            int numTilesX = 1;
-            int numTilesY = 1;
+            int TileCaptureMaxSize = Device.Adapter.IsProfileSupported(GraphicsProfile.HiDef) ? 4096 : 2048;
+            FrameExportPlan plan = new(MyRect.Center.X, MyRect.Center.Y, MyRect.Width, MyRect.Height, Downsample, TileCaptureMaxSize);
 
             Camera camera = new()
             {
                 Downsample = Downsample
             };
-
-            //Figure out if we can do the entire shot at once or have to divide it up
-            if (CapturedTileSizeX <= 2048 && CapturedTileSizeX <= 2048)
-            {
-
-            }
-            else
-            {
-                //The dimensions of a single cell in our captureg rid
-                int TileCaptureMaxSize = Device.Adapter.IsProfileSupported(GraphicsProfile.HiDef) ? 4096 : 2048;
-
-                //Find out how many tiles we'll have to capture using a buffer smaller than the current screen size
-                numTilesX = (int)Math.Ceiling((double)CapturedTileSizeX / (double)TileCaptureMaxSize);
-                numTilesY = (int)Math.Ceiling((double)CapturedTileSizeY / (double)TileCaptureMaxSize);
-
-                WorldTileSizeX = RequestedWorldWidth / numTilesX;
-                WorldTileSizeY = RequestedWorldHeight / numTilesY;
-
-                CapturedTileSizeX = (int)Math.Round(WorldTileSizeX / Downsample);
-                CapturedTileSizeY = (int)Math.Round(WorldTileSizeY / Downsample);
-
-                FinalImageWidth = CapturedTileSizeX * numTilesX;
-                FinalImageHeight = CapturedTileSizeY * numTilesY;
-
-                //CaptureWidth = TileSizeX * numTilesX;
-                //CaptureHeight = TileSizeY * numTilesY;                
-
-                AdjustedWorldWidth = WorldTileSizeX * numTilesX;
-                AdjustedWorldHeight = WorldTileSizeY * numTilesY;
-
-                int OffsetX = RequestedWorldWidth - AdjustedWorldWidth;
-                int OffsetY = RequestedWorldHeight - AdjustedWorldHeight;
-
-                AdjustedWorldX = RequestedWorldX + (OffsetX / 2);
-                AdjustedWorldY = RequestedWorldY + (OffsetY / 2);
-            }
-
 
             List<Task> listTasks = [];
             int MaxActiveExports = 2;
@@ -1317,16 +1337,14 @@ namespace Viking.UI.Controls
                 GraphicsDevice graphicsDevice = this.graphicsDeviceService.GraphicsDevice;
 
                 //Figure out how to cut the rectangle into 512x512 cells and take the screenshots
-                for (int iRow = 0; iRow < numTilesY; iRow++)
+                for (int iRow = 0; iRow < plan.NumTilesY; iRow++)
                 {
-                    double Y = AdjustedWorldY + (iRow * WorldTileSizeY);
-
-                    for (int iCol = 0; iCol < numTilesX; iCol++)
+                    for (int iCol = 0; iCol < plan.NumTilesX; iCol++)
                     {
                         //Figure out the rectangle we need to capture at this location
-                        double X = AdjustedWorldX + (iCol * WorldTileSizeX);
+                        (double X, double Y) = plan.TileCenter(iCol, iRow);
 
-                        VikingXNA.Scene TileScene = new(new Viewport(0, 0, CapturedTileSizeX, CapturedTileSizeY), camera);
+                        VikingXNA.Scene TileScene = new(new Viewport(0, 0, plan.CapturedTileSizeX, plan.CapturedTileSizeY), camera);
                         TileScene.Camera.LookAt = new Vector2((float)X, (float)Y);
                         string tile_filename = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Filename),
                             $"{System.IO.Path.GetFileNameWithoutExtension(Filename)}_Z{Z}_X{X}_Y{Y}_W{Width}_H{Height}_DS{Downsample}.png");
@@ -1336,11 +1354,7 @@ namespace Viking.UI.Controls
                             listTasks.Add(ExportTileToFileAsync(TileScene, (float)X, (float)Y, Z, IncludeOverlays, false, tile_filename));
                         }
 
-                        while (listTasks.Count > 0 && (listTasks.Count > MaxActiveExports))
-                        {
-                            var completedTask = await Task.WhenAny(listTasks);
-                            listTasks.Remove(completedTask);
-                        }
+                        await TaskChaining.DrainToAsync(listTasks, MaxActiveExports);
 
 
                     }
@@ -1348,11 +1362,7 @@ namespace Viking.UI.Controls
                     System.GC.Collect();
                 }
 
-                while (listTasks.Count > 0)
-                {
-                    var completedTask = await Task.WhenAny(listTasks);
-                    listTasks.Remove(completedTask);
-                }
+                await TaskChaining.DrainToAsync(listTasks, 0);
             }
         }
 
@@ -1392,8 +1402,13 @@ namespace Viking.UI.Controls
                 System.IO.DirectoryInfo dirInfo = System.IO.Directory.Exists(path) == false ? System.IO.Directory.CreateDirectory(path) : new System.IO.DirectoryInfo(path);
                 dirInfo.Attributes &= ~System.IO.FileAttributes.ReadOnly;
 
-                //Get the boundaries of the section (use S, not this.Section, so each exported section has correct tile grid)
+                //Get the boundaries of the exported section S, not the section on screen; this runs off the UI thread,
+                //so this.Section is not switched here (RenderSceneToTexture switches it per tile).
                 MappingBase mapping = S.VolumeViewModel.GetTileMapping(Volume.ActiveVolumeTransform, S.Number, this.CurrentChannel, this.CurrentTransform);
+
+                //A section without this channel or transform has nothing to export
+                if (mapping is null)
+                    continue;
 
                 //Figure out how much we need to capture
                 Size TileImageSize = new(512, 512);
@@ -2014,8 +2029,10 @@ namespace Viking.UI.Controls
                 //DrawXNAControls(scene);
             }
 
-            // Draw section number overlay (after overlays but before cleanup)
-            DrawSectionNumberOverlay(graphicsDevice, scene);
+            // The section number is an overlay: hidden with the spacebar, and never drawn into a capture
+            // (RenderSceneToTexture clears ShowOverlays), where a number at a fixed spot is text SAM2 would segment.
+            if (ShowOverlays)
+                DrawSectionNumberOverlay(graphicsDevice, scene);
 
             graphicsDevice.Textures[0] = null;
             graphicsDevice.Textures[1] = null;
@@ -2190,8 +2207,12 @@ namespace Viking.UI.Controls
             return listGetTextureTasks;
         }
 
+        /// <summary>Longest <see cref="PreloadSceneTexturesAsync"/> waits for texture loads before drawing with what it has.</summary>
+        private const int PreloadTextureTimeoutMs = 20000;
+
         /// <summary>
         /// Preloads texture for the visible tiles in the given section, awaiting completion.
+        /// Gives up after <see cref="PreloadTextureTimeoutMs"/> or when <paramref name="token"/> is cancelled.
         /// </summary>
         /// <param name="scene"></param>
         /// <param name="Z"></param>
@@ -2201,9 +2222,32 @@ namespace Viking.UI.Controls
         protected async Task PreloadSceneTexturesAsync(Scene scene, int Z, bool HighestResolutionOnly, CancellationToken token)
         {
             var listGetTextureTasks = await QueueTextureLoadsForSectionAsync(scene, Z, HighestResolutionOnly, token);
+            if (listGetTextureTasks.Count == 0)
+                return;
+
+            // A texture load that never completes (cancelled section token, stalled request) must not wedge the
+            // caller. Auto-segment capture awaits this, and its batch gate then rejects every later batch.
+            using CancellationTokenSource stopWaiting = CancellationTokenSource.CreateLinkedTokenSource(token);
+            stopWaiting.CancelAfter(PreloadTextureTimeoutMs);
+            Task stopWaitingTask = Task.Delay(Timeout.Infinite, stopWaiting.Token);
+
             while (listGetTextureTasks.Count > 0)
             {
-                var completedTask = await Task.WhenAny(listGetTextureTasks).ConfigureAwait(false);
+                var waitList = new List<Task>(listGetTextureTasks.Count + 1);
+                foreach (Task<Texture2D> pending in listGetTextureTasks)
+                    waitList.Add(pending);
+                waitList.Add(stopWaitingTask);
+
+                Task finished = await Task.WhenAny(waitList).ConfigureAwait(false);
+                if (ReferenceEquals(finished, stopWaitingTask))
+                {
+                    Trace.WriteLine(
+                        $"PreloadSceneTextures gave up on {listGetTextureTasks.Count} texture load(s) " +
+                        $"(cancelled={token.IsCancellationRequested})");
+                    return;
+                }
+
+                var completedTask = (Task<Texture2D>)finished;
                 listGetTextureTasks.Remove(completedTask);
                 if (completedTask.IsFaulted && completedTask.Exception is AggregateException ex)
                 {
@@ -2212,6 +2256,129 @@ namespace Viking.UI.Controls
             }
         }
 
+        /// <summary>
+        /// Waits off the UI thread until every visible tile has a usable texture or a server 404.
+        /// Already-queued loads are polled; they are not treated as complete.
+        /// </summary>
+        public async Task<bool> WaitForVisibleTexturesAsync(Scene scene, int z, CancellationToken token)
+        {
+            const int pollMs = 150;
+            const int timeoutMs = 10000;
+            if (scene is null || Volume is null)
+                return false;
+
+            Stopwatch wait = Stopwatch.StartNew();
+            while (!token.IsCancellationRequested && wait.ElapsedMilliseconds < timeoutMs)
+            {
+                List<TileView> tiles = await CollectVisibleTilesForCaptureAsync(scene, z, token).ConfigureAwait(false);
+                if (token.IsCancellationRequested)
+                    return false;
+
+                if (tiles.Count == 0)
+                {
+                    Trace.WriteLine("[SegmentationProfile] WaitForVisibleTextures: no visible tiles");
+                    return false;
+                }
+
+                bool allReady = true;
+                CancellationToken sectionToken = GetOrCreateSectionTextureLoadToken(z);
+                foreach (TileView tile in tiles)
+                {
+                    if (tile.HasTexture || tile.ServerTextureNotFound)
+                        continue;
+
+                    allReady = false;
+                    if (!tile.TextureNeedsLoading)
+                        continue;
+
+                    TileView toLoad = tile;
+                    _ = toLoad.GetOrLoadTextureAsync(graphicsDeviceService.GraphicsDevice, sectionToken)
+                        .ContinueWith(t =>
+                        {
+                            if (t.IsFaulted && t.Exception != null)
+                                Trace.WriteLine($"WaitForVisibleTextures load failed: {t.Exception.GetBaseException().Message}");
+                        }, TaskContinuationOptions.OnlyOnFaulted);
+                }
+
+                if (allReady)
+                    return true;
+
+                try
+                {
+                    await Task.Delay(pollMs, token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    return false;
+                }
+            }
+
+            Trace.WriteLine("[SegmentationProfile] WaitForVisibleTextures timed out");
+            return false;
+        }
+
+        /// <summary>
+        /// Visible tiles using the same skip rules as <c>QueueTextureLoads</c> so capture wait matches what the viewer would draw.
+        /// </summary>
+        private async Task<List<TileView>> CollectVisibleTilesForCaptureAsync(Scene scene, int sectionZ, CancellationToken token)
+        {
+            List<TileView> tiles = [];
+            if (false == Volume.SectionViewModels.ContainsKey(sectionZ))
+                return tiles;
+
+            SectionViewModel visibleSection = Volume.SectionViewModels[sectionZ];
+            ChannelInfo[] channels = visibleSection.ChannelInfoArray;
+            if (channels.Length == 0)
+                channels = visibleSection.VolumeViewModel.DefaultChannels;
+
+            foreach (ChannelInfo channel in channels)
+            {
+                Section section = visibleSection.GetSectionToDrawForChannel(channel);
+                MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel.ChannelName, this.CurrentTransform);
+                if (Mapping is null)
+                    continue;
+
+                await Mapping.Initialize(token);
+                if (token.IsCancellationRequested)
+                    return tiles;
+
+                int[] DownsamplesToRender = CalculateDownsamplesToRender(Mapping, scene.Camera.Downsample);
+                var visibleTiles = await Mapping.VisibleTilesAsync(scene.VisibleWorldBounds, scene.Camera.Downsample);
+
+                for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
+                {
+                    int level = Mapping.AvailableLevels[DownsamplesToRender[iLevel]];
+                    SortedDictionary<TileUniqueKey, TileViewModel> tileList = visibleTiles.GetTilesForLevel(level);
+                    foreach (TileViewModel t in tileList.Values)
+                    {
+                        TileView tileView = FetchOrConstructTileForSection(t, section, Mapping.Name);
+                        if (tileView is null)
+                            continue;
+
+                        if (tileView.HasTexture == false && tileView.Downsample > Downsample * 8 && iLevel < DownsamplesToRender.Length - 1)
+                            continue;
+
+                        tiles.Add(tileView);
+                    }
+                }
+            }
+
+            return tiles;
+        }
+
+        /// <summary>
+        /// A device reset loses render target contents, so the cached section texture must be redrawn.
+        /// </summary>
+        protected override void OnDeviceResetting(object sender, EventArgs e)
+        {
+            InvalidateSectionTextureCache();
+            base.OnDeviceResetting(sender, e);
+        }
+
+        /// <summary>
+        /// Draws the tiles of one section and channel into a new viewport-sized render target that the caller owns.
+        /// </summary>
+        /// <returns>The render target (null if the section could not be drawn yet) and whether every visible tile had a texture.</returns>
         protected (Texture2D? texture, bool allVisibleTilesHadTextures) DrawSection(GraphicsDevice graphicsDevice, Section section, string channel, Scene scene)
         {
             //           Microsoft.Xna.Framework.Color[] ColorWheel = new Microsoft.Xna.Framework.Color[] { new Microsoft.Xna.Framework.Color(1f,0,0), 
@@ -3011,11 +3178,6 @@ namespace Viking.UI.Controls
 
         }
 
-        private void menuSectionTransform_DropDownOpening(object sender, EventArgs e)
-        {
-
-        }
-
         private void AddTransformsToSectionChannelPyramidMenuItem(ToolStripMenuItem menuChannelPyramid)
         {
             //List all of the pyramid transforms available
@@ -3047,19 +3209,6 @@ namespace Viking.UI.Controls
             }
         }
 
-
-        /// <summary>
-        /// Sets the Section's channel without changing the transform
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void OnSectionChannelPyramidClick(object sender, EventArgs e)
-        {
-            ToolStripMenuItem menu = sender as ToolStripMenuItem;
-            Debug.Assert(menu != null);
-            this.CurrentChannel = menu.Text;
-            this.CurrentTransform = Section.DefaultPyramidTransform;
-        }
 
         private void OnSectionPyramidTransformClick(object sender, EventArgs e)
         {
@@ -3095,44 +3244,49 @@ namespace Viking.UI.Controls
         {
             try
             {
-                using Viking.UI.Forms.FrameCapturesForm form = new();
-                DialogResult result = form.ShowDialog();
-                if (result == DialogResult.Cancel)
-                    return;
-
-                //Capture each of the requested frames
-                using GenericProgressForm progressForm = new();
-                progressForm.Show();
-
-                //Request the UI to capture each frame
-                for (int i = 0; i < form.Frames.Length; i++)
-                {
-                    FrameCapture frame = form.Frames[i];
-                    int Z = (int)Math.Round(frame.Z);
-                    if (State.volume.SectionViewModels.ContainsKey(Z) == false)
-                        continue;
-                    // {
-                    //   DialogResult mbResult = MessageBox.Show("Could not location section #" + Z.ToString() + " in volume, skipping", "Info", MessageBoxButtons.OKCancel);
-                    //   if (mbResult == DialogResult.Cancel)
-                    //       break;
-                    //   else
-                    //       continue;
-                    //  }
-                    await this.ExportImage(frame.Filename, frame.Rect, Z, frame.downsample, frame.IncludeOverlay);
-                    //var task = System.Threading.Tasks.Task.Run(() => this.ExportImage(frame.Filename, frame.Rect, Z, frame.downsample, frame.IncludeOverlay));
-                    //task.Wait();
-                    progressForm.ShowProgress("Exported frame: " + frame.Filename, (double)i / (double)form.Frames.Length);
-                    //System.Windows.Forms.Application.DoEvents();
-                    if (progressForm.DialogResult == DialogResult.Cancel)
-                        break;
-                }
-
-                progressForm.Close();
+                await ExportFramesFromDialogAsync();
             }
             catch (Exception ex)
             {
                 Trace.WriteLine($"menuExportFrames_Click failed: {ex}", "SectionViewerControl");
+                MessageBox.Show(this, "Could not export frames: " + ex.Message, "Export frames", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private async Task ExportFramesFromDialogAsync()
+        {
+            using Viking.UI.Forms.FrameCapturesForm form = new();
+            DialogResult result = form.ShowDialog();
+            if (result == DialogResult.Cancel)
+                return;
+
+            //Capture each of the requested frames
+            using GenericProgressForm progressForm = new();
+            progressForm.Show();
+
+            //Request the UI to capture each frame
+            for (int i = 0; i < form.Frames.Length; i++)
+            {
+                FrameCapture frame = form.Frames[i];
+                int Z = (int)Math.Round(frame.Z);
+                if (State.volume.SectionViewModels.ContainsKey(Z) == false)
+                    continue;
+                // {
+                //   DialogResult mbResult = MessageBox.Show("Could not location section #" + Z.ToString() + " in volume, skipping", "Info", MessageBoxButtons.OKCancel);
+                //   if (mbResult == DialogResult.Cancel)
+                //       break;
+                //   else
+                //       continue;
+                //  } 
+                await this.ExportImage(frame.Filename, frame.Rect, Z, frame.downsample, frame.IncludeOverlay);
+                //task.Wait();
+                progressForm.ShowProgress("Exported frame: " + frame.Filename, (double)i / (double)form.Frames.Length);
+                //System.Windows.Forms.Application.DoEvents();
+                if (progressForm.DialogResult == DialogResult.Cancel)
+                    break;
+            }
+
+            progressForm.Close();
         }
 
         private void menuGoToLocation_Click(object sender, EventArgs e) => ShowGoToLocationForm();
@@ -3544,6 +3698,8 @@ namespace Viking.UI.Controls
             // Wire up event handlers to save settings
             _viewerPreferencesDialog.ApplyClicked += (s, args) => SaveViewerPreferencesFromViewModel(viewModel);
             _viewerPreferencesDialog.OkClicked += (s, args) => SaveViewerPreferencesFromViewModel(viewModel);
+            // Cancel has already reverted the view model; push those values back over the live preview.
+            _viewerPreferencesDialog.CancelClicked += (s, args) => ApplySectionNumberOverlaySettings(viewModel);
 
             _viewerPreferencesDialog.Show(); // Modeless dialog
         }

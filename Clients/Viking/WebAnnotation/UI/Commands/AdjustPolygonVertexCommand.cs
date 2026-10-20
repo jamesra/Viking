@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
-using VikingXNAWinForms;
+using VikingXNAWinForms;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -147,20 +147,21 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
+        /// <summary>
+        /// Passes the polygon with the moved vertex to the success callback and ends the command.
+        /// When the vertex was released outside the section's mapping, the callback is skipped and the location keeps its shape.
+        /// </summary>
         protected override void Execute()
         {
-            Polygon mosaic_polygon;
             try
             {
-                mosaic_polygon = mapping.TryMapShapeVolumeToSection(OutputVolumePolygon);
+                TryApplyInSection(mapping, OutputVolumePolygon, mosaic_polygon => success_callback(mosaic_polygon, OutputVolumePolygon), nameof(AdjustPolygonVertexCommand));
             }
             catch (ArgumentOutOfRangeException)
             {
                 Trace.WriteLine("TranslateLocationCommand: Could not map polygon to section on Execute", "Command");
                 return;
             }
-
-            success_callback(mosaic_polygon, OutputVolumePolygon);
 
             base.Execute();
         }

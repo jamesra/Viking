@@ -25,6 +25,10 @@
     <ProjectReference Include="..\..\SegmentationServiceTypes.gRPC\SegmentationServiceTypes.gRPC.csproj" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Reference Include="System.Configuration" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Duende.IdentityModel" Version="7.1.0" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />

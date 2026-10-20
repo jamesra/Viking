@@ -44,9 +44,9 @@ public class ViewerControl : GraphicsDeviceControl
     public Microsoft.Xna.Framework.Graphics.SpriteBatch? spriteBatch = null;
     public Microsoft.Xna.Framework.Graphics.SpriteFont? fontArial = null;
 
-    static readonly Dictionary<string, Vector2> LabelToSize = [];
+    static readonly Dictionary<string, Microsoft.Xna.Framework.Vector2> LabelToSize = [];
 
-    public static Vector2 GetLabelSize(SpriteFont font, string label)
+    public static Microsoft.Xna.Framework.Vector2 GetLabelSize(SpriteFont font, string label)
     {
         if (font is null)
             throw new ArgumentNullException(nameof(font));
@@ -138,7 +138,7 @@ public class ViewerControl : GraphicsDeviceControl
             //   basicEffect.DiffuseColor = new Vector3(0.1f, 0.1f, 0.1f);
             //   basicEffect.SpecularColor = new Vector3(0.25f, 0.25f, 0.25f);
             //   basicEffect.SpecularPower = 5.0f;
-            AmbientLightColor = new Vector3(1f, 1f, 1f)
+            AmbientLightColor = new Microsoft.Xna.Framework.Vector3(1f, 1f, 1f)
         };
 
         Matrix WorldViewProj = Scene.WorldViewProj;
@@ -297,7 +297,7 @@ public class ViewerControl : GraphicsDeviceControl
     public Geometry.Rectangle RenderTargetBounds()
     {
         if (Device is null)
-            return new Rectangle(0, 0, 10, 10);
+            return new Geometry.Rectangle(0, 0, 10, 10);
 
         //For debugging
         const int offset = 0;
@@ -308,7 +308,7 @@ public class ViewerControl : GraphicsDeviceControl
 
         Geometry.Vector2 BottomLeft = Scene.ScreenToWorld(offset, Device.Viewport.Height - offset);
         Geometry.Vector2 TopRight = Scene.ScreenToWorld(Device.Viewport.Width - offset, offset);
-        Rectangle rect = new(BottomLeft, TopRight.X - BottomLeft.X, TopRight.Y - BottomLeft.Y);
+        Geometry.Rectangle rect = new(BottomLeft, TopRight.X - BottomLeft.X, TopRight.Y - BottomLeft.Y);
         return rect;
     }
 
@@ -543,7 +543,7 @@ public class ViewerControl : GraphicsDeviceControl
             }
         }
 
-        //            Rectangle Bounds = VisibleBounds();
+        //            Geometry.Rectangle Bounds = VisibleBounds();
 
 #if !DEBUG
         try

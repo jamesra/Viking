@@ -26,18 +26,6 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.ViewModel
 {
-    /// <summary>Per-section annotation set used by both the WinForms overlay and AnnotationScene.</summary>
-    public interface ISectionAnnotationsView
-    {
-        void AddLocations(ICollection<LocationObj> locations);
-        void AddLocation(LocationObj loc);
-
-        bool RemoveLocations(ICollection<LocationObj> locations);
-        bool RemoveLocation(LocationObj loc);
-
-        List<HitTestResult> GetAnnotationsAtPosition(Geometry.Vector2 WorldPosition);
-    }
-
     internal abstract class SectionAnnotationsViewBase : System.Windows.IWeakEventListener, ICanvasViewHitTesting
     {
         public abstract int SectionNumber { get; }
@@ -83,6 +71,8 @@ namespace WebAnnotation.ViewModel
                 {
                     _regionLoadBounds = VisibleMosaicBounds;
                     _regionLoadPixelSize = pixel;
+                    // The found-objects callback must not be null: objects already in the store do not raise
+                    // CollectionChanged, so this is how they enter the canvas view after a region refresh.
                     load = Store.LocationsByRegion.GetObjectsInRegionAsync(
                         VisibleMosaicBounds.Value,
                         pixel,
@@ -209,18 +199,6 @@ namespace WebAnnotation.ViewModel
             {
                 Task.Run(() => AddLocations(local.Values));
             }
-        }
-
-        private IEnumerable<LocationObj> LinkedLocationsOnPrimary(ICollection<long> LinkedIDs)
-        {
-            Store.Locations.TryGetObjectsByIDs(LinkedIDs, out var found, out _);
-            return found.Where(l => (int)l.Z == PrimarySectionNumber);
-        }
-
-        private IEnumerable<LocationObj> LinkedLocationsOnAdjacent(ICollection<long> LinkedIDs)
-        {
-            Store.Locations.TryGetObjectsByIDs(LinkedIDs, out var found, out _);
-            return found.Where(l => (int)l.Z == AdjacentSection.Number);
         }
 
         /// <summary>
@@ -422,21 +400,6 @@ namespace WebAnnotation.ViewModel
             return locations;
         }
 
-        public ICollection<long> LocationIdsInRegion(Rectangle worldRect) => LocationsSearch.Intersects(worldRect.ToRTreeRect(SectionNumber));
-
-        public ICollection<LocationCanvasView> LocationViewsForIds(ICollection<long> loc_IDs)
-        {
-            List<LocationCanvasView> locations = [];
-            foreach (long id in loc_IDs)
-            {
-                if (LocationViews.TryGetValue(id, out LocationCanvasView view))
-                {
-                    locations.Add(view);
-                }
-            }
-            return locations;
-        }
-
         protected void OnLocationPropertyChanging(object sender, PropertyChangingEventArgs e)
         {
             if (sender is not LocationObj loc)
@@ -620,10 +583,8 @@ namespace WebAnnotation.ViewModel
                 return;
             }
 
-            if (LocationsForStructure.ContainsKey(s.ID))
+            if (LocationsForStructure.TryGetValue(s.ID, out KeyTracker<long> locIDs))
             {
-                KeyTracker<long> locIDs = LocationsForStructure[s.ID];
-
                 foreach (long locID in locIDs.ValuesCopy())
                 {
                     if (LocationViews.TryGetValue(locID, out LocationCanvasView locView))
@@ -815,6 +776,8 @@ namespace WebAnnotation.ViewModel
                 case NotifyCollectionChangedAction.Remove:
                     listOldObjs = e.OldItems.Cast<LocationObj>();
                     RemoveLocationBatch(listOldObjs);
+                    //RemoveLocationBatch drops every link of the removed locations' structures. Add and Replace re-create them in AddLocationBatch; a delete has no Add, so restore them here.
+                    SectionStructureLinks.RestoreStructureLinksAfterRemoval(listOldObjs);
                     break;
 
                 default:
@@ -933,7 +896,7 @@ namespace WebAnnotation.ViewModel
                */
 
             foreach (LocationObj loc in listLocations)
-            {
+            { 
                 if (AddLocation(loc, Subscribe, UpdateVolumeLocations))
                 {
                     VolumePositionUpdatedCount++;
@@ -1124,9 +1087,8 @@ namespace WebAnnotation.ViewModel
                 //long[] overlapped_links = loc.LinksCopy.Where(id => SectionLocationLinks.OverlappedAdjacentLocationIDs.Contains(id)).ToArray();
                 if (overlapped_links.Count > 0)
                 {
-                    if (LocationViews.ContainsKey(loc.ID))
+                    if (LocationViews.TryGetValue(loc.ID, out LocationCanvasView locView))
                     {
-                        LocationCanvasView locView = LocationViews[loc.ID];
                         locView.OverlappedLinks = [.. overlapped_links.Select(linkKey => linkKey.A == loc.ID ? linkKey.B : linkKey.A)];
                     }
                     else
@@ -1141,9 +1103,8 @@ namespace WebAnnotation.ViewModel
         {
             foreach (LocationObj loc in locs)
             {
-                if (LocationViews.ContainsKey(loc.ID))
+                if (LocationViews.TryGetValue(loc.ID, out LocationCanvasView locView))
                 {
-                    LocationCanvasView locView = LocationViews[loc.ID];
                     locView.OverlappedLinks = Array.Empty<long>();
                 }
             }
@@ -1166,8 +1127,6 @@ namespace WebAnnotation.ViewModel
 
             return null;
         }
-
-        public bool ContainsLocation(long ID) => LocationViews.ContainsKey(ID);
 
         public bool GetLocationsForStructure(long ID, out KeyTracker<long> child_locations)
         {

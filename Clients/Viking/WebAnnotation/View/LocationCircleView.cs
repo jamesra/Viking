@@ -104,7 +104,7 @@ namespace WebAnnotation.View
 
         public override Circle VolumeCircle => _VolumeCircle;
 
-        private readonly ICollection<long> _OverlappedLinks;
+        private readonly ICollection<long> _OverlappedLinks = [];
         public override ICollection<long> OverlappedLinks
         {
             protected get => _OverlappedLinks;
@@ -183,10 +183,20 @@ namespace WebAnnotation.View
 
         public override bool IsLabelVisible(VikingXNA.Scene scene) => structureLabels.IsLabelVisible(scene);
 
+        /// <summary>
+        /// Unmodified pen contact returns <see cref="LocationAction.NONE"/> so free-draw starts.
+        /// Shift or Ctrl still creates a linked location, which is what every pen contact used to do.
+        /// Mouse clicks are unchanged.
+        /// </summary>
         public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
             LocationID = ID;
-            return LocationAction.CREATELINKEDLOCATION;
+            if (modifierKeys.ShiftOrCtrlPressed())
+            {
+                return LocationAction.CREATELINKEDLOCATION;
+            }
+
+            return LocationAction.NONE;
         }
 
 
@@ -219,31 +229,24 @@ namespace WebAnnotation.View
                 IVolumeToSectionTransform Transform = WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
 
                 //TODO: Check our location links to make sure the shape does not intersect an existing annotation of the same structure on this section
-                IShape2D mosaic_shape;
-                IShape2D volume_shape;
+                IShape2D volume_shape = path.HasSelfIntersection
+                    ? new Polygon(path.SimplifiedFirstLoop)
+                    : new Polyline(path.SimplifiedPath, false);
 
-                if (path.HasSelfIntersection)
+                //Null when the stroke reaches past the section's mapped area; offer no linked location then
+                CreateNewLinkedLocationAction NewLinkedLocationAction = CreateNewLinkedLocationAction.TryCreate(ID, volume_shape, VisibleSectionNumber, Transform);
+                if (NewLinkedLocationAction is not null)
                 {
-                    Polygon poly = new(path.SimplifiedFirstLoop);
-                    volume_shape = poly;
-                    mosaic_shape = Transform.TryMapShapeVolumeToSection(poly);
+                    list.Add(NewLinkedLocationAction);
                 }
-                else
-                {
-                    Polyline line = new(path.SimplifiedPath, false);
-                    volume_shape = line;
-                    mosaic_shape = Transform.TryMapShapeVolumeToSection(line);
-                }
-
-                CreateNewLinkedLocationAction NewLinkedLocationAction = new(ID, mosaic_shape, volume_shape, VisibleSectionNumber, Transform);
-                list.Add(NewLinkedLocationAction);
             }
 
             return list;
         }
 
         public override string[] HelpStrings => [
-                    "Pen contact: Create a linked location on the adjacent section",
+                    "Pen contact: Start a freehand stroke",
+                    "Shift or Ctrl: Create a linked location on the adjacent section",
                     "A closed loop over this arrow offers Linked location: a new polygon on this section, not a replacement of the other section's circle",
                     "Hold left click and drag the inscribed arrow: Create a linked annotation on the adjacent section"
                 ];
@@ -325,8 +328,6 @@ namespace WebAnnotation.View
         private static readonly float RadiusToResizeCircle = 7.0f / 8.0f;
         private static readonly float RadiusToPenResizeCircle = 1.0f / 8.0f;
         private static readonly float RadiusToLinkCircle = 1.75f / 4.0f;
-        private static readonly double BeginFadeCutoff = 0.1;
-        private static readonly double InvisibleCutoff = 1f;
 
         public LocationCircleView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {
@@ -440,7 +441,7 @@ namespace WebAnnotation.View
                     ChangeToPolylineAction action = new(modelObj, line);
                     listActions.Add(action);
 
-                    /*SortedDictionary<double, PointIndex> intersectedSegments = this.VolumeShapeAsRendered.IntersectingSegments(path.ToLineSegments());
+                    /*SortedDictionary<double, PointIndex> intersectedSegments = this.VolumeShapeAsRendered.IntersectingSegmentIndices(path.ToLineSegments());
 
                     if (intersectedSegments.Count >= 2)
                     {
@@ -555,6 +556,12 @@ namespace WebAnnotation.View
 
         #endregion
 
+        /// <summary>
+        /// Alpha multiplier applied to a circle while its auto-polygonize proposal ring is hovered.
+        /// Half opacity reads as a clear link without changing hue.
+        /// </summary>
+        private const float ProposalHoverAlphaScale = 0.5f;
+
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
                           BasicEffect basicEffect,
@@ -566,13 +573,15 @@ namespace WebAnnotation.View
 
             float[] originalAlpha = [.. listToDraw.Select(loc => loc.Alpha)];
             float[] fadeFactor = [.. listToDraw.Select(loc => loc.GetAlphaFadeScalarForScene(scene))];
+            var overlay = AnnotationOverlay.CurrentOverlay;
 
             listToDraw.ForEach((view, i) =>
                 {
-                    if (fadeFactor[i] < 1.0f)
-                    {
-                        view.Alpha = originalAlpha[i] * fadeFactor[i];
-                    }
+                    float alpha = originalAlpha[i] * fadeFactor[i];
+                    if (overlay?.IsAutoPolygonizeHoverSource(view.ID) == true)
+                        alpha *= ProposalHoverAlphaScale;
+                    if (alpha != originalAlpha[i])
+                        view.Alpha = alpha;
                 });
 
             OverlappedLinkCircleView[] overlappedLocations = [.. listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene))];
@@ -708,7 +717,7 @@ namespace WebAnnotation.View
 
         internal override void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            if (args.PropertyName == "Label" || args.PropertyName == "Attributes")
+            if (IsParentPropertyAffectingLabels(args.PropertyName))
             {
                 CreateLabelObjects();
             }

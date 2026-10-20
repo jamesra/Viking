@@ -12,6 +12,7 @@ using System.Windows.Forms;
 #endif
 using VikingXNAGraphics;
 using WebAnnotation.UI;
+using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
@@ -47,7 +48,7 @@ namespace WebAnnotation.View
             set => circleView.Circle = new Circle(value, Circle.Radius);
         }
 
-        private readonly ICollection<long> _OverlappedLinks;
+        private readonly ICollection<long> _OverlappedLinks = [];
         public override ICollection<long> OverlappedLinks
         {
             protected get => _OverlappedLinks;
@@ -60,9 +61,15 @@ namespace WebAnnotation.View
             Microsoft.Xna.Framework.Color typeColor = obj.Parent?.Type is null
                 ? Microsoft.Xna.Framework.Color.Gray
                 : obj.Parent.Type.Color.ToXNAColor();
+            Microsoft.Xna.Framework.Color labelColor = LocationLinkView.GetLocationLinkColor(
+                typeColor,
+                1,
+                Up ? 1 : -1,
+                false).SetAlpha(1.0f);
+
             label = new LabelView(LocationLabel(obj), gridCircle.Center)
             {
-                _Color = Microsoft.Xna.Framework.Color.Red
+                _Color = labelColor
             };
             Microsoft.Xna.Framework.Color color = typeColor.SetAlpha(0.75f);
             circleView = Up ? TextureCircleView.CreateUpArrow(gridCircle, color) : TextureCircleView.CreateDownArrow(gridCircle, color);
@@ -128,7 +135,10 @@ namespace WebAnnotation.View
             return LocationAction.NONE;
         }
 
-        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new NotImplementedException();//return LocationAction.CREATELINKEDLOCATION;
+        /// <summary>
+        /// Overlapped locations have no stroke-completion edits. Returns an empty list so path completion does not throw.
+        /// </summary>
+        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => [];
 
         public override string[] HelpStrings => [
                     "Hold left click + drag on inscribed arrow: Create additional annotation for this structure linked to the annotation on the adjacent section."

@@ -12,6 +12,7 @@ using Microsoft.Xna.Framework.Graphics;
 using RoundCurve;
 using RoundLineCode;
 using System;
+using System.Diagnostics;
 using System.Threading;
 using VikingXNAGraphics;
 using ServiceContainer = System.ComponentModel.Design.ServiceContainer;
@@ -105,12 +106,17 @@ namespace VikingXNAWinForms
             GlobalPrimitives.DownArrowTexture = Content.LoadTextureWithAlpha("DownArrowV2", "UpArrowMask");
             GlobalPrimitives.ConnectTexture = Content.LoadTextureWithAlpha("CircleConnect", "CircleConnect");
             GlobalPrimitives.CircleXTexture = Content.LoadTextureWithAlpha("CircleX", "CircleX");
+            GlobalPrimitives.ScissorsTexture = ScissorsIconTexture.Create(graphicsDevice);
         }
 
 
         /// <summary>
         /// Gets a reference to the singleton instance.
         /// </summary>
+        public static GraphicsDeviceService? Current => singletonInstance;
+
+        public static GraphicsDevice? CurrentDevice => singletonInstance?.graphicsDevice;
+
         public static GraphicsDeviceService? AddRef(IntPtr windowHandle,
                                                    int width, int height)
         {
@@ -177,7 +183,15 @@ namespace VikingXNAWinForms
             parameters.IsFullScreen = false;
             parameters.RenderTargetUsage = RenderTargetUsage.DiscardContents;
 
-            graphicsDevice.Reset(parameters);
+            try
+            {
+                graphicsDevice.Reset(parameters);
+            }
+            catch (Exception ex) when (GpuDeviceRemovedDiagnostics.IsDeviceRemovedError(ex))
+            {
+                GpuDeviceRemovedDialog.LogAndShowOnce(ex, graphicsDevice);
+                return;
+            }
 
             // Reload global textures after reset
             LoadGlobalPrimitivesTextures();
@@ -199,6 +213,9 @@ namespace VikingXNAWinForms
             DeviceEffectsStore<PolygonOverlayEffect>.ClearAll();
             DeviceEffectsStore<OverlayShaderEffect>.ClearAll();
             DeviceEffectsStore<CircleInstancedEffect>.ClearAll();
+
+            GlobalPrimitives.ClearDeviceDependentCaches();
+            CircleView.ClearDeviceDependentCaches();
 
             GlobalPrimitives.ClearDeviceDependentCaches();
             CircleView.ClearDeviceDependentCaches();

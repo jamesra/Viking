@@ -1,6 +1,7 @@
-﻿using System.Diagnostics;
-using System.Linq;
+﻿using System.Collections.Generic;
+using System.Globalization;
 using System.Windows.Forms;
+using Viking.UI.Controls;
 
 namespace Viking.UI.Forms
 {
@@ -40,98 +41,72 @@ namespace Viking.UI.Forms
             if ((e.Control && e.KeyCode == Keys.V) ||
                 (e.Shift && e.KeyCode == Keys.Insert))
             {
-                System.Globalization.NumberFormatInfo numberFormatInfo = System.Globalization.CultureInfo.CurrentCulture.NumberFormat;
-                string decimalSeparator = numberFormatInfo.NumberDecimalSeparator;
-                string groupSeparator = numberFormatInfo.NumberGroupSeparator;
-                string negativeSign = numberFormatInfo.NegativeSign;
-
                 string Data = Clipboard.GetText();
-
-                if (Data is null)
+                if (string.IsNullOrEmpty(Data))
                     return;
 
-                if (Data.Length == 0)
-                    return;
+                NumericTextBox[] fields = { textX, textY, textZ, textDownsample };
+                IReadOnlyList<string> numbers = ParseNumbers(Data, CultureInfo.CurrentCulture.NumberFormat, fields.Length);
+                for (int i = 0; i < numbers.Count; i++)
+                    fields[i].Text = numbers[i];
+            }
+        }
 
-                //March along looking for digits, convert digits we find to values
-                int i = 0;
-                int iStart = -1;
-                int iValue = 0; //How many values we've extracted. Stop after three
-                do
+        /// <summary>
+        /// Splits pasted text into number strings in reading order, for filling X, Y, Z, and downsample.
+        /// A number is a run of digits, negative signs, group separators, and decimal separators of
+        /// <paramref name="numberFormat"/>; any other character ends it. A number starts at a digit, or at a
+        /// negative sign or decimal separator that leads into one, so "-5000.5" and ".5" keep their prefix.
+        /// Trailing separators and signs are dropped, so "100, 200, 34" in a comma-group culture yields "34", not "34,".
+        /// </summary>
+        /// <param name="text">Pasted text, such as "X: 1000.5 Y: 200 Z: 12".</param>
+        /// <param name="numberFormat">Culture whose separators and negative sign the text uses.</param>
+        /// <param name="maxCount">Stop after this many numbers.</param>
+        /// <returns>At most <paramref name="maxCount"/> number strings; empty when the text has no digits.</returns>
+        internal static IReadOnlyList<string> ParseNumbers(string text, NumberFormatInfo numberFormat, int maxCount)
+        {
+            var numbers = new List<string>(maxCount);
+            if (string.IsNullOrEmpty(text))
+                return numbers;
+
+            bool IsNumberChar(char c) =>
+                char.IsDigit(c) ||
+                numberFormat.NegativeSign.IndexOf(c) >= 0 ||
+                numberFormat.NumberGroupSeparator.IndexOf(c) >= 0 ||
+                numberFormat.NumberDecimalSeparator.IndexOf(c) >= 0;
+
+            // A sign or separator starts a number only when the run of number characters after it reaches a digit.
+            bool LeadsToDigit(int i)
+            {
+                for (; i < text.Length && IsNumberChar(text[i]); i++)
                 {
-                    //Convert the first number
-                    if (char.IsDigit(Data[i]))
-                    {
-                        if (iStart == -1)
-                            iStart = i;
-                    }
-                    else if (negativeSign.Contains(Data[i]) == false &&
-                            groupSeparator.Contains(Data[i]) == false &&
-                            decimalSeparator.Contains(Data[i]) == false)
-                    {
-                        //If we are building a number then stop looking and convert, otherwise continue
-                        if (iStart > -1)
-                        {
-                            string numString = Data.Substring(iStart, i - iStart);
-
-                            switch (iValue)
-                            {
-                                case 0:
-                                    textX.Text = numString;
-                                    break;
-                                case 1:
-                                    textY.Text = numString;
-                                    break;
-                                case 2:
-                                    textZ.Text = numString;
-                                    break;
-                                case 3:
-                                    textDownsample.Text = numString;
-                                    break;
-                                default:
-                                    Debug.Assert(false, "Parsed more than three numbers during paste");
-                                    break;
-                            }
-
-                            iValue++;
-                            iStart = -1;
-                        }
-                    }
-
-                    i++;
+                    if (char.IsDigit(text[i]))
+                        return true;
                 }
-                while (i < Data.Length && iValue < 4);
 
-                //If we are building a number then stop looking and convert, otherwise continue
-                if (iStart > -1)
+                return false;
+            }
+
+            int iStart = -1;
+            for (int i = 0; i <= text.Length && numbers.Count < maxCount; i++)
+            {
+                if (i < text.Length && IsNumberChar(text[i]))
                 {
-                    string numString = Data.Substring(iStart, i - iStart);
+                    if (iStart == -1 && LeadsToDigit(i))
+                        iStart = i;
+                }
+                else if (iStart > -1)
+                {
+                    int iEnd = i;
+                    while (!char.IsDigit(text[iEnd - 1]))
+                        iEnd--;
 
-                    switch (iValue)
-                    {
-                        case 0:
-                            textX.Text = numString;
-                            break;
-                        case 1:
-                            textY.Text = numString;
-                            break;
-                        case 2:
-                            textZ.Text = numString;
-                            break;
-                        case 3:
-                            textDownsample.Text = numString;
-                            break;
-                        default:
-                            Debug.Assert(false, "Parsed more than three numbers during paste");
-                            break;
-                    }
-
-                    iValue++;
+                    numbers.Add(text.Substring(iStart, iEnd - iStart));
                     iStart = -1;
                 }
-
-                //string[] lines = Data.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
             }
+
+            return numbers;
         }
 
 

@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using System.Windows.Forms;
 using VikingXNAGraphics;
 using VikingXNAWinForms;

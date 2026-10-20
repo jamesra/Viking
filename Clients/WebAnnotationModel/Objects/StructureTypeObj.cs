@@ -88,6 +88,11 @@ namespace WebAnnotationModel.Objects
         }
 
         private uint _Color = 0;
+
+        /// <summary>
+        /// ARGB color of the structure type. Stored as <c>uint</c>, so colors with alpha 0x80 or higher compare
+        /// correctly. Assigning the current value is a no-op: no change events and no <see cref="DBACTION.UPDATE"/>.
+        /// </summary>
         public uint Color
         {
             get => (uint)_Color;

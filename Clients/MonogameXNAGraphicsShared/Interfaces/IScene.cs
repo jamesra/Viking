@@ -1,27 +1,7 @@
-﻿
-/* Unmerged change from project 'Monographics'
-Before:
-using System;
+using Geometry;
+using Microsoft.Xna.Framework;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
-After:
-using Geometry;
-using Rectangle = Geometry.Rectangle;
-using Microsoft.Xna.Framework;
-using System;
-*/
-using
-/* Unmerged change from project 'Monographics'
-Before:
-using System.Threading.Tasks;
-using Geometry;
-using Rectangle = Geometry.Rectangle;
-using Microsoft.Xna.Framework;
-After:
-using System.Threading.Tasks;
-*/
-Geometry;
-using Microsoft.Xna.Framework;
 
 namespace VikingXNA
 {

@@ -22,7 +22,13 @@ namespace WebAnnotation.UI
         public static void Show(string summary, Exception exception)
         {
             Trace.WriteLine(summary + Environment.NewLine + exception);
+#if NETFRAMEWORK
+            Viking.UI.Forms.ErrorDialog.Show(null, "Recoverable Error",
+                summary + Environment.NewLine + Environment.NewLine + Describe(exception));
+#else
+            // VikingCore (which owns ErrorDialog) is referenced only for net48.
             MessageBox.Show(summary + Environment.NewLine + Environment.NewLine + Describe(exception), "Recoverable Error");
+#endif
         }
 
         /// <summary>

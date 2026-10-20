@@ -1027,6 +1027,36 @@ namespace Geometry
         }
 
         /// <summary>
+        /// Explains why <see cref="IsValid"/> is false, mirroring its checks in the same order.
+        /// Used by callers (e.g. the pen retrace) that need to tell a bad source polygon apart from a bad cut.
+        /// </summary>
+        /// <returns>Null when the polygon is valid; otherwise a short reason including vertex count and area.</returns>
+        public string DescribeInvalidity()
+        {
+            string stats = $"{_ExteriorRing.Length - 1} vertices, {InteriorPolygons.Count} interior ring(s), area {Area:F3}";
+
+            if (_ExteriorRing.Distinct().Count() != _ExteriorRing.Length - 1)
+                return $"exterior ring has repeated vertices ({stats})";
+
+            if (Polygon.SelfIntersects(this))
+                return $"exterior ring intersects itself ({stats})";
+
+            for (int iInnerPoly = 0; iInnerPoly < InteriorPolygons.Count; iInnerPoly++)
+            {
+                if (IsInnerValid(iInnerPoly, CheckForIntersectionWithOtherInnerPolygons: false) == false)
+                    return $"interior ring {iInnerPoly} is not valid inside the exterior ring ({stats})";
+            }
+
+            if (InteriorPolygons.Count > 0 && AnyInnerPolygonsIntersect())
+                return $"interior rings intersect each other ({stats})";
+
+            if (InteriorPolygons.Count > 0 && Area < Tolerance.Epsilon)
+                return $"area is below tolerance ({stats})";
+
+            return null;
+        }
+
+        /// <summary>
         /// Return true if the exterior ring intersects itself
         /// </summary>
         /// <returns></returns>
@@ -1740,6 +1770,7 @@ namespace Geometry
         /// <summary>
         /// How <paramref name="other"/> relates to this polygon: nested interior, shared boundary, crossing, or disjoint.
         /// Nested against the boundary is Touching (covered); boundary-only contact from outside is Touching | Exterior.
+        /// A hole of this polygon that lies inside <paramref name="other"/> makes it Intersecting.
         /// </summary>
         public ShapeRelation GetRelation(in Polygon other)
         {
@@ -1788,7 +1819,18 @@ namespace Geometry
                 anyContained = true;
 
             if (anyContained && !anyExterior)
+            {
+                // other's ring can enclose a hole without crossing it; the hole's area is then inside other but
+                // outside this. Any hole relation other than None or external contact means the interiors overlap.
+                foreach (Polygon inner in _InteriorPolygons)
+                {
+                    ShapeRelation hole = other.GetRelation(inner);
+                    if (hole != ShapeRelation.None && (hole & ShapeRelation.Exterior) == 0)
+                        return ShapeRelation.Intersecting;
+                }
+
                 return anyTouching || boundaryContact ? ShapeRelation.Touching : ShapeRelation.Contained;
+            }
 
             if (anyContained)
                 return ShapeRelation.Intersecting;

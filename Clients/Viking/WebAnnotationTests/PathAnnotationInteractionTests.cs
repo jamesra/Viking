@@ -1,4 +1,4 @@
-﻿using Geometry;
+using Geometry;
 using GeometryTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;

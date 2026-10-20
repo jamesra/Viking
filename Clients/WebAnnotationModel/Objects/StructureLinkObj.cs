@@ -14,10 +14,11 @@ namespace WebAnnotationModel.Objects
     {
         public override StructureLinkKey ID => new StructureLinkKey(SourceID, TargetID, Bidirectional);
 
-        protected override int GenerateHashCode()
-        {
-            return (int)(SourceID % int.MaxValue);
-        }
+        /// <summary>
+        /// Hashes through <see cref="ID"/>, so objects whose keys compare equal (including a bidirectional link stored
+        /// the other way round) hash alike.
+        /// </summary>
+        protected override int GenerateHashCode() => ID.GetHashCode();
 
         private long _SourceID;
         public long SourceID => _SourceID;
@@ -106,14 +107,9 @@ namespace WebAnnotationModel.Objects
             return this.ID.Equals(obj);
         }
 
-        bool IEquatable<IStructureLinkKey>.Equals(IStructureLinkKey other)
-        {
-            throw new NotImplementedException();
-        }
+        bool IEquatable<IStructureLinkKey>.Equals(IStructureLinkKey other) =>
+            other is not null && ((IEquatable<IStructureLinkKey>)ID).Equals(other);
 
-        int IComparable<IStructureLinkKey>.CompareTo(IStructureLinkKey other)
-        {
-            throw new NotImplementedException();
-        }
+        int IComparable<IStructureLinkKey>.CompareTo(IStructureLinkKey other) => ID.CompareTo(other);
     }
 }

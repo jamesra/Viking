@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
         xmlns:local="clr-namespace:WebAnnotation.WPF.Forms"
+        xmlns:controls="clr-namespace:WebAnnotation.WPF.Controls"
         Title="Annotation Preferences" 
         Height="750" 
         Width="520"
@@ -267,6 +268,52 @@
                                      Text="Size multiplier for annotations displayed on adjacent sections. Default 0.5 shows them at half size."/>
                         </Grid>
 
+                        <!-- Location Link Waist Width -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Link waist width (pixels):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding LocationLinkWaistPixels, Mode=TwoWay}"
+                                    Minimum="2"
+                                    Maximum="32"
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding LocationLinkWaistPixels, StringFormat='F0'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Screen width of the narrowest part of a link line between locations on different sections."/>
+                        </Grid>
+
+                        <!-- Location Link Under Markers -->
+                        <CheckBox IsChecked="{Binding LocationLinkDrawUnderMarkers, Mode=TwoWay}"
+                                  Content="Draw links under location markers"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="10,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Also draws each link under its two location markers as a round end the size of each marker. Off draws nothing under the markers."/>
+
                         <!-- Polygon Annotations -->
                         <TextBlock Text="Polygon Annotations" FontWeight="Bold" Margin="5,15,5,2"/>
                         <!-- Num Curve Interpolation Points -->
@@ -393,6 +440,47 @@
                                      Text="Left thumb: hidden below this width fraction. Right thumb: fully visible above this fraction. Pixel values at current viewport width."/>
                         </Grid>
 
+                        <!-- Polygon Point Opacity -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Polygon Point Opacity:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding PolygonPointOpacity, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    TickFrequency="0.01"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding PolygonPointOpacity, StringFormat='F2', Mode=OneWay}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Opacity of the control points on polygon annotations. Range: 0.0 (transparent) to 1.0 (opaque)."/>
+                        </Grid>
+
+                        <!-- Hide Polygon Points In Pen Mode -->
+                        <CheckBox Content="Hide polygon points in pen mode"
+                                  IsChecked="{Binding HidePolygonPointsInPenMode, Mode=TwoWay}"
+                                  Margin="5,5,5,10"/>
+
                         <!-- Polygon Opacity Parentless -->
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -493,41 +581,13 @@
                                      Text="Smallest allowed radius for circle annotations."/>
                         </Grid>
 
-                        <!-- Smallest Rendered Size -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="150"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="60"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            
-                            <Label Grid.Row="0" Grid.Column="0" Content="Smallest Rendered Size:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding SmallestRenderedSize, Mode=TwoWay}"
-                                    Minimum="0.5"
-                                    Maximum="10"
-                                    TickFrequency="0.1"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding SmallestRenderedSize, StringFormat='F1'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
-                                     Margin="10,0,10,10"
-                                     FontSize="10"
-                                     Foreground="Gray"
-                                     TextWrapping="Wrap"
-                                     Text="Minimum pixel size for circle diameter before it is hidden. Circles smaller than this value will not be rendered. Range: 0.5 to 10.0 pixels."/>
-                        </Grid>
+                        <controls:CircleSizePreviewSlider
+                            Header="Smallest Rendered Size:"
+                            Description="Minimum on-screen circle diameter before an annotation is hidden. The circle below shows the cutoff; the slider max is the width of this page."
+                            Value="{Binding SmallestRenderedSize, Mode=TwoWay}"
+                            Minimum="0.5"
+                            TickFrequency="0.1"
+                            PreviewMode="PixelDiameter"/>
 
                         <!-- Circle Opacity Parentless -->
                         <Grid>
@@ -600,13 +660,10 @@
                                      TextWrapping="Wrap"
                                      Text="Opacity for circles with a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
                         </Grid>
-                    </StackPanel>
-                </Expander>
 
-                <!-- Segmentation Settings -->
-                <Expander Header="Segmentation" IsExpanded="False" Margin="10">
-                    <StackPanel Margin="10">
-                        <!-- Segmentation Point Radius -->
+                        <!-- Segmentation -->
+                        <TextBlock Text="Segmentation" FontWeight="Bold" Margin="5,15,5,2"/>
+                        <!-- Segmentation Minimum Feature Width -->
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -618,17 +675,17 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            
-                            <Label Grid.Row="0" Grid.Column="0" Content="Segmentation Point Radius:"/>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Segmentation Minimum Width (nm):"/>
                             <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding SegmentationPointRadius, Mode=TwoWay}"
-                                    Minimum="1"
-                                    Maximum="15"
-                                    TickFrequency="0.1"
+                                    Value="{Binding SegmentationMinFeatureNanometers, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="100"
+                                    TickFrequency="1"
                                     IsSnapToTickEnabled="True"
                                     Margin="5"/>
                             <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding SegmentationPointRadius, StringFormat='F1'}"
+                                     Text="{Binding SegmentationMinFeatureNanometers, StringFormat='F0'}"
                                      IsReadOnly="True"
                                      Margin="5,0,0,0"
                                      VerticalAlignment="Center"
@@ -639,7 +696,329 @@
                                      FontSize="10"
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
-                                     Text="Radius in pixels for segmentation points displayed on the image. Range: 1.0 to 15.0. Larger values make points more visible but may overlap."/>
+                                     Text="Parts of a SAM2 mask narrower than this are cut before the outline is traced, so a thin bridge no longer joins the cell to a neighbor. Edges of wider parts do not move. A cell membrane is at least 7 to 10 nm thick, so nothing narrower is cytoplasm. 0 keeps everything. Changing it retraces the current view."/>
+                        </Grid>
+
+                        <!-- Segmentation Smoothing -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Segmentation Smoothing:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SegmentationSmoothingSigma, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="2"
+                                    TickFrequency="0.05"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding SegmentationSmoothingSigma, StringFormat='F2'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Blur, in SAM2 logit samples (4 pixels each), applied before the outline is traced. 0 traces the logits as sent; 0.5 is the default. Higher values remove tiny holes and zigzags but push the line outward and can merge thin necks. Applies to the next segmentation. The mask overlay always shows the server's mask."/>
+                        </Grid>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Segmentation Settings -->
+                <Expander Header="Segmentation" IsExpanded="False" Margin="10">
+                    <StackPanel Margin="10">
+                        <controls:CircleSizePreviewSlider
+                            Header="Segmentation Point Radius:"
+                            Description="Radius in pixels for segmentation prompt points on the image. The circle below is the on-screen size."
+                            Value="{Binding SegmentationPointRadius, Mode=TwoWay}"
+                            Minimum="1"
+                            TickFrequency="0.1"
+                            PreviewMode="PixelRadius"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Drop Holes Smaller Than:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SegmentationHoleDropFraction, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="0.25"
+                                    TickFrequency="0.01"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding SegmentationHoleDropFraction, StringFormat='P0'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Holes smaller than this percentage of the segmented area are filled. Set to 0% to preserve every detected hole."/>
+                        </Grid>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Edge Cleanup Radius:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SegmentationEdgeCleanupRadius, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="32"
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding SegmentationEdgeCleanupRadius}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Screen-pixel radius for closing the mask (dilate, then erode) before tracing. Fills thin inward notches and does not shrink the outer boundary. Apply retraces masks already on screen from the original server result. Set to 0 to show that result with no cleanup."/>
+                        </Grid>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="SAM2 Mask Threshold:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SegmentationMaskThreshold, Mode=TwoWay}"
+                                    Minimum="-5"
+                                    Maximum="5"
+                                    TickFrequency="0.1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding SegmentationMaskThreshold, StringFormat='F1'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Logit a pixel must exceed for SAM2 to call it object. 0 is SAM2's default. Raise it to shrink every returned mask, lower it to grow them. Changing it re-segments the current view."/>
+                        </Grid>
+
+                        <CheckBox Margin="10,0,0,0"
+                                  IsChecked="{Binding SegmentationUseMaskInput, Mode=TwoWay}"
+                                  Content="Refine with mask_input (second SAM2 pass)"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="20,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Feeds each cell's first prediction back to SAM2 as mask_input and predicts again with the same prompts. Off by default. Changing it re-segments the current view."/>
+
+                        <CheckBox Margin="10,0,0,0"
+                                  IsChecked="{Binding SegmentLinkedAnnotations, Mode=TwoWay}"
+                                  Content="Segment linked annotations"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="20,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="After you drag a linked annotation onto the next section, SAM2 refines its outline. Pen buttons let you accept it, cancel the new annotation, or skip the refinement and place the dragged polygon as it is. When off, the dragged polygon is placed as soon as you release it."/>
+
+                        <CheckBox Margin="10,0,0,0"
+                                  IsChecked="{Binding SegmentationEdgeSnapEnabled, Mode=TwoWay}"
+                                  Content="Snap contours to image edges"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="20,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Moves the traced line onto the nearest strong bright-to-dark edge of the image, so it sits on the membrane instead of where SAM2's logits cross the threshold. Where the image has no clear edge the line stays where SAM2 put it. On by default. Changing it retraces the current view without re-segmenting."/>
+
+                        <controls:CircleSizePreviewSlider
+                            Header="Auto Polygonize Min Size:"
+                            Description="Circles smaller than this radius are not auto-segmented. The value is in nanometers. The preview is that size on the current Viking view. 0 submits every eligible circle."
+                            Value="{Binding AutoPolygonizeMinRadiusNanometers, Mode=TwoWay}"
+                            NanometersPerPixel="{Binding NanometersPerPixel}"
+                            Minimum="0"
+                            Maximum="2000"
+                            TickFrequency="5"
+                            PreviewMode="NanometerRadius"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Max Auto-Segment Downsample:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding AutoPolygonizeMaxDownsample, Mode=TwoWay}"
+                                    Minimum="1"
+                                    Maximum="4"
+                                    TickFrequency="0.25"
+                                    IsSnapToTickEnabled="True"
+                                    SmallChange="0.25"
+                                    LargeChange="0.25"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding AutoPolygonizeMaxDownsample, StringFormat=0.##}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Auto-segment does not run when the view is zoomed out past this downsample. The value itself still runs, so at 2, DS 2 runs and DS 3 does not. The maximum is 4."/>
+                        </Grid>
+
+                        <CheckBox Margin="0,10,0,0"
+                                  IsChecked="{Binding AutoPolygonizeCircles, Mode=TwoWay}"
+                                  Content="Auto polygonize circles in view"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="10,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="When enabled, idle views automatically send each circle whose center is at least 5% from the edges and whose disk is fully on screen to the segmentation service. Double-click a result polyline to accept; double-right-click to dismiss."/>
+                        <CheckBox Margin="0,10,0,0"
+                                  IsChecked="{Binding AutoPolygonizeOverlayMasks, Mode=TwoWay}"
+                                  Content="Overlay returned masks (debug)"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="10,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Shows the raw SAM2 mask under each auto-polygonize outline so you can compare the service response to the traced polygon. Uses extra GPU memory. Debug builds start with this on; turn it off for normal tracing."/>
+                        <CheckBox Margin="28,0,0,0"
+                                  IsChecked="{Binding AutoPolygonizeHideSegmentationRings, Mode=TwoWay}"
+                                  IsEnabled="{Binding AutoPolygonizeOverlayMasks}"
+                                  Content="Hide segmentation rings"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="38,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Hides the auto-polygonize outline while the returned mask is shown. Available only when masks are on. Rings stay visible whenever masks are off."/>
+                        <CheckBox Margin="0,10,0,0"
+                                  IsChecked="{Binding AutoPolygonizeOverlayPrompts, Mode=TwoWay}"
+                                  Content="Show foreground and background points (debug)"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="10,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Draws the green foreground and red background clicks sent with each auto-polygonize request. Debug builds start with this on; turn it off for normal tracing."/>
+                        <CheckBox Margin="0,10,0,0"
+                                  IsChecked="{Binding AutoPolygonizeShimmerEnabled, Mode=TwoWay}"
+                                  Content="Shimmer new auto-segmentations"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="10,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Sweeps a band of white lines across each auto-polygonize result once when it first appears."/>
+                        <Grid IsEnabled="{Binding AutoPolygonizeShimmerEnabled}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Shimmer brightness:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding AutoPolygonizeShimmerBrightness, Mode=TwoWay}"
+                                    Minimum="0.1"
+                                    Maximum="1"
+                                    TickFrequency="0.05"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding AutoPolygonizeShimmerBrightness, StringFormat='F2'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+
+                            <Label Grid.Row="1" Grid.Column="0" Content="Shimmer duration (ms):"/>
+                            <Slider Grid.Row="1" Grid.Column="1"
+                                    Value="{Binding AutoPolygonizeShimmerDurationMs, Mode=TwoWay}"
+                                    Minimum="250"
+                                    Maximum="1000"
+                                    TickFrequency="50"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="1" Grid.Column="3"
+                                     Text="{Binding AutoPolygonizeShimmerDurationMs, StringFormat='F0'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
                         </Grid>
                     </StackPanel>
                 </Expander>
@@ -667,6 +1046,7 @@
                     Width="80" 
                     Height="30" 
                     Margin="5"
+                    IsCancel="True"
                     Click="CancelButton_Click"/>
         </StackPanel>
     </Grid>

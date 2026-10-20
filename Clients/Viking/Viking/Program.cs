@@ -10,9 +10,12 @@ using System.IO;
 using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
+using Microsoft.Win32.SafeHandles;
 using System.Windows.Forms;
 using CommandLine.Text;
 using Newtonsoft.Json;
+using Viking.ProductVersioning;
 using Viking.UI.Forms;
 using VikingCoreResources = Viking.Properties.Resources;
 using System.Linq;
@@ -22,7 +25,6 @@ using System.Xml.Linq;
 using Viking.UI.WPF;
 using Viking.Services;
 using Velopack;
-using Newtonsoft.Json.Linq;
 
 
 namespace Viking
@@ -43,12 +45,17 @@ namespace Viking
 
     static class Program
     {
+        static string? DebugLogPath;
+
         /// <summary>
         /// Pre-filled on the login volume stage when no <c>-v</c> argument is given
         /// (Viking No Args). Used by this branch to target the local gRPC test endpoint
         /// declared in VolumeTest.xml.
         /// </summary>
         internal const string DefaultVolumeUrl = "http://rogue1.codepharm.net/RABBIT/VolumeTest.xml";
+
+        /// <summary>Identity WebApi used for viking://open code exchange when the LaunchExchangeBaseUrl setting is empty.</summary>
+        private const string DefaultLaunchExchangeBaseUrl = "https://identity.codepharm.net:6001";
 
         static System.IO.StreamWriter? DebugLogFile = null;
         public static TextWriter? SynchronizedDebugWriter = null;
@@ -66,8 +73,25 @@ namespace Viking
             // Version will be displayed in About dialog from Assembly.GetEntryAssembly().GetName().Version
             VelopackApp.Build().Run();
 
+            if (args != null && args.Any(static a =>
+                    string.Equals(a, "--version", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(a, "/version", StringComparison.OrdinalIgnoreCase)))
+            {
+                try
+                {
+                    WriteVersionToParentConsole();
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    // A missing console must not fall through into the UI.
+                }
+
+                return;
+            }
+
             // A viking:// link goes to a Viking that is already open on that volume, if there is one: it jumps to the
-            // position and this process exits. Otherwise this process opens the volume as usual.
+            // position and this process exits, without spending the link's launch code. Otherwise this process opens
+            // the volume as usual (VikingSingleInstance below handles links without a code and after the exchange).
             string? deepLink = args?.FirstOrDefault(a => a?.StartsWith("viking://", StringComparison.OrdinalIgnoreCase) == true);
             if (!string.IsNullOrEmpty(deepLink) && VikingDeeplinkInstances.TryForward(deepLink))
                 return;
@@ -76,21 +100,38 @@ namespace Viking
             // Upgrade settings from previous versions (preserves user settings across updates)
             SettingsManager.UpgradeSettingsIfNeeded();
 
-            // Register viking:// URL protocol so the OS launches Viking when the user clicks a viking:// link
+            // Channel identity (production vs Viking Test) drives protocol, pipes, and update URL.
+            VikingDeepLinkParser.ProtocolScheme = VikingChannelIdentity.ProtocolScheme;
+
+            // Register this channel's URL protocol (viking:// or viking-test://)
             VikingProtocolRegistration.RegisterIfNeeded();
+
+            // Same-volume deep link with a full volume URL/name can be forwarded before UI setup.
+            // Launch codes are exchanged first (below) so location/volume from Identity survive a stripped query.
+            if (VikingDeepLinkParser.TryFindOpenUrl(args, out string? earlyOpenUrl)
+                && earlyOpenUrl != null
+                && VikingDeepLinkParser.TryParse(earlyOpenUrl, out VikingDeepLink? earlyLink)
+                && earlyLink != null
+                && string.IsNullOrWhiteSpace(earlyLink.Code)
+                && VikingSingleInstance.TryForwardToExistingInstance(earlyOpenUrl))
+            {
+                return;
+            }
 
             ConfigureHighDpiMode();
             Application.EnableVisualStyles();
 
             Assembly execAssembly = System.Reflection.Assembly.GetExecutingAssembly();
 
-            // Remove the DefaultTraceListener so nothing writes to OutputDebugString.
+            // Leave the default listener in place. Clearing it made Release OutputDebugString
+            // silent after the settings-upgrade line, so a DBWIN monitor missed the launch path.
             // A rotating file listener stays in Release so deep-link failures are diagnosable.
-#if !DEBUG
-            Trace.Listeners.Clear();
-#endif
             CreateFileTraceListener();
+            WriteStartupMarker();
+            SynchronizedDebugWriter?.WriteLine($"{DateTime.Now:O} {ProductVersion.Describe(execAssembly)}");
+            SynchronizedDebugWriter?.Flush();
             InitializeMathnet();
+            Viking.UI.GpuExceptionHandling.Register();
 
             Trace.WriteLine("Arguments: " + args.ToString(), "Viking");
             Trace.WriteLine("Current Directory: " + System.Environment.CurrentDirectory, "Viking");
@@ -105,7 +146,7 @@ namespace Viking
 
             //Change to the executing assemblies directory so we can load modules correctly
             //  System.Environment.CurrentDirectory = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
+            System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=16.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
             SqlServerTypesLoader.Loader.LoadNativeAssemblies(AppDomain.CurrentDomain.BaseDirectory);
 
 
@@ -115,20 +156,20 @@ namespace Viking
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // Check for updates before showing login dialog, unless this process was
-            // started from viking:// — the launch code lives five minutes and the
-            // Velopack UI has blocked exchange for minutes on a cold start.
+            // The update check runs only when this process will show UI (CheckForUpdatesUnlessForwarded): a
+            // viking:// link that joins the running Viking stays quiet, and a launch code is exchanged before the
+            // Velopack UI can block it (the code lives five minutes).
             ApplicationSettings? appSettings = null;
-            if (!ArgsContainVikingOpen(args))
-                UpdateService.CheckForUpdatesAtStartup();
 
             // Handle viking://open?code=...&volume=...&location=... protocol (one-use launch code)
-            if (TryHandleVikingOpenUrl(args, out appSettings))
+            if (TryHandleVikingOpenUrl(args, out appSettings, out bool forwardedToExisting))
             {
-                // appSettings set by TryHandleVikingOpenUrl; continue to volume load below
+                if (forwardedToExisting)
+                    return;
             }
             else
             {
+                CheckForUpdatesUnlessForwarded();
                 var options = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
 
                 options.WithParsed(o => appSettings = TryBypassSplash(o)).WithNotParsed(errors =>
@@ -157,6 +198,7 @@ namespace Viking
 
             //Make sure the volume URL includes a file, if it does not then include Volume.VikingXML by default
             appSettings.VolumeURL = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(appSettings.VolumeURL);
+            UI.State.VolumeUrl = appSettings.VolumeURL;
             Trace.WriteLine($"Loading: {appSettings.VolumeURL}", "Viking");
 
             // Populate annotation URL asynchronously (fire-and-forget, errors are logged)
@@ -168,13 +210,52 @@ namespace Viking
 
             VikingApplicationContext context = new(appSettings);
             context.Initialize();
+
+            // After the main window and viewer exist, accept same-volume viking:// activations.
+            if (context.MainForm != null && !string.IsNullOrWhiteSpace(UI.State.VolumeUrl))
+            {
+                context.MainForm.FormClosing += (_, e) =>
+                {
+                    if (!e.Cancel)
+                        VikingSingleInstance.BeginShutdown();
+                };
+                string? volumeName = UI.State.IdentityVolumeName ?? UI.State.volume?.Name;
+                VikingSingleInstance.StartListening(UI.State.VolumeUrl!, volumeName, VikingDeepLinkActivation.HandleIncomingUrl);
+            }
+
             Application.Run(context);
-             
-            // Shutdown WPF Application instance if it exists
-            System.Windows.Application.Current?.Shutdown();
+
+            VikingSingleInstance.StopListening();
+            VikingApplicationContext.ShutdownAfterMessageLoop();
 
             SynchronizedDebugWriter?.Close();
             DebugLogFile?.Close();
+
+            // Not Environment.Exit: its ProcessExit pass runs Grpc.Core's unbounded shutdown wait, which
+            // hung the windowless process whenever a gRPC call was still in flight.
+            ProcessTermination.Terminate(0);
+        }
+
+        /// <summary>Parses a viking:// query string. Used by <see cref="VikingDeeplinkInstances"/>.</summary>
+        internal static Dictionary<string, string> ParseQueryString(string query) =>
+            VikingDeepLinkParser.ParseQueryString(query);
+
+        /// <summary>
+        /// Copies location / coordinate query params into StartupArguments for post-load navigation.
+        /// Location ID wins over coordinates when both are present. Used by <see cref="VikingDeeplinkInstances"/>.
+        /// </summary>
+        internal static void ApplyStartupPlaceArguments(Dictionary<string, string> query) =>
+            UI.State.StartupArguments = VikingDeepLinkParser.ParsePlaceArguments(query);
+
+        private static string? FirstNonEmpty(params string?[] values)
+        {
+            foreach (string? value in values)
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                    return value.Trim();
+            }
+
+            return null;
         }
 
         private static ApplicationSettings TryBypassSplash(CommandLineOptions options)
@@ -195,54 +276,73 @@ namespace Viking
 
         /// <summary>
         /// Handles viking://open?code=...&volume=...&location=... protocol.
-        /// Returns true if args contained a viking:// URL and it was handled (appSettings may be null if user cancelled).
+        /// Returns true if args contained a viking:// URL. <paramref name="forwardedToExisting"/> is set
+        /// when the running instance accepted the link and this process should exit.
         /// </summary>
-        private static bool TryHandleVikingOpenUrl(string[] args, out ApplicationSettings? appSettings)
+        private static bool TryHandleVikingOpenUrl(string[] args, out ApplicationSettings? appSettings, out bool forwardedToExisting)
         {
             appSettings = null;
-            string? vikingUrl = args?.FirstOrDefault(a => a?.StartsWith("viking://", StringComparison.OrdinalIgnoreCase) == true);
-            if (string.IsNullOrEmpty(vikingUrl))
+            forwardedToExisting = false;
+            if (!VikingDeepLinkParser.TryFindOpenUrl(args, out string? vikingUrl) || string.IsNullOrEmpty(vikingUrl))
                 return false;
 
-            if (!Uri.TryCreate(vikingUrl, UriKind.Absolute, out Uri? uri) || string.IsNullOrEmpty(uri?.Query))
+            if (!VikingDeepLinkParser.TryParse(vikingUrl, out VikingDeepLink? link) || link is null)
                 return false;
 
-            var query = ParseQueryString(uri.Query);
-            ApplyStartupPlaceArguments(query);
+            ApplyStartupPlaceArguments(link);
 
-            string? code = query.TryGetValue("code", out var c) ? c?.Trim() : null;
-            string? volume = query.TryGetValue("volume", out var v) ? v?.Trim() : null;
-
-            if (!string.IsNullOrEmpty(code))
+            if (!string.IsNullOrEmpty(link.Code))
             {
-                string baseUrl = Viking.Properties.Settings.Default.LaunchExchangeBaseUrl?.Trim() ?? "";
+                string? volumeHint = link.VolumeUrl ?? link.VolumeName;
+                // LaunchExchangeBaseUrl is a Designer setting whose default is empty; fall back to the production
+                // Identity WebApi so launch codes work without configuration.
+                string baseUrl = FirstNonEmpty(
+                    Viking.Properties.Settings.Default.LaunchExchangeBaseUrl,
+                    DefaultLaunchExchangeBaseUrl) ?? "";
                 if (string.IsNullOrEmpty(baseUrl))
                 {
                     const string reason = "LaunchExchangeBaseUrl not configured.";
                     Trace.WriteLine("[Viking] viking://open with code ignored: " + reason, "Viking");
-                    appSettings = ShowLoginWindow(volume, null, null, autoAdvanceFromDeepLink: true,
+                    appSettings = ShowLoginWindow(volumeHint, null, null, autoAdvanceFromDeepLink: true,
                         launchStatusMessage: "The launch link could not be used (" + reason + "); please sign in.");
                     return true;
                 }
 
                 var exchangeUrl = baseUrl.TrimEnd('/') + "/api/viking/launch-exchange";
-                var exchange = ExchangeLaunchCodeAsync(exchangeUrl, code).GetAwaiter().GetResult();
-                if (exchange.AccessToken == null)
+                VikingLaunchExchangeResult exchanged = ExchangeLaunchCodeAsync(exchangeUrl, link.Code!).GetAwaiter().GetResult();
+                MergeExchangeIntoLink(link, exchanged);
+                ApplyStartupPlaceArguments(link);
+
+                string activationUrl = VikingDeepLinkParser.BuildActivationUrl(link);
+                if (VikingSingleInstance.TryForwardToExistingInstance(activationUrl))
                 {
-                    var detail = exchange.Error ?? "no token returned";
+                    forwardedToExisting = true;
+                    return true;
+                }
+
+                if (string.IsNullOrEmpty(exchanged.AccessToken))
+                {
+                    var detail = exchanged.Error ?? "no token returned";
                     Trace.WriteLine("[Viking] Launch code exchange failed: " + detail, "Viking");
-                    appSettings = ShowLoginWindow(volume, null, null, autoAdvanceFromDeepLink: true,
+                    appSettings = ShowLoginWindow(link.VolumeUrl ?? link.VolumeName ?? volumeHint, null, null, autoAdvanceFromDeepLink: true,
                         launchStatusMessage: "The launch link could not be used (" + detail + "); please sign in.");
                     return true;
                 }
-                string? initialVolume = !string.IsNullOrEmpty(exchange.VolumeUrl) ? exchange.VolumeUrl : volume;
-                appSettings = ShowLoginWindowWithLaunchResult(exchange.AccessToken, exchange.IdentityServerUrl ?? "", initialVolume, exchange.VolumeName);
+
+                string? initialVolume = !string.IsNullOrEmpty(link.VolumeUrl) ? link.VolumeUrl : link.VolumeName;
+                appSettings = ShowLoginWindowWithLaunchResult(exchanged.AccessToken!, exchanged.IdentityServerUrl ?? "", initialVolume, link.VolumeName);
                 return true;
             }
 
-            if (!string.IsNullOrEmpty(volume))
+            if (VikingSingleInstance.TryForwardToExistingInstance(VikingDeepLinkParser.BuildActivationUrl(link)))
             {
-                appSettings = ShowLoginWindow(volume, null, null, autoAdvanceFromDeepLink: true);
+                forwardedToExisting = true;
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(link.VolumeUrl) || !string.IsNullOrEmpty(link.VolumeName))
+            {
+                appSettings = ShowLoginWindow(link.VolumeUrl ?? link.VolumeName, null, null, autoAdvanceFromDeepLink: true);
                 return true;
             }
 
@@ -250,91 +350,39 @@ namespace Viking
             return true;
         }
 
-        private static bool ArgsContainVikingOpen(string[] args) =>
-            args?.Any(a => a != null && a.StartsWith("viking://", StringComparison.OrdinalIgnoreCase)) == true;
-
         /// <summary>
         /// Copies location / coordinate query params into StartupArguments for post-load navigation.
         /// Location ID wins over coordinates when both are present.
         /// </summary>
-        internal static void ApplyStartupPlaceArguments(Dictionary<string, string> query)
+        private static void ApplyStartupPlaceArguments(VikingDeepLink link)
         {
-            UI.State.StartupArguments = [];
-
-            if (query.TryGetValue("location", out string? locationRaw) && !string.IsNullOrWhiteSpace(locationRaw))
-            {
-                locationRaw = locationRaw.Trim();
-                if (long.TryParse(locationRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out long locationId))
-                {
-                    UI.State.StartupArguments["Location"] = locationId.ToString(CultureInfo.InvariantCulture);
-                    return;
-                }
-
-                // Comma-separated x,y,z[,downsample] from SBFSEM-tools pick readout
-                string[] parts = locationRaw.Split(',');
-                if (parts.Length >= 3)
-                {
-                    UI.State.StartupArguments["X"] = parts[0].Trim();
-                    UI.State.StartupArguments["Y"] = parts[1].Trim();
-                    UI.State.StartupArguments["Z"] = parts[2].Trim();
-                    if (parts.Length >= 4)
-                        UI.State.StartupArguments["DS"] = parts[3].Trim();
-                    return;
-                }
-            }
-
-            CopyQueryKey(query, "x", "X");
-            CopyQueryKey(query, "y", "Y");
-            CopyQueryKey(query, "z", "Z");
-            CopyQueryKey(query, "ds", "DS");
+            UI.State.StartupArguments = link.Place ?? [];
         }
 
-        private static void CopyQueryKey(Dictionary<string, string> query, string queryKey, string startupKey)
+        private static void MergeExchangeIntoLink(VikingDeepLink link, VikingLaunchExchangeResult exchanged)
         {
-            if (query.TryGetValue(queryKey, out string? value) && !string.IsNullOrWhiteSpace(value))
-                UI.State.StartupArguments[startupKey] = value.Trim();
+            if (!string.IsNullOrWhiteSpace(exchanged.VolumeUrl))
+                link.VolumeUrl = exchanged.VolumeUrl.Trim();
+            if (!string.IsNullOrWhiteSpace(exchanged.VolumeName))
+                link.VolumeName = exchanged.VolumeName.Trim();
+
+            var fromExchange = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (!string.IsNullOrWhiteSpace(exchanged.Location))
+                fromExchange["location"] = exchanged.Location.Trim();
+            if (!string.IsNullOrWhiteSpace(exchanged.X))
+                fromExchange["x"] = exchanged.X.Trim();
+            if (!string.IsNullOrWhiteSpace(exchanged.Y))
+                fromExchange["y"] = exchanged.Y.Trim();
+            if (!string.IsNullOrWhiteSpace(exchanged.Z))
+                fromExchange["z"] = exchanged.Z.Trim();
+            if (!string.IsNullOrWhiteSpace(exchanged.Downsample))
+                fromExchange["ds"] = exchanged.Downsample.Trim();
+
+            if (fromExchange.Count > 0)
+                VikingDeepLinkParser.MergePlace(link.Place, VikingDeepLinkParser.ParsePlaceArguments(fromExchange));
         }
 
-        internal static Dictionary<string, string> ParseQueryString(string query)
-        {
-            var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            if (string.IsNullOrEmpty(query) || query[0] != '?')
-                return dict;
-            foreach (var pair in query.Substring(1).Split('&'))
-            {
-                var eq = pair.IndexOf('=');
-                if (eq < 0)
-                    continue;
-                var key = Uri.UnescapeDataString(pair.Substring(0, eq).Replace('+', ' '));
-                var value = Uri.UnescapeDataString(pair.Substring(eq + 1).Replace('+', ' '));
-                dict[key] = value;
-            }
-            return dict;
-        }
-
-        private sealed class LaunchExchangeResult
-        {
-            public LaunchExchangeResult(string? accessToken, string? identityServerUrl, string? volumeUrl, string? volumeName, string? error)
-            {
-                AccessToken = accessToken;
-                IdentityServerUrl = identityServerUrl;
-                VolumeUrl = volumeUrl;
-                VolumeName = volumeName;
-                Error = error;
-            }
-
-            public string? AccessToken { get; }
-            public string? IdentityServerUrl { get; }
-            public string? VolumeUrl { get; }
-            public string? VolumeName { get; }
-            public string? Error { get; }
-        }
-
-        /// <summary>
-        /// Reads launch-exchange JSON. Prefer snake_case (the documented contract);
-        /// also accept camelCase so a mixed server build still works.
-        /// </summary>
-        private static async Task<LaunchExchangeResult> ExchangeLaunchCodeAsync(string exchangeUrl, string code)
+        private static async Task<VikingLaunchExchangeResult> ExchangeLaunchCodeAsync(string exchangeUrl, string code)
         {
             try
             {
@@ -345,45 +393,24 @@ namespace Viking
                 using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
                 using var response = await client.PostAsync(exchangeUrl, content).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
-                    return new LaunchExchangeResult(null, null, null, null, $"exchange failed ({(int)response.StatusCode})");
+                {
+                    Trace.WriteLine($"[Viking] Launch code exchange HTTP {(int)response.StatusCode}.", "Viking");
+                    return VikingLaunchExchangeParser.Failed($"exchange failed ({(int)response.StatusCode})");
+                }
+
                 var responseJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                var obj = JsonConvert.DeserializeObject<JObject>(responseJson);
-                if (obj == null)
-                    return new LaunchExchangeResult(null, null, null, null, "invalid token response");
-                var accessToken = FirstJsonString(obj, "access_token", "accessToken");
-                if (string.IsNullOrEmpty(accessToken))
-                    return new LaunchExchangeResult(null, null, null, null, "no token returned");
-                return new LaunchExchangeResult(
-                    accessToken,
-                    FirstJsonString(obj, "identity_server_url", "identityServerUrl"),
-                    FirstJsonString(obj, "volume_url", "volumeUrl"),
-                    FirstJsonString(obj, "volume_name", "volumeName"),
-                    null);
+                return VikingLaunchExchangeParser.ParseJson(responseJson);
             }
             catch (Exception ex)
             {
                 Trace.WriteLine($"[Viking] Launch code exchange error: {ex.Message}", "Viking");
-                return new LaunchExchangeResult(null, null, null, null, ex.Message);
+                return VikingLaunchExchangeParser.Failed(ex.Message);
             }
-        }
-
-        private static string? FirstJsonString(JObject obj, params string[] names)
-        {
-            foreach (var name in names)
-            {
-                var token = obj[name];
-                if (token != null && token.Type != JTokenType.Null)
-                {
-                    var value = token.ToString();
-                    if (!string.IsNullOrEmpty(value))
-                        return value;
-                }
-            }
-            return null;
         }
 
         private static ApplicationSettings? ShowLoginWindowWithLaunchResult(string initialApiToken, string initialIdentityServerUrl, string? initialVolumeUrl, string? initialVolumeName = null)
         {
+            CheckForUpdatesUnlessForwarded();
             LoginWindow wpfLoginWindow = new();
             wpfLoginWindow.InitialApiToken = initialApiToken;
             wpfLoginWindow.InitialIdentityServerUrl = string.IsNullOrWhiteSpace(initialIdentityServerUrl) ? null : initialIdentityServerUrl;
@@ -391,6 +418,20 @@ namespace Viking
             wpfLoginWindow.InitialVolumeName = string.IsNullOrWhiteSpace(initialVolumeName) ? null : initialVolumeName;
             wpfLoginWindow.AutoAdvanceFromDeepLink = true;
             return ShowLoginWindowFromDialog(wpfLoginWindow);
+        }
+
+        private static bool _checkedForUpdates;
+
+        /// <summary>
+        /// Update check for a process that will show UI. A deep link that joined
+        /// the running Viking returns before this, so that handoff stays quiet.
+        /// </summary>
+        private static void CheckForUpdatesUnlessForwarded()
+        {
+            if (_checkedForUpdates)
+                return;
+            _checkedForUpdates = true;
+            UpdateService.CheckForUpdatesAtStartup();
         }
 
         /// <summary>
@@ -403,13 +444,15 @@ namespace Viking
                 numMathProcs = 1;
 
             MathNet.Numerics.Control.MaxDegreeOfParallelism = numMathProcs;
-            bool MKLSuccess = Geometry.Global.TryUseNativeMKL();
-            if (MKLSuccess)
-                Console.WriteLine("Success loading MKL Library");
-            else
-            {
-                Console.WriteLine("Unable to load MKL Libarry");
-            }
+            bool MKLSuccess = Geometry.Global.TryUseNativeMKL(out string mathNetReport);
+
+            // Written to the startup log directly: Trace is stripped from Release builds, and a silent
+            // fall back to the managed provider makes the RBF fallback transform noticeably slower.
+            SynchronizedDebugWriter?.WriteLine(
+                $"{DateTime.Now:O} MathNet native linear algebra {(MKLSuccess ? "ENABLED" : "UNAVAILABLE (managed provider in use)")}, " +
+                $"MaxDegreeOfParallelism={MathNet.Numerics.Control.MaxDegreeOfParallelism}");
+            SynchronizedDebugWriter?.WriteLine(mathNetReport);
+            SynchronizedDebugWriter?.Flush();
         }
 
 
@@ -420,12 +463,13 @@ namespace Viking
             bool autoAdvanceFromDeepLink = false,
             string? launchStatusMessage = null)
         {
+            CheckForUpdatesUnlessForwarded();
             LoginWindow wpfLoginWindow = new();
             wpfLoginWindow.InitialVolumeUrl = string.IsNullOrWhiteSpace(volumePath) ? DefaultVolumeUrl : volumePath;
-            wpfLoginWindow.AutoAdvanceFromDeepLink = autoAdvanceFromDeepLink && !string.IsNullOrWhiteSpace(volumePath);
-            wpfLoginWindow.LaunchStatusMessage = launchStatusMessage;
             wpfLoginWindow.InitialUsername = username;
             wpfLoginWindow.InitialPassword = password;
+            wpfLoginWindow.AutoAdvanceFromDeepLink = autoAdvanceFromDeepLink && !string.IsNullOrWhiteSpace(volumePath);
+            wpfLoginWindow.LaunchStatusMessage = launchStatusMessage;
             return ShowLoginWindowFromDialog(wpfLoginWindow);
         }
 
@@ -459,6 +503,9 @@ namespace Viking
             UI.State.CorrectionDatabaseName = string.IsNullOrWhiteSpace(wpfLoginWindow.CorrectionDatabaseName)
                 ? null
                 : wpfLoginWindow.CorrectionDatabaseName;
+            // SectionShimContext.Source is set by WebAnnotation, which reuses the annotation gRPC channels.
+            if (!string.IsNullOrWhiteSpace(wpfLoginWindow.VolumeURL))
+                UI.State.VolumeUrl = Viking.Common.Util.AppendDefaultVolumeFilenameIfMissing(wpfLoginWindow.VolumeURL);
             UI.State.SbfsemToolsOpenUrl = string.IsNullOrWhiteSpace(settings.SbfsemToolsOpenUrl)
                 ? "https://sbfsem-tools.com/open"
                 : settings.SbfsemToolsOpenUrl;
@@ -469,9 +516,36 @@ namespace Viking
             if (wpfLoginWindow.BearerToken != null)
             {
                 Viking.Tokens.TokenStore.BearerToken = wpfLoginWindow.BearerToken;
-                var identityServerUrl = settings.IdentityServerURL ?? wpfLoginWindow.IdentityServerUrl;
+                // Prefer the URL from this login (launch-exchange) over a blank user setting.
+                // Empty IdentityServerURL in settings must not block Authority (?? only skips null).
+                var identityServerUrl = FirstNonEmpty(
+                    wpfLoginWindow.IdentityServerUrl,
+                    settings.IdentityServerURL);
                 if (!string.IsNullOrEmpty(identityServerUrl))
+                {
                     Viking.Tokens.TokenStore.BearerTokenAuthority = identityServerUrl;
+                }
+
+                Trace.WriteLine(
+                    "[Viking] Bearer token set. " +
+                    $"Authority={(identityServerUrl ?? "(null)")} AccessTokenLength={wpfLoginWindow.BearerToken.AccessToken?.Length ?? 0}",
+                    "Viking");
+
+                if (string.IsNullOrEmpty(wpfLoginWindow.BearerToken.AccessToken))
+                {
+                    Trace.WriteLine("[Viking] Login finished but BearerToken.AccessToken is empty; annotation service will deny access.", "Viking");
+                    System.Windows.Forms.MessageBox.Show(
+                        "Sign-in completed, but the access token could not be read. Annotation loading will fail.\n\n" +
+                        "Try signing in again with your username and password, or update Viking.",
+                        "Viking",
+                        System.Windows.Forms.MessageBoxButtons.OK,
+                        System.Windows.Forms.MessageBoxIcon.Error);
+                    return null;
+                }
+            }
+            else
+            {
+                Trace.WriteLine("[Viking] Login finished with no BearerToken; annotation calls may be denied.", "Viking");
             }
 
             bool settingsChanged = false;
@@ -544,6 +618,35 @@ namespace Viking
                 settings.Save();
             }
 
+            UI.State.IdentityServerUrl = FirstNonEmpty(
+                wpfLoginWindow.IdentityServerUrl,
+                settings.IdentityServerURL);
+
+            UI.State.RecentSegmentationServiceUrls = [];
+            if (settings.SegmentationServiceUrls != null)
+            {
+                foreach (string url in settings.SegmentationServiceUrls)
+                {
+                    if (!string.IsNullOrWhiteSpace(url))
+                        UI.State.RecentSegmentationServiceUrls.Add(url);
+                }
+            }
+
+            UI.State.PersistSegmentationServiceSelection = endpoint =>
+            {
+                settings.LastSegmentationServiceUrl = endpoint ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(endpoint))
+                {
+                    var history = settings.SegmentationServiceUrls ?? [];
+                    if (history.Contains(endpoint))
+                        history.Remove(endpoint);
+                    history.Insert(0, endpoint);
+                    settings.SegmentationServiceUrls = history;
+                }
+
+                settings.Save();
+            };
+
             return appSettings;
         }
 
@@ -591,6 +694,45 @@ namespace Viking
         }
 
         /// <summary>
+        /// Prints the entry-assembly version to the parent console.
+        /// Viking is a WinExe, so the process has no console until one is attached,
+        /// and <see cref="Console.Out"/> must be reopened afterwards or the write is dropped.
+        /// Called for <c>--version</c> and <c>/version</c> before the UI starts.
+        /// </summary>
+        private static void WriteVersionToParentConsole()
+        {
+            // Do not AllocConsole: that opens a stray window when there is no parent console.
+            var line = ProductVersion.Describe(Assembly.GetExecutingAssembly()) + Environment.NewLine;
+            var handle = GetStdHandle(StdOutputHandle);
+            if (handle != IntPtr.Zero && handle != new IntPtr(-1))
+            {
+                var bytes = Encoding.UTF8.GetBytes(line);
+                using (var stream = new FileStream(new SafeFileHandle(handle, ownsHandle: false), FileAccess.Write))
+                {
+                    stream.Write(bytes, 0, bytes.Length);
+                    stream.Flush();
+                }
+
+                return;
+            }
+
+            if (!AttachConsole(AttachParentProcess))
+                return;
+
+            Console.SetOut(new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true });
+            Console.Write(line);
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool AttachConsole(int dwProcessId);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr GetStdHandle(int nStdHandle);
+
+        private const int AttachParentProcess = -1;
+        private const int StdOutputHandle = -11;
+
+        /// <summary>
         /// File listener under %LOCALAPPDATA%\Viking\Logs. Kept in Release so a failed
         /// viking:// exchange is not silent. Oldest files beyond five are deleted.
         /// </summary>
@@ -603,15 +745,13 @@ namespace Viking
             Directory.CreateDirectory(logPath);
 
             string fileName = Path.Combine(logPath, DateTime.Now.ToString("yyyy-MM-dd HH.mm.ss") + ".log");
+            DebugLogPath = fileName;
             DebugLogFile = File.CreateText(fileName);
             SynchronizedDebugWriter = TextWriter.Synchronized(DebugLogFile);
             Trace.Listeners.Add(new TextWriterTraceListener(SynchronizedDebugWriter, "Viking Log Listener"));
             Trace.UseGlobalLock = true;
             Trace.AutoFlush = true;
             PruneLogFiles(logPath, keep: 5);
-#if DEBUG
-            TestCultureNumberParsing();
-#endif
         }
 
         private static void PruneLogFiles(string directory, int keep)
@@ -637,28 +777,23 @@ namespace Viking
             }
         }
 
-        private static void TestCultureNumberParsing()
+        /// <summary>
+        /// Records where Release launch traces went. Called from Main after CreateFileTraceListener.
+        /// debug_output.txt next to Viking.exe is rewritten empty on each build; appending the
+        /// log path there is what a monitor of that file can see on the next run.
+        /// </summary>
+        private static void WriteStartupMarker()
         {
-            NumberFormatInfo current1 = CultureInfo.CurrentCulture.NumberFormat;
-
-            Debug.WriteLine("Decimal separator: " + current1.NumberDecimalSeparator);
-            Debug.WriteLine("Group separator:   " + current1.NumberGroupSeparator);
-
-            string[] testStrings = ["3,800000000000e+01",
-                                    "3.800000000000e+01",
-                                    "3.80e+01",
-                                    "38"];
-
-            foreach (string number in testStrings)
+            string line = "[Viking] Startup log: " + (DebugLogPath ?? "(none)");
+            Trace.WriteLine(line, "Viking");
+            try
             {
-                try
-                {
-                    Debug.WriteLine($"Parsing {number} yields {System.Convert.ToDouble(number)}");
-                }
-                catch (Exception e)
-                {
-                    Debug.WriteLine($"Could not parse {number}\n{e}");
-                }
+                string sideFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_output.txt");
+                File.AppendAllText(sideFile, line + Environment.NewLine);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine("[Viking] Could not append debug_output.txt: " + ex.Message, "Viking");
             }
         }
 

@@ -135,35 +135,22 @@ namespace Viking.AnnotationServiceTypes
             if (B is null)
                 return -1;
 
-            if (A.Directional.Equals(B.Directional) && !A.Directional)
-            {
-                var A_Low = Math.Min(A.SourceTypeID, A.TargetTypeID);
-                var A_High = Math.Max(A.SourceTypeID, A.TargetTypeID);
+            int firstCompare = First(A).CompareTo(First(B));
+            if (firstCompare != 0)
+                return firstCompare;
 
-                var B_Low = Math.Min(B.SourceTypeID, B.TargetTypeID);
-                var B_High = Math.Max(B.SourceTypeID, B.TargetTypeID);
-
-                int lowCompare = A_Low.CompareTo(B_Low);
-                if (lowCompare != 0)
-                    return lowCompare;
-
-                int highCompare = B_High.CompareTo(B_High);
-                if (highCompare != 0)
-                    return highCompare;
-            }
-            else
-            {
-                int sourceCompare = A.SourceTypeID.CompareTo(B.SourceTypeID);
-                if (sourceCompare != 0)
-                    return sourceCompare;
-
-                int targetCompare = A.TargetTypeID.CompareTo(B.TargetTypeID);
-                if (targetCompare != 0)
-                    return targetCompare;
-            }
+            int secondCompare = Second(A).CompareTo(Second(B));
+            if (secondCompare != 0)
+                return secondCompare;
 
             return A.Directional.CompareTo(B.Directional);
         }
+
+        /// <summary>The first type in canonical order: the lower ID of a bidirectional key, else the source.</summary>
+        private static ulong First(IPermittedStructureLinkKey key) => key.Directional ? key.SourceTypeID : Math.Min(key.SourceTypeID, key.TargetTypeID);
+
+        /// <summary>The second type in canonical order: the higher ID of a bidirectional key, else the target.</summary>
+        private static ulong Second(IPermittedStructureLinkKey key) => key.Directional ? key.TargetTypeID : Math.Max(key.SourceTypeID, key.TargetTypeID);
          
 
         public static bool operator ==(PermittedStructureLinkKey A, PermittedStructureLinkKey B)

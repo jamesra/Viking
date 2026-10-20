@@ -92,8 +92,6 @@ namespace VikingXNAGraphics
                     device.DrawIndexedPrimitives(PrimitiveType.TriangleList,
                         0,
                         0,
-                        6,
-                        0,
                         2);
                 }
             }

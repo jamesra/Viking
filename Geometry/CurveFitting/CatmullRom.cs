@@ -285,6 +285,12 @@ namespace Geometry
             in Vector2 p2, in Vector2 p3,
                                                     uint NumInterpolations = 5)
         {
+            // One evenly spaced point would be i / (1 - 1) = 0 / 0 = NaN, which made every curve point NaN and dropped
+            // all control points (CurveView defaults to 1). Treat 1 as 2 so each segment always keeps p1 and p2 and the
+            // curvature refinement below still adds points where needed. 0 still means "no points".
+            if (NumInterpolations == 1)
+                NumInterpolations = 2;
+
             double[] tvalues = new double[NumInterpolations];
             SortedSet<double> tPoints = [.. tvalues.Select((t, i) => ((double)i / ((double)NumInterpolations - 1.0)))];
 

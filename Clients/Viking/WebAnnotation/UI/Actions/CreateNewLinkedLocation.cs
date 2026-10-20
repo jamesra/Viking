@@ -46,6 +46,33 @@ namespace WebAnnotation.UI.Actions
             NewVolumeShape = newVolumePolygon ?? Transform.TryMapShapeSectionToVolume(newMosaicPolygon.ToSqlGeometry()).ToIShape2D();
         }
 
+        /// <summary>
+        /// Maps a pen-drawn volume shape to the section and wraps it in an action that creates a location linked to <paramref name="existingLocID"/>.
+        /// </summary>
+        /// <param name="existingLocID">Location on the adjacent section the new location links to.</param>
+        /// <param name="volumeShape">A <see cref="Polygon"/> for a closed stroke or a <see cref="Polyline"/> for an open one, in volume space.</param>
+        /// <param name="sectionNumber">Section the new location is created on.</param>
+        /// <param name="transform">Mapping between that section and the volume.</param>
+        /// <returns>The action, or null (with a trace line) when any vertex of the shape cannot be mapped to the section,
+        /// so no linked-location choice is offered whose execution would fail.</returns>
+        internal static CreateNewLinkedLocationAction TryCreate(long existingLocID, IShape2D volumeShape, int sectionNumber, IVolumeToSectionTransform transform)
+        {
+            IShape2D mosaicShape = volumeShape switch
+            {
+                Polygon polygon => transform.TryMapShapeVolumeToSection(polygon),
+                Polyline line => transform.TryMapShapeVolumeToSection(line),
+                _ => throw new ArgumentException("Expected a Polygon or Polyline, got " + volumeShape?.GetType().Name, nameof(volumeShape))
+            };
+
+            if (mosaicShape is null)
+            {
+                Trace.WriteLine("CreateNewLinkedLocationAction: new shape crosses an unmapped region of section " + sectionNumber + "; no linked location offered for location " + existingLocID + ".", "WebAnnotation");
+                return null;
+            }
+
+            return new CreateNewLinkedLocationAction(existingLocID, mosaicShape, volumeShape, sectionNumber, transform);
+        }
+
         private async Task OnExecuteAsync()
         {
             try

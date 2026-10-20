@@ -1,6 +1,7 @@
 using Geometry;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace Viking.UI.Forms
@@ -114,42 +115,14 @@ namespace Viking.UI.Forms
             {
                 try
                 {
-                    FrameCapture frame = new();
-
-                    double X = System.Convert.ToDouble(row.Cells[iX].Value);
-                    double Y = System.Convert.ToDouble(row.Cells[iY].Value);
-                    double Width = 512;
-                    double Height = 512;
-                    if (row.Cells[iWidth].Value != null)
-                        Width = System.Convert.ToDouble(row.Cells[iWidth].Value);
-
-                    if (row.Cells[iHeight].Value != null)
-                        Height = System.Convert.ToDouble(row.Cells[iHeight].Value);
-
-                    frame.downsample = 1;
-                    if (row.Cells[iDownsample].Value != null)
-                        frame.downsample = System.Convert.ToDouble(row.Cells[iDownsample].Value);
-
-                    frame.IncludeOverlay = checkIncludeOverlays.Checked;
-
-                    //Width and Height are the target image width and height.  Figure out what the ROI Width and Height should be
-                    double ROIWidth = Width * frame.downsample;
-                    double ROIHeight = Height * frame.downsample;
-
-                    //Adjust frame so it is centered on X/Y coordinates
-                    X -= ROIWidth / 2;
-                    Y -= ROIHeight / 2;
-
-                    frame.Rect = new Rectangle(new Vector2(X, Y),
-                                                   ROIWidth,
-                                                   ROIHeight);
+                    object?[] cells = new object?[row.Cells.Count];
+                    for (int iCol = 0; iCol < cells.Length; iCol++)
+                        cells[iCol] = row.Cells[iCol].Value;
 
                     string Filename = Prefix + (FirstFrameNum + row.Index).ToString() + ".png";
-                    string FullpathFilename = System.IO.Path.Combine(Path, Filename);
-                    frame.Z = System.Convert.ToDouble(row.Cells[iZ].Value);
-                    frame.Filename = FullpathFilename;
-
-                    listFrames.Add(frame);
+                    FrameCapture? frame = ParseFrameRow(cells, checkIncludeOverlays.Checked, System.IO.Path.Combine(Path, Filename));
+                    if (frame.HasValue)
+                        listFrames.Add(frame.Value);
                 }
                 catch (Exception)
                 {
@@ -163,6 +136,52 @@ namespace Viking.UI.Forms
             this.Frames = [.. listFrames];
             this.DialogResult = DialogResult.OK;
             this.Close();
+        }
+
+        /// <summary>
+        /// Turns one row of the frame grid into a <see cref="FrameCapture"/> centered on the row's X and Y.
+        /// </summary>
+        /// <param name="cells">Cell values in grid column order: X, Y, Z, image width, image height, downsample.</param>
+        /// <param name="includeOverlay">Whether the frame is rendered with annotation overlays.</param>
+        /// <param name="filename">Full path of the PNG the frame is written to.</param>
+        /// <returns>The frame, or <c>null</c> when every cell is blank (the grid's new-row placeholder or an empty row).</returns>
+        /// <exception cref="FormatException">X, Y, or Z is blank while another cell is not, or a cell is not a number.</exception>
+        /// <remarks>Width and height default to 512 and downsample to 1 when their cells are null, empty, or white space.</remarks>
+        internal static FrameCapture? ParseFrameRow(IReadOnlyList<object?> cells, bool includeOverlay, string filename)
+        {
+            static bool IsBlank(object? value) => value is null || (value is string s && string.IsNullOrWhiteSpace(s));
+            object? Cell(int i) => i < cells.Count ? cells[i] : null;
+
+            if (cells.All(IsBlank))
+                return null;
+
+            //Convert.ToDouble(null) is 0, so a blank X, Y, or Z would silently become 0 instead of an error
+            double Required(int i) => IsBlank(Cell(i))
+                ? throw new FormatException($"Column {i} is required")
+                : System.Convert.ToDouble(Cell(i));
+
+            double X = Required(iX);
+            double Y = Required(iY);
+            //A pasted spreadsheet row leaves trailing optional cells as "", which Convert.ToDouble rejects
+            double Optional(int i, double defaultValue) => IsBlank(Cell(i)) ? defaultValue : System.Convert.ToDouble(Cell(i));
+
+            double Width = Optional(iWidth, 512);
+            double Height = Optional(iHeight, 512);
+            double downsample = Optional(iDownsample, 1);
+
+            //Width and Height are the target image width and height.  Figure out what the ROI Width and Height should be
+            double ROIWidth = Width * downsample;
+            double ROIHeight = Height * downsample;
+
+            //Adjust frame so it is centered on X/Y coordinates
+            return new FrameCapture
+            {
+                Filename = filename,
+                Z = Required(iZ),
+                Rect = new Rectangle(new Vector2(X - (ROIWidth / 2), Y - (ROIHeight / 2)), ROIWidth, ROIHeight),
+                downsample = downsample,
+                IncludeOverlay = includeOverlay
+            };
         }
 
         private void btnBrowse_Click(object sender, EventArgs e)

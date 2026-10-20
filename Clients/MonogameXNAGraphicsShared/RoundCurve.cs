@@ -427,6 +427,11 @@ namespace RoundCurve
             device.Indices = null;
         }
 
+        /// <summary>
+        /// Uploads control points in batches of <see cref="MaxInstancesPerBatch"/> and draws
+        /// one triangle-strip join per adjacent pair. Consecutive batches overlap by one
+        /// point so the ribbon stays continuous; the extra leftover instance is never drawn.
+        /// </summary>
         private void DrawOnConfiguredDevice(RoundCurve roundLine, float lineRadius, Color lineColor, double BlurThreshold)
         {
             lineColorParameter.SetValue(lineColor.ToVector4());
@@ -434,53 +439,42 @@ namespace RoundCurve
             blurThresholdParameter.SetValue(DefaultBlurThreshold);
             lineTotalLengthParameter.SetValue((float)roundLine.TotalDistance);
 
-            int SegmentsAlreadyDrawn = 0;
-            int numSegmentsThisDraw = 0;
-            int numSegmentsToDraw = roundLine.ControlPoints.Length;
+            int pointsUploadedSoFar = 0;
+            int numPoints = roundLine.ControlPoints.Length;
 
-            while (SegmentsAlreadyDrawn < numSegmentsToDraw)
+            while (pointsUploadedSoFar < numPoints)
             {
-                int iData = 0;
-                int FirstSegmentToRender = SegmentsAlreadyDrawn;
+                int firstPoint = pointsUploadedSoFar;
+                if (pointsUploadedSoFar > 0)
+                    firstPoint -= 1;
 
-                //If we draw more than one batch we need to redraw the last point from the former batch
-                if (SegmentsAlreadyDrawn > 0)
-                    FirstSegmentToRender -= 1;
-
-                int iSegment = 0;
-                int iSegmentToDraw = 0;
-                //Draw as many segments as we can 
-                for (iSegment = 0; iSegment < MaxInstancesPerBatch; iSegment++)
+                int uploaded = 0;
+                for (int i = 0; i < MaxInstancesPerBatch; i++)
                 {
-                    iSegmentToDraw = iSegment + FirstSegmentToRender;
-
-                    if (iSegmentToDraw >= numSegmentsToDraw)
-                    {
-                        iSegment -= 1;
+                    int iPoint = firstPoint + i;
+                    if (iPoint >= numPoints)
                         break;
-                    }
 
-                    translationData[iData++] = new Vector4((float)roundLine.ControlPoints[iSegmentToDraw].X,
-                                                         (float)roundLine.ControlPoints[iSegmentToDraw].Y,
-                                                         (float)roundLine.DistanceNormalized[iSegmentToDraw],
-                                                         (float)roundLine.Theta[iSegmentToDraw]);
+                    translationData[uploaded++] = new Vector4((float)roundLine.ControlPoints[iPoint].X,
+                                                             (float)roundLine.ControlPoints[iPoint].Y,
+                                                             (float)roundLine.DistanceNormalized[iPoint],
+                                                             (float)roundLine.Theta[iPoint]);
                 }
 
-                numSegmentsThisDraw = iSegment;
+                if (uploaded < 2)
+                    break;
 
+                int stripCount = uploaded - 1;
                 segmentDataParamter.SetValue(translationData);
 
                 foreach (EffectPass pass in effect.CurrentTechnique.Passes)
                 {
                     pass.Apply();
-
-                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numVertices, 0, numPrimitivesPerInstance * numSegmentsThisDraw);
+                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, numPrimitivesPerInstance * stripCount);
                 }
 
-                SegmentsAlreadyDrawn += numSegmentsThisDraw;
-
+                pointsUploadedSoFar = firstPoint + uploaded;
             }
-            //NumLinesDrawn += numInstancesThisDraw;
         }
 
 
@@ -593,6 +587,14 @@ namespace RoundCurve
                 default:
                     throw new ArgumentException("Unknown alignment type " + alignment.ToString());
             }
+        }
+
+        /// <summary>
+        /// Releases GPU mesh buffers. DeviceEffectsStore calls this on device reset.
+        /// </summary>
+        public void Dispose()
+        {
+            VikingXNAGraphics.EffectManagerLifetime.DisposeOwnedBuffers(ref vb, ref ib, ref vdecl);
         }
     }
 

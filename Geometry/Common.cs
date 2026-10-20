@@ -31,6 +31,14 @@ namespace Geometry
             return [.. lines];
         }
 
+        /// <summary>
+        /// Reads the whole stream as text (BOM-detected, UTF-8 by default) and splits it with <see cref="ToLines(string)"/>.
+        /// Callers: <c>TilesToSectionMapping</c> (.mosaic files) and <c>TransformFactory</c> (.stos files).
+        /// </summary>
+        /// <param name="stream">Stream to read. A seekable stream is rewound to the start and read into one buffer
+        /// sized by <see cref="System.IO.Stream.Length"/>; reading stops at end of stream even if that comes before
+        /// <c>Length</c> (a file truncated while open), and only the bytes actually read are decoded.</param>
+        /// <returns>The trimmed lines; empty input yields one empty line.</returns>
         public static async Task<string[]> ToLinesAsync(this System.IO.Stream stream)
         {
             if (stream is null)
@@ -41,13 +49,16 @@ namespace Geometry
                 stream.Seek(0, System.IO.SeekOrigin.Begin);
 
                 byte[] buffer = new byte[stream.Length];
-                int bytesRead = await stream.ReadAsync(buffer, 0, (int)stream.Length);
-                while (bytesRead < stream.Length)
+                int bytesRead = 0;
+                while (bytesRead < buffer.Length)
                 {
-                    bytesRead += await stream.ReadAsync(buffer, bytesRead, (int)stream.Length - bytesRead);
+                    int read = await stream.ReadAsync(buffer, bytesRead, buffer.Length - bytesRead);
+                    if (read == 0)
+                        break;
+                    bytesRead += read;
                 }
 
-                using System.IO.StreamReader MosaicStream = new(new MemoryStream(buffer, false));
+                using System.IO.StreamReader MosaicStream = new(new MemoryStream(buffer, 0, bytesRead, false));
                 string streamData = await MosaicStream.ReadToEndAsync();
                 return streamData.ToLines();
             }

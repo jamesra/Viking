@@ -3,22 +3,37 @@ using System.Windows.Forms;
 
 namespace Viking.UI
 {
+    /// <summary>
+    /// Touch gesture notifications raised by a control that hosts a <see cref="GestureEventManager"/>.
+    /// Handlers run on the host control's UI thread.
+    /// </summary>
     public interface IGestureEvents
     {
+        /// <summary>Raised for each pan update of a gesture in progress.</summary>
         event PanGestureEventHandler OnGesturePan;
+        /// <summary>Raised for each zoom update; zoom reuses <see cref="PanGestureEventArgs"/>.</summary>
         event ZoomGestureEventHandler OnGestureZoom;
+        /// <summary>Raised when a gesture starts.</summary>
         event BeginGestureEventHandler OnGestureBegin;
+        /// <summary>Raised when a gesture finishes.</summary>
         event EndGestureEventHandler OnGestureEnd;
     }
 
+
+    /// <summary>Handler for <see cref="IGestureEvents.OnGestureBegin"/>.</summary>
     public delegate void BeginGestureEventHandler(object sender, BeginGestureEventArgs e);
+    /// <summary>Handler for <see cref="IGestureEvents.OnGestureEnd"/>.</summary>
     public delegate void EndGestureEventHandler(object sender, GestureEventArgs e);
+    /// <summary>Handler for <see cref="IGestureEvents.OnGesturePan"/>.</summary>
     public delegate void PanGestureEventHandler(object sender, PanGestureEventArgs e);
+    /// <summary>Handler for <see cref="IGestureEvents.OnGestureZoom"/>; receives <see cref="PanGestureEventArgs"/>.</summary>
     public delegate void ZoomGestureEventHandler(object sender, PanGestureEventArgs e);
 
 
+    /// <summary>Base event data for a Windows WM_GESTURE message.</summary>
     public class GestureEventArgs : EventArgs
     {
+        /// <summary>The gesture kind reported by <see cref="Gesture"/> (begin, end, pan, zoom, ...).</summary>
         public Gesture Type => Gesture.Gesture;
 
         /// <summary>
@@ -27,6 +42,7 @@ namespace Viking.UI
         public GestureInfo Gesture { get; internal set; }
     }
 
+    /// <summary>Event data raised when a gesture begins.</summary>
     public class BeginGestureEventArgs : GestureEventArgs
     {
         /// <summary>
@@ -36,6 +52,7 @@ namespace Viking.UI
     }
 
 
+    /// <summary>Event data carrying begin/end points of a zoom gesture. Currently unused by <see cref="GestureEventManager"/>, which raises zoom with <see cref="PanGestureEventArgs"/>.</summary>
     public class ZoomGestureEventArgs : GestureEventArgs
     {
         /// <summary>
@@ -48,6 +65,7 @@ namespace Viking.UI
         /// </summary>
         public System.Drawing.Point EndPt { get; internal set; }
 
+        /// <summary>Offset from <see cref="BeginPt"/> to <see cref="EndPt"/>.</summary>
         public System.Drawing.Point Delta
         {
             get
@@ -62,6 +80,7 @@ namespace Viking.UI
         }
     }
 
+    /// <summary>Event data for pan updates, also used for zoom updates.</summary>
     public class PanGestureEventArgs : GestureEventArgs
     {
         /// <summary>
@@ -79,15 +98,28 @@ namespace Viking.UI
         /// </summary>
         public System.Drawing.Point Delta { get; internal set; }
 
+        /// <summary>Formats begin point, end point and delta for diagnostics.</summary>
         public override string ToString() => $"B:{BeginPt} E:{EndPt} D:{Delta}";
     }
 
 
+    /// <summary>
+    /// Translates WM_GESTURE messages from a host control into <see cref="IGestureEvents"/> events.
+    /// </summary>
+    /// <remarks>
+    /// Created by <c>SectionViewerControl</c>, which forwards its WndProc messages to
+    /// <see cref="ProcessGestureMessages"/>. Events are marshalled with <c>Control.BeginInvoke</c> to the
+    /// parent's UI thread, so handlers never run inside WndProc.
+    /// </remarks>
     class GestureEventManager(System.Windows.Forms.Control parent) : IGestureEvents
     {
+        /// <inheritdoc/>
         public event PanGestureEventHandler OnGesturePan;
+        /// <inheritdoc/>
         public event ZoomGestureEventHandler OnGestureZoom;
+        /// <inheritdoc/>
         public event BeginGestureEventHandler OnGestureBegin;
+        /// <inheritdoc/>
         public event EndGestureEventHandler OnGestureEnd;
 
         GestureInfo? PreviousGestureInfo;
@@ -99,10 +131,10 @@ namespace Viking.UI
         System.Drawing.Point LastGesturePositon;
 
         /// <summary>
-        /// This function must be called by the host controls WndProc function to process Pen related input events
+        /// This function must be called by the host controls WndProc function to process touch gesture (WM_GESTURE) messages
         /// </summary>
-        /// <param name="msg"></param>
-        /// <returns>True if a pen message was processed</returns>
+        /// <param name="msg">The window message from the host control's WndProc.</param>
+        /// <returns>True if a gesture message was recognised and an event was queued</returns>
         public bool ProcessGestureMessages(ref Message msg)
         {
             switch (msg.Msg)
@@ -115,7 +147,6 @@ namespace Viking.UI
 
                     return false;
             }
-            return false;
         }
 
         private bool UpdateGestureState(ref Message msg)

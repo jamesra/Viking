@@ -1,4 +1,4 @@
-﻿using connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd;
+using connectomes.utah.edu.XSD.BookmarkSchemaV2.xsd;
 using Geometry;
 using System;
 

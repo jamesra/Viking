@@ -73,7 +73,14 @@ namespace Viking.ViewModels
         private volatile bool _loadQueued;
 
         private CancellationToken? _SectionLoadingToken;
-        public bool SectionLoadingCancelled => _SectionLoadingToken?.IsCancellationRequested ?? false;
+        /// <summary>
+        /// Set by <see cref="AbortRequest"/> and cleared when a new load starts.
+        /// Kept separate from the section token so abort still looks cancelled after that token field is replaced.
+        /// </summary>
+        private int _loadAborted;
+
+        public bool SectionLoadingCancelled =>
+            Volatile.Read(ref _loadAborted) != 0 || (_SectionLoadingToken?.IsCancellationRequested ?? false);
 
         /// <summary>
         /// This should only be written via the texture member 
@@ -307,6 +314,7 @@ namespace Viking.ViewModels
 
         public void AbortRequest()
         {
+            Interlocked.Exchange(ref _loadAborted, 1);
             var tokenSource = Interlocked.Exchange(ref TextureLoadCancellationTokenSource, null);
             if (tokenSource != null && !tokenSource.IsCancellationRequested)
             {
@@ -314,8 +322,6 @@ namespace Viking.ViewModels
                 tokenSource.Cancel();
             }
             tokenSource?.Dispose();
-
-            _SectionLoadingToken = null;
         }
 
         /// <summary>
@@ -325,6 +331,7 @@ namespace Viking.ViewModels
         /// <returns></returns>
         public async Task<Texture2D> GetOrLoadTextureAsync(GraphicsDevice graphicsDevice, CancellationToken token)
         {
+            Interlocked.Exchange(ref _loadAborted, 0);
             _SectionLoadingToken = token;
 
             if (token.IsCancellationRequested)
@@ -366,25 +373,6 @@ namespace Viking.ViewModels
                     _loadQueued = false;
             }
         }
-
-        private Texture2D CompleteTextureReadTask(TextureReaderV2 texReader, Task<Texture2D> texTask)
-        {
-            var tokenSource = Interlocked.Exchange(ref TextureLoadCancellationTokenSource, null);
-            if (tokenSource is null || tokenSource.IsCancellationRequested)
-                return null;
-
-            this.ServerTextureNotFound = texReader.TextureNotFound;
-
-            if (texTask.IsFaulted == false && texTask.IsCanceled == false && texReader.HasTexture)
-            {
-                // Task is known completed; .Result is safe. Caller runs on background thread.
-                this.texture = texTask.Result;
-                return this.texture;
-            }
-
-            return null;
-        }
-
 
 #if DEBUG
         private static bool NullGridWarningPrinted = false;
@@ -484,10 +472,6 @@ namespace Viking.ViewModels
         //static VertexDeclaration VertexPositionColorDeclaration = null;
         VertexBuffer? vbMesh = null;
         IndexBuffer? ibMesh = null;
-        //PORT XNA 4
-        readonly VertexPositionColor[]? MeshVerticies = null;
-
-        //int[] MeshEdges = null;
 
         public static VertexPositionColor[] CreateMeshVerticies(TileViewModel t, Color color)
         {

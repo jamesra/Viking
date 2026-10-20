@@ -23,9 +23,12 @@ using WebAnnotationModel.gRPC;
 using System.Net.Http;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
-using rouge1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
+using rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 using Utils;
 using VikingXNAGraphics;
+#if NETFRAMEWORK
+using WebAnnotation.UI.Commands.Segmentation;
+#endif
 using WebAnnotation.View;
 #if NETFRAMEWORK
 using Viking.UI;
@@ -59,12 +62,16 @@ namespace WebAnnotation
 
         /// <summary>
         /// Static method called by ExtensionManager to determine if this extension should be loaded.
-        /// Returns false if the VolumeToEndpoint element with Endpoint attribute is not found in the VikingXML.
+        /// Loads when Identity supplied an annotation endpoint for the session, or when VikingXML
+        /// has a <c>VolumeToEndpoint</c> with an Endpoint attribute.
         /// </summary>
         /// <param name="context">The extension load context providing access to VikingXML</param>
         /// <returns>True if the extension should load, false otherwise</returns>
         public static bool ShouldLoad(Viking.Common.IExtensionLoadContext context)
         {
+            if (AccessibleVolumeSession.AnnotationServiceEndpoint != null)
+                return true;
+
             if (context is null)
             {
                 return false;
@@ -97,7 +104,9 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Returns true if a SegmentationService is configured and available with a valid URL format
+        /// Returns true if a SegmentationService is configured and available with a valid URL format.
+        /// Null and whitespace endpoints cache as unavailable so a later Select can clear the cache
+        /// via <see cref="InvalidateSegmentationServiceAvailability"/>.
         /// </summary>
         public static bool IsSegmentationServiceAvailable
         {
@@ -124,11 +133,35 @@ namespace WebAnnotation
                     return false;
                 }
 
-                string urlToValidate = serviceUrl.Contains("://") ? serviceUrl : $"http://{serviceUrl}";
-                _isSegmentationServiceAvailable = Uri.TryCreate(urlToValidate, UriKind.Absolute, out Uri result) &&
-                    (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
+                _isSegmentationServiceAvailable = HasValidSegmentationServiceUrl(serviceUrl);
                 return _isSegmentationServiceAvailable.Value;
             }
+        }
+
+        /// <summary>
+        /// Drops the cached availability result so the next read re-evaluates
+        /// <see cref="IGrpcServiceConfiguration.Endpoint"/>. Called after mid-session Select/None.
+        /// </summary>
+        public static void InvalidateSegmentationServiceAvailability()
+        {
+            _isSegmentationServiceAvailable = null;
+#if NETFRAMEWORK
+            UI.AnnotationStatusChips.Refresh();
+#endif
+        }
+
+        /// <summary>
+        /// True when <paramref name="serviceUrl"/> is a usable http(s) host for gRPC.
+        /// Host:port without a scheme is accepted.
+        /// </summary>
+        internal static bool HasValidSegmentationServiceUrl(string? serviceUrl)
+        {
+            if (string.IsNullOrWhiteSpace(serviceUrl))
+                return false;
+
+            string urlToValidate = serviceUrl.Contains("://") ? serviceUrl : $"http://{serviceUrl}";
+            return Uri.TryCreate(urlToValidate, UriKind.Absolute, out Uri result) &&
+                   (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
         }
 
         /// <summary>
@@ -168,7 +201,7 @@ namespace WebAnnotation
         {
             static AnnotationSettings()
             {
-                // Initialize static accessor properties on application startup
+                Properties.Settings.UpgradeFromPreviousVersionIfNeeded();
                 CircleView.SmallestRenderedSizeAccessor = () => SmallestRenderedSize;
                 LocationCanvasView.SmallestRenderedSizeAccessor = () => SmallestRenderedSize;
             }
@@ -194,10 +227,10 @@ namespace WebAnnotation
             private const double DEFAULT_ADJACENT_LOCATION_RADIUS_SCALAR = 0.5;
             private const int MIN_CURVE_POINTS = 2;
             private const int MAX_CURVE_POINTS = 20;
-            private const int DEFAULT_NUM_CLOSED_CURVE_INTERPOLATION_POINTS = 4;
+            private const int DEFAULT_NUM_CLOSED_CURVE_INTERPOLATION_POINTS = 3;
             private const int MIN_PEN_THRESHOLD = 1;
             private const int MAX_PEN_THRESHOLD = 100;
-            private const int DEFAULT_PEN_SIMPLIFY_THRESHOLD = 12;
+            private const int DEFAULT_PEN_SIMPLIFY_THRESHOLD = 3;
             private const double MIN_RADIUS = 0.1;
             private const double MAX_RADIUS = 10.0;
             private const double DEFAULT_MIN_RADIUS = 0.5;
@@ -210,6 +243,10 @@ namespace WebAnnotation
             private const double MIN_SEGMENTATION_POINT_RADIUS = 1.0;
             private const double MAX_SEGMENTATION_POINT_RADIUS = 15.0;
             private const double DEFAULT_SEGMENTATION_POINT_RADIUS = 5.0;
+            private const double MIN_SEGMENTATION_HOLE_DROP_FRACTION = 0.0;
+            private const double MAX_SEGMENTATION_HOLE_DROP_FRACTION = 1.0;
+            private const int MIN_SEGMENTATION_EDGE_CLEANUP_RADIUS = 0;
+            private const int MAX_SEGMENTATION_EDGE_CLEANUP_RADIUS = 32;
             private const double MIN_POLYGON_POINT_RADIUS = 1.0;
             private const double MAX_POLYGON_POINT_RADIUS = 50.0;
             private const double DEFAULT_POLYGON_POINT_RADIUS = 6.0;
@@ -225,6 +262,10 @@ namespace WebAnnotation
             private const double MIN_POLYGON_VERTEX_HIDDEN_FRACTION = 0.00005;   // 0.005%
             private const double MAX_POLYGON_VERTEX_HIDDEN_FRACTION = 0.015;     // 1.5%
             private const double DEFAULT_POLYGON_VERTEX_HIDDEN_FRACTION = 0.002;   // 0.2%
+            private const double MIN_AUTOPOLYGONIZE_RADIUS_NANOMETERS = 0.0;
+            private const double MAX_AUTOPOLYGONIZE_RADIUS_NANOMETERS = 10000.0;
+            private const double MIN_AUTOPOLYGONIZE_MAX_DOWNSAMPLE = 1.0;
+            private const double MAX_AUTOPOLYGONIZE_MAX_DOWNSAMPLE = 4.0;
 
             // Use shared MathUtils.Clamp methods (Math.Clamp not available in .NET Framework 4.8)
 
@@ -389,6 +430,49 @@ namespace WebAnnotation
                 }
             }
 
+            /// <summary>Narrowest accepted <see cref="LocationLinkWaistPixels"/>.</summary>
+            public const int MIN_LOCATION_LINK_WAIST_PIXELS = 2;
+
+            /// <summary>Widest accepted <see cref="LocationLinkWaistPixels"/>.</summary>
+            public const int MAX_LOCATION_LINK_WAIST_PIXELS = 32;
+
+            /// <summary>Starting <see cref="LocationLinkWaistPixels"/>. Must match the DefaultSettingValue in Settings.LocationLinks.cs.</summary>
+            public const int DEFAULT_LOCATION_LINK_WAIST_PIXELS = 8;
+
+            /// <summary>
+            /// Width in screen pixels of the narrowest part of a link line between two locations on different sections,
+            /// clamped to the MIN/MAX_LOCATION_LINK_WAIST_PIXELS range.
+            /// </summary>
+            public static int LocationLinkWaistPixels
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.LocationLinkWaistPixels,
+                    MIN_LOCATION_LINK_WAIST_PIXELS,
+                    MAX_LOCATION_LINK_WAIST_PIXELS);
+                set
+                {
+                    Properties.Settings.Default.LocationLinkWaistPixels = MathUtils.Clamp(
+                        value,
+                        MIN_LOCATION_LINK_WAIST_PIXELS,
+                        MAX_LOCATION_LINK_WAIST_PIXELS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>
+            /// Whether a location link is also drawn under its two location markers, as a round end the size of each marker.
+            /// False draws nothing under the markers.
+            /// </summary>
+            public static bool LocationLinkDrawUnderMarkers
+            {
+                get => Properties.Settings.Default.LocationLinkDrawUnderMarkers;
+                set
+                {
+                    Properties.Settings.Default.LocationLinkDrawUnderMarkers = value;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
             public static uint NumClosedCurveInterpolationPointsForDisplay
             {
                 get => (uint)MathUtils.Clamp((int)Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay, MIN_CURVE_POINTS, MAX_CURVE_POINTS);
@@ -502,6 +586,11 @@ namespace WebAnnotation
                 get => Properties.Settings.Default.SegmentationServiceUrl;
                 set
                 {
+                    // Re-applying the same URL (picker confirmed again, volume reload) must not drop the shared
+                    // channel: that cancels in-flight segmentation for no reason.
+                    if (string.Equals(Properties.Settings.Default.SegmentationServiceUrl, value, StringComparison.Ordinal))
+                        return;
+
                     Properties.Settings.Default.SegmentationServiceUrl = value;
                     Properties.Settings.Default.Save();
                     _isSegmentationServiceAvailable = null;
@@ -514,13 +603,477 @@ namespace WebAnnotation
 
             public static double SegmentationPointRadius
             {
-                get => MathUtils.Clamp(Properties.Settings.Default.SegmentationPointRadius, MIN_SEGMENTATION_POINT_RADIUS, MAX_SEGMENTATION_POINT_RADIUS);
+                get => Math.Max(MIN_SEGMENTATION_POINT_RADIUS, Properties.Settings.Default.SegmentationPointRadius);
                 set
                 {
-                    Properties.Settings.Default.SegmentationPointRadius = MathUtils.Clamp(value, MIN_SEGMENTATION_POINT_RADIUS, MAX_SEGMENTATION_POINT_RADIUS);
+                    Properties.Settings.Default.SegmentationPointRadius = Math.Max(MIN_SEGMENTATION_POINT_RADIUS, value);
+                    Properties.Settings.Default.Save();
+                    RefreshActiveSegmentationPromptPoints();
+                }
+            }
+
+            public static double SegmentationHoleDropFraction
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.SegmentationHoleDropFraction,
+                    MIN_SEGMENTATION_HOLE_DROP_FRACTION,
+                    MAX_SEGMENTATION_HOLE_DROP_FRACTION);
+                set
+                {
+                    Properties.Settings.Default.SegmentationHoleDropFraction = MathUtils.Clamp(
+                        value,
+                        MIN_SEGMENTATION_HOLE_DROP_FRACTION,
+                        MAX_SEGMENTATION_HOLE_DROP_FRACTION);
+                    Properties.Settings.Default.Save();
+                    RefreshActiveSegmentationPolygons();
+                }
+            }
+
+            public static int SegmentationEdgeCleanupRadius
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.SegmentationEdgeCleanupRadius,
+                    MIN_SEGMENTATION_EDGE_CLEANUP_RADIUS,
+                    MAX_SEGMENTATION_EDGE_CLEANUP_RADIUS);
+                set
+                {
+                    Properties.Settings.Default.SegmentationEdgeCleanupRadius = MathUtils.Clamp(
+                        value,
+                        MIN_SEGMENTATION_EDGE_CLEANUP_RADIUS,
+                        MAX_SEGMENTATION_EDGE_CLEANUP_RADIUS);
+                    Properties.Settings.Default.Save();
+                    RefreshActiveSegmentationPolygons();
+                }
+            }
+
+            /// <summary>Smallest accepted <see cref="SegmentationMaskThreshold"/>, in SAM2 logit units.</summary>
+            public const double MIN_SEGMENTATION_MASK_THRESHOLD = -2.5;
+
+            /// <summary>Largest accepted <see cref="SegmentationMaskThreshold"/>, in SAM2 logit units.</summary>
+            public const double MAX_SEGMENTATION_MASK_THRESHOLD = 5.0;
+
+            /// <summary>Starting <see cref="SegmentationMaskThreshold"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
+            public const double DEFAULT_SEGMENTATION_MASK_THRESHOLD = 0.5;
+
+            private const int SEGMENTATION_REQUEST_SETTINGS_DEBOUNCE_MS = 400;
+
+            private static System.Threading.Timer? _segmentationRequestSettingsTimer;
+
+            /// <summary>
+            /// Logit a pixel must exceed for SAM2 to call it object, sent with every SegmentTiles request.
+            /// 0 is SAM2's own default; higher values shrink the mask. A change re-segments the active
+            /// segmentation command and the auto-polygonize view once the value has stopped moving.
+            /// </summary>
+            public static double SegmentationMaskThreshold
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.SegmentationMaskThreshold,
+                    MIN_SEGMENTATION_MASK_THRESHOLD,
+                    MAX_SEGMENTATION_MASK_THRESHOLD);
+                set
+                {
+                    double clamped = MathUtils.Clamp(
+                        value,
+                        MIN_SEGMENTATION_MASK_THRESHOLD,
+                        MAX_SEGMENTATION_MASK_THRESHOLD);
+                    if (Math.Abs(Properties.Settings.Default.SegmentationMaskThreshold - clamped) < 0.0001)
+                        return;
+
+                    Properties.Settings.Default.SegmentationMaskThreshold = clamped;
+                    Properties.Settings.Default.Save();
+#if NETFRAMEWORK
+                    UI.AnnotationModeToolbar.SyncMaskThreshold();
+#endif
+                    ScheduleSegmentationRequestSettingsRefresh();
+                }
+            }
+
+            /// <summary>
+            /// When true the server predicts twice per cell, feeding the first pass's logits back to SAM2
+            /// as mask_input. Off by default. A change re-segments like <see cref="SegmentationMaskThreshold"/>.
+            /// </summary>
+            public static bool SegmentationUseMaskInput
+            {
+                get => Properties.Settings.Default.SegmentationUseMaskInput;
+                set
+                {
+                    if (Properties.Settings.Default.SegmentationUseMaskInput == value)
+                        return;
+
+                    Properties.Settings.Default.SegmentationUseMaskInput = value;
+                    Properties.Settings.Default.Save();
+                    ScheduleSegmentationRequestSettingsRefresh();
+                }
+            }
+
+            /// <summary>Largest accepted <see cref="SegmentationMinFeatureNanometers"/>.</summary>
+            public const double MAX_SEGMENTATION_MIN_FEATURE_NANOMETERS = 100.0;
+
+            /// <summary>
+            /// Narrowest part of a SAM2 mask that is kept, in nanometers; thinner bridges and specks are cut before the outline
+            /// is traced. 0 keeps everything. A change retraces the proposals on screen from their stored masks.
+            /// </summary>
+            public static double SegmentationMinFeatureNanometers
+            {
+                get => MathUtils.Clamp(Properties.Settings.Default.SegmentationMinFeatureNanometers, 0, MAX_SEGMENTATION_MIN_FEATURE_NANOMETERS);
+                set
+                {
+                    double clamped = MathUtils.Clamp(value, 0, MAX_SEGMENTATION_MIN_FEATURE_NANOMETERS);
+                    if (Math.Abs(Properties.Settings.Default.SegmentationMinFeatureNanometers - clamped) < 0.0001)
+                        return;
+
+                    Properties.Settings.Default.SegmentationMinFeatureNanometers = clamped;
+                    Properties.Settings.Default.Save();
+                    RefreshActiveSegmentationPolygons();
+                }
+            }
+
+            /// <summary>
+            /// <see cref="SegmentationMinFeatureNanometers"/> in world units (volume pixels at downsample 1), using the volume's
+            /// nanometers per pixel. 0 when the setting is off or the scale is not known.
+            /// </summary>
+            public static double SegmentationMinFeatureWorld
+            {
+                get
+                {
+                    double nanometersPerWorld = Scale.X;
+                    double nanometers = SegmentationMinFeatureNanometers;
+                    return nanometers > 0 && nanometersPerWorld > 0 ? nanometers / nanometersPerWorld : 0;
+                }
+            }
+
+            /// <summary>Largest accepted <see cref="SegmentationSmoothingSigma"/>, in logit samples.</summary>
+            public const double MAX_SEGMENTATION_SMOOTHING_SIGMA = 2.0;
+
+            /// <summary>
+            /// Smoothing, in logit samples (four pixels each), applied to a response's logits before they are traced; 0 traces
+            /// them as sent. Not retroactive: a response is decoded once, so the value applies to the next segmentation.
+            /// </summary>
+            public static double SegmentationSmoothingSigma
+            {
+                get => MathUtils.Clamp(Properties.Settings.Default.SegmentationSmoothingSigma, 0, MAX_SEGMENTATION_SMOOTHING_SIGMA);
+                set
+                {
+                    double clamped = MathUtils.Clamp(value, 0, MAX_SEGMENTATION_SMOOTHING_SIGMA);
+                    if (Math.Abs(Properties.Settings.Default.SegmentationSmoothingSigma - clamped) < 0.0001)
+                        return;
+
+                    Properties.Settings.Default.SegmentationSmoothingSigma = clamped;
                     Properties.Settings.Default.Save();
                 }
             }
+
+            /// <summary>
+            /// When true each traced contour is moved onto the nearest strong bright-to-dark image edge. Client-side, so a
+            /// change retraces the active command and the on-screen auto-polygonize proposals from their stored masks
+            /// without asking the server again.
+            /// </summary>
+            public static bool SegmentationEdgeSnapEnabled
+            {
+                get => Properties.Settings.Default.SegmentationEdgeSnapEnabled;
+                set
+                {
+                    if (Properties.Settings.Default.SegmentationEdgeSnapEnabled == value)
+                        return;
+
+                    Properties.Settings.Default.SegmentationEdgeSnapEnabled = value;
+                    Properties.Settings.Default.Save();
+                    RefreshActiveSegmentationPolygons();
+                }
+            }
+
+            /// <summary>
+            /// Waits for the mask-threshold slider to stop moving, then re-requests on the UI thread.
+            /// Each change restarts the wait so a drag sends one request, not one per tick.
+            /// </summary>
+            private static void ScheduleSegmentationRequestSettingsRefresh()
+            {
+                _segmentationRequestSettingsTimer?.Dispose();
+                _segmentationRequestSettingsTimer = new System.Threading.Timer(
+                    _ => RefreshAfterSegmentationRequestSettingsChange(),
+                    null,
+                    SEGMENTATION_REQUEST_SETTINGS_DEBOUNCE_MS,
+                    System.Threading.Timeout.Infinite);
+            }
+
+            private static void RefreshAfterSegmentationRequestSettingsChange()
+            {
+#if NETFRAMEWORK
+                var overlay = AnnotationOverlay.CurrentOverlay;
+                if (overlay is null)
+                    return;
+
+                var parent = overlay.Parent;
+                if (parent is null || parent.IsDisposed)
+                    return;
+
+                void Refresh()
+                {
+                    overlay.OnSegmentationRequestSettingsChanged();
+                    if (parent.CurrentCommand is SegmentationCommand command)
+                        command.ResegmentAfterRequestSettingsChange();
+                }
+
+                if (parent.InvokeRequired)
+                    parent.BeginInvoke(new System.Action(Refresh));
+                else
+                    Refresh();
+#endif
+            }
+
+            /// <summary>
+            /// Enables idle-driven SAM2 proposals on circles. Until the user toggles this,
+            /// review/admin sessions default on and annotate sessions default off. After a
+            /// toggle the chosen value persists across restarts.
+            /// </summary>
+            public static bool AutoPolygonizeCircles
+            {
+                get
+                {
+                    if (!Properties.Settings.Default.AutoPolygonizeCirclesUserSet)
+                    {
+#if NETFRAMEWORK
+                        return VolumeAccessRoles.HasReviewAccess();
+#else
+                        return false;
+#endif
+                    }
+
+                    return Properties.Settings.Default.AutoPolygonizeCircles;
+                }
+                set
+                {
+                    bool previous = AutoPolygonizeCircles;
+                    Properties.Settings.Default.AutoPolygonizeCirclesUserSet = true;
+                    Properties.Settings.Default.AutoPolygonizeCircles = value;
+                    Properties.Settings.Default.Save();
+                    if (previous == value)
+                        return;
+
+#if NETFRAMEWORK
+                    AnnotationOverlay.CurrentOverlay?.SetAutoPolygonizeEnabled(value);
+#endif
+                }
+            }
+
+            /// <summary>
+            /// Minimum circle radius, in nanometers, for auto-polygonize.
+            /// Default <see cref="Properties.Settings.DefaultAutoPolygonizeMinRadiusNanometers"/>.
+            /// 0 accepts any positive radius. Preview size uses the current zoom.
+            /// A saved value is kept across restarts. The old 75 nm default is replaced once at startup.
+            /// </summary>
+            public static double AutoPolygonizeMinRadiusNanometers
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.AutoPolygonizeMinRadiusNanometers,
+                    MIN_AUTOPOLYGONIZE_RADIUS_NANOMETERS,
+                    MAX_AUTOPOLYGONIZE_RADIUS_NANOMETERS);
+                set
+                {
+                    Properties.Settings.Default.AutoPolygonizeMinRadiusNanometers = MathUtils.Clamp(
+                        value,
+                        MIN_AUTOPOLYGONIZE_RADIUS_NANOMETERS,
+                        MAX_AUTOPOLYGONIZE_RADIUS_NANOMETERS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>
+            /// Coarsest camera downsample at which auto-segment and tile submit still run. Default 2.
+            /// The preference allows 1 to 4: the value itself still submits and anything coarser does not.
+            /// A saved value above 4 is clamped to 4; a lower saved value still wins.
+            /// Changing it restarts the idle timer so a view that is now allowed can run without a camera nudge.
+            /// </summary>
+            public static double AutoPolygonizeMaxDownsample
+            {
+                get => MathUtils.Clamp(
+                    Math.Round(Properties.Settings.Default.AutoPolygonizeMaxDownsample * 4.0) / 4.0,
+                    MIN_AUTOPOLYGONIZE_MAX_DOWNSAMPLE,
+                    MAX_AUTOPOLYGONIZE_MAX_DOWNSAMPLE);
+                set
+                {
+                    // Preference slider steps by 0.25; keep stored values on those ticks.
+                    double clamped = MathUtils.Clamp(
+                        Math.Round(value * 4.0) / 4.0,
+                        MIN_AUTOPOLYGONIZE_MAX_DOWNSAMPLE,
+                        MAX_AUTOPOLYGONIZE_MAX_DOWNSAMPLE);
+                    if (Math.Abs(Properties.Settings.Default.AutoPolygonizeMaxDownsample - clamped) < 0.001)
+                        return;
+
+                    Properties.Settings.Default.AutoPolygonizeMaxDownsample = clamped;
+                    Properties.Settings.Default.Save();
+#if NETFRAMEWORK
+                    AnnotationOverlay.CurrentOverlay?.RequestAutoPolygonizeIdlePass();
+#endif
+                }
+            }
+
+            /// <summary>Smallest accepted <see cref="AutoPolygonizeShimmerBrightness"/>.</summary>
+            public const double MIN_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS = 0.1;
+
+            /// <summary>Largest accepted <see cref="AutoPolygonizeShimmerBrightness"/>.</summary>
+            public const double MAX_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS = 1.0;
+
+            /// <summary>Starting <see cref="AutoPolygonizeShimmerBrightness"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
+            public const double DEFAULT_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS = 0.6;
+
+            /// <summary>Shortest accepted <see cref="AutoPolygonizeShimmerDurationMs"/>.</summary>
+            public const int MIN_AUTOPOLYGONIZE_SHIMMER_DURATION_MS = 250;
+
+            /// <summary>Longest accepted <see cref="AutoPolygonizeShimmerDurationMs"/>.</summary>
+            public const int MAX_AUTOPOLYGONIZE_SHIMMER_DURATION_MS = 1000;
+
+            /// <summary>Starting <see cref="AutoPolygonizeShimmerDurationMs"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
+            public const int DEFAULT_AUTOPOLYGONIZE_SHIMMER_DURATION_MS = 750;
+
+            /// <summary>
+            /// Whether a newly shown auto-polygonize proposal plays the one-shot shimmer. Read when the proposal is
+            /// first drawn, so turning it off does not cut a shimmer already running.
+            /// </summary>
+            public static bool AutoPolygonizeShimmerEnabled
+            {
+                get => Properties.Settings.Default.AutoPolygonizeShimmerEnabled;
+                set
+                {
+                    Properties.Settings.Default.AutoPolygonizeShimmerEnabled = value;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>
+            /// Whether dragging a linked annotation onto the next section opens the segmentation step before the polygon is
+            /// saved. Read when the drag is released, so changing it does not affect a segmentation already open.
+            /// </summary>
+            public static bool SegmentLinkedAnnotations
+            {
+                get => Properties.Settings.Default.SegmentLinkedAnnotations;
+                set
+                {
+                    Properties.Settings.Default.SegmentLinkedAnnotations = value;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>Peak alpha of the shimmer lines, clamped to the MIN/MAX_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS range.</summary>
+            public static double AutoPolygonizeShimmerBrightness
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.AutoPolygonizeShimmerBrightness,
+                    MIN_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS,
+                    MAX_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS);
+                set
+                {
+                    Properties.Settings.Default.AutoPolygonizeShimmerBrightness = MathUtils.Clamp(
+                        value,
+                        MIN_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS,
+                        MAX_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>Milliseconds the shimmer takes to cross a proposal, clamped to the MIN/MAX_AUTOPOLYGONIZE_SHIMMER_DURATION_MS range.</summary>
+            public static int AutoPolygonizeShimmerDurationMs
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.AutoPolygonizeShimmerDurationMs,
+                    MIN_AUTOPOLYGONIZE_SHIMMER_DURATION_MS,
+                    MAX_AUTOPOLYGONIZE_SHIMMER_DURATION_MS);
+                set
+                {
+                    Properties.Settings.Default.AutoPolygonizeShimmerDurationMs = MathUtils.Clamp(
+                        value,
+                        MIN_AUTOPOLYGONIZE_SHIMMER_DURATION_MS,
+                        MAX_AUTOPOLYGONIZE_SHIMMER_DURATION_MS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>
+            /// Debug overlay of the raw SAM2 mask on auto-polygonize proposals.
+            /// Debug builds start on until the user toggles this. After a toggle the choice
+            /// is saved and copied into the next Viking version.
+            /// </summary>
+            public static bool AutoPolygonizeOverlayMasks
+            {
+                get
+                {
+#if DEBUG
+                    if (!Properties.Settings.Default.AutoPolygonizeOverlayMasksUserSet)
+                        return true;
+#endif
+                    return Properties.Settings.Default.AutoPolygonizeOverlayMasks;
+                }
+                set
+                {
+                    bool previous = AutoPolygonizeOverlayMasks;
+                    Properties.Settings.Default.AutoPolygonizeOverlayMasksUserSet = true;
+                    Properties.Settings.Default.AutoPolygonizeOverlayMasks = value;
+                    Properties.Settings.Default.Save();
+                    if (previous == value)
+                        return;
+
+#if NETFRAMEWORK
+                    AnnotationOverlay.CurrentOverlay?.SetAutoPolygonizeOverlayMasksEnabled(value);
+#endif
+                }
+            }
+
+            /// <summary>
+            /// Green foreground and red background clicks on auto-polygonize proposals.
+            /// Debug builds start on until the user toggles this. After a toggle the choice
+            /// is saved and copied into the next Viking version. Independent of the mask overlay.
+            /// </summary>
+            public static bool AutoPolygonizeOverlayPrompts
+            {
+                get
+                {
+#if DEBUG
+                    if (!Properties.Settings.Default.AutoPolygonizeOverlayPromptsUserSet)
+                        return true;
+#endif
+                    return Properties.Settings.Default.AutoPolygonizeOverlayPrompts;
+                }
+                set
+                {
+                    bool previous = AutoPolygonizeOverlayPrompts;
+                    Properties.Settings.Default.AutoPolygonizeOverlayPromptsUserSet = true;
+                    Properties.Settings.Default.AutoPolygonizeOverlayPrompts = value;
+                    Properties.Settings.Default.Save();
+                    if (previous == value)
+                        return;
+
+#if NETFRAMEWORK
+                    AnnotationOverlay.CurrentOverlay?.SetAutoPolygonizeOverlayPromptsEnabled(value);
+#endif
+                }
+            }
+
+            /// <summary>
+            /// Omits auto-polygonize outlines while the mask overlay is visible.
+            /// Saved across restarts. Has no effect while masks are off.
+            /// </summary>
+            public static bool AutoPolygonizeHideSegmentationRings
+            {
+                get => Properties.Settings.Default.AutoPolygonizeHideSegmentationRings;
+                set
+                {
+                    if (Properties.Settings.Default.AutoPolygonizeHideSegmentationRings == value)
+                        return;
+
+                    Properties.Settings.Default.AutoPolygonizeHideSegmentationRings = value;
+                    Properties.Settings.Default.Save();
+#if NETFRAMEWORK
+                    AnnotationOverlay.CurrentOverlay?.RefreshAutoPolygonizeOverlay();
+#endif
+                }
+            }
+
+            /// <summary>
+            /// Proposal outlines draw while auto-polygonize is on.
+            /// They are omitted only when the mask overlay is visible and <see cref="AutoPolygonizeHideSegmentationRings"/> is set.
+            /// </summary>
+            public static bool AutoPolygonizeShowSegmentationRings =>
+                !AutoPolygonizeOverlayMasks || !AutoPolygonizeHideSegmentationRings;
 
             public static double PolygonPointDiameter
             {
@@ -537,9 +1090,42 @@ namespace WebAnnotation
             }
 
             /// <summary>
-            /// Polygon point radius in world units (computed as diameter / 2). Used by rendering code.
+            /// Opacity (0..1) of the control-point circles drawn on polygon annotations. Independent of the
+            /// polygon fill opacity. Read per frame by <c>LocationPolygonView.Draw</c>.
             /// </summary>
-            public static double PolygonPointRadius => PolygonPointDiameter / 2.0;
+            public static double PolygonPointOpacity
+            {
+                get => MathUtils.Clamp(Properties.Settings.Default.PolygonPointOpacity, 0.0, 1.0);
+                set
+                {
+                    Properties.Settings.Default.PolygonPointOpacity = MathUtils.Clamp(value, 0.0, 1.0);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>
+            /// When true (the default), polygon control points are not drawn while pen mode is on.
+            /// </summary>
+            public static bool HidePolygonPointsInPenMode
+            {
+                get => Properties.Settings.Default.HidePolygonPointsInPenMode;
+                set
+                {
+                    Properties.Settings.Default.HidePolygonPointsInPenMode = value;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>
+            /// Polygon point radius in world units (computed as diameter / 2). Used by rendering code.
+            /// Setting it stores twice the value as <see cref="PolygonPointDiameter"/> (the preference the Legacy
+            /// dialog edited as a radius).
+            /// </summary>
+            public static double PolygonPointRadius
+            {
+                get => PolygonPointDiameter / 2.0;
+                set => PolygonPointDiameter = 2.0 * value;
+            }
 
             private static void MigratePolygonPointDiameterIfNeeded()
             {
@@ -553,10 +1139,10 @@ namespace WebAnnotation
 
             public static double SmallestRenderedSize
             {
-                get => MathUtils.Clamp(Properties.Settings.Default.SmallestRenderedSize, MIN_SMALLEST_RENDERED_SIZE, MAX_SMALLEST_RENDERED_SIZE);
+                get => Math.Max(MIN_SMALLEST_RENDERED_SIZE, Properties.Settings.Default.SmallestRenderedSize);
                 set
                 {
-                    Properties.Settings.Default.SmallestRenderedSize = MathUtils.Clamp(value, MIN_SMALLEST_RENDERED_SIZE, MAX_SMALLEST_RENDERED_SIZE);
+                    Properties.Settings.Default.SmallestRenderedSize = Math.Max(MIN_SMALLEST_RENDERED_SIZE, value);
                     Properties.Settings.Default.Save();
                 }
             }
@@ -593,6 +1179,9 @@ namespace WebAnnotation
             /// </summary>
             public static void ResetToDefaults()
             {
+                bool segmentationRequestSettingsChanged =
+                    Math.Abs(Properties.Settings.Default.SegmentationMaskThreshold - DEFAULT_SEGMENTATION_MASK_THRESHOLD) > 0.0001 ||
+                    Properties.Settings.Default.SegmentationUseMaskInput;
                 Properties.Settings.Default.NumSectionsInMemory = DEFAULT_NUM_SECTIONS_IN_MEMORY;
                 Properties.Settings.Default.NumSectionsLoading = DEFAULT_NUM_SECTIONS_LOADING;
                 Properties.Settings.Default.LocationTextScaleFactor = (float)DEFAULT_LOCATION_TEXT_SCALE_FACTOR;
@@ -604,6 +1193,8 @@ namespace WebAnnotation
                 CorrectionShimFadeStartDownsample = Viking.SectionCorrectionClient.SectionShimSettings.DefaultFadeStartDownsample;
                 CorrectionShimFadeEndDownsample = Viking.SectionCorrectionClient.SectionShimSettings.DefaultFadeEndDownsample;
                 Properties.Settings.Default.AdjacentLocationRadiusScalar = DEFAULT_ADJACENT_LOCATION_RADIUS_SCALAR;
+                Properties.Settings.Default.LocationLinkWaistPixels = DEFAULT_LOCATION_LINK_WAIST_PIXELS;
+                Properties.Settings.Default.LocationLinkDrawUnderMarkers = false;
                 Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = (uint)DEFAULT_NUM_CLOSED_CURVE_INTERPOLATION_POINTS;
                 Properties.Settings.Default.PenSimplifyThreshold = DEFAULT_PEN_SIMPLIFY_THRESHOLD;
                 Properties.Settings.Default.MinRadius = DEFAULT_MIN_RADIUS;
@@ -612,22 +1203,82 @@ namespace WebAnnotation
                 Properties.Settings.Default.CircleOpacityParentless = (float)DEFAULT_CIRCLE_OPACITY_PARENTLESS;
                 Properties.Settings.Default.CircleOpacityWithParent = (float)DEFAULT_CIRCLE_OPACITY_WITH_PARENT;
                 Properties.Settings.Default.SegmentationPointRadius = DEFAULT_SEGMENTATION_POINT_RADIUS;
+                Properties.Settings.Default.SegmentationHoleDropFraction = 0.03;
+                Properties.Settings.Default.SegmentationEdgeCleanupRadius = 8;
+                Properties.Settings.Default.SegmentationMaskThreshold = DEFAULT_SEGMENTATION_MASK_THRESHOLD;
+                Properties.Settings.Default.SegmentationUseMaskInput = false;
+                Properties.Settings.Default.SegmentationEdgeSnapEnabled = true;
+                Properties.Settings.Default.SegmentationSmoothingSigma = 0.5;
+                Properties.Settings.Default.SegmentationMinFeatureNanometers = 10;
+                Properties.Settings.Default.AutoPolygonizeCircles = false;
+                Properties.Settings.Default.AutoPolygonizeCirclesUserSet = false;
+                Properties.Settings.Default.AutoPolygonizeMinRadiusNanometers = Properties.Settings.DefaultAutoPolygonizeMinRadiusNanometers;
+                Properties.Settings.Default.AutoPolygonizeMaxDownsample = 2.0;
+                Properties.Settings.Default.AutoPolygonizeShimmerEnabled = true;
+                Properties.Settings.Default.SegmentLinkedAnnotations = true;
+                Properties.Settings.Default.AutoPolygonizeShimmerBrightness = DEFAULT_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS;
+                Properties.Settings.Default.AutoPolygonizeShimmerDurationMs = DEFAULT_AUTOPOLYGONIZE_SHIMMER_DURATION_MS;
+                Properties.Settings.Default.AutoPolygonizeOverlayMasks = false;
+                Properties.Settings.Default.AutoPolygonizeOverlayMasksUserSet = false;
+                Properties.Settings.Default.AutoPolygonizeOverlayPrompts = false;
+                Properties.Settings.Default.AutoPolygonizeOverlayPromptsUserSet = false;
+                Properties.Settings.Default.AutoPolygonizeHideSegmentationRings = false;
                 Properties.Settings.Default.PolygonPointDiameter = DEFAULT_POLYGON_POINT_DIAMETER;
+                Properties.Settings.Default.PolygonPointOpacity = 0.75;
+                Properties.Settings.Default.HidePolygonPointsInPenMode = true;
                 Properties.Settings.Default.SmallestRenderedSize = DEFAULT_SMALLEST_RENDERED_SIZE;
                 Properties.Settings.Default.PolygonVertexPointsVisibleAtWidthFraction = DEFAULT_POLYGON_VERTEX_VISIBLE_FRACTION;
                 Properties.Settings.Default.PolygonVertexPointsHiddenAtWidthFraction = DEFAULT_POLYGON_VERTEX_HIDDEN_FRACTION;
                 Properties.Settings.Default.Save();
                 OnSettingsChanged();
+                if (segmentationRequestSettingsChanged)
+                    ScheduleSegmentationRequestSettingsRefresh();
             }
 
             private static void OnSettingsChanged()
             {
-                // Update cache size when memory settings change
                 if (AnnotationOverlay.CurrentOverlay != null)
                 {
                     AnnotationOverlay.UpdateCacheSize(NumSectionsInMemory);
+#if NETFRAMEWORK
+                    AnnotationOverlay.CurrentOverlay.SetAutoPolygonizeEnabled(AutoPolygonizeCircles);
+                    AnnotationOverlay.CurrentOverlay.SetAutoPolygonizeOverlayMasksEnabled(AutoPolygonizeOverlayMasks);
+                    AnnotationOverlay.CurrentOverlay.SetAutoPolygonizeOverlayPromptsEnabled(AutoPolygonizeOverlayPrompts);
+                    AnnotationOverlay.CurrentOverlay.RefreshAutoPolygonizeOverlay();
+                    RefreshActiveSegmentationPolygons();
+                    RefreshActiveSegmentationPromptPoints();
+#endif
                 }
             }
+
+            private static void RefreshActiveSegmentationPolygons(double? holeDropFraction = null)
+            {
+#if NETFRAMEWORK
+                InvokeOnActiveSegmentationCommand(command => command.RefreshPolygonsFromLastMask(holeDropFraction));
+                AnnotationOverlay.CurrentOverlay?.RefreshAutoPolygonizeFromStoredMasks();
+#endif
+            }
+
+            private static void RefreshActiveSegmentationPromptPoints(double? pointRadiusPixels = null)
+            {
+#if NETFRAMEWORK
+                InvokeOnActiveSegmentationCommand(command => command.RefreshPromptPointViews(pointRadiusPixels));
+#endif
+            }
+
+#if NETFRAMEWORK
+            private static void InvokeOnActiveSegmentationCommand(System.Action<SegmentationCommand> action)
+            {
+                var parent = AnnotationOverlay.CurrentOverlay?.Parent;
+                if (parent?.CurrentCommand is not SegmentationCommand command)
+                    return;
+
+                if (parent.InvokeRequired)
+                    parent.BeginInvoke(new System.Action(() => action(command)));
+                else
+                    action(command);
+            }
+#endif
         }
 
         /// <summary>
@@ -667,8 +1318,13 @@ namespace WebAnnotation
             get => WebAnnotation.Properties.Settings.Default.PenMode;
             set
             {
+                bool previous = WebAnnotation.Properties.Settings.Default.PenMode;
                 WebAnnotation.Properties.Settings.Default.PenMode = value;
                 WebAnnotation.Properties.Settings.Default.Save();
+#if NETFRAMEWORK
+                if (previous != value)
+                    UI.AnnotationStatusChips.Refresh();
+#endif
             }
         }
 
@@ -697,17 +1353,16 @@ namespace WebAnnotation
                     _UserFavoriteStructureTypes = [];
                     foreach (string ID_str in Properties.Settings.Default.FavoriteStructureIDs)
                     {
-                        try
+                        if (WebAnnotation.UI.StructureIdText.TryParseUnsigned(ID_str, out ulong ID))
                         {
-                            ulong ID = System.Convert.ToUInt64(ID_str);
                             if (_UserFavoriteStructureTypes.Contains(ID) == false) //Do not add accidental duplicates
                             {
                                 _UserFavoriteStructureTypes.Add(ID);
                             }
                         }
-                        catch (ArgumentException)
+                        else
                         {
-                            Trace.WriteLine($"Unable to convert Favorite StructureID to long {ID_str}");
+                            Trace.WriteLine($"Unable to convert Favorite StructureID to ulong {ID_str}");
                         }
                     }
 
@@ -751,16 +1406,6 @@ namespace WebAnnotation
                     break;
             }
 
-            /* The brute force approach */
-            /*
-            StringCollection newList = new System.Collections.Specialized.StringCollection();
-            foreach(long ID in _UserFavoriteStructureTypes)
-            {
-                newList.Add(string.Format("{0}", ID));
-            }
-
-            Properties.Settings.Default.FavoriteStructureIDs = newList;
-            */
             Properties.Settings.Default.Save(); //Persist the updated list
         }
 
@@ -946,7 +1591,23 @@ namespace WebAnnotation
             }
 
             if (serviceProvider.GetService<WebAnnotationModel.IAnnotationStores>() is WebAnnotationModel.IAnnotationStores annotationStores)
-                await WebAnnotationModel.Store.InitializeAsync(annotationStores, cancellationToken).ConfigureAwait(false);
+            {
+                try
+                {
+                    await WebAnnotationModel.Store.InitializeAsync(annotationStores, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // The viewer stays open without annotations rather than failing module start.
+                    Trace.WriteLine("[WebAnnotation] Annotation store failed to start: " + ex);
+                    System.Windows.Forms.MessageBox.Show(
+                        "Viking could not load annotations.\n\n" + ex.Message +
+                        "\n\nThe viewer will stay open. Annotations stay unavailable until a later launch is accepted by the annotation service.",
+                        "Viking",
+                        System.Windows.Forms.MessageBoxButtons.OK,
+                        System.Windows.Forms.MessageBoxIcon.Warning);
+                }
+            }
         }
 
         private static async Task<bool> InitializeModuleAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
@@ -1069,12 +1730,10 @@ namespace WebAnnotation
 
                     IEnumerable<XElement> MappingElements = elem.Elements().Where(e => e.Name.LocalName == "VolumeToEndpoint");
 
-                    if (MappingElements.Count() == 0)
-                    {
-                        break;
-                    }
-
-                    Global.PopulateEndpointStateFromVolumeToEndpointElement(MappingElements.First());
+                    if (MappingElements.Count() > 0)
+                        Global.PopulateEndpointStateFromVolumeToEndpointElement(MappingElements.First());
+                    else
+                        Global.ApplyIdentityAnnotationEndpointOnly();
 
                     break;
                 default:
@@ -1091,6 +1750,24 @@ namespace WebAnnotation
             return false;
         }
 
+        /// <summary>
+        /// Applies Identity session annotation / export URLs when VikingXML has no VolumeToEndpoint.
+        /// </summary>
+        private static void ApplyIdentityAnnotationEndpointOnly()
+        {
+            Uri? resolvedEndpoint = IdentityEndpoints.ResolveAnnotationServiceEndpoint(
+                null,
+                AccessibleVolumeSession.AnnotationServiceEndpoint?.ToString());
+            if (resolvedEndpoint != null)
+                WebAnnotationModel.State.Endpoint = resolvedEndpoint;
+
+            if (!string.IsNullOrWhiteSpace(AccessibleVolumeSession.AnnotationServerName))
+                Global.EndpointName = AccessibleVolumeSession.AnnotationServerName;
+
+            if (AccessibleVolumeSession.ExportEndpoint != null)
+                Global.Export = new WebAnnotation.Export(AccessibleVolumeSession.ExportEndpoint);
+        }
+
         private static void PopulateEndpointStateFromVolumeToEndpointElement(XElement MappingElement)
         {
             XAttribute NameAttribute = MappingElement.Attribute("Name");
@@ -1098,22 +1775,40 @@ namespace WebAnnotation
             {
                 Global.EndpointName = NameAttribute.Value;
             }
+            else if (!string.IsNullOrWhiteSpace(AccessibleVolumeSession.AnnotationServerName))
+            {
+                Global.EndpointName = AccessibleVolumeSession.AnnotationServerName;
+            }
 
+            Uri? volumeXmlEndpoint = null;
             XAttribute EndpointAttribute = MappingElement.Attribute("Endpoint");
             if (EndpointAttribute != null)
             {
 #if DEBUG
-                WebAnnotationModel.State.Endpoint = new Uri(EndpointAttribute.Value);
+                volumeXmlEndpoint = new Uri(EndpointAttribute.Value);
                 //                        WebAnnotationModel.State.EndpointAddress = new EndpointAddress("https://connectomes.utah.edu/Services/TestBinary/Annotate.svc");
 #else
-                WebAnnotationModel.State.Endpoint = new Uri(EndpointAttribute.Value);
+                volumeXmlEndpoint = new Uri(EndpointAttribute.Value);
 #endif
             }
 
-            XAttribute ExportURLAttribute = MappingElement.Attribute("ExportURL");
-            if (ExportURLAttribute != null)
+            Uri? resolvedEndpoint = IdentityEndpoints.ResolveAnnotationServiceEndpoint(
+                volumeXmlEndpoint,
+                AccessibleVolumeSession.AnnotationServiceEndpoint?.ToString());
+            if (resolvedEndpoint != null)
+                WebAnnotationModel.State.Endpoint = resolvedEndpoint;
+
+            if (AccessibleVolumeSession.ExportEndpoint != null)
             {
-                Global.Export = new WebAnnotation.Export(new Uri(ExportURLAttribute.Value));
+                Global.Export = new WebAnnotation.Export(AccessibleVolumeSession.ExportEndpoint);
+            }
+            else
+            {
+                XAttribute ExportURLAttribute = MappingElement.Attribute("ExportURL");
+                if (ExportURLAttribute != null)
+                {
+                    Global.Export = new WebAnnotation.Export(new Uri(ExportURLAttribute.Value));
+                }
             }
 
             /*
@@ -1126,6 +1821,37 @@ namespace WebAnnotation
             */
 
             return;
+        }
+
+        /// <summary>
+        /// Downloads a replacement settings file when the local one cannot be parsed.
+        /// Leaves the previous in-memory settings unchanged when the download fails, so a
+        /// bad server response does not erase a shortcuts file the user already had.
+        /// </summary>
+        private static async Task ReplaceUnreadableUserSettingsFromServerAsync(CancellationToken cancellationToken)
+        {
+            bool success = await LoadServerUserSettingsAsync(cancellationToken).ConfigureAwait(false);
+            if (!success)
+            {
+                Trace.WriteLine("User settings could not be parsed and the server copy was not downloaded.");
+                return;
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            TryLoadLocalUserSettings();
+        }
+
+        /// <summary>
+        /// Loads <see cref="UserSettingsFilePath"/> after correcting the legacy namespace.
+        /// Called from startup. A missing file leaves <see cref="_userSettingsDoc"/> unchanged.
+        /// </summary>
+        private static bool TryLoadLocalUserSettings()
+        {
+            if (!System.IO.File.Exists(UserSettingsFilePath))
+                return false;
+
+            _userSettingsDoc = XRoot.Load(UserSettingsFilePath);
+            return _userSettingsDoc != null;
         }
 
         private static Task LoadUserPreferencesAsync()
@@ -1176,16 +1902,13 @@ namespace WebAnnotation
                     bool success = await LoadServerUserSettingsAsync(cancellationToken).ConfigureAwait(false);
                     if (!success)
                     {
+                        // A failed download must not drop the shortcuts already on disk. That is the C hotkey.
                         Trace.WriteLine("User settings download failed; loading the local file.");
                     }
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
-
-                if (System.IO.File.Exists(UserSettingsFilePath))
-                {
-                    _userSettingsDoc = XRoot.Load(UserSettingsFilePath);
-                }
+                TryLoadLocalUserSettings();
             }
             catch (OperationCanceledException)
             {
@@ -1194,35 +1917,12 @@ namespace WebAnnotation
             }
             catch (Xml.Schema.Linq.LinqToXsdException)
             {
-                //We found it locally, but could not parse it
-                bool success = await LoadServerUserSettingsAsync(cancellationToken);
-                if (!success)
-                {
-                    throw;
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (System.IO.File.Exists(UserSettingsFilePath))
-                {
-                    _userSettingsDoc = XRoot.Load(UserSettingsFilePath);
-                }
+                // The local cache did not match the schema. Download the volume's settings file again.
+                await ReplaceUnreadableUserSettingsFromServerAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (System.Xml.XmlException)
             {
-                //We found it locally, but could not parse it
-                bool success = await LoadServerUserSettingsAsync(cancellationToken);
-                if (!success)
-                {
-                    throw;
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (System.IO.File.Exists(UserSettingsFilePath))
-                {
-                    _userSettingsDoc = XRoot.Load(UserSettingsFilePath);
-                }
+                await ReplaceUnreadableUserSettingsFromServerAsync(cancellationToken).ConfigureAwait(false);
             }
             /*
             catch (Exception )
@@ -1239,8 +1939,6 @@ namespace WebAnnotation
         /// <param name="CacheFilename"></param>
         /// <param name="textureUri"></param>
         /// <returns></returns>
-        private static Task<bool> CachedResourceIsValid(string CacheFilename, Uri uri) => CachedResourceIsValidAsync(CacheFilename, uri);
-
         private static async Task<bool> CachedResourceIsValidAsync(string CacheFilename, Uri uri, CancellationToken cancellationToken = default)
         {
             if (uri is null)
@@ -1268,8 +1966,6 @@ namespace WebAnnotation
                 return false;
             }
         }
-
-        private static Task<bool> LoadServerUserSettings() => LoadServerUserSettingsAsync();
 
         private static async Task<bool> LoadServerUserSettingsAsync(CancellationToken cancellationToken = default)
         {
@@ -1309,12 +2005,6 @@ namespace WebAnnotation
             }
 
 
-        }
-
-        private static void CreateNewUserSettingsFile()
-        {
-            Global._userSettingsDoc = new XRoot(new UserSettings());
-            SaveUserSettings();
         }
 
         public static void SaveUserSettings() => Global._userSettingsDoc.Save(UserSettingsFilePath);

@@ -1,19 +1,19 @@
 using Geometry;
-using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework.Graphics;
 using SIMeasurement;
 using System;
 using Viking.UI.Controls;
 using VikingXNA;
 using VikingXNAGraphics;
-using Vector2 = Microsoft.Xna.Framework.Vector2;
-using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace MeasurementExtension
 {
     [Viking.Common.SectionOverlay("Scale Bar")]
     public class MeasureOverlay : Viking.Common.ISectionOverlayExtension
     {
+        /// <summary>Copies the scale-bar preference from the previous version before the first read.</summary>
+        static MeasureOverlay() => Measurement.Properties.Settings.Default.UpgradeIfNeeded();
+
         private SectionViewerControl? Parent;
 
         public static double MeasureBarWidthScreenTargetFraction = 0.15;
@@ -25,7 +25,19 @@ namespace MeasurementExtension
 
         public static Geometry.Vector2 CornerOffsetFractions = new(0.01, 0.05);
 
-        private static readonly double log5 = Math.Log(5);
+        /// <summary>
+        /// Converts a positive viewport width and units-per-pixel into a positive view width in display units.
+        /// Returns false when the viewport is non-positive, scale is zero/non-finite, or the quotient is not positive.
+        /// </summary>
+        internal static bool TryGetViewWidthInUnits(double viewWidthInPixels, double unitsPerPixel, out double viewWidthInUnits)
+        {
+            viewWidthInUnits = 0;
+            if (viewWidthInPixels <= 0 || !ScaleBarLayout.IsPositiveFinite(unitsPerPixel))
+                return false;
+
+            viewWidthInUnits = viewWidthInPixels / unitsPerPixel;
+            return viewWidthInUnits > 0;
+        }
 
         public void Draw(GraphicsDevice graphicsDevice, Scene scene, Texture BackgroundLuma, Texture BackgroundColors, ref int NextStencilValue)
         {
@@ -33,21 +45,14 @@ namespace MeasurementExtension
                 return;
 
             double ViewWidthInPixels = scene.VisibleWorldBounds.Width;
-            double ViewWidthInUnits = ViewWidthInPixels / Global.UnitsPerPixel;
+            if (!TryGetViewWidthInUnits(ViewWidthInPixels, Global.UnitsPerPixel, out double ViewWidthInUnits))
+                return;
 
             LengthMeasurement ApproximateViewBarWidth = new(Global.UnitOfMeasure, ViewWidthInUnits * MeasureBarWidthScreenTargetFraction);
             LengthMeasurement AdjustedApproximateViewBarWidth = LengthMeasurement.ConvertToReadableUnits(Global.UnitOfMeasure, ViewWidthInUnits * MeasureBarWidthScreenTargetFraction);
 
-            //Round to the nearest power of 10
-            double log10 = Math.Log10(AdjustedApproximateViewBarWidth.Length);
-            int numDigits = Convert.ToInt32(Math.Ceiling(log10));
-
-            double MeasureBarDistance = Math.Pow(10, numDigits);
-
-            if (log10 - Math.Floor(log10) > log5 - 1)
-            {
-                MeasureBarDistance *= 5;
-            }
+            if (!ScaleBarLayout.TryRoundReadableLengthToBarDistance(AdjustedApproximateViewBarWidth.Length, out double MeasureBarDistance))
+                return;
 
             LengthMeasurement FinalBarWidth = new(AdjustedApproximateViewBarWidth.Units, MeasureBarDistance);
             FinalBarWidth = FinalBarWidth.ConvertTo(Global.PixelWidth.Units);
@@ -69,7 +74,7 @@ namespace MeasurementExtension
             double BarEndX = scene.VisibleWorldBounds.Right - CornerOffset.X;
             double BarStartX = BarEndX - BarWidthInPixels;
 
-            Rectangle scaleBarRect = new(new Geometry.Vector2(BarStartX, BarStartY), BarWidthInPixels, BarHeightInPixels);
+            Geometry.Rectangle scaleBarRect = new(new Geometry.Vector2(BarStartX, BarStartY), BarWidthInPixels, BarHeightInPixels);
 
             //Draw a black box
             RectangleView scaleBarView = new(scaleBarRect, Microsoft.Xna.Framework.Color.Black);

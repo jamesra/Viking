@@ -234,6 +234,33 @@ namespace WebAnnotationModel
         /// </summary>
         public void InvalidateSection(int sectionNumber) => sectionPyramids.TryRemove(sectionNumber, out _);
 
+        /// <inheritdoc />
+        public bool AreRegionQueriesComplete(Geometry.Rectangle? volumeBounds, double screenPixelSizeInVolume, int sectionNumber)
+        {
+            if (!volumeBounds.HasValue)
+                return false;
+
+            if (!sectionPyramids.TryGetValue(sectionNumber, out RegionPyramid<OBJECT> regionPyramid))
+                return false;
+
+            IRegionPyramidLevel<RegionRequestData<OBJECT>> level = regionPyramid.GetLevel(screenPixelSizeInVolume);
+            RegionRequestData<OBJECT>[] cells = level.ArrayForRegion(volumeBounds.Value);
+            if (cells.Length == 0)
+                return false;
+
+            foreach (RegionRequestData<OBJECT> cell in cells)
+            {
+                //A new cell's LastQuery starts at DateTime.MinValue, so only a later stamp means a query finished.
+                if (cell is null || !cell.HasBeenQueried || cell.LastQuery.Value == DateTime.MinValue)
+                    return false;
+
+                if (cell.CurrentQuery is not null && !cell.CurrentQuery.IsCompleted)
+                    return false;
+            }
+
+            return true;
+        }
+
         /*
         private async Task ReportLocalObjectsInRegion(RegionRequestData<OBJECT> cell,
             IRegionPyramidLevel<RegionRequestData<OBJECT>> level, int sectionNumber, CancellationToken aToken,

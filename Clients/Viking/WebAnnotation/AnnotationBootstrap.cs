@@ -24,6 +24,12 @@ namespace WebAnnotation
 
         public static VolumeTransformProvider Transforms { get; private set; }
 
+        /// <summary>
+        /// The service provider that composed the annotation stores, or null before initialization. Background jobs that must
+        /// not share the viewer's store (volume-position correction) take their own gRPC clients and converters from here.
+        /// </summary>
+        public static IServiceProvider Services { get; private set; }
+
         public static bool TryInitialize(Volume volume, NetworkCredential credentials, string segmentationServiceUrl)
         {
             return Task.Run(() => TryInitializeAsync(volume, credentials, segmentationServiceUrl))
@@ -67,6 +73,7 @@ namespace WebAnnotation
                 });
 
             ServiceProvider provider = services.BuildServiceProvider();
+            Services = provider;
             if (provider.GetService<IOptions<GrpcRepositorySettings>>() is IOptions<GrpcRepositorySettings> grpcSettings)
                 grpcSettings.Value.Endpoint = endpoint;
 

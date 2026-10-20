@@ -1,6 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
@@ -84,7 +84,8 @@ namespace Viking.UI.Controls
         }
 
         /// <summary>
-        /// Shows None (grey) when the context has no correction service, otherwise On (green) or Off (red).
+        /// Shows None (grey) when the context has no correction service, Error (red) when the service could not be
+        /// reached, otherwise On (green) or Off (red).
         /// </summary>
         void UpdateCorrectionStatus()
         {
@@ -96,6 +97,15 @@ namespace Viking.UI.Controls
                 _tsCorrection.Text = "Corrections: None";
                 _tsCorrection.ForeColor = System.Drawing.SystemColors.GrayText;
                 _tsCorrection.ToolTipText = "This annotation context has no correction service.";
+                return;
+            }
+
+            string? error = _correctionShim.LastError;
+            if (error is not null)
+            {
+                _tsCorrection.Text = "Corrections: " + ServiceErrorTracker.ErrorText;
+                _tsCorrection.ForeColor = ServiceErrorTracker.ErrorColor;
+                _tsCorrection.ToolTipText = ServiceErrorTracker.ToolTip("The correction service", error);
                 return;
             }
 
@@ -117,6 +127,27 @@ namespace Viking.UI.Controls
 
             return string.Format(System.Globalization.CultureInfo.CurrentCulture, " - {0:0.0}x, {1:0.0}y nm",
                 _correctionOffsetXNm, _correctionOffsetYNm);
+        }
+
+        /// <summary>
+        /// Redraws the status item after the service reported a changed error. Raised on a thread-pool thread.
+        /// </summary>
+        void OnCorrectionErrorChanged()
+        {
+            if (IsDisposed)
+                return;
+
+            try
+            {
+                if (InvokeRequired)
+                    BeginInvoke(new Action(UpdateCorrectionStatus));
+                else
+                    UpdateCorrectionStatus();
+            }
+            catch (InvalidOperationException)
+            {
+                // Handle destroyed while a request was in flight.
+            }
         }
 
         /// <summary>
@@ -147,6 +178,7 @@ namespace Viking.UI.Controls
             _correctionShimCreated = true;
             _correctionShim = new SectionShimService(source, ApplyCorrectionShimToCamera, SectionShimContext.Settings,
                 message => Trace.WriteLine(message, "CorrectionShim"));
+            _correctionShim.ErrorChanged += OnCorrectionErrorChanged;
             _correctionShim.Configure(url, database, _Section.VolumeViewModel.DefaultXYScale.Value);
             Trace.WriteLine($"Corrections available: service URL '{url}', database '{database}', IsAvailable={_correctionShim.IsAvailable}.", "CorrectionShim");
             UpdateCorrectionStatus();
@@ -202,13 +234,84 @@ namespace Viking.UI.Controls
             return [.. neighbors];
         }
 
-        /// <summary>How long the camera shim takes to glide to a new value.</summary>
-        const int ShimTweenMilliseconds = 200;
+        /// <summary>
+        /// How long every shim glide takes: toggling corrections, changing the correction preferences, and a correction
+        /// that arrives after the view was shown.
+        /// </summary>
+        const int ShimTweenMilliseconds = 250;
 
         System.Windows.Forms.Timer? _shimTweenTimer;
         readonly Stopwatch _shimTweenClock = new();
         Vector2 _shimTweenFrom;
         Vector2 _shimTweenTo;
+
+        /// <summary>
+        /// Receives the faded shim in volume units on whatever thread produced it and moves it to the UI thread.
+        /// </summary>
+        void ApplyCorrectionShimToCamera(double dx, double dy)
+        {
+            if (IsDisposed)
+                return;
+
+            if (InvokeRequired)
+            {
+                try
+                {
+                    BeginInvoke(new Action(() => ApplyCorrectionShimToCamera(dx, dy)));
+                }
+                catch (InvalidOperationException)
+                {
+                    // Handle destroyed while a request was in flight.
+                }
+
+                return;
+            }
+
+            if (_Section is not null)
+            {
+                double nmPerPixel = _Section.VolumeViewModel.DefaultXYScale.Value;
+                _correctionOffsetXNm = dx * nmPerPixel;
+                _correctionOffsetYNm = dy * nmPerPixel;
+                if (SectionShimContext.Settings.ShowOffset)
+                    UpdateCorrectionStatus();
+            }
+
+            var target = new Vector2((float)dx, (float)dy);
+            Trace.WriteLine($"Apply shim {dx:0.00},{dy:0.00} volume units from {Camera.Shim.X:0.00},{Camera.Shim.Y:0.00}, {(_snapShim ? "snap" : "glide")}.", "CorrectionShim");
+            if (_snapShim)
+            {
+                _shimTweenTimer?.Stop();
+                Camera.Shim = target;
+                Invalidate();
+                return;
+            }
+
+            StartShimTween(target);
+        }
+
+        /// <summary>
+        /// True while <see cref="UpdateCorrectionShimSnapped"/> is running on the UI thread, so a value sampled from an
+        /// already cached lattice is applied at once instead of glided.
+        /// </summary>
+        bool _snapShim;
+
+        /// <summary>
+        /// Reports a camera or section change to the shim service. The shim sampled from a cached lattice follows the
+        /// camera smoothly by itself, and a section change replaces the whole image, so gliding either would only
+        /// make the correction lag the view. Only toggles and answers that arrive later glide.
+        /// </summary>
+        void UpdateCorrectionShimSnapped()
+        {
+            _snapShim = true;
+            try
+            {
+                UpdateCorrectionShim();
+            }
+            finally
+            {
+                _snapShim = false;
+            }
+        }
 
         /// <summary>
         /// Glides <see cref="VikingXNA.Camera.Shim"/> from where it is now to <paramref name="target"/> so a late
@@ -252,40 +355,6 @@ namespace Viking.UI.Controls
             Invalidate();
         }
 
-        /// <summary>
-        /// Receives the faded shim in volume units on whatever thread produced it and moves it to the UI thread.
-        /// </summary>
-        void ApplyCorrectionShimToCamera(double dx, double dy)
-        {
-            if (IsDisposed)
-                return;
-
-            if (InvokeRequired)
-            {
-                try
-                {
-                    BeginInvoke(new Action(() => ApplyCorrectionShimToCamera(dx, dy)));
-                }
-                catch (InvalidOperationException)
-                {
-                    // Handle destroyed while a request was in flight.
-                }
-
-                return;
-            }
-
-            StartShimTween(new Vector2((float)dx, (float)dy));
-
-            if (_Section is not null)
-            {
-                double nmPerPixel = _Section.VolumeViewModel.DefaultXYScale.Value;
-                _correctionOffsetXNm = dx * nmPerPixel;
-                _correctionOffsetYNm = dy * nmPerPixel;
-                if (SectionShimContext.Settings.ShowOffset)
-                    UpdateCorrectionStatus();
-            }
-        }
-
         /// <inheritdoc/>
         protected override void OnSceneChanged(object sender, PropertyChangedEventArgs e)
         {
@@ -293,7 +362,7 @@ namespace Viking.UI.Controls
 
             // Camera.Shim is excluded: applying the shim raises it, and it must not trigger another report.
             if (e.PropertyName == "Camera.LookAt" || e.PropertyName == "Camera.Downsample" || e.PropertyName == "Viewport")
-                UpdateCorrectionShim();
+                UpdateCorrectionShimSnapped();
         }
 
         void DisposeCorrectionShim()
@@ -301,6 +370,8 @@ namespace Viking.UI.Controls
             SectionShimContext.SettingsChanged -= OnCorrectionSettingsChanged;
             _shimTweenTimer?.Dispose();
             _shimTweenTimer = null;
+            if (_correctionShim is not null)
+                _correctionShim.ErrorChanged -= OnCorrectionErrorChanged;
             _correctionShim?.Dispose();
             _correctionShim = null;
         }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Viking.Common;
 using Viking.ViewModels;
@@ -181,7 +182,7 @@ namespace Viking.UI
 
         /// <summary>
         /// URL of the correction service Identity assigned to the open annotation context, or null when none is
-        /// assigned (or the volume was opened by URL). Set by the login flow before the viewer opens.
+        /// assigned (or the volume was opened by URL). Set by the login flow; the server-tree viewer uses it to apply section-correction shims.
         /// </summary>
         public static string? CorrectionServiceUrl { get; set; }
 
@@ -190,6 +191,30 @@ namespace Viking.UI
         /// from <see cref="CorrectionServiceUrl"/>.
         /// </summary>
         public static string? CorrectionDatabaseName { get; set; }
+
+        /// <summary>
+        /// Identity Server URL from this login (launch-exchange or login view). Used to reload
+        /// accessible segmentation services mid-session without another login.
+        /// </summary>
+        public static string? IdentityServerUrl { get; set; }
+
+        /// <summary>
+        /// Recent segmentation endpoints for the mid-session picker. Snapshot of user settings at login,
+        /// updated when the user selects a server from the Annotation menu.
+        /// </summary>
+        public static List<string> RecentSegmentationServiceUrls { get; set; } = [];
+
+        /// <summary>
+        /// Host writes LastSegmentationServiceUrl and recent history. Null endpoint means None.
+        /// Assigned by Viking.exe after a successful login dialog.
+        /// </summary>
+        public static Action<string?>? PersistSegmentationServiceSelection { get; set; }
+
+        /// <summary>
+        /// Volume endpoint URL currently open (normalized at login). Used to match viking:// deep links
+        /// for same-volume single-instance activation.
+        /// </summary>
+        public static string? VolumeUrl { get; set; }
 
         /// <summary>
         /// Base URL for opening a cell in SBFSEM-tools (default https://sbfsem-tools.com/open).
@@ -213,6 +238,11 @@ namespace Viking.UI
         /// viking://open?location=... link is handed to a Viking that is already running.
         /// </summary>
         public static Func<long, System.Threading.Tasks.Task>? GoToLocationIdHandler { get; set; }
+
+        /// <summary>
+        /// Registered by WebAnnotation to navigate to a Location ID (AskServer). Used by deep-link activation.
+        /// </summary>
+        public static Action<long>? GoToAnnotationLocation { get; set; }
 
     }
 }

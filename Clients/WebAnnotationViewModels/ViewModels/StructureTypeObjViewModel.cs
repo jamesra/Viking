@@ -356,15 +356,14 @@ namespace Annotation.ViewModels
             return true;
         }
 
+        /// <summary>
+        /// Apply: saves changed structure types, then every pending permitted link change (added links are INSERT,
+        /// removed links DELETE). Links are saved even when no link was added, so a delete-only Apply reaches the server.
+        /// </summary>
         private void SaveModel(object item)
         {
             Store.StructureTypes.Save(CancellationToken.None).Wait();
-
-            foreach (PermittedStructureLinkObj newObj in NewPermits)
-            {
-                //Store.PermittedStructureLinks.Create(newObj);
-                Store.PermittedStructureLinks.Save(CancellationToken.None).Wait();
-            }
+            Store.PermittedStructureLinks.Save(CancellationToken.None).Wait();
         }
 
         private bool CanRestoreModel(object item) => Model.DBAction != DBACTION.NONE;

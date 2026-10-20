@@ -1,7 +1,8 @@
 using Geometry;
-using Rectangle = Geometry.Rectangle;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using WebAnnotation.UI.Commands.Segmentation;
 
 namespace WebAnnotationTests.Commands
@@ -12,44 +13,61 @@ namespace WebAnnotationTests.Commands
     [TestClass]
     public class SegmentationCommandTests
     {
+        #region Gesture Help Tests
+
+        /// <summary>
+        /// Finalize moved from a single click to a double-click on a green point; the help bar must say so
+        /// and must not still advertise the old gesture.
+        /// </summary>
+        [TestMethod]
+        public void MouseHelpDescribesDoubleClickFinalize()
+        {
+            string[] help = SegmentationCommand.DefaultMouseHelpStrings;
+
+            Assert.IsTrue(help.Any(line => line.StartsWith("Double-click a green point", StringComparison.Ordinal)));
+            Assert.IsFalse(help.Any(line => line.Contains("Left-click inside polygon")));
+        }
+
+        #endregion
+
         #region Point Management Tests
 
         [TestMethod]
         public void TestFindPointWithinRadius_PointFound()
         {
             // Arrange
-            List<Vector2> points = new List<Vector2>
+            List<Geometry.Vector2> points = new List<Geometry.Vector2>
             {
-                new Vector2(0, 0),
-                new Vector2(10, 10),
-                new Vector2(20, 20)
+                new Geometry.Vector2(0, 0),
+                new Geometry.Vector2(10, 10),
+                new Geometry.Vector2(20, 20)
             };
-            Vector2 searchPos = new Vector2(10.5, 10.5); // Close to second point
+            Geometry.Vector2 searchPos = new Geometry.Vector2(10.5, 10.5); // Close to second point
             double radiusInPixels = 5.0;
 
             // Act
-            Vector2? found = FindPointWithinRadiusHelper(points, searchPos, radiusInPixels);
+            Geometry.Vector2? found = FindPointWithinRadiusHelper(points, searchPos, radiusInPixels);
 
             // Assert
             Assert.IsNotNull(found, "Should find point within radius");
-            Assert.AreEqual(new Vector2(10, 10), found.Value);
+            Assert.AreEqual(new Geometry.Vector2(10, 10), found.Value);
         }
 
         [TestMethod]
         public void TestFindPointWithinRadius_PointNotFound()
         {
             // Arrange
-            List<Vector2> points = new List<Vector2>
+            List<Geometry.Vector2> points = new List<Geometry.Vector2>
             {
-                new Vector2(0, 0),
-                new Vector2(10, 10),
-                new Vector2(20, 20)
+                new Geometry.Vector2(0, 0),
+                new Geometry.Vector2(10, 10),
+                new Geometry.Vector2(20, 20)
             };
-            Vector2 searchPos = new Vector2(50, 50); // Far from all points
+            Geometry.Vector2 searchPos = new Geometry.Vector2(50, 50); // Far from all points
             double radiusInPixels = 5.0;
 
             // Act
-            Vector2? found = FindPointWithinRadiusHelper(points, searchPos, radiusInPixels);
+            Geometry.Vector2? found = FindPointWithinRadiusHelper(points, searchPos, radiusInPixels);
 
             // Assert
             Assert.IsNull(found, "Should not find point outside radius");
@@ -59,12 +77,12 @@ namespace WebAnnotationTests.Commands
         public void TestFindPointWithinRadius_EmptyList()
         {
             // Arrange
-            List<Vector2> points = new List<Vector2>();
-            Vector2 searchPos = new Vector2(10, 10);
+            List<Geometry.Vector2> points = new List<Geometry.Vector2>();
+            Geometry.Vector2 searchPos = new Geometry.Vector2(10, 10);
             double radiusInPixels = 5.0;
 
             // Act
-            Vector2? found = FindPointWithinRadiusHelper(points, searchPos, radiusInPixels);
+            Geometry.Vector2? found = FindPointWithinRadiusHelper(points, searchPos, radiusInPixels);
 
             // Assert
             Assert.IsNull(found, "Should return null for empty list");
@@ -73,13 +91,13 @@ namespace WebAnnotationTests.Commands
         /// <summary>
         /// Helper method that simulates the FindPointWithinRadius logic from SegmentationCommand
         /// </summary>
-        private Vector2? FindPointWithinRadiusHelper(List<Vector2> points, Vector2 searchPos, double radiusInPixels)
+        private Geometry.Vector2? FindPointWithinRadiusHelper(List<Geometry.Vector2> points, Geometry.Vector2 searchPos, double radiusInPixels)
         {
             double radiusSquared = radiusInPixels * radiusInPixels;
 
             foreach (var pt in points)
             {
-                double distSq = Vector2.DistanceSquared(pt, searchPos);
+                double distSq = Geometry.Vector2.DistanceSquared(pt, searchPos);
                 if (distSq <= radiusSquared)
                 {
                     return pt;
@@ -97,16 +115,16 @@ namespace WebAnnotationTests.Commands
         public void TestWorldToViewport_BasicTransform()
         {
             // Arrange
-            Rectangle viewportBounds = new Rectangle(
-                new Vector2(0, 0),
-                new Vector2(100, 100)
+            Geometry.Rectangle viewportBounds = new Geometry.Rectangle(
+                new Geometry.Vector2(0, 0),
+                new Geometry.Vector2(100, 100)
             );
-            Vector2 worldPos = new Vector2(50, 50); // Center
+            Geometry.Vector2 worldPos = new Geometry.Vector2(50, 50); // Center
             int viewportWidth = 1000;
             int viewportHeight = 1000;
 
             // Act
-            Vector2 result = WorldToViewportHelper(worldPos, viewportBounds, viewportWidth, viewportHeight);
+            Geometry.Vector2 result = SegmentationExtensions.MapWorldToViewportPixel(worldPos, viewportBounds, viewportWidth, viewportHeight);
 
             // Assert
             Assert.AreEqual(500.0, result.X, 0.01, "X coordinate should be at center");
@@ -117,16 +135,16 @@ namespace WebAnnotationTests.Commands
         public void TestWorldToViewport_OriginTransform()
         {
             // Arrange
-            Rectangle viewportBounds = new Rectangle(
-                new Vector2(0, 0),
-                new Vector2(100, 100)
+            Geometry.Rectangle viewportBounds = new Geometry.Rectangle(
+                new Geometry.Vector2(0, 0),
+                new Geometry.Vector2(100, 100)
             );
-            Vector2 worldPos = new Vector2(0, 0); // Origin
+            Geometry.Vector2 worldPos = new Geometry.Vector2(0, 0); // Origin
             int viewportWidth = 1000;
             int viewportHeight = 1000;
 
             // Act
-            Vector2 result = WorldToViewportHelper(worldPos, viewportBounds, viewportWidth, viewportHeight);
+            Geometry.Vector2 result = SegmentationExtensions.MapWorldToViewportPixel(worldPos, viewportBounds, viewportWidth, viewportHeight);
 
             // Assert
             Assert.AreEqual(0.0, result.X, 0.01, "X coordinate should be at origin");
@@ -137,16 +155,16 @@ namespace WebAnnotationTests.Commands
         public void TestWorldToViewport_MaxBoundsTransform()
         {
             // Arrange
-            Rectangle viewportBounds = new Rectangle(
-                new Vector2(0, 0),
-                new Vector2(100, 100)
+            Geometry.Rectangle viewportBounds = new Geometry.Rectangle(
+                new Geometry.Vector2(0, 0),
+                new Geometry.Vector2(100, 100)
             );
-            Vector2 worldPos = new Vector2(100, 100); // Max bounds
+            Geometry.Vector2 worldPos = new Geometry.Vector2(100, 100); // Max bounds
             int viewportWidth = 1000;
             int viewportHeight = 1000;
 
             // Act
-            Vector2 result = WorldToViewportHelper(worldPos, viewportBounds, viewportWidth, viewportHeight);
+            Geometry.Vector2 result = SegmentationExtensions.MapWorldToViewportPixel(worldPos, viewportBounds, viewportWidth, viewportHeight);
 
             // Assert
             Assert.AreEqual(1000.0, result.X, 0.01, "X coordinate should be at max");
@@ -157,9 +175,9 @@ namespace WebAnnotationTests.Commands
         public void TestViewportToWorld_BasicTransform()
         {
             // Arrange
-            Rectangle viewportBounds = new Rectangle(
-                new Vector2(0, 0),
-                new Vector2(100, 100)
+            Geometry.Rectangle viewportBounds = new Geometry.Rectangle(
+                new Geometry.Vector2(0, 0),
+                new Geometry.Vector2(100, 100)
             );
             int pixelX = 500;
             int pixelY = 500;
@@ -167,7 +185,8 @@ namespace WebAnnotationTests.Commands
             int viewportHeight = 1000;
 
             // Act
-            Vector2 result = ViewportToWorldHelper(pixelX, pixelY, viewportBounds, viewportWidth, viewportHeight);
+            Geometry.Vector2 result = SegmentationExtensions.MapViewportPixelToWorld(
+                pixelX, pixelY, viewportBounds, viewportWidth, viewportHeight);
 
             // Assert
             Assert.AreEqual(50.0, result.X, 0.01, "X coordinate should be at center in world space");
@@ -178,64 +197,27 @@ namespace WebAnnotationTests.Commands
         public void TestViewportToWorld_RoundTrip()
         {
             // Arrange
-            Rectangle viewportBounds = new Rectangle(
-                new Vector2(10, 20),
-                new Vector2(110, 120)
+            Geometry.Rectangle viewportBounds = new Geometry.Rectangle(
+                new Geometry.Vector2(10, 20),
+                new Geometry.Vector2(110, 120)
             );
-            Vector2 originalWorldPos = new Vector2(60, 70); // Arbitrary point
+            Geometry.Vector2 originalWorldPos = new Geometry.Vector2(60, 70); // Arbitrary point
             int viewportWidth = 800;
             int viewportHeight = 600;
 
             // Act: Convert world -> viewport -> world
-            Vector2 viewportPos = WorldToViewportHelper(originalWorldPos, viewportBounds, viewportWidth, viewportHeight);
-            Vector2 roundTripWorldPos = ViewportToWorldHelper(
-                (int)viewportPos.X, 
-                (int)viewportPos.Y, 
-                viewportBounds, 
-                viewportWidth, 
+            Geometry.Vector2 viewportPos = SegmentationExtensions.MapWorldToViewportPixel(
+                originalWorldPos, viewportBounds, viewportWidth, viewportHeight);
+            Geometry.Vector2 roundTripWorldPos = SegmentationExtensions.MapViewportPixelToWorld(
+                (int)viewportPos.X,
+                (int)viewportPos.Y,
+                viewportBounds,
+                viewportWidth,
                 viewportHeight);
 
             // Assert
             Assert.AreEqual(originalWorldPos.X, roundTripWorldPos.X, 1.0, "X coordinate should round-trip correctly");
             Assert.AreEqual(originalWorldPos.Y, roundTripWorldPos.Y, 1.0, "Y coordinate should round-trip correctly");
-        }
-
-        /// <summary>
-        /// Helper method that simulates WorldToViewport logic from SegmentationCommand
-        /// </summary>
-        private Vector2 WorldToViewportHelper(Vector2 worldPos, Rectangle viewportBounds, int viewportWidth, int viewportHeight)
-        {
-            Vector2 boundsMin = viewportBounds.LowerLeft;
-            Vector2 boundsMax = viewportBounds.UpperRight;
-
-            // Normalize to [0,1] range within viewport bounds
-            double normalizedX = (worldPos.X - boundsMin.X) / (boundsMax.X - boundsMin.X);
-            double normalizedY = (worldPos.Y - boundsMin.Y) / (boundsMax.Y - boundsMin.Y);
-
-            // Scale to viewport pixel dimensions
-            return new Vector2(
-                normalizedX * viewportWidth,
-                normalizedY * viewportHeight
-            );
-        }
-
-        /// <summary>
-        /// Helper method that simulates ViewportToWorld logic from SegmentationCommand
-        /// </summary>
-        private Vector2 ViewportToWorldHelper(int pixelX, int pixelY, Rectangle viewportBounds, int viewportWidth, int viewportHeight)
-        {
-            // Normalize from pixel coordinates to [0,1] range
-            double normalizedX = (double)pixelX / viewportWidth;
-            double normalizedY = (double)pixelY / viewportHeight;
-
-            Vector2 boundsMin = viewportBounds.LowerLeft;
-            Vector2 boundsMax = viewportBounds.UpperRight;
-
-            // Scale to world coordinates within viewport bounds
-            return new Vector2(
-                boundsMin.X + normalizedX * (boundsMax.X - boundsMin.X),
-                boundsMin.Y + normalizedY * (boundsMax.Y - boundsMin.Y)
-            );
         }
 
         #endregion
@@ -245,17 +227,17 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void TestPolygonContainsPoint_Inside()
         {
-            // Arrange - Create a simple square polygon (closed ring)
-            Vector2[] vertices = new Vector2[]
+            // Arrange - Create a simple square polygon
+            Geometry.Vector2[] vertices = new Geometry.Vector2[]
             {
-                new Vector2(0, 0),
-                new Vector2(10, 0),
-                new Vector2(10, 10),
-                new Vector2(0, 10),
-                new Vector2(0, 0)
+                new Geometry.Vector2(0, 0),
+                new Geometry.Vector2(10, 0),
+                new Geometry.Vector2(10, 10),
+                new Geometry.Vector2(0, 10),
+                new Geometry.Vector2(0, 0)
             };
             Polygon polygon = new Polygon(vertices);
-            Vector2 testPoint = new Vector2(5, 5); // Center point
+            Geometry.Vector2 testPoint = new Geometry.Vector2(5, 5); // Center point
 
             // Act
             bool contains = polygon.Contains(testPoint);
@@ -267,17 +249,17 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void TestPolygonContainsPoint_Outside()
         {
-            // Arrange - Create a simple square polygon (closed ring)
-            Vector2[] vertices = new Vector2[]
+            // Arrange - Create a simple square polygon
+            Geometry.Vector2[] vertices = new Geometry.Vector2[]
             {
-                new Vector2(0, 0),
-                new Vector2(10, 0),
-                new Vector2(10, 10),
-                new Vector2(0, 10),
-                new Vector2(0, 0)
+                new Geometry.Vector2(0, 0),
+                new Geometry.Vector2(10, 0),
+                new Geometry.Vector2(10, 10),
+                new Geometry.Vector2(0, 10),
+                new Geometry.Vector2(0, 0)
             };
             Polygon polygon = new Polygon(vertices);
-            Vector2 testPoint = new Vector2(15, 15); // Outside
+            Geometry.Vector2 testPoint = new Geometry.Vector2(15, 15); // Outside
 
             // Act
             bool contains = polygon.Contains(testPoint);
@@ -289,24 +271,25 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void TestPolygonContainsPoint_OnEdge()
         {
-            // Arrange - Create a simple square polygon (closed ring)
-            Vector2[] vertices = new Vector2[]
+            // Arrange - Create a simple square polygon
+            Geometry.Vector2[] vertices = new Geometry.Vector2[]
             {
-                new Vector2(0, 0),
-                new Vector2(10, 0),
-                new Vector2(10, 10),
-                new Vector2(0, 10),
-                new Vector2(0, 0)
+                new Geometry.Vector2(0, 0),
+                new Geometry.Vector2(10, 0),
+                new Geometry.Vector2(10, 10),
+                new Geometry.Vector2(0, 10),
+                new Geometry.Vector2(0, 0)
             };
             Polygon polygon = new Polygon(vertices);
-            Vector2 testPoint = new Vector2(5, 0); // On edge
+            Geometry.Vector2 testPoint = new Geometry.Vector2(5, 0); // On edge
 
             // Act
-            bool contains = polygon.Contains(testPoint);
             bool covers = polygon.Covers(testPoint);
+            bool contains = polygon.Contains(testPoint);
 
-            Assert.IsFalse(contains, "Point on edge is not in the interior (OGC Contains)");
-            Assert.IsTrue(covers, "Point on edge is covered (OGC Covers)");
+            // Assert - the boundary is covered but not contained
+            Assert.IsTrue(covers, "Point on edge should be covered by polygon");
+            Assert.IsFalse(contains, "Point on edge should not be strictly inside polygon");
         }
 
         #endregion
@@ -323,7 +306,7 @@ namespace WebAnnotationTests.Commands
             // Act - Generate distinct colors
             for (int i = 0; i < totalColors; i++)
             {
-                var color = GenerateDistinctColorHelper(i, totalColors);
+                var color = SegmentationDistinctColors.GenerateDistinctColor(i, totalColors);
                 colors.Add(color);
             }
 
@@ -340,48 +323,16 @@ namespace WebAnnotationTests.Commands
             }
         }
 
-        /// <summary>
-        /// Helper method that simulates GenerateDistinctColor logic from SegmentationCommand
-        /// </summary>
-        private Microsoft.Xna.Framework.Color GenerateDistinctColorHelper(int index, int total)
+        [TestMethod]
+        public void ColorFromHsl_AutoPolygonizeLocationIdHue_Regression()
         {
-            float hue = (float)index / System.Math.Max(total, 1);
-            return ColorFromHSL(hue, 0.8f, 0.5f, 0.25f);
-        }
+            float hue = (float)((42L * 0.6180339887) % 1.0);
+            Microsoft.Xna.Framework.Color color = SegmentationDistinctColors.ColorFromHsl(hue, 0.80f, 0.70f, 0.92f);
 
-        private Microsoft.Xna.Framework.Color ColorFromHSL(float hue, float saturation, float lightness, float alpha)
-        {
-            hue = hue - (float)System.Math.Floor(hue);
-
-            float r, g, b;
-
-            if (saturation == 0)
-            {
-                r = g = b = lightness;
-            }
-            else
-            {
-                float q = lightness < 0.5f 
-                    ? lightness * (1 + saturation) 
-                    : lightness + saturation - lightness * saturation;
-                float p = 2 * lightness - q;
-
-                r = HueToRGB(p, q, hue + 1f / 3f);
-                g = HueToRGB(p, q, hue);
-                b = HueToRGB(p, q, hue - 1f / 3f);
-            }
-
-            return new Microsoft.Xna.Framework.Color(r, g, b, alpha);
-        }
-
-        private float HueToRGB(float p, float q, float t)
-        {
-            if (t < 0f) t += 1f;
-            if (t > 1f) t -= 1f;
-            if (t < 1f / 6f) return p + (q - p) * 6f * t;
-            if (t < 1f / 2f) return q;
-            if (t < 2f / 3f) return p + (q - p) * (2f / 3f - t) * 6f;
-            return p;
+            Assert.AreEqual(239, color.R);
+            Assert.AreEqual(117, color.G);
+            Assert.AreEqual(148, color.B);
+            Assert.AreEqual(234, color.A);
         }
 
         #endregion

@@ -38,6 +38,7 @@ namespace Viking
 
         private void VikingMain_FormClosed(object sender, FormClosedEventArgs e)
         {
+            CacheCleaningTimer.Enabled = false;
             Global.PrintAllocatedTextures();
             Global.PrintAllocatedTextureReaders();
         }
@@ -137,7 +138,7 @@ namespace Viking
             //
             bool MouseInPointerEnabled = WinMsgInput.EnableMouseInPointer(true);
 
-            this.Text = UI.State.volume.Name;
+            this.Text = UI.State.volume.Name + " — Viking " + AboutBox.AssemblyVersion;
 
             /* PORT
             if (UI.State.volume.Sections is null)
@@ -158,7 +159,8 @@ namespace Viking
             {
                 try
                 {
-                    // Location ID is handled by WebAnnotation after the overlay is ready.
+                    // Location ID is applied by the annotation overlay (WebAnnotation) after the store is ready.
+                    // Do not recenter on the default section or the later camera jump overwrites it.
                     var startupLocationId = UI.State.StartupArguments["location"] ?? UI.State.StartupArguments["Location"];
                     bool hasLocationId = !string.IsNullOrWhiteSpace(startupLocationId)
                                          && long.TryParse(startupLocationId.Trim(), out _);
@@ -171,7 +173,7 @@ namespace Viking
 
                     if (strX is null || strY is null || strZ is null)
                         UseDefaultPosition = !hasLocationId;
-                    else
+                    else if (!hasLocationId)
                     {
                         UseDefaultPosition = false;
                         float X = System.Convert.ToSingle(strX, System.Globalization.CultureInfo.InvariantCulture);

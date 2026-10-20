@@ -77,14 +77,11 @@ namespace Viking.UI.Commands
             foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
             {
                 object nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
-                if (nearObj != null)
-                {
-                    if (newDistance < distance)
+                    if (nearObj != null && newDistance < distance)
                     {
-                        nearest_obj = nearObj as IContextMenu;
+                        nearest_obj = nearObj;
                         distance = newDistance;
                     }
-                }
             }
 
             return nearest_obj;
@@ -122,44 +119,67 @@ namespace Viking.UI.Commands
 
         protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
         {
+            Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
+            double distance = double.MaxValue;
+            object context_obj = null;
+
+            // #region agent log
+            try
+            {
+                System.IO.File.AppendAllText(
+                    System.IO.Path.Combine(System.IO.Path.GetTempPath(), "viking-seg-diag.log"),
+                    $"{System.DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} DIAG H14 DefaultCommand.OnMouseDoubleClick button={e.Button} " +
+                    $"showOverlays={Parent.ShowOverlays} overlays={ExtensionManager.SectionOverlays?.Length} world={WorldPosition}{System.Environment.NewLine}");
+            }
+            catch { }
+            // #endregion
+
+            // Preferential overlay double-click (e.g. auto-polygonize rings) before
+            // ObjectAtPosition so hollow hits do not steal single-click edit of annotations.
+            if (Parent.ShowOverlays && ExtensionManager.SectionOverlays != null)
+            {
+                foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
+                {
+                    if (overlay is IHandleOverlayMouseDoubleClick preferential &&
+                        preferential.TryHandleMouseDoubleClick(e.Button, WorldPosition))
+                    {
+                        return;
+                    }
+                }
+            }
+
+            if (Parent.ShowOverlays)
+            {
+                foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
+                {
+                    object nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
+                    if (nearObj != null && newDistance < distance)
+                    {
+                        context_obj = nearObj;
+                        distance = newDistance;
+                    }
+                }
+            }
+
+            if (context_obj is IHandleMouseDoubleClick handler &&
+                handler.HandleMouseDoubleClick(e.Button, WorldPosition))
+            {
+                return;
+            }
+
             //Middle mouse button is for Wacom Pen Support
             if (e.Button == MouseButtons.Right || e.Button == MouseButtons.Middle)
             {
-                Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
-                double distance = double.MaxValue;
-                object context_obj = null;
-
-                if (Parent.ShowOverlays)
-                {
-                    foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
-                    {
-                        object nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
-                        if (nearObj != null)
-                        {
-                            if (newDistance < distance)
-                            {
-                                context_obj = nearObj;
-                                distance = newDistance;
-                            }
-                        }
-                    }
-                }
-
                 //Create a context menu and show it where the mouse clicked
-                //Right mouse button calls up context menu
                 ContextMenuStrip menu = null;
-                if (context_obj != null)
-                    if (context_obj is IContextMenu menu_obj)
-                    {
-                        menu = menu_obj.ContextMenu;
-                        menu ??= new ContextMenuStrip();
-                    }
-                    else
-                        menu = new ContextMenuStrip();
+                if (context_obj is IContextMenu menu_obj)
+                {
+                    menu = menu_obj.ContextMenu;
+                    menu ??= new ContextMenuStrip();
+                }
                 else
                     menu = new ContextMenuStrip();
 
-                //Talk to everyone who modifies context menus to see if they have a contribution
                 IProvideContextMenus[] ContextMenuProviders = ExtensionManager.CreateContextMenuProviders();
                 foreach (IProvideContextMenus provider in ContextMenuProviders)
                 {

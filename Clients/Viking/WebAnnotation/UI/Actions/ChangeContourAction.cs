@@ -35,7 +35,15 @@ namespace WebAnnotation.UI.Actions
         /// </summary>
         public readonly Polygon NewSmoothedVolumePolygon;
 
-        /// <summary>Cell triangulated for the choice fill. Null when this action has no cached preview.</summary>
+        /// <summary>
+        /// The volume space polygon after smoothing
+        /// </summary>
+        //public readonly Polygon NewSmoothVolumePolygon;
+
+        /// <summary>
+        /// Cell ring the cut started from. When set, the choice fill reuses that triangulation
+        /// instead of meshing <see cref="NewVolumePolygon"/> when the kept piece is almost the whole cell.
+        /// </summary>
         internal Polygon PreviewOriginal;
 
         /// <summary>Cap removed from <see cref="PreviewOriginal"/> for a shrink choice. Not drawn by this action.</summary>
@@ -46,11 +54,6 @@ namespace WebAnnotation.UI.Actions
 
         /// <summary>Pen path that cut <see cref="PreviewOriginal"/>. Used to keep the cap flood on the near side of the cut.</summary>
         internal IReadOnlyList<Vector2> PreviewPath;
-
-        /// <summary>
-        /// The volume space polygon after smoothing
-        /// </summary>
-        //public readonly Polygon NewSmoothVolumePolygon;
 
         public LocationAction Type => LocationAction.CHANGEBOUNDARY;
 
@@ -99,11 +102,13 @@ namespace WebAnnotation.UI.Actions
         {
             Microsoft.SqlServer.Types.SqlGeometry original_mosaic_polygon = Location.MosaicShape.ToSqlGeometry();
             //var mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolygon);
+            WebAnnotation.View.PolygonViewTimingLog.MarkBoundaryChange(Location.ID, "ChangeContour");
             Location.SetShapeFromGeometryInSection(Transform, NewMosaicPolygon.ToSqlGeometry());
 
             try
             {
                 await Store.Locations.Save();
+                UndoManager.PushLocationShape("Change Contour", Location, Transform, original_mosaic_polygon, Location.TypeCode);
             }
             catch (System.ServiceModel.FaultException e)
             {
@@ -172,12 +177,33 @@ namespace WebAnnotation.UI.Actions
             return a.Execute;
         }
 
+        /// <summary>
+        /// Maps the new volume polyline to the section, replaces the location's shape with it, and saves it.
+        /// Changes nothing, and writes a trace line, when any vertex of the polyline cannot be mapped to the section.
+        /// On a save fault the location's original shape is restored.
+        /// </summary>
         public async void OnExecute()
         {
+            Microsoft.SqlServer.Types.SqlGeometry originalShape = Location.MosaicShape.ToSqlGeometry();
             Polyline mosaic_shape = Transform.TryMapShapeVolumeToSection(NewVolumePolyline);
+            if (mosaic_shape is null)
+            {
+                Trace.WriteLine("Change1DContourAction: new polyline crosses an unmapped region of the section; location " + Location.ID + " unchanged.", "WebAnnotation");
+                return;
+            }
+
             Location.SetShapeFromGeometryInSection(Transform, mosaic_shape.ToSqlGeometry());
 
-            await Store.Locations.Save();
+            try
+            {
+                await Store.Locations.Save();
+                UndoManager.PushLocationShape("Change Contour", Location, Transform, originalShape, Location.TypeCode);
+            }
+            catch (System.ServiceModel.FaultException e)
+            {
+                AnnotationOverlay.ShowFaultExceptionMsgBox(e);
+                Location.SetShapeFromGeometryInSection(Transform, originalShape);
+            }
         }
 
         public bool Equals(IAction other)

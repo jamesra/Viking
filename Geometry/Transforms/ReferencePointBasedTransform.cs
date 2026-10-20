@@ -83,7 +83,9 @@ namespace Geometry.Transforms
         /// <summary>
         /// List of points that define transform.  Triangles are derived from these points.  They should be populated at creation.  They may
         /// be replaced during a transformation with a new list, which requires regenerating triangles and any other derived data.
-        /// These points are sorted by control point x, lowest to highest
+        /// These points are sorted by mapped point x, then mapped point y, lowest to highest (see <see cref="MappingVector2"/>'s
+        /// <see cref="IComparable.CompareTo(object)"/>), unless a constructor preserved the caller's order and no duplicates were removed.
+        /// Points that repeat another point's control or mapped position are removed.
         /// </summary>
         private MappingVector2[] _mapPoints = [];
         public MappingVector2[] MapPoints
@@ -99,9 +101,11 @@ namespace Geometry.Transforms
             _mapPoints = value;
 
             var _mapPointsList = _mapPoints.ToList();
-            bool ArrayHadDuplicates = false;
-            ArrayHadDuplicates = ArrayHadDuplicates || MappingVector2.RemoveControlSpaceDuplicates(_mapPointsList);
-            ArrayHadDuplicates = ArrayHadDuplicates || MappingVector2.RemoveMappedSpaceDuplicates(_mapPointsList);
+            //Run both passes: a control-space duplicate must not skip the mapped-space pass. The mapped pass runs last,
+            //so a list with duplicates removed ends sorted by mapped point, the same order Array.Sort gives.
+            bool controlHadDuplicates = MappingVector2.RemoveControlSpaceDuplicates(_mapPointsList);
+            bool mappedHadDuplicates = MappingVector2.RemoveMappedSpaceDuplicates(_mapPointsList);
+            bool ArrayHadDuplicates = controlHadDuplicates || mappedHadDuplicates;
 
             //Replace our map points with the list that had duplicates removed if necessary
             if (ArrayHadDuplicates)

@@ -31,48 +31,41 @@ namespace SIMeasurement
 
         public override string ToString() => Length.ToString("#0.###") + " " + Units.ToString();
 
-        public string ToString(uint scale, bool PreserveNonSignificant = true)
-        {
-            if (PreserveNonSignificant)
-            {
-                return Length.ToString($"F{scale}") + " " + Units.ToString();
-            }
-
-            if (scale > 32)
-                throw new ArgumentException("Scale must be between 0 and 64");
-
-
-            string format = "#0.";
-            while (scale > 0)
-            {
-                format += '0';
-            }
-
-            return Length.ToString(format) + " " + Units.ToString();
-        }
+        /// <summary>
+        /// Formats the length with exactly <paramref name="scale"/> decimal places, keeping trailing zeros
+        /// (fixed-point <c>F</c> format in the current culture), followed by a space and the unit abbreviation.
+        /// Used for the measure tool labels.
+        /// </summary>
+        /// <param name="scale">Number of decimal places.</param>
+        /// <param name="PreserveNonSignificant">
+        /// Kept for source compatibility with existing callers, which all pass <c>true</c>. It has no effect:
+        /// trailing zeros are always kept. The former <c>false</c> branch never terminated and was removed.
+        /// </param>
+        /// <returns>For example <c>"1.500 um"</c> for 1.5 um and a scale of 3.</returns>
+        public string ToString(uint scale, bool PreserveNonSignificant = true) => Length.ToString($"F{scale}") + " " + Units.ToString();
 
         /// <summary>
-        /// Given a starting distance and measurement we return a unit and scalar that will result in a distance of less than 1,000 
+        /// Given a starting distance and measurement we return a unit and scalar that will result in a distance of at least 1 and less than 1,000.
+        /// Outside the defined prefixes the result clamps to <see cref="SILengthUnits.ym"/> or <see cref="SILengthUnits.Ym"/> and the scalar leaves that range.
+        /// Zero stays 0 in <paramref name="UnitOfMeasure"/>. A negative distance gets the unit of its absolute value and keeps its sign.
+        /// Non-finite values (<see cref="double.NaN"/>, infinities) stay in <paramref name="UnitOfMeasure"/> without unit hops so labels do not throw.
+        /// Used for the measure tool and scale bar labels.
         /// </summary>
         /// <param name="UnitOfMeasure"></param>
         /// <param name="distance"></param>
         /// <returns></returns>
         public static LengthMeasurement ConvertToReadableUnits(SILengthUnits UnitOfMeasure, double distance)
         {
-            if (distance <= 0)
-                return new LengthMeasurement(UnitOfMeasure, 1.0);
+            if (distance == 0)
+                return new LengthMeasurement(UnitOfMeasure, 0);
 
-            double numDigits = Convert.ToInt32(Math.Ceiling(Math.Log10(distance)));
-
-            if (numDigits < 3 && numDigits > 0)
-            {
+            if (double.IsNaN(distance) || double.IsInfinity(distance))
                 return new LengthMeasurement(UnitOfMeasure, distance);
-            }
 
             int iStartUnit = (int)UnitOfMeasure;
 
             //Figure out how many 1,000 sized steps we make
-            int numUnitHops = Convert.ToInt32(Math.Floor(numDigits / 3.0));
+            int numUnitHops = Convert.ToInt32(Math.Floor(Math.Log10(Math.Abs(distance)) / 3.0));
             int numUnitDefinitions = Enum.GetValues(typeof(SILengthUnits)).Length;
 
             //Handle units that are out of our range

@@ -13,6 +13,7 @@ using Viking.AnnotationServiceTypes;
 using VikingXNA;
 using VikingXNAGraphics;
 using WebAnnotation.UI;
+using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
@@ -98,13 +99,21 @@ namespace WebAnnotation.View
         /// </summary>
         long IViewLocation.ID => OffSectionLocationID;
 
-        public OverlappedLocationLinkView(long locationID, LocationObj linkedObj, Circle gridCircle, bool Up)
+        public OverlappedLocationLinkView(long locationID, LocationObj linkedObj, Circle gridCircle, bool Up, int currentSectionNumber)
         {
             LocationID = locationID;
             linkKey = new LocationLinkKey(locationID, linkedObj.ID);
+
+            int sectionSpan = Math.Abs((int)Math.Round(linkedObj.Z) - currentSectionNumber);
+            Microsoft.Xna.Framework.Color labelColor = LocationLinkView.GetLocationLinkColor(
+                linkedObj.Parent.Type.Color.ToXNAColor(),
+                sectionSpan,
+                Up ? 1 : -1,
+                false).SetAlpha(1.0f);
+
             label = new LabelView(((int)linkedObj.Z).ToString(), gridCircle.Center)
             {
-                _Color = Microsoft.Xna.Framework.Color.Red
+                _Color = labelColor
             };
             Microsoft.Xna.Framework.Color color = linkedObj.Parent.Type.Color.ToXNAColor(0.75f);
             circleView = Up ? TextureCircleView.CreateUpArrow(gridCircle, color) : TextureCircleView.CreateDownArrow(gridCircle, color);

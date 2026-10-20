@@ -244,8 +244,6 @@ namespace Viking
                 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
                 return await CreateEntryAssumeDirectoryExistsAsync(filename, textureBuffer);
             }
-
-            return null;
         }
 
         private async Task<LocalTextureCacheEntry> CreateEntryAssumeDirectoryExistsAsync(string filename,
@@ -278,6 +276,7 @@ namespace Viking
                     writeBody(output);
                 }
 
+                // The stream must be disposed first: the entry reads the file length, which excludes buffered bytes.
                 if (ReplaceCacheFile(tempPath, filename))
                 {
                     return new LocalTextureCacheEntry(filename);
@@ -304,6 +303,7 @@ namespace Viking
                     await writeBody(output).ConfigureAwait(false);
                 }
 
+                // The stream must be disposed first: the entry reads the file length, which excludes buffered bytes.
                 if (ReplaceCacheFile(tempPath, filename))
                 {
                     return new LocalTextureCacheEntry(filename);
@@ -311,7 +311,8 @@ namespace Viking
 
                 return null;
             }
-            catch (IOException ioexception)
+            // A missing directory still surfaces as DirectoryNotFoundException so CreateEntryAsync can create it and retry.
+            catch (IOException ioexception) when (ioexception is not DirectoryNotFoundException)
             {
                 Trace.WriteLine(ioexception.Message);
                 Trace.WriteLine(ioexception.StackTrace);

@@ -59,7 +59,15 @@ namespace WebAnnotation.View
             PolyLineView.Draw(device, scene, OverlayStyle.Luma, linesToDraw);
         }
 
-        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID) => throw new NotImplementedException();
+        /// <summary>
+        /// Unmodified pen contact returns <see cref="LocationAction.NONE"/> so free-draw starts.
+        /// Mouse clicks still create a linked location. Called from pen contact dispatch.
+        /// </summary>
+        public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
+        {
+            LocationID = ID;
+            return LocationAction.NONE;
+        }
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
@@ -72,10 +80,10 @@ namespace WebAnnotation.View
             return LocationAction.CREATELINKEDLOCATION;
         }
 
-        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new NotImplementedException();/*
-            LocationID = this.ID;
-            return LocationAction.NONE;
-            */
+        /// <summary>
+        /// Adjacent-section lines have no stroke-completion edits. Returns an empty list so the confirmation ring is not fed a throw.
+        /// </summary>
+        public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => [];
     }
 
     internal class LocationLineView : LocationLineViewBase
@@ -111,17 +119,20 @@ namespace WebAnnotation.View
                           OverlayShaderEffect overlayEffect,
                           LocationLineView[] listToDraw) => PolyLineView.Draw(device, scene, OverlayStyle.Luma, [.. listToDraw.Select(l => l.polyLineView)]);
 
+        /// <summary>
+        /// Unmodified pen contact returns <see cref="LocationAction.NONE"/> so free-draw starts.
+        /// Ctrl still creates a linked location. Shift stays idle, matching the previous pen path.
+        /// Mouse clicks are unchanged.
+        /// </summary>
         public override LocationAction GetPenContactActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
         {
             LocationID = ID;
-            if (modifierKeys.ShiftPressed())
-            {
-                return LocationAction.NONE;
-            }
-            else
+            if (modifierKeys.CtrlPressed() && !modifierKeys.ShiftPressed())
             {
                 return LocationAction.CREATELINKEDLOCATION;
             }
+
+            return LocationAction.NONE;
         }
 
         public override LocationAction GetMouseClickActionForPositionOnAnnotation(Geometry.Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys modifierKeys, out long LocationID)
@@ -175,19 +186,20 @@ namespace WebAnnotation.View
             set => _OverlappedLinks = value;
         }
 
+        /// <summary>
+        /// Distance from <paramref name="Position"/> scaled so 0 is on the line and 1 is at its edge: relative to the nearest
+        /// control point's radius when over one, otherwise to half of <see cref="LineWidth"/> from the <see cref="HitTestPoints"/> polyline.
+        /// </summary>
         public override double DistanceFromCenterNormalized(Geometry.Vector2 Position)
         {
             if (PointIntersectsAnyControlPoint(Position))
             {
                 return VolumeControlPoints.Select(p => Geometry.Vector2.Distance(p, Position) / ControlPointRadius).Min();
             }
-            else
-            {
-                //TODO: Find a more accurate measurement.  Returning 0 means the line is always on top in selection.
-                LineSegment[] segs = LineSegment.SegmentsFromPoints(VolumeControlPoints);
-                double MinDistance = segs.Min(l => l.DistanceToPoint(Position));
-                return (LineWidth / 2.0) - MinDistance;
-            }
+
+            LineSegment[] segs = LineSegment.SegmentsFromPoints(HitTestPoints);
+            double MinDistance = segs.Min(l => l.DistanceToPoint(Position));
+            return MinDistance / (LineWidth / 2.0);
         }
 
         protected bool PointIntersectsAnyControlPoint(Geometry.Vector2 WorldPosition)
@@ -196,10 +208,16 @@ namespace WebAnnotation.View
             return VolumeControlPoints.Any(p => testCircle.Covers(p));
         }
 
-        protected virtual bool PointIntersectsAnyLineSegment(Geometry.Vector2 WorldPosition)
+        /// <summary>
+        /// The polyline hit-tested by <see cref="PointIntersectsAnyLineSegment"/> and measured by <see cref="DistanceFromCenterNormalized"/>: the control points here,
+        /// the interpolated curve for <see cref="LocationCurveView"/>.
+        /// </summary>
+        protected virtual Geometry.Vector2[] HitTestPoints => VolumeControlPoints;
+
+        protected bool PointIntersectsAnyLineSegment(Geometry.Vector2 WorldPosition)
         {
             //TODO: This could be optimized considerably
-            LineSegment[] lineSegs = LineSegment.SegmentsFromPoints(VolumeControlPoints);
+            LineSegment[] lineSegs = LineSegment.SegmentsFromPoints(HitTestPoints);
             //Find the line segment the NewControlPoint intersects
             int iNearest = lineSegs.NearestSegment(WorldPosition, out double MinDistance);
             return MinDistance < LineWidth / 2.0f;

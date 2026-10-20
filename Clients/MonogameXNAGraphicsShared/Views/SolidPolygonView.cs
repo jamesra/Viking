@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using VikingXNA;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
@@ -23,10 +24,21 @@ namespace VikingXNAGraphics
         /// </summary>
         bool _modelFailed;
 
+        /// <summary>
+        /// The mesh once it has been built, or null while it is building or if building failed.
+        /// </summary>
+        /// <remarks>
+        /// Callable from any thread. Once the mesh exists it is returned without taking <see cref="ModelRWLock"/>;
+        /// the lock only guards the transition from the background build task to <c>_meshModel</c>.
+        /// </remarks>
         PositionColorMeshModel meshModel
         {
             get
             {
+                PositionColorMeshModel built = Volatile.Read(ref _meshModel);
+                if (built is not null)
+                    return built;
+
                 try
                 {
                     ModelRWLock.EnterUpgradeableReadLock();
@@ -38,7 +50,7 @@ namespace VikingXNAGraphics
                     {
                         if (_modelTask is null)
                         {
-                            _modelTask = Task<PositionColorMeshModel>.Run(() => InitializeModel(InputPolygon, InputColor));
+                            _modelTask = StartModelBuild();
                         }
                         else if (_modelTask.IsFaulted || _modelTask.IsCanceled)
                         {
@@ -52,7 +64,7 @@ namespace VikingXNAGraphics
                             try
                             {
                                 ModelRWLock.EnterWriteLock();
-                                _meshModel = _modelTask.Result;
+                                Volatile.Write(ref _meshModel, _modelTask.Result);
                             }
                             finally
                             {
@@ -160,24 +172,121 @@ namespace VikingXNAGraphics
 
         readonly System.Threading.ReaderWriterLockSlim ModelRWLock = new();
 
+        readonly Task<PolygonCutFill> _sharedTriangulation;
+
         /// <summary>
         /// 
         /// </summary>
         /// <param name="poly"></param>
         /// <param name="color"></param>
         /// <param name="LazyInit">If Lazy init is set to true, we do not start a task to triangulate the polygon until Draw is called.  At that point triangulation is performed in parallel. </param>
-        public SolidPolygonView(Polygon poly, Color color, bool LazyInit = true)
+        /// <param name="sharedTriangulation">
+        /// A triangulation of <paramref name="poly"/> that another consumer is already building. The lazy mesh build
+        /// waits for it and converts it, instead of triangulating the same ring again. If it faults, the view
+        /// triangulates by itself, including the simplify fallback. Ignored when <paramref name="LazyInit"/> is false.
+        /// </param>
+        public SolidPolygonView(Polygon poly, Color color, bool LazyInit = true, Task<PolygonCutFill> sharedTriangulation = null)
         {
             //Debug.Assert(poly.TotalUniqueVertices < 1000, "This is a huge polygon, why?");
 
             InputPolygon = poly;
             InputColor = color;
+            _sharedTriangulation = sharedTriangulation;
 
             if (LazyInit == false)
             {
                 _meshModel = InitializeModel(InputPolygon, InputColor);
                 _modelFailed = _meshModel is null;
             }
+        }
+
+        /// <summary>
+        /// Raised once from the background build thread when the lazy triangulation finishes or fails.
+        /// The arguments are the time spent in <see cref="InitializeModel"/> (centering, Delaunay triangulation,
+        /// and conversion to a vertex mesh) and whether a mesh was produced. Set it before the first draw,
+        /// because the build starts when the mesh is first requested. Not raised when the view is built with
+        /// <c>LazyInit: false</c>.
+        /// </summary>
+        public Action<TimeSpan, bool> MeshBuildCompleted { get; set; }
+
+        /// <summary>
+        /// Raised from the background build thread just before triangulation begins, with the polygon being
+        /// triangulated. Pair with <see cref="MeshBuildCompleted"/> to detect a build that never finishes.
+        /// </summary>
+        public Action<Polygon> MeshBuildStarted { get; set; }
+
+        /// <summary>
+        /// Background build entry point: runs <see cref="InitializeModel"/> and reports its duration to
+        /// <see cref="MeshBuildCompleted"/> even when triangulation throws.
+        /// </summary>
+        private Task<PositionColorMeshModel> StartModelBuild()
+        {
+            Task<PolygonCutFill> shared = _sharedTriangulation;
+            if (shared is null)
+                return Task<PositionColorMeshModel>.Run(() => InitializeTimedModel(null, Stopwatch.GetTimestamp()));
+
+            // Continue rather than block, so waiting for the shared triangulation does not hold a pool thread.
+            long waitStart = Stopwatch.GetTimestamp();
+            return shared.ContinueWith(done => InitializeTimedModel(done, waitStart), TaskScheduler.Default);
+        }
+
+        private PositionColorMeshModel InitializeTimedModel(Task<PolygonCutFill> shared, long waitStart)
+        {
+            long start = Stopwatch.GetTimestamp();
+            PositionColorMeshModel model = null;
+            try
+            {
+                try
+                {
+                    MeshBuildStarted?.Invoke(InputPolygon);
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"SolidPolygonView.MeshBuildStarted handler failed: {ex.Message}");
+                }
+
+                // The time spent waiting on the shared triangulation is the triangulation time for this view.
+                start = shared is null ? Stopwatch.GetTimestamp() : waitStart;
+                model = shared is not null && shared.Status == TaskStatus.RanToCompletion
+                    ? ModelFromTriangulation(shared.Result, InputColor)
+                    : InitializeModel(InputPolygon, InputColor);
+                return model;
+            }
+            finally
+            {
+                TimeSpan elapsed = TimeSpan.FromSeconds((Stopwatch.GetTimestamp() - start) / (double)Stopwatch.Frequency);
+                try
+                {
+                    MeshBuildCompleted?.Invoke(elapsed, model is not null);
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"SolidPolygonView.MeshBuildCompleted handler failed: {ex.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Vertex model for a finished triangulation: positions are centered on the polygon's centroid in double
+        /// precision and the centroid goes in the model matrix, the same layout <see cref="InitializeModel"/> builds.
+        /// </summary>
+        private static PositionColorMeshModel ModelFromTriangulation(PolygonCutFill fill, Color InputColor)
+        {
+            Geometry.Vector2 centroid = fill.Centroid;
+            IReadOnlyList<Geometry.Vector2> positions = fill.Positions;
+            VertexPositionColor[] vertices = new VertexPositionColor[positions.Count];
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                vertices[i] = new VertexPositionColor((positions[i] - centroid).ToXNAVector3(0), InputColor);
+            }
+
+            PositionColorMeshModel model = new()
+            {
+                Vertices = vertices,
+                Edges = [.. fill.TriangleIndices]
+            };
+            model.ModelMatrix = Matrix.CreateTranslation((float)centroid.X, (float)centroid.Y, 0);
+            return model;
         }
 
         private static PositionColorMeshModel InitializeModel(Polygon InputPolygon, Color InputColor)

@@ -316,6 +316,8 @@ namespace WebAnnotationModel.gRPC
 
         public bool TryGetObjectByID(KEY key, out OBJECT obj) => IDToObject.TryGetValue(key, out obj);
 
+        public IReadOnlyCollection<OBJECT> CachedObjects => IDToObject.Values.ToArray();
+
         public bool TryGetObjectsByIDs(ICollection<KEY> keys, out IReadOnlyList<OBJECT> found, out IReadOnlyList<KEY> missing)
         {
             if (keys == null || keys.Count == 0)

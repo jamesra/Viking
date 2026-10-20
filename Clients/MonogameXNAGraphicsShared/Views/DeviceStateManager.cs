@@ -140,6 +140,7 @@ namespace VikingXNAGraphics
                 depthstencilState.DepthBufferFunction = depthFunction;
                 CachedDepthFunction = depthFunction;
                 CachedSourceDepthEnable = true;
+                // Stencil fields were copied from the previous device state; refresh cache to match.
                 CachedStencilReference = depthstencilState.ReferenceStencil;
                 CachedStencilFunction = depthstencilState.StencilFunction;
                 CachedStencilEnable = depthstencilState.StencilEnable;

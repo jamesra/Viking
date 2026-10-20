@@ -4,6 +4,7 @@
     <TargetFrameworks>net48;</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>WebAnnotationTests</RootNamespace>
     <AssemblyName>WebAnnotationTests</AssemblyName>
     <IsCodedUITest>false</IsCodedUITest>
@@ -12,6 +13,9 @@
     <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
   <ItemGroup>
+    <!-- WCFTokenInjector is gone on the gRPC side; TokenResponseFactory and the Identity helpers moved to Viking.Tokens. -->
+    <ProjectReference Include="..\..\Viking.Tokens\Viking.Tokens.csproj" />
+    <ProjectReference Include="..\..\Common\Common.csproj" />
     <ProjectReference Include="..\..\..\GeometryTests\GeometryTests.csproj" />
     <ProjectReference Include="..\..\..\Geometry\Geometry.csproj" />
     <ProjectReference Include="..\..\..\RTree\RTree.csproj" />
@@ -20,11 +24,61 @@
     <ProjectReference Include="..\..\Viking.Input\Viking.Input.csproj" />
     <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj" />
     <ProjectReference Include="..\..\WebAnnotationModel\WebAnnotationModel.csproj" />
+    <ProjectReference Include="..\..\..\SqlGeometryUtils\SqlGeometryUtils.csproj" />
     <ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition="'$(TargetFramework)' == 'net9.0-windows'" />
     <ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition="'$(TargetFramework)' == 'net9.0'" />
     <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" Condition="'$(TargetFramework)' == 'net48'" />
   </ItemGroup>
   <ItemGroup>
+    <!-- ChannelPoolTests.cs (Legacy) is left out: it tests the WCF ChannelPool, which the gRPC client does not have. -->
+    <Compile Include="View\LocationShapeChangeEventTests.cs" />
+    <Compile Include="View\StructureLinkRestoreAfterRemovalTests.cs" />
+    <Compile Include="Actions\ChangeTypeActionTests.cs" />
+    <Compile Include="LocationShapeUpdateTests.cs" />
+    <Compile Include="Actions\ChangeContourActionTests.cs" />
+    <Compile Include="Actions\PolygonCutTests.cs" />
+    <Compile Include="Actions\CreateNewLinkedLocationActionTests.cs" />
+    <Compile Include="View\LinkedLocationShapeMappingTests.cs" />
+    <Compile Include="Commands\RetraceAndReplaceMappingTests.cs" />
+    <Compile Include="Commands\PolygonVertexCommandMappingTests.cs" />
+    <Compile Include="Commands\LineControlPointTests.cs" />
+    <Compile Include="View\LocationLinkPinchTests.cs" />
+    <Compile Include="ExceptionReportTests.cs" />
+    <Compile Include="UndoManagerTests.cs" />
+    <Compile Include="DelegateCommandTests.cs" />
+    <Compile Include="FavoriteStructureIDsViewModelTests.cs" />
+    <Compile Include="Commands\SegmentationPenButtonsTests.cs" />
+    <Compile Include="Commands\PenCancelButtonTests.cs" />
+    <Compile Include="Commands\SegmentationMaskEditTests.cs" />
+    <Compile Include="AccessibleVolumesPayloadTests.cs" />
+    <Compile Include="FindAccessibleVolumeAsyncTests.cs" />
+    <Compile Include="LINQLikeExtensionsTests.cs" />
+    <Compile Include="ConcurrentDictionaryExtensionsTests.cs" />
+    <Compile Include="ExtensionsTests.cs" />
+    <Compile Include="StructureIdTextTests.cs" />
+    <Compile Include="GoToActionFormIdTests.cs" />
+    <Compile Include="AnnotationPreferencesResetToDefaultsTests.cs" />
+    <Compile Include="AnnotationPreferencesRevertTests.cs" />
+    <Compile Include="SplitStructuresFormTests.cs" />
+    <Compile Include="HotkeyKeyCodeTests.cs" />
+    <Compile Include="OverlayHotkeysTests.cs" />
+    <Compile Include="HiddenStructuresTests.cs" />
+    <Compile Include="ObjAttributeTests.cs" />
+    <Compile Include="StructureLinkKeyTests.cs" />
+    <Compile Include="StructureTypeObjColorTests.cs" />
+    <Compile Include="PermittedStructureLinkSaveQueueTests.cs" />
+    <Compile Include="PenInteractionLogExtensionsTests.cs" />
+    <Compile Include="View\PolygonViewTimingLogTests.cs" />
+    <Compile Include="Commands\PolygonHoleFillTests.cs" />
+    <Compile Include="Commands\SegmentationMaskUnionTests.cs" />
+    <Compile Include="Commands\SegmentationMaskScaleTests.cs" />
+    <Compile Include="Commands\SegmentationMaskTilesTests.cs" />
+    <Compile Include="Commands\PolygonCutMeshBuilderTests.cs" />
+    <Compile Include="Commands\PolygonCutFillCacheTests.cs" />
+    <Compile Include="Commands\PenModeContactTests.cs" />
+    <Compile Include="View\LocationLineHitTestTests.cs" />
+    <Compile Include="Commands\SegmentationServiceSessionTests.cs" />
+    <Compile Include="Commands\CommandConstructorBinderTests.cs" />
     <Compile Include="Commands\StructureColorForIdTests.cs" />
     <Compile Include="Commands\SegmentationCommandTests.cs" />
     <Compile Include="DialogSmokeTests.cs" />
@@ -32,21 +86,66 @@
     <Compile Include="SectionLocationPollPolicyTests.cs" />
     <Compile Include="TileGridMetricsTests.cs" />
     <Compile Include="VolumePathTests.cs" />
+    <Compile Include="Commands\SegmentationRequestCoalescerTests.cs" />
+    <Compile Include="Commands\SegmentationResultContextTests.cs" />
+    <Compile Include="Commands\SegmentationResponseExtensionsTests.cs" />
+    <Compile Include="Commands\SegmentationCapabilitiesTests.cs" />
+    <Compile Include="Commands\LocationRefreshQueueTests.cs" />
+    <Compile Include="Commands\PolygonViewportClipTests.cs" />
+    <Compile Include="Commands\PanZoomDebouncerTests.cs" />
+    <Compile Include="Commands\TileUploadCacheTests.cs" />
+    <Compile Include="Commands\CapturedPngTests.cs" />
+    <Compile Include="Commands\SegmentationCameraPolicyTests.cs" />
+    <Compile Include="Commands\SegmentationMaskPolygonizerTests.cs" />
+    <Compile Include="Commands\SegmentationLogitFieldTests.cs" />
+    <Compile Include="Commands\AutoPolygonizeRefiningTests.cs" />
+    <Compile Include="Commands\SegmentationEdgeSnapTests.cs" />
+    <Compile Include="Commands\SegmentationTileImagesTests.cs" />
+    <Compile Include="Commands\SegmentationThinFeatureCutTests.cs" />
+    <Compile Include="Commands\AutoPolygonizeDissolveTests.cs" />
+    <Compile Include="Commands\AutoCirclePolygonizeTests.cs" />
+    <Compile Include="Commands\AutoPolygonizeSelectionRulesTests.cs" />
+    <Compile Include="Properties\AutoPolygonizeMinRadiusSettingsTests.cs" />
+    <Compile Include="Commands\AnnotationStatusChipsTests.cs" />
+    <Compile Include="Commands\VolumeToSectionFallbackTests.cs" />
+    <Compile Include="Commands\HitTestLocationLinkPreferenceTests.cs" />
+    <Compile Include="HitTestSelectionTests.cs" />
+    <Compile Include="Commands\SegmentationUserFeedbackTests.cs" />
+    <Compile Include="Commands\SegmentationRpcErrorsTests.cs" />
+    <Compile Include="Commands\CircleStartingPromptTests.cs" />
+    <Compile Include="Commands\SharedViewportImageLeaseTests.cs" />
+    <Compile Include="Commands\SegmentationCaptureEncoderTests.cs" />
+    <Compile Include="ReviewChangeFeedTests.cs" />
+    <Compile Include="RegionLoaderInvalidateSectionTests.cs" />
+    <Compile Include="RegionLoaderTests.cs" />
+    <Compile Include="SectionRangeParserTests.cs" />
+    <Compile Include="GlobalShouldLoadTests.cs" />
+    <Compile Include="ExportRequestTests.cs" />
     <Compile Include="DummyCanvas.cs" />
     <Compile Include="LocationActionTests.cs" />
     <Compile Include="MouseActionSupportTests.cs" />
     <Compile Include="PathAnnotationInteractionTests.cs" />
+    <Compile Include="VikingDeepLinkParserTests.cs" />
+    <Compile Include="VikingLaunchExchangeParserTests.cs" />
+    <Compile Include="TokenResponseFactoryTests.cs" />
+    <Compile Include="GpuDeviceRemovedDiagnosticsTests.cs" />
+    <Compile Include="PidControllerTests.cs" />
+    <Compile Include="LocationParentFetchTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FlaUI.UIA3" Version="4.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
     <PackageReference Include="MSTest.TestAdapter" Version="3.9.3" />
     <PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
   </ItemGroup>
     <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
 	    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+	    <!-- Pen commands derive from types that touch WPF's DependencyObject; tests that call their static members need it to compile. -->
+	    <Reference Include="WindowsBase" />
     </ItemGroup>
     <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
 	    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />

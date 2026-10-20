@@ -132,6 +132,28 @@ namespace Viking
         }
 
         /// <summary>
+        /// True if any TileView of <paramref name="section"/> still has a texture waiting to be created on the main thread.
+        /// </summary>
+        internal static bool HasPendingForSection(int section)
+        {
+            _pendingLock.EnterReadLock();
+            try
+            {
+                foreach (TileView tileView in PendingTileViews)
+                {
+                    if (tileView.Section == section)
+                        return true;
+                }
+
+                return false;
+            }
+            finally
+            {
+                _pendingLock.ExitReadLock();
+            }
+        }
+
+        /// <summary>
         /// Fired when the queue has just become empty (after processing the last item). Viewer can invalidate to re-request loads for visible tiles.
         /// </summary>
         public static event Action? QueueBecameEmpty;
@@ -331,29 +353,20 @@ namespace Viking
                 if (!TryDequeue(out PendingItem? item) || item is null)
                     break;
 
-                if (item?.TileView?.SectionLoadingCancelled ?? false)
-                {
-                    //Must remove from the pending set here, otherwise Enqueue/IsTileViewPending will believe this
-                    //TileView still has a request in flight and will refuse to ever queue a new load for it again.
-                    _pendingLock.EnterWriteLock();
-                    try
-                    {
-                        if (item.TileView != null)
-                            PendingTileViews.Remove(item.TileView);
-                    }
-                    finally
-                    {
-                        _pendingLock.ExitWriteLock();
-                    }
-                    if (item.FileKey != null)
-                        EndLoadingFile(item.FileKey, null);
-                    item.Tcs.TrySetResult(null);
-                    continue;
-                }
-
                 bool requeuedForDevice = false;
+
+                // Every exit for a dequeued item, including cancel, must pass through the finally below; a tile left
+                // in PendingTileViews makes TileView.GetOrLoadTextureAsync skip that tile key for the rest of the session.
                 try
                 {
+                    if (item.TileView?.SectionLoadingCancelled ?? false)
+                    {
+                        item.Tcs.TrySetResult(null);
+                        if (item.FileKey != null)
+                            EndLoadingFile(item.FileKey, null);
+                        continue;
+                    }
+
                     GraphicsDevice device = TileLoadEnvironment.GetDevice?.Invoke();
 
                     if (device is null || device.IsDisposed)
@@ -447,11 +460,11 @@ namespace Viking
                 if (_items.Count < TextureRequestQueue.MaxWorkers)
                     return;
 
-                var sorted = _items
-                    .OrderBy(item => item.TileView != null && item.TileView.Bounds.Intersects(visibleBounds) ? 0 : 1)
-                    .ThenBy(item => Math.Abs((item.TileView?.Section ?? currentSectionZ) - currentSectionZ))
-                    .ThenByDescending(item => item.TileView?.Downsample ?? 0)
-                    .ToList();
+                var sorted = TextureLoadQueueSort.SortToList(
+                    _items,
+                    visibleBounds,
+                    currentSectionZ,
+                    item => item.TileView);
 
                 _items.Clear();
                 _items.AddRange(sorted);
@@ -491,5 +504,18 @@ namespace Viking
             if (_sortTimer != null)
                 _sortTimer.Interval = TimeSpan.FromMilliseconds(intervalMs);
         }
+
+        /// <summary>
+        /// Stops the WPF DispatcherTimer so it cannot keep the main dispatcher alive after the viewer closes.
+        /// </summary>
+        public static void Stop()
+        {
+            if (_sortTimer is null)
+                return;
+
+            _sortTimer.Stop();
+            _sortTimer = null;
+        }
+
     }
 }

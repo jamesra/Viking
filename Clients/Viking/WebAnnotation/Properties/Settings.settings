@@ -54,10 +54,10 @@
       <Value Profile="(Default)">0.5</Value>
     </Setting>
     <Setting Name="NumClosedCurveInterpolationPointsForDisplay" Type="System.UInt32" Scope="User">
-      <Value Profile="(Default)">4</Value>
+      <Value Profile="(Default)">3</Value>
     </Setting>
     <Setting Name="PenSimplifyThreshold" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">12</Value>
+      <Value Profile="(Default)">3</Value>
     </Setting>
     <Setting Name="MinRadius" Type="System.Double" Scope="User">
       <Value Profile="(Default)">0.5</Value>
@@ -80,6 +80,18 @@
     <Setting Name="SegmentationPointRadius" Type="System.Double" Scope="User">
       <Value Profile="(Default)">5</Value>
     </Setting>
+    <Setting Name="SegmentationHoleDropFraction" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.03</Value>
+    </Setting>
+    <Setting Name="SegmentationEdgeCleanupRadius" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">8</Value>
+    </Setting>
+    <Setting Name="AutoPolygonizeCircles" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="AutoPolygonizeCirclesUserSet" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
     <Setting Name="PolygonPointRadius" Type="System.Double" Scope="User">
       <Value Profile="(Default)">6</Value>
     </Setting>
@@ -89,6 +101,12 @@
     <Setting Name="PolygonPointDiameterMigrated" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
+    <Setting Name="PolygonPointOpacity" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.75</Value>
+    </Setting>
+    <Setting Name="HidePolygonPointsInPenMode" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
     <Setting Name="SmallestRenderedSize" Type="System.Double" Scope="User">
       <Value Profile="(Default)">10</Value>
     </Setting>
@@ -97,6 +115,45 @@
     </Setting>
     <Setting Name="PolygonVertexPointsHiddenAtWidthFraction" Type="System.Double" Scope="User">
       <Value Profile="(Default)">0.002</Value>
+    </Setting>
+    <Setting Name="AutoPolygonizeMinRadiusNanometers" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">40</Value>
+    </Setting>
+    <Setting Name="AutoPolygonizeMinRadiusMigrated" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="AutoPolygonizeMaxDownsample" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">2</Value>
+    </Setting>
+    <Setting Name="AutoPolygonizeOverlayMasks" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="AutoPolygonizeOverlayMasksUserSet" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="AutoPolygonizeOverlayPrompts" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="AutoPolygonizeOverlayPromptsUserSet" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="AutoPolygonizeHideSegmentationRings" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="ReviewFeedHideOwnChanges" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="ReviewFeedHideDeleted" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="ReviewFeedWatchedUsers" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="ReviewFeedStructureOrLabel" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="ReviewFeedSections" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
     </Setting>
   </Settings>
 </SettingsFile>

@@ -1,5 +1,6 @@
 using Geometry;
 using System.Collections.Generic;
+using System.Linq;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 
 namespace WebAnnotation.UI.Commands.Segmentation
@@ -10,6 +11,86 @@ namespace WebAnnotation.UI.Commands.Segmentation
     public static class SegmentationExtensions
     {
         /// <summary>
+        /// Segments from highest to lowest score, or empty when the response has none.
+        /// Tie-breaking matches <see cref="Enumerable.OrderByDescending{TSource, TKey}(IEnumerable{TSource}, Func{TSource, TKey})"/>.
+        /// </summary>
+        internal static IEnumerable<SegmentationServiceTypes.SegmentResult> GetSegmentsByDescendingScore(
+            this SegmentationServiceTypes.SegmentationResponse? response)
+        {
+            if (response?.Segments is null || response.Segments.Count == 0)
+                yield break;
+
+            foreach (SegmentationServiceTypes.SegmentResult segment in response.Segments.OrderByDescending(s => s.Score))
+                yield return segment;
+        }
+
+        /// <summary>
+        /// Returns the segment with the highest <see cref="SegmentationServiceTypes.SegmentResult.Score"/>,
+        /// or null when the response has no segments. Matches the previous
+        /// <c>OrderByDescending(s =&gt; s.Score).First()</c> choice (stable tie-break on list order).
+        /// </summary>
+        internal static SegmentationServiceTypes.SegmentResult? GetHighestScoringSegment(
+            this SegmentationServiceTypes.SegmentationResponse? response)
+            => response.GetSegmentsByDescendingScore().FirstOrDefault();
+
+        /// <summary>
+        /// Image pixels per sample of the frame <paramref name="response"/> describes: 4 when the server sent SAM2's
+        /// native logits (<c>Width</c>, <c>Height</c>, mask and logit sizes are then in samples), 1 otherwise.
+        /// </summary>
+        internal static int PixelScale(this SegmentationServiceTypes.SegmentationResponse? response)
+        {
+            if (response?.Segments is null)
+                return 1;
+
+            foreach (SegmentationServiceTypes.SegmentResult segment in response.Segments)
+            {
+                if (SegmentationLogitField.HasLogits(segment))
+                    return SegmentationLogitField.PixelScale(segment);
+            }
+
+            return 1;
+        }
+
+        /// <summary>
+        /// Maps world coordinates to capture-pixel space without a Y flip. SAM2 mask Y is flipped elsewhere.
+        /// </summary>
+        internal static Vector2 MapWorldToViewportPixel(
+            Vector2 worldPos,
+            Rectangle viewportBounds,
+            int viewportWidth,
+            int viewportHeight)
+        {
+            Vector2 boundsMin = viewportBounds.LowerLeft;
+            Vector2 boundsMax = viewportBounds.UpperRight;
+
+            double normalizedX = (worldPos.X - boundsMin.X) / (boundsMax.X - boundsMin.X);
+            double normalizedY = (worldPos.Y - boundsMin.Y) / (boundsMax.Y - boundsMin.Y);
+
+            return new Vector2(
+                normalizedX * viewportWidth,
+                normalizedY * viewportHeight);
+        }
+
+        /// <summary>
+        /// Inverse of <see cref="MapWorldToViewportPixel"/>; pixel Y is not flipped here.
+        /// </summary>
+        internal static Vector2 MapViewportPixelToWorld(
+            double pixelX,
+            double pixelY,
+            Rectangle viewportBounds,
+            int viewportWidth,
+            int viewportHeight)
+        {
+            double normalizedX = pixelX / viewportWidth;
+            double normalizedY = pixelY / viewportHeight;
+            Vector2 boundsMin = viewportBounds.LowerLeft;
+            Vector2 boundsMax = viewportBounds.UpperRight;
+            return new Vector2(
+                boundsMin.X + normalizedX * (boundsMax.X - boundsMin.X),
+                boundsMin.Y + normalizedY * (boundsMax.Y - boundsMin.Y));
+        }
+
+        /// <summary>
         /// Converts a protobuf Polygon to a Polygon by transforming viewport pixel coordinates to world coordinates
         /// </summary>
         /// <param name="protoPolygon">The protobuf polygon to convert</param>
@@ -17,7 +98,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <param name="viewportWidth">Width of the viewport in pixels</param>
         /// <param name="viewportHeight">Height of the viewport in pixels</param>
         /// <returns>A Polygon in world coordinates</returns>
-        public static Polygon ToGridPolygon(
+        public static Polygon ToPolygon(
             this SegmentationServiceTypes.Polygon protoPolygon,
             Rectangle viewportBounds,
             int viewportWidth,
@@ -26,25 +107,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (protoPolygon is null || protoPolygon.Points.Count < 3)
                 return null;
 
-            // Transform each point from viewport pixel coordinates to world coordinates
             List<Vector2> worldPoints = new(protoPolygon.Points.Count);
-
-            Vector2 topLeft = viewportBounds.LowerLeft;
-            Vector2 bottomRight = viewportBounds.UpperRight;
 
             foreach (var point in protoPolygon.Points)
             {
-                // Convert pixel coordinates to normalized coordinates (0-1)
-                double normalizedX = (double)point.X / viewportWidth;
-                double normalizedY = (double)point.Y / viewportHeight;
-
-                // Transform normalized coordinates to world coordinates
-                Vector2 worldPoint = new(
-                    topLeft.X + normalizedX * (bottomRight.X - topLeft.X),
-                    topLeft.Y + normalizedY * (bottomRight.Y - topLeft.Y)
-                );
-
-                worldPoints.Add(worldPoint);
+                worldPoints.Add(MapViewportPixelToWorld(
+                    point.X,
+                    point.Y,
+                    viewportBounds,
+                    viewportWidth,
+                    viewportHeight));
             }
 
             return new Polygon(worldPoints.EnsureClosedRing().RemoveAdjacentDuplicates());

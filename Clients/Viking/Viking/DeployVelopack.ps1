@@ -1,44 +1,110 @@
-# PowerShell script to deploy Viking Velopack releases to the web server
-
 <#
 .SYNOPSIS
-    Deploys Viking Velopack releases to the web server.
+    Copies a Viking Velopack release folder to the update server and bumps the next build version.
 
 .DESCRIPTION
-    This script:
-    1. Validates the releases directory exists and contains required files
-    2. Uploads all files from the releases directory to the web server
-    3. Verifies deployment was successful
+    Run this after PublishVelopack.ps1 has written .\releases. It:
+
+    1. Requires RELEASES and Viking-win-Setup.exe in ReleasesDir (plus any .nupkg files).
+    2. Copies that folder to ServerPath when DeploymentMethod is Copy.
+    3. Checks that Setup.exe and RELEASES exist at the destination.
+    4. On a verified Copy, increments the patch of ApplicationVersion / FileVersion /
+       AssemblyVersion in Viking.csproj (1.2.0.0 -> 1.2.1.0) so the next publish is newer.
+
+    WebDAV, FTP, and SCP are accepted as DeploymentMethod values but are not implemented.
+
+    Show this help:
+        .\DeployVelopack.ps1 -?
+        .\DeployVelopack.ps1 -Help
+        Get-Help .\DeployVelopack.ps1 -Full
+
+.PARAMETER Help
+    Writes this help and exits without deploying or changing Viking.csproj.
 
 .PARAMETER ReleasesDir
-    The directory containing the release files (default: releases - relative to script location)
+    Folder produced by PublishVelopack.ps1. Relative paths are resolved from this script's
+    directory. Default: releases (or releases-test with -TestChannel)
 
 .PARAMETER ReleaseUrl
-    The base URL where releases are hosted (default: https://websvc.codepharm.net/Software/Viking)
+    Public HTTP base printed in the summary (where clients download updates).
+    Default: http://websvc.codepharm.net/Software/Viking
+    With -TestChannel: http://websvc.codepharm.net/Software/VikingTest
 
 .PARAMETER DeploymentMethod
-    The method to use for deployment: WebDAV, FTP, SCP, or Copy (default: Copy)
-    Note: Copy assumes the server path is accessible as a network share or local path
+    How to place files on the server: Copy, WebDAV, FTP, or SCP. Only Copy is implemented.
+    Default: Copy
 
 .PARAMETER ServerPath
-    The server path or network share path where files should be deployed
-    Required if DeploymentMethod is Copy
+    Destination directory or UNC share for Copy (for example \\server\share\Software\Viking).
+    Required when DeploymentMethod is Copy. For -TestChannel use ...\Software\VikingTest.
+
+.PARAMETER TestChannel
+    Deploy an unsigned Viking Test pack from .\releases-test to the VikingTest feed.
+    Expects Viking-win-Setup.exe (public install name; pack id remains VikingTest).
+    Does not bump Viking.csproj version.
 
 .EXAMPLE
-    .\DeployVelopack.ps1
+    .\DeployVelopack.ps1 -Help
+
+    Print usage and parameter descriptions.
+
 .EXAMPLE
-    .\DeployVelopack.ps1 -DeploymentMethod Copy -ServerPath "\\server\share\Software\Viking"
+    .\DeployVelopack.ps1 -ServerPath "\\server\share\Software\Viking"
+
+    Copy .\releases to that share and bump Viking.csproj if verification succeeds.
+
+.EXAMPLE
+    .\DeployVelopack.ps1 -TestChannel -ServerPath "\\server\share\Software\VikingTest"
+
+    Copy .\releases-test to the test feed without bumping the production version.
+
+.EXAMPLE
+    .\DeployVelopack.ps1 -ReleasesDir "D:\build\viking-releases" -ServerPath "\\server\share\Software\Viking"
+
+    Deploy from an explicit releases folder instead of .\releases.
+
+.NOTES
+    Does not build or sign. Run PublishVelopack.ps1 first.
+    Version increment happens only after a successful Copy verification (skipped for -TestChannel).
+    Clients then fetch {PackId}-win-Setup.exe and RELEASES from ReleaseUrl.
+
+.LINK
+    PublishVelopack.ps1
 #>
 
+[CmdletBinding(PositionalBinding = $false)]
 param(
-    [string]$ReleasesDir = "releases",
-    [string]$ReleaseUrl = "http://websvc.codepharm.net/Software/Viking",
+    [switch]$Help,
+    [string]$ReleasesDir = "",
+    [string]$ReleaseUrl = "",
     [ValidateSet("WebDAV", "FTP", "SCP", "Copy")]
     [string]$DeploymentMethod = "Copy",
-    [string]$ServerPath = ""
+    [string]$ServerPath = "",
+    [switch]$TestChannel
 )
 
+if ($Help) {
+    Get-Help -Name $PSCommandPath -Full
+    exit 0
+}
+
 $ErrorActionPreference = "Stop"
+
+$PackId = if ($TestChannel) { "VikingTest" } else { "Viking" }
+# Public test feed filename matches production Setup name; folder Software/VikingTest separates them.
+$setupExeName = if ($TestChannel) { "Viking-win-Setup.exe" } else { "$PackId-win-Setup.exe" }
+$packSetupExeName = "$PackId-win-Setup.exe"
+
+if ([string]::IsNullOrWhiteSpace($ReleasesDir)) {
+    $ReleasesDir = if ($TestChannel) { "releases-test" } else { "releases" }
+}
+if ([string]::IsNullOrWhiteSpace($ReleaseUrl)) {
+    $ReleaseUrl = if ($TestChannel) {
+        "http://websvc.codepharm.net/Software/VikingTest"
+    } else {
+        "http://websvc.codepharm.net/Software/Viking"
+    }
+}
 
 # Resolve releases directory relative to script location
 if (-not [System.IO.Path]::IsPathRooted($ReleasesDir)) {
@@ -113,10 +179,15 @@ function IncrementPatchVersion {
 }
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "Viking Velopack Deployment" -ForegroundColor Cyan
+if ($TestChannel) {
+    Write-Host "Viking Test Velopack Deployment" -ForegroundColor Cyan
+} else {
+    Write-Host "Viking Velopack Deployment" -ForegroundColor Cyan
+}
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Releases Directory: $ReleasesDir" -ForegroundColor Yellow
 Write-Host "Release URL: $ReleaseUrl" -ForegroundColor Yellow
+Write-Host "Pack id / setup: $PackId / $setupExeName" -ForegroundColor Yellow
 Write-Host "Deployment Method: $DeploymentMethod" -ForegroundColor Yellow
 Write-Host ""
 
@@ -129,8 +200,18 @@ if (-not (Test-Path $ReleasesDir)) {
     exit 1
 }
 
+# Test channel: Velopack emits VikingTest-win-Setup.exe; public feed name is Viking-win-Setup.exe
+if ($TestChannel) {
+    $publicSetupPath = Join-Path $ReleasesDir $setupExeName
+    $packSetupPath = Join-Path $ReleasesDir $packSetupExeName
+    if (-not (Test-Path $publicSetupPath) -and (Test-Path $packSetupPath)) {
+        Copy-Item -LiteralPath $packSetupPath -Destination $publicSetupPath -Force
+        Write-Host "Created public installer alias $setupExeName from $packSetupExeName" -ForegroundColor Cyan
+    }
+}
+
 # Check for required files
-$requiredFiles = @("RELEASES", "Viking-win-Setup.exe")
+$requiredFiles = @("RELEASES", $setupExeName)
 $missingFiles = @()
 
 foreach ($file in $requiredFiles) {
@@ -167,6 +248,7 @@ switch ($DeploymentMethod) {
         if ([string]::IsNullOrWhiteSpace($ServerPath)) {
             Write-Host "Error: ServerPath parameter is required when using Copy deployment method" -ForegroundColor Red
             Write-Host "Example: .\DeployVelopack.ps1 -ServerPath '\\server\share\Software\Viking'" -ForegroundColor Yellow
+            Write-Host "Test:    .\DeployVelopack.ps1 -TestChannel -ServerPath '\\server\share\Software\VikingTest'" -ForegroundColor Yellow
             exit 1
         }
         
@@ -209,7 +291,7 @@ $newVersion = $null
 
 if ($DeploymentMethod -eq "Copy" -and -not [string]::IsNullOrWhiteSpace($ServerPath)) {
     # Verify files exist at destination
-    $setupExeDest = Join-Path $ServerPath "Viking-win-Setup.exe"
+    $setupExeDest = Join-Path $ServerPath $setupExeName
     $releasesDest = Join-Path $ServerPath "RELEASES"
     
     # Also check for generic Setup.exe (in case naming changes)
@@ -237,8 +319,8 @@ if ($DeploymentMethod -eq "Copy" -and -not [string]::IsNullOrWhiteSpace($ServerP
     $deploymentSuccessful = $true
 }
 
-# Step 4: Increment version for next deployment (only if deployment was successful)
-if ($deploymentSuccessful) {
+# Step 4: Increment version for next deployment (production only, and only if verified)
+if ($deploymentSuccessful -and -not $TestChannel) {
     Write-Host ""
     Write-Host "Step 4: Incrementing version for next deployment..." -ForegroundColor Green
     
@@ -252,6 +334,9 @@ if ($deploymentSuccessful) {
         Write-Host "Warning: Version increment failed, but deployment was successful" -ForegroundColor Yellow
         Write-Host "You may need to manually update the version in Viking.csproj" -ForegroundColor Yellow
     }
+} elseif ($TestChannel) {
+    Write-Host ""
+    Write-Host "Step 4: Skipping version increment (Viking Test channel does not bump production)" -ForegroundColor Yellow
 } else {
     Write-Host ""
     Write-Host "Step 4: Skipping version increment (deployment verification failed)" -ForegroundColor Yellow
@@ -272,7 +357,12 @@ if ($deploymentSuccessful -and $newVersion) {
 }
 Write-Host ""
 Write-Host "Users can now:" -ForegroundColor Yellow
-Write-Host "1. Download Setup.exe from: $ReleaseUrl/Viking-win-Setup.exe" -ForegroundColor White
-Write-Host "2. Install Viking using the setup file" -ForegroundColor White
-Write-Host "3. The application will automatically check for updates from this location" -ForegroundColor White
+Write-Host "1. Download Setup.exe from: $ReleaseUrl/$setupExeName" -ForegroundColor White
+if ($TestChannel) {
+    Write-Host "2. Install Viking Test (Start menu: Viking Test). It sits beside signed Viking." -ForegroundColor White
+    Write-Host "3. Updates come from the VikingTest feed only; Open in Viking still uses viking://." -ForegroundColor White
+} else {
+    Write-Host "2. Install Viking using the setup file" -ForegroundColor White
+    Write-Host "3. The application will automatically check for updates from this location" -ForegroundColor White
+}
 Write-Host ""

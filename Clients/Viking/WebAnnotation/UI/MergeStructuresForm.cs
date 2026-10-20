@@ -19,14 +19,7 @@ namespace WebAnnotation.UI
         /// <returns></returns>
         private async Task<(bool Valid, string Reason)> VerifyTypeMatchAsync()
         {
-            int KeepID;
-            int MergeID;
-            try
-            {
-                KeepID = int.Parse(textKeepID.Text);
-                MergeID = int.Parse(textMergeID.Text);
-            }
-            catch (FormatException)
+            if (!StructureIdText.TryParse(textKeepID.Text, out long KeepID) || !StructureIdText.TryParse(textMergeID.Text, out long MergeID))
             {
                 return (false, "Could not parse ID number");
             }
@@ -48,15 +41,7 @@ namespace WebAnnotation.UI
 
         private async void btnMerge_Click(object sender, EventArgs e)
         {
-            int KeepID;
-            int MergeID;
-
-            try
-            {
-                KeepID = int.Parse(textKeepID.Text);
-                MergeID = int.Parse(textMergeID.Text);
-            }
-            catch (FormatException)
+            if (!StructureIdText.TryParse(textKeepID.Text, out long KeepID) || !StructureIdText.TryParse(textMergeID.Text, out long MergeID))
             {
                 return;
             }
@@ -80,7 +65,7 @@ namespace WebAnnotation.UI
             }
             catch (Exception except)
             {
-                MessageBox.Show("Merge error", except.Message.ToString());
+                MessageBox.Show(except.Message, "Merge error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
             Close();
@@ -90,34 +75,24 @@ namespace WebAnnotation.UI
 
         private async Task<(bool Valid, string Reason)> IsIDValidAsync(string Input)
         {
-            try
-            {
-                if (Input.Length == 0)
-                    return (true, null);
+            //Check if the string is empty, that is OK
+            if (Input.Length == 0)
+                return (true, null);
 
-                int ID = int.Parse(Input);
-                StructureObj obj = await Store.Structures.GetObjectByID(ID);
-                if (obj is null)
-                    return (false, "No structure found");
-
-                return (true, obj.Label);
-            }
-            catch (FormatException)
-            {
+            //If string is not empty it needs to be a number
+            if (!StructureIdText.TryParse(Input, out long ID))
                 return (false, null);
-            }
+
+            StructureObj obj = await Store.Structures.GetObjectByID(ID);
+            if (obj is null)
+                return (false, "No structure found");
+
+            return (true, obj.Label);
         }
 
         private async Task<(bool Valid, string Reason)> IsAllInputValidAsync()
         {
-            long KeepID;
-            long SplitID;
-            try
-            {
-                KeepID = long.Parse(textKeepID.Text);
-                SplitID = long.Parse(textMergeID.Text);
-            }
-            catch (FormatException)
+            if (!StructureIdText.TryParse(textKeepID.Text, out long KeepID) || !StructureIdText.TryParse(textMergeID.Text, out long SplitID))
             {
                 return (false, "Input ID is not a number");
             }

@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows.Forms;
 
 namespace Viking.UI.BaseClasses
@@ -18,10 +19,8 @@ namespace Viking.UI.BaseClasses
         {
             foreach (System.Type ModuleTabType in Viking.Common.ExtensionManager.GetExtensionTabCategory(TabCategory))
             {
-#if !DEBUG
                 try
                 {
-#endif
                     object? Obj = Activator.CreateInstance(ModuleTabType);
                     if (Obj is not Viking.Common.ITabExtension tab)
                         continue;
@@ -29,15 +28,14 @@ namespace Viking.UI.BaseClasses
                     TabPage? Page = tab.GetPage();
                     if (Page != null)
                         this.TabsModules.TabPages.Add(Page);
-#if !DEBUG
                 }
-                catch (Exception Except)
+                catch (Exception except)
                 {
-                    System.Diagnostics.Trace.WriteLine("Error Loading Module Tab Control: " + ModuleTabType.ToString(), "UI");
-                    System.Diagnostics.Trace.WriteLine(Except.ToString(), "UI");
-                    throw;
+                    // A failed annotation store (launch token denied) used to rethrow here while the
+                    // main window was shown, which is the crash after a tools-page open missed the running instance.
+                    Trace.WriteLine("Error Loading Module Tab Control: " + ModuleTabType, "UI");
+                    Trace.WriteLine(except.ToString(), "UI");
                 }
-#endif
             }
         }
     }

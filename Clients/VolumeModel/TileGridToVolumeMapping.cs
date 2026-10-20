@@ -80,9 +80,7 @@ namespace Viking.VolumeModel
 
         public override bool[] TryVolumeToSection(in Vector2[] P, out Vector2[] transformedP) => this.VolumeTransform.TryInverseTransform(P, out transformedP);
 
-
         public override Vector2[] VolumeToSection(Vector2[] P) => this.VolumeTransform.InverseTransform(P);
-
 
         public override Vector2[] SectionToVolume(Vector2[] P) => this.VolumeTransform.Transform(P);
 
@@ -97,8 +95,7 @@ namespace Viking.VolumeModel
             }
 
             return base.FreeMemory();
-        }
-
+        } 
 
         public override TilePyramid VisibleTiles(Rectangle VisibleBounds, double DownSample)
         {

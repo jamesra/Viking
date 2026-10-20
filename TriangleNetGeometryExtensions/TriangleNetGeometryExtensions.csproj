@@ -8,7 +8,7 @@
 		<AppDesignerFolder>Properties</AppDesignerFolder>
 		<RootNamespace>TriangeNetGeometryExtensions</RootNamespace>
 		<AssemblyName>TriangeNetGeometryExtensions</AssemblyName>
-		<TargetFrameworks>net48;netstandard2.0</TargetFrameworks>
+		<TargetFrameworks>net48;netstandard2.0;net10.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
 		<FileAlignment>512</FileAlignment>
 		<UserSecretsId>9f8bc87c-d0ad-4a76-8844-443667d5e510</UserSecretsId>

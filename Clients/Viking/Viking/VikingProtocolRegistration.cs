@@ -6,17 +6,19 @@ using Microsoft.Win32;
 namespace Viking
 {
     /// <summary>
-    /// Registers the viking:// URL protocol so the OS launches Viking when the user clicks a viking://open?code=... link.
-    /// Uses HKCU (no admin required).
+    /// Registers the channel URL protocol (viking:// or viking-test://) so the OS launches this build
+    /// when the user clicks an open link. Uses HKCU (no admin required).
     /// </summary>
     public static class VikingProtocolRegistration
     {
-        private const string ProtocolName = "viking";
-        private const string UrlProtocolValue = "URL:Viking Volume";
+        private static string ProtocolName => VikingChannelIdentity.ProtocolScheme;
+        private static string UrlProtocolValue =>
+            VikingChannelIdentity.IsTestChannel ? "URL:Viking Test Volume" : "URL:Viking Volume";
 
         /// <summary>
-        /// Registers the viking:// protocol for the current user so that viking:// URLs open this application.
+        /// Registers this channel's protocol for the current user.
         /// Safe to call on every run; updates the command if the executable path has changed.
+        /// Test builds register viking-test:// and leave production viking:// alone.
         /// </summary>
         public static void RegisterIfNeeded()
         {

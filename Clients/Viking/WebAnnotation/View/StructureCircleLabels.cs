@@ -118,7 +118,7 @@ namespace WebAnnotation.View
                 StructureIDLabelView = new LabelView(StructureIDLabelWithTypeCode(locationObj.Parent), VolumeCircle.Center - new Geometry.Vector2(0, Height), fontSize: DefaultFontSize)
                 {
                     MaxLineWidth = Circle.WidthAtHeight(Height / Radius) * (Radius * 2.0),
-                    _Color = locationObj.IsUnverifiedTerminal ? Color.Yellow : Color.Black
+                    _Color = locationObj.IsUnverifiedTerminal ? Color.Orange : Color.Black
                 };
             }
 

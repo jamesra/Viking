@@ -34,6 +34,7 @@
     <InternalsVisibleTo Include="VikingCore" />
     <InternalsVisibleTo Include="Jotunn" />
     <InternalsVisibleTo Include="WebAnnotation" />
+    <InternalsVisibleTo Include="VikingCoreTests" />
   </ItemGroup>
 
   <ItemGroup>
@@ -44,7 +45,7 @@
     <Compile Include="..\Viking\NGVV\Threading\TextureReaderV2.cs" Link="Tiles\TextureReaderV2.cs" />
     <Compile Include="..\Viking\NGVV\Threading\TextureRequestQueue.cs" Link="Tiles\TextureRequestQueue.cs" />
     <Compile Include="..\Viking\NGVV\Threading\PendingTextureQueue.cs" Link="Tiles\PendingTextureQueue.cs" />
-    <Compile Include="..\Viking\NGVV\Threading\DisposeTextureThreadingObj.cs" Link="Tiles\DisposeTextureThreadingObj.cs" />
+    <Compile Include="..\Viking\NGVV\Threading\TextureLoadQueueSort.cs" Link="Tiles\TextureLoadQueueSort.cs" />
   </ItemGroup>
 
 </Project>

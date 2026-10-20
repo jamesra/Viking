@@ -726,7 +726,7 @@ namespace VikingXNAGraphics
             device.SetRenderTarget(target);
             device.Clear(Color.Transparent);
 
-            // Own batch for offscreen text; must not nest Begin on the caller's shared SpriteBatch.
+            // Own batch for offscreen text; spriteBatch is only used for device affinity and must not be nested.
             using (SpriteBatch offlineBatch = new(device))
             {
                 offlineBatch.Begin();
