@@ -23,7 +23,7 @@ namespace WebAnnotation
         public void OpenMorphology(long id)
         {
             Uri uri_path = BuildMorphologyRequest(ExportURL, id);
-            System.Diagnostics.Process.Start(uri_path.ToString());
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(uri_path.ToString()) { UseShellExecute = true });
         }
 
         //Fetch morphology
@@ -49,7 +49,7 @@ namespace WebAnnotation
         public void OpenNetwork(long id, long? hops)
         {
             Uri uri_path = BuildNetworkRequest(ExportURL, id, hops);
-            System.Diagnostics.Process.Start(uri_path.ToString());
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(uri_path.ToString()) { UseShellExecute = true });
         }
 
         //Fetch network motifs
@@ -64,7 +64,7 @@ namespace WebAnnotation
         public void OpenMotif()
         {
             Uri uri_path = BuildMotifRequest(ExportURL);
-            System.Diagnostics.Process.Start(uri_path.ToString());
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(uri_path.ToString()) { UseShellExecute = true });
         }
     }
 }

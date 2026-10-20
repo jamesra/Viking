@@ -108,7 +108,7 @@ namespace Viking.UI.Controls
 
         }
 
-        void linkLabel1_Click(object sender, System.EventArgs e) => System.Diagnostics.Process.Start("https://155.100.104.153/Viz/Account/Register");
+        void linkLabel1_Click(object sender, System.EventArgs e) => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://155.100.104.153/Viz/Account/Register") { UseShellExecute = true });
 
         async void login_handle(object sender, System.EventArgs e)
         {
@@ -288,7 +288,7 @@ namespace Viking.UI.Controls
         void password_KeyUp(object sender, System.Windows.Forms.KeyEventArgs e) => btnLogin.Enabled = this.textUsername.Text.Length != 0 && this.textPassword.Text.Length != 0;
 
 
-        void linkLabel3_Click(object sender, System.EventArgs e) => System.Diagnostics.Process.Start("http://prometheus.med.utah.edu/~marclab/");
+        void linkLabel3_Click(object sender, System.EventArgs e) => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("http://prometheus.med.utah.edu/~marclab/") { UseShellExecute = true });
 
 
 
@@ -297,11 +297,11 @@ namespace Viking.UI.Controls
 
         }
 
-        private void vikingLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) => System.Diagnostics.Process.Start("http://connectomes.utah.edu");
+        private void vikingLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("http://connectomes.utah.edu") { UseShellExecute = true });
 
-        private void annotationsLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) => System.Diagnostics.Process.Start("http://155.100.104.153/Viz");
+        private void annotationsLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("http://155.100.104.153/Viz") { UseShellExecute = true });
 
-        private void pictureBox1_Click(object sender, EventArgs e) => System.Diagnostics.Process.Start("http://prometheus.med.utah.edu/~marclab/");
+        private void pictureBox1_Click(object sender, EventArgs e) => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("http://prometheus.med.utah.edu/~marclab/") { UseShellExecute = true });
 
         public string EncryptString(string Message, string Passphrase)
         {
