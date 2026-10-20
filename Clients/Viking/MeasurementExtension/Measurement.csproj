@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net48</TargetFramework>
+		<TargetFrameworks>net48;net10.0-windows</TargetFrameworks>
 		<UseWindowsForms>true</UseWindowsForms>
 		<UseWPF>true</UseWPF>
 		<LangVersion>latest</LangVersion>
@@ -16,8 +16,8 @@
 		<PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.7.1.189" />
 	</ItemGroup>
 
-	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0-windows'">
-		<PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8" />
+	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+		<PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.5-preview.3" />
 	</ItemGroup>
 	<PropertyGroup>
 		<ModulesDir>..\Viking\Modules</ModulesDir>
@@ -67,7 +67,7 @@
 		<ProjectReference Include="..\NGVV\VikingCore.csproj" />
 		<ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj" />
 		<ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" Condition=" '$(TargetFramework)' == 'net48' " />
-		<ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition=" '$(TargetFramework)' == 'net9.0-windows' " />
+		<ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition=" '$(TargetFramework)' == 'net10.0-windows' " />
 	</ItemGroup>
 	<ItemGroup>
 		<None Include="app.config" />

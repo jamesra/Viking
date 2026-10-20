@@ -3,12 +3,12 @@
 		<TargetFrameworks>net48;net10.0-windows</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
-		<NoWarn>$(NoWarn);CS0436;CA1014;CS3009;CS3001;CS3002;CS3003;CS3008</NoWarn>
+		<NoWarn>$(NoWarn);CS0436;CA1014;CS3009;CS3001;CS3002;CS3003;CS3008;WFO1000</NoWarn>
 		<UseWPF>true</UseWPF>
 		<GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
 		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
 	</PropertyGroup>
-	<PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+	<PropertyGroup>
 		<UseWindowsForms>true</UseWindowsForms>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -31,8 +31,7 @@
 	</PropertyGroup>
 	
 	<!-- Post-build event to copy output to Modules folder -->
-		<!-- Post-build event to copy output to Modules folder -->
-	<Target Name="PostBuild" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net48'">
+	<Target Name="PostBuild" AfterTargets="Build">
 		<PropertyGroup>
 			<OutputDirectory>$(OutDir)</OutputDirectory>
 			<OutputDirectory Condition="'$(OutputDirectory)' == ''">$(OutputPath)</OutputDirectory>
@@ -119,8 +118,8 @@
 		<ProjectReference Include="..\..\Viking.Scene\Viking.Scene.csproj" />
 		<ProjectReference Include="..\..\Viking.Tokens\Viking.Tokens.csproj" />
 		<ProjectReference Include="..\..\Viking.UI.WPF\Viking.UI.WPF.csproj" />
-		<ProjectReference Include="..\NGVV\VikingCore.csproj" Condition="'$(TargetFramework)' == 'net48'" />
-		<ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj" Condition="'$(TargetFramework)' == 'net48'" />
+		<ProjectReference Include="..\NGVV\VikingCore.csproj" />
+		<ProjectReference Include="..\VikingXNAWinForms\VikingXNAWinForms.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="EntityFramework" Version="6.5.1" />
@@ -170,50 +169,9 @@
 		<InternalsVisibleTo Include="Jotunn" />
 		<InternalsVisibleTo Include="VolumeView" />
 	</ItemGroup>
-	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
-		<Compile Remove="UI\AnnotationOverlay.cs" />
-		<Compile Remove="UI\AnnotationMenu.cs" />
-		<Compile Remove="UI\Commands\**" />
-		<Compile Remove="UI\Forms\**" />
-		<Compile Remove="UI\Controls\**" />
-		<Compile Remove="UI\Actions\Pen\AnnotationOverlayPenFreeDrawCommandV2.cs" />
-		<Compile Remove="UI\MergeStructuresForm.cs" />
-		<Compile Remove="UI\MergeStructuresForm.Designer.cs" />
-		<Compile Remove="UI\SplitStructuresForm.cs" />
-		<Compile Remove="UI\SplitStructuresForm.Designer.cs" />
-		<Compile Remove="UI\StructureChildStructuresPage.cs" />
-		<Compile Remove="UI\StructureChildStructuresPage.Designer.cs" />
-		<Compile Remove="UI\StructureExtendedPropertiesPage.cs" />
-		<Compile Remove="UI\StructureExtendedPropertiesPage.Designer.cs" />
-		<Compile Remove="UI\StructureGeneralPage.cs" />
-		<Compile Remove="UI\StructureGeneralPage.Designer.cs" />
-		<Compile Remove="UI\StructureLocationsChangeLogPropertiesPage.cs" />
-		<Compile Remove="UI\StructureLocationsChangeLogPropertiesPage.Designer.cs" />
-		<Compile Remove="UI\StructureLocationsPage.cs" />
-		<Compile Remove="UI\StructureLocationsPage.Designer.cs" />
-		<Compile Remove="UI\StructureNotesPage.cs" />
-		<Compile Remove="UI\StructureNotesPage.Designer.cs" />
-		<Compile Remove="UI\StructureTypeGeneralPage.cs" />
-		<Compile Remove="UI\StructureTypeGeneralPage.Designer.cs" />
-		<Compile Remove="UI\StructureTypesRelationsPage.cs" />
-		<Compile Remove="UI\StructureTypesRelationsPage.Designer.cs" />
-		<Compile Remove="UI\StructureTypesTree.cs" />
-		<Compile Remove="UI\StructureTypesTree.Designer.cs" />
-		<Compile Remove="UI\StructureTypeStructuresPage.cs" />
-		<Compile Remove="UI\StructureTypeStructuresPage.Designer.cs" />
-		<Compile Remove="View\*ContextMenuView.cs" />
-		<Compile Remove="SbfsemToolsLauncher.cs" />
-		<Compile Remove="ViewModel\Location_ViewModelBase.cs" />
-		<Compile Remove="ViewModel\Location_CanvasViewModel.cs" />
-		<Compile Remove="ViewModel\LocationLinksViewModel.cs" />
-		<Compile Remove="ViewModel\Location.cs" />
-		<Compile Remove="Services\**" />
+	<ItemGroup>
+		<!-- The WCF service proxy; the client talks to the gRPC annotation service. -->
 		<Compile Remove="Service References\**" />
-		<EmbeddedResource Remove="UI\**\*.resx" />
-	</ItemGroup>
-	<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
-		<Compile Remove="Net10Compat.cs" />
-		<Compile Remove="Net10AnnotationOverlay.cs" />
 	</ItemGroup>
 	<ItemGroup>
 	  <Folder Include="bin\" />

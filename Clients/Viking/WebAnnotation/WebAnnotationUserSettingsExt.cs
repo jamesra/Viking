@@ -2,14 +2,11 @@
 namespace rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd
 {
     using System;
-#if NETFRAMEWORK
     using System.Windows.Forms;
-#endif
 
 
     public partial class Hotkey
     {
-#if NETFRAMEWORK
         /// <summary>
         /// The key named by <see cref="KeyName"/>, or <see cref="Keys.None"/> when the name is missing or unreadable.
         /// Called for every hotkey on each key press by <c>AnnotationOverlay</c>; <c>UserSettings.xml</c> is
@@ -35,7 +32,6 @@ namespace rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd
                 }
             }
         }
-#endif
     }
 
     public partial class Parameters

@@ -39,9 +39,8 @@ namespace WebAnnotation
         {
             _volume = volume;
             _transforms = new VolumeTransformProvider(volume);
-#if !NETFRAMEWORK
+            // Jotunn has no WinForms overlay; shared actions and views find this scene's section views through the lookup.
             AnnotationOverlay.SectionViewLookup = GetOrCreate;
-#endif
             if (Store.IsInitialized)
             {
                 Store.Locations.CollectionChanged += OnStoreCollectionChanged;

@@ -7,15 +7,13 @@ using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
-#if NETFRAMEWORK
 using WebAnnotation.UI.Commands;
-#endif
 
 namespace WebAnnotation.UI.Actions
 {
     internal abstract class CreateStructureActionBase(int SectionNumber, IVolumeToSectionTransform? transform = null) : IAction
     {
-        protected IVolumeToSectionTransform Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+        protected IVolumeToSectionTransform Transform = transform ?? AnnotationOverlay.ActiveSectionToVolumeTransform;
 
         public long TypeID; //The TypeID the action will use for the new structure.   
 
@@ -35,16 +33,12 @@ namespace WebAnnotation.UI.Actions
 
         protected static async Task CommitNewStructure(StructureTypeObj typeObj, StructureObj newStruct, LocationObj newLocation)
         {
-#if NETFRAMEWORK
             if (typeObj.Parent != null)
             {
                 AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), [AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation]);
             }
 
             AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(CreateNewStructureCommand), [AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation]);
-#else
-            await Store.Structures.Create(newStruct, newLocation);
-#endif
         }
     }
 

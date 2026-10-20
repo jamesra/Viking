@@ -223,7 +223,7 @@ namespace WebAnnotation.View
         {
             List<IAction> listActions = [];
             IVolumeToSectionTransform mapper =
-                AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+                AnnotationOverlay.ActiveSectionToVolumeTransform;
 
             if (path.HasSelfIntersection == false)
             {

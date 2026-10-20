@@ -50,7 +50,7 @@ namespace WebAnnotation.UI.Actions
         public ChangeToPolygonAction(LocationObj location, Polygon newVolumePolygon, IVolumeToSectionTransform? transform = null)
         {
             Location = location;
-            Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+            Transform = transform ?? AnnotationOverlay.ActiveSectionToVolumeTransform;
             NewVolumePolygon = newVolumePolygon;
             NewSmoothVolumePolygon = NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints, Global.PenSimplifyThreshold);
 
@@ -163,7 +163,7 @@ namespace WebAnnotation.UI.Actions
         public ChangeToPolylineAction(LocationObj location, Polyline newVolumePolyline, IVolumeToSectionTransform? transform = null)
         {
             Location = location;
-            Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+            Transform = transform ?? AnnotationOverlay.ActiveSectionToVolumeTransform;
             NewVolumePolyline = newVolumePolyline;
             NewSmoothVolumePolyline = NewVolumePolyline.Smooth(Global.NumClosedCurveInterpolationPoints);
 

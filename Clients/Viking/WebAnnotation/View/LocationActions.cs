@@ -3,7 +3,6 @@ using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
-#if NETFRAMEWORK
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using VikingXNAWinForms;
@@ -12,7 +11,6 @@ using Viking.Services.Grpc;
 using WebAnnotation.UI.Commands;
 using WebAnnotation.UI.Commands.Segmentation;
 using WebAnnotation.ViewModel;
-#endif
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
@@ -92,7 +90,6 @@ namespace WebAnnotation
     /// </summary>
     internal static class LocationActions
     {
-#if NETFRAMEWORK
         public static Cursor GetCursor(this LocationAction action)
         {
             return action switch
@@ -716,7 +713,6 @@ namespace WebAnnotation
             _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
-#endif
 
         /// <summary>
         /// Warps a shape from the source section's mosaic space to the destination section's mosaic space, through volume space.

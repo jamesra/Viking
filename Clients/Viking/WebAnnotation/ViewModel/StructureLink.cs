@@ -8,9 +8,7 @@ using Viking.AnnotationServiceTypes;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-#if NETFRAMEWORK
 using System.Windows.Forms;
-#endif
 using Viking.Common;
 using Viking.VolumeModel;
 using VikingXNA;
@@ -82,14 +80,10 @@ namespace WebAnnotation.ViewModel
         }
     }
 
-#if NETFRAMEWORK
     public delegate ContextMenuStrip StructureLinkContextMenuGeneratorDelegate(IViewStructureLink key);
-#endif
 
     internal abstract class StructureLinkViewModelBase : Viking.Objects.UIObjBase, ICanvasGeometryView, IViewStructureLink
-#if NETFRAMEWORK
         , IContextMenu
-#endif
     {
         private readonly StructureLinkObj modelObj;
 
@@ -102,9 +96,7 @@ namespace WebAnnotation.ViewModel
         /// LocationOnSection is the location on the reference section
         /// </summary>
         public LocationObj TargetLocation;
-#if NETFRAMEWORK
         private readonly StructureLinkContextMenuGeneratorDelegate? ContextMenuGenerator = null;
-#endif
 
         public override string ToString() => modelObj.ToString();
 
@@ -148,12 +140,9 @@ namespace WebAnnotation.ViewModel
             SourceLocation = Store.Locations[linkKey.SourceLocID];
             TargetLocation = Store.Locations[linkKey.TargetLocID];
 
-#if NETFRAMEWORK
             ContextMenuGenerator = StructureLink_CanvasContextMenuView.ContextMenuGenerator;
-#endif
         }
 
-#if NETFRAMEWORK
         public override System.Windows.Forms.ContextMenuStrip ContextMenu
         {
             get
@@ -167,7 +156,6 @@ namespace WebAnnotation.ViewModel
 
             }
         }
-#endif
 
         public override void Delete() => _ = DeleteAsync();
 

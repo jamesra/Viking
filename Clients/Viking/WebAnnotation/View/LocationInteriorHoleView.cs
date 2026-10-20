@@ -3,9 +3,7 @@ using Viking.Input;
 using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using System.Collections.Generic;
-#if NETFRAMEWORK
 using System.Windows.Forms;
-#endif
 using VikingXNA;
 using WebAnnotation.UI;
 using WebAnnotation.UI.Actions;
@@ -20,9 +18,7 @@ namespace WebAnnotation.View
     /// <param name="volumePolygon">The interior polygon</param>
     /// <param name="smoothVolumePolygon">The smoothed interior polygon</param>
     internal class LocationInteriorHoleView(long LocationID, int innerPoly, Polygon volumePolygon, Polygon smoothVolumePolygon) : ICanvasGeometryView, Viking.Common.IHelpStrings,
-#if NETFRAMEWORK
         Viking.Common.IContextMenu,
-#endif
         IMouseActionSupport, IPenActionSupport
     {
         private readonly Polygon VolumePolygon = volumePolygon;
@@ -60,7 +56,6 @@ namespace WebAnnotation.View
             }
         }
 
-#if NETFRAMEWORK
         public ContextMenuStrip ContextMenu
         {
             get
@@ -83,7 +78,6 @@ namespace WebAnnotation.View
                 return menu;
             }
         }
-#endif
         public bool Contains(Vector2 Position) => SmoothedVolumePolygon.Covers(Position);
 
         public double Distance(SqlGeometry Shape) => VolumeShapeAsRendered.STDistance(Shape).Value;

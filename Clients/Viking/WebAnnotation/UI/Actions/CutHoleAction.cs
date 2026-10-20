@@ -49,7 +49,7 @@ namespace WebAnnotation.UI.Actions
         public CutHoleAction(LocationObj location, Polygon newVolumeInteriorPolygon, IVolumeToSectionTransform? transform = null)
         {
             Location = location;
-            Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+            Transform = transform ?? AnnotationOverlay.ActiveSectionToVolumeTransform;
             NewVolumeInteriorPolygon = newVolumeInteriorPolygon;
             NewSmoothVolumeInteriorPolygon = NewVolumeInteriorPolygon.Smooth(Global.NumClosedCurveInterpolationPoints, Global.PenSimplifyThreshold);
 

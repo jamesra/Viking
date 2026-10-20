@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFrameworks>net48;net10.0-windows</TargetFrameworks>
     <RootNamespace>Viking</RootNamespace>
     <AssemblyName>Viking</AssemblyName>
     <ApplicationIcon>Viking.ico</ApplicationIcon>
@@ -35,13 +35,18 @@
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
     <PackageReference Include="EntityFramework" Version="6.5.1" />
     <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
-    <PackageReference Include="System.Buffers" Version="4.6.1" />
-    <PackageReference Include="System.Memory" Version="4.6.3" />
     <PackageReference Include="LinqToXsd" Version="2.0.2" />
     <PackageReference Include="protobuf-net" Version="3.2.56" />
     <PackageReference Include="protobuf-net.ServiceModel" Version="3.2.52" />
     <PackageReference Include="Velopack" Version="0.0.1298" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="System.Buffers" Version="4.6.1" />
+    <PackageReference Include="System.Memory" Version="4.6.3" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.8" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\..\Servers\Shared\ProductVersion.cs" Link="ProductVersion.cs" />
@@ -51,7 +56,10 @@
     <ProjectReference Include="..\..\..\SqlServerTypesLoader\SqlServerTypesLoader.csproj" />
     <ProjectReference Include="..\..\Viking.UI.WPF\Viking.UI.WPF.csproj" />
     <!-- Ensure MGCB content is built before Viking copies graphics assets to output -->
-    <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj">
+    <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" Condition="'$(TargetFramework)' == 'net48'">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition="'$(TargetFramework)' == 'net10.0-windows'">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
     <!-- Module projects - built as plugins, not direct references -->
@@ -141,6 +149,9 @@
       <_GraphicsBuildConfig Condition="'$(_GraphicsBuildConfig)' == ''">Debug</_GraphicsBuildConfig>
       <_GraphicsContentSourceDir>$(MSBuildThisFileDirectory)..\..\VikingXNAGraphics\bin\$(_GraphicsBuildConfig)\net48\Content\</_GraphicsContentSourceDir>
       <_GraphicsContentFallbackDir>$(MSBuildThisFileDirectory)..\..\VikingXNAGraphics\Content\bin\Windows\</_GraphicsContentFallbackDir>
+      <!-- MonoGame 3.8 cannot load effects compiled for 3.7, so .NET 10 takes Monographics' content. -->
+      <_GraphicsContentSourceDir Condition="'$(TargetFramework)' == 'net10.0-windows'">$(MSBuildThisFileDirectory)..\..\Monographics\bin\MonoGame\$(_GraphicsBuildConfig)\$(TargetFramework)\Content\</_GraphicsContentSourceDir>
+      <_GraphicsContentFallbackDir Condition="'$(TargetFramework)' == 'net10.0-windows'">$(MSBuildThisFileDirectory)..\..\Monographics\Content\bin\Windows\</_GraphicsContentFallbackDir>
       <_GraphicsContentDestDir>$(OutputPath)Content\</_GraphicsContentDestDir>
     </PropertyGroup>
     <ItemGroup Condition="Exists('$(_GraphicsContentSourceDir)')">

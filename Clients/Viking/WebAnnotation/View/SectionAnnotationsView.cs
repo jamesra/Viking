@@ -171,12 +171,10 @@ namespace WebAnnotation.ViewModel
             Init();
         }
 
-#if NETFRAMEWORK
         public AdjacentSectionAnnotationsView(int primary_section_number, SectionViewModel adjacent)
             : this(primary_section_number, adjacent.section, adjacent.ActiveSectionToVolumeTransform)
         {
         }
-#endif
 
         public readonly Viking.VolumeModel.Section AdjacentSection;
 
@@ -549,12 +547,10 @@ namespace WebAnnotation.ViewModel
             Init();
         }
 
-#if NETFRAMEWORK
         public SectionAnnotationsView(SectionViewModel section)
             : this(section.section, section.VolumeViewModel, section.section.volume)
         {
         }
-#endif
 
         public override void Init()
         {

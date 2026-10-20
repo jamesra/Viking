@@ -479,7 +479,38 @@ namespace WebAnnotation
         /// Returns annotations for section if they exist or null if they do not
         /// </summary>
         /// <param name="SectionNumber"></param>
-        public static SectionAnnotationsView GetAnnotationsForSection(int SectionNumber) => cacheSectionAnnotations.Fetch(SectionNumber);
+        public static SectionAnnotationsView GetAnnotationsForSection(int SectionNumber) =>
+            SectionViewLookup?.Invoke(SectionNumber) ?? cacheSectionAnnotations.Fetch(SectionNumber);
+
+        /// <summary>
+        /// Set by a host without a WinForms overlay (Jotunn's <see cref="AnnotationScene"/>) so shared actions and views
+        /// find that host's section views. Viking leaves it null and uses the overlay's cache.
+        /// </summary>
+        public static Func<int, SectionAnnotationsView> SectionViewLookup { get; set; }
+
+        /// <summary>
+        /// Section-to-volume transform of the section being edited: the Viking viewer's when this overlay is shown,
+        /// otherwise the scene host's section (Jotunn) through <see cref="TileLoadEnvironment"/>.
+        /// </summary>
+        public static IVolumeToSectionTransform ActiveSectionToVolumeTransform
+        {
+            get
+            {
+                IVolumeToSectionTransform viewer = _CurrentOverlay?.Parent?.Section?.ActiveSectionToVolumeTransform;
+                if (viewer != null)
+                    return viewer;
+
+                int sectionNumber = Viking.TileLoadEnvironment.GetSectionNumber?.Invoke() ?? 0;
+                if (AnnotationBootstrap.Transforms != null)
+                    return AnnotationBootstrap.Transforms.GetSectionToVolumeTransform(sectionNumber);
+
+                throw new InvalidOperationException("No viewer or annotation scene is showing a section.");
+            }
+        }
+
+        /// <summary>Downsample of the viewer or scene the user is editing in; 1 when neither reports one.</summary>
+        public static double ActiveDownsample =>
+            _CurrentOverlay?.Parent?.Downsample ?? Viking.TileLoadEnvironment.GetDownsample?.Invoke() ?? 1;
 
         private static readonly SemaphoreSlim GetOrCreateAnnotationsForSectionSemaphore = new(1);
         /// <summary>

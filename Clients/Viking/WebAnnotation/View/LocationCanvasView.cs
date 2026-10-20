@@ -5,9 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
-#if NETFRAMEWORK
 using System.Windows.Forms;
-#endif
 using Viking.Common;
 using VikingXNA;
 using VikingXNAGraphics;
@@ -18,9 +16,7 @@ using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.View
 {
-#if NETFRAMEWORK
     public delegate ContextMenuStrip ContextMenuGeneratorDelegate(IViewLocation locationID);
-#endif
 
     /// <summary>
     /// On-canvas location. ParentDepth is structure nesting for draw/hit order, not Z.
@@ -28,9 +24,7 @@ namespace WebAnnotation.View
     /// </summary>
     public abstract class LocationCanvasView(LocationObj obj) : IComparable<LocationCanvasView>, IUIObjectBasic, ICanvasGeometryView, IEquatable<LocationCanvasView>,
                                                IMouseActionSupport, IPenActionSupport, IViewLocation, IHelpStrings
-#if NETFRAMEWORK
                                                , IContextMenu
-#endif
     {
         #region static
 
@@ -80,9 +74,7 @@ namespace WebAnnotation.View
 
         public abstract SqlGeometry VolumeShapeAsRendered { get; }
 
-#if NETFRAMEWORK
         public readonly ContextMenuGeneratorDelegate ContextMenuGenerator = Location_CanvasContextMenuView.ContextMenuGenerator;
-#endif
 
         public int VisualHeight => ParentDepth;
 
@@ -302,7 +294,6 @@ namespace WebAnnotation.View
 
         public long? ParentID => modelObj.ParentID;
 
-#if NETFRAMEWORK
         public ContextMenuStrip ContextMenu
         {
             get
@@ -315,7 +306,6 @@ namespace WebAnnotation.View
                 return null;
             }
         }
-#endif
 
         public string ToolTip => modelObj.Label;
 
@@ -414,10 +404,8 @@ namespace WebAnnotation.View
 
         public void ShowProperties()
         {
-#if NETFRAMEWORK
             Location_CanvasContextMenuView contextView = new(ID);
             contextView.ShowProperties();
-#endif
         }
 
         public void Save() => throw new NotImplementedException();

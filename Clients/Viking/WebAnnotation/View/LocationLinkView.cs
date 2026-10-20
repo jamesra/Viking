@@ -6,9 +6,7 @@ using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-#if NETFRAMEWORK
 using System.Windows.Forms;
-#endif
 using Viking.AnnotationServiceTypes;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.Common;
@@ -24,18 +22,14 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 namespace WebAnnotation.ViewModel
 {
 
-#if NETFRAMEWORK
     public delegate ContextMenuStrip LocationLinkContextMenuGeneratorDelegate(IViewLocationLink key);
-#endif
 
     /// <summary>
     /// Drawn line between two locations in volume space. VisualHeight is 0 so location hits win.
     /// Not a store object — built from LocationLinkKey plus the two endpoint views.
     /// </summary>
     public class LocationLinkView : Viking.Objects.UIObjBase, ICanvasGeometryView, IEquatable<LocationLinkView>, IColorView, IViewLocationLink
-#if NETFRAMEWORK
         , IContextMenu
-#endif
     {
         public readonly LocationLinkKey Key;
 
@@ -256,9 +250,7 @@ namespace WebAnnotation.ViewModel
 
         public Geometry.LineSegment LineSegment => new(A.Center, B.Center);
 
-#if NETFRAMEWORK
         public LocationLinkContextMenuGeneratorDelegate? ContextMenuGenerator = null;
-#endif
 
         protected IVolumeTransformProvider mapProvider;
 
@@ -523,7 +515,6 @@ namespace WebAnnotation.ViewModel
 
         #region IUIObjectBasic Members
 
-#if NETFRAMEWORK
         public override System.Windows.Forms.ContextMenuStrip ContextMenu
         {
             get
@@ -536,7 +527,6 @@ namespace WebAnnotation.ViewModel
                 return null;
             }
         }
-#endif
 
         public override string ToolTip => Key.A.ToString() + " -> " + Key.B.ToString();
 

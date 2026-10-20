@@ -40,7 +40,7 @@ namespace WebAnnotation.UI.Actions
         {
             this.SectionNumber = SectionNumber;
             ExistingLocID = existingLocID;
-            Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+            Transform = transform ?? AnnotationOverlay.ActiveSectionToVolumeTransform;
 
             NewMosaicShape = newMosaicPolygon;
             NewVolumeShape = newVolumePolygon ?? Transform.TryMapShapeSectionToVolume(newMosaicPolygon.ToSqlGeometry()).ToIShape2D();

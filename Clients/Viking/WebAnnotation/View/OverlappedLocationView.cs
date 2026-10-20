@@ -7,9 +7,7 @@ using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-#if NETFRAMEWORK
 using System.Windows.Forms;
-#endif
 using VikingXNAGraphics;
 using WebAnnotation.UI;
 using WebAnnotation.ViewModel;
@@ -144,9 +142,7 @@ namespace WebAnnotation.View
                     "Hold left click + drag on inscribed arrow: Create additional annotation for this structure linked to the annotation on the adjacent section."
                 ];
 
-#if NETFRAMEWORK
         public new ContextMenuStrip ContextMenu => new Location_CanvasContextMenuView(ID).ContextMenu;
-#endif
 
         public override Rectangle BoundingBox => Circle.BoundingBox;
 

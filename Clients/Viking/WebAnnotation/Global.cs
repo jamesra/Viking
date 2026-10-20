@@ -26,17 +26,13 @@ using System.Security.Cryptography.X509Certificates;
 using rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
 using Utils;
 using VikingXNAGraphics;
-#if NETFRAMEWORK
 using WebAnnotation.UI.Commands.Segmentation;
-#endif
 using WebAnnotation.View;
-#if NETFRAMEWORK
 using Viking.UI;
 using Viking.DependencyInjection;
 using Viking.Services.Grpc;
 using WebAnnotation.Services;
 using SegmentationGrpcChannelManager = Viking.Services.Grpc.IGrpcChannelManager;
-#endif
 
 namespace WebAnnotation
 {
@@ -44,9 +40,7 @@ namespace WebAnnotation
     /// Viking WinForms module entry (settings, credentials, overlay cache size). Jotunn/net10 store init is AnnotationBootstrap.
     /// </summary>
     public class Global
-#if NETFRAMEWORK
         : IModuleServiceRegistrar, IModuleInitializer
-#endif
     {
         /// <summary>
         /// Jumping to a location causes it's diameter to occupy 1/8 the width of the screen
@@ -116,7 +110,6 @@ namespace WebAnnotation
                     return _isSegmentationServiceAvailable.Value;
 
                 string serviceUrl = AnnotationSettings.SegmentationServiceUrl;
-#if NETFRAMEWORK
                 try
                 {
                     IGrpcServiceConfiguration segmentationService = ServiceLocator.ServiceProvider?.GetService<IGrpcServiceConfiguration>();
@@ -126,7 +119,6 @@ namespace WebAnnotation
                 catch (Exception)
                 {
                 }
-#endif
                 if (string.IsNullOrWhiteSpace(serviceUrl))
                 {
                     _isSegmentationServiceAvailable = false;
@@ -145,9 +137,7 @@ namespace WebAnnotation
         public static void InvalidateSegmentationServiceAvailability()
         {
             _isSegmentationServiceAvailable = null;
-#if NETFRAMEWORK
             UI.AnnotationStatusChips.Refresh();
-#endif
         }
 
         /// <summary>
@@ -190,9 +180,7 @@ namespace WebAnnotation
 
         public static double MinRadius => AnnotationSettings.MinRadius;
 
-#if NETFRAMEWORK
         public static WebAnnotation.UI.Forms.PenAnnotationViewForm? PenAnnotationForm = null;
-#endif
 
         /// <summary>
         /// Wrapper class for annotation settings with validation
@@ -594,10 +582,8 @@ namespace WebAnnotation
                     Properties.Settings.Default.SegmentationServiceUrl = value;
                     Properties.Settings.Default.Save();
                     _isSegmentationServiceAvailable = null;
-#if NETFRAMEWORK
                     if (ServiceLocator.IsInitialized)
                         ServiceLocator.GrpcChannelManager?.ResetChannel();
-#endif
                 }
             }
 
@@ -681,9 +667,7 @@ namespace WebAnnotation
 
                     Properties.Settings.Default.SegmentationMaskThreshold = clamped;
                     Properties.Settings.Default.Save();
-#if NETFRAMEWORK
                     UI.AnnotationModeToolbar.SyncMaskThreshold();
-#endif
                     ScheduleSegmentationRequestSettingsRefresh();
                 }
             }
@@ -798,7 +782,6 @@ namespace WebAnnotation
 
             private static void RefreshAfterSegmentationRequestSettingsChange()
             {
-#if NETFRAMEWORK
                 var overlay = AnnotationOverlay.CurrentOverlay;
                 if (overlay is null)
                     return;
@@ -818,7 +801,6 @@ namespace WebAnnotation
                     parent.BeginInvoke(new System.Action(Refresh));
                 else
                     Refresh();
-#endif
             }
 
             /// <summary>
@@ -832,11 +814,7 @@ namespace WebAnnotation
                 {
                     if (!Properties.Settings.Default.AutoPolygonizeCirclesUserSet)
                     {
-#if NETFRAMEWORK
                         return VolumeAccessRoles.HasReviewAccess();
-#else
-                        return false;
-#endif
                     }
 
                     return Properties.Settings.Default.AutoPolygonizeCircles;
@@ -850,9 +828,7 @@ namespace WebAnnotation
                     if (previous == value)
                         return;
 
-#if NETFRAMEWORK
                     AnnotationOverlay.CurrentOverlay?.SetAutoPolygonizeEnabled(value);
-#endif
                 }
             }
 
@@ -902,9 +878,7 @@ namespace WebAnnotation
 
                     Properties.Settings.Default.AutoPolygonizeMaxDownsample = clamped;
                     Properties.Settings.Default.Save();
-#if NETFRAMEWORK
                     AnnotationOverlay.CurrentOverlay?.RequestAutoPolygonizeIdlePass();
-#endif
                 }
             }
 
@@ -1012,9 +986,7 @@ namespace WebAnnotation
                     if (previous == value)
                         return;
 
-#if NETFRAMEWORK
                     AnnotationOverlay.CurrentOverlay?.SetAutoPolygonizeOverlayMasksEnabled(value);
-#endif
                 }
             }
 
@@ -1042,9 +1014,7 @@ namespace WebAnnotation
                     if (previous == value)
                         return;
 
-#if NETFRAMEWORK
                     AnnotationOverlay.CurrentOverlay?.SetAutoPolygonizeOverlayPromptsEnabled(value);
-#endif
                 }
             }
 
@@ -1062,9 +1032,7 @@ namespace WebAnnotation
 
                     Properties.Settings.Default.AutoPolygonizeHideSegmentationRings = value;
                     Properties.Settings.Default.Save();
-#if NETFRAMEWORK
                     AnnotationOverlay.CurrentOverlay?.RefreshAutoPolygonizeOverlay();
-#endif
                 }
             }
 
@@ -1240,33 +1208,26 @@ namespace WebAnnotation
                 if (AnnotationOverlay.CurrentOverlay != null)
                 {
                     AnnotationOverlay.UpdateCacheSize(NumSectionsInMemory);
-#if NETFRAMEWORK
                     AnnotationOverlay.CurrentOverlay.SetAutoPolygonizeEnabled(AutoPolygonizeCircles);
                     AnnotationOverlay.CurrentOverlay.SetAutoPolygonizeOverlayMasksEnabled(AutoPolygonizeOverlayMasks);
                     AnnotationOverlay.CurrentOverlay.SetAutoPolygonizeOverlayPromptsEnabled(AutoPolygonizeOverlayPrompts);
                     AnnotationOverlay.CurrentOverlay.RefreshAutoPolygonizeOverlay();
                     RefreshActiveSegmentationPolygons();
                     RefreshActiveSegmentationPromptPoints();
-#endif
                 }
             }
 
             private static void RefreshActiveSegmentationPolygons(double? holeDropFraction = null)
             {
-#if NETFRAMEWORK
                 InvokeOnActiveSegmentationCommand(command => command.RefreshPolygonsFromLastMask(holeDropFraction));
                 AnnotationOverlay.CurrentOverlay?.RefreshAutoPolygonizeFromStoredMasks();
-#endif
             }
 
             private static void RefreshActiveSegmentationPromptPoints(double? pointRadiusPixels = null)
             {
-#if NETFRAMEWORK
                 InvokeOnActiveSegmentationCommand(command => command.RefreshPromptPointViews(pointRadiusPixels));
-#endif
             }
 
-#if NETFRAMEWORK
             private static void InvokeOnActiveSegmentationCommand(System.Action<SegmentationCommand> action)
             {
                 var parent = AnnotationOverlay.CurrentOverlay?.Parent;
@@ -1278,7 +1239,6 @@ namespace WebAnnotation
                 else
                     action(command);
             }
-#endif
         }
 
         /// <summary>
@@ -1296,11 +1256,7 @@ namespace WebAnnotation
         /// </summary>
         internal static Geometry.Vector3 Scale;
         private static readonly string WebAnnotationPath =
-#if NETFRAMEWORK
             Viking.UI.State.VolumeCachePath + System.IO.Path.DirectorySeparatorChar + "WebAnnotation";
-#else
-            System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Viking", "Cache", "WebAnnotation");
-#endif
 
         /// <summary>
         /// Bookmark filename only
@@ -1321,10 +1277,8 @@ namespace WebAnnotation
                 bool previous = WebAnnotation.Properties.Settings.Default.PenMode;
                 WebAnnotation.Properties.Settings.Default.PenMode = value;
                 WebAnnotation.Properties.Settings.Default.Save();
-#if NETFRAMEWORK
                 if (previous != value)
                     UI.AnnotationStatusChips.Refresh();
-#endif
             }
         }
 
@@ -1512,7 +1466,6 @@ namespace WebAnnotation
         }
          */
 
-#if NETFRAMEWORK
         void IModuleServiceRegistrar.RegisterServices(IServiceCollection services)
         {
             if (services is null)
@@ -1624,14 +1577,12 @@ namespace WebAnnotation
             Scale = new Geometry.Vector3(volume.DefaultXYScale.Value, volume.DefaultXYScale.Value, 90.0);
             AnnotationSettings.ApplyCorrectionShimSettings();
 
-#if NETFRAMEWORK
             // The section-correction shim reuses the annotation channels (WinHttp handler, https rewrite, bearer token).
             if (serviceProvider?.GetService<WebAnnotationModel.gRPC.IGrpcChannelManager>() is WebAnnotationModel.gRPC.IGrpcChannelManager correctionChannels)
             {
                 Viking.SectionCorrectionClient.SectionShimContext.Source = new Viking.SectionCorrectionClient.GrpcSectionShimSource(
                     uri => correctionChannels.GetOrCreate(uri).CreateCallInvoker());
             }
-#endif
 
             WebAnnotationModel.State.UserCredentials = Viking.UI.State.UserCredentials;
 
@@ -1672,9 +1623,7 @@ namespace WebAnnotation
 
             return false;
         }
-#endif
 
-#if NETFRAMEWORK
         /// <summary>
         /// After the viewer is up, jump to StartupArguments["location"] if it is a Location ID
         /// (same action as Annotation → Goto Location ID). Coordinate jumps use X/Y/Z/DS instead.
@@ -1715,7 +1664,6 @@ namespace WebAnnotation
                 Trace.WriteLine("Startup Goto Location timed out waiting for viewer.", "WebAnnotation");
             });
         }
-#endif
 
         private static bool GetEndpointFromXML(XElement elem)
         {
@@ -2012,7 +1960,6 @@ namespace WebAnnotation
         #endregion
     }
 
-#if NETFRAMEWORK
     internal sealed class WebAnnotationGrpcServiceConfiguration(ApplicationSettings applicationSettings) : IGrpcServiceConfiguration
     {
         private readonly ApplicationSettings _applicationSettings = applicationSettings;
@@ -2033,5 +1980,4 @@ namespace WebAnnotation
             return Global.GetSegmentationServiceUrl();
         }
     }
-#endif
 }

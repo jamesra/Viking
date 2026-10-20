@@ -72,7 +72,7 @@ namespace WebAnnotation.UI.Actions
             }
 
             // Cuts near or past the edge of the registration grid have vertices a discrete grid cannot map; the RBF fallback extrapolates them.
-            IVolumeToSectionTransform Transform = AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform.WithContinuousFallback();
+            IVolumeToSectionTransform Transform = AnnotationOverlay.ActiveSectionToVolumeTransform.WithContinuousFallback();
 
             Polygon PolyToCut = OriginalVolumePolygon.Clone() as Polygon;
             if (FirstIntersection.IsInner)
@@ -104,7 +104,7 @@ namespace WebAnnotation.UI.Actions
             // The walk follows the smoothed display ring, so it carries every interpolated sample.
             // Drop samples that sit on the chord between neighbors before this piece is saved.
             // The choice fill still draws from the cached cell, not from this reduced ring.
-            double downsample = AnnotationOverlay.CurrentOverlay.Parent.Downsample;
+            double downsample = AnnotationOverlay.ActiveDownsample;
             double reduceTolerance = downsample < 2 ? 4 : downsample * 4;
 
             // Each side is cut on its own: a self-intersecting source ring only spoils the side that carries the fold,
@@ -395,7 +395,7 @@ namespace WebAnnotation.UI.Actions
 
                         volume_shape_copy.AddInteriorRing(closedpath);
 
-                        IVolumeToSectionTransform transform = WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+                        IVolumeToSectionTransform transform = WebAnnotation.AnnotationOverlay.ActiveSectionToVolumeTransform;
 
                         Change2DContourAction action = new(origin_ID, RetraceCommandAction.REPLACE_INTERIOR_RING, volume_shape_copy, transform: transform);
                         actions.Add(action);
@@ -449,7 +449,7 @@ namespace WebAnnotation.UI.Actions
                     }
                 }
 
-                IVolumeToSectionTransform Transform = WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+                IVolumeToSectionTransform Transform = WebAnnotation.AnnotationOverlay.ActiveSectionToVolumeTransform;
                 Polygon mosaic_shape = Transform.TryMapShapeVolumeToSection(newShape);
                 if (mosaic_shape is null)
                     return actions;

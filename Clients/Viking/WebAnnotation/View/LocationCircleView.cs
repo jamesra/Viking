@@ -226,7 +226,7 @@ namespace WebAnnotation.View
                (path.HasSelfIntersection == false && TypeCode.AllowsOpen2DShape()))
             {
                 //Both are closed shapes, so allow continuing a linked annotation
-                IVolumeToSectionTransform Transform = WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+                IVolumeToSectionTransform Transform = WebAnnotation.AnnotationOverlay.ActiveSectionToVolumeTransform;
 
                 //TODO: Check our location links to make sure the shape does not intersect an existing annotation of the same structure on this section
                 IShape2D volume_shape = path.HasSelfIntersection

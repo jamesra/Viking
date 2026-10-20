@@ -6,9 +6,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-#if NETFRAMEWORK
 using System.Windows.Forms;
-#endif
 using Viking.AnnotationServiceTypes;
 using VikingXNA;
 using VikingXNAGraphics;

@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
-#if NETFRAMEWORK
 using System.Windows.Forms;
-#endif
 using Viking.Common;
 using Viking.Common.UI;
 using WebAnnotationModel;
@@ -14,9 +12,7 @@ using WebAnnotationModel.Objects;
 namespace WebAnnotation.ViewModel
 {
     public class Structure(StructureObj data) : Viking.Objects.UIObjBase, IEquatable<Structure>, IEqualityComparer<Structure>
-#if NETFRAMEWORK
         , IContextMenu
-#endif
     {
         public StructureObj modelObj = data;
 
@@ -179,7 +175,6 @@ namespace WebAnnotation.ViewModel
             remove => modelObj.PropertyChanged -= value;
         }
 
-#if NETFRAMEWORK
         public override ContextMenuStrip ContextMenu
         {
             get
@@ -220,30 +215,15 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-#endif
 
         public override void Save() => _ = SaveAsync();
 
         async Task SaveAsync()
         {
-#if NETFRAMEWORK
             await AnnotationOverlay.SaveStructuresWithMessageBoxOnError();
-#else
-            try
-            {
-                if (!await Store.Structures.Save())
-                    System.Diagnostics.Trace.WriteLine("Structure save was not confirmed by the server.");
-            }
-            catch (Exception e)
-            {
-                System.Diagnostics.Trace.WriteLine(e);
-            }
-#endif
         }
 
-#if NETFRAMEWORK
         public override Viking.UI.Controls.GenericTreeNode CreateNode() => new Viking.UI.Controls.GenericTreeNode(this);
-#endif
 
         public override Type[] AssignableParentTypes => [typeof(StructureObj)];
 
@@ -251,7 +231,6 @@ namespace WebAnnotation.ViewModel
 
         #endregion
 
-#if NETFRAMEWORK
         protected void ContextMenu_OnMorphology(object sender, EventArgs e) => Global.Export.OpenMorphology(ID);
 
 
@@ -356,7 +335,6 @@ namespace WebAnnotation.ViewModel
 
             AnnotationOverlay.GoToLocation(loc);
         }
-#endif
 
         public override void Delete() => _ = DeleteAsync();
 

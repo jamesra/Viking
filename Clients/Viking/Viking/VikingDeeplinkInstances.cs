@@ -110,8 +110,13 @@ namespace Viking
             {
                 try
                 {
+#if NETFRAMEWORK
                     using var server = new NamedPipeServerStream(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
                         PipeOptions.None, 4096, 4096, security);
+#else
+                    using var server = NamedPipeServerStreamAcl.Create(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
+                        PipeOptions.None, 4096, 4096, security);
+#endif
                     server.WaitForConnection();
 
                     var reader = new StreamReader(server, Encoding.UTF8, false, 4096, leaveOpen: true);

@@ -78,7 +78,7 @@ namespace WebAnnotation.UI.Actions
             RetraceType = retraceType;
             Location = Store.Locations[locationID];
 
-            Transform = transform ?? WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+            Transform = transform ?? WebAnnotation.AnnotationOverlay.ActiveSectionToVolumeTransform;
 
             NewMosaicPolygon = newMosaicPolygon;
             NewVolumePolygon = newVolumePolygon ?? Transform.TryMapShapeSectionToVolume(newMosaicPolygon);
@@ -90,7 +90,7 @@ namespace WebAnnotation.UI.Actions
             this.ClockwiseContour = ClockwiseContour;
             RetraceType = retraceType;
             Location = location;
-            Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+            Transform = transform ?? AnnotationOverlay.ActiveSectionToVolumeTransform;
 
             NewMosaicPolygon = newMosaicPolygon;
 
@@ -156,7 +156,7 @@ namespace WebAnnotation.UI.Actions
     internal class Change1DContourAction(LocationObj location, Polyline newVolumePolyline, IVolumeToSectionTransform? transform = null) : IAction, IEquatable<Change1DContourAction>
     {
         public readonly LocationObj Location = location;
-        private readonly IVolumeToSectionTransform Transform = transform ?? AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
+        private readonly IVolumeToSectionTransform Transform = transform ?? AnnotationOverlay.ActiveSectionToVolumeTransform;
 
         /// <summary>
         /// The volume space polygon we want to add to the location

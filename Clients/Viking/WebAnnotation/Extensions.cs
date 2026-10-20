@@ -35,14 +35,12 @@ namespace WebAnnotation
 
     public static class KeysExtensions
     {
-#if NETFRAMEWORK
         public static bool ShiftOrCtrlPressed(this System.Windows.Forms.Keys keys) =>
             keys == System.Windows.Forms.Keys.Control || keys == System.Windows.Forms.Keys.Shift;
 
         public static bool ShiftPressed(this System.Windows.Forms.Keys keys) => keys == System.Windows.Forms.Keys.Shift;
 
         public static bool CtrlPressed(this System.Windows.Forms.Keys keys) => keys == System.Windows.Forms.Keys.Control;
-#endif
     }
 
     public static class HitTestResultExtensions
@@ -233,9 +231,7 @@ namespace WebAnnotation
         {
             Viking.VolumeModel.IVolumeToSectionTransform mapper =
                 AnnotationBootstrap.Transforms?.GetSectionToVolumeTransform((int)l.Z)
-#if NETFRAMEWORK
                 ?? Viking.UI.State.volume.GetSectionToVolumeTransform((int)l.Z)
-#endif
                 ;
             if (mapper is null)
             {
