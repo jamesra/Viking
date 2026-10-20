@@ -157,6 +157,7 @@ namespace Jotunn
         static void ShareSessionWithVikingState(Volume volume, LoginWindow login)
         {
             Viking.UI.State.volume = new Viking.ViewModels.VolumeViewModel(volume);
+            Viking.UI.State.MainThreadDispatcher = Current.Dispatcher;
             if (login.Credentials != null)
                 Viking.UI.State.UserCredentials = login.Credentials;
             if (login.BearerToken != null)

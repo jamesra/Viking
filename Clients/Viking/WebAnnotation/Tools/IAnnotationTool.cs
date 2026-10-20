@@ -20,4 +20,12 @@ namespace WebAnnotation.Tools
 
         void Cancel();
     }
+
+    /// <summary>
+    /// A tool that uses the right and middle buttons itself (segmentation's background points), so the view does not pan
+    /// or open its context menu with them while the tool is active.
+    /// </summary>
+    public interface IAnnotationToolUsesAllButtons
+    {
+    }
 }

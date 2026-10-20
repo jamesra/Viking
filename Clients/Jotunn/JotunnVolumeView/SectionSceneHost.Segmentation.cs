@@ -1,0 +1,161 @@
+using System;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Xna.Framework.Graphics;
+using Viking.VolumeModel;
+using WebAnnotation.UI.Commands.Segmentation;
+using JotunnSectionVM = Viking.VolumeViewModel.SectionViewModel;
+using VolumeVM = Viking.VolumeViewModel.VolumeViewModel;
+
+namespace Viking.VolumeView
+{
+    /// <summary>
+    /// The active grid cell as a <see cref="ISegmentationViewport"/>, so Viking's segmentation session can capture and
+    /// upload mosaic tiles from Jotunn's view.
+    /// </summary>
+    public partial class SectionSceneHost : ISegmentationViewport
+    {
+        /// <summary>Longest a capture waits for its tile textures before rendering what has loaded.</summary>
+        static readonly TimeSpan CaptureTextureWait = TimeSpan.FromSeconds(20);
+
+        double ISegmentationViewport.CameraDownsample => Scene?.Camera.Downsample ?? 1;
+
+        int ISegmentationViewport.ViewportWidth
+        {
+            get
+            {
+                ApplyActiveCellViewport();
+                return Scene?.Viewport.Width ?? 1;
+            }
+        }
+
+        int ISegmentationViewport.ViewportHeight
+        {
+            get
+            {
+                ApplyActiveCellViewport();
+                return Scene?.Viewport.Height ?? 1;
+            }
+        }
+
+        Geometry.Vector2 ISegmentationViewport.ScreenToWorld(double x, double y)
+        {
+            ApplyActiveCellViewport();
+            return ScreenToWorld(new Geometry.Vector2(x, y));
+        }
+
+        int ISegmentationViewport.SectionNumber => SectionNumber;
+
+        string ISegmentationViewport.VolumeName => Volume?.Name ?? string.Empty;
+
+        string ISegmentationViewport.VolumeTransform =>
+            ActiveVolumeVm()?.ActiveVolumeTransform ?? Volume?.DefaultVolumeTransform ?? string.Empty;
+
+        string ISegmentationViewport.SectionTransform => SectionTransformFor(SectionNumber);
+
+        string ISegmentationViewport.Channel => ChannelFor(SectionNumber);
+
+        /// <summary>Jotunn draws one channel per cell.</summary>
+        bool ISegmentationViewport.IsGrayscale => true;
+
+        VolumeVM ActiveVolumeVm() => Grid?.DataContext as VolumeVM ?? DataContext as VolumeVM;
+
+        JotunnSectionVM SectionVmFor(int sectionNumber)
+        {
+            VolumeVM volume = ActiveVolumeVm();
+            return volume != null && volume.SectionViewModels.ContainsKey(sectionNumber) ? volume.SectionViewModels[sectionNumber] : null;
+        }
+
+        string SectionTransformFor(int sectionNumber)
+        {
+            Section section = Volume != null && Volume.Sections.TryGetValue(sectionNumber, out Section s) ? s : null;
+            return SectionVmFor(sectionNumber)?.SelectedSectionTransform ?? section?.DefaultPyramidTransform ?? string.Empty;
+        }
+
+        string ChannelFor(int sectionNumber)
+        {
+            Section section = Volume != null && Volume.Sections.TryGetValue(sectionNumber, out Section s) ? s : null;
+            return SectionVmFor(sectionNumber)?.SelectedChannel ?? section?.DefaultChannel ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Draws the section's tiles for <paramref name="tileScene"/> into a new render target, as Viking's viewer does
+        /// for segmentation captures. Unless <paramref name="asyncTextureLoad"/> is set, it draws again every 100 ms until
+        /// every tile's texture has loaded (or <see cref="CaptureTextureWait"/> passes). Runs on the UI thread, which owns
+        /// the device. Annotations are never drawn into a capture.
+        /// </summary>
+        public async Task<RenderTarget2D> RenderSceneToTexture(VikingXNA.Scene tileScene, float centerX, float centerY, int sectionNumber,
+            bool showOverlays, bool asyncTextureLoad, CancellationToken token)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                return await Dispatcher.InvokeAsync(() =>
+                    RenderSceneToTexture(tileScene, centerX, centerY, sectionNumber, showOverlays, asyncTextureLoad, token)).Task.Unwrap()
+                    .ConfigureAwait(false);
+            }
+
+            tileScene.Camera.LookAt = new Microsoft.Xna.Framework.Vector2(centerX, centerY);
+            GraphicsDevice device = Device;
+            if (device == null || Volume == null || !Volume.Sections.TryGetValue(sectionNumber, out Section section))
+                return null;
+
+            _renderer.EnsureMappingInitialized(section, token);
+            RenderTarget2D target = new(device, tileScene.Viewport.Width, tileScene.Viewport.Height, false,
+                SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
+
+            Stopwatch waited = Stopwatch.StartNew();
+            try
+            {
+                while (true)
+                {
+                    token.ThrowIfCancellationRequested();
+                    bool complete = DrawTilesInto(target, device, tileScene, section, token);
+                    if (complete || asyncTextureLoad || waited.Elapsed > CaptureTextureWait)
+                    {
+                        if (!complete)
+                            Trace.WriteLine($"Segmentation capture of section {sectionNumber} used partly loaded tiles");
+                        return target;
+                    }
+
+                    await Task.Delay(100, token).ConfigureAwait(true);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                target.Dispose();
+                return null;
+            }
+        }
+
+        /// <summary>One synchronous tile pass into <paramref name="target"/>; restores the device and renderer state after.</summary>
+        bool DrawTilesInto(RenderTarget2D target, GraphicsDevice device, VikingXNA.Scene tileScene, Section section, CancellationToken token)
+        {
+            RenderTargetBinding[] savedTargets = device.GetRenderTargets();
+            Viewport savedViewport = device.Viewport;
+            bool savedAsync = _renderer.AsynchTextureLoad;
+            string savedVolumeTransform = _renderer.VolumeTransformName;
+            string savedSectionTransform = _renderer.SectionTransformName;
+            try
+            {
+                device.SetRenderTarget(target);
+                device.Clear(ClearOptions.Target | ClearOptions.DepthBuffer | ClearOptions.Stencil, Microsoft.Xna.Framework.Color.Black, 1f, 0);
+                // Full-resolution tiles only, as Viking's capture does with synchronous texture loads.
+                _renderer.AsynchTextureLoad = false;
+                _renderer.VolumeTransformName = ActiveVolumeVm()?.ActiveVolumeTransform ?? string.Empty;
+                _renderer.SectionTransformName = SectionTransformFor(section.Number);
+                int drawn = _renderer.DrawTiles(device, tileScene, section, ChannelFor(section.Number), token,
+                    loadFullResolution: true, queueTextureLoads: true);
+                return drawn >= 0 && _renderer.LastDrawTilesComplete;
+            }
+            finally
+            {
+                device.SetRenderTargets(savedTargets);
+                device.Viewport = savedViewport;
+                _renderer.AsynchTextureLoad = savedAsync;
+                _renderer.VolumeTransformName = savedVolumeTransform;
+                _renderer.SectionTransformName = savedSectionTransform;
+            }
+        }
+    }
+}

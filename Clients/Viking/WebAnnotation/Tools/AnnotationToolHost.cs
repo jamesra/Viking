@@ -53,6 +53,9 @@ namespace WebAnnotation.Tools
 
         public bool IsIdle => ReferenceEquals(_current, _defaultTool);
 
+        /// <summary>True while the active tool takes right and middle clicks itself (see <see cref="IAnnotationToolUsesAllButtons"/>).</summary>
+        public bool ToolUsesAllButtons => _current is IAnnotationToolUsesAllButtons;
+
         public void ArmPlace(AnnotationPlaceKind kind)
         {
             ArmedPlaceKind = kind;
@@ -239,6 +242,27 @@ namespace WebAnnotation.Tools
         public void ToggleTerminal(LocationObj location) => _ = AnnotationToolActions.ToggleTerminalAsync(_context, location);
 
         public void ToggleOffEdge(LocationObj location) => _ = AnnotationToolActions.ToggleOffEdgeAsync(_context, location);
+
+        /// <summary>
+        /// Viking's Tab: interactive segmentation of a new structure of the type chosen in the type list, else type 1
+        /// (cell) as in Viking. Only while no tool is active.
+        /// </summary>
+        public void StartSegmentation(UI.Commands.Segmentation.ISegmentationViewport viewport, Viking.Services.Grpc.IGrpcChannelManager channels)
+        {
+            if (!IsIdle)
+                return;
+
+            long? typeId = SelectedStructureTypeId;
+            if (!typeId.HasValue && Store.IsInitialized && Store.StructureTypes.TryGetObjectByID(1, out StructureTypeObj cell) && cell != null)
+                typeId = 1;
+            if (!typeId.HasValue)
+            {
+                StatusChanged?.Invoke(this, "Choose a structure type to segment");
+                return;
+            }
+
+            StartTool(new SegmentTool(_context, viewport, channels, typeId.Value));
+        }
 
         /// <summary>Viking's Ctrl+Z: reverts the newest recorded edit and saves it. Only while no tool is active.</summary>
         public bool Undo()

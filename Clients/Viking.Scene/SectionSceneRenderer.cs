@@ -129,6 +129,12 @@ namespace Viking.Rendering
         }
 
         /// <summary>
+        /// True when the last <see cref="DrawTiles"/> drew every visible tile with its texture read (none still loading or
+        /// queued). Tile captures (segmentation) draw again until it is set.
+        /// </summary>
+        public bool LastDrawTilesComplete { get; private set; }
+
+        /// <summary>
         /// Draws visible tiles for one section. Returns without drawing when the mapping
         /// is missing or still initializing; annotations are drawn by Draw after this returns.
         /// </summary>
@@ -142,6 +148,7 @@ namespace Viking.Rendering
             bool loadFullResolution = true,
             bool queueTextureLoads = true)
         {
+            LastDrawTilesComplete = false;
             if (_volume is null || _mappingManager is null || section is null)
             {
                 return -1;
@@ -278,6 +285,7 @@ namespace Viking.Rendering
                 texturedDrawn += hasTex;
             }
 
+            LastDrawTilesComplete = complete;
             int uncovered = Math.Max(0, totalVisible - texturedDrawn - totalNotFound);
             RequestFollowUpPresentIfNeeded(totalQueued, texturedDrawn, complete, uncovered, mapping.HasPendingTileConstruction);
             return texturedDrawn;

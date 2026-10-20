@@ -25,7 +25,7 @@ namespace Viking.VolumeView
     /// <summary>
     /// Jotunn section viewport. Owns SectionSceneRenderer and implements IViewportHost for annotation input.
     /// </summary>
-    public class SectionSceneHost : MonoGameHwndHost, IViewportHost
+    public partial class SectionSceneHost : MonoGameHwndHost, IViewportHost
     {
         readonly SectionSceneRenderer _renderer = new();
         VirtualizingGrid _grid;
@@ -723,6 +723,12 @@ namespace Viking.VolumeView
                 return;
             }
 
+            if (AnnotationTools?.ToolUsesAllButtons == true && button is MouseButton.Right or MouseButton.Middle)
+            {
+                AnnotationTools.OnMouseDown(screen, button, clickCount);
+                return;
+            }
+
             if (button == MouseButton.Right)
             {
                 _panStartScreen = p;
@@ -1018,7 +1024,7 @@ namespace Viking.VolumeView
         protected override void OnMouseDown(MouseButtonEventArgs e)
         {
             base.OnMouseDown(e);
-            if (e.ChangedButton == MouseButton.XButton1 || e.ChangedButton == MouseButton.XButton2)
+            if (e.ChangedButton == MouseButton.XButton1 || e.ChangedButton == MouseButton.XButton2 || e.ChangedButton == MouseButton.Middle)
             {
                 HandleViewMouseDown(e.GetPosition(this), e.ChangedButton, e.ClickCount);
                 e.Handled = true;

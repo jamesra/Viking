@@ -81,6 +81,7 @@
     <Compile Include="Commands\PenModeContactTests.cs" />
     <Compile Include="View\LocationLineHitTestTests.cs" />
     <Compile Include="Commands\SegmentationServiceSessionTests.cs" />
+    <Compile Include="Commands\SegmentationViewportInterfaceTests.cs" />
     <Compile Include="Commands\CommandConstructorBinderTests.cs" />
     <Compile Include="Commands\StructureColorForIdTests.cs" />
     <Compile Include="Commands\SegmentationCommandTests.cs" />

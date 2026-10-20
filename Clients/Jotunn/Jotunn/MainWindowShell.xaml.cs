@@ -200,6 +200,11 @@ namespace Jotunn
                 CopyPointerPosition();
                 e.Handled = true;
             }
+            else if (!ctrl && e.Key == Key.Tab && _tools != null && _tools.IsIdle)
+            {
+                StartSegmentation();
+                e.Handled = true;
+            }
             else if (ctrl && !shift && e.Key == Key.Z)
             {
                 GlobalCommands.UndoAnnotationEdit.Execute(null, this);
@@ -651,24 +656,32 @@ namespace Jotunn
             _status?.SetMessage($"Exported {locals.Count} annotations");
         }
 
-        void OnSegmentation(object sender, ExecutedRoutedEventArgs e)
+        void OnSegmentation(object sender, ExecutedRoutedEventArgs e) => StartSegmentation();
+
+        Viking.Services.Grpc.IGrpcChannelManager _segmentationChannels;
+
+        /// <summary>Viking's Tab: segment a new structure with the segmentation service chosen at login.</summary>
+        void StartSegmentation()
         {
-            string url = App.SegmentationServiceUrl;
+            string url = !string.IsNullOrWhiteSpace(App.SegmentationServiceUrl)
+                ? App.SegmentationServiceUrl
+                : WebAnnotation.Global.AnnotationSettings.SegmentationServiceUrl;
             if (string.IsNullOrWhiteSpace(url))
             {
-                MessageBox.Show(
-                    "No segmentation service URL was set at login. SAM/CapsLock segmentation still runs in Viking; Jotunn stores the URL for a later interactive tool.",
-                    "Jotunn",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                _status?.SetMessage("No segmentation service was chosen at login");
                 return;
             }
 
-            MessageBox.Show(
-                $"Segmentation service is configured:\n{url}\n\nInteractive SAM (CapsLock) is still Viking-only. The URL is stored for the Jotunn segmentation tool.",
-                "Jotunn",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            if (_tools == null || _sectionGrid?.SceneHostControl is not SectionSceneHost host)
+                return;
+
+            _segmentationChannels ??= new Viking.Services.Grpc.GrpcChannelManager(new FixedSegmentationEndpoint(url));
+            _tools.StartSegmentation(host, _segmentationChannels);
+        }
+
+        sealed class FixedSegmentationEndpoint(string endpoint) : Viking.DependencyInjection.IGrpcServiceConfiguration
+        {
+            public string Endpoint() => endpoint;
         }
 
         void OnExit(object sender, RoutedEventArgs e) => Close();

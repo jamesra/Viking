@@ -66,7 +66,8 @@ namespace Viking.VolumeView
 
         void OnViewMouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (e.ChangedButton != MouseButton.XButton1 && e.ChangedButton != MouseButton.XButton2)
+            // Middle clicks matter only to tools that take every button (segmentation removes a point with it).
+            if (e.ChangedButton != MouseButton.XButton1 && e.ChangedButton != MouseButton.XButton2 && e.ChangedButton != MouseButton.Middle)
                 return;
 
             SceneHost.HandleViewMouseDown(e.GetPosition(SceneHost), e.ChangedButton, e.ClickCount);
