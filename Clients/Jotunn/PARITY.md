@@ -61,4 +61,8 @@ Jotunn has no Viking shell, so it fills in what Viking's shell would have set up
 
 ## Not yet in Jotunn
 
-- **Auto-polygonize in a grid of several sections**: proposals cover the active cell's section only (sized from that cell's view).
+No known Viking annotation feature is missing. One difference:
+
+- **Auto-polygonize in a grid of several sections**: proposals cover the active cell's section only, sized from that cell's view. Viking also covers only the section it shows.
+
+None of this has been exercised against a live segmentation server or in the GUI. It is covered by unit tests and builds only.
