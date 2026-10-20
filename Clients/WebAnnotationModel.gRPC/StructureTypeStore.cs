@@ -27,7 +27,7 @@ namespace WebAnnotationModel.gRPC
             IServerAnnotationsClientFactory<IStructureTypesRepository> structureTypeClientFactory,
             IObjectConverter<StructureTypeObj, IStructureType> objToServerObjConverter,
             IObjectConverter<IStructureType, StructureTypeObj> serverObjToObjConverter,
-            IObjectUpdater<StructureTypeObj, IStructureType> objUpdater = null) : base(clientFactory, null, objToServerObjConverter, serverObjToObjConverter)
+            IObjectUpdater<StructureTypeObj, IStructureType> objUpdater = null) : base(clientFactory, null, objToServerObjConverter, serverObjToObjConverter, objUpdater)
         {
             _structureTypeClientFactory = structureTypeClientFactory;
         }

@@ -116,8 +116,18 @@ namespace WebAnnotationModel.gRPC.Converters
     /// Copies a server refresh onto a cached structure type without marking it for Save. A type with an unsaved local
     /// edit (DBAction not NONE) keeps the user's values until that edit is saved.
     /// </summary>
-    public class StructureTypeServerToClientUpdater : IObjectUpdater<StructureTypeObj, StructureType>
+    public class StructureTypeServerToClientUpdater : IObjectUpdater<StructureTypeObj, StructureType>,
+        IObjectUpdater<StructureTypeObj, IStructureType>
     {
+        public Task<bool> Update(StructureTypeObj obj, IStructureType update)
+        {
+            if (update is StructureType proto)
+                return Update(obj, proto);
+            throw new ArgumentException(
+                $"Expected {nameof(StructureType)}, got {update?.GetType().FullName ?? "null"}",
+                nameof(update));
+        }
+
         public async Task<bool> Update(StructureTypeObj obj, StructureType update)
         {
             if (obj.DBAction != DBACTION.NONE)

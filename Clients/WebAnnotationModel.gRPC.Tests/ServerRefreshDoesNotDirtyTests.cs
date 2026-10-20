@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Google.Protobuf.WellKnownTypes;
 using Geometry;
+using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using Viking.AnnotationServiceTypes.Interfaces;
@@ -140,6 +141,27 @@ namespace WebAnnotationModel.gRPC.Tests
                 new StructureType { Id = 3, Name = "server", Code = "S", Notes = string.Empty, Color = 0xFF00FF00u });
 
             Assert.That(changed, Is.True);
+            Assert.That(obj.Name, Is.EqualTo("server"));
+            Assert.That(obj.DBAction, Is.EqualTo(DBACTION.NONE));
+        }
+
+        /// <summary>
+        /// StructureTypeStore takes its updater as <c>IObjectUpdater&lt;StructureTypeObj, IStructureType&gt;</c>; without that
+        /// registration a refreshed type kept its cached values.
+        /// </summary>
+        [Test]
+        public async Task StructureTypeStoreUpdater_IsRegisteredForTheStoresInterfaceType()
+        {
+            var services = new ServiceCollection();
+            services.AddStandardStructureTypeConverters();
+            var updater = services.BuildServiceProvider()
+                .GetService<WebAnnotationModel.ServerInterface.IObjectUpdater<StructureTypeObj, IStructureType>>();
+            Assert.That(updater, Is.Not.Null);
+
+            var obj = new StructureTypeObj(3) { Name = "cached", Code = "C" };
+            obj.DBAction = DBACTION.NONE;
+            await updater.Update(obj, new StructureType { Id = 3, Name = "server", Code = "S", Notes = string.Empty, Color = 0xFF00FF00u });
+
             Assert.That(obj.Name, Is.EqualTo("server"));
             Assert.That(obj.DBAction, Is.EqualTo(DBACTION.NONE));
         }
