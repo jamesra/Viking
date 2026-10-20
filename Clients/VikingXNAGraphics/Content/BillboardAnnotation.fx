@@ -730,6 +730,13 @@ technique CircleRingOverlayEffect
 //White diagonal stripes inside a clip mask, worked out per pixel so stripe and clip edges stay smooth at any zoom.
 //Positions are measured in mask texels (TexCoord * stripeTexelCount), so the stripes are tied to the image and scale with zoom.
 
+//How far the stripes drift sideways, toward +stripeDirection, in stripe periods per band half width the band travels.
+//The drift follows stripeBand.x / stripeBand.y, so it runs at a steady rate while a band sweeps, whatever the polygon's size,
+//and stops when no band is set. The shimmer band travels about 8.7 half widths per sweep, so 0.3 drifts about 2.6 periods.
+//Raise it for faster drift; keep it under about 0.5 so a 250 ms sweep at 30 fps moves less than half a period per frame,
+//or the stripes strobe instead of gliding.
+static const float StripeDriftPeriodsPerHalfBand = 0.3;
+
 uniform const texture StripeClipTexture;
 
 //Linear filtering makes the clip edge a smooth curve through the mask instead of texel-sized steps.
@@ -768,11 +775,9 @@ PixelShaderOutput StripePixelShaderFunction(TexturePixelShaderInput input)
 	float clipCoverage = saturate(clipValue / max(fwidth(clipValue), 1e-5) + 0.5);
 
 	//Stripes: edge is the distance to the nearest stripe edge in periods, positive on a stripe and negative in a gap.
-	//While a band sweeps, the stripes move with it: the pattern shifts along stripeDirection by exactly the distance the band
-	//centre moves (dot(texel, stripeDirection) and x + y change by the same amount per texel step for the (1, 1) and (1, -1)
-	//directions), so the lines travel at the same speed as the white flash and keep their orientation. frac below wraps it.
-	float travel = stripeBand.y > 0 ? stripeBand.x : 0;
-	float u = (dot(texel, stripeDirection) - travel) / stripePeriod;
+	//While a band sweeps, the stripes also drift across their own length; frac below makes the drift wrap seamlessly.
+	float drift = stripeBand.y > 0 ? StripeDriftPeriodsPerHalfBand * stripeBand.x / stripeBand.y : 0;
+	float u = (dot(texel, stripeDirection) / stripePeriod) - drift;
 	float uWidth = max(fwidth(u), 1e-5);
 	float edge = 0.25 - abs(frac(u + 0.25) - 0.5);
 	float stripe = saturate(edge / uWidth + 0.5);
