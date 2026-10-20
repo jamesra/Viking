@@ -211,6 +211,36 @@ namespace Jotunn
             _sectionGrid?.SceneHostControl?.Invalidate();
         }
 
+        bool _volumePositionJobShowing;
+
+        /// <summary>
+        /// Viking's "Update Volume Positions…" (Review or Admin role): recomputes stored volume positions for the chosen
+        /// sections and transform. Progress shows in the status bar; one job at a time.
+        /// </summary>
+        void OnUpdateVolumePositions(object sender, RoutedEventArgs e)
+        {
+            _ = WebAnnotation.UI.VolumePositionUpdateLauncher.RunAsync((title, cancellation) =>
+            {
+                if (_volumePositionJobShowing)
+                    return null;
+
+                _volumePositionJobShowing = true;
+                var progress = new Progress<Viking.UI.Controls.ViewerTaskProgress>(p =>
+                    _status?.SetMessage(p.Total > 0 ? $"{title}: {p.Message} ({p.Completed}/{p.Total})" : $"{title}: {p.Message}"));
+                IDisposable finish = new Finished(() =>
+                {
+                    _volumePositionJobShowing = false;
+                    ReloadAnnotations();
+                });
+                return (progress, finish);
+            });
+        }
+
+        sealed class Finished(Action onDispose) : IDisposable
+        {
+            public void Dispose() => onDispose();
+        }
+
         void OnExportMotifs(object sender, RoutedEventArgs e)
         {
             if (WebAnnotation.Global.Export is WebAnnotation.Export export)

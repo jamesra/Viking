@@ -69,6 +69,7 @@
                 <MenuItem Header="_Favorite structure types…" Click="OnChooseFavoriteStructureTypes" InputGestureText="F6"/>
                 <MenuItem x:Name="PenModeMenuItem" Header="Pe_n mode" IsCheckable="True" Click="OnTogglePenModeMenu" InputGestureText="Num * / Shift+8"/>
                 <MenuItem Header="Randomize all _colors" Click="OnRandomizeAllColors"/>
+                <MenuItem Header="Update _volume positions…" Click="OnUpdateVolumePositions"/>
                 <MenuItem x:Name="ExportMotifsMenuItem" Header="Export _motifs (Tulip)" Click="OnExportMotifs"/>
                 <Separator/>
                 <MenuItem Header="Annotation _preferences…" Command="{x:Static jotunnuicommon:GlobalCommands.AnnotationPreferences}"/>

@@ -59,8 +59,25 @@ namespace WebAnnotation.UI
                 MessageBoxDefaultButton.Button2) == DialogResult.Yes;
         }
 
+        /// <summary>
+        /// Starts the host's progress display for the job (Viking's status-bar task): the progress sink and the handle
+        /// that ends the display. Null when the host cannot show it now (another task is showing).
+        /// </summary>
+        internal delegate (IProgress<ViewerTaskProgress> Progress, IDisposable Finish)? BeginProgressDisplay(
+            string title, CancellationTokenSource cancellation);
+
         /// <summary>Called from the Annotation menu click. Re-checks reviewer access before opening the dialog.</summary>
-        public static async Task RunAsync()
+        public static Task RunAsync() => RunAsync(BeginOnViewer);
+
+        /// <summary>Viking's status-bar task on the section viewer.</summary>
+        private static (IProgress<ViewerTaskProgress> Progress, IDisposable Finish)? BeginOnViewer(string title, CancellationTokenSource cancellation)
+        {
+            ViewerTaskHandle? handle = State.ViewerControl?.TryBeginViewerTask(title, cancellation);
+            return handle is null ? null : (handle.Progress, handle);
+        }
+
+        /// <summary>As <see cref="RunAsync()"/>, for a host that shows the job's progress its own way (Jotunn).</summary>
+        internal static async Task RunAsync(BeginProgressDisplay beginProgress)
         {
             if (Interlocked.Exchange(ref _menuBusy, 1) == 1)
                 return;
@@ -70,7 +87,7 @@ namespace WebAnnotation.UI
                 if (!VolumeAccessRoles.HasReviewAccess())
                     return;
 
-                await RunCoreAsync().ConfigureAwait(true);
+                await RunCoreAsync(beginProgress).ConfigureAwait(true);
             }
             catch (Exception ex)
             {
@@ -83,7 +100,7 @@ namespace WebAnnotation.UI
             }
         }
 
-        private static async Task RunCoreAsync()
+        private static async Task RunCoreAsync(BeginProgressDisplay beginProgress)
         {
             if (_activeRun is not null && !_activeRun.IsCompleted)
             {
@@ -100,8 +117,7 @@ namespace WebAnnotation.UI
             }
 
             VolumeViewModel? volume = State.volume;
-            SectionViewerControl? viewer = State.ViewerControl;
-            if (volume is null || viewer is null)
+            if (volume is null)
             {
                 MessageBox.Show(
                     "Open a volume before updating volume positions.",
@@ -118,10 +134,10 @@ namespace WebAnnotation.UI
             if (dialog.ShowDialog(State.ViewerForm) != DialogResult.OK)
                 return;
 
-            Launch(volume, viewer, dialog);
+            Launch(volume, beginProgress, dialog);
         }
 
-        private static void Launch(VolumeViewModel volume, SectionViewerControl viewer, UpdateVolumePositionsForm dialog)
+        private static void Launch(VolumeViewModel volume, BeginProgressDisplay beginProgress, UpdateVolumePositionsForm dialog)
         {
             var sections = new List<VolumePositionSection>();
             if (dialog.IsAllSections)
@@ -152,7 +168,7 @@ namespace WebAnnotation.UI
             }
 
             var cancellation = new CancellationTokenSource();
-            ViewerTaskHandle? handle = viewer.TryBeginViewerTask("Update volume positions", cancellation);
+            (IProgress<ViewerTaskProgress> Progress, IDisposable Finish)? handle = beginProgress("Update volume positions", cancellation);
             if (handle is null)
             {
                 cancellation.Dispose();
@@ -168,14 +184,15 @@ namespace WebAnnotation.UI
             string? transformName = dialog.TransformName;
             _activeCancellation = cancellation;
             HookExitConfirmation(State.ViewerForm);
-            _activeRun = FinishAsync(mappings, sections, transformName, handle, cancellation);
+            _activeRun = FinishAsync(mappings, sections, transformName, handle.Value.Progress, handle.Value.Finish, cancellation);
         }
 
         private static async Task FinishAsync(
             MappingManager mappings,
             List<VolumePositionSection> sections,
             string? transformName,
-            ViewerTaskHandle handle,
+            IProgress<ViewerTaskProgress> progress,
+            IDisposable finish,
             CancellationTokenSource cancellation)
         {
             VolumePositionUpdateResult result;
@@ -186,7 +203,7 @@ namespace WebAnnotation.UI
                         mappings,
                         sections,
                         transformName,
-                        handle.Progress,
+                        progress,
                         cancellation.Token).ConfigureAwait(false)).ConfigureAwait(true);
             }
             catch (OperationCanceledException)
@@ -200,7 +217,7 @@ namespace WebAnnotation.UI
             }
             finally
             {
-                handle.Dispose();
+                finish.Dispose();
                 if (ReferenceEquals(_activeCancellation, cancellation))
                     _activeCancellation = null;
                 cancellation.Dispose();
