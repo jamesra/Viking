@@ -264,6 +264,22 @@ namespace WebAnnotation.Tools
             StartTool(new SegmentTool(_context, viewport, channels, typeId.Value));
         }
 
+        /// <summary>Viking's "Segment" on a circle: segments from the circle's prompt and replaces its shape on accept.</summary>
+        public void StartSegmentationOf(LocationObj circle, UI.Commands.Segmentation.ISegmentationViewport viewport,
+            Viking.Services.Grpc.IGrpcChannelManager channels)
+        {
+            if (!IsIdle || circle == null)
+                return;
+
+            if (!SegmentTool.TryCreateCirclePrompt(circle, _context.Mapper, out var prompt))
+            {
+                StatusChanged?.Invoke(this, "This circle could not be mapped onto the volume");
+                return;
+            }
+
+            StartTool(new SegmentTool(_context, viewport, channels, circle, prompt));
+        }
+
         /// <summary>Viking's Ctrl+Z: reverts the newest recorded edit and saves it. Only while no tool is active.</summary>
         public bool Undo()
         {

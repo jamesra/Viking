@@ -23,7 +23,8 @@ namespace WebAnnotation.Tools
     /// Viking's interactive SAM2 segmentation (Tab) for hosts without its WinForms command. Left click adds an object
     /// point, right click a background point, middle click removes the nearest point, Backspace the last one. Each change
     /// asks the segmentation service through Viking's <see cref="SegmentationViewportSession"/> and outlines the result;
-    /// Enter, or a double click inside an outline, creates a structure from it. Escape cancels.
+    /// Enter, or a double click inside an outline, creates a structure from it, or, when started on a circle (Viking's
+    /// "Segment" menu item), replaces that location's shape. Escape cancels.
     /// </summary>
     public sealed class SegmentTool : IAnnotationTool, IAnnotationToolPreview, IAnnotationToolUsesAllButtons
     {
@@ -35,6 +36,8 @@ namespace WebAnnotation.Tools
         readonly long _structureTypeId;
         readonly List<Vector2> _foreground = new();
         readonly List<Vector2> _background = new();
+        readonly LocationObj _target;
+        readonly SegmentationSeed[] _seeds = Array.Empty<SegmentationSeed>();
         IReadOnlyList<Polygon> _polygons = Array.Empty<Polygon>();
         CancellationTokenSource _request;
         int _generation;
@@ -51,6 +54,34 @@ namespace WebAnnotation.Tools
                 _context.SetStatus("Segment: no segmentation service is available");
             else
                 _context.SetStatus(StatusText);
+        }
+
+        /// <summary>
+        /// Viking's "Segment" on a circle: starts from the circle's prompt (four clicks inside it and its disc as a seed,
+        /// as auto-polygonize sends) and, on accept, gives <paramref name="circle"/> the outline as its shape.
+        /// </summary>
+        internal SegmentTool(AnnotationToolContext context, ISegmentationViewport viewport,
+            Viking.Services.Grpc.IGrpcChannelManager channels, LocationObj circle, CircleSegmentationPrompts.StartingPrompt prompt)
+            : this(context, viewport, channels, circle.Parent?.TypeID ?? 0)
+        {
+            _target = circle;
+            _foreground.AddRange(prompt.Points);
+            _seeds = new[] { prompt.Seed };
+            RequestSegmentation();
+        }
+
+        /// <summary>The prompt Viking sends for <paramref name="circle"/>; false when it cannot be mapped onto the volume.</summary>
+        internal static bool TryCreateCirclePrompt(LocationObj circle, Viking.VolumeModel.IVolumeToSectionTransform mapper,
+            out CircleSegmentationPrompts.StartingPrompt prompt)
+        {
+            prompt = default;
+            if (circle?.TypeCode != LocationType.CIRCLE || mapper == null)
+                return false;
+
+            Circle mosaicCircle = new(circle.Position, circle.Radius);
+            return CircleSegmentationPrompts.TryCreateStartingPrompt(
+                CircleSegmentationPrompts.ToVolumePoints(CircleSegmentationPrompts.CreateMosaicRadiusPoints(mosaicCircle), mapper),
+                out prompt);
         }
 
         public string StatusText =>
@@ -167,7 +198,8 @@ namespace WebAnnotation.Tools
         {
             try
             {
-                SegmentationResponse response = await _session.SegmentAsync(foreground, background, token);
+                SegmentationResponse response = await _session.SegmentAsync(foreground, background, token,
+                    _seeds.Length > 0 ? _seeds : null);
                 if (token.IsCancellationRequested || generation != _generation)
                     return;
 
@@ -217,7 +249,10 @@ namespace WebAnnotation.Tools
 
             _finished = true;
             _request?.Cancel();
-            _ = CreateStructureAsync(chosen, _context.Host.Downsample);
+            if (_target != null)
+                _ = ReplaceShapeAsync(_target, chosen, _context.Host.Downsample);
+            else
+                _ = CreateStructureAsync(chosen, _context.Host.Downsample);
             _ = DeleteServerImageAsync();
             _polygons = Array.Empty<Polygon>();
             _context.Invalidate();
@@ -249,6 +284,26 @@ namespace WebAnnotation.Tools
                 Trace.WriteLine($"Create segmented structure failed: {ex}");
                 _context.SetStatus($"Could not create the segmented structure: {ex.Message}");
             }
+        }
+
+        /// <summary>As Viking's segment-a-circle accept: the location becomes a curve polygon; the old shape is kept for Ctrl+Z.</summary>
+        async Task ReplaceShapeAsync(LocationObj location, Polygon volumePolygon, double downsample)
+        {
+            Viking.VolumeModel.IVolumeToSectionTransform mapper = _context.Mapper;
+            Microsoft.SqlServer.Types.SqlGeometry undoShape = SqlGeometryUtils.Extensions.ToSqlGeometry(location.MosaicShape);
+            LocationType undoType = location.TypeCode;
+            try
+            {
+                LocationShapeUpdate.AssignSimplifiedVolumePolygon(location, volumePolygon, mapper, downsample);
+            }
+            catch (ArgumentException ex)
+            {
+                _context.SetStatus($"Could not use the outline: {ex.Message}");
+                return;
+            }
+
+            await AnnotationToolActions.SaveLocationAsync(_context, location,
+                () => UndoManager.PushLocationShape("Segment", location, mapper, undoShape, undoType));
         }
 
         async Task DeleteServerImageAsync()

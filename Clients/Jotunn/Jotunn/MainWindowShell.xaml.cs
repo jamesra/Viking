@@ -663,9 +663,7 @@ namespace Jotunn
         /// <summary>Viking's Tab: segment a new structure with the segmentation service chosen at login.</summary>
         void StartSegmentation()
         {
-            string url = !string.IsNullOrWhiteSpace(App.SegmentationServiceUrl)
-                ? App.SegmentationServiceUrl
-                : WebAnnotation.Global.AnnotationSettings.SegmentationServiceUrl;
+            string url = SegmentationServiceUrl();
             if (string.IsNullOrWhiteSpace(url))
             {
                 _status?.SetMessage("No segmentation service was chosen at login");
@@ -675,8 +673,30 @@ namespace Jotunn
             if (_tools == null || _sectionGrid?.SceneHostControl is not SectionSceneHost host)
                 return;
 
+            _tools.StartSegmentation(host, SegmentationChannels(url));
+        }
+
+        /// <summary>The segmentation service chosen at login, or null when there is none.</summary>
+        static string SegmentationServiceUrl() =>
+            !string.IsNullOrWhiteSpace(App.SegmentationServiceUrl)
+                ? App.SegmentationServiceUrl
+                : WebAnnotation.Global.AnnotationSettings.SegmentationServiceUrl;
+
+        Viking.Services.Grpc.IGrpcChannelManager SegmentationChannels(string url) =>
             _segmentationChannels ??= new Viking.Services.Grpc.GrpcChannelManager(new FixedSegmentationEndpoint(url));
-            _tools.StartSegmentation(host, _segmentationChannels);
+
+        /// <summary>Viking's "Segment" on a circle location.</summary>
+        void SegmentCircle(LocationObj circle)
+        {
+            string url = SegmentationServiceUrl();
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                _status?.SetMessage("No segmentation service was chosen at login");
+                return;
+            }
+
+            if (_tools != null && _sectionGrid?.SceneHostControl is SectionSceneHost host)
+                _tools.StartSegmentationOf(circle, host, SegmentationChannels(url));
         }
 
         sealed class FixedSegmentationEndpoint(string endpoint) : Viking.DependencyInjection.IGrpcServiceConfiguration

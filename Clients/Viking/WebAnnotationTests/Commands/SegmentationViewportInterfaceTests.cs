@@ -41,6 +41,20 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void CirclePromptIsFourClicksInsideTheCircle()
+        {
+            var circle = WebAnnotationTests.Actions.ChangeTypeActionTests.NewLocation(
+                Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE, "CURVEPOLYGON(CIRCULARSTRING(40 50, 50 40, 60 50, 50 60, 40 50))");
+
+            Assert.IsTrue(WebAnnotation.Tools.SegmentTool.TryCreateCirclePrompt(
+                circle, WebAnnotationTests.Actions.ChangeTypeActionTests.CreateBoundedTransform(), out var prompt));
+
+            Assert.AreEqual(4, prompt.Points.Count);
+            foreach (Geometry.Vector2 point in prompt.Points)
+                Assert.IsTrue(Geometry.Vector2.Distance(point, new Geometry.Vector2(50, 50)) < 10);
+        }
+
+        [TestMethod]
         public async Task SegmentingWithoutAServiceReportsNoClient()
         {
             SegmentationViewportSession session = new(new FakeViewport());

@@ -39,6 +39,8 @@ namespace Jotunn
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("_Terminal", () => _tools.ToggleTerminal(location), isChecked: location.Terminal));
             menu.Items.Add(Item("_Off edge", () => _tools.ToggleOffEdge(location), isChecked: location.OffEdge));
+            if (location.TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE)
+                menu.Items.Add(Item("Se_gment into a polygon", () => SegmentCircle(location)));
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("Copy _location ID", () => Clipboard.SetText(location.ID.ToString())));
             menu.Items.Add(Item("Copy _structure ID", () => Clipboard.SetText(location.ParentID.ToString()), isEnabled: location.ParentID.HasValue));
