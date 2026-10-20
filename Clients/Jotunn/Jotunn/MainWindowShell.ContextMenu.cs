@@ -49,6 +49,8 @@ namespace Jotunn
             menu.Items.Add(Item("Copy _location ID", () => Clipboard.SetText(location.ID.ToString())));
             menu.Items.Add(Item("Copy _structure ID", () => Clipboard.SetText(location.ParentID.ToString()), isEnabled: location.ParentID.HasValue));
             menu.Items.Add(Item("_Center view here", () => GoToLocation(location)));
+            if (WebAnnotation.Global.Export is WebAnnotation.Export export && location.ParentID is long exportId)
+                menu.Items.Add(ExportMenu(export, exportId));
             if (WebAnnotation.SbfsemToolsLauncher.GetRootStructureIdForLocation(location) is long cellId
                 && !string.IsNullOrWhiteSpace(WebAnnotation.SbfsemToolsLauncher.ResolveVolumeName()))
                 menu.Items.Add(Item("Open in SBFSEM-_tools", () => WebAnnotation.SbfsemToolsLauncher.TryOpen(cellId, location.ID)));
@@ -60,6 +62,24 @@ namespace Jotunn
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("_Delete…", () => ConfirmAndDelete(location)));
             return menu;
+        }
+
+        /// <summary>Viking's Export > Tulip URL submenu for the location's structure.</summary>
+        static MenuItem ExportMenu(WebAnnotation.Export export, long structureId)
+        {
+            MenuItem network = new() { Header = "_Network" };
+            network.Items.Add(Item("_1 degree of separation", () => export.OpenNetwork(structureId, 1)));
+            network.Items.Add(Item("_2 degrees of separation", () => export.OpenNetwork(structureId, 2)));
+            network.Items.Add(Item("_3 degrees of separation", () => export.OpenNetwork(structureId, 3)));
+            network.Items.Add(Item("_All connected", () => export.OpenNetwork(structureId, null)));
+
+            MenuItem tulip = new() { Header = "Tulip URL" };
+            tulip.Items.Add(Item("_Morphology", () => export.OpenMorphology(structureId)));
+            tulip.Items.Add(network);
+
+            MenuItem root = new() { Header = "E_xport" };
+            root.Items.Add(tulip);
+            return root;
         }
 
         /// <summary>Viking's "Change Shape" submenu, plus "Simplify Shape" for polygons.</summary>

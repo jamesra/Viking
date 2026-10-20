@@ -98,6 +98,15 @@ namespace WebAnnotation
 
             XElement mapping = volumeElement.Elements()
                 .FirstOrDefault(e => e.Name.LocalName == "VolumeToEndpoint");
+
+            // Export links (Tulip morphology/network), as Viking's module init sets them: Identity's export endpoint, else
+            // the VikingXML ExportURL attribute.
+            string exportUrl = mapping?.Attribute("ExportURL")?.Value;
+            Uri export = Viking.Common.AccessibleVolumeSession.ExportEndpoint
+                ?? (Uri.TryCreate(exportUrl, UriKind.Absolute, out Uri parsed) ? parsed : null);
+            if (export != null)
+                Global.Export = new Export(export);
+
             if (mapping is null)
                 return WebAnnotationModel.State.Endpoint != null;
 
