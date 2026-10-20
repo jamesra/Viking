@@ -97,12 +97,7 @@ namespace VikingCoreTests
             }
         }
 
-        private static GraphicsDevice CreatePlaceholderDevice()
-        {
-            var device = (GraphicsDevice)FormatterServices.GetUninitializedObject(typeof(GraphicsDevice));
-            GC.SuppressFinalize(device);
-            return device;
-        }
+        private static GraphicsDevice CreatePlaceholderDevice() => PlaceholderGraphicsDevice.Create();
 
         private static byte[] CreatePng()
         {
@@ -152,10 +147,12 @@ namespace VikingCoreTests
         private string NewUnreadableCacheFile()
         {
             string path = NewCacheFile(PngBytes);
-            FileSecurity security = File.GetAccessControl(path);
+            // FileInfo's ACL methods exist on .NET Framework and, as extensions, on .NET 10.
+            FileInfo file = new(path);
+            FileSecurity security = file.GetAccessControl();
             security.AddAccessRule(new FileSystemAccessRule(WindowsIdentity.GetCurrent().User!,
                 FileSystemRights.ReadData, AccessControlType.Deny));
-            File.SetAccessControl(path, security);
+            file.SetAccessControl(security);
             return path;
         }
 

@@ -28,12 +28,7 @@ namespace VikingCoreTests
 
         private static readonly GraphicsDevice PlaceholderDevice = CreatePlaceholderDevice();
 
-        private static GraphicsDevice CreatePlaceholderDevice()
-        {
-            var device = (GraphicsDevice)FormatterServices.GetUninitializedObject(typeof(GraphicsDevice));
-            GC.SuppressFinalize(device);
-            return device;
-        }
+        private static GraphicsDevice CreatePlaceholderDevice() => PlaceholderGraphicsDevice.Create();
 
         private static Texture2D NewStandInTexture()
         {

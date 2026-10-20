@@ -31,7 +31,19 @@ namespace Viking.Common
             catch (HttpRequestException e)
             {
                 // On .NET Framework the connect or DNS failure is an inner WebException; its message matches what WebClient reported.
-                return [e.InnerException is WebException inner ? inner.Message : e.Message];
+                if (e.InnerException is WebException inner)
+                    return [inner.Message];
+
+                // .NET 10 reports a refused or unreachable connection as a SocketException; keep the .NET Framework wording.
+                if (e.InnerException is System.Net.Sockets.SocketException)
+                    return ["Unable to connect to the remote server"];
+
+                return [e.Message];
+            }
+            catch (NotSupportedException e)
+            {
+                // .NET 10 rejects an ftp: or file: server URL here; .NET Framework throws ArgumentException (below).
+                return [e.Message];
             }
             catch (TaskCanceledException e)
             {

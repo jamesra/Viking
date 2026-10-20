@@ -58,7 +58,11 @@ namespace Viking.UI.Controls
         /// <summary>
         /// Text parsed as a <see cref="double"/> in the current culture, or 0 when it is empty, malformed, or out of range.
         /// </summary>
-        public double DoubleValue => double.TryParse(this.Text, out double val) ? val : 0;
+        /// <summary>
+        /// The text as a number, or 0 when it is not one. Text beyond the range of a double is also 0: .NET Framework
+        /// fails to parse it, and .NET 10 parses it as infinity.
+        /// </summary>
+        public double DoubleValue => double.TryParse(this.Text, out double val) && !double.IsInfinity(val) ? val : 0;
 
         public decimal DecimalValue => Decimal.Parse(this.Text);
 

@@ -45,12 +45,7 @@ namespace VikingCoreTests
 
         private Func<GraphicsDevice?>? _savedGetDevice;
 
-        private static GraphicsDevice CreatePlaceholderDevice()
-        {
-            var device = (GraphicsDevice)FormatterServices.GetUninitializedObject(typeof(GraphicsDevice));
-            GC.SuppressFinalize(device);
-            return device;
-        }
+        private static GraphicsDevice CreatePlaceholderDevice() => PlaceholderGraphicsDevice.Create();
 
         [TestInitialize]
         public void Initialize()

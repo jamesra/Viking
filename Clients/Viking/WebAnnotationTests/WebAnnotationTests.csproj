@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFrameworks>net48;</TargetFrameworks>
+    <TargetFrameworks>net48;net10.0-windows</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
@@ -25,8 +25,7 @@
     <ProjectReference Include="..\..\VolumeModel\VolumeModel.csproj" />
     <ProjectReference Include="..\..\WebAnnotationModel\WebAnnotationModel.csproj" />
     <ProjectReference Include="..\..\..\SqlGeometryUtils\SqlGeometryUtils.csproj" />
-    <ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition="'$(TargetFramework)' == 'net9.0-windows'" />
-    <ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition="'$(TargetFramework)' == 'net9.0'" />
+    <ProjectReference Include="..\..\Monographics\Monographics.csproj" Condition="'$(TargetFramework)' == 'net10.0-windows'" />
     <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" Condition="'$(TargetFramework)' == 'net48'" />
   </ItemGroup>
   <ItemGroup>
@@ -146,10 +145,11 @@
 	    <!-- Pen commands derive from types that touch WPF's DependencyObject; tests that call their static members need it to compile. -->
 	    <Reference Include="WindowsBase" />
     </ItemGroup>
-    <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
 	    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
     </ItemGroup>
-    <ItemGroup Condition="'$(TargetFramework)' == 'net9.0-windows'">
-	    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
-    </ItemGroup>
+    <!-- On .NET 10 ConfigurationManager reads the test host's config, so app.config's appSettings go there too. -->
+    <Target Name="CopyAppConfigForTestHost" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net10.0-windows'">
+	    <Copy SourceFiles="app.config" DestinationFiles="$(OutDir)testhost.dll.config" SkipUnchangedFiles="true" />
+    </Target>
 </Project>

@@ -50,12 +50,7 @@ namespace VikingCoreTests
         private CountingHandler _handler = new();
         private string _folder = "";
 
-        private static GraphicsDevice CreatePlaceholderDevice()
-        {
-            var device = (GraphicsDevice)FormatterServices.GetUninitializedObject(typeof(GraphicsDevice));
-            GC.SuppressFinalize(device);
-            return device;
-        }
+        private static GraphicsDevice CreatePlaceholderDevice() => PlaceholderGraphicsDevice.Create();
 
         private static byte[] CreatePng()
         {
