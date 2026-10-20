@@ -384,14 +384,17 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>Texels per stripe of the refining hatch. Texels are 1 to 4 image pixels, so stripes scale with zoom.</summary>
         private const int RefiningHatchStripeTexels = 2;
 
-        /// <summary>Width of the shimmer band as a fraction of the polygon's diagonal extent (its x+y span in texels).</summary>
+        /// <summary>Width of the shimmer band as a fraction of the polygon's extent along the sweep direction (in texels).</summary>
         private const float ShimmerBandFraction = 0.3f;
 
         /// <summary>
-        /// Texels per line of the shimmer. Lines run along the sweep direction, across the band, and the shader drifts
-        /// them sideways while the band sweeps.
+        /// How many times longer the sweep takes than the Duration preference says. Two makes the white band travel at
+        /// half the speed it had when the preference was introduced.
         /// </summary>
-        private const int ShimmerLineTexels = 2;
+        private const double ShimmerDurationScale = 2.0;
+
+        /// <summary>Alpha of the shimmer glow at its brightest, as a fraction of the shimmer brightness preference.</summary>
+        private const float ShimmerGlowPeakFraction = 0.5f;
 
         /// <summary>Most clip texels per mask texel along each axis when the shimmer clip is rasterized from the polygon.</summary>
         private const int ShimmerClipMaxSupersample = 8;
@@ -441,6 +444,12 @@ namespace WebAnnotation.UI.AutoPolygonize
         private AutoPolygonizeMaskOverlay? shimmerClipSource;
         private float shimmerDiagonalLow;
         private float shimmerDiagonalHigh;
+
+        /// <summary>Angle, in radians, that sets which way this proposal's shimmer band sweeps. Chosen when the shimmer starts.</summary>
+        private double shimmerAngle;
+
+        private Vector2 shimmerGlowCentre;
+        private float shimmerGlowSigma;
 
         public AutoPolygonizeProposal(
             AutoCirclePolygonizeController controller,
@@ -808,7 +817,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         public bool IsShimmering => shimmerStartTimestamp != 0 && !shimmerDone;
 
         /// <summary>
-        /// Sweeps a band of white lines across the mask once, starting on the first frame this proposal is drawn in
+        /// Sweeps a soft white band across the mask once, at a random angle, over a white glow that fades in and out, starting on the first frame this proposal is drawn in
         /// its final (non-refining) form. Duration and brightness come from the preferences and are read when the
         /// shimmer starts. Skipped for good when the preference is off at that moment. Never replays for the same
         /// proposal, including after a mask rebuild. Needs the decoded mask bytes; without them it is skipped.
@@ -835,11 +844,12 @@ namespace WebAnnotation.UI.AutoPolygonize
                 }
 
                 shimmerDurationMs = Global.AnnotationSettings.AutoPolygonizeShimmerDurationMs;
+                shimmerAngle = Random.Shared.NextDouble() * 2.0 * Math.PI;
                 shimmerPeakAlpha = (float)Global.AnnotationSettings.AutoPolygonizeShimmerBrightness;
                 shimmerStartTimestamp = Stopwatch.GetTimestamp();
             }
 
-            double progress = (Stopwatch.GetTimestamp() - shimmerStartTimestamp) * 1000.0 / Stopwatch.Frequency / shimmerDurationMs;
+            double progress = (Stopwatch.GetTimestamp() - shimmerStartTimestamp) * 1000.0 / Stopwatch.Frequency / (shimmerDurationMs * ShimmerDurationScale);
             if (progress >= 1.0)
             {
                 shimmerDone = true;
@@ -856,7 +866,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 {
                     DisposeShimmer();
                     int supersample = ShimmerClipSupersample(shown);
-                    bool[] inside = RasterizePolygon(Polygon, shown, out int low, out int high, supersample);
+                    bool[] inside = RasterizePolygon(Polygon, shown, out _, out _, supersample);
                     byte[] clip = new byte[inside.Length];
                     for (int i = 0; i < inside.Length; i++)
                         clip[i] = inside[i] ? byte.MaxValue : byte.MinValue;
@@ -867,9 +877,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                     shimmerView = new TextureOverlayView(shimmerClipTexture, shown.WorldBounds, Color.White);
                     shimmerClipSource = shown;
 
-                    // The shader measures from texel corners, so a texel centre's x + y is its index sum plus one.
-                    shimmerDiagonalLow = (low + 1f) / supersample;
-                    shimmerDiagonalHigh = (high + 1f) / supersample;
+                    (shimmerGlowCentre, shimmerGlowSigma) = ShimmerGlowShape(inside, shown.Width * supersample, shown.Height * supersample, supersample);
+                    (shimmerDiagonalLow, shimmerDiagonalHigh) = ShimmerSweepRange(
+                        inside, shown.Width * supersample, shown.Height * supersample, supersample, ShimmerSweepDirection(shimmerAngle));
                 }
             }
             catch (Exception)
@@ -885,11 +895,12 @@ namespace WebAnnotation.UI.AutoPolygonize
                 scene,
                 shimmerView!,
                 new Vector2(shown.Width, shown.Height),
-                new Vector2(1, -1),
-                2 * ShimmerLineTexels,
+                ShimmerStripeNormal(shimmerAngle),
+                0f,
                 new Vector2(center, halfWidth),
                 0.5f,
-                shimmerPeakAlpha);
+                shimmerPeakAlpha,
+                new Vector4(shimmerGlowCentre.X, shimmerGlowCentre.Y, shimmerGlowSigma, ShimmerGlowAlpha(shimmerPeakAlpha, progress)));
         }
 
         /// <summary>Releases the shimmer clip texture. Does not rearm the shimmer.</summary>
@@ -971,7 +982,114 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Centre and half width, in mask texels along x + y, of the shimmer band at <paramref name="progress"/>.
+        /// Direction handed to the stripe shader for a shimmer angle of <paramref name="angle"/> radians. The shimmer draws
+        /// no stripes (period zero), so this only fixes which way the band sweeps: the shader sweeps along it turned a
+        /// quarter turn, see <see cref="ShimmerSweepDirection"/>. Its length is the square root of two, like the (1, -1)
+        /// normal the shimmer used when it had stripes, so the band keeps the same scale at every angle.
+        /// </summary>
+        internal static Vector2 ShimmerStripeNormal(double angle)
+        {
+            double length = Math.Sqrt(2.0);
+            return new Vector2((float)(length * Math.Cos(angle)), (float)(length * Math.Sin(angle)));
+        }
+
+        /// <summary>
+        /// Direction the shimmer band travels for the direction <see cref="ShimmerStripeNormal"/>: rotated a quarter turn
+        /// from it, with the same length. The stripe shader derives the same
+        /// vector from its stripe direction, so keep the two in step. The (1, -1) normal gives (1, 1), the x + y sweep.
+        /// </summary>
+        internal static Vector2 ShimmerSweepDirection(double angle)
+        {
+            Vector2 normal = ShimmerStripeNormal(angle);
+            return new Vector2(-normal.Y, normal.X);
+        }
+
+        /// <summary>
+        /// Alpha at the centre of the shimmer glow: none when the shimmer starts, the most halfway through, none again when
+        /// it ends, following a sine so it eases in and out.
+        /// </summary>
+        internal static float ShimmerGlowAlpha(float peakAlpha, double progress)
+        {
+            double clamped = Math.Min(1.0, Math.Max(0.0, progress));
+            return (float)(peakAlpha * ShimmerGlowPeakFraction * Math.Sin(Math.PI * clamped));
+        }
+
+        /// <summary>
+        /// Centre and standard deviation, in mask texels, of the round glow under the shimmer: the middle of the marked
+        /// texels' bounding box, with a deviation of a quarter of its longer side (at least one texel) so the glow fades
+        /// out near the polygon's edge. The grid arguments are as for <see cref="ShimmerSweepRange"/>.
+        /// </summary>
+        internal static (Vector2 Centre, float Sigma) ShimmerGlowShape(bool[] inside, int width, int height, int supersample)
+        {
+            int minX = int.MaxValue;
+            int maxX = int.MinValue;
+            int minY = int.MaxValue;
+            int maxY = int.MinValue;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    if (!inside[(y * width) + x])
+                        continue;
+
+                    minX = Math.Min(minX, x);
+                    maxX = Math.Max(maxX, x);
+                    minY = Math.Min(minY, y);
+                    maxY = Math.Max(maxY, y);
+                }
+            }
+
+            if (minX > maxX)
+                return (Vector2.Zero, 1f);
+
+            float centreX = (minX + maxX + 1) / 2f / supersample;
+            float centreY = (minY + maxY + 1) / 2f / supersample;
+            float longerSide = Math.Max(maxX - minX + 1, maxY - minY + 1) / (float)supersample;
+            return (new Vector2(centreX, centreY), Math.Max(1f, longerSide / 4f));
+        }
+
+        /// <summary>
+        /// Smallest and largest position of any marked texel along <paramref name="sweep"/>, in mask texels, so the band
+        /// can start just before the polygon and end just past it. <paramref name="inside"/> is a grid of
+        /// <paramref name="width"/> by <paramref name="height"/> clip texels with <paramref name="supersample"/> of them
+        /// per mask texel along each axis. Positions are those of texel centres, matching the shader's
+        /// dot(texel, sweep); both are 0 when nothing is marked.
+        /// </summary>
+        internal static (float Low, float High) ShimmerSweepRange(bool[] inside, int width, int height, int supersample, Vector2 sweep)
+        {
+            double low = double.MaxValue;
+            double high = double.MinValue;
+            for (int y = 0; y < height; y++)
+            {
+                int first = -1;
+                int last = -1;
+                for (int x = 0; x < width; x++)
+                {
+                    if (!inside[(y * width) + x])
+                        continue;
+
+                    if (first < 0)
+                        first = x;
+                    last = x;
+                }
+
+                if (first < 0)
+                    continue;
+
+                // The projection is linear in x, so a row's extremes are at its first and last marked texel.
+                foreach (int x in new[] { first, last })
+                {
+                    double position = ((sweep.X * (x + 0.5)) + (sweep.Y * (y + 0.5))) / supersample;
+                    low = Math.Min(low, position);
+                    high = Math.Max(high, position);
+                }
+            }
+
+            return low > high ? (0f, 0f) : ((float)low, (float)high);
+        }
+
+        /// <summary>
+        /// Centre and half width, in mask texels along the sweep direction, of the shimmer band at <paramref name="progress"/>.
         /// The band starts just before <paramref name="diagonalLow"/> (progress 0) and ends just past
         /// <paramref name="diagonalHigh"/> (progress 1), so it enters and leaves the polygon fully.
         /// </summary>
@@ -1009,7 +1127,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             float period,
             Vector2 band,
             float clipLevel,
-            float alpha)
+            float alpha,
+            Vector4 glow = default)
         {
             OverlayShaderEffect? effect = DeviceEffectsStore<OverlayShaderEffect>.TryGet(graphicsDevice);
             if (effect is null || view.Texture is null)
@@ -1023,6 +1142,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             effect.StripeBand = band;
             effect.StripeClipLevel = clipLevel;
             effect.StripeAlpha = alpha;
+            effect.StripeGlow = glow;
 
             DepthStencilState previous = graphicsDevice.DepthStencilState;
             graphicsDevice.DepthStencilState = MaskOverlayDepthState;
