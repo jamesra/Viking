@@ -130,6 +130,10 @@ namespace WebAnnotation
                     cts.Cancel();
                     _loadCtsBySection.Remove(oldest);
                 }
+
+                // The region cells still read as loaded; without this a later visit builds an empty view.
+                if (Store.IsInitialized)
+                    Store.LocationsByRegion.InvalidateSection(oldest);
             }
         }
 
