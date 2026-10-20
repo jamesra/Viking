@@ -20,6 +20,9 @@ namespace WebAnnotation.Tools
         public Action<string> SetStatus { get; }
         public AnnotationPlaceKind ArmedPlaceKind { get; set; } = AnnotationPlaceKind.Circle;
 
+        /// <summary>The location the user last clicked, or null after a click on empty space. Delete acts on it.</summary>
+        public LocationObj SelectedLocation { get; set; }
+
         public AnnotationToolContext(
             IViewportHost host,
             AnnotationScene scene,

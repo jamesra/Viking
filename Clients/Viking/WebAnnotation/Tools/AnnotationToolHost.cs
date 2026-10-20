@@ -38,7 +38,8 @@ namespace WebAnnotation.Tools
 
         public long? SelectedStructureTypeId { get; set; }
 
-        public LocationObj SelectedLocation { get; private set; }
+        /// <summary>The location the user last clicked, or null after a click on empty space.</summary>
+        public LocationObj SelectedLocation => _context.SelectedLocation;
 
         public event EventHandler<LocationObj> GoToRequested;
 
@@ -130,13 +131,27 @@ namespace WebAnnotation.Tools
             _ = AnnotationToolActions.CreateLinkedLocationAsync(_context, lastId, world, LocationType.CIRCLE, null);
         }
 
-        public void DeleteLastOrSelected()
+        /// <summary>The location Delete would remove: the selected one, else the last edited one; null if neither is cached.</summary>
+        public LocationObj DeletionTarget
         {
-            LocationObj loc = SelectedLocation;
-            if (loc == null && Global.LastEditedAnnotationID.HasValue)
-                Store.Locations.TryGetObjectByID(Global.LastEditedAnnotationID.Value, out loc);
-            if (loc != null)
-                _ = AnnotationToolActions.DeleteLocationAsync(_context, loc);
+            get
+            {
+                LocationObj loc = SelectedLocation;
+                if (loc == null && Global.LastEditedAnnotationID.HasValue)
+                    Store.Locations.TryGetObjectByID(Global.LastEditedAnnotationID.Value, out loc);
+                return loc;
+            }
+        }
+
+        /// <summary>Deletes <paramref name="location"/> and clears the selection if it was selected.</summary>
+        public void DeleteLocation(LocationObj location)
+        {
+            if (location == null)
+                return;
+
+            if (ReferenceEquals(_context.SelectedLocation, location))
+                _context.SelectedLocation = null;
+            _ = AnnotationToolActions.DeleteLocationAsync(_context, location);
         }
 
         public void ToggleAnnotationsVisible()

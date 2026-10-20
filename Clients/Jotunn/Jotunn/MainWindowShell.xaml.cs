@@ -90,19 +90,71 @@ namespace Jotunn
             _sectionGrid.SceneHostControl.Invalidate();
         }
 
+        /// <summary>
+        /// Viking's key map for the view: + and - step sections (Shift for 10), PageUp/PageDown zoom, arrows pan a
+        /// quarter view, Home snaps the zoom to a power of two, Backspace returns to the last edited annotation, F5
+        /// reloads annotations, Delete deletes the selected annotation, Enter commits a tool or continues the last
+        /// trace, Ctrl+C copies the cursor position.
+        /// </summary>
         protected void OnKeyDownPreview(object sender, KeyEventArgs e)
         {
             if (IsTextInputTarget(e.OriginalSource as DependencyObject))
                 return;
 
-            if (e.Key == Key.Insert)
+            bool shift = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
+            bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) != 0;
+            SectionSceneHost host = _sectionGrid?.SceneHostControl;
+
+            if (!ctrl && (e.Key == Key.OemPlus || e.Key == Key.Add))
             {
-                GlobalCommands.IncrementSectionNumber.Execute(null, this);
+                StepSections(shift ? 10 : 1);
+                e.Handled = true;
+            }
+            else if (!ctrl && (e.Key == Key.OemMinus || e.Key == Key.Subtract))
+            {
+                StepSections(shift ? -10 : -1);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Insert)
+            {
+                StepSections(1);
+                e.Handled = true;
+            }
+            else if (host != null && !ctrl && (e.Key == Key.PageUp || e.Key == Key.PageDown))
+            {
+                host.StepMagnification(zoomIn: e.Key == Key.PageUp);
+                e.Handled = true;
+            }
+            else if (host != null && !ctrl && e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
+            {
+                host.PanByViewFraction(
+                    e.Key == Key.Left ? -0.25 : e.Key == Key.Right ? 0.25 : 0,
+                    e.Key == Key.Up ? 0.25 : e.Key == Key.Down ? -0.25 : 0);
+                e.Handled = true;
+            }
+            else if (host != null && e.Key == Key.Home)
+            {
+                host.SnapMagnificationToPowerOfTwo();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Back)
+            {
+                _ = GoToLastEditedAsync();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.F5)
+            {
+                ReloadAnnotations();
                 e.Handled = true;
             }
             else if (e.Key == Key.Delete)
             {
-                GlobalCommands.DecrementSectionNumber.Execute(null, this);
+                GlobalCommands.DeleteAnnotation.Execute(null, this);
+                e.Handled = true;
+            }
+            else if (ctrl && e.Key == Key.C)
+            {
+                CopyPointerPosition();
                 e.Handled = true;
             }
             else if (e.Key == Key.Space)
@@ -118,10 +170,10 @@ namespace Jotunn
             else if (e.Key == Key.Enter || e.Key == Key.Return)
             {
                 if (_tools != null && !_tools.IsIdle)
-                {
                     GlobalCommands.CommitTool.Execute(null, this);
-                    e.Handled = true;
-                }
+                else
+                    GlobalCommands.ContinueLast.Execute(null, this);
+                e.Handled = true;
             }
             else if (_sectionGrid?.SceneHostControl != null && _sectionGrid.SceneHostControl.HandleViewKeyDown(e.Key))
             {
@@ -252,15 +304,82 @@ namespace Jotunn
             form.Show();
         }
 
+        /// <summary>Continues the last trace at the cursor, as Viking does, or at the view center when the cursor is elsewhere.</summary>
         void OnContinueLast(object sender, ExecutedRoutedEventArgs e)
         {
             if (_tools == null || DataContext is not VolumeVM volume || volume.VisibleRegion == null)
                 return;
-            Geometry.Vector2 world = new(volume.VisibleRegion.Center.X, volume.VisibleRegion.Center.Y);
+
+            SectionSceneHost host = _sectionGrid?.SceneHostControl;
+            Geometry.Vector2 world = host != null && host.TryGetPointerWorldPosition(out Geometry.Vector2 pointer, out _)
+                ? pointer
+                : new(volume.VisibleRegion.Center.X, volume.VisibleRegion.Center.Y);
             _tools.ContinueLast(world);
         }
 
-        void OnDeleteAnnotation(object sender, ExecutedRoutedEventArgs e) => _tools?.DeleteLastOrSelected();
+        /// <summary>Deletes the selected annotation (else the last edited one) after the user confirms.</summary>
+        void OnDeleteAnnotation(object sender, ExecutedRoutedEventArgs e)
+        {
+            LocationObj target = _tools?.DeletionTarget;
+            if (target == null)
+            {
+                _status?.SetMessage("Click an annotation to select it before deleting");
+                return;
+            }
+
+            if (MessageBox.Show(this, $"Delete location {target.ID} of structure {target.ParentID}?", "Jotunn",
+                    MessageBoxButton.OKCancel, MessageBoxImage.Question) == MessageBoxResult.OK)
+            {
+                _tools.DeleteLocation(target);
+            }
+        }
+
+        void StepSections(int count)
+        {
+            if (DataContext is not VolumeVM volume || volume.SectionViewModels.Count == 0)
+                return;
+
+            volume.CenterIndex = Math.Max(0, Math.Min(volume.SectionViewModels.Count - 1, volume.CenterIndex + count));
+        }
+
+        void OnGoToLastEdited(object sender, RoutedEventArgs e) => _ = GoToLastEditedAsync();
+
+        /// <summary>Viking's Backspace: the last annotation edited in this session, else the volume's last modified location.</summary>
+        async Task GoToLastEditedAsync()
+        {
+            if (!Store.IsInitialized)
+                return;
+
+            LocationObj loc = WebAnnotation.Global.LastEditedAnnotationID.HasValue
+                ? await Store.Locations.GetObjectByID(WebAnnotation.Global.LastEditedAnnotationID.Value)
+                : await Store.Locations.GetLastModifiedLocation();
+            if (loc == null)
+            {
+                _status?.SetMessage("No edited annotation to return to");
+                return;
+            }
+
+            GoToLocation(loc);
+        }
+
+        void OnReloadAnnotations(object sender, RoutedEventArgs e) => ReloadAnnotations();
+
+        void ReloadAnnotations()
+        {
+            (_sectionGrid?.SceneHostControl?.Annotations as AnnotationScene)?.Reload();
+            _status?.SetMessage("Reloading annotations");
+        }
+
+        /// <summary>Viking's Ctrl+C: copies the cursor's X, Y, section and downsample in Viking's paste format.</summary>
+        void CopyPointerPosition()
+        {
+            SectionSceneHost host = _sectionGrid?.SceneHostControl;
+            if (host == null || !host.TryGetPointerWorldPosition(out Geometry.Vector2 world, out int section))
+                return;
+
+            Clipboard.SetText(Viking.Common.Util.CoordinatesToCopyPaste(world.X, world.Y, section, host.Downsample));
+            _status?.SetMessage("Position copied");
+        }
 
         void OnHideAnnotations(object sender, ExecutedRoutedEventArgs e) => _tools?.ToggleAnnotationsVisible();
 

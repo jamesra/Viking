@@ -71,6 +71,34 @@ namespace WebAnnotation
             }
         }
 
+        /// <summary>
+        /// Viking's F5: drops every section's annotation views and the region cells behind them, so the next draw rebuilds
+        /// the views and asks the server again.
+        /// </summary>
+        public void Reload()
+        {
+            int[] sections;
+            lock (_loadLock)
+            {
+                foreach (CancellationTokenSource cts in _loadCtsBySection.Values)
+                    cts.Cancel();
+
+                sections = _sections.Keys.ToArray();
+                _sections.Clear();
+                _loadTarget.Clear();
+                _loadBySection.Clear();
+                _loadCtsBySection.Clear();
+            }
+
+            if (Store.IsInitialized)
+            {
+                foreach (int section in sections)
+                    Store.LocationsByRegion.InvalidateSection(section);
+            }
+
+            TileLoadEnvironment.RequestRender?.Invoke();
+        }
+
         public void LoadVisible(VikingXNA.Scene scene, int sectionNumber)
         {
             _ = LoadVisibleAsync(scene, sectionNumber);

@@ -4,13 +4,13 @@ namespace Jotunn.Common
 {
     public static class GlobalCommands
     {
+        // Viking keys: + and - step sections (Shift for 10), handled in MainWindow's key preview because WPF key
+        // gestures cannot be the plain +/- keys. PageUp/PageDown change magnification, as in Viking.
         public static readonly RoutedUICommand IncrementSectionNumber = new RoutedUICommand(
-            "Increment section", nameof(IncrementSectionNumber), typeof(GlobalCommands),
-            [new KeyGesture(Key.PageUp)]);
+            "Increment section", nameof(IncrementSectionNumber), typeof(GlobalCommands));
 
         public static readonly RoutedUICommand DecrementSectionNumber = new RoutedUICommand(
-            "Decrement section", nameof(DecrementSectionNumber), typeof(GlobalCommands),
-            [new KeyGesture(Key.PageDown)]);
+            "Decrement section", nameof(DecrementSectionNumber), typeof(GlobalCommands));
 
         public static readonly RoutedUICommand AddGridRowCommand = new RoutedUICommand(
             "Add grid row", nameof(AddGridRowCommand), typeof(GlobalCommands));

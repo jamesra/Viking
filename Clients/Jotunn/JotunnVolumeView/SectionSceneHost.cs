@@ -710,8 +710,63 @@ namespace Viking.VolumeView
             AnnotationTools?.OnMouseDown(screen, button, clickCount);
         }
 
+        /// <summary>Last pointer position over the host, for keyboard actions that act at the cursor (Ctrl+C, continue trace).</summary>
+        Point? _lastPointer;
+
+        /// <summary>World position and section under the last pointer position, if the pointer has been over a cell.</summary>
+        public bool TryGetPointerWorldPosition(out Geometry.Vector2 world, out int sectionNumber)
+        {
+            world = default;
+            sectionNumber = SectionNumber;
+            return _lastPointer.HasValue && TryGetWorldPosition(_lastPointer.Value, out world, out sectionNumber);
+        }
+
+        /// <summary>Viking's PageUp/PageDown: one zoom step about the view center, the same step as the mouse wheel.</summary>
+        public void StepMagnification(bool zoomIn)
+        {
+            if (Grid?.VisibleRegion == null)
+                return;
+
+            double ds = Grid.VisibleRegion.Downsample * (zoomIn ? 0.86956521739130434782608695652174 : 1.15);
+            SetDownsampleAboutCenter(Math.Max(ds, 0.25));
+        }
+
+        /// <summary>Viking's Home key: snaps the magnification to the nearest power of two so tiles draw at native size.</summary>
+        public void SnapMagnificationToPowerOfTwo()
+        {
+            if (Grid?.VisibleRegion == null)
+                return;
+
+            SetDownsampleAboutCenter(Viking.UI.ViewerMagnificationSteps.NearestPowerOfTwo(Grid.VisibleRegion.Downsample));
+        }
+
+        /// <summary>
+        /// Viking's arrow keys: moves the view by a fraction of its width (<paramref name="fx"/>) and height
+        /// (<paramref name="fy"/>). Positive Y moves the view up.
+        /// </summary>
+        public void PanByViewFraction(double fx, double fy)
+        {
+            if (Grid?.VisibleRegion == null)
+                return;
+
+            double ds = Grid.VisibleRegion.Downsample;
+            Size area = HostWorldArea(ds);
+            Point center = Grid.VisibleRegion.Center;
+            Grid.VisibleRegion = new VisibleRegionInfo(new Point(center.X + fx * area.Width, center.Y + fy * area.Height), area, ds);
+            RunTileCacheCheckpoint();
+            RequestRender();
+        }
+
+        void SetDownsampleAboutCenter(double ds)
+        {
+            Grid.VisibleRegion = new VisibleRegionInfo(Grid.VisibleRegion.Center, HostWorldArea(ds), ds);
+            ApplyVisibleRegion();
+            RequestRender();
+        }
+
         public void HandleViewMouseMove(Point p, MouseButtonState leftButton, MouseButtonState rightButton)
         {
+            _lastPointer = p;
             if (_annotating && leftButton == MouseButtonState.Pressed)
             {
                 ApplyActiveCellViewport();

@@ -58,8 +58,10 @@
                 <Separator/>
                 <MenuItem Header="_Go to location…" Command="{x:Static jotunnuicommon:GlobalCommands.GoToLocation}" InputGestureText="F12"/>
                 <MenuItem Header="_Find structure…" Command="{x:Static jotunnuicommon:GlobalCommands.FindStructure}" InputGestureText="F11"/>
-                <MenuItem Header="_Continue last" Command="{x:Static jotunnuicommon:GlobalCommands.ContinueLast}" InputGestureText="F3"/>
-                <MenuItem Header="_Delete" Command="{x:Static jotunnuicommon:GlobalCommands.DeleteAnnotation}" InputGestureText="Ctrl+D"/>
+                <MenuItem Header="_Continue last" Command="{x:Static jotunnuicommon:GlobalCommands.ContinueLast}" InputGestureText="F3 / Enter"/>
+                <MenuItem Header="_Delete" Command="{x:Static jotunnuicommon:GlobalCommands.DeleteAnnotation}" InputGestureText="Del / Ctrl+D"/>
+                <MenuItem Header="Go to last _edited" Click="OnGoToLastEdited" InputGestureText="Backspace"/>
+                <MenuItem Header="_Reload annotations" Click="OnReloadAnnotations" InputGestureText="F5"/>
                 <Separator/>
                 <MenuItem Header="Annotation _preferences…" Command="{x:Static jotunnuicommon:GlobalCommands.AnnotationPreferences}"/>
                 <MenuItem Header="Manage structure _types…" Command="{x:Static jotunnuicommon:GlobalCommands.ManageStructureTypes}"/>
@@ -74,12 +76,11 @@
 
         <Grid>
             <Grid.InputBindings>
-                <KeyBinding Command="{x:Static jotunnuicommon:GlobalCommands.IncrementSectionNumber}" Key="PageUp"/>
-                <KeyBinding Command="{x:Static jotunnuicommon:GlobalCommands.DecrementSectionNumber}" Key="PageDown"/>
-                <KeyBinding Key="Left" Command="{x:Static jotunnuicommon:GlobalCommands.RemoveGridColumnCommand}"/>
-                <KeyBinding Key="Right" Command="{x:Static jotunnuicommon:GlobalCommands.AddGridColumnCommand}"/>
-                <KeyBinding Key="Up" Command="{x:Static jotunnuicommon:GlobalCommands.AddGridRowCommand}"/>
-                <KeyBinding Key="Down" Command="{x:Static jotunnuicommon:GlobalCommands.RemoveGridRowCommand}"/>
+                <!-- Plain arrows pan the view as in Viking; Ctrl+arrows resize the section grid. -->
+                <KeyBinding Key="Left" Modifiers="Control" Command="{x:Static jotunnuicommon:GlobalCommands.RemoveGridColumnCommand}"/>
+                <KeyBinding Key="Right" Modifiers="Control" Command="{x:Static jotunnuicommon:GlobalCommands.AddGridColumnCommand}"/>
+                <KeyBinding Key="Up" Modifiers="Control" Command="{x:Static jotunnuicommon:GlobalCommands.AddGridRowCommand}"/>
+                <KeyBinding Key="Down" Modifiers="Control" Command="{x:Static jotunnuicommon:GlobalCommands.RemoveGridRowCommand}"/>
             </Grid.InputBindings>
 
             <Grid.ColumnDefinitions>

@@ -46,6 +46,10 @@ namespace WebAnnotation.Tools
             if (button != MouseButton.Left)
                 return AnnotationToolResult.Continue;
 
+            _context.SelectedLocation = hit is LocationCanvasView selected && Store.Locations.TryGetObjectByID(selected.ID, out LocationObj selectedLoc)
+                ? selectedLoc
+                : null;
+
             if (clickCount > 1 && hit is LocationCanvasView jumpView)
             {
                 if (Store.Locations.TryGetObjectByID(jumpView.ID, out LocationObj loc) && loc != null)
