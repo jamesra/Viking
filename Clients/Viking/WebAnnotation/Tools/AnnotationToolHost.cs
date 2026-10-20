@@ -104,7 +104,7 @@ namespace WebAnnotation.Tools
         public void OnMouseUp()
         {
             _current.OnMouseUp();
-            if (!ReferenceEquals(_current, _defaultTool) && _current is TranslateLocationTool or ResizeCircleTool)
+            if (!ReferenceEquals(_current, _defaultTool) && _current is TranslateLocationTool or ResizeCircleTool or AdjustVertexTool)
                 FinishCurrent(AnnotationToolResult.Done);
         }
 

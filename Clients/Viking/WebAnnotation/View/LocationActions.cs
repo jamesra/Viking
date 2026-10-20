@@ -680,7 +680,7 @@ namespace WebAnnotation
             _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
-        private static void UpdateLineLocationNoSaveCallback(LocationObj loc, Geometry.Vector2[] VolumeControlPoints, Geometry.Vector2[] MosaicControlPoints)
+        internal static void UpdateLineLocationNoSaveCallback(LocationObj loc, Geometry.Vector2[] VolumeControlPoints, Geometry.Vector2[] MosaicControlPoints)
         {
             SqlGeometry updatedMosaicShape = loc.TypeCode.GetShape(MosaicControlPoints);
             SqlGeometry updatedVolumeShape = loc.TypeCode.GetSmoothedShape(VolumeControlPoints);

@@ -1255,7 +1255,11 @@ namespace WebAnnotation
         /// This is hardcoded for now, but should be read from the VikingXML file
         /// </summary>
         internal static Geometry.Vector3 Scale;
-        private static readonly string WebAnnotationPath =
+        /// <summary>
+        /// Computed on use: Viking's volume is not known when this type initializes, and hosts without one (Jotunn,
+        /// tests) must still be able to use <see cref="Global"/>.
+        /// </summary>
+        private static string WebAnnotationPath =>
             Viking.UI.State.VolumeCachePath + System.IO.Path.DirectorySeparatorChar + "WebAnnotation";
 
         /// <summary>
@@ -1266,7 +1270,7 @@ namespace WebAnnotation
         /// <summary>
         /// The full name of the settings file including filename and path
         /// </summary>
-        private static readonly string UserSettingsFilePath = WebAnnotationPath + System.IO.Path.DirectorySeparatorChar + UserSettingsFileName;
+        private static string UserSettingsFilePath => WebAnnotationPath + System.IO.Path.DirectorySeparatorChar + UserSettingsFileName;
         private static XElement? UserSettingsElement = null;
 
         public static bool PenMode

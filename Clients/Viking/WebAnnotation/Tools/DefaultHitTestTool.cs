@@ -70,6 +70,14 @@ namespace WebAnnotation.Tools
                     LocationAction action = support.GetMouseClickActionForPositionOnAnnotation(
                         world, sectionNumber, _context.Host.CurrentModifiers, out long locationId);
 
+                    if (action is LocationAction.ADJUST or LocationAction.ADDCONTROLPOINT or LocationAction.REMOVECONTROLPOINT)
+                    {
+                        if (Store.Locations.TryGetObjectByID(locationId, out LocationObj edited)
+                            && VertexEditTarget.TryCreate(_context, edited) is VertexEditTarget target)
+                            EditVertices(target, action, world);
+                        return AnnotationToolResult.Continue;
+                    }
+
                     if (action == LocationAction.SCALE)
                     {
                         if (Store.Locations.TryGetObjectByID(locationId, out LocationObj resize) && resize?.TypeCode == LocationType.CIRCLE)
@@ -137,6 +145,27 @@ namespace WebAnnotation.Tools
 
             if (!AnnotationToolActions.TryContinueLastTrace(_context, world))
                 _context.SetStatus("Choose a structure type, or press a structure shortcut, to place an annotation");
+        }
+
+        /// <summary>Viking's vertex actions: drag a control point, or add/remove one with a single click.</summary>
+        void EditVertices(VertexEditTarget target, LocationAction action, Vector2 world)
+        {
+            if (action == LocationAction.ADJUST)
+            {
+                _context.StartTool(new AdjustVertexTool(_context, target, world));
+                return;
+            }
+
+            bool changed = action == LocationAction.ADDCONTROLPOINT ? target.TryAdd(world) : target.TryRemove(world);
+            if (changed)
+            {
+                target.Save(_context);
+                _context.Invalidate();
+            }
+            else
+                _context.SetStatus(action == LocationAction.ADDCONTROLPOINT
+                    ? "Could not add a control point there"
+                    : "Could not remove that control point; the shape needs the points it has");
         }
 
         void Place(LocationType shape, Vector2 world, long? typeId, IReadOnlyList<string> tags)
@@ -214,6 +243,9 @@ namespace WebAnnotation.Tools
                 LocationAction.TRANSLATE => $"{what}: drag to move",
                 LocationAction.SCALE => $"{what}: drag to resize",
                 LocationAction.SCALETRANSLATE => $"{what}: drag to move",
+                LocationAction.ADJUST => $"{what}: drag to move this control point",
+                LocationAction.ADDCONTROLPOINT => $"{what}: click to add a control point",
+                LocationAction.REMOVECONTROLPOINT => $"{what}: click to remove this control point",
                 LocationAction.CREATELINKEDLOCATION => $"{what}: click to continue it on this section",
                 LocationAction.CREATELINK => $"{what}: click to link the last edited location to it",
                 _ => what
