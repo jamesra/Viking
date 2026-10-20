@@ -60,7 +60,7 @@ Jotunn has no Viking shell, so it fills in what Viking's shell would have set up
 
 ## Not yet in Jotunn
 
-- **Auto-polygonize in a grid of several sections**: proposals cover the active cell's section only, and the controller sizes its work from the whole view.
+- **Auto-polygonize in a grid of several sections**: proposals cover the active cell's section only (sized from that cell's view).
 - **Segmentation extras**: dilate/erode mask editing (`SegmentationMaskEditCommand`). It needs mouse-wheel routing to tools, a texture overlay, and a mask-seeded follow-up request.
-- **Pen extras**: Viking hides the target cell's children during a stroke, and draws previews of each choice.
+- **Pen extras**: Viking draws a preview of each choice on its choice buttons; Jotunn lists the choices by name.
 - **Update Volume Positions**: Viking's admin job needs its section viewer.

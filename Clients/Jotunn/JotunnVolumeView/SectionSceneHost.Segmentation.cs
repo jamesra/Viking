@@ -27,7 +27,32 @@ namespace Viking.VolumeView
         Viking.VolumeModel.IVolumeToSectionTransform IAutoPolygonizeHost.ActiveSectionToVolumeTransform =>
             WebAnnotation.AnnotationBootstrap.Transforms?.GetSectionToVolumeTransform(SectionNumber);
 
-        VikingXNA.Scene IAutoPolygonizeHost.Scene => Scene;
+        VikingXNA.Scene _activeCellScene;
+
+        /// <summary>
+        /// The active cell's view (its viewport, the shared camera), not the whole grid: auto-polygonize sizes its work
+        /// and picks circles from the scene's visible bounds. One scene is kept and its viewport updated, because each
+        /// scene subscribes to the camera.
+        /// </summary>
+        VikingXNA.Scene IAutoPolygonizeHost.Scene => OnUiThread(() =>
+        {
+            if (Scene == null)
+                return null;
+
+            ApplyActiveCellViewport();
+            Viewport cell = Scene.Viewport;
+            if (_activeCellScene == null || !ReferenceEquals(_activeCellScene.Camera, Scene.Camera))
+            {
+                _activeCellScene?.Dispose();
+                _activeCellScene = new VikingXNA.Scene(cell, Scene.Camera);
+            }
+            else
+            {
+                _activeCellScene.Viewport = cell;
+            }
+
+            return _activeCellScene;
+        });
 
         double IAutoPolygonizeHost.Downsample => Downsample;
 
