@@ -88,7 +88,23 @@ namespace Jotunn
             NavigationHost.Items.Add(new TabItem { Header = "Types", Content = typeTree });
             _tools.UserName = App.UserCredentials?.UserName;
             _ = LoadHotkeysAsync(_tools);
+            StartAnnotationPoll(scene);
             _sectionGrid.SceneHostControl.Invalidate();
+        }
+
+        System.Windows.Threading.DispatcherTimer _annotationPollTimer;
+
+        /// <summary>Viking's idle poll: picks up other users' edits on the visible sections every 30 seconds.</summary>
+        void StartAnnotationPoll(AnnotationScene scene)
+        {
+            _annotationPollTimer?.Stop();
+            _annotationPollTimer = new System.Windows.Threading.DispatcherTimer { Interval = AnnotationScene.PollInterval };
+            _annotationPollTimer.Tick += (_, _) =>
+            {
+                if (_sectionGrid?.SceneHostControl is SectionSceneHost host)
+                    scene.PollSections(host.VisibleSectionNumbers);
+            };
+            _annotationPollTimer.Start();
         }
 
         /// <summary>

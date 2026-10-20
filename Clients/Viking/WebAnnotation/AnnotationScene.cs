@@ -105,6 +105,47 @@ namespace WebAnnotation
             TileLoadEnvironment.RequestRender?.Invoke();
         }
 
+        /// <summary>How often <see cref="PollSections"/> should run: Viking's idle poll interval.</summary>
+        public static TimeSpan PollInterval => TimeSpan.FromMilliseconds(SectionLocationPollPolicy.IntervalMilliseconds);
+
+        /// <summary>
+        /// Viking's idle poll for other users' edits: for each of <paramref name="sectionNumbers"/> already shown, asks the
+        /// server for locations changed since that section's watermark and adds them to its view. Sections still loading,
+        /// or not yet seeded by a region load, are skipped as in Viking.
+        /// </summary>
+        public void PollSections(IEnumerable<int> sectionNumbers)
+        {
+            if (!Store.IsInitialized || sectionNumbers == null)
+                return;
+
+            foreach (int sectionNumber in sectionNumbers.Distinct())
+            {
+                SectionAnnotationsView view;
+                bool loadInFlight;
+                lock (_loadLock)
+                {
+                    if (!_sections.TryGetValue(sectionNumber, out view))
+                        continue;
+                    loadInFlight = _loadBySection.TryGetValue(sectionNumber, out Task load) && load is { IsCompleted: false };
+                }
+
+                if (!SectionLocationPollPolicy.ShouldPollSection(
+                        Store.Locations.GetLastQueryTimeForSection(sectionNumber),
+                        Store.Locations.HasOutstandingSectionQuery(sectionNumber),
+                        loadInFlight))
+                    continue;
+
+                _ = Store.Locations.RefreshSectionLocationsAsync(sectionNumber, locations =>
+                {
+                    if (locations is null || locations.Count == 0)
+                        return;
+                    // Objects already in the store raise no CollectionChanged; AddLocations is how they reach the view.
+                    view.AddLocations(locations);
+                    TileLoadEnvironment.RequestRender?.Invoke();
+                });
+            }
+        }
+
         public void LoadVisible(VikingXNA.Scene scene, int sectionNumber)
         {
             _ = LoadVisibleAsync(scene, sectionNumber);

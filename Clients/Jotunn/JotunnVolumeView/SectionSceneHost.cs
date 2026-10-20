@@ -462,6 +462,28 @@ namespace Viking.VolumeView
         /// Visible grid cells that resolve to a section, or the volume's current section in the
         /// full backbuffer when the overlay has not realized any cells.
         /// </summary>
+        /// <summary>The sections shown in the grid's visible cells, else the current section.</summary>
+        public IReadOnlyList<int> VisibleSectionNumbers
+        {
+            get
+            {
+                List<int> numbers = new();
+                if (Grid != null)
+                {
+                    foreach (GridCellLayout cell in Grid.GetVisibleCells())
+                    {
+                        JotunnSectionVM sectionVm = ResolveSectionVm(cell.Item);
+                        if (sectionVm?.section != null)
+                            numbers.Add(sectionVm.section.Number);
+                    }
+                }
+
+                if (numbers.Count == 0 && SectionNumber > 0)
+                    numbers.Add(SectionNumber);
+                return numbers;
+            }
+        }
+
         List<(Section section, string channel, Viewport viewport)> CollectDraws(GraphicsDevice device)
         {
             var draws = new List<(Section section, string channel, Viewport viewport)>();
