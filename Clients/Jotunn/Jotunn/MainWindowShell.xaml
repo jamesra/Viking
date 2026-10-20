@@ -80,6 +80,7 @@
                 <MenuItem Header="Add bookmark" Command="{x:Static jotunnuicommon:GlobalCommands.AddBookmark}" InputGestureText="Ctrl+B"/>
                 <MenuItem Header="_Segmentation…" Command="{x:Static jotunnuicommon:GlobalCommands.Segmentation}" InputGestureText="Tab"/>
                 <MenuItem x:Name="AutoPolygonizeMenuItem" Header="_Auto-polygonize circles" IsCheckable="True" Click="OnToggleAutoPolygonize"/>
+                <MenuItem Header="Select segmentation se_rvice…" Click="OnSelectSegmentationService"/>
             </MenuItem>
         </Menu>
 

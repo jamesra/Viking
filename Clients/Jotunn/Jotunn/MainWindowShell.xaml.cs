@@ -704,13 +704,42 @@ namespace Jotunn
         }
 
         /// <summary>The segmentation service chosen at login, or null when there is none.</summary>
+        /// <summary>
+        /// The segmentation service in use: the one chosen with Tools > Select segmentation service (Viking's setting,
+        /// which the login's choice also sets), else the login's.
+        /// </summary>
         static string SegmentationServiceUrl() =>
-            !string.IsNullOrWhiteSpace(App.SegmentationServiceUrl)
-                ? App.SegmentationServiceUrl
-                : WebAnnotation.Global.AnnotationSettings.SegmentationServiceUrl;
+            !string.IsNullOrWhiteSpace(WebAnnotation.Global.AnnotationSettings.SegmentationServiceUrl)
+                ? WebAnnotation.Global.AnnotationSettings.SegmentationServiceUrl
+                : App.SegmentationServiceUrl;
 
-        Viking.Services.Grpc.IGrpcChannelManager SegmentationChannels(string url) =>
-            _segmentationChannels ??= new Viking.Services.Grpc.GrpcChannelManager(new FixedSegmentationEndpoint(url));
+        string _segmentationChannelsUrl;
+
+        /// <summary>Channels to <paramref name="url"/>, made again when the service changes.</summary>
+        Viking.Services.Grpc.IGrpcChannelManager SegmentationChannels(string url)
+        {
+            if (_segmentationChannels == null || !string.Equals(_segmentationChannelsUrl, url, StringComparison.OrdinalIgnoreCase))
+            {
+                _segmentationChannels = new Viking.Services.Grpc.GrpcChannelManager(new FixedSegmentationEndpoint(url));
+                _segmentationChannelsUrl = url;
+            }
+
+            return _segmentationChannels;
+        }
+
+        /// <summary>
+        /// Viking's "Select Segmentation Service…": lists the services Identity offers this user. Choosing one switches
+        /// segmentation, the tools and auto-polygonize to it.
+        /// </summary>
+        void OnSelectSegmentationService(object sender, RoutedEventArgs e)
+        {
+            WebAnnotation.AnnotationMenu.OnSelectSegmentationService(sender, EventArgs.Empty);
+
+            string url = SegmentationServiceUrl();
+            if (_tools != null)
+                _tools.SegmentationChannels = string.IsNullOrWhiteSpace(url) ? null : SegmentationChannels(url);
+            ApplyAutoPolygonizeSetting();
+        }
 
         /// <summary>Viking's "Segment to Polygon" on a circle, or "Resegment" on a polygon.</summary>
         void SegmentCircle(LocationObj circle)

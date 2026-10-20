@@ -53,6 +53,8 @@ namespace Jotunn
             host.TransientStatus += (_, message) => _status?.SetMessage(message);
             tools.PointerMoved += (_, world) => _autoPolygonize?.UpdateHover(world);
             tools.PreviewMouseDown = OnProposalMouseDown;
+            // A new segmentation service: proposals from the old one are dropped and, if it is usable, made again.
+            SegmentationServiceSession.AutoPolygonizeResubmit += usable => _autoPolygonize?.OnSegmentationEndpointChanged(usable);
             Closed += (_, _) => _autoPolygonize?.Stop();
 
             ApplyAutoPolygonizeSetting();
