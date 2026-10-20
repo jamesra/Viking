@@ -46,7 +46,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             return await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
             {
-                int downsample = ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
+                int downsample = ResolveTileDownsample(parent.CameraDownsample);
                 TileSignature signature = CurrentTileSignature(downsample);
                 Geometry.Rectangle bounds = GetCurrentViewportBounds();
                 ViewportBounds = bounds;
@@ -56,18 +56,18 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     bounds.UpperRight.X,
                     bounds.UpperRight.Y,
                     downsample);
-                bool grayscale = parent.CurrentChannelset.Length == 1;
+                bool grayscale = parent.IsGrayscale;
                 return (downsample, signature, visible, grayscale);
             }).Task.ConfigureAwait(false);
         }
 
         private TileSignature CurrentTileSignature(int downsample)
         {
-            string volume = parent.Section?.VolumeViewModel?.Name ?? string.Empty;
-            int section = parent.Section?.Number ?? 0;
-            string channel = parent.CurrentChannel ?? string.Empty;
-            string volumeTransform = parent.Section?.VolumeViewModel?.ActiveVolumeTransform ?? string.Empty;
-            string sectionTransform = parent.CurrentTransform ?? string.Empty;
+            string volume = parent.VolumeName ?? string.Empty;
+            int section = parent.SectionNumber;
+            string channel = parent.Channel ?? string.Empty;
+            string volumeTransform = parent.VolumeTransform ?? string.Empty;
+            string sectionTransform = parent.SectionTransform ?? string.Empty;
             return new TileSignature(volume, section, channel, volumeTransform + "|" + sectionTransform, downsample);
         }
 
@@ -454,7 +454,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     tileScene,
                     centerX,
                     centerY,
-                    parent.Section.Number,
+                    parent.SectionNumber,
                     showOverlays: false,
                     asyncTextureLoad: false,
                     renderToken).ConfigureAwait(false);
@@ -500,7 +500,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                         pngData,
                         width,
                         height,
-                        $"s{parent.Section?.Number}_ds{downsample}_r{cell.Row}_c{cell.Col}");
+                        $"s{parent.SectionNumber}_ds{downsample}_r{cell.Row}_c{cell.Col}");
                     var (isValid, errorMessage) = CapturedPng.Validate(pngData, width, height);
                     SegmentationDiag.Log(
                         $"CaptureTile encoded row={cell.Row} col={cell.Col} " +

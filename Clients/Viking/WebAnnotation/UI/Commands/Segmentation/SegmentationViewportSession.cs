@@ -32,7 +32,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// </summary>
     internal sealed partial class SegmentationViewportSession
     {
-        private readonly SectionViewerControl parent;
+        private readonly ISegmentationViewport parent;
         private SegmentationServiceTypes.SegmentationService.SegmentationServiceClient grpcClient;
 
         private ulong? currentImageId;
@@ -312,7 +312,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         private bool IsCameraWithinTileSubmission(bool recordSkip = true)
         {
-            double cameraDownsample = parent.Camera?.Downsample ?? parent.Downsample;
+            double cameraDownsample = parent.CameraDownsample;
             double maxCameraDownsample = WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample;
             if (CameraAllowsSubmission(cameraDownsample, maxCameraDownsample, EnforceAutoDownsampleLimit))
                 return true;
@@ -419,11 +419,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// that already holds the manager passes it so the session does not depend on the global locator.
         /// </param>
         public SegmentationViewportSession(SectionViewerControl parent, Viking.Services.Grpc.IGrpcChannelManager? channelManager = null)
+            : this(new SectionViewerSegmentationViewport(parent ?? throw new ArgumentNullException(nameof(parent))), channelManager)
         {
-            this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
+        }
+
+        /// <summary>A session over any view that can render mosaic tiles (Jotunn's scene host as well as Viking's viewer).</summary>
+        public SegmentationViewportSession(ISegmentationViewport viewport, Viking.Services.Grpc.IGrpcChannelManager? channelManager = null)
+        {
+            this.parent = viewport ?? throw new ArgumentNullException(nameof(viewport));
             this.channelManager = channelManager;
             ViewportBounds = GetCurrentViewportBounds();
-            mosaicDownsample = ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
+            mosaicDownsample = ResolveTileDownsample(parent.CameraDownsample);
         }
 
         public Geometry.Rectangle ViewportBounds { get; set; }
@@ -484,7 +490,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public Geometry.Rectangle GetCurrentViewportBounds()
         {
             Geometry.Vector2 topLeft = parent.ScreenToWorld(0, 0);
-            Geometry.Vector2 bottomRight = parent.ScreenToWorld(parent.Width, parent.Height);
+            Geometry.Vector2 bottomRight = parent.ScreenToWorld(parent.ViewportWidth, parent.ViewportHeight);
             return new Geometry.Rectangle(topLeft, bottomRight);
         }
 
@@ -519,7 +525,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             uploadedImageHeight = 0;
             uploadedTileKeys.Clear();
             tileImages.Clear();
-            mosaicDownsample = ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
+            mosaicDownsample = ResolveTileDownsample(parent.CameraDownsample);
             mosaicOriginX = 0;
             mosaicOriginY = 0;
             Interlocked.Exchange(ref isUploadingImage, 0);
@@ -1067,7 +1073,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         public Task<int> GetLiveTileDownsampleAsync()
         {
-            int Resolve() => ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
+            int Resolve() => ResolveTileDownsample(parent.CameraDownsample);
 
             var dispatcher = Viking.UI.State.MainThreadDispatcher;
             if (dispatcher is null || dispatcher.CheckAccess())

@@ -1,0 +1,74 @@
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Xna.Framework.Graphics;
+using Viking.UI.Controls;
+
+namespace WebAnnotation.UI.Commands.Segmentation
+{
+    /// <summary>
+    /// What <see cref="SegmentationViewportSession"/> needs from the view it segments: the camera, the section, channel
+    /// and transforms that identify the tiles, and a way to render a tile of mosaic to a texture. Viking's section viewer
+    /// and Jotunn's scene host both provide it. Members are read on the UI thread.
+    /// </summary>
+    public interface ISegmentationViewport
+    {
+        /// <summary>The camera's downsample (volume pixels per screen pixel).</summary>
+        double CameraDownsample { get; }
+
+        int ViewportWidth { get; }
+
+        int ViewportHeight { get; }
+
+        Geometry.Vector2 ScreenToWorld(double x, double y);
+
+        /// <summary>The section being viewed, or 0 when none is.</summary>
+        int SectionNumber { get; }
+
+        string VolumeName { get; }
+
+        string VolumeTransform { get; }
+
+        string SectionTransform { get; }
+
+        string Channel { get; }
+
+        /// <summary>True when one channel is shown, so captures are encoded as grayscale.</summary>
+        bool IsGrayscale { get; }
+
+        /// <summary>
+        /// Renders <paramref name="tileScene"/> (its viewport is the tile size) centered on the given volume point of
+        /// <paramref name="sectionNumber"/> to a new render target the caller disposes; null when cancelled or not possible.
+        /// With <paramref name="asyncTextureLoad"/> false the tile textures are loaded before rendering.
+        /// </summary>
+        Task<RenderTarget2D> RenderSceneToTexture(VikingXNA.Scene tileScene, float centerX, float centerY, int sectionNumber,
+            bool showOverlays, bool asyncTextureLoad, CancellationToken token);
+    }
+
+    /// <summary>Viking's section viewer as a <see cref="ISegmentationViewport"/>.</summary>
+    internal sealed class SectionViewerSegmentationViewport(SectionViewerControl viewer) : ISegmentationViewport
+    {
+        public double CameraDownsample => viewer.Camera?.Downsample ?? viewer.Downsample;
+
+        public int ViewportWidth => viewer.Width;
+
+        public int ViewportHeight => viewer.Height;
+
+        public Geometry.Vector2 ScreenToWorld(double x, double y) => viewer.ScreenToWorld(x, y);
+
+        public int SectionNumber => viewer.Section?.Number ?? 0;
+
+        public string VolumeName => viewer.Section?.VolumeViewModel?.Name ?? string.Empty;
+
+        public string VolumeTransform => viewer.Section?.VolumeViewModel?.ActiveVolumeTransform ?? string.Empty;
+
+        public string SectionTransform => viewer.CurrentTransform ?? string.Empty;
+
+        public string Channel => viewer.CurrentChannel ?? string.Empty;
+
+        public bool IsGrayscale => viewer.CurrentChannelset.Length == 1;
+
+        public Task<RenderTarget2D> RenderSceneToTexture(VikingXNA.Scene tileScene, float centerX, float centerY, int sectionNumber,
+            bool showOverlays, bool asyncTextureLoad, CancellationToken token) =>
+            viewer.RenderSceneToTexture(tileScene, centerX, centerY, sectionNumber, showOverlays, asyncTextureLoad, token);
+    }
+}
