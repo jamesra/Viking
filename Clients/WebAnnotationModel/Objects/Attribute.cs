@@ -83,7 +83,11 @@ namespace WebAnnotationModel.Objects
             List<ObjAttribute> listAttrib = new List<ObjAttribute>();
             foreach (XElement attribElem in structureElem.Elements("Attrib"))
             {
-                var name = attribElem.Attribute("Name")?.Value ?? "";
+                //An entry without a name is not a tag, so it is skipped rather than kept as an empty-named attribute.
+                var name = attribElem.Attribute("Name")?.Value;
+                if (string.IsNullOrEmpty(name))
+                    continue;
+
                 var value = attribElem.Attribute("Value")?.Value ?? "";
 
                 listAttrib.Add(new ObjAttribute(name, value));
@@ -94,7 +98,7 @@ namespace WebAnnotationModel.Objects
             return listAttrib;
         }
 
-        private static List<ObjAttribute> TagStringsToList(IEnumerable<string> tags)
+        internal static List<ObjAttribute> TagStringsToList(IEnumerable<string> tags)
         {
             if (tags == null)
                 return new List<ObjAttribute>();

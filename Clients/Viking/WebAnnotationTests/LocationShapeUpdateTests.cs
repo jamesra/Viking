@@ -1,11 +1,13 @@
 ﻿using Viking.AnnotationServiceTypes.Interfaces;
 using Geometry;
+using SqlGeometryUtils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using Viking.VolumeModel;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 using WebAnnotationTests.Actions;
 
 namespace WebAnnotationTests
@@ -85,8 +87,8 @@ namespace WebAnnotationTests
             Assert.AreEqual(LocationType.CURVEPOLYGON, location.TypeCode);
             Assert.IsNotNull(location.MosaicShape);
             Assert.IsNotNull(location.VolumeShape);
-            Assert.AreEqual(0, location.MosaicShape.STNumInteriorRing().Value);
-            Assert.AreEqual(0, location.VolumeShape.STNumInteriorRing().Value);
+            Assert.AreEqual(0, location.MosaicShape.ToSqlGeometry().STNumInteriorRing().Value);
+            Assert.AreEqual(0, location.VolumeShape.ToSqlGeometry().STNumInteriorRing().Value);
         }
 
         [TestMethod]
@@ -97,7 +99,7 @@ namespace WebAnnotationTests
             LocationShapeUpdate.AssignSimplifiedVolumePolygon(location, new Polygon(Square(20, 180)), ChangeTypeActionTests.CreateBoundedTransform(), 1);
 
             // The grid transform is the identity, so the mosaic envelope is the simplified square itself.
-            Microsoft.SqlServer.Types.SqlGeometry envelope = location.MosaicShape.STEnvelope();
+            Microsoft.SqlServer.Types.SqlGeometry envelope = location.MosaicShape.ToSqlGeometry().STEnvelope();
             Assert.AreEqual(20, envelope.STPointN(1).STX.Value, 1e-6);
             Assert.AreEqual(20, envelope.STPointN(1).STY.Value, 1e-6);
             Assert.AreEqual(180, envelope.STPointN(3).STX.Value, 1e-6);
@@ -114,8 +116,8 @@ namespace WebAnnotationTests
             LocationShapeUpdate.AssignSimplifiedVolumePolygon(location, withHole, ChangeTypeActionTests.CreateBoundedTransform(), 1);
 
             Assert.AreEqual(LocationType.CURVEPOLYGON, location.TypeCode);
-            Assert.AreEqual(1, location.MosaicShape.STNumInteriorRing().Value);
-            Assert.AreEqual(1, location.VolumeShape.STNumInteriorRing().Value);
+            Assert.AreEqual(1, location.MosaicShape.ToSqlGeometry().STNumInteriorRing().Value);
+            Assert.AreEqual(1, location.VolumeShape.ToSqlGeometry().STNumInteriorRing().Value);
         }
 
         [TestMethod]
@@ -133,7 +135,7 @@ namespace WebAnnotationTests
 
             LocationShapeUpdate.AssignSimplifiedVolumePolygon(location, new Polygon(dense.ToArray()), transform, 1);
 
-            Assert.IsTrue(location.MosaicShape.STNumPoints().Value < dense.Count / 10, "mosaic points: " + location.MosaicShape.STNumPoints().Value);
+            Assert.IsTrue(location.MosaicShape.ToSqlGeometry().STNumPoints().Value < dense.Count / 10, "mosaic points: " + location.MosaicShape.ToSqlGeometry().STNumPoints().Value);
         }
 
         [TestMethod]

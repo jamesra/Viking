@@ -1,7 +1,8 @@
-using AnnotationService.Types;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotationTests
 {
@@ -9,13 +10,17 @@ namespace WebAnnotationTests
     /// Pins that assigning <see cref="StructureTypeObj.Color"/> its current value is a no-op. The structure type
     /// editor's color picker writes the same color back (for example when its Advanced view opens), so a same-value
     /// assignment must not raise change events or mark the type for saving. The color is stored as a signed
-    /// <c>int</c> in the WCF data, so colors with alpha 0x80 or higher are negative there.
+    /// <c>int</c> on the wire, so colors with alpha 0x80 or higher are negative there.
     /// </summary>
     [TestClass]
     public class StructureTypeObjColorTests
     {
-        private static StructureTypeObj NewType(uint color) =>
-            new(new StructureType { Code = "C", Color = unchecked((int)color), DBAction = DBACTION.NONE });
+        private static StructureTypeObj NewType(uint color)
+        {
+            StructureTypeObj type = new(1) { Code = "C", Color = color };
+            type.DBAction = DBACTION.NONE;
+            return type;
+        }
 
         private static List<string> RecordEvents(StructureTypeObj obj)
         {

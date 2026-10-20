@@ -127,8 +127,8 @@ namespace WebAnnotationTests.View
             public override double LineWidth => Width;
             public override double ControlPointRadius => Width / 2.0;
             public override SqlGeometry VolumeShapeAsRendered => throw new System.NotSupportedException();
-            public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID) => throw new System.NotSupportedException();
-            public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID) => throw new System.NotSupportedException();
+            public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys ModifierKeys, out long LocationID) => throw new System.NotSupportedException();
+            public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys ModifierKeys, out long LocationID) => throw new System.NotSupportedException();
             public override List<IAction> GetPenActionsForShapeAnnotation(Geometry.Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new System.NotSupportedException();
             public override string[] HelpStrings => [];
         }
@@ -146,8 +146,8 @@ namespace WebAnnotationTests.View
             public override Color Color { get; set; }
             public override float Alpha { get; set; }
             public override SqlGeometry VolumeShapeAsRendered => throw new System.NotSupportedException();
-            public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID) => throw new System.NotSupportedException();
-            public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID) => throw new System.NotSupportedException();
+            public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys ModifierKeys, out long LocationID) => throw new System.NotSupportedException();
+            public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys ModifierKeys, out long LocationID) => throw new System.NotSupportedException();
             public override List<IAction> GetPenActionsForShapeAnnotation(Geometry.Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new System.NotSupportedException();
             public override string[] HelpStrings => [];
         }

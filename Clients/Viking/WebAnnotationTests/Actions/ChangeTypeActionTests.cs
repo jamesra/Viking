@@ -1,4 +1,3 @@
-using AnnotationService.Types;
 using Geometry;
 using Geometry.Transforms;
 using Microsoft.SqlServer.Types;
@@ -8,6 +7,7 @@ using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
 using WebAnnotation.UI.Actions;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotationTests.Actions
 {
@@ -42,19 +42,7 @@ namespace WebAnnotationTests.Actions
             return new VolumeToSectionTransform("grid", new GridTransform(points, new Rectangle(0, 200, 0, 200), 3, 3, new TransformBasicInfo()));
         }
 
-        internal static LocationObj NewLocation(LocationType type, string wkt)
-        {
-            SqlGeometry shape = SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(wkt), 0);
-            Location data = new()
-            {
-                ID = 1,
-                TypeCode = (short)type,
-                Section = 1,
-                MosaicShapeWKB = shape.AsBinary(),
-                VolumeShapeWKB = shape.AsBinary()
-            };
-            return new LocationObj(data);
-        }
+        internal static LocationObj NewLocation(LocationType type, string wkt) => TestModel.Location(1, 0, type, wkt);
 
         internal static Vector2[] UnmappableRing() =>
             [new(-1000, -1000), new(-900, -1000), new(-900, -900), new(-1000, -900), new(-1000, -1000)];

@@ -1,6 +1,7 @@
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotationTests.Commands
 {

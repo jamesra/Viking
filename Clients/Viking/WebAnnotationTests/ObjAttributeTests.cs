@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.Linq;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotationTests
 {
@@ -13,16 +14,16 @@ namespace WebAnnotationTests
     public class ObjAttributeTests
     {
         [TestMethod]
-        public void Parse_Null_ReturnsEmpty() => Assert.AreEqual(0, ObjAttribute.Parse(null).Count);
+        public void Parse_Null_ReturnsEmpty() => Assert.AreEqual(0, ObjAttributeParser.ParseAttributes(null).Count);
 
         [TestMethod]
         public void Parse_XmlWithoutStructureRoot_ReturnsEmpty() =>
-            Assert.AreEqual(0, ObjAttribute.Parse("<Other/>").Count);
+            Assert.AreEqual(0, ObjAttributeParser.ParseAttributes("<Other/>").Count);
 
         [TestMethod]
         public void Parse_Xml_ReadsNameAndOptionalValueAndSkipsNamelessEntries()
         {
-            List<ObjAttribute> list = ObjAttribute.Parse(
+            List<ObjAttribute> list = ObjAttributeParser.ParseAttributes(
                 "<Structure><Attrib Name=\"b\" Value=\"2\"/><Attrib Name=\"a\"/><Attrib Value=\"x\"/><Attrib Name=\"\"/></Structure>");
 
             Assert.AreEqual(2, list.Count);
@@ -35,7 +36,7 @@ namespace WebAnnotationTests
         [TestMethod]
         public void Parse_Xml_ResultIsSortedByNameThenValue()
         {
-            List<ObjAttribute> list = ObjAttribute.Parse(
+            List<ObjAttribute> list = ObjAttributeParser.ParseAttributes(
                 "<Structure><Attrib Name=\"b\"/><Attrib Name=\"a\" Value=\"2\"/><Attrib Name=\"a\" Value=\"1\"/></Structure>");
 
             CollectionAssert.AreEqual(
@@ -46,7 +47,7 @@ namespace WebAnnotationTests
         [TestMethod]
         public void Parse_LegacySemicolonString_TrimsAndSkipsEmptyKeys()
         {
-            List<ObjAttribute> list = ObjAttribute.Parse(" b = 2 ; a ;; =x ;  ");
+            List<ObjAttribute> list = ObjAttributeParser.ParseAttributes(" b = 2 ; a ;; =x ;  ");
 
             // "=x" has an empty key after trimming but is not skipped: only a fully blank entry is.
             Assert.AreEqual(3, list.Count);
@@ -60,12 +61,12 @@ namespace WebAnnotationTests
 
         [TestMethod]
         public void TagStringsToList_Null_ReturnsEmpty() =>
-            Assert.AreEqual(0, ObjAttribute.TagStringsToList(null).Count);
+            Assert.AreEqual(0, ObjAttributeParser.TagStringsToList(null).Count);
 
         [TestMethod]
         public void TagStringsToList_OnlyFirstEqualsSplitsKeyFromValue()
         {
-            List<ObjAttribute> list = ObjAttribute.TagStringsToList(["k=v=w"]);
+            List<ObjAttribute> list = ObjAttributeParser.TagStringsToList(["k=v=w"]);
 
             Assert.AreEqual(1, list.Count);
             Assert.AreEqual("k", list[0].Name);
@@ -74,15 +75,15 @@ namespace WebAnnotationTests
 
         [TestMethod]
         public void TagStringsToList_BlankEntriesAreDropped() =>
-            Assert.AreEqual(0, ObjAttribute.TagStringsToList(["", "   "]).Count);
+            Assert.AreEqual(0, ObjAttributeParser.TagStringsToList(["", "   "]).Count);
 
         [TestMethod]
-        public void ToXml_Empty_ReturnsNull() => Assert.IsNull(ObjAttribute.ToXml([]));
+        public void ToXml_Empty_ReturnsNull() => Assert.IsNull(ObjAttributeParser.ToXml([]));
 
         [TestMethod]
         public void ToXml_OmitsValueWhenNullOrEmpty()
         {
-            string xml = ObjAttribute.ToXml([new ObjAttribute("a", null), new ObjAttribute("b", ""), new ObjAttribute("c", "3")]);
+            string xml = ObjAttributeParser.ToXml([new ObjAttribute("a", null), new ObjAttribute("b", ""), new ObjAttribute("c", "3")]);
 
             Assert.IsFalse(xml.Contains("Name=\"a\" Value"));
             Assert.IsFalse(xml.Contains("Name=\"b\" Value"));
@@ -99,7 +100,7 @@ namespace WebAnnotationTests
                 new ObjAttribute("gamma", "quote\"d"),
             ];
 
-            List<ObjAttribute> parsed = ObjAttribute.Parse(ObjAttribute.ToXml(original));
+            List<ObjAttribute> parsed = ObjAttributeParser.ParseAttributes(ObjAttributeParser.ToXml(original));
 
             CollectionAssert.AreEqual(
                 original.Select(a => a.Name + "|" + a.Value).ToArray(),

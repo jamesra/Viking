@@ -22,6 +22,11 @@ namespace WebAnnotationTests
             public string Name => "t" + ID;
             public string Code => "c" + ID;
             public string[] Tags => [];
+            public string Notes => string.Empty;
+            public IReadOnlyDictionary<string, string> Attributes { get; } = new Dictionary<string, string>();
+            public bool Abstract => false;
+            public uint Color => 0;
+            public int AllowedShapes => 0;
             public bool Equals(IStructureTypeReadOnly other) => other != null && other.ID == ID;
         }
 

@@ -2,6 +2,7 @@
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using Viking.AnnotationServiceTypes;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using WebAnnotationModel.Objects;
@@ -43,6 +44,78 @@ namespace WebAnnotationModel.gRPC
                     DateTime.UtcNow, all.Cast<IPermittedStructureLink>().ToArray(), Array.Empty<PermittedStructureLinkKey>()))
                 .ConfigureAwait(false);
             await CallOnCollectionChanged(changes).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Queues a link that is not on the server yet (DBAction other than NONE) for the next Save. A link built with the
+        /// editor's constructor is already INSERT before the store watches its DBAction.
+        /// </summary>
+        protected override void TrackForSaveIfPending(PermittedStructureLinkObj obj) =>
+            QueueUnsavedLinks(new[] { obj }, ChangedObjects);
+
+        /// <summary>
+        /// Puts links that are not on the server yet (DBAction other than NONE) on the dirty set so the next
+        /// <c>Save()</c> sends them. Links loaded from the server arrive with DBAction NONE and are skipped.
+        /// Re-adding a link whose removal is still queued cancels that DELETE and leaves the new link NONE, because
+        /// the server row still exists (a DELETE is only queued for saved links; see <see cref="Remove(PermittedStructureLinkKey)"/>).
+        /// </summary>
+        /// <param name="addedLinks">Links that were newly added to the store.</param>
+        /// <param name="changedObjects">The store's dirty set, keyed by link.</param>
+        internal static void QueueUnsavedLinks(IEnumerable<PermittedStructureLinkObj> addedLinks,
+                                               ConcurrentDictionary<PermittedStructureLinkKey, PermittedStructureLinkObj> changedObjects)
+        {
+            foreach (PermittedStructureLinkObj link in addedLinks)
+            {
+                if (link.DBAction == DBACTION.NONE)
+                    continue;
+
+                if (link.DBAction == DBACTION.INSERT &&
+                    changedObjects.TryGetValue(link.ID, out PermittedStructureLinkObj queued) &&
+                    queued.DBAction == DBACTION.DELETE &&
+                    changedObjects.TryRemove(link.ID, out _))
+                {
+                    link.DBAction = DBACTION.NONE;
+                    continue;
+                }
+
+                changedObjects.TryAdd(link.ID, link);
+            }
+        }
+
+        /// <summary>
+        /// Removes a link from the store. A link added since the last Save (DBAction INSERT) is not on the server,
+        /// so its queued INSERT is cancelled and nothing is sent; a saved link is queued for DELETE as usual.
+        /// </summary>
+        public override async Task<PermittedStructureLinkObj> Remove(PermittedStructureLinkKey ID)
+        {
+            if (IDToObject.TryGetValue(ID, out PermittedStructureLinkObj link) && CancelUnsavedInsert(link, ChangedObjects))
+            {
+                PermittedStructureLinkObj deleted = InternalDelete(ID);
+                if (deleted != null)
+                    CallOnCollectionChangedForDelete(deleted);
+                return deleted;
+            }
+
+            return await base.Remove(ID).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc cref="Remove(PermittedStructureLinkKey)"/>
+        public override async Task<bool> Remove(PermittedStructureLinkObj obj) =>
+            obj != null && await Remove(obj.ID).ConfigureAwait(false) != null;
+
+        /// <summary>
+        /// Drops a never-saved link's pending INSERT from the dirty set. Sending a DELETE instead would hit whatever
+        /// server row shares its source and target (the server key ignores Bidirectional), or nothing at all.
+        /// </summary>
+        /// <returns>True if the link was unsaved (INSERT) and is no longer queued; false for a saved link.</returns>
+        internal static bool CancelUnsavedInsert(PermittedStructureLinkObj link,
+                                                 ConcurrentDictionary<PermittedStructureLinkKey, PermittedStructureLinkObj> changedObjects)
+        {
+            if (link.DBAction != DBACTION.INSERT)
+                return false;
+
+            changedObjects.TryRemove(link.ID, out _);
+            return true;
         }
 
         /// <summary>

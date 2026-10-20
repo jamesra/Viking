@@ -1,8 +1,8 @@
-using AnnotationService.Types;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Linq;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotationTests.View
 {
@@ -18,8 +18,7 @@ namespace WebAnnotationTests.View
     {
         private const int Section = 250;
 
-        private static LocationObj Loc(long id, long parent, int section) =>
-            new(new Location { ID = id, ParentID = parent, Position = new AnnotationPoint(0, 0, section) });
+        private static LocationObj Loc(long id, long parent, int section) => TestModel.Location(id, parent, section);
 
         [TestMethod]
         public void EachStructureOfTheRemovedLocationsOnTheSectionIsRefreshedOnce()

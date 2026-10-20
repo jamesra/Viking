@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
+using Viking.AnnotationServiceTypes;
 
 namespace WebAnnotationTests
 {
@@ -122,13 +123,13 @@ namespace WebAnnotationTests
         [TestMethod]
         public void LinkObjects_WithReversedBidirectionalEndpoints_AreEqualAndHashAlike()
         {
-            var a = new StructureLinkObj(new AnnotationService.Types.StructureLink { SourceID = 7, TargetID = 3, Bidirectional = true });
-            var b = new StructureLinkObj(new AnnotationService.Types.StructureLink { SourceID = 3, TargetID = 7, Bidirectional = true });
+            var a = new StructureLinkObj(7, 3, true);
+            var b = new StructureLinkObj(3, 7, true);
             Assert.IsTrue(a.Equals(b));
             Assert.AreEqual(a.GetHashCode(), b.GetHashCode());
 
-            var p = new PermittedStructureLinkObj(new AnnotationService.Types.PermittedStructureLink { SourceTypeID = 7, TargetTypeID = 3, Bidirectional = true });
-            var q = new PermittedStructureLinkObj(new AnnotationService.Types.PermittedStructureLink { SourceTypeID = 3, TargetTypeID = 7, Bidirectional = true });
+            var p = new PermittedStructureLinkObj(7, 3, true);
+            var q = new PermittedStructureLinkObj(3, 7, true);
             Assert.IsTrue(p.Equals(q));
             Assert.AreEqual(p.GetHashCode(), q.GetHashCode());
         }

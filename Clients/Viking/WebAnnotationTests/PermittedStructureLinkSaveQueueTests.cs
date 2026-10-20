@@ -1,4 +1,6 @@
-using AnnotationService.Types;
+using Viking.AnnotationServiceTypes;
+using Viking.AnnotationServiceTypes.Interfaces;
+using WebAnnotationModel.gRPC;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Concurrent;
 using WebAnnotationModel;
@@ -15,6 +17,14 @@ namespace WebAnnotationTests
     public class PermittedStructureLinkSaveQueueTests
     {
         private static ConcurrentDictionary<PermittedStructureLinkKey, PermittedStructureLinkObj> NewQueue() => new();
+
+        /// <summary>A link as loaded from the server: DBAction NONE.</summary>
+        private static PermittedStructureLinkObj Loaded(long source, long target, bool bidirectional)
+        {
+            PermittedStructureLinkObj link = new(source, target, bidirectional);
+            link.DBAction = DBACTION.NONE;
+            return link;
+        }
 
         /// <summary>A link made in the editor (directional or bidirectional) is INSERT and is queued under its key.</summary>
         [DataTestMethod]
@@ -36,7 +46,7 @@ namespace WebAnnotationTests
         [TestMethod]
         public void ServerLink_IsNotQueued()
         {
-            PermittedStructureLinkObj link = new(new PermittedStructureLink { SourceTypeID = 1, TargetTypeID = 2, Bidirectional = false });
+            PermittedStructureLinkObj link = Loaded(1, 2, false);
             var queue = NewQueue();
 
             PermittedStructureLinkStore.QueueUnsavedLinks([link], queue);
@@ -49,7 +59,7 @@ namespace WebAnnotationTests
         [TestMethod]
         public void Mixed_QueuesOnlyUnsaved_AndKeepsExistingEntry()
         {
-            PermittedStructureLinkObj loaded = new(new PermittedStructureLink { SourceTypeID = 4, TargetTypeID = 5 });
+            PermittedStructureLinkObj loaded = Loaded(4, 5, false);
             PermittedStructureLinkObj added = new(6, 8, false);
             PermittedStructureLinkObj alreadyQueued = new(1, 2, true);
             PermittedStructureLinkObj sameKey = new(2, 1, true);
@@ -74,12 +84,7 @@ namespace WebAnnotationTests
         [DataRow(9L, 2L, true, DisplayName = "Bidirectional, higher ID first")]
         public void ReAddAfterRemovingSavedLink_CancelsDelete(long source, long target, bool bidirectional)
         {
-            PermittedStructureLinkObj saved = new(new PermittedStructureLink
-            {
-                SourceTypeID = bidirectional ? System.Math.Min(source, target) : source,
-                TargetTypeID = bidirectional ? System.Math.Max(source, target) : target,
-                Bidirectional = bidirectional
-            });
+            PermittedStructureLinkObj saved = Loaded(source, target, bidirectional);
             saved.DBAction = DBACTION.DELETE;
             var queue = NewQueue();
             queue.TryAdd(saved.ID, saved);
@@ -95,7 +100,7 @@ namespace WebAnnotationTests
         [TestMethod]
         public void AddWithOtherDirection_KeepsDeleteOfOriginal()
         {
-            PermittedStructureLinkObj saved = new(new PermittedStructureLink { SourceTypeID = 1, TargetTypeID = 2, Bidirectional = false });
+            PermittedStructureLinkObj saved = Loaded(1, 2, false);
             saved.DBAction = DBACTION.DELETE;
             var queue = NewQueue();
             queue.TryAdd(saved.ID, saved);
@@ -124,7 +129,7 @@ namespace WebAnnotationTests
         [TestMethod]
         public void RemoveSavedLink_IsNotCancelled()
         {
-            PermittedStructureLinkObj saved = new(new PermittedStructureLink { SourceTypeID = 4, TargetTypeID = 5 });
+            PermittedStructureLinkObj saved = Loaded(4, 5, false);
             PermittedStructureLinkObj other = new(6, 8, false);
             var queue = NewQueue();
             queue.TryAdd(other.ID, other);

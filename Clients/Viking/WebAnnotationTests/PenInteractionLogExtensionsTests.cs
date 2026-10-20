@@ -1,10 +1,10 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.Linq;
-using AnnotationService.Types;
 using WebAnnotation.UI;
 using WebAnnotation.UI.Actions;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotationTests
 {
@@ -27,7 +27,7 @@ namespace WebAnnotationTests
         private static readonly LocationObj OtherB = Loc(11, OtherStruct);
         private static readonly LocationObj Third = Loc(20, ThirdStruct);
 
-        private static LocationObj Loc(long id, long parent) => new(new Location { ID = id, ParentID = parent });
+        private static LocationObj Loc(long id, long parent) => TestModel.Location(id, parent);
 
         private static (AnnotationRegionInteraction, LocationObj?) Enter(LocationObj? l) => (AnnotationRegionInteraction.ENTER, l);
         private static (AnnotationRegionInteraction, LocationObj?) Exit(LocationObj? l) => (AnnotationRegionInteraction.EXIT, l);

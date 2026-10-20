@@ -1,10 +1,10 @@
-using AnnotationService.Types;
 using SqlGeometryUtils;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Microsoft.SqlServer.Types;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotationTests.View
 {
@@ -24,19 +24,8 @@ namespace WebAnnotationTests.View
         private static string FormattableString(double side) =>
             System.FormattableString.Invariant($"POLYGON((0 0, {side} 0, {side} {side}, 0 {side}, 0 0))");
 
-        private static LocationObj NewPolygonLocation()
-        {
-            SqlGeometry shape = Square(10);
-            Location data = new()
-            {
-                ID = 1,
-                TypeCode = (short)LocationType.POLYGON,
-                Section = 1,
-                MosaicShapeWKB = shape.AsBinary(),
-                VolumeShapeWKB = shape.AsBinary()
-            };
-            return new LocationObj(data);
-        }
+        private static LocationObj NewPolygonLocation() =>
+            TestModel.Location(1, 0, LocationType.POLYGON, FormattableString(10));
 
         [TestMethod]
         public void RadiusIsNotAGeometryProperty()
@@ -61,7 +50,7 @@ namespace WebAnnotationTests.View
                     radiusWhenShapeChanged = location.Radius;
             };
 
-            location.MosaicShape = Square(40);
+            location.MosaicShape = Square(40).ToShape2D();
 
             CollectionAssert.AreEqual(new[] { nameof(LocationObj.MosaicShape) }, geometryChanges);
             Assert.AreNotEqual(oldRadius, radiusWhenShapeChanged, "The views built for the change read the old radius.");

@@ -26,23 +26,17 @@ namespace WebAnnotationTests
             Assert.IsNull(TokenResponseFactory.FromAccessToken(null));
         }
 
+        /// <summary>
+        /// The gRPC clients read <see cref="TokenStore.BearerToken"/>'s AccessToken for the Authorization header, so a
+        /// token built from a launch-code JWT must expose that JWT (Duende parses it from the response JSON).
+        /// </summary>
         [TestMethod]
-        public void TryGetBearerAuthorizationValue_UsesAccessTokenWithoutAuthority()
+        public void FromAccessToken_ExposesTheJwtAsAccessToken()
         {
-            TokenInjector.BearerTokenAuthority = null;
-            TokenInjector.BearerToken = TokenResponseFactory.FromAccessToken("hdr.pay.sig");
+            TokenStore.BearerTokenAuthority = null;
+            TokenStore.BearerToken = TokenResponseFactory.FromAccessToken("hdr.pay.sig");
 
-            Assert.IsTrue(TokenInjector.TryGetBearerAuthorizationValue(out string header));
-            Assert.AreEqual("Bearer hdr.pay.sig", header);
-        }
-
-        [TestMethod]
-        public void TryGetBearerAuthorizationValue_FalseWhenAccessTokenEmpty()
-        {
-            TokenInjector.BearerTokenAuthority = "https://identity.example";
-            TokenInjector.BearerToken = null;
-
-            Assert.IsFalse(TokenInjector.TryGetBearerAuthorizationValue(out _));
+            Assert.AreEqual("hdr.pay.sig", TokenStore.BearerToken.AccessToken);
         }
 
         [TestMethod]

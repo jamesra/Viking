@@ -10,6 +10,7 @@ using WebAnnotation.UI;
 using WebAnnotation.UI.Actions;
 using WebAnnotation.View;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotationTests.Commands
 {
@@ -70,7 +71,7 @@ namespace WebAnnotationTests.Commands
             Polygon polygon = BoxWithHole();
 
             LocationAction action = PolygonPenModeContact.Action(
-                polygon, new Circle(Vector2.Zero, 1), 7, 1, new Vector2(5, 0), 1, Keys.None, out long id);
+                polygon, new Circle(Vector2.Zero, 1), 7, 1, new Vector2(5, 0), 1, Viking.Input.ModifierKeys.None, out long id);
 
             Assert.AreEqual(LocationAction.NONE, action);
             Assert.AreEqual(7, id);
@@ -84,7 +85,7 @@ namespace WebAnnotationTests.Commands
             Assert.IsTrue(polygon.Covers(onRing));
 
             LocationAction action = PolygonPenModeContact.Action(
-                polygon, new Circle(Vector2.Zero, 1), 7, 1, onRing, 1, Keys.Control, out long id);
+                polygon, new Circle(Vector2.Zero, 1), 7, 1, onRing, 1, Viking.Input.ModifierKeys.Control, out long id);
 
             Assert.AreEqual(LocationAction.CUTHOLE, action);
             Assert.AreEqual(7, id);
@@ -98,7 +99,7 @@ namespace WebAnnotationTests.Commands
             Assert.IsTrue(polygon.InteriorPolygonContains(inHole));
 
             LocationAction action = PolygonPenModeContact.Action(
-                polygon, new Circle(Vector2.Zero, 1), 7, 1, inHole, 1, Keys.Control, out long id);
+                polygon, new Circle(Vector2.Zero, 1), 7, 1, inHole, 1, Viking.Input.ModifierKeys.Control, out long id);
 
             Assert.AreEqual(LocationAction.REMOVEHOLE, action);
             Assert.AreEqual(7, id);
@@ -107,11 +108,11 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void ClosedCurveUnmodifiedContactAndEmptyStrokeDoNotThrow()
         {
-            LocationClosedCurveView view = ViewWithoutConstructor<LocationClosedCurveView>(new LocationObj());
+            LocationClosedCurveView view = ViewWithoutConstructor<LocationClosedCurveView>(new LocationObj(0));
             Path path = new();
 
             LocationAction contact = view.GetPenContactActionForPositionOnAnnotation(
-                Vector2.Zero, 1, Keys.None, out long id);
+                Vector2.Zero, 1, Viking.Input.ModifierKeys.None, out long id);
             List<IAction> actions = view.GetPenActionsForShapeAnnotation(path, [], 1);
 
             Assert.AreEqual(LocationAction.NONE, contact);
@@ -122,10 +123,10 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void OverlappedLocationPenContactAndActionsDoNotThrow()
         {
-            OverlappedLocationView view = ViewWithoutConstructor<OverlappedLocationView>(new LocationObj());
+            OverlappedLocationView view = ViewWithoutConstructor<OverlappedLocationView>(new LocationObj(0));
 
             LocationAction contact = view.GetPenContactActionForPositionOnAnnotation(
-                Vector2.Zero, 1, Keys.None, out _);
+                Vector2.Zero, 1, Viking.Input.ModifierKeys.None, out _);
             List<IAction> actions = view.GetPenActionsForShapeAnnotation(new Path(), [], 1);
 
             Assert.AreEqual(LocationAction.NONE, contact);
@@ -155,10 +156,10 @@ namespace WebAnnotationTests.Commands
 
         private sealed class ThrowingHit : IPenActionSupport, IMouseActionSupport
         {
-            public LocationAction GetPenContactActionForPositionOnAnnotation(Vector2 WorldPosition, int VisibleSectionNumber, Keys ModifierKeys, out long LocationID)
+            public LocationAction GetPenContactActionForPositionOnAnnotation(Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys ModifierKeys, out long LocationID)
                 => throw new System.NotImplementedException("pen");
 
-            public LocationAction GetMouseClickActionForPositionOnAnnotation(Vector2 WorldPosition, int VisibleSectionNumber, Keys ModifierKeys, out long LocationID)
+            public LocationAction GetMouseClickActionForPositionOnAnnotation(Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys ModifierKeys, out long LocationID)
                 => throw new System.NotImplementedException("mouse");
 
             public List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
@@ -167,13 +168,13 @@ namespace WebAnnotationTests.Commands
 
         private sealed class NoneHit : IPenActionSupport, IMouseActionSupport
         {
-            public LocationAction GetPenContactActionForPositionOnAnnotation(Vector2 WorldPosition, int VisibleSectionNumber, Keys ModifierKeys, out long LocationID)
+            public LocationAction GetPenContactActionForPositionOnAnnotation(Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys ModifierKeys, out long LocationID)
             {
                 LocationID = 0;
                 return LocationAction.NONE;
             }
 
-            public LocationAction GetMouseClickActionForPositionOnAnnotation(Vector2 WorldPosition, int VisibleSectionNumber, Keys ModifierKeys, out long LocationID)
+            public LocationAction GetMouseClickActionForPositionOnAnnotation(Vector2 WorldPosition, int VisibleSectionNumber, Viking.Input.ModifierKeys ModifierKeys, out long LocationID)
             {
                 LocationID = 0;
                 return LocationAction.NONE;

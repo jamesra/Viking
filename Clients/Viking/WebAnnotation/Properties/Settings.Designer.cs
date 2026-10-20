@@ -394,7 +394,7 @@ namespace WebAnnotation.Properties {
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0.001")]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.002")]
         public double PolygonVertexPointsHiddenAtWidthFraction {
             get {
                 return ((double)(this["PolygonVertexPointsHiddenAtWidthFraction"]));

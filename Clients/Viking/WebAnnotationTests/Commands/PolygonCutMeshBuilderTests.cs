@@ -63,13 +63,13 @@ namespace WebAnnotationTests.Commands
 
             var mesh = PolygonCutMeshBuilder.FromIndices(fill, [.. fill.TriangleIndices], Color.Green);
 
-            Assert.AreEqual(fill.Positions.Count, mesh.Verticies.Length);
-            for (int i = 0; i < mesh.Verticies.Length; i++)
+            Assert.AreEqual(fill.Positions.Count, mesh.Vertices.Length);
+            for (int i = 0; i < mesh.Vertices.Length; i++)
             {
-                Assert.AreEqual((float)fill.Positions[i].X, mesh.Verticies[i].Position.X);
-                Assert.AreEqual((float)fill.Positions[i].Y, mesh.Verticies[i].Position.Y);
-                Assert.AreEqual(0f, mesh.Verticies[i].Position.Z);
-                Assert.AreEqual(Color.Green, mesh.Verticies[i].Color);
+                Assert.AreEqual((float)fill.Positions[i].X, mesh.Vertices[i].Position.X);
+                Assert.AreEqual((float)fill.Positions[i].Y, mesh.Vertices[i].Position.Y);
+                Assert.AreEqual(0f, mesh.Vertices[i].Position.Z);
+                Assert.AreEqual(Color.Green, mesh.Vertices[i].Color);
             }
         }
 

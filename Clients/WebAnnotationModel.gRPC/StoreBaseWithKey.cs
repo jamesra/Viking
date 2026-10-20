@@ -110,7 +110,7 @@ namespace WebAnnotationModel.gRPC
         /// during construction (e.g. DBACTION.INSERT) is never observed by OnObjectPropertyChanged.
         /// Queue it for Save() explicitly here instead.
         /// </summary>
-        private void TrackForSaveIfPending(OBJECT obj)
+        protected virtual void TrackForSaveIfPending(OBJECT obj)
         {
             if (obj is IChangeAction changeObj && changeObj.DBAction != DBACTION.NONE)
                 ChangedObjects.TryAdd(obj.ID, obj);
@@ -160,7 +160,7 @@ namespace WebAnnotationModel.gRPC
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
-        public async Task<OBJECT> Remove(KEY ID)
+        public virtual async Task<OBJECT> Remove(KEY ID)
         {
             //Default implementation
             if (IDToObject.TryGetValue(ID, out OBJECT obj))

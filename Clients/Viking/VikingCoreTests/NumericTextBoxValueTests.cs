@@ -72,6 +72,7 @@ namespace VikingCoreTests
         [TestMethod]
         public void DoubleValue_UnparsableText_IsZero()
         {
+            using var box = new NumericTextBox { Text = "-" };
             Assert.AreEqual(0.0, box.DoubleValue, 0);
         }
 

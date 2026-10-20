@@ -177,6 +177,7 @@
     <Compile Remove="Threading\TextureReaderV2.cs" />
     <Compile Remove="Threading\TextureRequestQueue.cs" />
     <Compile Remove="Threading\PendingTextureQueue.cs" />
+    <Compile Remove="Threading\TextureData.cs" />
     <!-- Shared by PendingTextureQueue/TextureRequestQueue, which compile into Viking.Scene. -->
     <Compile Remove="Threading\TextureLoadQueueSort.cs" />
   </ItemGroup>

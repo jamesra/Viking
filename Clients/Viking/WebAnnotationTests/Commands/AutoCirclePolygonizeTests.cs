@@ -11,6 +11,7 @@ using WebAnnotation;
 using WebAnnotation.UI.AutoPolygonize;
 using WebAnnotation.UI.Commands.Segmentation;
 using WebAnnotationModel;
+using WebAnnotationModel.Objects;
 
 namespace WebAnnotationTests.Commands
 {
@@ -738,10 +739,10 @@ namespace WebAnnotationTests.Commands
                 Polygon unsmoothed = CreateRegularPolygon(6, 20);
                 Polygon smoothed = unsmoothed.Smooth(Geometry.Global.NumClosedCurveInterpolationPoints);
 
-                LocationObj loc = new();
+                LocationObj loc = new(0, 0);
                 loc.TypeCode = LocationType.CURVEPOLYGON;
-                loc.MosaicShape = unsmoothed.ToSqlGeometry();
-                loc.VolumeShape = smoothed.ToSqlGeometry();
+                loc.MosaicShape = unsmoothed;
+                loc.VolumeShape = smoothed;
 
                 IReadOnlyList<Vector2> points = AnnotationPointExtensions.GetAnnotationRepresentativePoints([loc]);
                 IReadOnlyList<Vector2> expected = AnnotationPointExtensions.GetLargestTriangleCentroidPoint(unsmoothed);
@@ -879,11 +880,11 @@ namespace WebAnnotationTests.Commands
         {
             AutoPolygonizeCache cache = new();
             DateTime first = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            LocationObj location = new();
+            LocationObj location = new(0, 0);
             location.TypeCode = LocationType.CIRCLE;
 
-            cache.RememberProposal(location.ID, location.Section, first, LocationType.CIRCLE, location);
-            int generation = cache.MarkPending(location.ID, location.Section, location, null);
+            cache.RememberProposal(location.ID, (int)location.Section, first, LocationType.CIRCLE, location);
+            int generation = cache.MarkPending(location.ID, (int)location.Section, location, null);
             Assert.IsTrue(cache.IsGenerationCurrent(location.ID, generation));
 
             cache.Remove(location.ID);
@@ -895,13 +896,13 @@ namespace WebAnnotationTests.Commands
         {
             AutoPolygonizeCache cache = new();
             DateTime first = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            LocationObj location = new();
+            LocationObj location = new(0, 0);
             location.TypeCode = LocationType.CIRCLE;
             int forgotten = 0;
             cache.LocationForgotten += _ => forgotten++;
 
-            cache.RememberProposal(location.ID, location.Section, first, LocationType.CIRCLE, location);
-            int generation = cache.MarkPending(location.ID, location.Section, location, null);
+            cache.RememberProposal(location.ID, (int)location.Section, first, LocationType.CIRCLE, location);
+            int generation = cache.MarkPending(location.ID, (int)location.Section, location, null);
             location.TypeCode = LocationType.POLYGON;
 
             Assert.AreEqual(1, forgotten);
@@ -1517,17 +1518,17 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void TryGetVolumePolygonAcceptsPolygonAndCurvePolygonOnly()
         {
-            LocationObj polygon = new();
+            LocationObj polygon = new(0, 0);
             polygon.TypeCode = LocationType.POLYGON;
-            polygon.VolumeShape = Square(0, 0, 10).ToSqlGeometry();
+            polygon.VolumeShape = Square(0, 0, 10);
 
-            LocationObj curve = new();
+            LocationObj curve = new(0, 0);
             curve.TypeCode = LocationType.CURVEPOLYGON;
-            curve.VolumeShape = Square(20, 0, 10).ToSqlGeometry();
+            curve.VolumeShape = Square(20, 0, 10);
 
-            LocationObj circle = new();
+            LocationObj circle = new(0, 0);
             circle.TypeCode = LocationType.CIRCLE;
-            circle.VolumeShape = Square(40, 0, 10).ToSqlGeometry();
+            circle.VolumeShape = Square(40, 0, 10);
 
             Assert.IsTrue(AutoPolygonizeSelection.TryGetVolumePolygon(polygon, null, out Polygon? fromPolygon));
             Assert.IsNotNull(fromPolygon);
@@ -1542,17 +1543,17 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void CollectOverlappingExistingPolygonsSkipsCirclesAndNonOverlapping()
         {
-            LocationObj overlap = new();
+            LocationObj overlap = new(0, 0);
             overlap.TypeCode = LocationType.POLYGON;
-            overlap.VolumeShape = Square(5, 0, 10).ToSqlGeometry();
+            overlap.VolumeShape = Square(5, 0, 10);
 
-            LocationObj far = new();
+            LocationObj far = new(0, 0);
             far.TypeCode = LocationType.POLYGON;
-            far.VolumeShape = Square(100, 0, 10).ToSqlGeometry();
+            far.VolumeShape = Square(100, 0, 10);
 
-            LocationObj circle = new();
+            LocationObj circle = new(0, 0);
             circle.TypeCode = LocationType.CIRCLE;
-            circle.VolumeShape = Square(0, 0, 10).ToSqlGeometry();
+            circle.VolumeShape = Square(0, 0, 10);
 
             List<Polygon> collected = AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
                 [overlap, far, circle],
@@ -1565,9 +1566,9 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void CollectOverlappingExistingPolygonsSkipsSameParentSiblings()
         {
-            LocationObj sibling = new();
+            LocationObj sibling = new(0, 0);
             sibling.TypeCode = LocationType.POLYGON;
-            sibling.VolumeShape = Square(5, 0, 10).ToSqlGeometry();
+            sibling.VolumeShape = Square(5, 0, 10);
 
             List<Polygon> carved = AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
                 [sibling],
@@ -1586,9 +1587,9 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void CollectOverlappingExistingPolygonsSkipsChildAndParentStructuresButKeepsOtherCells()
         {
-            // The annotation is in structure 0 (LocationObj.ParentID is read only and defaults to 0).
-            LocationObj annotation = new() { TypeCode = LocationType.POLYGON };
-            annotation.VolumeShape = Square(5, 0, 10).ToSqlGeometry();
+            // The annotation is in structure 0 (built with parent ID 0).
+            LocationObj annotation = new(0, 0) { TypeCode = LocationType.POLYGON };
+            annotation.VolumeShape = Square(5, 0, 10);
             Polygon proposed = Square(0, 0, 10);
 
             static long? Child(long id) => id == 0 ? 9 : null;
@@ -1624,13 +1625,13 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void CollectSavedSameCellPolygonCandidatesSkipsCircles()
         {
-            LocationObj polygon = new();
+            LocationObj polygon = new(0, 0);
             polygon.TypeCode = LocationType.POLYGON;
-            polygon.VolumeShape = Square(0, 0, 10).ToSqlGeometry();
+            polygon.VolumeShape = Square(0, 0, 10);
 
-            LocationObj circle = new();
+            LocationObj circle = new(0, 0);
             circle.TypeCode = LocationType.CIRCLE;
-            circle.VolumeShape = Square(0, 0, 10).ToSqlGeometry();
+            circle.VolumeShape = Square(0, 0, 10);
 
             List<OverlapCandidate> saved = AutoPolygonizeSelection.CollectSavedSameCellPolygonCandidates(
                 [polygon, circle],

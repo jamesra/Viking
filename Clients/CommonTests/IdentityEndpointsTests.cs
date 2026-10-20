@@ -137,7 +137,8 @@ namespace CommonTests
         [TestMethod]
         public void FromIdentityServer_HttpsSchemeIsCaseInsensitive()
         {
-            Assert.AreEqual(6001, IdentityEndpoints.FromIdentityServer(new Uri("HTTPS://identity.codepharm.net/")).Port);
+            // An explicit issuer port selects the port-per-app layout; the default port (443) selects the path layout.
+            Assert.AreEqual(6001, IdentityEndpoints.FromIdentityServer(new Uri("HTTPS://identity.codepharm.net:5001/")).Port);
         }
 
         [TestMethod]
