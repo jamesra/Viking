@@ -69,7 +69,16 @@ namespace WebAnnotation.Tools
         {
             _current?.Cancel();
             _current = tool ?? _defaultTool;
+            ShowPreviewOf(_current);
             StatusChanged?.Invoke(this, _current.StatusText);
+        }
+
+        /// <summary>Lets the scene draw the active tool's feedback, if it has any.</summary>
+        void ShowPreviewOf(IAnnotationTool tool)
+        {
+            _scene.ToolPreview = tool as IAnnotationToolPreview;
+            _scene.ToolPreviewSection = _host.SectionNumber;
+            _host.Invalidate();
         }
 
         public void Enqueue(Func<IAnnotationTool> factory)
@@ -84,12 +93,16 @@ namespace WebAnnotation.Tools
             HandleResult(result);
         }
 
-        public void OnMouseMove(Vector2 screen) => _current.OnMouseMove(screen);
+        public void OnMouseMove(Vector2 screen)
+        {
+            _scene.ToolPreviewSection = _host.SectionNumber;
+            _current.OnMouseMove(screen);
+        }
 
         public void OnMouseUp()
         {
             _current.OnMouseUp();
-            if (!ReferenceEquals(_current, _defaultTool) && _current is TranslateLocationTool)
+            if (!ReferenceEquals(_current, _defaultTool) && _current is TranslateLocationTool or ResizeCircleTool)
                 FinishCurrent(AnnotationToolResult.Done);
         }
 
@@ -181,6 +194,7 @@ namespace WebAnnotation.Tools
         void RestoreDefault()
         {
             _current = _defaultTool;
+            ShowPreviewOf(_current);
         }
     }
 }

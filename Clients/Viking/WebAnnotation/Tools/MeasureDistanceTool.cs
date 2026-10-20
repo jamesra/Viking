@@ -1,12 +1,20 @@
+using System.Collections.Generic;
 using System.Windows.Input;
 using Geometry;
+using Microsoft.Xna.Framework.Graphics;
+using VikingXNAGraphics;
 
 namespace WebAnnotation.Tools
 {
-    public sealed class MeasureDistanceTool : IAnnotationTool
+    /// <summary>
+    /// Viking's measure command: click an origin, and a line follows the pointer with its length in the volume's units
+    /// until the second click.
+    /// </summary>
+    public sealed class MeasureDistanceTool : IAnnotationTool, IAnnotationToolPreview
     {
         readonly AnnotationToolContext _context;
         Vector2? _first;
+        Vector2? _pointer;
 
         public MeasureDistanceTool(AnnotationToolContext context)
         {
@@ -29,11 +37,10 @@ namespace WebAnnotation.Tools
                 return AnnotationToolResult.Continue;
             }
 
-            double dx = world.X - _first.Value.X;
-            double dy = world.Y - _first.Value.Y;
-            double dist = System.Math.Sqrt(dx * dx + dy * dy);
-            _context.SetStatus($"Distance: {dist:F1}");
+            _context.SetStatus($"Distance: {FormatDistance(Vector2.Distance(_first.Value, world))}");
             _first = null;
+            _pointer = null;
+            _context.Invalidate();
             return AnnotationToolResult.Done;
         }
 
@@ -41,10 +48,10 @@ namespace WebAnnotation.Tools
         {
             if (!_first.HasValue)
                 return;
-            Vector2 world = _context.ScreenToWorld(screen);
-            double dx = world.X - _first.Value.X;
-            double dy = world.Y - _first.Value.Y;
-            _context.SetStatus($"Distance: {System.Math.Sqrt(dx * dx + dy * dy):F1}");
+
+            _pointer = _context.ScreenToWorld(screen);
+            _context.SetStatus($"Distance: {FormatDistance(Vector2.Distance(_first.Value, _pointer.Value))}");
+            _context.Invalidate();
         }
 
         public void OnMouseUp()
@@ -62,7 +69,36 @@ namespace WebAnnotation.Tools
         public void Cancel()
         {
             _first = null;
+            _pointer = null;
             _context.SetStatus(null);
+            _context.Invalidate();
+        }
+
+        public void DrawPreview(GraphicsDevice device, VikingXNA.Scene scene, RoundLineCode.RoundLineManager lineManager, OverlayShaderEffect overlayEffect)
+        {
+            if (!_first.HasValue || !_pointer.HasValue)
+                return;
+
+            List<LineView> lines = new() { new LineView(_first.Value, _pointer.Value, 3 * _context.Host.Downsample, ToolPreviewDrawing.ActionColor, LineStyle.Standard) };
+            ToolPreviewDrawing.Draw(device, scene, lineManager, lines);
+        }
+
+        /// <summary>
+        /// <paramref name="worldDistance"/> (volume pixels) in the volume's units, switching nanometers to micrometers past
+        /// 1000; volume pixels when the volume has no scale.
+        /// </summary>
+        public static string FormatDistance(double worldDistance)
+        {
+            UnitsAndScale.IAxisUnits scale = AnnotationBootstrap.Volume?.DefaultXYScale;
+            double perPixel = scale?.Value ?? Global.Scale.X;
+            string units = scale?.Units ?? "nm";
+            if (!(perPixel > 0))
+                return $"{worldDistance:F1} px";
+
+            double length = worldDistance * perPixel;
+            if (units == "nm" && length >= 1000)
+                return $"{length / 1000:G4} µm";
+            return $"{length:G4} {units}";
         }
     }
 }

@@ -55,6 +55,12 @@ namespace WebAnnotation
 
         public bool Visible { get; set; } = true;
 
+        /// <summary>Feedback the active annotation tool draws over the annotations; null when the tool draws none.</summary>
+        public WebAnnotation.Tools.IAnnotationToolPreview ToolPreview { get; set; }
+
+        /// <summary>The section <see cref="ToolPreview"/> is drawn over.</summary>
+        public int ToolPreviewSection { get; set; }
+
         internal SectionAnnotationsView GetOrCreate(int sectionNumber)
         {
             lock (_loadLock)
@@ -165,6 +171,23 @@ namespace WebAnnotation
                     if (!_loadCtsBySection.TryGetValue(sectionNumber, out CancellationTokenSource current) || !ReferenceEquals(current, cts))
                         cts.Dispose();
                 }
+            }
+        }
+
+        /// <summary>Draws the tool's feedback over the section the tool works on; other sections in a grid show none.</summary>
+        void DrawToolPreview(int sectionNumber, GraphicsDevice device, VikingXNA.Scene scene, RoundLineCode.RoundLineManager lineManager, OverlayShaderEffect overlayEffect)
+        {
+            WebAnnotation.Tools.IAnnotationToolPreview preview = ToolPreview;
+            if (preview is null || lineManager is null || sectionNumber != ToolPreviewSection)
+                return;
+
+            try
+            {
+                preview.DrawPreview(device, scene, lineManager, overlayEffect);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine($"Annotation tool preview failed: {ex.Message}");
             }
         }
 
@@ -284,6 +307,8 @@ namespace WebAnnotation
                 }
                 _spriteBatch.End();
             }
+
+            DrawToolPreview(sectionNumber, graphicsDevice, scene, lineManager, overlayEffect);
 
             if (originalRaster != null && !originalRaster.IsDisposed)
                 graphicsDevice.RasterizerState = originalRaster;

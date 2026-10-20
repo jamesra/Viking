@@ -774,6 +774,14 @@ namespace Viking.VolumeView
                 return;
             }
 
+            if (leftButton != MouseButtonState.Pressed && rightButton != MouseButtonState.Pressed && IsInActiveCell(p))
+            {
+                // Hover: the tools outline what a click would act on and draw their rubber bands.
+                ApplyActiveCellViewport();
+                AnnotationTools?.OnMouseMove(ActiveCellScreen(p));
+                return;
+            }
+
             if (rightButton != MouseButtonState.Pressed || !_panStartScreen.HasValue || Grid?.VisibleRegion == null)
                 return;
 
@@ -1044,6 +1052,15 @@ namespace Viking.VolumeView
         /// Converts host coordinates to the active cell's local pixels so ScreenToWorld
         /// matches the viewport set for that cell.
         /// </summary>
+        bool IsInActiveCell(Point p)
+        {
+            if (Grid == null)
+                return true;
+
+            var cells = Grid.GetVisibleCells();
+            return _activeCellIndex >= 0 && _activeCellIndex < cells.Count && cells[_activeCellIndex].Bounds.Contains(p);
+        }
+
         Geometry.Vector2 ActiveCellScreen(Point p)
         {
             if (Grid == null)

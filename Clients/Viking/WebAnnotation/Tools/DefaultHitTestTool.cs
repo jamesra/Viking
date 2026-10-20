@@ -1,5 +1,8 @@
+using System.Collections.Generic;
 using System.Windows.Input;
 using Geometry;
+using Microsoft.Xna.Framework.Graphics;
+using VikingXNAGraphics;
 using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotation.View;
 using WebAnnotationModel;
@@ -8,11 +11,14 @@ using WebAnnotationModel.Objects;
 namespace WebAnnotation.Tools
 {
     /// <summary>
-    /// Idle tool: hit-test, start translate/link/create, or arm a place tool on empty clicks.
+    /// Idle tool: hit-test, start translate/resize/link/create, or arm a place tool on empty clicks. Outlines the annotation
+    /// under the pointer and names what a click there would do, as Viking's cursor does.
     /// </summary>
-    public sealed class DefaultHitTestTool : IAnnotationTool
+    public sealed class DefaultHitTestTool : IAnnotationTool, IAnnotationToolPreview
     {
         readonly AnnotationToolContext _context;
+        LocationObj _hovered;
+        LocationAction _hoverAction;
 
         public DefaultHitTestTool(AnnotationToolContext context)
         {
@@ -64,6 +70,13 @@ namespace WebAnnotation.Tools
                     LocationAction action = support.GetMouseClickActionForPositionOnAnnotation(
                         world, sectionNumber, _context.Host.CurrentModifiers, out long locationId);
 
+                    if (action == LocationAction.SCALE)
+                    {
+                        if (Store.Locations.TryGetObjectByID(locationId, out LocationObj resize) && resize?.TypeCode == LocationType.CIRCLE)
+                            _context.StartTool(new ResizeCircleTool(_context, resize));
+                        return AnnotationToolResult.Continue;
+                    }
+
                     if (action == LocationAction.TRANSLATE || action == LocationAction.SCALETRANSLATE)
                     {
                         if (Store.Locations.TryGetObjectByID(locationId, out LocationObj drag) && drag != null)
@@ -113,6 +126,32 @@ namespace WebAnnotation.Tools
 
         public void OnMouseMove(Vector2 screen)
         {
+            Vector2 world = _context.ScreenToWorld(screen);
+            int sectionNumber = _context.SectionNumber;
+            LocationObj hovered = null;
+            LocationAction action = LocationAction.NONE;
+            try
+            {
+                object hit = _context.Scene.HitTest(sectionNumber, world, out _);
+                if (hit is LocationCanvasView view && Store.Locations.TryGetObjectByID(view.ID, out LocationObj loc))
+                {
+                    hovered = loc;
+                    if (hit is IMouseActionSupport support)
+                        action = support.GetMouseClickActionForPositionOnAnnotation(world, sectionNumber, _context.Host.CurrentModifiers, out _);
+                }
+            }
+            catch (System.Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine($"Annotation hover hit test failed: {ex.Message}");
+            }
+
+            if (ReferenceEquals(hovered, _hovered) && action == _hoverAction)
+                return;
+
+            _hovered = hovered;
+            _hoverAction = action;
+            _context.SetStatus(HoverHint(hovered, action));
+            _context.Invalidate();
         }
 
         public void OnMouseUp()
@@ -123,6 +162,37 @@ namespace WebAnnotation.Tools
 
         public void Cancel()
         {
+            _hovered = null;
+            _hoverAction = LocationAction.NONE;
+        }
+
+        public void DrawPreview(GraphicsDevice device, VikingXNA.Scene scene, RoundLineCode.RoundLineManager lineManager, OverlayShaderEffect overlayEffect)
+        {
+            if (_hovered == null)
+                return;
+
+            List<LineView> lines = new();
+            bool acts = _hoverAction != LocationAction.NONE;
+            ToolPreviewDrawing.AddOutline(lines, _hovered, (acts ? 3 : 2) * _context.Host.Downsample,
+                acts ? ToolPreviewDrawing.ActionColor : ToolPreviewDrawing.HoverColor);
+            ToolPreviewDrawing.Draw(device, scene, lineManager, lines);
+        }
+
+        static string HoverHint(LocationObj hovered, LocationAction action)
+        {
+            if (hovered == null)
+                return null;
+
+            string what = $"Location {hovered.ID} of structure {hovered.ParentID}";
+            return action switch
+            {
+                LocationAction.TRANSLATE => $"{what}: drag to move",
+                LocationAction.SCALE => $"{what}: drag to resize",
+                LocationAction.SCALETRANSLATE => $"{what}: drag to move",
+                LocationAction.CREATELINKEDLOCATION => $"{what}: click to continue it on this section",
+                LocationAction.CREATELINK => $"{what}: click to link the last edited location to it",
+                _ => what
+            };
         }
     }
 }

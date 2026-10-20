@@ -1,18 +1,22 @@
 using System.Collections.Generic;
 using System.Windows.Input;
 using Geometry;
+using Microsoft.Xna.Framework.Graphics;
 using Viking.AnnotationServiceTypes.Interfaces;
+using VikingXNAGraphics;
 
 namespace WebAnnotation.Tools
 {
     /// <summary>
-    /// Click vertices; Enter or double-click commits. Esc cancels. Used for polyline and polygon.
+    /// Click vertices; Enter or double-click commits. Esc cancels. Used for polyline and polygon. Draws the placed vertices
+    /// and a rubber band to the pointer.
     /// </summary>
-    public sealed class PlacePolyTool : IAnnotationTool
+    public sealed class PlacePolyTool : IAnnotationTool, IAnnotationToolPreview
     {
         readonly AnnotationToolContext _context;
         readonly LocationType _shapeType;
         readonly List<Vector2> _vertices = new();
+        Vector2? _pointer;
 
         public PlacePolyTool(AnnotationToolContext context, LocationType shapeType, Vector2 firstVertex)
         {
@@ -38,11 +42,30 @@ namespace WebAnnotation.Tools
 
             _vertices.Add(world);
             _context.SetStatus(StatusText);
+            _context.Invalidate();
             return AnnotationToolResult.Continue;
         }
 
         public void OnMouseMove(Vector2 screen)
         {
+            _pointer = _context.ScreenToWorld(screen);
+            _context.Invalidate();
+        }
+
+        public void DrawPreview(GraphicsDevice device, VikingXNA.Scene scene, RoundLineCode.RoundLineManager lineManager, OverlayShaderEffect overlayEffect)
+        {
+            if (_vertices.Count == 0)
+                return;
+
+            double width = 2 * _context.Host.Downsample;
+            List<LineView> lines = new();
+            List<Vector2> path = new(_vertices);
+            if (_pointer.HasValue)
+                path.Add(_pointer.Value);
+            ToolPreviewDrawing.AddPath(lines, path, closed: _shapeType == LocationType.POLYGON, width, ToolPreviewDrawing.ActionColor);
+            foreach (Vector2 vertex in _vertices)
+                ToolPreviewDrawing.AddRing(lines, vertex, 4 * _context.Host.Downsample, width, ToolPreviewDrawing.ActionColor);
+            ToolPreviewDrawing.Draw(device, scene, lineManager, lines);
         }
 
         public void OnMouseUp()
@@ -64,6 +87,7 @@ namespace WebAnnotation.Tools
             {
                 _vertices.RemoveAt(_vertices.Count - 1);
                 _context.SetStatus(StatusText);
+                _context.Invalidate();
             }
 
             return AnnotationToolResult.Continue;
@@ -73,6 +97,7 @@ namespace WebAnnotation.Tools
         {
             _vertices.Clear();
             _context.SetStatus(null);
+            _context.Invalidate();
         }
 
         AnnotationToolResult Commit()
