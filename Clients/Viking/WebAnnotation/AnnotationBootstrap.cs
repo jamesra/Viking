@@ -52,6 +52,11 @@ namespace WebAnnotation
             if (volume?.VolumeElement is null)
                 return false;
 
+            // Nanometers per volume pixel for measurements and segmentation sizes. Viking's module init sets the same
+            // value; Jotunn has only this path. Section thickness is hard-coded there too.
+            if (volume.DefaultXYScale is { Value: > 0 } xyScale)
+                Global.Scale = new Geometry.Vector3(xyScale.Value, xyScale.Value, 90.0);
+
             WebAnnotationModel.State.UserCredentials = credentials;
             if (!string.IsNullOrWhiteSpace(segmentationServiceUrl))
                 Global.AnnotationSettings.SegmentationServiceUrl = segmentationServiceUrl;
