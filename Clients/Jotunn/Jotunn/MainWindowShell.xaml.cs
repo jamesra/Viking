@@ -90,6 +90,7 @@ namespace Jotunn
             _tools.UserName = App.UserCredentials?.UserName;
             _ = LoadHotkeysAsync(_tools);
             StartAnnotationPoll(scene);
+            _ = AddReviewFeedTabAsync();
             _sectionGrid.SceneHostControl.Invalidate();
         }
 

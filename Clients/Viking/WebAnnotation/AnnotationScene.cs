@@ -49,12 +49,25 @@ namespace WebAnnotation
             if (Store.IsInitialized)
             {
                 Store.Locations.CollectionChanged += OnStoreCollectionChanged;
+                Store.Locations.CollectionChanged += OnLocationsChanged;
                 Store.LocationLinks.CollectionChanged += OnStoreCollectionChanged;
             }
         }
 
         void OnStoreCollectionChanged(object sender, NotifyCollectionChangedEventArgs e) =>
             TileLoadEnvironment.RequestRender?.Invoke();
+
+        static void OnLocationsChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            try
+            {
+                ReviewFeed.ReviewChangeFeedIngress.PushLocationStoreChange(e);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine($"Review feed ingest failed: {ex.Message}");
+            }
+        }
 
         public VolumeTransformProvider Transforms => _transforms;
 
@@ -195,6 +208,8 @@ namespace WebAnnotation
                         return;
                     // Objects already in the store raise no CollectionChanged; AddLocations is how they reach the view.
                     view.AddLocations(locations);
+                    // As in Viking, only rows newer than the Review seed floor enter the change feed.
+                    ReviewFeed.ReviewChangeFeedIngress.PushUpsertsFromPoll(locations);
                     TileLoadEnvironment.RequestRender?.Invoke();
                 });
             }

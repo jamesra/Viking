@@ -1135,51 +1135,6 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Records store deletes in the Review feed. Called from <see cref="OnLocationCollectionChanged"/>.
-        /// </summary>
-        static void PushReviewFeedDeletes(NotifyCollectionChangedEventArgs e)
-        {
-            if (e is null || e.Action != NotifyCollectionChangedAction.Remove || e.OldItems is null)
-                return;
-            if (!VolumeAccessRoles.HasReviewAccess())
-                return;
-
-            var ids = new List<long>(e.OldItems.Count);
-            foreach (object item in e.OldItems)
-            {
-                if (item is LocationObj loc)
-                    ids.Add(loc.ID);
-            }
-
-            if (ids.Count > 0)
-                ReviewChangeFeed.Session.ApplyDeletes(ids, DateTime.UtcNow);
-        }
-
-        /// <summary>
-        /// Local creates/updates (accept autosegment, new structures, replaces) do not go through the
-        /// section poll; push NewItems into the Review feed when CollectionChanged reports them.
-        /// </summary>
-        static void PushReviewFeedLocalUpserts(NotifyCollectionChangedEventArgs e)
-        {
-            if (e is null || e.NewItems is null || e.NewItems.Count == 0)
-                return;
-            if (e.Action != NotifyCollectionChangedAction.Add
-                && e.Action != NotifyCollectionChangedAction.Replace)
-            {
-                return;
-            }
-
-            var locations = new List<LocationObj>(e.NewItems.Count);
-            foreach (object item in e.NewItems)
-            {
-                if (item is LocationObj loc)
-                    locations.Add(loc);
-            }
-
-            ReviewChangeFeedIngress.PushUpserts(locations);
-        }
-
-        /// <summary>
         /// Sets the mouse cursor from the hit under the pointer via
         /// <see cref="LocationActionDispatch"/> so unimplemented action methods cannot throw on hover.
         /// </summary>
@@ -2649,8 +2604,7 @@ break;
         /// <param name="e"></param>
         protected void OnLocationCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            PushReviewFeedDeletes(e);
-            PushReviewFeedLocalUpserts(e);
+            ReviewChangeFeedIngress.PushLocationStoreChange(e);
 
             SortedSet<int> changedSections = ChangedSectionsInLocationCollection(e);
 

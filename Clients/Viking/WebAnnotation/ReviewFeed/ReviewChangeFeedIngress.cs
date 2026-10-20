@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
@@ -32,6 +33,47 @@ namespace WebAnnotation.ReviewFeed
         public static void PushUpsertsFromPoll(IEnumerable<LocationObj> locations)
         {
             PushUpserts(locations, requirePollCutoff: true);
+        }
+
+        /// <summary>
+        /// A location store CollectionChanged: removes become deleted rows, and local adds/replaces (new structures,
+        /// accepted segmentations), which do not go through the section poll, become upserts. Viking's overlay and
+        /// Jotunn's scene both forward the store's events here.
+        /// </summary>
+        public static void PushLocationStoreChange(NotifyCollectionChangedEventArgs e)
+        {
+            if (e is null)
+                return;
+
+            if (e.Action == NotifyCollectionChangedAction.Remove && e.OldItems is { Count: > 0 })
+            {
+                if (!VolumeAccessRoles.HasReviewAccess())
+                    return;
+
+                var ids = new List<long>(e.OldItems.Count);
+                foreach (object item in e.OldItems)
+                {
+                    if (item is LocationObj loc)
+                        ids.Add(loc.ID);
+                }
+
+                if (ids.Count > 0)
+                    ReviewChangeFeed.Session.ApplyDeletes(ids, DateTime.UtcNow);
+                return;
+            }
+
+            if ((e.Action == NotifyCollectionChangedAction.Add || e.Action == NotifyCollectionChangedAction.Replace)
+                && e.NewItems is { Count: > 0 })
+            {
+                var locations = new List<LocationObj>(e.NewItems.Count);
+                foreach (object item in e.NewItems)
+                {
+                    if (item is LocationObj loc)
+                        locations.Add(loc);
+                }
+
+                PushUpserts(locations);
+            }
         }
 
         /// <summary>Convenience for a single saved or created location.</summary>
