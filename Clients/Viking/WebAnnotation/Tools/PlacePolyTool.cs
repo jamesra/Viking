@@ -18,6 +18,9 @@ namespace WebAnnotation.Tools
         readonly List<Vector2> _vertices = new();
         readonly long? _typeId;
         readonly IReadOnlyList<string> _tags;
+
+        /// <summary>An existing location the committed shape replaces (Viking's change-type hotkeys), else null.</summary>
+        public WebAnnotationModel.Objects.LocationObj Retarget { get; init; }
         Vector2? _pointer;
 
         /// <param name="typeId">The structure type to create; null uses the type chosen in the structure type list.</param>
@@ -117,7 +120,10 @@ namespace WebAnnotation.Tools
             }
 
             Vector2[] points = _vertices.ToArray();
-            _ = AnnotationToolActions.CreateStructureAtAsync(_context, _shapeType, points[0], points, _typeId, _tags);
+            if (Retarget != null)
+                _ = ShapeActions.ReplaceWithPointsAsync(_context, Retarget, _shapeType, points);
+            else
+                _ = AnnotationToolActions.CreateStructureAtAsync(_context, _shapeType, points[0], points, _typeId, _tags);
             _context.SetStatus(null);
             return AnnotationToolResult.Done;
         }

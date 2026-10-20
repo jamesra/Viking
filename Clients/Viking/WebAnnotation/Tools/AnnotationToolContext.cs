@@ -23,6 +23,9 @@ namespace WebAnnotation.Tools
         /// <summary>The location the user last clicked, or null after a click on empty space. Delete acts on it.</summary>
         public LocationObj SelectedLocation { get; set; }
 
+        /// <summary>The pointer's last position over the view, in volume coordinates.</summary>
+        public Vector2 PointerWorld { get; set; }
+
         /// <summary>The location under the pointer, or null. Viking's tag and terminal hotkeys act on it.</summary>
         public LocationObj HoveredLocation { get; set; }
 

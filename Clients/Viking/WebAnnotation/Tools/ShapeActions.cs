@@ -91,6 +91,24 @@ namespace WebAnnotation.Tools
             });
         }
 
+        /// <summary>
+        /// Viking's change-type hotkeys for curves and polygons: the location takes <paramref name="type"/> and the shape
+        /// through <paramref name="volumePoints"/>.
+        /// </summary>
+        public static Task ReplaceWithPointsAsync(AnnotationToolContext context, LocationObj location, LocationType type, Vector2[] volumePoints)
+        {
+            IVolumeToSectionTransform mapper = context.Mapper;
+            return ChangeAndSaveAsync(context, location, "Change Type", () =>
+            {
+                bool wasCurve = location.TypeCode is LocationType.OPENCURVE or LocationType.CLOSEDCURVE;
+                location.TypeCode = type;
+                if (!wasCurve && type is LocationType.OPENCURVE or LocationType.CLOSEDCURVE)
+                    location.Width = 8.0; // Viking's width for new curves; a curve keeps the width it had
+                location.SetShapeFromPointsInVolume(mapper, volumePoints, null);
+                return true;
+            });
+        }
+
         /// <summary>Applies <paramref name="change"/> (false leaves the location alone), saves, and records the old shape.</summary>
         static async Task ChangeAndSaveAsync(AnnotationToolContext context, LocationObj location, string description, Func<bool> change)
         {

@@ -189,6 +189,21 @@ namespace WebAnnotationTests
             Assert.IsTrue(SqlGeometryUtils.Extensions.ToPolygon(polygon.MosaicShape).ExteriorRing.Length < 65, _status);
         }
 
+        [TestMethod]
+        public void ChangingTypeReplacesTheShapeWithTheClickedPoints()
+        {
+            var circle = WebAnnotationTests.Actions.ChangeTypeActionTests.NewLocation(
+                Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE, "CURVEPOLYGON(CIRCULARSTRING(40 50, 50 40, 60 50, 50 60, 40 50))");
+            AnnotationToolContext context = new(new IdentityViewport(), _scene, () => null, _ => { }, _ => { }, _ => { });
+
+            _ = ShapeActions.ReplaceWithPointsAsync(context, circle, Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE,
+                [new Geometry.Vector2(10, 10), new Geometry.Vector2(50, 50), new Geometry.Vector2(90, 10)]);
+
+            Assert.AreEqual(Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE, circle.TypeCode);
+            Assert.AreEqual(8.0, circle.Width);
+            Assert.AreEqual(3, SqlGeometryUtils.Extensions.ToPoints(circle.MosaicShape).Length);
+        }
+
         static string RepoUserSettings([CallerFilePath] string thisSourceFile = "") =>
             Path.GetFullPath(Path.Combine(Path.GetDirectoryName(thisSourceFile) ?? "", @"..\WebAnnotation\UserSettings.xml"));
     }

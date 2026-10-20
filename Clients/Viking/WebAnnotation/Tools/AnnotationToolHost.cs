@@ -138,6 +138,7 @@ namespace WebAnnotation.Tools
         public void OnMouseMove(Vector2 screen)
         {
             _scene.ToolPreviewSection = _host.SectionNumber;
+            _context.PointerWorld = _host.ScreenToWorld(screen);
             _current.OnMouseMove(screen);
         }
 
@@ -220,12 +221,43 @@ namespace WebAnnotation.Tools
                 case HotkeyCommandKind.ToggleLocationTerminal:
                     _ = AnnotationToolActions.ToggleTerminalAsync(_context, target);
                     break;
+                case HotkeyCommandKind.ChangeLocationType:
+                    ChangeLocationType(target, command.LocationType);
+                    break;
                 default:
                     StatusChanged?.Invoke(this, $"{command.Name} is not supported here yet");
                     break;
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Viking's change-type hotkeys re-place the location in the new shape: a circle becomes one at the location's
+        /// center and radius; curves and polygons are clicked out from the pointer, then replace the location's shape.
+        /// Only locations on this section can change.
+        /// </summary>
+        void ChangeLocationType(LocationObj target, LocationType type)
+        {
+            if ((int)Math.Round(target.Z) != _host.SectionNumber)
+            {
+                StatusChanged?.Invoke(this, "Only annotations on this section can change type");
+                return;
+            }
+
+            if (type == LocationType.CIRCLE)
+            {
+                _ = ShapeActions.ConvertToCircleAsync(_context, target);
+                return;
+            }
+
+            if (type is LocationType.OPENCURVE or LocationType.CLOSEDCURVE or LocationType.CURVEPOLYGON or LocationType.POLYGON or LocationType.POLYLINE)
+            {
+                StartTool(new PlacePolyTool(_context, type, _context.PointerWorld) { Retarget = target });
+                return;
+            }
+
+            StatusChanged?.Invoke(this, $"Changing an annotation to {type} is not supported");
         }
 
         string ExpandTagValue(string value) =>
