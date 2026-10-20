@@ -799,7 +799,8 @@ PixelShaderOutput StripePixelShaderFunction(TexturePixelShaderInput input)
 	if (stripeRipple.w > 0)
 	{
 		//Three rings trail the leading one by stripeRipple2.x each. Rings combine as light does and dim as they spread,
-		//so the leading ring is brightest. A ring that has not started yet (radius <= 0) adds nothing.
+		//so the leading ring is brightest. stripeRipple.w is the leading ring's half width; each following ring is half as
+		//wide as the one before it. A ring that has not started yet (radius <= 0) adds nothing.
 		float distanceFromCentre = length(texel - stripeRipple.xy);
 		float halfWidth = max(stripeRipple.w, 1e-3);
 		float outerRadius = max(stripeRipple2.y, 1e-3);
@@ -808,7 +809,7 @@ PixelShaderOutput StripePixelShaderFunction(TexturePixelShaderInput input)
 		for (int k = 0; k < 3; k++)
 		{
 			float radius = stripeRipple.z - (k * stripeRipple2.x);
-			float ring = 1 - saturate(abs(distanceFromCentre - radius) / halfWidth);
+			float ring = 1 - saturate(abs(distanceFromCentre - radius) / (halfWidth * exp2(-k)));
 			ring = ring * ring * (3 - (2 * ring));
 			float ringAlpha = radius > 0 ? stripeAlpha * saturate(1 - (radius / outerRadius)) * ring : 0;
 			dark *= 1 - ringAlpha;

@@ -395,16 +395,16 @@ namespace WebAnnotation.UI.AutoPolygonize
         private const double ShimmerSweepDurationScale = 4.0 / 3.0;
 
         /// <summary>How many times longer the ripple takes than the Duration preference says.</summary>
-        private const double ShimmerRippleDurationScale = 2.0;
+        private const double ShimmerRippleDurationScale = 4.0;
 
         /// <summary>Alpha of the shimmer glow at its brightest, as a fraction of the shimmer brightness preference.</summary>
         private const float ShimmerGlowPeakFraction = 1.0f;
 
         /// <summary>Smallest ripple ring half width, in mask texels, so small polygons still show a visible ring.</summary>
-        private const float ShimmerRippleMinHalfWidth = 1.5f;
+        private const float ShimmerRippleMinHalfWidth = 3f;
 
-        /// <summary>Ripple ring half width as a fraction of the ripple's outer radius.</summary>
-        private const float ShimmerRippleHalfWidthFraction = 0.06f;
+        /// <summary>Half width of the leading ripple ring as a fraction of the ripple's outer radius; each following ring is half as wide.</summary>
+        private const float ShimmerRippleHalfWidthFraction = 0.12f;
 
         /// <summary>Distance between successive ripple rings as a fraction of the ripple's outer radius.</summary>
         private const float ShimmerRippleSpacingFraction = 0.28f;

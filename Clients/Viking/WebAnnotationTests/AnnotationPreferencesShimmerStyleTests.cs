@@ -4,20 +4,20 @@ using WebAnnotation.WPF.Forms;
 namespace WebAnnotationTests
 {
     /// <summary>
-    /// Pins <see cref="AnnotationPreferencesDialogViewModel.AutoPolygonizeShimmerStyle"/>: it starts on Sweep so existing
-    /// users see no change, Cancel restores the value the dialog opened with, Reset to Defaults goes back to Sweep, and an
+    /// Pins <see cref="AnnotationPreferencesDialogViewModel.AutoPolygonizeShimmerStyle"/>: it starts on Random, Cancel
+    /// restores the value the dialog opened with, Reset to Defaults goes back to Random, and an
     /// undefined value cannot be stored.
     /// </summary>
     [TestClass]
     public class AnnotationPreferencesShimmerStyleTests
     {
         [TestMethod]
-        public void ShimmerStyle_DefaultsToSweep()
+        public void ShimmerStyle_DefaultsToRandom()
         {
             var vm = new AnnotationPreferencesDialogViewModel();
 
-            Assert.AreEqual(AutoPolygonizeShimmerStyle.Sweep, AnnotationPreferencesDialogViewModel.DefaultAutoPolygonizeShimmerStyle);
-            Assert.AreEqual(AutoPolygonizeShimmerStyle.Sweep, vm.AutoPolygonizeShimmerStyle);
+            Assert.AreEqual(AutoPolygonizeShimmerStyle.Random, AnnotationPreferencesDialogViewModel.DefaultAutoPolygonizeShimmerStyle);
+            Assert.AreEqual(AutoPolygonizeShimmerStyle.Random, vm.AutoPolygonizeShimmerStyle);
         }
 
         [TestMethod]
@@ -33,13 +33,13 @@ namespace WebAnnotationTests
         }
 
         [TestMethod]
-        public void ShimmerStyle_ResetToDefaults_RestoresSweep()
+        public void ShimmerStyle_ResetToDefaults_RestoresRandom()
         {
-            var vm = new AnnotationPreferencesDialogViewModel { AutoPolygonizeShimmerStyle = AutoPolygonizeShimmerStyle.Random };
+            var vm = new AnnotationPreferencesDialogViewModel { AutoPolygonizeShimmerStyle = AutoPolygonizeShimmerStyle.Sweep };
 
             vm.ResetToDefaults();
 
-            Assert.AreEqual(AutoPolygonizeShimmerStyle.Sweep, vm.AutoPolygonizeShimmerStyle);
+            Assert.AreEqual(AutoPolygonizeShimmerStyle.Random, vm.AutoPolygonizeShimmerStyle);
         }
 
         [TestMethod]
@@ -49,7 +49,7 @@ namespace WebAnnotationTests
 
             vm.AutoPolygonizeShimmerStyle = (AutoPolygonizeShimmerStyle)42;
 
-            Assert.AreEqual(AutoPolygonizeShimmerStyle.Sweep, vm.AutoPolygonizeShimmerStyle);
+            Assert.AreEqual(AutoPolygonizeShimmerStyle.Random, vm.AutoPolygonizeShimmerStyle);
         }
     }
 }

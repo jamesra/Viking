@@ -591,7 +591,7 @@ namespace WebAnnotation.WPF.Forms
         }
 
         /// <summary>Starting <see cref="AutoPolygonizeShimmerStyle"/>; matches WebAnnotation's stored default.</summary>
-        public const AutoPolygonizeShimmerStyle DefaultAutoPolygonizeShimmerStyle = AutoPolygonizeShimmerStyle.Sweep;
+        public const AutoPolygonizeShimmerStyle DefaultAutoPolygonizeShimmerStyle = AutoPolygonizeShimmerStyle.Random;
 
         private AutoPolygonizeShimmerStyle _autoPolygonizeShimmerStyle = DefaultAutoPolygonizeShimmerStyle;
 

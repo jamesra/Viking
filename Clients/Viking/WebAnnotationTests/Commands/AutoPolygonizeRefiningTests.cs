@@ -260,8 +260,8 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void TheRippleRingsKeepAVisibleWidthOnSmallPolygons()
         {
-            Assert.AreEqual(1.5f, AutoPolygonizeProposal.ShimmerRippleHalfWidth(5f), 1e-6);
-            Assert.AreEqual(6f, AutoPolygonizeProposal.ShimmerRippleHalfWidth(100f), 1e-4);
+            Assert.AreEqual(3f, AutoPolygonizeProposal.ShimmerRippleHalfWidth(5f), 1e-6);
+            Assert.AreEqual(12f, AutoPolygonizeProposal.ShimmerRippleHalfWidth(100f), 1e-4);
             Assert.AreEqual(28f, AutoPolygonizeProposal.ShimmerRippleSpacing(100f), 1e-4);
         }
 

@@ -860,7 +860,7 @@ namespace WebAnnotation
 
             /// <summary>Starting <see cref="AutoPolygonizeShimmerStyle"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
             public const WebAnnotation.WPF.Forms.AutoPolygonizeShimmerStyle DEFAULT_AUTOPOLYGONIZE_SHIMMER_STYLE =
-                WebAnnotation.WPF.Forms.AutoPolygonizeShimmerStyle.Sweep;
+                WebAnnotation.WPF.Forms.AutoPolygonizeShimmerStyle.Random;
 
             /// <summary>
             /// Whether a newly shown auto-polygonize proposal plays the one-shot shimmer. Read when the proposal is
