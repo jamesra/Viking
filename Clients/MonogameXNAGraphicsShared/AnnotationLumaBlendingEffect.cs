@@ -184,6 +184,8 @@ namespace VikingXNAGraphics
         private EffectParameter _StripeClipLevel;
         private EffectParameter _StripeAlpha;
         private EffectParameter _StripeGlow;
+        private EffectParameter _StripeRipple;
+        private EffectParameter _StripeRipple2;
 
         private EffectParameter _InputLumaAlpha;
 
@@ -337,6 +339,25 @@ namespace VikingXNAGraphics
             set => _StripeGlow?.SetValue(value);
         }
 
+        /// <summary>
+        /// Expanding rings drawn instead of the stripes and band: X and Y are the centre in texels, Z the radius of the
+        /// leading ring in texels and W the ring half width in texels. A W of zero or less turns the rings off. The
+        /// effect is shared, so callers set this every draw. Null-safe so an older compiled shader without it still works.
+        /// </summary>
+        public Vector4 StripeRipple
+        {
+            set => _StripeRipple?.SetValue(value);
+        }
+
+        /// <summary>
+        /// Companion to <see cref="StripeRipple"/>: X is the spacing between successive rings in texels and Y the radius
+        /// in texels at which a ring has faded out completely. Z and W are unused.
+        /// </summary>
+        public Vector4 StripeRipple2
+        {
+            set => _StripeRipple2?.SetValue(value);
+        }
+
         public float InputLumaAlphaValue
         {
             get => _InputLumaAlpha.GetValueSingle();
@@ -408,6 +429,8 @@ namespace VikingXNAGraphics
             _StripeClipLevel = effect.Parameters["stripeClipLevel"];
             _StripeAlpha = effect.Parameters["stripeAlpha"];
             _StripeGlow = effect.Parameters["stripeGlow"];
+            _StripeRipple = effect.Parameters["stripeRipple"];
+            _StripeRipple2 = effect.Parameters["stripeRipple2"];
 
             _InputLumaAlpha = effect.Parameters["InputLumaAlpha"];
             _AnnotationHSLColor = effect.Parameters["AnnotationHSLColor"];

@@ -899,7 +899,7 @@
                                    FontSize="10"
                                    Foreground="Gray"
                                    TextWrapping="Wrap"
-                                   Text="Sweeps a band of white lines across each auto-polygonize result once when it first appears."/>
+                                   Text="Plays a short shimmer over each auto-polygonize result once when it first appears."/>
                         <Grid IsEnabled="{Binding AutoPolygonizeShimmerEnabled}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -908,6 +908,7 @@
                                 <ColumnDefinition Width="60"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
@@ -943,6 +944,17 @@
                                      VerticalAlignment="Center"
                                      Width="50"
                                      HorizontalAlignment="Left"/>
+
+                            <Label Grid.Row="2" Grid.Column="0" Content="Shimmer style:"/>
+                            <ComboBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3"
+                                      SelectedValuePath="Tag"
+                                      SelectedValue="{Binding AutoPolygonizeShimmerStyle, Mode=TwoWay}"
+                                      Margin="5"
+                                      ToolTip="Sweep: a soft band sweeps across a fading glow. Ripple: rings spread from the centre like a drop of water. Random: picks one each time.">
+                                <ComboBoxItem Content="Sweep" Tag="{x:Static local:AutoPolygonizeShimmerStyle.Sweep}"/>
+                                <ComboBoxItem Content="Ripple (drop of water)" Tag="{x:Static local:AutoPolygonizeShimmerStyle.Ripple}"/>
+                                <ComboBoxItem Content="Random" Tag="{x:Static local:AutoPolygonizeShimmerStyle.Random}"/>
+                            </ComboBox>
                         </Grid>
                     </StackPanel>
                 </Expander>

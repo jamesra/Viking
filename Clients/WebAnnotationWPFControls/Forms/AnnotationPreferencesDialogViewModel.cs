@@ -46,6 +46,7 @@ namespace WebAnnotation.WPF.Forms
         private bool _originalSegmentLinkedAnnotations;
         private double _originalAutoPolygonizeShimmerBrightness;
         private int _originalAutoPolygonizeShimmerDurationMs;
+        private AutoPolygonizeShimmerStyle _originalAutoPolygonizeShimmerStyle;
         private bool _originalCorrectionShimEnabled;
         private bool _originalCorrectionShimShowOffset;
         private double _originalCorrectionShimFadeStartDownsample;
@@ -589,6 +590,31 @@ namespace WebAnnotation.WPF.Forms
             }
         }
 
+        /// <summary>Starting <see cref="AutoPolygonizeShimmerStyle"/>; matches WebAnnotation's stored default.</summary>
+        public const AutoPolygonizeShimmerStyle DefaultAutoPolygonizeShimmerStyle = AutoPolygonizeShimmerStyle.Sweep;
+
+        private AutoPolygonizeShimmerStyle _autoPolygonizeShimmerStyle = DefaultAutoPolygonizeShimmerStyle;
+
+        /// <summary>
+        /// Look of the shimmer over a new result. Values outside the enum fall back to
+        /// <see cref="DefaultAutoPolygonizeShimmerStyle"/> so a bad stored value cannot reach the renderer.
+        /// </summary>
+        public AutoPolygonizeShimmerStyle AutoPolygonizeShimmerStyle
+        {
+            get => _autoPolygonizeShimmerStyle;
+            set
+            {
+                AutoPolygonizeShimmerStyle validValue = Enum.IsDefined(typeof(AutoPolygonizeShimmerStyle), value)
+                    ? value
+                    : DefaultAutoPolygonizeShimmerStyle;
+                if (_autoPolygonizeShimmerStyle != validValue)
+                {
+                    _autoPolygonizeShimmerStyle = validValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         /// <summary>
         /// Green foreground and red background clicks on auto-polygonize proposals.
         /// Debug builds reset this to on; release builds reset it to off. Independent of the mask overlay.
@@ -896,7 +922,8 @@ namespace WebAnnotation.WPF.Forms
             int autoPolygonizeShimmerDurationMs = DefaultAutoPolygonizeShimmerDurationMs,
             bool segmentLinkedAnnotations = true,
             int locationLinkWaistPixels = DefaultLocationLinkWaistPixels,
-            bool locationLinkDrawUnderMarkers = false)
+            bool locationLinkDrawUnderMarkers = false,
+            AutoPolygonizeShimmerStyle autoPolygonizeShimmerStyle = DefaultAutoPolygonizeShimmerStyle)
         {
             _polygonPointOpacity = _originalPolygonPointOpacity = polygonPointOpacity;
             _hidePolygonPointsInPenMode = _originalHidePolygonPointsInPenMode = hidePolygonPointsInPenMode;
@@ -932,6 +959,7 @@ namespace WebAnnotation.WPF.Forms
             _segmentLinkedAnnotations = segmentLinkedAnnotations;
             _autoPolygonizeShimmerBrightness = autoPolygonizeShimmerBrightness;
             _autoPolygonizeShimmerDurationMs = autoPolygonizeShimmerDurationMs;
+            _autoPolygonizeShimmerStyle = autoPolygonizeShimmerStyle;
 
             // Store original values for Cancel revert BEFORE setting properties
             _originalNumSectionsInMemory = numSectionsInMemory;
@@ -968,6 +996,7 @@ namespace WebAnnotation.WPF.Forms
             _originalSegmentLinkedAnnotations = segmentLinkedAnnotations;
             _originalAutoPolygonizeShimmerBrightness = autoPolygonizeShimmerBrightness;
             _originalAutoPolygonizeShimmerDurationMs = autoPolygonizeShimmerDurationMs;
+            _originalAutoPolygonizeShimmerStyle = autoPolygonizeShimmerStyle;
             _originalCorrectionShimEnabled = correctionShimEnabled;
             _originalCorrectionShimShowOffset = correctionShimShowOffset;
             _originalCorrectionShimFadeStartDownsample = correctionShimFadeStartDownsample;
@@ -1007,6 +1036,7 @@ namespace WebAnnotation.WPF.Forms
             SegmentLinkedAnnotations = segmentLinkedAnnotations;
             AutoPolygonizeShimmerBrightness = autoPolygonizeShimmerBrightness;
             AutoPolygonizeShimmerDurationMs = autoPolygonizeShimmerDurationMs;
+            AutoPolygonizeShimmerStyle = autoPolygonizeShimmerStyle;
             LocationLinkWaistPixels = locationLinkWaistPixels;
             LocationLinkDrawUnderMarkers = locationLinkDrawUnderMarkers;
             CorrectionShimEnabled = correctionShimEnabled;
@@ -1057,6 +1087,7 @@ namespace WebAnnotation.WPF.Forms
             _originalSegmentLinkedAnnotations = _segmentLinkedAnnotations;
             _originalAutoPolygonizeShimmerBrightness = _autoPolygonizeShimmerBrightness;
             _originalAutoPolygonizeShimmerDurationMs = _autoPolygonizeShimmerDurationMs;
+            _originalAutoPolygonizeShimmerStyle = _autoPolygonizeShimmerStyle;
             _originalCorrectionShimEnabled = _correctionShimEnabled;
             _originalCorrectionShimShowOffset = _correctionShimShowOffset;
             _originalCorrectionShimFadeStartDownsample = _correctionShimFadeStartDownsample;
@@ -1103,6 +1134,7 @@ namespace WebAnnotation.WPF.Forms
             _segmentLinkedAnnotations = _originalSegmentLinkedAnnotations;
             _autoPolygonizeShimmerBrightness = _originalAutoPolygonizeShimmerBrightness;
             _autoPolygonizeShimmerDurationMs = _originalAutoPolygonizeShimmerDurationMs;
+            _autoPolygonizeShimmerStyle = _originalAutoPolygonizeShimmerStyle;
             _correctionShimEnabled = _originalCorrectionShimEnabled;
             _correctionShimShowOffset = _originalCorrectionShimShowOffset;
             _correctionShimFadeStartDownsample = _originalCorrectionShimFadeStartDownsample;
@@ -1156,6 +1188,7 @@ namespace WebAnnotation.WPF.Forms
             _segmentLinkedAnnotations = true;
             _autoPolygonizeShimmerBrightness = DefaultAutoPolygonizeShimmerBrightness;
             _autoPolygonizeShimmerDurationMs = DefaultAutoPolygonizeShimmerDurationMs;
+            _autoPolygonizeShimmerStyle = DefaultAutoPolygonizeShimmerStyle;
             _correctionShimEnabled = true;
             _correctionShimShowOffset = false;
             _correctionShimFadeStartDownsample = 8;

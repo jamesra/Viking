@@ -216,6 +216,20 @@ namespace WebAnnotation.Properties
         }
 
         /// <summary>
+        /// Shimmer look as the integer of <see cref="WebAnnotation.WPF.Forms.AutoPolygonizeShimmerStyle"/>
+        /// (0 Sweep, 1 Ripple, 2 Random). Keep the default in step with
+        /// <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_AUTOPOLYGONIZE_SHIMMER_STYLE"/>.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int AutoPolygonizeShimmerStyle
+        {
+            get => (int)this[nameof(AutoPolygonizeShimmerStyle)];
+            set => this[nameof(AutoPolygonizeShimmerStyle)] = value;
+        }
+
+        /// <summary>
         /// Stored mask-overlay choice. Debug builds ignore this until
         /// <see cref="AutoPolygonizeOverlayMasksUserSet"/> is true.
         /// </summary>

@@ -5,6 +5,7 @@ using System;
 using System.Linq;
 using WebAnnotation.UI.AutoPolygonize;
 using WebAnnotation.UI.Commands.Segmentation;
+using WebAnnotation.WPF.Forms;
 
 namespace WebAnnotationTests.Commands
 {
@@ -218,6 +219,84 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual(coarse.Length * supersample * supersample, fine.Length);
             Assert.AreEqual(coarse.Count(inside => inside) * supersample * supersample, fine.Count(inside => inside),
                 "the square covers the same area at both resolutions");
+        }
+
+        [TestMethod]
+        public void TheRippleStartsAtTheCentreAndItsLastRingLeavesThePolygonByTheEnd()
+        {
+            const float outerRadius = 40f;
+            float halfWidth = AutoPolygonizeProposal.ShimmerRippleHalfWidth(outerRadius);
+            float spacing = AutoPolygonizeProposal.ShimmerRippleSpacing(outerRadius);
+
+            float start = AutoPolygonizeProposal.ShimmerRippleRadius(0, outerRadius, spacing, halfWidth);
+            float end = AutoPolygonizeProposal.ShimmerRippleRadius(1, outerRadius, spacing, halfWidth);
+            float lastRingInnerEdge = end - (2 * spacing) - halfWidth;
+
+            Assert.IsTrue(start <= 0f, "no ring shows when the drop lands");
+            Assert.IsTrue(lastRingInnerEdge >= outerRadius - 1e-4f, "the third ring has fully passed the outer radius at the end");
+            Assert.AreEqual(end, AutoPolygonizeProposal.ShimmerRippleRadius(1.5, outerRadius, spacing, halfWidth), 1e-5, "progress past the end is clamped");
+        }
+
+        [TestMethod]
+        public void TheRippleSpreadsMonotonicallyAndSlowsDownLikeWater()
+        {
+            const float outerRadius = 25f;
+            float halfWidth = AutoPolygonizeProposal.ShimmerRippleHalfWidth(outerRadius);
+            float spacing = AutoPolygonizeProposal.ShimmerRippleSpacing(outerRadius);
+
+            float previous = AutoPolygonizeProposal.ShimmerRippleRadius(0, outerRadius, spacing, halfWidth);
+            for (int step = 1; step <= 20; step++)
+            {
+                float radius = AutoPolygonizeProposal.ShimmerRippleRadius(step / 20.0, outerRadius, spacing, halfWidth);
+                Assert.IsTrue(radius > previous, $"radius grows at step {step}");
+                previous = radius;
+            }
+
+            float firstHalf = AutoPolygonizeProposal.ShimmerRippleRadius(0.5, outerRadius, spacing, halfWidth);
+            float total = AutoPolygonizeProposal.ShimmerRippleRadius(1, outerRadius, spacing, halfWidth);
+            Assert.IsTrue(firstHalf > total / 2, "an ease-out covers more than half the distance in the first half");
+        }
+
+        [TestMethod]
+        public void TheRippleRingsKeepAVisibleWidthOnSmallPolygons()
+        {
+            Assert.AreEqual(1.5f, AutoPolygonizeProposal.ShimmerRippleHalfWidth(5f), 1e-6);
+            Assert.AreEqual(6f, AutoPolygonizeProposal.ShimmerRippleHalfWidth(100f), 1e-4);
+            Assert.AreEqual(28f, AutoPolygonizeProposal.ShimmerRippleSpacing(100f), 1e-4);
+        }
+
+        [TestMethod]
+        public void TheRippleIsCentredOnTheMarkedTexelsWithHalfTheirDiagonalAsOuterRadius()
+        {
+            // Marked texels fill columns 2..7 and rows 0..7 of an 8 x 8 grid, two clip texels per mask texel:
+            // a 3 x 4 mask texel box centred at (2.5, 2).
+            bool[] inside = new bool[8 * 8];
+            for (int y = 0; y <= 7; y++)
+                for (int x = 2; x <= 7; x++)
+                    inside[(y * 8) + x] = true;
+
+            (Microsoft.Xna.Framework.Vector2 centre, float outerRadius) = AutoPolygonizeProposal.ShimmerRippleShape(inside, 8, 8, 2);
+
+            Assert.AreEqual(2.5f, centre.X, 1e-5);
+            Assert.AreEqual(2f, centre.Y, 1e-5);
+            Assert.AreEqual(2.5f, outerRadius, 1e-5, "half of the 3-4-5 diagonal");
+            Assert.AreEqual(1f, AutoPolygonizeProposal.ShimmerRippleShape(new bool[4], 2, 2, 1).OuterRadius, 1e-6, "nothing marked");
+        }
+
+        [TestMethod]
+        public void TheShimmerStyleChoiceKeepsFixedStylesAndSplitsRandomEvenly()
+        {
+            foreach (double value in new[] { 0.0, 0.49, 0.5, 0.99 })
+            {
+                Assert.AreEqual(AutoPolygonizeShimmerStyle.Sweep, AutoPolygonizeProposal.ChooseShimmerStyle(AutoPolygonizeShimmerStyle.Sweep, value));
+                Assert.AreEqual(AutoPolygonizeShimmerStyle.Ripple, AutoPolygonizeProposal.ChooseShimmerStyle(AutoPolygonizeShimmerStyle.Ripple, value));
+            }
+
+            Assert.AreEqual(AutoPolygonizeShimmerStyle.Sweep, AutoPolygonizeProposal.ChooseShimmerStyle(AutoPolygonizeShimmerStyle.Random, 0.0));
+            Assert.AreEqual(AutoPolygonizeShimmerStyle.Sweep, AutoPolygonizeProposal.ChooseShimmerStyle(AutoPolygonizeShimmerStyle.Random, 0.49));
+            Assert.AreEqual(AutoPolygonizeShimmerStyle.Ripple, AutoPolygonizeProposal.ChooseShimmerStyle(AutoPolygonizeShimmerStyle.Random, 0.5));
+            Assert.AreEqual(AutoPolygonizeShimmerStyle.Ripple, AutoPolygonizeProposal.ChooseShimmerStyle(AutoPolygonizeShimmerStyle.Random, 0.99));
+            Assert.AreEqual(AutoPolygonizeShimmerStyle.Sweep, AutoPolygonizeProposal.ChooseShimmerStyle((AutoPolygonizeShimmerStyle)42, 0.9), "unknown values sweep");
         }
     }
 }

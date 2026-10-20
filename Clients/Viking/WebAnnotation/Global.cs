@@ -858,6 +858,10 @@ namespace WebAnnotation
             /// <summary>Starting <see cref="AutoPolygonizeShimmerDurationMs"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
             public const int DEFAULT_AUTOPOLYGONIZE_SHIMMER_DURATION_MS = 750;
 
+            /// <summary>Starting <see cref="AutoPolygonizeShimmerStyle"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
+            public const WebAnnotation.WPF.Forms.AutoPolygonizeShimmerStyle DEFAULT_AUTOPOLYGONIZE_SHIMMER_STYLE =
+                WebAnnotation.WPF.Forms.AutoPolygonizeShimmerStyle.Sweep;
+
             /// <summary>
             /// Whether a newly shown auto-polygonize proposal plays the one-shot shimmer. Read when the proposal is
             /// first drawn, so turning it off does not cut a shimmer already running.
@@ -919,6 +923,27 @@ namespace WebAnnotation
                     Properties.Settings.Default.Save();
                 }
             }
+
+            /// <summary>
+            /// Look of the auto-polygonize shimmer. Stored as the enum's integer; an unknown stored value reads as
+            /// <see cref="DEFAULT_AUTOPOLYGONIZE_SHIMMER_STYLE"/>. Read when a shimmer starts, so changing it does not
+            /// alter a shimmer already running.
+            /// </summary>
+            public static WebAnnotation.WPF.Forms.AutoPolygonizeShimmerStyle AutoPolygonizeShimmerStyle
+            {
+                get => ValidAutoPolygonizeShimmerStyle(Properties.Settings.Default.AutoPolygonizeShimmerStyle);
+                set
+                {
+                    Properties.Settings.Default.AutoPolygonizeShimmerStyle = (int)ValidAutoPolygonizeShimmerStyle((int)value);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>Maps a stored integer to a defined shimmer style, falling back to the default for unknown values.</summary>
+            internal static WebAnnotation.WPF.Forms.AutoPolygonizeShimmerStyle ValidAutoPolygonizeShimmerStyle(int storedValue) =>
+                Enum.IsDefined(typeof(WebAnnotation.WPF.Forms.AutoPolygonizeShimmerStyle), storedValue)
+                    ? (WebAnnotation.WPF.Forms.AutoPolygonizeShimmerStyle)storedValue
+                    : DEFAULT_AUTOPOLYGONIZE_SHIMMER_STYLE;
 
             /// <summary>
             /// Debug overlay of the raw SAM2 mask on auto-polygonize proposals.
@@ -1089,6 +1114,7 @@ namespace WebAnnotation
                 Properties.Settings.Default.SegmentLinkedAnnotations = true;
                 Properties.Settings.Default.AutoPolygonizeShimmerBrightness = DEFAULT_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS;
                 Properties.Settings.Default.AutoPolygonizeShimmerDurationMs = DEFAULT_AUTOPOLYGONIZE_SHIMMER_DURATION_MS;
+                Properties.Settings.Default.AutoPolygonizeShimmerStyle = (int)DEFAULT_AUTOPOLYGONIZE_SHIMMER_STYLE;
                 Properties.Settings.Default.AutoPolygonizeOverlayMasks = false;
                 Properties.Settings.Default.AutoPolygonizeOverlayMasksUserSet = false;
                 Properties.Settings.Default.AutoPolygonizeOverlayPrompts = false;

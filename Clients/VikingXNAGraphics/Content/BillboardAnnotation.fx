@@ -760,6 +760,11 @@ uniform const float stripeAlpha = 1;
 //Optional round glow under the stripes: xy is its centre in mask texels, z its standard deviation in texels, w its alpha at the
 //centre. w <= 0 draws none. The stripes and the glow combine as light does, so a lit stripe over the glow is brighter than either.
 uniform const float4 stripeGlow = float4(0, 0, 1, 0);
+//Optional ripple drawn instead of the stripes and band, like a drop of water landing: xy is the centre in mask texels, z the radius
+//of the leading ring in texels, w the ring half width in texels. w <= 0 turns it off and leaves the stripes as they were.
+uniform const float4 stripeRipple = float4(0, 0, 1, 0);
+//Ripple companion: x is the spacing between successive rings in texels, y the radius in texels at which a ring has fully faded.
+uniform const float4 stripeRipple2 = float4(1, 1, 0, 0);
 
 PixelShaderOutput StripePixelShaderFunction(TexturePixelShaderInput input)
 {
@@ -794,6 +799,25 @@ PixelShaderOutput StripePixelShaderFunction(TexturePixelShaderInput input)
 	}
 
 	float stripeLit = stripeAlpha * stripe * band;
+	if (stripeRipple.w > 0)
+	{
+		//Three rings trail the leading one by stripeRipple2.x each. Rings combine as light does and dim as they spread,
+		//so the leading ring is brightest. A ring that has not started yet (radius <= 0) adds nothing.
+		float distanceFromCentre = length(texel - stripeRipple.xy);
+		float halfWidth = max(stripeRipple.w, 1e-3);
+		float outerRadius = max(stripeRipple2.y, 1e-3);
+		float dark = 1;
+		[unroll]
+		for (int k = 0; k < 3; k++)
+		{
+			float radius = stripeRipple.z - (k * stripeRipple2.x);
+			float ring = 1 - saturate(abs(distanceFromCentre - radius) / halfWidth);
+			ring = ring * ring * (3 - (2 * ring));
+			float ringAlpha = radius > 0 ? stripeAlpha * saturate(1 - (radius / outerRadius)) * ring : 0;
+			dark *= 1 - ringAlpha;
+		}
+		stripeLit = 1 - dark;
+	}
 	float glow = 0;
 	if (stripeGlow.w > 0)
 	{
