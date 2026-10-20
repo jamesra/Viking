@@ -105,23 +105,46 @@ namespace WebAnnotation.Tools
             }
 
             if (hit is null && clickCount == 1)
-            {
-                if (_context.ArmedPlaceKind == AnnotationPlaceKind.Polyline)
-                {
-                    _context.StartTool(new PlacePolyTool(_context, LocationType.POLYLINE, world));
-                    return AnnotationToolResult.Continue;
-                }
-
-                if (_context.ArmedPlaceKind == AnnotationPlaceKind.Polygon)
-                {
-                    _context.StartTool(new PlacePolyTool(_context, LocationType.POLYGON, world));
-                    return AnnotationToolResult.Continue;
-                }
-
-                _ = AnnotationToolActions.CreateStructureAtAsync(_context, LocationType.CIRCLE, world, null);
-            }
+                OnEmptyClick(world);
 
             return AnnotationToolResult.Continue;
+        }
+
+        /// <summary>
+        /// As in Viking, a click on empty space places only what the user asked for: an armed structure hotkey, else the
+        /// type chosen in the structure type list, else it continues the last trace when that is on another section.
+        /// </summary>
+        void OnEmptyClick(Vector2 world)
+        {
+            if (_context.ArmedStructure is HotkeyCommand armed)
+            {
+                _context.ArmedStructure = null;
+                Place(armed.LocationType, world, armed.TypeId, armed.Tags);
+                return;
+            }
+
+            if (_context.SelectedStructureTypeId().HasValue)
+            {
+                LocationType shape = _context.ArmedPlaceKind switch
+                {
+                    AnnotationPlaceKind.Polyline => LocationType.POLYLINE,
+                    AnnotationPlaceKind.Polygon => LocationType.POLYGON,
+                    _ => LocationType.CIRCLE,
+                };
+                Place(shape, world, null, null);
+                return;
+            }
+
+            if (!AnnotationToolActions.TryContinueLastTrace(_context, world))
+                _context.SetStatus("Choose a structure type, or press a structure shortcut, to place an annotation");
+        }
+
+        void Place(LocationType shape, Vector2 world, long? typeId, IReadOnlyList<string> tags)
+        {
+            if (shape == LocationType.CIRCLE || shape == LocationType.POINT)
+                _ = AnnotationToolActions.CreateStructureAtAsync(_context, LocationType.CIRCLE, world, null, typeId, tags);
+            else
+                _context.StartTool(new PlacePolyTool(_context, shape, world, typeId, tags));
         }
 
         public void OnMouseMove(Vector2 screen)
@@ -150,6 +173,7 @@ namespace WebAnnotation.Tools
 
             _hovered = hovered;
             _hoverAction = action;
+            _context.HoveredLocation = hovered;
             _context.SetStatus(HoverHint(hovered, action));
             _context.Invalidate();
         }
@@ -162,6 +186,7 @@ namespace WebAnnotation.Tools
 
         public void Cancel()
         {
+            _context.HoveredLocation = null;
             _hovered = null;
             _hoverAction = LocationAction.NONE;
         }

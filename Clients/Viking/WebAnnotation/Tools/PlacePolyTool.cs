@@ -16,17 +16,25 @@ namespace WebAnnotation.Tools
         readonly AnnotationToolContext _context;
         readonly LocationType _shapeType;
         readonly List<Vector2> _vertices = new();
+        readonly long? _typeId;
+        readonly IReadOnlyList<string> _tags;
         Vector2? _pointer;
 
-        public PlacePolyTool(AnnotationToolContext context, LocationType shapeType, Vector2 firstVertex)
+        /// <param name="typeId">The structure type to create; null uses the type chosen in the structure type list.</param>
+        /// <param name="tags">Tags a structure hotkey adds to the new structure.</param>
+        public PlacePolyTool(AnnotationToolContext context, LocationType shapeType, Vector2 firstVertex, long? typeId = null, IReadOnlyList<string> tags = null)
         {
             _context = context;
             _shapeType = shapeType;
+            _typeId = typeId;
+            _tags = tags;
             _vertices.Add(firstVertex);
             _context.SetStatus(StatusText);
         }
 
-        int MinVertices => _shapeType == LocationType.POLYGON ? 3 : 2;
+        bool IsClosed => _shapeType is LocationType.POLYGON or LocationType.CURVEPOLYGON or LocationType.CLOSEDCURVE;
+
+        int MinVertices => IsClosed ? 3 : 2;
 
         public string StatusText =>
             $"{_shapeType}: {_vertices.Count} vertices (click to add, Enter to commit, Esc to cancel)";
@@ -62,7 +70,7 @@ namespace WebAnnotation.Tools
             List<Vector2> path = new(_vertices);
             if (_pointer.HasValue)
                 path.Add(_pointer.Value);
-            ToolPreviewDrawing.AddPath(lines, path, closed: _shapeType == LocationType.POLYGON, width, ToolPreviewDrawing.ActionColor);
+            ToolPreviewDrawing.AddPath(lines, path, closed: IsClosed, width, ToolPreviewDrawing.ActionColor);
             foreach (Vector2 vertex in _vertices)
                 ToolPreviewDrawing.AddRing(lines, vertex, 4 * _context.Host.Downsample, width, ToolPreviewDrawing.ActionColor);
             ToolPreviewDrawing.Draw(device, scene, lineManager, lines);
@@ -109,7 +117,7 @@ namespace WebAnnotation.Tools
             }
 
             Vector2[] points = _vertices.ToArray();
-            _ = AnnotationToolActions.CreateStructureAtAsync(_context, _shapeType, points[0], points);
+            _ = AnnotationToolActions.CreateStructureAtAsync(_context, _shapeType, points[0], points, _typeId, _tags);
             _context.SetStatus(null);
             return AnnotationToolResult.Done;
         }

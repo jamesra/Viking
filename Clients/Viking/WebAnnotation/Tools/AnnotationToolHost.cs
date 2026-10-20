@@ -57,7 +57,9 @@ namespace WebAnnotation.Tools
         {
             ArmedPlaceKind = kind;
             CancelCurrent();
-            StatusChanged?.Invoke(this, $"Place {kind}: click in the view");
+            StatusChanged?.Invoke(this, SelectedStructureTypeId.HasValue
+                ? $"Place {kind}: click in the view"
+                : $"Place {kind}: choose a structure type, then click in the view");
         }
 
         public void StartMeasure()
@@ -108,6 +110,13 @@ namespace WebAnnotation.Tools
 
         public bool OnKeyDown(Key key)
         {
+            if (key == Key.Escape && IsIdle && _context.ArmedStructure != null)
+            {
+                _context.ArmedStructure = null;
+                StatusChanged?.Invoke(this, null);
+                return true;
+            }
+
             AnnotationToolResult result = _current.OnKeyDown(key);
             if (result != AnnotationToolResult.Continue)
             {
@@ -120,6 +129,7 @@ namespace WebAnnotation.Tools
 
         public void CancelCurrent()
         {
+            _context.ArmedStructure = null;
             _current?.Cancel();
             _queue.Clear();
             RestoreDefault();
@@ -130,19 +140,63 @@ namespace WebAnnotation.Tools
             HandleResult(_current.OnKeyDown(Key.Enter));
         }
 
-        public void ContinueLast(Vector2 world)
-        {
-            if (!Global.LastEditedAnnotationID.HasValue)
-                return;
-            if (Store.Locations.TryGetObjectByID(Global.LastEditedAnnotationID.Value, out LocationObj last) && last != null
-                && (int)Math.Round(last.Z) == _host.SectionNumber)
-                return;
+        public void ContinueLast(Vector2 world) => AnnotationToolActions.TryContinueLastTrace(_context, world);
 
-            // Cache miss still continues: the location may have been dropped after skipping a bad section.
-            // CreateLinkedLocationAsync loads it from the server.
-            long lastId = Global.LastEditedAnnotationID.Value;
-            _ = AnnotationToolActions.CreateLinkedLocationAsync(_context, lastId, world, LocationType.CIRCLE, null);
+        /// <summary>The volume's UserSettings shortcuts, or null when none were loaded.</summary>
+        public UserSettingsHotkeys Hotkeys { get; set; }
+
+        /// <summary>The user name the client signed in with; Viking's <c>@username</c> tag value expands to it.</summary>
+        public string UserName { get; set; }
+
+        /// <summary>
+        /// Runs the UserSettings shortcut bound to this chord, as Viking's overlay does: structure shortcuts arm a placement
+        /// for the next click; tag and terminal shortcuts act on the location under the pointer (else the selected one).
+        /// Only while no tool is active. False when nothing is bound.
+        /// </summary>
+        public bool TryRunHotkey(Key key, bool shift, bool ctrl, bool alt)
+        {
+            if (Hotkeys == null || !IsIdle)
+                return false;
+
+            HotkeyCommand command = Hotkeys.Find(key, shift, ctrl, alt);
+            if (command == null)
+                return false;
+
+            if (command.Kind == HotkeyCommandKind.CreateStructure)
+            {
+                _context.ArmedStructure = command;
+                StatusChanged?.Invoke(this, $"{command.Name}: click to place, Esc to cancel");
+                return true;
+            }
+
+            LocationObj target = _context.HoveredLocation ?? SelectedLocation;
+            if (target == null)
+            {
+                StatusChanged?.Invoke(this, $"{command.Name}: point at an annotation first");
+                return true;
+            }
+
+            switch (command.Kind)
+            {
+                case HotkeyCommandKind.ToggleStructureTag:
+                    _ = AnnotationToolActions.ToggleStructureTagAsync(_context, target, command.Tag, ExpandTagValue(command.Value));
+                    break;
+                case HotkeyCommandKind.ToggleLocationTag:
+                    _ = AnnotationToolActions.ToggleLocationTagAsync(_context, target, command.Tag, ExpandTagValue(command.Value));
+                    break;
+                case HotkeyCommandKind.ToggleLocationTerminal:
+                    _ = AnnotationToolActions.ToggleTerminalAsync(_context, target);
+                    break;
+                default:
+                    StatusChanged?.Invoke(this, $"{command.Name} is not supported here yet");
+                    break;
+            }
+
+            return true;
         }
+
+        string ExpandTagValue(string value) =>
+            string.Equals(value, "@username", StringComparison.OrdinalIgnoreCase) ? UserName : value;
 
         /// <summary>The location Delete would remove: the selected one, else the last edited one; null if neither is cached.</summary>
         public LocationObj DeletionTarget

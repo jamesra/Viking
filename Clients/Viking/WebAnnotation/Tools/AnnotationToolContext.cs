@@ -23,6 +23,12 @@ namespace WebAnnotation.Tools
         /// <summary>The location the user last clicked, or null after a click on empty space. Delete acts on it.</summary>
         public LocationObj SelectedLocation { get; set; }
 
+        /// <summary>The location under the pointer, or null. Viking's tag and terminal hotkeys act on it.</summary>
+        public LocationObj HoveredLocation { get; set; }
+
+        /// <summary>A structure hotkey waiting for the click that places it; the click clears it, as does Escape.</summary>
+        public HotkeyCommand ArmedStructure { get; set; }
+
         public AnnotationToolContext(
             IViewportHost host,
             AnnotationScene scene,

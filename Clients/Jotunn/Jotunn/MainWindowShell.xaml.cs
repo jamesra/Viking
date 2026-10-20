@@ -85,9 +85,33 @@ namespace Jotunn
             StructureTypeTree typeTree = new();
             typeTree.StructureTypeSelected += (_, id) => _tools.SelectedStructureTypeId = (long)id;
             NavigationHost.Items.Add(new TabItem { Header = "Types", Content = typeTree });
-            if (Store.StructureTypes.RootObjects.Count > 0)
-                _tools.SelectedStructureTypeId = (long)Store.StructureTypes.RootObjects[0];
+            _tools.UserName = App.UserCredentials?.UserName;
+            _ = LoadHotkeysAsync(_tools);
             _sectionGrid.SceneHostControl.Invalidate();
+        }
+
+        /// <summary>
+        /// Loads the volume's UserSettings shortcuts (Viking's structure and tag hotkeys), cached per volume under
+        /// LocalApplicationData/Jotunn.
+        /// </summary>
+        static async Task LoadHotkeysAsync(AnnotationToolHost tools)
+        {
+            Viking.VolumeModel.Volume volume = WebAnnotation.AnnotationBootstrap.Volume;
+            if (volume?.VolumeElement == null)
+                return;
+
+            string cacheDirectory = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Jotunn", SafeFolderName(volume.Name), "WebAnnotation");
+            tools.Hotkeys = await UserSettingsHotkeys.LoadAsync(volume.VolumeElement, cacheDirectory).ConfigureAwait(true);
+        }
+
+        static string SafeFolderName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return "Volume";
+            foreach (char c in System.IO.Path.GetInvalidFileNameChars())
+                name = name.Replace(c, '_');
+            return name;
         }
 
         /// <summary>
@@ -176,6 +200,11 @@ namespace Jotunn
                 e.Handled = true;
             }
             else if (_sectionGrid?.SceneHostControl != null && _sectionGrid.SceneHostControl.HandleViewKeyDown(e.Key))
+            {
+                e.Handled = true;
+            }
+            else if (_tools != null && _tools.TryRunHotkey(e.Key == Key.System ? e.SystemKey : e.Key, shift, ctrl,
+                         (Keyboard.Modifiers & ModifierKeys.Alt) != 0))
             {
                 e.Handled = true;
             }

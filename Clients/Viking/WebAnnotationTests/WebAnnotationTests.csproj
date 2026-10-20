@@ -62,6 +62,7 @@
     <Compile Include="SplitStructuresFormTests.cs" />
     <Compile Include="HotkeyKeyCodeTests.cs" />
     <Compile Include="OverlayHotkeysTests.cs" />
+    <Compile Include="UserSettingsHotkeysTests.cs" />
     <Compile Include="HiddenStructuresTests.cs" />
     <Compile Include="ObjAttributeTests.cs" />
     <Compile Include="StructureLinkKeyTests.cs" />
