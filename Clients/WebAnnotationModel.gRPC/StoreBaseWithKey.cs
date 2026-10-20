@@ -745,6 +745,7 @@ namespace WebAnnotationModel.gRPC
 
         public override async Task<bool> Save(CancellationToken token)
         {
+            LastSaveFault = null;
             List<OBJECT> changed = new List<OBJECT>(ChangedObjects.Count);
 
             while (ChangedObjects.Count > 0)
@@ -760,7 +761,16 @@ namespace WebAnnotationModel.gRPC
                 changed.Add(obj);
             }
 
-            return await Save(changed, token);
+            try
+            {
+                return await Save(changed, token);
+            }
+            catch (Exception e)
+            {
+                if (LastSaveFault == null)
+                    LastSaveFault = e;
+                throw;
+            }
         }
 
 
@@ -812,6 +822,7 @@ namespace WebAnnotationModel.gRPC
                 catch (Exception e)
                 {
                     Trace.WriteLine($"An error occurred during the update:\n{e.Message}");
+                    LastSaveFault = e;
                     RestoreChangedObjects(changedObjects);
                     return false;
                 }

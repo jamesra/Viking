@@ -63,6 +63,9 @@ namespace WebAnnotationModel.gRPC
         /// </summary>
         public Task<bool> Save() => Save(CancellationToken.None);
 
+        /// <inheritdoc cref="IStore{OBJECT}.LastSaveFault"/>
+        public Exception LastSaveFault { get; protected set; }
+
         #endregion
 
         #region Events

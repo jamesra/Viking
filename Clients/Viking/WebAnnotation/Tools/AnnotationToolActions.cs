@@ -277,7 +277,8 @@ namespace WebAnnotation.Tools
                 Trace.WriteLine($"Restoring location {location.ID} after a failed save failed: {ex}");
             }
 
-            context.SetStatus($"Could not save location {location.ID}; its shape was put back");
+            Exception fault = Store.IsInitialized ? Store.Locations.LastSaveFault : null;
+            context.SetStatus($"Could not save location {location.ID}; its shape was put back" + (fault is null ? "" : $" ({fault.Message})"));
             context.Invalidate();
         }
 

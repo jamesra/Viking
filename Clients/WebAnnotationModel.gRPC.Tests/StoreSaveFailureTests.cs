@@ -57,6 +57,31 @@ namespace WebAnnotationModel.gRPC.Tests
             Assert.That(_changed.Values, Is.EquivalentTo(new[] { updated, deleted }));
         }
 
+        /// <summary>Legacy's LastSaveFault: the failed save's exception is kept for the message the user sees.</summary>
+        [Test]
+        public async Task FailedUpdate_RecordsTheFault()
+        {
+            QueueChange(5, DBACTION.UPDATE);
+
+            await _structures.Save(CancellationToken.None);
+
+            Assert.That(_structures.LastSaveFault, Is.InstanceOf<InvalidOperationException>());
+            Assert.That(_structures.LastSaveFault.Message, Is.EqualTo("server unavailable"));
+        }
+
+        [Test]
+        public async Task SaveWithNothingQueued_ClearsTheFault()
+        {
+            QueueChange(5, DBACTION.UPDATE);
+            await _structures.Save(CancellationToken.None);
+            _changed.Clear();
+
+            bool ok = await _structures.Save(CancellationToken.None);
+
+            Assert.That(ok, Is.True);
+            Assert.That(_structures.LastSaveFault, Is.Null);
+        }
+
         /// <summary>
         /// Client creation fails before any RPC (bad endpoint, channel setup): the exception still reaches the
         /// caller, as in the WCF store's CreateProxy path, but every edit stays queued with its DBAction.

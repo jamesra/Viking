@@ -1,6 +1,6 @@
 # gRPC store parity with the WCF client
 
-Compares `VikingClient/Clients/WebAnnotationModel/Store` (WCF, `Legacy`) with this project, member by member. First version, built by the improvement loop from member names only: "done" means an equivalent member exists, not that behavior (ordering, null/empty results, timestamps, cancellation) has been verified by a paired test. The Test and Benchmark columns are empty until `Benchmarks/AnnotationParity` and paired tests exist. Tally: 37 done, 2 partial, 1 missing, 4 n/a.
+Compares `VikingClient/Clients/WebAnnotationModel/Store` (WCF, `Legacy`) with this project, member by member. First version, built by the improvement loop from member names only: "done" means an equivalent member exists, not that behavior (ordering, null/empty results, timestamps, cancellation) has been verified by a paired test. The Test and Benchmark columns are empty until `Benchmarks/AnnotationParity` and paired tests exist. Tally: 38 done, 2 partial, 0 missing, 4 n/a.
 
 The client above the stores was brought to parity by merging Legacy 00014315 (base f43992ae) into this tree on 2026-10-19: every Legacy client feature now builds against these stores, and the Legacy client tests run against them (WebAnnotationTests, VikingCoreTests, CommonTests, VolumeModelTests). The rows below the table header marked "Legacy 2026-08..10" are store behaviors Legacy added after the fork.
 
@@ -43,7 +43,7 @@ The client above the stores was brought to parity by merging Legacy 00014315 (ba
 | Legacy 2026-08..10: PermittedStructureLinkStore queues editor-built links (INSERT) on add (a2a05091) | `StoreBaseWithKey.TrackForSaveIfPending`, `PermittedStructureLinkStore.QueueUnsavedLinks` | done | `PermittedStructureLinkSaveQueueTests` (WebAnnotationTests) | |
 | Legacy: re-adding a link whose DELETE is queued cancels it; removing an unsaved INSERT sends nothing (f654ad32) | `PermittedStructureLinkStore.QueueUnsavedLinks`, `CancelUnsavedInsert`, `Remove` overrides | done | `PermittedStructureLinkSaveQueueTests` | |
 | Legacy: one lock across store, section list and R-tree; duplicate R-tree ID replaces (efaa2d78) | R-tree owned by `RegionLoader` (`SpatialSearch`) | n/a: different index ownership; not re-checked | | |
-| Legacy: `LastSaveFault` on the store (c5295588) | `Save` returns false and traces; the volume-position job reports the RPC exception | missing: no store property; callers that showed the fault show a generic failure | | |
+| Legacy: `LastSaveFault` on the store (c5295588) | `IStore.LastSaveFault`, set when an update RPC fails or `Save` throws and cleared by the next `Save`; Viking's save-failed message and Jotunn's status show it | done | `StoreSaveFailureTests` | |
 | Legacy: `LastServerFetchError` so Goto Location reports access denied (05e38245) | `IStoreWithKey.LastServerFetchError`, read by `AnnotationOverlay` deep-link lookups | done | | |
 | Legacy: 30 s visible-section poll, outstanding-query guard, watermark from region-load time, `InvalidateSection` on eviction (81fd3192) | `SectionLocationPollPolicy`, `LocationStore.HasOutstandingSectionQuery`/`TouchSectionQueryTime`, `IRegionLoader.InvalidateSection` | done | `SectionLocationPollPolicyTests` | |
 | Legacy: region refresh compares `TotalSeconds` (66460820) | `RegionRefreshTiming` | done | | |

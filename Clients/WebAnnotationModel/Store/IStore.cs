@@ -59,6 +59,12 @@ namespace WebAnnotationModel
         Task<bool> Save();
 
         /// <summary>
+        /// The exception behind the most recent <see cref="Save()"/> that returned false or threw, or null when it
+        /// succeeded. Callers read it right after Save to tell users why the save failed (as Legacy's store did).
+        /// </summary>
+        Exception LastSaveFault { get; }
+
+        /// <summary>
         /// Fired when objects are added, removed or replaced in the store.
         /// This mirrors <see cref="INotifyCollectionChanged.CollectionChanged"/> but is exposed
         /// directly on the interface so callers do not need to cast to subscribe.

@@ -352,10 +352,12 @@ namespace WebAnnotation
                 $"Server did not send proper response to save request.  The change was probably not saved.\nException:\n{e}", "Client <-> Server Error", MessageBoxButtons.OK);
         }
 
-        public static void ShowSaveFailedMsgBox()
+        /// <param name="fault">The store's <c>LastSaveFault</c>, shown so the user can see why; null when it gave none.</param>
+        public static void ShowSaveFailedMsgBox(Exception fault = null)
         {
             MessageBox.Show(
-                "Server did not confirm the save. The change was probably not saved.",
+                "Server did not confirm the save. The change was probably not saved." +
+                (fault is null ? "" : Environment.NewLine + Environment.NewLine + fault.Message),
                 "Client <-> Server Error",
                 MessageBoxButtons.OK);
         }
@@ -367,12 +369,12 @@ namespace WebAnnotation
         public static void UpdateCacheSize(int maxSize) => cacheSectionAnnotations.MaxCacheSize = maxSize;
 
         public static async Task<bool> SaveLocationsWithMessageBoxOnError() =>
-            await SaveWithMessageBoxOnError(() => Store.Locations.Save());
+            await SaveWithMessageBoxOnError(() => Store.Locations.Save(), () => Store.Locations.LastSaveFault);
 
         public static async Task<bool> SaveStructuresWithMessageBoxOnError() =>
-            await SaveWithMessageBoxOnError(() => Store.Structures.Save());
+            await SaveWithMessageBoxOnError(() => Store.Structures.Save(), () => Store.Structures.LastSaveFault);
 
-        static async Task<bool> SaveWithMessageBoxOnError(Func<Task<bool>> save)
+        static async Task<bool> SaveWithMessageBoxOnError(Func<Task<bool>> save, Func<Exception> lastFault)
         {
             try
             {
@@ -382,7 +384,7 @@ namespace WebAnnotation
                         return true;
                 }
 
-                ShowSaveFailedMsgBox();
+                ShowSaveFailedMsgBox(lastFault());
             }
             catch (System.ServiceModel.FaultException e)
             {
