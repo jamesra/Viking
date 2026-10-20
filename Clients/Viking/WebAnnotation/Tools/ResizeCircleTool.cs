@@ -16,6 +16,7 @@ namespace WebAnnotation.Tools
         readonly Vector2 _volumeCenter;
         readonly Vector2 _mosaicCenter;
         readonly double _originalRadius;
+        readonly IShape2D _originalMosaic;
         readonly Viking.AnnotationServiceTypes.Interfaces.DBACTION _originalAction;
 
         public ResizeCircleTool(AnnotationToolContext context, LocationObj location)
@@ -26,6 +27,7 @@ namespace WebAnnotation.Tools
             // As Viking does, map the mosaic center through this section's transform; the stored volume position can lag it.
             _volumeCenter = context.Mapper is { } mapper && mapper.TrySectionToVolume(_mosaicCenter, out Vector2 mapped) ? mapped : location.VolumePosition;
             _originalRadius = location.Radius;
+            _originalMosaic = location.MosaicShape;
             _originalAction = location.DBAction;
             _context.Host.CapturePointer();
         }
@@ -47,8 +49,13 @@ namespace WebAnnotation.Tools
         public void OnMouseUp()
         {
             _context.Host.ReleasePointer();
-            if (_location.Radius != _originalRadius)
-                _ = AnnotationToolActions.SaveLocationAsync(_context, _location);
+            if (_location.Radius != _originalRadius && _originalMosaic != null)
+            {
+                Microsoft.SqlServer.Types.SqlGeometry undoShape = SqlGeometryUtils.Extensions.ToSqlGeometry(_originalMosaic);
+                Viking.VolumeModel.IVolumeToSectionTransform mapper = _context.Mapper;
+                _ = AnnotationToolActions.SaveLocationAsync(_context, _location,
+                    () => UndoManager.PushLocationShape("Resize", _location, mapper, undoShape, _location.TypeCode));
+            }
             _context.SetStatus(null);
         }
 

@@ -221,6 +221,24 @@ namespace WebAnnotation.Tools
             _ = AnnotationToolActions.DeleteLocationAsync(_context, location);
         }
 
+        /// <summary>Viking's Ctrl+Z: reverts the newest recorded edit and saves it. Only while no tool is active.</summary>
+        public bool Undo()
+        {
+            if (!IsIdle)
+                return false;
+
+            string description = UndoManager.NextUndoDescription;
+            if (!UndoManager.UndoLast())
+            {
+                StatusChanged?.Invoke(this, "Nothing to undo");
+                return false;
+            }
+
+            StatusChanged?.Invoke(this, $"Undid {description}");
+            _host.Invalidate();
+            return true;
+        }
+
         public void ToggleAnnotationsVisible()
         {
             _scene.Visible = !_scene.Visible;

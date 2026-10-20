@@ -186,6 +186,8 @@ namespace WebAnnotation.Tools
                     return;
                 }
 
+                UndoManager.PushLocationFlags("Toggle Terminal", location, previous, location.OffEdge);
+
                 context.SetStatus(location.Terminal ? $"Location {location.ID} is terminal" : $"Location {location.ID} is not terminal");
                 context.Invalidate();
             }
@@ -208,11 +210,18 @@ namespace WebAnnotation.Tools
             }
         }
 
-        public static async Task SaveLocationAsync(AnnotationToolContext context, LocationObj location)
+        /// <summary>Saves pending location edits; <paramref name="onSaved"/> runs once the server accepted them (undo records).</summary>
+        public static async Task SaveLocationAsync(AnnotationToolContext context, LocationObj location, Action onSaved = null)
         {
             try
             {
-                await Store.Locations.Save();
+                if (!await Store.Locations.Save())
+                {
+                    context.SetStatus($"Could not save location {location.ID}");
+                    return;
+                }
+
+                onSaved?.Invoke();
                 Global.LastEditedAnnotationID = location.ID;
                 context.Invalidate();
             }

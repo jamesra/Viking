@@ -181,6 +181,11 @@ namespace Jotunn
                 CopyPointerPosition();
                 e.Handled = true;
             }
+            else if (ctrl && !shift && e.Key == Key.Z)
+            {
+                GlobalCommands.UndoAnnotationEdit.Execute(null, this);
+                e.Handled = true;
+            }
             else if (e.Key == Key.Space)
             {
                 GlobalCommands.HideAnnotations.Execute(null, this);
@@ -370,6 +375,8 @@ namespace Jotunn
 
             volume.CenterIndex = Math.Max(0, Math.Min(volume.SectionViewModels.Count - 1, volume.CenterIndex + count));
         }
+
+        void OnUndoAnnotationEdit(object sender, ExecutedRoutedEventArgs e) => _tools?.Undo();
 
         void OnGoToLastEdited(object sender, RoutedEventArgs e) => _ = GoToLastEditedAsync();
 

@@ -40,6 +40,10 @@ namespace Jotunn.Common
             "Delete annotation", nameof(DeleteAnnotation), typeof(GlobalCommands),
             [new KeyGesture(Key.D, ModifierKeys.Control)]);
 
+        /// <summary>Viking's Ctrl+Z; the window's key handler runs it, so it carries no gesture of its own.</summary>
+        public static readonly RoutedUICommand UndoAnnotationEdit = new RoutedUICommand(
+            "Undo annotation edit", nameof(UndoAnnotationEdit), typeof(GlobalCommands));
+
         public static readonly RoutedUICommand HideAnnotations = new RoutedUICommand(
             "Hide annotations", nameof(HideAnnotations), typeof(GlobalCommands));
 
