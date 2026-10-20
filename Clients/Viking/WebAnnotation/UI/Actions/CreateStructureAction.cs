@@ -31,8 +31,20 @@ namespace WebAnnotation.UI.Actions
         /// </summary>
         public abstract void OnExecute();
 
+        /// <summary>
+        /// Set by a host without Viking's command queue (Jotunn) to save a structure a pen action created, asking for its
+        /// parent first when its type needs one. Viking leaves it null and queues its commands.
+        /// </summary>
+        public static Func<StructureObj, LocationObj, Task>? CommitHandler { get; set; }
+
         protected static async Task CommitNewStructure(StructureTypeObj typeObj, StructureObj newStruct, LocationObj newLocation)
         {
+            if (CommitHandler != null)
+            {
+                await CommitHandler(newStruct, newLocation);
+                return;
+            }
+
             if (typeObj.Parent != null)
             {
                 AnnotationOverlay.CurrentOverlay.Parent.CommandQueue.EnqueueCommand(typeof(LinkStructureToParentCommand), [AnnotationOverlay.CurrentOverlay.Parent, newStruct, newLocation]);

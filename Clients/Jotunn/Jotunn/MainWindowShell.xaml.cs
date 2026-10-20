@@ -81,6 +81,7 @@ namespace Jotunn
             _tools.GoToRequested += (_, loc) => GoToLocation(loc);
             AnnotationOverlay.GoToLocationHandler = loc => Dispatcher.BeginInvoke(new Action(() => GoToLocation(loc)));
             _tools.StatusChanged += (_, text) => _status?.SetMessage(text);
+            _tools.ChoicesProposed += (_, choices) => ShowChoices(choices);
             _sectionGrid.SceneHostControl.AnnotationTools = _tools;
             _sectionGrid.SceneHostControl.AnnotationContextMenuRequested += OnAnnotationContextMenuRequested;
 
@@ -198,6 +199,11 @@ namespace Jotunn
             else if (ctrl && e.Key == Key.C)
             {
                 CopyPointerPosition();
+                e.Handled = true;
+            }
+            else if (_tools != null && !ctrl && (e.Key == Key.Multiply || (shift && e.Key == Key.D8)))
+            {
+                _tools.TogglePenMode();
                 e.Handled = true;
             }
             else if (!ctrl && e.Key == Key.Tab && _tools != null && _tools.IsIdle)

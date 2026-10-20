@@ -204,6 +204,36 @@ namespace WebAnnotationTests
             Assert.AreEqual(3, SqlGeometryUtils.Extensions.ToPoints(circle.MosaicShape).Length);
         }
 
+        [TestMethod]
+        public void PenModeTogglesAndSaysSo()
+        {
+            bool saved = WebAnnotation.Global.PenMode;
+            try
+            {
+                WebAnnotation.Global.PenMode = false;
+                _host.TogglePenMode();
+                Assert.IsTrue(WebAnnotation.Global.PenMode);
+                StringAssert.StartsWith(_status, "Pen mode on");
+                _host.TogglePenMode();
+                Assert.IsFalse(WebAnnotation.Global.PenMode);
+            }
+            finally
+            {
+                WebAnnotation.Global.PenMode = saved;
+            }
+        }
+
+        [TestMethod]
+        public void PenChoicesNameWhatTheyDo()
+        {
+            var transform = WebAnnotationTests.Actions.ChangeTypeActionTests.CreateBoundedTransform();
+            var closed = new WebAnnotation.UI.Actions.Create2DStructureAction(5,
+                new Geometry.Polygon([new(10, 10), new(90, 10), new(50, 90), new(10, 10)]), 1, transform);
+
+            StringAssert.StartsWith(PenStrokeTool.Describe(closed), "Create ");
+            StringAssert.EndsWith(PenStrokeTool.Describe(closed), "(closed shape)");
+        }
+
         static string RepoUserSettings([CallerFilePath] string thisSourceFile = "") =>
             Path.GetFullPath(Path.Combine(Path.GetDirectoryName(thisSourceFile) ?? "", @"..\WebAnnotation\UserSettings.xml"));
     }

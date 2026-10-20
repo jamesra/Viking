@@ -23,6 +23,9 @@ namespace WebAnnotation.Tools
         /// <summary>The location the user last clicked, or null after a click on empty space. Delete acts on it.</summary>
         public LocationObj SelectedLocation { get; set; }
 
+        /// <summary>Shows choices for the user to pick from (a finished pen stroke's actions); set by the host.</summary>
+        public Action<System.Collections.Generic.IReadOnlyList<AnnotationChoice>> ProposeChoices { get; set; }
+
         /// <summary>The pointer's last position over the view, in volume coordinates.</summary>
         public Vector2 PointerWorld { get; set; }
 

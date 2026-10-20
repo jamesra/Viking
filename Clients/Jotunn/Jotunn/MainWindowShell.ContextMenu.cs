@@ -108,6 +108,17 @@ namespace Jotunn
 
         void OnMergeStructures(object sender, RoutedEventArgs e) => ShowMergeStructures(0);
 
+        /// <summary>Viking's choice buttons after a pen stroke, as a menu at the pointer.</summary>
+        void ShowChoices(System.Collections.Generic.IReadOnlyList<WebAnnotation.Tools.AnnotationChoice> choices)
+        {
+            ContextMenu menu = new() { Placement = PlacementMode.MousePoint };
+            foreach (WebAnnotation.Tools.AnnotationChoice choice in choices)
+                menu.Items.Add(Item(choice.Label.Replace("_", "__"), choice.Execute));
+            menu.Items.Add(new Separator());
+            menu.Items.Add(Item("Do nothing", () => { }));
+            menu.IsOpen = true;
+        }
+
         static MenuItem Item(string header, Action click, bool isEnabled = true, bool? isChecked = null)
         {
             MenuItem item = new() { Header = header, IsEnabled = isEnabled };

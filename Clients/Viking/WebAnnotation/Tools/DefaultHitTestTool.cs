@@ -112,6 +112,14 @@ namespace WebAnnotation.Tools
                 }
             }
 
+            if (clickCount == 1 && Global.PenMode && _context.ArmedStructure == null && !_context.SelectedStructureTypeId().HasValue)
+            {
+                // As in Viking, Pen Mode turns a press that started no annotation action into a stroke, even over an
+                // annotation: that is how a boundary is retraced or a hole cut.
+                _context.StartTool(new PenStrokeTool(_context, world));
+                return AnnotationToolResult.Continue;
+            }
+
             if (hit is null && clickCount == 1)
                 OnEmptyClick(world);
 

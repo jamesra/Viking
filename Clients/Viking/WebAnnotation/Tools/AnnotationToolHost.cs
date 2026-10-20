@@ -36,6 +36,7 @@ namespace WebAnnotation.Tools
                 StartTool,
                 loc => GoToRequested?.Invoke(this, loc),
                 text => StatusChanged?.Invoke(this, text));
+            _context.ProposeChoices = choices => ChoicesProposed?.Invoke(this, choices);
             _defaultTool = new DefaultHitTestTool(_context);
             _current = _defaultTool;
         }
@@ -48,6 +49,16 @@ namespace WebAnnotation.Tools
         public event EventHandler<LocationObj> GoToRequested;
 
         public event EventHandler<string> StatusChanged;
+
+        /// <summary>Choices for the user to pick from at the pointer, such as what a pen stroke should do.</summary>
+        public event EventHandler<IReadOnlyList<AnnotationChoice>> ChoicesProposed;
+
+        /// <summary>Viking's Pen Mode (numpad * or Shift+8): a drag on the view draws a stroke instead of continuing a trace.</summary>
+        public void TogglePenMode()
+        {
+            Global.PenMode = !Global.PenMode;
+            StatusChanged?.Invoke(this, Global.PenMode ? "Pen mode on: drag to draw a stroke" : "Pen mode off");
+        }
 
         public AnnotationPlaceKind ArmedPlaceKind
         {
@@ -145,7 +156,7 @@ namespace WebAnnotation.Tools
         public void OnMouseUp()
         {
             _current.OnMouseUp();
-            if (!ReferenceEquals(_current, _defaultTool) && _current is TranslateLocationTool or ResizeCircleTool or AdjustVertexTool or LinkAnnotationsTool)
+            if (!ReferenceEquals(_current, _defaultTool) && _current is TranslateLocationTool or ResizeCircleTool or AdjustVertexTool or LinkAnnotationsTool or PenStrokeTool)
                 FinishCurrent(AnnotationToolResult.Done);
         }
 

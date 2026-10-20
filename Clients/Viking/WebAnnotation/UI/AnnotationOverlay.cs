@@ -1479,24 +1479,11 @@ namespace WebAnnotation
                 return;
             }
 
-            AddConvertCircleActions(sender_cmd, actions);
-            AddCutHoleActions(sender_cmd, actions);
+            PenStrokeActions.AddLoopActions(sender_cmd.Path, CurrentSectionNumber, actions);
 
-            //Check if we should add actions to create new structures
-            foreach (ulong favoriteStructureID in Global.UserFavoriteStructureTypes)
-            {
-                IAction new_action = null;
-                if (sender_cmd.Path.HasSelfIntersection)
-                {
-                    new_action = new WebAnnotation.UI.Actions.Create2DStructureAction(System.Convert.ToInt64(favoriteStructureID), new Polygon(sender_cmd.Path.SimplifiedFirstLoop.EnsureClosedRing()), CurrentSectionNumber);
-                }
-                else
-                {
-                    new_action = new WebAnnotation.UI.Actions.Create1DStructureAction(System.Convert.ToInt64(favoriteStructureID), sender_cmd.Path.SimplifiedPath.ToPolyline(), CurrentSectionNumber);
-                }
-
-                actions.Add(new_action);
-            }
+            //Offer to create a new structure of each favorite type from the stroke
+            PenStrokeActions.AddCreateStructureActions(sender_cmd.Path, CurrentSectionNumber,
+                Global.UserFavoriteStructureTypes.Select(id => System.Convert.ToInt64(id)), actions);
 
             //ActionConfirmationCommand confirm_command = new ActionConfirmationCommand(this.Parent, actions, path.BoundingBox(), () => { return; });
             ActionSelectionCanvasControl confirm_command = ActionSelectionCanvasControl.CreateViews(Parent, [.. actions]);
@@ -1538,64 +1525,6 @@ namespace WebAnnotation
                 _Parent.CurrentCommand = confirm_command;
             }*/
 
-        }
-
-        /// <summary>
-        /// Adds a convert-to-polygon choice for each circle on this section that the closed
-        /// pen loop overlaps. The stroke log only includes circles the path entered, so a
-        /// loop drawn around a circle would otherwise have no convert button.
-        /// Called from <see cref="OnPenPathCompleted"/> before the choice buttons are shown.
-        /// Skips a circle that already has a <see cref="WebAnnotation.UI.Actions.ChangeToPolygonAction"/>.
-        /// </summary>
-        private void AddConvertCircleActions(AnnotationOverlayPenFreeDrawCommandV2 sender, List<IAction> actions)
-        {
-            if (!sender.Path.HasSelfIntersection)
-                return;
-
-            Polygon loop = new(sender.Path.SimplifiedFirstLoop);
-            List<LocationCircleView> circles = IntersectedCirclesOnSection(CurrentSectionNumber, loop);
-            if (circles is null)
-                return;
-
-            foreach (LocationCircleView circle in circles)
-            {
-                if (actions.OfType<WebAnnotation.UI.Actions.ChangeToPolygonAction>().Any(existing => existing.Location.ID == circle.ID))
-                    continue;
-
-                if (!Store.Locations.TryGetObjectByID(circle.ID, out LocationObj location) || location is null || location.TypeCode != LocationType.CIRCLE)
-                    continue;
-
-                actions.Add(new WebAnnotation.UI.Actions.ChangeToPolygonAction(location, loop));
-            }
-        }
-
-        /// <summary>
-        /// Adds a cut-hole (scissors) choice for each polygon on this section that wholly contains the closed pen loop
-        /// without touching one of its interior holes. The stroke log only includes annotations the path crossed,
-        /// so a loop drawn entirely inside a polygon would otherwise offer no cut-hole button.
-        /// Called from <see cref="OnPenPathCompleted"/> before the choice buttons are shown.
-        /// Skips a hole already offered from the stroke log.
-        /// </summary>
-        private void AddCutHoleActions(AnnotationOverlayPenFreeDrawCommandV2 sender, List<IAction> actions)
-        {
-            if (!sender.Path.HasSelfIntersection)
-                return;
-
-            Polygon loop = new(sender.Path.SimplifiedFirstLoop);
-            List<LocationPolygonView> polygons = IntersectedPolygonsOnSection(CurrentSectionNumber, loop);
-            if (polygons is null)
-                return;
-
-            foreach (LocationPolygonView polygon in polygons)
-            {
-                foreach (WebAnnotation.UI.Actions.CutHoleAction cutHole in polygon.GetCutHoleActionsForLoop(sender.Path))
-                {
-                    if (actions.OfType<WebAnnotation.UI.Actions.CutHoleAction>().Any(existing => existing.Equals(cutHole)))
-                        continue;
-
-                    actions.Add(cutHole);
-                }
-            }
         }
 
         protected void OnMouseUp(object sender, MouseEventArgs e)
