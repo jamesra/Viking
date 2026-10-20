@@ -461,6 +461,12 @@ namespace WebAnnotation
                 return;
             }
 
+            if (GoToLocationHandler != null)
+            {
+                GoToLocationHandler(loc);
+                return;
+            }
+
             //Adjust downsample so the location fits nicely in the view
             double downsample = (loc.MosaicShape.BoundingBox.Width / Viking.UI.State.ViewerForm.Width) * Global.DefaultLocationJumpDownsample;
 
@@ -487,6 +493,12 @@ namespace WebAnnotation
         /// find that host's section views. Viking leaves it null and uses the overlay's cache.
         /// </summary>
         public static Func<int, SectionAnnotationsView> SectionViewLookup { get; set; }
+
+        /// <summary>
+        /// Set by a host without Viking's viewer form (Jotunn) so shared views that jump to a location (review feed cards,
+        /// the structure property sheet's location list) move that host's view. Viking leaves it null.
+        /// </summary>
+        public static Action<LocationObj> GoToLocationHandler { get; set; }
 
         /// <summary>
         /// Section-to-volume transform of the section being edited: the Viking viewer's when this overlay is shown,

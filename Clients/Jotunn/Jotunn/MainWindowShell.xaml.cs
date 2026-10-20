@@ -79,6 +79,7 @@ namespace Jotunn
             _sectionGrid.SceneHostControl.Annotations = scene;
             _tools = new AnnotationToolHost(_sectionGrid.SceneHostControl, scene);
             _tools.GoToRequested += (_, loc) => GoToLocation(loc);
+            AnnotationOverlay.GoToLocationHandler = loc => Dispatcher.BeginInvoke(new Action(() => GoToLocation(loc)));
             _tools.StatusChanged += (_, text) => _status?.SetMessage(text);
             _sectionGrid.SceneHostControl.AnnotationTools = _tools;
             _sectionGrid.SceneHostControl.AnnotationContextMenuRequested += OnAnnotationContextMenuRequested;
