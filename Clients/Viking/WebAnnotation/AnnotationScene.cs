@@ -131,7 +131,8 @@ namespace WebAnnotation
                     _loadCtsBySection.Remove(oldest);
                 }
 
-                // The region cells still read as loaded; without this a later visit builds an empty view.
+                // An evicted section is no longer polled, so its region cells' stamps would let a revisit skip the server
+                // and miss edits made meanwhile; dropping them makes the revisit ask again.
                 if (Store.IsInitialized)
                     Store.LocationsByRegion.InvalidateSection(oldest);
             }
