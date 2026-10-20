@@ -1246,7 +1246,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 }
 
                 stepTimer.Restart();
-                localUploadSession = new SegmentationViewportSession(parent) { EnforceAutoDownsampleLimit = true };
+                localUploadSession = new SegmentationViewportSession(parent, parent.SegmentationChannels) { EnforceAutoDownsampleLimit = true };
                 if (!localUploadSession.TryInitializeClient())
                 {
                     SegmentationDiag.Log("RunBatch abort: TryInitializeClient failed");
@@ -2080,7 +2080,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>Creates a short-lived session only to DeleteImage a lease the cache no longer holds.</summary>
         private async Task DeleteLeasedImageAsync(ulong imageId)
         {
-            var session = new SegmentationViewportSession(parent);
+            var session = new SegmentationViewportSession(parent, parent.SegmentationChannels);
             if (!session.TryInitializeClient())
                 return;
 

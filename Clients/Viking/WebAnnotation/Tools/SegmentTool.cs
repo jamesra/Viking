@@ -38,6 +38,9 @@ namespace WebAnnotation.Tools
         readonly List<Vector2> _background = new();
         readonly LocationObj _target;
         readonly SegmentationSeed[] _seeds = Array.Empty<SegmentationSeed>();
+        Action<Polygon> _onAccepted;
+        Action _onAbandoned;
+        bool _accepted;
         IReadOnlyList<Polygon> _polygons = Array.Empty<Polygon>();
         CancellationTokenSource _request;
         int _generation;
@@ -68,6 +71,22 @@ namespace WebAnnotation.Tools
             _target = target;
             _foreground.AddRange(foreground);
             _seeds = seeds?.ToArray() ?? Array.Empty<SegmentationSeed>();
+            RequestSegmentation();
+        }
+
+        /// <summary>
+        /// Auto-polygonize's "Add points": starts from the proposal's prompts, and hands the accepted outline to
+        /// <paramref name="onAccepted"/>; <paramref name="onAbandoned"/> runs when the user cancels instead.
+        /// </summary>
+        internal SegmentTool(AnnotationToolContext context, ISegmentationViewport viewport,
+            Viking.Services.Grpc.IGrpcChannelManager channels, long structureTypeId, IReadOnlyList<Vector2> foreground,
+            IReadOnlyList<SegmentationSeed> seeds, Action<Polygon> onAccepted, Action onAbandoned)
+            : this(context, viewport, channels, structureTypeId)
+        {
+            _foreground.AddRange(foreground);
+            _seeds = seeds?.ToArray() ?? Array.Empty<SegmentationSeed>();
+            _onAccepted = onAccepted;
+            _onAbandoned = onAbandoned;
             RequestSegmentation();
         }
 
@@ -153,6 +172,13 @@ namespace WebAnnotation.Tools
 
         public void Cancel()
         {
+            if (!_accepted)
+            {
+                Action abandoned = _onAbandoned;
+                _onAbandoned = null;
+                abandoned?.Invoke();
+            }
+
             _finished = true;
             _request?.Cancel();
             _session.CancelPendingWork();
@@ -254,8 +280,11 @@ namespace WebAnnotation.Tools
             }
 
             _finished = true;
+            _accepted = true;
             _request?.Cancel();
-            if (_target != null)
+            if (_onAccepted != null)
+                _onAccepted(chosen);
+            else if (_target != null)
                 _ = ReplaceShapeAsync(_target, chosen, _context.Host.Downsample);
             else
                 _ = CreateStructureAsync(chosen, _context.Host.Downsample);

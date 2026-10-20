@@ -71,6 +71,28 @@ namespace WebAnnotation.Tools
 
         public bool IsIdle => ReferenceEquals(_current, _defaultTool);
 
+        /// <summary>True while interactive segmentation is the active tool.</summary>
+        public bool IsSegmenting => _current is SegmentTool;
+
+        /// <summary>The segmentation service's channels, for tools and auto-polygonize; null when there is no service.</summary>
+        public Viking.Services.Grpc.IGrpcChannelManager SegmentationChannels { get; set; }
+
+        /// <summary>The pointer moved over the view (volume coordinates), with or without a button held.</summary>
+        public event EventHandler<Vector2> PointerMoved;
+
+        /// <summary>
+        /// Offered every press while no tool is active, before the default tool (auto-polygonize proposals take double
+        /// clicks); returns true when it handled the press.
+        /// </summary>
+        public Func<Vector2, MouseButton, int, bool> PreviewMouseDown { get; set; }
+
+        /// <summary>Auto-polygonize's "Add points" on a proposal: interactive segmentation from its prompts.</summary>
+        internal void StartProposalSegmentation(UI.Commands.Segmentation.ISegmentationViewport viewport, UI.AutoPolygonize.ProposalSegmentationRequest request)
+        {
+            StartTool(new SegmentTool(_context, viewport, SegmentationChannels, request.StructureTypeId, request.Foreground,
+                request.StartingBoxes, request.OnAccepted, request.OnAbandoned));
+        }
+
         /// <summary>True while the active tool takes right and middle clicks itself (see <see cref="IAnnotationToolUsesAllButtons"/>).</summary>
         public bool ToolUsesAllButtons => _current is IAnnotationToolUsesAllButtons;
 
@@ -121,8 +143,13 @@ namespace WebAnnotation.Tools
                 _queue.Enqueue(factory);
         }
 
-        public void OnMouseDown(Vector2 screen, MouseButton button, int clickCount) =>
+        public void OnMouseDown(Vector2 screen, MouseButton button, int clickCount)
+        {
+            if (IsIdle && PreviewMouseDown?.Invoke(_host.ScreenToWorld(screen), button, clickCount) == true)
+                return;
+
             Dispatch(() => _current.OnMouseDown(screen, button, clickCount));
+        }
 
         /// <summary>Runs one tool event, handles its result, then starts any tool the event asked for.</summary>
         AnnotationToolResult Dispatch(Func<AnnotationToolResult> toolEvent)
@@ -153,6 +180,7 @@ namespace WebAnnotation.Tools
         {
             _scene.ToolPreviewSection = _host.SectionNumber;
             _context.PointerWorld = _host.ScreenToWorld(screen);
+            PointerMoved?.Invoke(this, _context.PointerWorld);
             _current.OnMouseMove(screen);
         }
 

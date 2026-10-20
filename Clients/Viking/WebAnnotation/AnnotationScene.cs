@@ -79,6 +79,12 @@ namespace WebAnnotation
         /// <summary>The section <see cref="ToolPreview"/> is drawn over.</summary>
         public int ToolPreviewSection { get; set; }
 
+        /// <summary>
+        /// Draws more over a section's annotations (auto-polygonize proposals), given the section number; the host decides
+        /// which sections it applies to.
+        /// </summary>
+        public Action<GraphicsDevice, VikingXNA.Scene, int> OverlayDraw { get; set; }
+
         internal SectionAnnotationsView GetOrCreate(int sectionNumber)
         {
             lock (_loadLock)
@@ -424,6 +430,14 @@ namespace WebAnnotation
             }
 
             DrawToolPreview(sectionNumber, graphicsDevice, scene, lineManager, overlayEffect);
+            try
+            {
+                OverlayDraw?.Invoke(graphicsDevice, scene, sectionNumber);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine($"Annotation overlay draw failed: {ex.Message}");
+            }
 
             if (originalRaster != null && !originalRaster.IsDisposed)
                 graphicsDevice.RasterizerState = originalRaster;

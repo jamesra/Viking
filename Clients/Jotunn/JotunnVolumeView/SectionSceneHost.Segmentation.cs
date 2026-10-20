@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework.Graphics;
 using Viking.VolumeModel;
+using WebAnnotation.UI.AutoPolygonize;
 using WebAnnotation.UI.Commands.Segmentation;
 using JotunnSectionVM = Viking.VolumeViewModel.SectionViewModel;
 using VolumeVM = Viking.VolumeViewModel.VolumeViewModel;
@@ -12,10 +13,43 @@ namespace Viking.VolumeView
 {
     /// <summary>
     /// The active grid cell as a <see cref="ISegmentationViewport"/>, so Viking's segmentation session can capture and
-    /// upload mosaic tiles from Jotunn's view.
+    /// upload mosaic tiles from Jotunn's view, and as the view auto-polygonize proposes outlines in.
     /// </summary>
-    public partial class SectionSceneHost : ISegmentationViewport
+    public partial class SectionSceneHost : ISegmentationViewport, IAutoPolygonizeHost
     {
+        /// <summary>A short message for the status bar (auto-polygonize reports a failed save this way).</summary>
+        public event EventHandler<string> TransientStatus;
+
+        bool IAutoPolygonizeHost.HasSection => Volume != null && Volume.Sections.ContainsKey(SectionNumber);
+
+        bool IAutoPolygonizeHost.HasCamera => Scene != null;
+
+        Viking.VolumeModel.IVolumeToSectionTransform IAutoPolygonizeHost.ActiveSectionToVolumeTransform =>
+            WebAnnotation.AnnotationBootstrap.Transforms?.GetSectionToVolumeTransform(SectionNumber);
+
+        VikingXNA.Scene IAutoPolygonizeHost.Scene => Scene;
+
+        double IAutoPolygonizeHost.Downsample => Downsample;
+
+        GraphicsDevice IAutoPolygonizeHost.Device => Device;
+
+        void IAutoPolygonizeHost.Invalidate() => Invalidate();
+
+        void IAutoPolygonizeHost.ShowTransientStatus(string message) => TransientStatus?.Invoke(this, message);
+
+        bool IAutoPolygonizeHost.IsIdle => AnnotationTools?.IsIdle ?? true;
+
+        bool IAutoPolygonizeHost.IsSegmenting => AnnotationTools?.IsSegmenting ?? false;
+
+        bool IAutoPolygonizeHost.InvokeRequired => !Dispatcher.CheckAccess();
+
+        void IAutoPolygonizeHost.BeginInvoke(Action action) => Dispatcher.BeginInvoke(action);
+
+        Viking.Services.Grpc.IGrpcChannelManager IAutoPolygonizeHost.SegmentationChannels => AnnotationTools?.SegmentationChannels;
+
+        void IAutoPolygonizeHost.StartSegmentation(ProposalSegmentationRequest request) =>
+            AnnotationTools?.StartProposalSegmentation(this, request);
+
         /// <summary>Longest a capture waits for its tile textures before rendering what has loaded.</summary>
         static readonly TimeSpan CaptureTextureWait = TimeSpan.FromSeconds(20);
 

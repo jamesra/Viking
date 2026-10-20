@@ -17,6 +17,9 @@ namespace Jotunn
     {
         void OnAnnotationContextMenuRequested(object sender, Geometry.Vector2 screen)
         {
+            if (_sectionGrid?.SceneHostControl is Viking.VolumeView.SectionSceneHost host && TryShowProposalMenu(host.ScreenToWorld(screen)))
+                return;
+
             LocationObj location = _tools?.LocationAt(screen);
             if (location == null)
                 return;

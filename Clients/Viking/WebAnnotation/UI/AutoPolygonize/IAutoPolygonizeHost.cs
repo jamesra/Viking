@@ -60,6 +60,9 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>Opens interactive segmentation seeded from a proposal.</summary>
         void StartSegmentation(ProposalSegmentationRequest request);
+
+        /// <summary>The segmentation service's channels; null uses the ones registered with Viking's service locator.</summary>
+        Viking.Services.Grpc.IGrpcChannelManager SegmentationChannels { get; }
     }
 
     /// <summary>Viking's section viewer as an <see cref="IAutoPolygonizeHost"/>.</summary>
@@ -112,6 +115,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             (viewer.CurrentCommand.GetType() == typeof(DefaultCommand) && viewer.CommandQueue.QueueDepth == 0);
 
         public bool IsSegmenting => viewer.CurrentCommand is SegmentationCommand;
+
+        public Viking.Services.Grpc.IGrpcChannelManager SegmentationChannels => null;
 
         public bool InvokeRequired => viewer.InvokeRequired;
 

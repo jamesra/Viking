@@ -92,6 +92,10 @@ namespace Jotunn
             _ = LoadHotkeysAsync(_tools);
             StartAnnotationPoll(scene);
             _ = AddReviewFeedTabAsync();
+            string segmentationUrl = SegmentationServiceUrl();
+            if (!string.IsNullOrWhiteSpace(segmentationUrl))
+                _tools.SegmentationChannels = SegmentationChannels(segmentationUrl);
+            AttachAutoPolygonize(_sectionGrid.SceneHostControl, scene, _tools);
             _sectionGrid.SceneHostControl.Invalidate();
         }
 
