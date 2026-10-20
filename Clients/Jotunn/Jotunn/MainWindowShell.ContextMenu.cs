@@ -45,6 +45,9 @@ namespace Jotunn
             menu.Items.Add(Item("Copy _location ID", () => Clipboard.SetText(location.ID.ToString())));
             menu.Items.Add(Item("Copy _structure ID", () => Clipboard.SetText(location.ParentID.ToString()), isEnabled: location.ParentID.HasValue));
             menu.Items.Add(Item("_Center view here", () => GoToLocation(location)));
+            if (WebAnnotation.SbfsemToolsLauncher.GetRootStructureIdForLocation(location) is long cellId
+                && !string.IsNullOrWhiteSpace(WebAnnotation.SbfsemToolsLauncher.ResolveVolumeName()))
+                menu.Items.Add(Item("Open in SBFSEM-_tools", () => WebAnnotation.SbfsemToolsLauncher.TryOpen(cellId, location.ID)));
             menu.Items.Add(new Separator());
             menu.Items.Add(Item("_Merge another structure into this one…", () => ShowMergeStructures(location.ParentID ?? 0), isEnabled: location.ParentID.HasValue));
             menu.Items.Add(SplitMenu(location));
@@ -134,6 +137,7 @@ namespace Jotunn
                 }
 
                 Viking.Common.ExtensionManager.RegisterPropertyPages(typeof(WebAnnotation.ViewModel.Structure).Assembly);
+                Viking.Common.ExtensionManager.RegisterContextMenuProviders(typeof(WebAnnotation.ViewModel.Structure).Assembly);
                 Viking.UI.Forms.PropertySheetForm.ShowDialog(new WebAnnotation.ViewModel.Structure(structure), null);
                 _sectionGrid?.SceneHostControl?.Invalidate();
             }

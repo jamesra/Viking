@@ -55,6 +55,21 @@ namespace Viking.Common
 
         private static readonly HashSet<Assembly> PropertyPageAssemblies = [];
 
+        private static readonly HashSet<Assembly> ContextMenuProviderAssemblies = [];
+
+        /// <summary>
+        /// Registers the context menu providers declared in <paramref name="assembly"/> (the menus of lists inside property
+        /// sheets), for hosts that do not load Viking's extension modules (Jotunn). An assembly is registered once.
+        /// </summary>
+        public static void RegisterContextMenuProviders(Assembly assembly)
+        {
+            if (assembly is null || !ContextMenuProviderAssemblies.Add(assembly))
+                return;
+
+            foreach (System.Type T in assembly.GetTypes())
+                FindContextMenuExtensions(T);
+        }
+
         /// <summary>
         /// Registers the property pages declared in <paramref name="assembly"/>, for hosts that show Viking's property
         /// sheets without loading its extension modules (Jotunn). An assembly is registered once.
@@ -672,6 +687,7 @@ namespace Viking.Common
         {
             System.Type[] ExtensionTypes = Extension.GetTypes();
             bool registerPropertyPages = PropertyPageAssemblies.Add(Extension);
+            bool registerContextMenus = ContextMenuProviderAssemblies.Add(Extension);
             foreach (System.Type T in ExtensionTypes)
             {
                 /*Find Property Page extensions*/
@@ -687,7 +703,8 @@ namespace Viking.Common
                 /*Find Menu Extensions */
                 FindMenuExtensions(T);
 
-                FindContextMenuExtensions(T);
+                if (registerContextMenus)
+                    FindContextMenuExtensions(T);
 
                 /*Find Overview Tab extensions*/
                 /*Find ContextMenu extensions*/

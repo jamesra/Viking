@@ -24,6 +24,22 @@ namespace VikingCoreTests
         {
         }
 
+        public sealed class CountingMenuProvider : IProvideContextMenus
+        {
+            public System.Windows.Forms.ContextMenuStrip BuildMenuFor(object Obj, System.Windows.Forms.ContextMenuStrip Menu) => Menu;
+
+            public System.Windows.Forms.ContextMenuStrip BuildMenuFor(System.Type ObjType, System.Windows.Forms.ContextMenuStrip Menu) => Menu;
+        }
+
+        [TestMethod]
+        public void RegisteringAnAssemblyAddsItsContextMenuProvidersOnce()
+        {
+            ExtensionManager.RegisterContextMenuProviders(typeof(ExtensionManagerPropertyPageTests).Assembly);
+            ExtensionManager.RegisterContextMenuProviders(typeof(ExtensionManagerPropertyPageTests).Assembly);
+
+            Assert.AreEqual(1, ExtensionManager.CreateContextMenuProviders().Count(p => p is CountingMenuProvider));
+        }
+
         [TestMethod]
         public void RegisteringAnAssemblyAddsItsPagesOnce()
         {
