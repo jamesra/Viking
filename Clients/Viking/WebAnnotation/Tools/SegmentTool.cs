@@ -84,8 +84,9 @@ namespace WebAnnotation.Tools
                 out prompt);
         }
 
-        public string StatusText =>
-            "Segment: left-click the object, right-click background, Enter to accept, Backspace removes the last point, Esc cancels";
+        public string StatusText => _session.HasClient
+            ? "Segment: left-click the object, right-click background, Enter to accept, Backspace removes the last point, Esc cancels"
+            : "Segment: no segmentation service is available";
 
         public AnnotationToolResult OnMouseDown(Vector2 screen, MouseButton button, int clickCount)
         {
@@ -273,11 +274,7 @@ namespace WebAnnotation.Tools
                 StructureObj structure = new(type);
                 LocationObj location = new(structure, _context.SectionNumber, LocationType.POLYGON);
                 LocationShapeUpdate.AssignSimplifiedVolumePolygon(location, volumePolygon, _context.Mapper, downsample);
-                var result = await Store.Structures.Create(structure, location);
-                if (result.Location != null)
-                    Global.LastEditedAnnotationID = result.Location.ID;
-                _context.SetStatus($"Created {type.Name} {result.Structure?.ID}");
-                _context.Invalidate();
+                await AnnotationToolActions.CreateOrPickParentAsync(_context, structure, location);
             }
             catch (Exception ex)
             {

@@ -57,15 +57,31 @@ namespace WebAnnotation.Tools
                 else if (volumePoints != null && volumePoints.Length > 0)
                     location.SetShapeFromPointsInVolume(mapper, volumePoints, null);
 
-                var result = await Store.Structures.Create(structure, location);
-                if (result.Location != null)
-                    Global.LastEditedAnnotationID = result.Location.ID;
-                context.Invalidate();
+                await CreateOrPickParentAsync(context, structure, location);
             }
             catch (Exception ex)
             {
                 Trace.WriteLine($"Create structure failed: {ex}");
             }
+        }
+
+        /// <summary>
+        /// Saves a new structure with its first location. As in Viking, a structure whose type has a parent type (a synapse
+        /// inside a cell) first asks the user to click its parent structure; nothing is saved if they cancel.
+        /// </summary>
+        public static async Task CreateOrPickParentAsync(AnnotationToolContext context, StructureObj structure, LocationObj location)
+        {
+            if (structure.Type?.ParentID.HasValue == true && !structure.ParentID.HasValue)
+            {
+                context.StartTool(new PickParentStructureTool(context, structure, location));
+                return;
+            }
+
+            var result = await Store.Structures.Create(structure, location);
+            if (result.Location != null)
+                Global.LastEditedAnnotationID = result.Location.ID;
+            context.SetStatus(result.Structure != null ? $"Created {structure.Type?.Name} {result.Structure.ID}" : null);
+            context.Invalidate();
         }
 
         public static async Task CreateLinkedLocationAsync(

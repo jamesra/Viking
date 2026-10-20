@@ -21,6 +21,10 @@ namespace WebAnnotation.Tools
         IAnnotationTool _current;
         DefaultHitTestTool _defaultTool;
 
+        /// <summary>Set while a tool handles an event; a tool started meanwhile waits in <see cref="_pendingStart"/>.</summary>
+        int _dispatchDepth;
+        IAnnotationTool _pendingStart;
+
         public AnnotationToolHost(IViewportHost host, AnnotationScene scene)
         {
             _host = host;
@@ -70,8 +74,19 @@ namespace WebAnnotation.Tools
             StartTool(new MeasureDistanceTool(_context));
         }
 
+        /// <summary>
+        /// Makes <paramref name="tool"/> current. Called from inside another tool's event (a placement that goes on to ask
+        /// for a parent structure), it starts once that event's result has been handled, so the finishing tool does not
+        /// replace it.
+        /// </summary>
         public void StartTool(IAnnotationTool tool)
         {
+            if (_dispatchDepth > 0)
+            {
+                _pendingStart = tool ?? _defaultTool;
+                return;
+            }
+
             _current?.Cancel();
             _current = tool ?? _defaultTool;
             ShowPreviewOf(_current);
@@ -92,10 +107,32 @@ namespace WebAnnotation.Tools
                 _queue.Enqueue(factory);
         }
 
-        public void OnMouseDown(Vector2 screen, MouseButton button, int clickCount)
+        public void OnMouseDown(Vector2 screen, MouseButton button, int clickCount) =>
+            Dispatch(() => _current.OnMouseDown(screen, button, clickCount));
+
+        /// <summary>Runs one tool event, handles its result, then starts any tool the event asked for.</summary>
+        AnnotationToolResult Dispatch(Func<AnnotationToolResult> toolEvent)
         {
-            AnnotationToolResult result = _current.OnMouseDown(screen, button, clickCount);
+            AnnotationToolResult result;
+            _dispatchDepth++;
+            try
+            {
+                result = toolEvent();
+            }
+            finally
+            {
+                _dispatchDepth--;
+            }
+
             HandleResult(result);
+            if (_dispatchDepth == 0 && _pendingStart != null)
+            {
+                IAnnotationTool next = _pendingStart;
+                _pendingStart = null;
+                StartTool(next);
+            }
+
+            return result;
         }
 
         public void OnMouseMove(Vector2 screen)
@@ -120,14 +157,7 @@ namespace WebAnnotation.Tools
                 return true;
             }
 
-            AnnotationToolResult result = _current.OnKeyDown(key);
-            if (result != AnnotationToolResult.Continue)
-            {
-                HandleResult(result);
-                return true;
-            }
-
-            return false;
+            return Dispatch(() => _current.OnKeyDown(key)) != AnnotationToolResult.Continue;
         }
 
         public void CancelCurrent()
@@ -140,7 +170,7 @@ namespace WebAnnotation.Tools
 
         public void CommitCurrent()
         {
-            HandleResult(_current.OnKeyDown(Key.Enter));
+            Dispatch(() => _current.OnKeyDown(Key.Enter));
         }
 
         public void ContinueLast(Vector2 world) => AnnotationToolActions.TryContinueLastTrace(_context, world);
