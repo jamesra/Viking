@@ -48,6 +48,38 @@ namespace VikingTests
             Assert.AreEqual(xml, resolved);
         }
 
+        static readonly Uri ProxiedIdentityServer = new Uri("https://identity.connectomes.pitt.edu/");
+
+        [TestMethod]
+        public void Resolve_ProxiedIssuer_NullXml_UsesWebApiPath()
+        {
+            var resolved = IdentityEndpoints.ResolvePermissionsApiUrl(null, ProxiedIdentityServer);
+            Assert.AreEqual("https://identity.connectomes.pitt.edu/webapi/", resolved.ToString());
+        }
+
+        [TestMethod]
+        public void Resolve_ProxiedIssuer_RootXml_RewritesToWebApiPath()
+        {
+            var xml = new Uri("https://identity.connectomes.pitt.edu/");
+            var resolved = IdentityEndpoints.ResolvePermissionsApiUrl(xml, ProxiedIdentityServer);
+            Assert.AreEqual("https://identity.connectomes.pitt.edu/webapi/", resolved.ToString());
+        }
+
+        [TestMethod]
+        public void Resolve_ProxiedIssuer_WebApiPathXml_Unchanged()
+        {
+            var xml = new Uri("https://identity.connectomes.pitt.edu/webapi/");
+            var resolved = IdentityEndpoints.ResolvePermissionsApiUrl(xml, ProxiedIdentityServer);
+            Assert.AreEqual(xml, resolved);
+        }
+
+        [TestMethod]
+        public void FromIdentityServer_DefaultPort_UsesWebApiPath()
+        {
+            var resolved = IdentityEndpoints.FromIdentityServer(new Uri("https://identity.connectomes.pitt.edu/connect/token"));
+            Assert.AreEqual("https://identity.connectomes.pitt.edu/webapi/", resolved.ToString());
+        }
+
         [TestMethod]
         public void FromIdentityServer_Http_UsesPort6000()
         {

@@ -1,0 +1,78 @@
+# Rendered by the nginx image's envsubst into /etc/nginx/conf.d/identity.conf and included inside
+# http {} by ../nginx.conf (after http.conf, which sets the resolver).
+#
+# Identity on plain 443. stream.conf sends the Identity SNI name to this listener; nginx terminates
+# TLS with the shared certificate and routes by path, so the three Identity apps share one origin
+# (the login cookie set by the management site reaches the issuer):
+#   /manage/  -> management site (UsePathBase /manage)   VIKING_UPSTREAM_IDENTITY_MANAGEMENT
+#   /webapi/  -> permissions WebApi (UsePathBase /webapi) VIKING_UPSTREAM_IDENTITY_WEBAPI
+#   /         -> OIDC issuer (/connect, /.well-known, /Account/Logout, ...) VIKING_UPSTREAM_IDENTITY
+# The prefix is passed through unchanged; each app strips its own (IDENTITY_*_PATH_BASE).
+# Upstreams are re-encrypted (each app serves HTTPS with the same certificate); the hop is local,
+# so the upstream certificate is not verified.
+
+# Loaded per handshake (variable path): nginx starts even before the first certificate exists,
+# and the Identity name simply fails TLS until viking-certs / `stack.ps1 certs manual` publish it.
+map $ssl_server_name $viking_identity_cert {
+    default /certs/${TLS_CERT_NAME}/fullchain.pem;
+}
+map $ssl_server_name $viking_identity_key {
+    default /certs/${TLS_CERT_NAME}/privkey.pem;
+}
+
+map $http_upgrade $viking_connection_upgrade {
+    default upgrade;
+    ''      '';
+}
+
+server {
+    listen 127.0.0.1:8443 ssl;
+    http2 on;
+    server_name ${VIKING_HOSTNAME_IDENTITY};
+
+    ssl_certificate     $viking_identity_cert;
+    ssl_certificate_key $viking_identity_key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_session_cache   shared:viking_identity:10m;
+
+    # nginx's own redirects (/manage -> /manage/) stay relative; absolute ones would expose :8443.
+    absolute_redirect off;
+
+    # Identity cookies and OIDC redirects carry large headers.
+    large_client_header_buffers 8 32k;
+    client_max_body_size 50m;
+
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $viking_connection_upgrade;
+    proxy_ssl_server_name on;
+    proxy_ssl_name $host;
+    proxy_ssl_verify off;
+    proxy_buffer_size 32k;
+    proxy_buffers 16 32k;
+    proxy_busy_buffers_size 64k;
+    proxy_read_timeout 300s;
+    # Upstream redirects to their own host:port (e.g. HTTPS redirection) are rewritten to this origin.
+    proxy_redirect ~^https?://[^/]+:(4001|5001|6001)(/.*)?$ https://$host$2;
+
+    location = /manage { return 301 /manage/; }
+    location ^~ /manage/ {
+        set $viking_identity_mgmt ${VIKING_UPSTREAM_IDENTITY_MANAGEMENT};
+        proxy_pass https://$viking_identity_mgmt;
+    }
+
+    location = /webapi { return 301 /webapi/; }
+    location ^~ /webapi/ {
+        set $viking_identity_webapi ${VIKING_UPSTREAM_IDENTITY_WEBAPI};
+        proxy_pass https://$viking_identity_webapi;
+    }
+
+    location / {
+        set $viking_identity_issuer ${VIKING_UPSTREAM_IDENTITY};
+        proxy_pass https://$viking_identity_issuer;
+    }
+}

@@ -31,9 +31,8 @@ Before you start
 
 #. DNS: an A/CNAME record for every ``VIKING_HOSTNAME_*`` pointing at the **web** host's public
    address. Ask Pitt IT if the zone is theirs.
-#. Firewall on the web host: inbound 80 and 443 from anywhere; 4001 and 6001 (Identity
-   management and WebApi) and 5001 (issuer, also reachable through 443) as needed. See
-   :doc:`ports_and_remote_access`.
+#. Firewall on the web host: inbound 80 and 443 from anywhere, nothing else (Identity's issuer,
+   management site and WebApi are all served on 443). See :doc:`ports_and_remote_access`.
 #. Accounts and tokens collected (Duende license, SQL logins, EAB key if using InCommon, SMTP):
    :doc:`accounts_and_tokens`.
 #. Clone Viking on each Linux host and set ``VIKING_REPO_ROOT_HOST`` to it.

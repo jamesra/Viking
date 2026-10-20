@@ -3,19 +3,29 @@ using System;
 namespace Viking.Common
 {
     /// <summary>
-    /// VikingXML IdentityApi/Authentication often copies the public Identity host (port 443 or :5001).
-    /// Permissions live on WebApi (:6001 HTTPS / :6000 HTTP), not IdentityServerStandalone.
+    /// VikingXML IdentityApi/Authentication often copies the public Identity host.
+    /// Permissions live on the WebApi, not IdentityServerStandalone. Two layouts are supported:
+    /// <list type="bullet">
+    /// <item>Port-per-app (legacy, e.g. identity.codepharm.net): issuer :5001, WebApi :6001 HTTPS / :6000 HTTP.</item>
+    /// <item>Path-per-app behind viking-proxy on 443 (e.g. identity.connectomes.pitt.edu): issuer at /,
+    /// WebApi at /webapi/, management at /manage/.</item>
+    /// </list>
+    /// An issuer URL on the scheme's default port (443/80) selects the path layout.
     /// </summary>
     public static class IdentityEndpoints
     {
         public const int PermissionsApiHttpPort = 6000;
         public const int PermissionsApiHttpsPort = 6001;
 
+        /// <summary>WebApi path prefix when Identity is served on the default port through viking-proxy.</summary>
+        public const string PermissionsApiPathBase = "/webapi/";
+
         /// <summary>
         /// Returns the WebApi base URL for /Permissions.
         /// Called by login and VikingAU after reading VolumeToEndpoint, and by token helpers
         /// that already know the IdentityServer authority.
-        /// Same host as IdentityServer on any other port is rewritten to 6001/6000.
+        /// Same host as IdentityServer is rewritten to the WebApi location (port 6001/6000, or
+        /// /webapi/ when the issuer is on the default port) unless it already points there.
         /// A different host is left unchanged (dedicated API proxy).
         /// </summary>
         public static Uri ResolvePermissionsApiUrl(Uri identityApiFromXml, Uri identityServerUrl)
@@ -23,7 +33,7 @@ namespace Viking.Common
             if (identityServerUrl == null)
                 return identityApiFromXml;
 
-            if (identityApiFromXml == null || ShouldRewriteToPermissionsPort(identityApiFromXml, identityServerUrl))
+            if (identityApiFromXml == null || ShouldRewriteToPermissionsApi(identityApiFromXml, identityServerUrl))
                 return FromIdentityServer(identityServerUrl);
 
             return identityApiFromXml;
@@ -37,6 +47,17 @@ namespace Viking.Common
             if (identityServerUrl == null)
                 throw new ArgumentNullException(nameof(identityServerUrl));
 
+            if (identityServerUrl.IsDefaultPort)
+            {
+                return new UriBuilder(identityServerUrl)
+                {
+                    Port = -1,
+                    Path = PermissionsApiPathBase,
+                    Query = string.Empty,
+                    Fragment = string.Empty
+                }.Uri;
+            }
+
             var https = string.Equals(identityServerUrl.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
             return new UriBuilder(identityServerUrl)
             {
@@ -47,15 +68,21 @@ namespace Viking.Common
             }.Uri;
         }
 
-        static bool ShouldRewriteToPermissionsPort(Uri identityApi, Uri identityServer)
+        static bool ShouldRewriteToPermissionsApi(Uri identityApi, Uri identityServer)
         {
             if (!string.Equals(identityApi.Host, identityServer.Host, StringComparison.OrdinalIgnoreCase))
                 return false;
 
-            return !IsPermissionsApiPort(identityApi.Port);
+            if (IsPermissionsApiPort(identityApi.Port))
+                return false;
+
+            return !IsPermissionsApiPath(identityApi);
         }
 
         static bool IsPermissionsApiPort(int port)
             => port == PermissionsApiHttpPort || port == PermissionsApiHttpsPort;
+
+        static bool IsPermissionsApiPath(Uri uri)
+            => uri.AbsolutePath.StartsWith(PermissionsApiPathBase.TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
     }
 }

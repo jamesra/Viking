@@ -245,6 +245,15 @@ public class Program
 
             var app = builder.Build();
 
+            // Behind viking-proxy the WebApi is served at https://<identity host>/webapi/.
+            // UsePathBase strips the prefix; direct :6001 requests without it still work.
+            var webApiPathBase = Environment.GetEnvironmentVariable("IDENTITY_WEBAPI_PATH_BASE");
+            if (!string.IsNullOrWhiteSpace(webApiPathBase))
+            {
+                app.UsePathBase(webApiPathBase.TrimEnd('/'));
+                Log.Information("WebApi path base: {PathBase}", webApiPathBase);
+            }
+
             // Configure the HTTP request pipeline
             if (app.Environment.IsDevelopment())
             {

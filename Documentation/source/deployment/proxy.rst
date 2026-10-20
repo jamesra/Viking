@@ -5,7 +5,13 @@ Proxy
 ``viking-proxy`` (``Servers/proxy/``) is nginx on the web host and owns host ports 80 and 443.
 
 Port 443
-   TLS passthrough. ``ssl_preread`` reads the SNI name and the ``map`` in
+   TLS passthrough for every name except Identity.
+   The Identity name goes to a local listener (``templates/identity.conf.template``) that
+   terminates TLS with ``/certs/<TLS_CERT_NAME>/`` and routes by path: ``/manage/`` to
+   ``VIKING_UPSTREAM_IDENTITY_MANAGEMENT``, ``/webapi/`` to ``VIKING_UPSTREAM_IDENTITY_WEBAPI``,
+   everything else to ``VIKING_UPSTREAM_IDENTITY`` (see :doc:`identity`). The proxy therefore mounts
+   ``DOCKER_CERTS_DIR`` read-only and carries ``viking.tls-reload`` so a renewal restarts it.
+   For the other names, ``ssl_preread`` reads the SNI name and the ``map`` in
    ``templates/stream.conf.template`` sends ``VIKING_HOSTNAME_<SERVICE>`` to
    ``VIKING_UPSTREAM_<SERVICE>`` (``host:port`` of the service's own TLS port). Unknown names go to
    ``VIKING_UPSTREAM_DEFAULT`` (the IIS host). Upstreams are resolved per connection, so a host that is
@@ -20,9 +26,9 @@ Port 80
 Configuration
 =============
 
-``nginx.conf`` includes ``conf.d/stream.conf`` inside ``stream {}`` and ``conf.d/http.conf`` inside
-``http {}``. The nginx image renders both from ``templates/*.template`` with envsubst at container
-start (only ``VIKING_*`` and ``PROXY_*`` variables), so a change of hostname or upstream needs only
+``nginx.conf`` includes ``conf.d/stream.conf`` inside ``stream {}`` and ``conf.d/http.conf`` plus
+``conf.d/identity.conf`` inside ``http {}``. The nginx image renders both from ``templates/*.template`` with envsubst at container
+start (only ``VIKING_*``, ``PROXY_*`` and ``TLS_CERT_NAME``), so a change of hostname or upstream needs only
 ``stack.ps1 restart viking-proxy``.
 
 Defaults (override any of them in ``Run/viking-proxy/viking-proxy.run.env``):
@@ -30,7 +36,9 @@ Defaults (override any of them in ``Run/viking-proxy/viking-proxy.run.env``):
 =====================  ==========================================  ===============================
 Service                Upstream default                            Host
 =====================  ==========================================  ===============================
-IDENTITY               ``host.docker.internal:5001``               web
+IDENTITY               ``host.docker.internal:5001``               web (issuer, ``/``)
+IDENTITY_MANAGEMENT    ``host.docker.internal:4001``               web (``/manage/``)
+IDENTITY_WEBAPI        ``host.docker.internal:6001``               web (``/webapi/``)
 ANNOTATION             ``host.docker.internal:5011``               web
 CORRECTIONS            ``host.docker.internal:41443``              web
 GALLERY, TEM, SEM      ``host.docker.internal:8442``               web (gallery-router)

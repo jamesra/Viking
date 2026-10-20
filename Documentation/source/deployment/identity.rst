@@ -4,7 +4,8 @@ Identity
 
 ``viking-identity`` runs ``Servers/IdentityServer/docker-compose-all.yml``: one container with the
 Duende IdentityServer issuer (5001), the permissions WebApi (6001) and the management site (4001)
-under supervisor, plus a one-shot ``identity-init`` that creates the state folders and hands them to
+under supervisor. Publicly all three share ``https://<identity host>/`` on 443 through
+``viking-proxy`` (see `Public URLs`_), plus a one-shot ``identity-init`` that creates the state folders and hands them to
 the app user (uid 1654).
 
 Files
@@ -28,12 +29,48 @@ Path                                                      Content
 Public URLs
 ===========
 
-The appsettings files still name ``identity.codepharm.net``. The compose file overrides them from
-``VIKING_HOSTNAME_IDENTITY``: ``VikingIdentityServerOptions__Authority`` and the JWT/introspection
-authorities default to ``https://<identity host>:5001/``, ``ManagementPublicUrl`` to ``:4001`` and
-``WebApiOptions__BaseUrl`` to ``:6001``. Set ``IDENTITY_AUTHORITY``,
-``IDENTITY_MANAGEMENT_PUBLIC_URL`` or ``IDENTITY_WEBAPI_PUBLIC_URL`` to differ. Port 443 on the
-identity name reaches 5001 through the proxy; 4001 and 6001 are reached directly.
+Everything is served on port 443 at one origin. ``viking-proxy`` terminates TLS for the identity
+name (``templates/identity.conf.template``) and routes by path:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Public URL
+     - App (container port)
+     - Path base
+   * - ``https://<identity host>/`` (``/connect``, ``/.well-known``, ``/Account/Logout``, ...)
+     - IdentityServerStandalone, the issuer (5001)
+     - none
+   * - ``https://<identity host>/manage/``
+     - management site (4001)
+     - ``/manage``
+   * - ``https://<identity host>/webapi/``
+     - permissions WebApi (6001)
+     - ``/webapi``
+
+One origin keeps the shared login cookie working: the management site issues it and the issuer must
+see it. The management site and WebApi strip their prefix with ``UsePathBase``
+(``IDENTITY_MANAGEMENT_PATH_BASE`` / ``IDENTITY_WEBAPI_PATH_BASE``), and still answer on their own
+ports without it.
+
+The appsettings files still name ``identity.codepharm.net`` with ports. The compose file overrides
+them from ``VIKING_HOSTNAME_IDENTITY``: the issuer (``IssuerUri``) and the JWT/introspection
+authorities become ``https://<identity host>/``, ``ManagementPublicUrl`` ``…/manage/`` (so the login
+page is ``…/manage/Account/Login``) and ``WebApiOptions__BaseUrl`` ``…/webapi/``. To go back to
+direct-port URLs set ``IDENTITY_AUTHORITY``, ``IDENTITY_MANAGEMENT_PUBLIC_URL`` and
+``IDENTITY_WEBAPI_PUBLIC_URL`` and set both path bases empty.
+
+Consumers that need the new URLs:
+
+* ``viking-annotation`` / ``viking-corrections``: ``IdentityServer__Endpoint=https://<identity host>/``
+  and ``IdentityServer__ApiEndpoint=https://<identity host>/webapi/``.
+* SAM2 gallery: OIDC authority ``https://<identity host>/``; its callback URIs are
+  ``VikingIdentityServerOptions__GalleryTemRedirectUris__0`` / ``…Sem…`` in the identity run env.
+* VikingXML ``IdentityApi`` / ``Authentication``: ``https://<identity host>/``. Viking desktop clients
+  derive the WebApi as ``/webapi/`` on the same host when the issuer is on port 443
+  (``Viking.Common.IdentityEndpoints``); **clients built before this change** look for ``:6001``
+  instead and must be updated.
+* The sbfsem-tools bounce URL is now ``https://<identity host>/manage/SbfsemOpen/Redirect``.
 
 Moving an existing instance
 ===========================

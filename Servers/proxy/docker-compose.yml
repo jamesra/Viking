@@ -1,8 +1,12 @@
 # Stack: viking-proxy  (registry: deploy/stacks.psd1)
 #
 # The public entry point on the web host. nginx owns host ports 80 and 443:
-#   443  TLS passthrough routed by SNI: VIKING_HOSTNAME_<SERVICE> -> VIKING_UPSTREAM_<SERVICE> (host:port).
-#        The proxy never holds a certificate; every service presents the shared one from /certs.
+#   443  TLS passthrough routed by SNI: VIKING_HOSTNAME_<SERVICE> -> VIKING_UPSTREAM_<SERVICE> (host:port);
+#        every service presents the shared certificate from /certs itself. Exception: the Identity
+#        hostname is terminated here (templates/identity.conf.template) and routed by path so the
+#        issuer, management site and WebApi all share https://<identity host>/ on 443:
+#          /manage/ -> VIKING_UPSTREAM_IDENTITY_MANAGEMENT   /webapi/ -> VIKING_UPSTREAM_IDENTITY_WEBAPI
+#          everything else -> VIKING_UPSTREAM_IDENTITY (issuer)
 #   80   /.well-known/acme-challenge/ from the viking-certs webroot (HTTP-01), /healthz, and a
 #        redirect to https for everything else.
 # Config is templates/*.template rendered by the nginx image's envsubst at container start, so a
@@ -39,10 +43,17 @@ services:
       - "${PROXY_HTTPS_PORT:-443}:443"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    labels:
+      # Restarted by the cert renewer / `stack.ps1 certs reload` so the Identity listener picks up a new cert.
+      viking.tls-reload: "true"
     environment:
       <<: *viking-hostnames
       # Web host services (identity, gRPC annotation, corrections, gallery-router).
       VIKING_UPSTREAM_IDENTITY: ${VIKING_UPSTREAM_IDENTITY:-host.docker.internal:5001}
+      VIKING_UPSTREAM_IDENTITY_MANAGEMENT: ${VIKING_UPSTREAM_IDENTITY_MANAGEMENT:-host.docker.internal:4001}
+      VIKING_UPSTREAM_IDENTITY_WEBAPI: ${VIKING_UPSTREAM_IDENTITY_WEBAPI:-host.docker.internal:6001}
+      # Certificate the Identity listener presents (DOCKER_CERTS_DIR/<name>/ mounted at /certs).
+      TLS_CERT_NAME: ${TLS_CERT_NAME:-viking}
       VIKING_UPSTREAM_ANNOTATION: ${VIKING_UPSTREAM_ANNOTATION:-host.docker.internal:5011}
       VIKING_UPSTREAM_CORRECTIONS: ${VIKING_UPSTREAM_CORRECTIONS:-host.docker.internal:41443}
       VIKING_UPSTREAM_GALLERY: ${VIKING_UPSTREAM_GALLERY:-host.docker.internal:8442}
@@ -63,10 +74,12 @@ services:
       # Docker's embedded DNS; resolves host.docker.internal, compose service names and public names.
       PROXY_RESOLVER: ${PROXY_RESOLVER:-127.0.0.11}
       # envsubst only these prefixes, so nginx's own $variables are never touched.
-      NGINX_ENVSUBST_FILTER: "^(VIKING_|PROXY_)"
+      NGINX_ENVSUBST_FILTER: "^(VIKING_|PROXY_|TLS_CERT_NAME)"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./templates:/etc/nginx/templates:ro
+      # Shared certificates (Identity is the only name TLS-terminated here).
+      - ${DOCKER_CERTS_DIR:?DOCKER_CERTS_DIR must be set (stack.ps1 exports it)}:/certs:ro
       # The HTTP-01 webroot viking-certs writes (its STACK_DATA_DIR/webroot).
       - ${VIKING_ACME_WEBROOT:-${NORNIR_DOCKER_USER_ROOT:?NORNIR_DOCKER_USER_ROOT must be set (stack.ps1 exports it)}/Data/viking-certs/webroot}:/var/www/certbot:ro
     healthcheck:

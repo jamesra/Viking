@@ -12,7 +12,8 @@ resolver ${PROXY_RESOLVER} valid=30s ipv6=off;
 resolver_timeout 5s;
 
 map $ssl_preread_server_name $viking_backend {
-    ${VIKING_HOSTNAME_IDENTITY}          ${VIKING_UPSTREAM_IDENTITY};
+    # Identity is TLS-terminated by this proxy (identity.conf) and routed by path.
+    ${VIKING_HOSTNAME_IDENTITY}          127.0.0.1:8443;
     ${VIKING_HOSTNAME_WEBSVC}            ${VIKING_UPSTREAM_WEBSVC};
     ${VIKING_HOSTNAME_ANNOTATION}        ${VIKING_UPSTREAM_ANNOTATION};
     ${VIKING_HOSTNAME_CORRECTIONS}       ${VIKING_UPSTREAM_CORRECTIONS};

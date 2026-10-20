@@ -320,6 +320,16 @@ namespace Viking.Identity.Server.WebManagement
             InitializeDatabase(app);
             Console.WriteLine(" Database initialization complete");
 
+            // Behind viking-proxy the management site is served at https://<identity host>/manage/.
+            // UsePathBase strips the prefix and makes generated links include it; requests that
+            // arrive without the prefix (direct :4001 access) still work.
+            var managementPathBase = Environment.GetEnvironmentVariable("IDENTITY_MANAGEMENT_PATH_BASE");
+            if (!string.IsNullOrWhiteSpace(managementPathBase))
+            {
+                app.UsePathBase(managementPathBase.TrimEnd('/'));
+                Log.Information("Management path base: {PathBase}", managementPathBase);
+            }
+
             Console.WriteLine(" Checking environment...");
             if (env.IsDevelopment())
             {
