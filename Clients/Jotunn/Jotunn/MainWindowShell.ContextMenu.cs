@@ -212,6 +212,7 @@ namespace Jotunn
         }
 
         bool _volumePositionJobShowing;
+        bool _volumePositionCloseHooked;
 
         /// <summary>
         /// Viking's "Update Volume Positions…" (Review or Admin role): recomputes stored volume positions for the chosen
@@ -223,6 +224,17 @@ namespace Jotunn
             {
                 if (_volumePositionJobShowing)
                     return null;
+
+                // As Viking does, closing the window mid-job asks first.
+                if (!_volumePositionCloseHooked)
+                {
+                    _volumePositionCloseHooked = true;
+                    Closing += (_, args) =>
+                    {
+                        if (!args.Cancel && !WebAnnotation.UI.VolumePositionUpdateLauncher.ConfirmExit(null))
+                            args.Cancel = true;
+                    };
+                }
 
                 _volumePositionJobShowing = true;
                 var progress = new Progress<Viking.UI.Controls.ViewerTaskProgress>(p =>

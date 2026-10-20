@@ -77,12 +77,22 @@ namespace WebAnnotationTests
         [DataRow("<Structure><Other/><Attrib Name=\"y\"/></Structure>")]
         [DataRow("<Other><Attrib Name=\"z\"/></Other>")]
         [DataRow("<Structure><Attrib Name=\"b\" Value=\"2\"/><Attrib Name=\"a\" Value=\"1\"/><Attrib Name=\"a\"/></Structure>")]
+        [DataRow("<?xml-stylesheet href=\"s.xsl\"?><Structure><Attrib Name=\"pi\"/></Structure>")]
+        [DataRow("<Structure><Attrib Name=\"emoji\" Value=\"&#x1F600;\U0001F600\"/></Structure>")]
         public void Parse_Xml_MatchesTheXmlParser(string xml)
         {
             CollectionAssert.AreEqual(
                 ReferenceParse(xml),
                 ObjAttributeParser.ParseAttributes(xml).Select(a => a.Name + "=" + a.Value).ToArray());
         }
+
+        [DataTestMethod]
+        [DataRow("<Structure><Attrib Name=\"a\"Value=\"b\"/></Structure>")]
+        [DataRow("<Structure><Attrib Name=\"a\" Value=\"&#xFFFE;\"/></Structure>")]
+        [DataRow("<Structure><Attrib Name=\"a\" Value=\"\u0001\"/></Structure>")]
+        [DataRow("<?xml?><Structure><Attrib Name=\"a\"/></Structure>")]
+        public void Parse_MalformedXml_IsRejectedAsTheXmlParserDoes(string xml) =>
+            Assert.ThrowsException<System.Xml.XmlException>(() => ObjAttributeParser.ParseAttributes(xml));
 
         [TestMethod]
         public void Parse_Xml_RoundTripsToXml()

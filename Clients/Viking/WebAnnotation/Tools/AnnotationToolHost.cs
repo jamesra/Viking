@@ -399,6 +399,20 @@ namespace WebAnnotation.Tools
             _ = AnnotationToolActions.DeleteLocationAsync(_context, location);
         }
 
+        /// <summary>True when an annotation (location or link) is drawn at <paramref name="world"/> on the current section.</summary>
+        public bool AnnotationAtWorld(Vector2 world)
+        {
+            try
+            {
+                return _scene.HitTest(_host.SectionNumber, world, out _) != null;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine($"Annotation hit test failed: {ex.Message}");
+                return false;
+            }
+        }
+
         /// <summary>The location drawn at <paramref name="screen"/> on the current section, or null.</summary>
         public LocationObj LocationAt(Vector2 screen)
         {

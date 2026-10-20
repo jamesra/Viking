@@ -62,8 +62,8 @@ namespace Jotunn
 
         /// <summary>
         /// Viking's double click on a proposal accepts it, even over the circle it proposes for. The first press of that
-        /// double click is consumed too, as Viking's overlay treats the proposal as the object under the pointer;
-        /// otherwise it would place a structure or continue a trace on empty space before the accept.
+        /// double click is consumed only over empty space, where it would otherwise place a structure or continue a
+        /// trace before the accept; over an annotation (the circle itself) it still selects, drags or resizes it.
         /// </summary>
         bool OnProposalMouseDown(Geometry.Vector2 world, MouseButton button, int clickCount)
         {
@@ -73,7 +73,7 @@ namespace Jotunn
                 return false;
 
             if (clickCount < 2)
-                return true;
+                return _tools == null || !_tools.AnnotationAtWorld(world);
 
             proposal.HandleMouseDoubleClick(System.Windows.Forms.MouseButtons.Left, world);
             return true;

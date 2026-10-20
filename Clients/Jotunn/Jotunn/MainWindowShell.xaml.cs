@@ -739,9 +739,9 @@ namespace Jotunn
         /// </summary>
         void OnSelectSegmentationService(object sender, RoutedEventArgs e)
         {
-            string before = WebAnnotation.Global.AnnotationSettings.SegmentationServiceUrl;
-            WebAnnotation.AnnotationMenu.OnSelectSegmentationService(sender, EventArgs.Empty);
-            if (!string.Equals(before, WebAnnotation.Global.AnnotationSettings.SegmentationServiceUrl, StringComparison.OrdinalIgnoreCase))
+            // Any confirmed choice decides from now on, None included (even when the setting was already empty and
+            // the login's service was being used).
+            if (WebAnnotation.AnnotationMenu.SelectSegmentationService())
                 _segmentationServiceChosen = true;
 
             string url = SegmentationServiceUrl();

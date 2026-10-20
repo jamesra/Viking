@@ -837,7 +837,10 @@ namespace WebAnnotation
         /// <summary>
         /// Opens the login-stage segmentation picker mid-session and applies Select or None.
         /// </summary>
-        public static void OnSelectSegmentationService(object sender, EventArgs e)
+        public static void OnSelectSegmentationService(object sender, EventArgs e) => SelectSegmentationService();
+
+        /// <summary>As <see cref="OnSelectSegmentationService"/>; true when the user confirmed a choice (a service or None).</summary>
+        public static bool SelectSegmentationService()
         {
             if (State.UserBearerToken == null || string.IsNullOrEmpty(State.UserBearerToken.AccessToken))
             {
@@ -846,7 +849,7 @@ namespace WebAnnotation
                     "Select Segmentation Service",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
-                return;
+                return false;
             }
 
             string identityUrl = State.IdentityServerUrl
@@ -858,7 +861,7 @@ namespace WebAnnotation
                     "Select Segmentation Service",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
-                return;
+                return false;
             }
 
             IntPtr ownerHandle = IntPtr.Zero;
@@ -874,8 +877,11 @@ namespace WebAnnotation
                 out string? selectedEndpoint,
                 SegmentationServiceHealth.LastError);
 
-            if (confirmed == true)
-                SegmentationServiceSession.ApplyEndpoint(selectedEndpoint);
+            if (confirmed != true)
+                return false;
+
+            SegmentationServiceSession.ApplyEndpoint(selectedEndpoint);
+            return true;
         }
 
         private static void OnUpdateVolumePositions(object sender, EventArgs e)

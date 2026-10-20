@@ -97,6 +97,13 @@ namespace WebAnnotationModel.Objects
             SkipWhitespace(xml, ref i);
             if (Matches(xml, i, "<?xml"))
             {
+                // A declaration is "<?xml" then whitespace then version; anything else (another processing instruction)
+                // is left to the XML parser.
+                i += "<?xml".Length;
+                int afterTarget = i;
+                SkipWhitespace(xml, ref i);
+                if (i == afterTarget || !Matches(xml, i, "version"))
+                    return null;
                 int end = xml.IndexOf("?>", i, StringComparison.Ordinal);
                 if (end < 0)
                     return null;
@@ -143,7 +150,9 @@ namespace WebAnnotationModel.Objects
                 string value = null;
                 while (true)
                 {
+                    int beforeSpace = i;
                     SkipWhitespace(xml, ref i);
+                    bool spaced = i > beforeSpace;
                     if (Matches(xml, i, "/>"))
                     {
                         i += 2;
@@ -164,6 +173,9 @@ namespace WebAnnotationModel.Objects
                         break;
                     }
 
+                    // XML requires whitespace between attributes; without it the document is malformed.
+                    if (!spaced)
+                        return null;
                     string attribute = ReadName(xml, ref i);
                     if (attribute == null)
                         return null;
@@ -233,9 +245,15 @@ namespace WebAnnotationModel.Objects
 
             string raw = s.Substring(i, end - i);
             i = end + 1;
-            // XML turns literal tabs and line breaks in an attribute value into spaces; leave that to the XML parser.
-            if (raw.IndexOf('<') >= 0 || raw.IndexOfAny(new[] { '\t', '\r', '\n' }) >= 0)
+            // XML turns literal tabs and line breaks in an attribute value into spaces, and rejects other control
+            // characters and noncharacters; leave all of those (and surrogate pairs) to the XML parser.
+            if (raw.IndexOf('<') >= 0)
                 return null;
+            foreach (char c in raw)
+            {
+                if (c < ' ' || char.IsSurrogate(c) || c == '\uFFFE' || c == '\uFFFF')
+                    return null;
+            }
             if (raw.IndexOf('&') < 0)
                 return raw;
 
@@ -266,7 +284,7 @@ namespace WebAnnotationModel.Objects
                             if (!int.TryParse(hex ? entity.Substring(2) : entity.Substring(1),
                                     hex ? System.Globalization.NumberStyles.AllowHexSpecifier : System.Globalization.NumberStyles.None,
                                     System.Globalization.CultureInfo.InvariantCulture, out int code) ||
-                                code > 0x10FFFF || (code >= 0xD800 && code <= 0xDFFF) ||
+                                code > 0x10FFFF || (code >= 0xD800 && code <= 0xDFFF) || code == 0xFFFE || code == 0xFFFF ||
                                 (code < 0x20 && code != 0x9 && code != 0xA && code != 0xD))
                                 return null;
                             decoded.Append(char.ConvertFromUtf32(code));

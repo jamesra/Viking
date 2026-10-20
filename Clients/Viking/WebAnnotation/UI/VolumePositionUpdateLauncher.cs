@@ -45,7 +45,7 @@ namespace WebAnnotation.UI
         }
 
         /// <summary>Returns true when it is fine to close: no pass is running, or the user chose to exit anyway.</summary>
-        private static bool ConfirmExit(IWin32Window? owner)
+        internal static bool ConfirmExit(IWin32Window? owner)
         {
             if (!IsRunning)
                 return true;
@@ -67,7 +67,18 @@ namespace WebAnnotation.UI
             string title, CancellationTokenSource cancellation);
 
         /// <summary>Called from the Annotation menu click. Re-checks reviewer access before opening the dialog.</summary>
-        public static Task RunAsync() => RunAsync(BeginOnViewer);
+        public static Task RunAsync()
+        {
+            // Viking reports the job on the section viewer's status bar; without one, there is nothing to run it from.
+            if (State.ViewerControl is null)
+            {
+                MessageBox.Show("Open a volume before updating volume positions.", "Update Volume Positions",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return Task.CompletedTask;
+            }
+
+            return RunAsync(BeginOnViewer);
+        }
 
         /// <summary>Viking's status-bar task on the section viewer.</summary>
         private static (IProgress<ViewerTaskProgress> Progress, IDisposable Finish)? BeginOnViewer(string title, CancellationTokenSource cancellation)

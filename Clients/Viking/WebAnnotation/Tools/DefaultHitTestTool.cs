@@ -120,8 +120,9 @@ namespace WebAnnotation.Tools
                 bool overEmptySpace = hit is null;
                 _context.StartTool(new PenStrokeTool(_context, world, at =>
                 {
+                    // Viking's Pen Mode places the chosen type on a tap but never continues a trace from one.
                     if (overEmptySpace)
-                        OnEmptyClick(at);
+                        OnEmptyClick(at, continueTrace: false);
                 }));
                 return AnnotationToolResult.Continue;
             }
@@ -134,9 +135,10 @@ namespace WebAnnotation.Tools
 
         /// <summary>
         /// As in Viking, a click on empty space places only what the user asked for: an armed structure hotkey, else the
-        /// type chosen in the structure type list, else it continues the last trace when that is on another section.
+        /// type chosen in the structure type list, else (when <paramref name="continueTrace"/>) it continues the last trace
+        /// when that is on another section.
         /// </summary>
-        void OnEmptyClick(Vector2 world)
+        void OnEmptyClick(Vector2 world, bool continueTrace = true)
         {
             if (_context.ArmedStructure is HotkeyCommand armed)
             {
@@ -156,6 +158,9 @@ namespace WebAnnotation.Tools
                 Place(shape, world, null, null);
                 return;
             }
+
+            if (!continueTrace)
+                return;
 
             if (!AnnotationToolActions.TryContinueLastTrace(_context, world))
                 _context.SetStatus("Choose a structure type, or press a structure shortcut, to place an annotation");

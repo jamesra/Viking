@@ -33,6 +33,7 @@ namespace WebAnnotation.Tools
 
         readonly AnnotationToolContext _context;
         readonly SegmentationViewportSession _session;
+        readonly ISegmentationViewport _viewport;
         readonly long _structureTypeId;
         readonly List<Vector2> _foreground = new();
         readonly List<Vector2> _background = new();
@@ -56,6 +57,7 @@ namespace WebAnnotation.Tools
         {
             _context = context;
             _structureTypeId = structureTypeId;
+            _viewport = viewport;
             _session = new SegmentationViewportSession(viewport, channels);
             if (!_session.TryInitializeClient())
                 _context.SetStatus("Segment: no segmentation service is available");
@@ -253,7 +255,7 @@ namespace WebAnnotation.Tools
                 if (view == null || mapper == null)
                     return;
 
-                List<LocationObj> visible = view.GetLocations(_context.Host.VisibleWorldBounds)
+                List<LocationObj> visible = view.GetLocations(SegmentedWorldBounds())
                     .Select(v => Store.Locations.TryGetObjectByID(v.ID, out LocationObj loc) ? loc : null)
                     .OfType<LocationObj>()
                     .ToList();
@@ -267,6 +269,23 @@ namespace WebAnnotation.Tools
             {
                 Trace.WriteLine($"Segmentation background from other structures failed: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// The world area the segmentation viewport shows (in Jotunn's grid, the active cell rather than the whole
+        /// grid), so only structures in the segmented view become background.
+        /// </summary>
+        Geometry.Rectangle SegmentedWorldBounds()
+        {
+            int width = _viewport.ViewportWidth;
+            int height = _viewport.ViewportHeight;
+            return Geometry.Rectangle.GetBoundingBox(new[]
+            {
+                _viewport.ScreenToWorld(0, 0),
+                _viewport.ScreenToWorld(width, 0),
+                _viewport.ScreenToWorld(0, height),
+                _viewport.ScreenToWorld(width, height),
+            });
         }
 
         async Task SegmentAsync(int generation, Vector2[] foreground, Vector2[] background, SegmentationMaskUnion backgroundMask,

@@ -54,7 +54,7 @@ Jotunn has no Viking shell, so it fills in what Viking's shell would have set up
 | Dilate/erode mask | Polygon menu > Change shape > Dilate/erode mask:<br>- the wheel grows or shrinks the rasterized polygon (Shift for fine steps, Ctrl still zooms)<br>- Enter segments from the edited mask, as Viking does |
 | Segmentation background | Other structures in view are background points plus a background mask, as in Viking. |
 | Export | Location menu Export > Tulip URL (morphology, network), and Annotations > Export motifs, when the volume has an export service. |
-| Annotations menu | Favorite structure types (F6), Pen mode, Randomize all colors, Update volume positions (Review/Admin; progress in the status bar). |
+| Annotations menu | Favorite structure types (F6), Pen mode, Randomize all colors, Update volume positions (Review/Admin; progress in the status bar; closing the window mid-job asks first, as in Viking). |
 | Unmarked process terminals | Location menu. The structure's unfinished branch ends, grouped by section; choosing one goes there. |
 | Random color | Polygons, for the session, as in Viking. |
 | Auto-polygonize | Viking's `AutoCirclePolygonizeController` runs unchanged over `SectionSceneHost` (an `IAutoPolygonizeHost`):<br>- double click accepts a proposal; right click opens Accept / Add points / Dismiss<br>- "Add points" uses the segment tool<br>- Tools > Auto-polygonize circles toggles Viking's setting<br>- not yet verified against a live server |

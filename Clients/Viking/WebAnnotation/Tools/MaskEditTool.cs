@@ -58,7 +58,7 @@ namespace WebAnnotation.Tools
         internal bool IsUsable => _signedDistance != null;
 
         public string StatusText =>
-            $"Mask: wheel grows or shrinks ({_radiusPixels * _input.WorldPerPixel:+0;-0;0} px), Shift for fine steps, Enter accepts, Esc cancels";
+            $"Mask: wheel grows or shrinks ({_radiusPixels * _input.WorldPerPixel * (Global.Scale.X > 0 ? Global.Scale.X : 1):+0;-0;0} nm), Shift for fine steps, Enter accepts, Esc cancels";
 
         public bool OnMouseWheel(int delta, bool shift, bool ctrl)
         {
