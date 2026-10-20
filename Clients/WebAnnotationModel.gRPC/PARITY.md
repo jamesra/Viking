@@ -60,3 +60,12 @@ The client above the stores was brought to parity by merging Legacy 00014315 (ba
 | Revisit, rows unchanged | 240 ms, 1.88 GB | 1.6 ms, 4.2 MB | updater skips a row whose LastModified matches (links still sync) |
 | Refresh, every row changed | 176 ms, 1.42 GB | 17 ms, 97 MB | `Polygon.Equals` read rings directly instead of copying the ring per vertex |
 | WKT parse of the polygons alone | 114 ms, 140 MB | 17-19 ms, 45 MB | hand-written coordinate and parenthesis scanner |
+
+`StructureIngestBenchmarks` does the same for structures. Its payload is cells, each with nine child synapses carrying two attribute tags; the run used 5,000 structures. The numbers below are before and after the attribute scanner of 2026-10-20. That change also speeds up location attributes, which go through the same parser.
+
+| Case | Before | After | Change |
+|---|---|---|---|
+| First visit (all new) | 29 ms, 59 MB | 7.4 ms, 14 MB | `ObjAttributeParser` scans the `<Structure><Attrib/>` shape directly instead of building an `XDocument`. Anything else still goes to the XML parser. |
+| Refresh, rows unchanged | 12 ms, 52 MB | 3.6 ms, 7 MB | same |
+| Refresh, every row changed | 12.8 ms, 52 MB | 3.6 ms, 7 MB | same |
+| Attribute parse alone | 4.1 ms, 48 MB | 0.8 ms, 2 MB | same |

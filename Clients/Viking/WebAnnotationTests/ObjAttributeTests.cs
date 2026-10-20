@@ -44,6 +44,57 @@ namespace WebAnnotationTests
                 list.Select(a => a.Name + "=" + a.Value).ToArray());
         }
 
+        /// <summary>
+        /// The XML parser's reading of an attribute string, as ParseAttributes did before it scanned the common shape
+        /// itself. The scanner must give the same list for every input, falling back to XML for what it does not cover.
+        /// </summary>
+        static string[] ReferenceParse(string xml)
+        {
+            var root = System.Xml.Linq.XDocument.Parse(xml).Element("Structure");
+            if (root == null)
+                return new string[0];
+
+            return root.Elements("Attrib")
+                .Select(e => new ObjAttribute(e.Attribute("Name")?.Value ?? "", e.Attribute("Value")?.Value ?? ""))
+                .Where(a => a.Name.Length > 0)
+                .OrderBy(a => a)
+                .Select(a => a.Name + "=" + a.Value)
+                .ToArray();
+        }
+
+        [DataTestMethod]
+        [DataRow("<Structure><Attrib Name=\"Conventional\" /><Attrib Name=\"Glutamate\" Value=\"0.5\" /></Structure>")]
+        [DataRow("<?xml version=\"1.0\" encoding=\"utf-16\"?><Structure><Attrib Name=\"a\" /></Structure>")]
+        [DataRow("<Structure />")]
+        [DataRow("<Structure></Structure>")]
+        [DataRow("<Structure>\r\n  <Attrib Name='single' Value='q'></Attrib>\r\n</Structure>  ")]
+        [DataRow("<Structure><Attrib Value=\"v\" Name=\"reversed\"/></Structure>")]
+        [DataRow("<Structure><Attrib Name=\"a&amp;b\" Value=\"&lt;&gt;&quot;&apos;&#65;&#x42;\"/></Structure>")]
+        [DataRow("<Structure><Attrib Name=\"\"/><Attrib Value=\"x\"/></Structure>")]
+        [DataRow("<Structure><Attrib Name=\"tab\" Value=\"a\tb\"/></Structure>")]
+        [DataRow("<Structure><!-- note --><Attrib Name=\"c\"/></Structure>")]
+        [DataRow("<Structure><Attrib Name=\"x\" Extra=\"1\"/></Structure>")]
+        [DataRow("<Structure><Other/><Attrib Name=\"y\"/></Structure>")]
+        [DataRow("<Other><Attrib Name=\"z\"/></Other>")]
+        [DataRow("<Structure><Attrib Name=\"b\" Value=\"2\"/><Attrib Name=\"a\" Value=\"1\"/><Attrib Name=\"a\"/></Structure>")]
+        public void Parse_Xml_MatchesTheXmlParser(string xml)
+        {
+            CollectionAssert.AreEqual(
+                ReferenceParse(xml),
+                ObjAttributeParser.ParseAttributes(xml).Select(a => a.Name + "=" + a.Value).ToArray());
+        }
+
+        [TestMethod]
+        public void Parse_Xml_RoundTripsToXml()
+        {
+            List<ObjAttribute> original = ObjAttributeParser.ParseAttributes(
+                "<Structure><Attrib Name=\"a &amp; b\" Value=\"x&quot;y\"/><Attrib Name=\"c\"/></Structure>");
+
+            List<ObjAttribute> again = ObjAttributeParser.ParseAttributes(original.ToXml());
+
+            CollectionAssert.AreEqual(original.Select(a => a.Name + "=" + a.Value).ToArray(), again.Select(a => a.Name + "=" + a.Value).ToArray());
+        }
+
         [TestMethod]
         public void Parse_LegacySemicolonString_TrimsAndSkipsEmptyKeys()
         {
