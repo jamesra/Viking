@@ -72,7 +72,7 @@ namespace gRPCAnnotationService
             {
                 var ct = context.CancellationToken;
                 var response = new GetStructureTypesByIDsResponse();
-                foreach (var chunk in request.Ids.ToArray().Chunk())
+                foreach (var chunk in request.Ids.DistinctChunk())
                 {
                     var rows = await _context.StructureTypes.AsNoTracking()
                         .Where(t => chunk.Contains(t.Id)).ToListAsync(ct);

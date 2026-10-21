@@ -79,6 +79,40 @@ namespace ConnectomeDataModelCoreTests
             Assert.Equal(new[] { 2000, 1 }, lengths);
         }
 
+        /// <summary>IDs drawn from a small range so repeats are common, with chunk sizes small enough that repeats cross chunks.</summary>
+        private static Arbitrary<(long[] Input, int Size)> RepeatedIdsAndSize() =>
+            Arb.From(
+                from ids in Gen.ArrayOf(Gen.Choose(-50, 50).Select(i => (long)i * 100_003))
+                from size in Gen.Choose(1, 40)
+                select (ids, size));
+
+        /// <summary>
+        /// Chunks hold each ID once, in first-occurrence order, so no ID reaches two chunk queries.
+        /// <see cref="LongKeyExtensions.Chunk"/> alone fails this when a repeat crosses a chunk boundary.
+        /// </summary>
+        [Fact]
+        public void DistinctChunkConcatenationIsTheDistinctInput()
+        {
+            Prop.ForAll(RepeatedIdsAndSize(), t =>
+            {
+                var chunks = LongKeyExtensions.DistinctChunk(t.Input, t.Size).Select(c => c.ToArray()).ToList();
+                return chunks.SelectMany(c => c).SequenceEqual(t.Input.Distinct())
+                    && (chunks.Count == 1 || chunks.All(c => c.Length > 0 && c.Length <= t.Size));
+            }).QuickCheckThrowOnFailure();
+        }
+
+        /// <summary>Regression: a GetLocationsByID request of 2001 IDs whose first ID is repeated at the end.</summary>
+        [Fact]
+        public void DistinctChunkDropsARepeatThatWouldCrossTheDefaultChunkBoundary()
+        {
+            var ids = Enumerable.Range(1, 2000).Select(i => (long)i).Append(1L).ToArray();
+            Assert.Equal(2, LongKeyExtensions.Chunk(ids).Count());
+            var chunks = LongKeyExtensions.DistinctChunk(ids).Select(c => c.ToArray()).ToList();
+            var chunk = Assert.Single(chunks);
+            Assert.Equal(2000, chunk.Distinct().Count());
+            Assert.Equal(2000, chunk.Length);
+        }
+
         [Fact]
         public void LongExtensionPassesChunkSizeThrough()
         {

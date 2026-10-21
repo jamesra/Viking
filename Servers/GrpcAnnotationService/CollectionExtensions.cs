@@ -19,6 +19,19 @@ namespace gRPCAnnotationService
         {
             return CollectionExtensions<long>.Chunk(input, Chunksize);
         }
+
+        /// <summary>
+        /// Drops repeated IDs, then chunks as <see cref="CollectionExtensions{T}.Chunk"/> does (same buffer-reuse contract).
+        /// Use for client-supplied ID lists: a repeat that falls in two chunks would return its row twice,
+        /// and the services' <c>ToDictionary(Id)</c> link attachment then throws on the duplicate key.
+        /// </summary>
+        /// <param name="ids">IDs in request order; the first occurrence of each is kept.</param>
+        /// <param name="Chunksize">Maximum IDs per chunk; must be positive.</param>
+        /// <returns>Chunks whose concatenation is <c>ids.Distinct()</c>; one empty chunk for empty input.</returns>
+        public static IEnumerable<long[]> DistinctChunk(this IEnumerable<long> ids, int Chunksize = 2000)
+        {
+            return CollectionExtensions<long>.Chunk(ids.Distinct().ToArray(), Chunksize);
+        }
     }
 
     /// <summary>

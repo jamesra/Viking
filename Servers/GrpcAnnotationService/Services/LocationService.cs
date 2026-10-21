@@ -62,7 +62,7 @@ namespace gRPCAnnotationService
             {
                 var ct = context.CancellationToken;
                 var response = new GetLocationsByIDResponse();
-                foreach (var chunk in request.Ids.ToArray().Chunk())
+                foreach (var chunk in request.Ids.DistinctChunk())
                 {
                     var rows = await _context.Locations.AsNoTracking()
                         .Where(l => chunk.Contains(l.Id)).ToListAsync(ct);
@@ -652,8 +652,7 @@ namespace gRPCAnnotationService
             set.Locations.AddRange(locations.Select(l => l.ToProtobufMessage()));
             await AttachLocationLinksAsync(set.Locations, ct);
 
-            var parentIds = locations.Select(l => l.ParentId).Distinct().ToArray();
-            foreach (var parentChunk in parentIds.Chunk())
+            foreach (var parentChunk in locations.Select(l => l.ParentId).DistinctChunk())
             {
                 var structures = await _context.Structures.AsNoTracking()
                     .Where(s => parentChunk.Contains(s.Id))
