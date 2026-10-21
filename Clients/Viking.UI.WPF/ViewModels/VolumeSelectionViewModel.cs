@@ -310,9 +310,11 @@ namespace Viking.UI.WPF.ViewModels
                 if (segments.Length > 1)
                 {
                     var lastSegment = segments[segments.Length - 1].TrimEnd('/');
-                    if (lastSegment.EndsWith(".vikingxml", StringComparison.OrdinalIgnoreCase))
-                        return lastSegment.Substring(0, lastSegment.Length - 11);
-                    return lastSegment;
+
+                    // Drop the extension: the rightmost '.' and everything after it. A name with no '.', or only a
+                    // leading one, is kept whole.
+                    int extensionStart = lastSegment.LastIndexOf('.');
+                    return extensionStart > 0 ? lastSegment.Substring(0, extensionStart) : lastSegment;
                 }
                 return uri.Host;
             }

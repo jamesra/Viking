@@ -9,6 +9,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.118 - unreleased
 
+* A recent volume that was saved by its URL now shows its file name without the extension (for example `SliceToVolume`). Before, the last letter was cut off too (`SliceToVolum`), and any extension other than `.vikingxml` was left on. Entries saved earlier keep the name they were saved with.
 * Ctrl-copying a curve's control points while moving or reshaping an open curve now copies from the curve nearest the mouse instead of an arbitrary one under it, and the copied shape shows right away. It no longer errors when the section has no annotations.
 * Per-channel colors saved in the section reference settings (section-references.json) now come back with their transparency intact. They were reloaded with the opacity inverted (fully opaque became fully transparent), which hid or washed out the channel in the section view.
 * Adding or removing a root structure type while the Structure Types form (F7) is open no longer throws an error; the form is refreshed instead.
