@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Drawing;
 using System.Windows.Forms;
 using Viking.Common;
 using Viking.UI.Controls;
@@ -17,6 +18,9 @@ namespace WebAnnotation.UI
             InitializeComponent();
 
             Title = "Structure Types";
+
+            Tree.DrawMode = TreeViewDrawMode.OwnerDrawText;
+            Tree.DrawNode += Tree_DrawNode;
 
             Store.StructureTypes.OnCollectionChanged += OnStructureTypeCollectionChanged;
         }
@@ -170,8 +174,104 @@ namespace WebAnnotation.UI
             }
         }
 
+        /// <summary>Width of the column at the right edge of the tree that holds the eyes.</summary>
+        private const int EyeColumnWidth = 26;
+
+        /// <summary>Children of a structure type, for hiding or showing a type together with its descendants.</summary>
+        private static readonly Func<long, IEnumerable<long>> ChildTypeIds = HiddenStructureTypes.ChildTypeIds;
+
+        private void Tree_DrawNode(object sender, DrawTreeNodeEventArgs e)
+        {
+            // The tree draws the node text, selection and expand glyphs; the eye is added in the column on the right.
+            e.DrawDefault = true;
+
+            if (e.Node?.Tag is not StructureType type || e.Bounds.IsEmpty)
+                return;
+
+            Rectangle eyeCell = new(Tree.ClientSize.Width - EyeColumnWidth, e.Bounds.Top, EyeColumnWidth, e.Bounds.Height);
+            using SolidBrush background = new(Tree.BackColor);
+            e.Graphics.FillRectangle(background, eyeCell);
+            DrawEye(e.Graphics, eyeCell, HiddenStructureTypeSet.Current.StateOf(type.ID, ChildTypeIds));
+        }
+
+        /// <summary>
+        /// Draws an eye: open when the type is shown, struck through and grey when hidden, and with a half-filled pupil
+        /// when only some of its descendants are hidden.
+        /// </summary>
+        private void DrawEye(Graphics g, Rectangle cell, StructureTypeEyeState state)
+        {
+            System.Drawing.Drawing2D.SmoothingMode oldMode = g.SmoothingMode;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+            Color ink = state == StructureTypeEyeState.Hidden ? SystemColors.GrayText : SystemColors.ControlText;
+            float width = 14f;
+            float height = Math.Min(9f, cell.Height - 4f);
+            float left = cell.Left + ((cell.Width - width) / 2f);
+            float top = cell.Top + ((cell.Height - height) / 2f);
+            float midY = top + (height / 2f);
+
+            using Pen pen = new(ink, 1.4f);
+            using System.Drawing.Drawing2D.GraphicsPath outline = new();
+            outline.AddBezier(left, midY, left + (width * 0.3f), top - (height * 0.3f), left + (width * 0.7f), top - (height * 0.3f), left + width, midY);
+            outline.AddBezier(left + width, midY, left + (width * 0.7f), top + (height * 1.3f), left + (width * 0.3f), top + (height * 1.3f), left, midY);
+            g.DrawPath(pen, outline);
+
+            float pupil = height * 0.6f;
+            RectangleF pupilRect = new(left + ((width - pupil) / 2f), midY - (pupil / 2f), pupil, pupil);
+            using SolidBrush fill = new(ink);
+            if (state == StructureTypeEyeState.Mixed)
+            {
+                g.DrawEllipse(pen, pupilRect);
+                g.FillPie(fill, Rectangle.Round(pupilRect), 90, 180);
+            }
+            else
+            {
+                g.FillEllipse(fill, pupilRect);
+            }
+
+            if (state == StructureTypeEyeState.Hidden)
+                g.DrawLine(pen, left + 1f, top + height + 2f, left + width - 1f, top - 2f);
+
+            g.SmoothingMode = oldMode;
+        }
+
+        /// <summary>The visible node whose row contains client y, or null.</summary>
+        private TreeNode NodeAtRow(int y)
+        {
+            for (TreeNode node =Tree.TopNode; node is not null; node = node.NextVisibleNode)
+            {
+                if (node.Bounds.Top > Tree.ClientSize.Height)
+                    break;
+
+                if (y >= node.Bounds.Top && y < node.Bounds.Bottom)
+                    return node;
+            }
+
+            return null;
+        }
+
+        /// <summary>Handles a left click in the eye column: toggles the type and its descendants and redraws the viewer.</summary>
+        private bool TryToggleEye(MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left || e.X < Tree.ClientSize.Width - EyeColumnWidth)
+                return false;
+
+            if (NodeAtRow(e.Y)?.Tag is not StructureType type)
+                return false;
+
+            HiddenStructureTypeSet.Current.Toggle(type.ID, ChildTypeIds);
+
+            // Every row's eye can change, because the click can reach descendants and a parent's partial state.
+            Tree.Invalidate();
+            AnnotationOverlay.CurrentOverlay?.InvalidateParent();
+            return true;
+        }
+
         private void Tree_MouseDown(object sender, MouseEventArgs e)
         {
+            if (TryToggleEye(e))
+                return;
+
             if (e.Button == MouseButtons.Right)
             {
                 TreeNode node = Tree.GetNodeAt(e.Location);

@@ -62,6 +62,7 @@
         <Compile Include="TemporarilyHiddenAnnotationsTests.cs" />
         <Compile Include="LabelOutlineTests.cs" />
         <Compile Include="HiddenStructuresTests.cs" />
+        <Compile Include="HiddenStructureTypeSetTests.cs" />
         <Compile Include="ObjAttributeTests.cs" />
         <Compile Include="StructureLinkKeyTests.cs" />
         <Compile Include="StructureObjTagsXmlTests.cs" />

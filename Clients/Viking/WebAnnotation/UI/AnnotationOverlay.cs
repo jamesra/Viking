@@ -539,7 +539,7 @@ namespace WebAnnotation
             }
 
             //Get the overlapping locations, filter out non-location annotations
-            return [.. locView.GetAnnotations(position).Where(hr => hr.obj is LocationCanvasView)];
+            return [.. HiddenStructureTypes.ExcludeHits(locView.GetAnnotations(position)).Where(hr => hr.obj is LocationCanvasView)];
         }
 
         /// <summary>
@@ -555,8 +555,8 @@ namespace WebAnnotation
                 return null;
             }
 
-            //Get the overlapping locations, filter out non-location annotations and the ones Del hid
-            return [.. hiddenAnnotations.Exclude(locView.GetAnnotations(position)).Where(hr => hr.obj is LocationCanvasView)];
+            //Get the overlapping locations, filter out non-location annotations, the ones Del hid and those of types hidden with the eye
+            return [.. HiddenStructureTypes.ExcludeHits(hiddenAnnotations.Exclude(locView.GetAnnotations(position))).Where(hr => hr.obj is LocationCanvasView)];
         }
 
         /// <summary>
@@ -577,7 +577,7 @@ namespace WebAnnotation
 
             ICanvasGeometryView bestObj = null;
 
-            List<HitTestResult> listObjects = hiddenAnnotations.Exclude(locView.GetAnnotations(position));
+            List<HitTestResult> listObjects = HiddenStructureTypes.ExcludeHits(hiddenAnnotations.Exclude(locView.GetAnnotations(position)));
 
             HitTestResult bestHit = listObjects.NearestObjectOnCurrentSectionThenAdjacent(CurrentSectionNumber, preferCloserLocationLinks: true);
 
@@ -678,7 +678,7 @@ namespace WebAnnotation
                 return null;
             }
 
-            List<HitTestResult> listObjects = locView.GetAnnotations(rect);
+            List<HitTestResult> listObjects = HiddenStructureTypes.ExcludeHits(locView.GetAnnotations(rect));
             return listObjects;
         }
 
@@ -759,7 +759,7 @@ namespace WebAnnotation
                 return null;
             }
 
-            List<HitTestResult> listObjects = [.. locView.GetLocations(line).Select(o => new HitTestResult(o, (int)o.Z, o.VisualHeight, o.DistanceFromCenterNormalized(line.A)))];
+            List<HitTestResult> listObjects = [.. locView.GetLocations(line).Where(o => !HiddenStructureTypes.IsHidden(o)).Select(o => new HitTestResult(o, (int)o.Z, o.VisualHeight, o.DistanceFromCenterNormalized(line.A)))];
             return listObjects;
         }
 
@@ -3029,9 +3029,9 @@ break;
             ISet<long>? hiddenStructures = (_Parent.CurrentCommand as AnnotationOverlayPenFreeDrawCommandV2)?.HiddenStructureIDs;
 
             ICollection<LocationCanvasView> Locations = currentSectionAnnotations.GetLocations(scene.VisibleWorldBounds);
-            List<LocationCanvasView> listLocationsToDraw = hiddenAnnotations.VisibleToDraw(HiddenStructures.ExcludeLocations(FindVisibleLocations(Locations, scene), hiddenStructures));
+            List<LocationCanvasView> listLocationsToDraw = hiddenAnnotations.VisibleToDraw(HiddenStructureTypes.ExcludeLocations(HiddenStructures.ExcludeLocations(FindVisibleLocations(Locations, scene), hiddenStructures)));
             ICollection<LocationCanvasView> RefLocations = currentSectionAnnotations.AdjacentLocationsNotOverlappedInRegion(Bounds);
-            List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = HiddenStructures.ExcludeLocations(FindVisibleAdjacentLocations(RefLocations, scene), hiddenStructures); //Find the locations on the adjacent sections
+            List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = HiddenStructureTypes.ExcludeLocations(HiddenStructures.ExcludeLocations(FindVisibleAdjacentLocations(RefLocations, scene), hiddenStructures)); //Find the locations on the adjacent sections
 
             //Draw all of the locations on the current section
             //An annotation Del hid fades back in over the end of its hide time; scale its alpha for this draw only.
@@ -3050,10 +3050,11 @@ break;
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, StartingStencilValue);
 
             //Get all the lines to draw first so the text and geometric shapes are over top of them
-            LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, HiddenStructures.ExcludeLocationLinks(
+            LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, HiddenStructureTypes.ExcludeLocationLinks(HiddenStructures.ExcludeLocationLinks(
                 currentSectionAnnotations.NonOverlappedLocationLinksInRegion(scene.VisibleWorldBounds),
                 hiddenStructures,
-                locationId => Store.Locations.GetObjectByID(locationId, false)?.ParentID));
+                locationId => Store.Locations.GetObjectByID(locationId, false)?.ParentID),
+                locationId => Store.Locations.GetObjectByID(locationId, false)?.Parent?.TypeID));
 
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, 1, 0);
 
@@ -3078,7 +3079,9 @@ break;
             //Draw structure links over any annotations
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
-            List<StructureLinkViewModelBase> VisibleStructureLinks = HiddenStructures.ExcludeStructureLinks(currentSectionAnnotations.VisibleStructureLinks(scene), hiddenStructures);
+            List<StructureLinkViewModelBase> VisibleStructureLinks = HiddenStructureTypes.ExcludeStructureLinks(
+                HiddenStructures.ExcludeStructureLinks(currentSectionAnnotations.VisibleStructureLinks(scene), hiddenStructures),
+                structureId => Store.Structures.GetObjectByID(structureId, false)?.TypeID);
             StructureLinkCirclesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, [.. VisibleStructureLinks.Where(l => l as StructureLinkCirclesView != null).Cast<StructureLinkCirclesView>()]);
             StructureLinkCurvesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, [.. VisibleStructureLinks.Where(l => l as StructureLinkCurvesView != null).Cast<StructureLinkCurvesView>()]);
 
