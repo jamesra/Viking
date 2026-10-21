@@ -1222,7 +1222,7 @@ namespace Viking.UI.Controls
             {
                 string path = ExportPath + S.VolumeViewModel.Name + "/" + S.Number.ToString("D3") + "/Tiles/" + Downsample.ToString("D3") + "/";
 
-                System.IO.DirectoryInfo dirInfo = System.IO.Directory.Exists(path) == false ? System.IO.Directory.CreateDirectory(path) : new System.IO.DirectoryInfo(path);
+                System.IO.DirectoryInfo dirInfo = System.IO.Directory.CreateDirectory(path);
                 dirInfo.Attributes &= ~System.IO.FileAttributes.ReadOnly;
 
                 //Get the boundaries of the exported section S, not the section on screen; this runs off the UI thread,
