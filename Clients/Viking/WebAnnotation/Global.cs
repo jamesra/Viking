@@ -177,6 +177,7 @@ namespace WebAnnotation
                 Properties.Settings.UpgradeFromPreviousVersionIfNeeded();
                 CircleView.SmallestRenderedSizeAccessor = () => SmallestRenderedSize;
                 LocationCanvasView.SmallestRenderedSizeAccessor = () => SmallestRenderedSize;
+                VikingXNAGraphics.LabelView.OutlineStyleAccessor = () => LabelOutline;
             }
 
             private const int MIN_SECTIONS_IN_MEMORY = 1;
@@ -402,6 +403,36 @@ namespace WebAnnotation
                     Properties.Settings.Default.Save();
                 }
             }
+
+            /// <summary>Whether annotation text is drawn with a thin outline for readability.</summary>
+            public static bool LabelOutlineEnabled
+            {
+                get => Properties.Settings.Default.LabelOutlineEnabled;
+                set
+                {
+                    Properties.Settings.Default.LabelOutlineEnabled = value;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>False outlines black text in white; true draws white text with a black outline.</summary>
+            public static bool LabelOutlineWhiteText
+            {
+                get => Properties.Settings.Default.LabelOutlineWhiteText;
+                set
+                {
+                    Properties.Settings.Default.LabelOutlineWhiteText = value;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>The outline style the label drawing code reads: off, or one of the two color choices.</summary>
+            public static VikingXNAGraphics.LabelOutlineStyle LabelOutline =>
+                !LabelOutlineEnabled
+                    ? VikingXNAGraphics.LabelOutlineStyle.Off
+                    : LabelOutlineWhiteText
+                        ? VikingXNAGraphics.LabelOutlineStyle.WhiteTextBlackOutline
+                        : VikingXNAGraphics.LabelOutlineStyle.BlackTextWhiteOutline;
 
             /// <summary>Shortest accepted <see cref="HideAnnotationSeconds"/>.</summary>
             public const int MIN_HIDE_ANNOTATION_SECONDS = 1;
@@ -1120,6 +1151,8 @@ namespace WebAnnotation
                 Properties.Settings.Default.LocationLinkWaistPixels = DEFAULT_LOCATION_LINK_WAIST_PIXELS;
                 Properties.Settings.Default.LocationLinkDrawUnderMarkers = false;
                 Properties.Settings.Default.HideAnnotationSeconds = DEFAULT_HIDE_ANNOTATION_SECONDS;
+                Properties.Settings.Default.LabelOutlineEnabled = true;
+                Properties.Settings.Default.LabelOutlineWhiteText = false;
                 Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = 3;
                 Properties.Settings.Default.PenSimplifyThreshold = 3;
                 Properties.Settings.Default.MinRadius = 0.5;

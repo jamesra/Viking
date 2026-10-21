@@ -312,6 +312,29 @@
                                    TextWrapping="Wrap"
                                    Text="Also draws each link under its two location markers as a round end the size of each marker. Off draws nothing under the markers."/>
 
+                        <!-- Label Outline -->
+                        <CheckBox IsChecked="{Binding LabelOutlineEnabled, Mode=TwoWay}"
+                                  Content="Outline annotation text"
+                                  VerticalContentAlignment="Center"/>
+                        <Grid IsEnabled="{Binding LabelOutlineEnabled}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="220"/>
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Column="0" Content="Outline colors:" Margin="20,0,0,0"/>
+                            <ComboBox Grid.Column="1"
+                                      SelectedIndex="{Binding LabelOutlineColorChoice, Mode=TwoWay}"
+                                      Margin="5">
+                                <ComboBoxItem Content="Black text, white outline"/>
+                                <ComboBoxItem Content="White text, black outline"/>
+                            </ComboBox>
+                        </Grid>
+                        <TextBlock Margin="10,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Draws a thin outline around annotation text so it stays readable over both light and dark images."/>
+
                         <!-- Hide Annotation Seconds -->
                         <Grid>
                             <Grid.ColumnDefinitions>

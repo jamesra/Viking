@@ -23,6 +23,8 @@ namespace WebAnnotation.WPF.Forms
         private int _originalLocationLinkWaistPixels;
         private bool _originalLocationLinkDrawUnderMarkers;
         private int _originalHideAnnotationSeconds;
+        private bool _originalLabelOutlineEnabled = true;
+        private bool _originalLabelOutlineWhiteText;
         private uint _originalNumClosedCurveInterpolationPointsForDisplay;
         private int _originalPenSimplifyThreshold;
         private double _originalMinRadius;
@@ -185,6 +187,46 @@ namespace WebAnnotation.WPF.Forms
                     OnPropertyChanged();
                 }
             }
+        }
+
+        private bool _labelOutlineEnabled = true;
+
+        /// <summary>Draws annotation text with a thin outline so it stays readable over light and dark images.</summary>
+        public bool LabelOutlineEnabled
+        {
+            get => _labelOutlineEnabled;
+            set
+            {
+                if (_labelOutlineEnabled != value)
+                {
+                    _labelOutlineEnabled = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _labelOutlineWhiteText;
+
+        /// <summary>False outlines black text in white. True draws white text with a black outline.</summary>
+        public bool LabelOutlineWhiteText
+        {
+            get => _labelOutlineWhiteText;
+            set
+            {
+                if (_labelOutlineWhiteText != value)
+                {
+                    _labelOutlineWhiteText = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(LabelOutlineColorChoice));
+                }
+            }
+        }
+
+        /// <summary>The outline color combo box position: 0 is black text with a white outline, 1 is white text with a black outline.</summary>
+        public int LabelOutlineColorChoice
+        {
+            get => _labelOutlineWhiteText ? 1 : 0;
+            set => LabelOutlineWhiteText = value == 1;
         }
 
         /// <summary>Starting <see cref="HideAnnotationSeconds"/>; matches WebAnnotation's stored default.</summary>
@@ -951,7 +993,9 @@ namespace WebAnnotation.WPF.Forms
             int locationLinkWaistPixels = DefaultLocationLinkWaistPixels,
             bool locationLinkDrawUnderMarkers = false,
             AutoPolygonizeShimmerStyle autoPolygonizeShimmerStyle = DefaultAutoPolygonizeShimmerStyle,
-            int hideAnnotationSeconds = DefaultHideAnnotationSeconds)
+            int hideAnnotationSeconds = DefaultHideAnnotationSeconds,
+            bool labelOutlineEnabled = true,
+            bool labelOutlineWhiteText = false)
         {
             _polygonPointOpacity = _originalPolygonPointOpacity = polygonPointOpacity;
             _hidePolygonPointsInPenMode = _originalHidePolygonPointsInPenMode = hidePolygonPointsInPenMode;
@@ -1000,6 +1044,8 @@ namespace WebAnnotation.WPF.Forms
             _originalLocationLinkWaistPixels = locationLinkWaistPixels;
             _originalLocationLinkDrawUnderMarkers = locationLinkDrawUnderMarkers;
             _originalHideAnnotationSeconds = hideAnnotationSeconds;
+            _originalLabelOutlineEnabled = labelOutlineEnabled;
+            _originalLabelOutlineWhiteText = labelOutlineWhiteText;
             _originalNumClosedCurveInterpolationPointsForDisplay = numClosedCurveInterpolationPointsForDisplay;
             _originalPenSimplifyThreshold = penSimplifyThreshold;
             _originalMinRadius = minRadius;
@@ -1069,6 +1115,8 @@ namespace WebAnnotation.WPF.Forms
             LocationLinkWaistPixels = locationLinkWaistPixels;
             LocationLinkDrawUnderMarkers = locationLinkDrawUnderMarkers;
             HideAnnotationSeconds = hideAnnotationSeconds;
+            LabelOutlineEnabled = labelOutlineEnabled;
+            LabelOutlineWhiteText = labelOutlineWhiteText;
             CorrectionShimEnabled = correctionShimEnabled;
             CorrectionShimShowOffset = correctionShimShowOffset;
             CorrectionShimFadeStartDownsample = correctionShimFadeStartDownsample;
@@ -1093,6 +1141,8 @@ namespace WebAnnotation.WPF.Forms
             _originalLocationLinkWaistPixels = _locationLinkWaistPixels;
             _originalLocationLinkDrawUnderMarkers = _locationLinkDrawUnderMarkers;
             _originalHideAnnotationSeconds = _hideAnnotationSeconds;
+            _originalLabelOutlineEnabled = _labelOutlineEnabled;
+            _originalLabelOutlineWhiteText = _labelOutlineWhiteText;
             _originalNumClosedCurveInterpolationPointsForDisplay = _numClosedCurveInterpolationPointsForDisplay;
             _originalPenSimplifyThreshold = _penSimplifyThreshold;
             _originalMinRadius = _minRadius;
@@ -1141,6 +1191,8 @@ namespace WebAnnotation.WPF.Forms
             _locationLinkWaistPixels = _originalLocationLinkWaistPixels;
             _locationLinkDrawUnderMarkers = _originalLocationLinkDrawUnderMarkers;
             _hideAnnotationSeconds = _originalHideAnnotationSeconds;
+            _labelOutlineEnabled = _originalLabelOutlineEnabled;
+            _labelOutlineWhiteText = _originalLabelOutlineWhiteText;
             _numClosedCurveInterpolationPointsForDisplay = _originalNumClosedCurveInterpolationPointsForDisplay;
             _penSimplifyThreshold = _originalPenSimplifyThreshold;
             _minRadius = _originalMinRadius;
@@ -1191,6 +1243,8 @@ namespace WebAnnotation.WPF.Forms
             _locationLinkWaistPixels = DefaultLocationLinkWaistPixels;
             _locationLinkDrawUnderMarkers = false;
             _hideAnnotationSeconds = DefaultHideAnnotationSeconds;
+            _labelOutlineEnabled = true;
+            _labelOutlineWhiteText = false;
             _numClosedCurveInterpolationPointsForDisplay = 3;
             _penSimplifyThreshold = 3;
             _minRadius = 0.5;

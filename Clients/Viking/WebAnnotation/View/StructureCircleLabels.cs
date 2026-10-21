@@ -117,6 +117,7 @@ namespace WebAnnotation.View
                 StructureIDLabelView = new LabelView(StructureIDLabelWithTypeCode(locationObj.Parent), VolumeCircle.Center - new Geometry.Vector2(0, Height), fontSize: DefaultFontSize)
                 {
                     MaxLineWidth = Circle.WidthAtHeight(Height / Radius) * (Radius * 2.0),
+                    Outlined = true,
                     _Color = locationObj.IsUnverifiedTerminal ? Color.Orange : Color.Black
                 };
             }
@@ -133,6 +134,7 @@ namespace WebAnnotation.View
                     double height = Radius / 2.0f;
                     StructureLabelView = new LabelView(Label, VolumeCircle.Center + new Geometry.Vector2(0, height))
                     {
+                        Outlined = true,
                         MaxLineWidth = Circle.WidthAtHeight(height / Radius) * (Radius * 2.0)
                     };
                 }
@@ -147,6 +149,7 @@ namespace WebAnnotation.View
                     double height = Radius / 4.0f;
                     StructureAttributeView = new LabelView(Tags, VolumeCircle.Center + new Geometry.Vector2(0, height))
                     {
+                        Outlined = true,
                         MaxLineWidth = Circle.WidthAtHeight(height / Radius) * (Radius * 2.0)
                     };
                 }
@@ -157,6 +160,7 @@ namespace WebAnnotation.View
                 double height = Radius / 2.0f;
                 ParentStructureLabelView = new LabelView(locationObj.Parent.ParentID.ToString(), VolumeCircle.Center + new Geometry.Vector2(0, height))
                 {
+                    Outlined = true,
                     _Color = Color.Red, //locationObj.Parent.Parent.Type.Color.ToXNAColor(0.75f);
                     MaxLineWidth = Circle.WidthAtHeight(height / Radius) * (Radius * 2.0)
                 };

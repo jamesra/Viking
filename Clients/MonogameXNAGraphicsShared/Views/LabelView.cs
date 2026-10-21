@@ -83,6 +83,67 @@ namespace VikingXNAGraphics
 
         static readonly byte DefaultAlpha = 192;
 
+        /// <summary>
+        /// Set by the application from its preferences: whether and how <see cref="Outlined"/> labels get an outline.
+        /// Read on every draw, so a preference change shows on the next frame.
+        /// </summary>
+        public static Func<LabelOutlineStyle> OutlineStyleAccessor { get; set; } = () => LabelOutlineStyle.Off;
+
+        /// <summary>
+        /// True draws this label with an outline when <see cref="OutlineStyleAccessor"/> asks for one, so the text stays
+        /// readable over both light and dark images. Off for labels that already sit on their own background.
+        /// </summary>
+        public bool Outlined { get; set; }
+
+        /// <summary>Screen-pixel offsets at which the outline copies of the text are drawn, one pixel in each direction.</summary>
+        private static readonly Vector2[] OutlineOffsets =
+        [
+            new(-1, -1), new(0, -1), new(1, -1),
+            new(-1, 0), new(1, 0),
+            new(-1, 1), new(0, 1), new(1, 1),
+        ];
+
+        /// <summary>
+        /// The colors an outlined label is drawn in. The outline keeps the text's alpha.
+        /// <see cref="LabelOutlineStyle.BlackTextWhiteOutline"/> leaves the text as it is and outlines it in white.
+        /// <see cref="LabelOutlineStyle.WhiteTextBlackOutline"/> turns black text white and outlines it in black. Text in
+        /// another color (a flagged annotation's orange, a parent ID's red) keeps its color in both styles, since the
+        /// color carries meaning.
+        /// </summary>
+        public static (Color Text, Color Outline) OutlineColors(Color text, LabelOutlineStyle style)
+        {
+            switch (style)
+            {
+                case LabelOutlineStyle.BlackTextWhiteOutline:
+                    return (text, new Color((byte)255, (byte)255, (byte)255, text.A));
+                case LabelOutlineStyle.WhiteTextBlackOutline:
+                    Color recolored = text.R == 0 && text.G == 0 && text.B == 0 ? new Color((byte)255, (byte)255, (byte)255, text.A) : text;
+                    return (recolored, new Color((byte)0, (byte)0, (byte)0, text.A));
+                default:
+                    return (text, text);
+            }
+        }
+
+        /// <summary>The outline style for this label right now, <see cref="LabelOutlineStyle.Off"/> unless it is <see cref="Outlined"/>.</summary>
+        private LabelOutlineStyle CurrentOutlineStyle => Outlined ? OutlineStyleAccessor() : LabelOutlineStyle.Off;
+
+        /// <summary>Draws one row of text, with its outline first when this label is outlined.</summary>
+        private void DrawRow(SpriteBatch spriteBatch, SpriteFont font, string row, Vector2 position, Vector2 origin, float fontScale)
+        {
+            LabelOutlineStyle style = CurrentOutlineStyle;
+            if (style == LabelOutlineStyle.Off)
+            {
+                spriteBatch.DrawString(font, row, position, this._Color, this.Rotation, origin, fontScale, SpriteEffects.None, 0);
+                return;
+            }
+
+            (Color text, Color outline) = OutlineColors(this._Color, style);
+            foreach (Vector2 offset in OutlineOffsets)
+                spriteBatch.DrawString(font, row, position + offset, outline, this.Rotation, origin, fontScale, SpriteEffects.None, 0);
+
+            spriteBatch.DrawString(font, row, position, text, this.Rotation, origin, fontScale, SpriteEffects.None, 0);
+        }
+
         public Microsoft.Xna.Framework.Color _Color = new((byte)(0),
                                                                                     (byte)(0),
                                                                                     (byte)(0),
@@ -760,6 +821,13 @@ namespace VikingXNAGraphics
         /// <param name="device">GraphicsDevice (for texture generation)</param>
         /// <param name="screenPosition">Screen-space position to draw at</param>
         /// <param name="drawScale">Scale factor at draw time (e.g. 1.0 to 2.0). Texture is drawn at base size * drawScale without regenerating.</param>
+        /// <summary>SpriteBatch uses premultiplied alpha blending, so a tint must be premultiplied for its opacity to work.</summary>
+        private static Color Premultiply(Color color) => new(
+            (byte)(color.R * color.A / 255),
+            (byte)(color.G * color.A / 255),
+            (byte)(color.B * color.A / 255),
+            color.A);
+
         public void DrawWithTexture(SpriteBatch spriteBatch, SpriteFont font, GraphicsDevice device, Vector2 screenPosition, float drawScale = 1.0f)
         {
             if (string.IsNullOrEmpty(this.Text) || font == null)
@@ -799,8 +867,7 @@ namespace VikingXNAGraphics
                         screenPosition.X - maxWidth / 2.0f,
                         yPos
                     );
-                    spriteBatch.DrawString(font, _Rows[iRow], drawPos, this._Color, 
-                        this.Rotation, Vector2.Zero, fontScale, SpriteEffects.None, 0);
+                    DrawRow(spriteBatch, font, _Rows[iRow], drawPos, Vector2.Zero, fontScale);
                     yPos += rowMeasurement.Y;
                 }
             }
@@ -818,13 +885,21 @@ namespace VikingXNAGraphics
                 );
 
                 var destRect = new Microsoft.Xna.Framework.Rectangle((int)drawPos.X, (int)drawPos.Y, (int)textureWidth, (int)textureHeight);
-                byte a = this._Color.A;
-                Color premultiplied = new Color(
-                    (byte)(this._Color.R * a / 255),
-                    (byte)(this._Color.G * a / 255),
-                    (byte)(this._Color.B * a / 255),
-                    a);
-                spriteBatch.Draw(texture, destRect, null, premultiplied);
+                LabelOutlineStyle style = CurrentOutlineStyle;
+                Color textColor = this._Color;
+                if (style != LabelOutlineStyle.Off)
+                {
+                    (textColor, Color outlineColor) = OutlineColors(this._Color, style);
+                    Color premultipliedOutline = Premultiply(outlineColor);
+                    foreach (Vector2 offset in OutlineOffsets)
+                    {
+                        Microsoft.Xna.Framework.Rectangle shifted = destRect;
+                        shifted.Offset((int)offset.X, (int)offset.Y);
+                        spriteBatch.Draw(texture, shifted, null, premultipliedOutline);
+                    }
+                }
+
+                spriteBatch.Draw(texture, destRect, null, Premultiply(textColor));
             }
         }
 
@@ -887,15 +962,8 @@ namespace VikingXNAGraphics
                 DrawPosition.Y += LineStep * iRow;
                 Vector2 origin = AlignmentAdjustmentForRow(_RowMeasurements[iRow], bounds, max_row_size, Alignment);
 
-                spriteBatch.DrawString(font,
-                                       _Rows[iRow],
-                                       DrawPosition,
-                                       this._Color,
-                                       this.Rotation,
-                                       origin, //_RowMeasurements[iRow] / 2.0f, //The string is centered on the drawing position, instead of starting at the top left
-                                       fontScale,
-                                       SpriteEffects.None,
-                                       0);
+                //The string is centered on the drawing position, instead of starting at the top left
+                DrawRow(spriteBatch, font, _Rows[iRow], DrawPosition, origin, fontScale);
             }
         }
 

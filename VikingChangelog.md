@@ -7,6 +7,10 @@ Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Docum
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
+## 1.2.115 - unreleased
+
+* Annotation text (structure ID, tags, parent ID) is drawn with a thin white outline so it stays readable over both light and dark images. In Annotation Preferences, **Outline annotation text** turns it on or off, and **Outline colors** switches between black text with a white outline (the default) and white text with a black outline. Text in another color, such as the orange of an unverified terminal, keeps its color.
+
 ## 1.2.114 — 2026-10-20 (Viking Test, unsigned)
 
 * An annotation hidden with Del now fades back in over the last 5% of its hide time (1.5 s of the default 30 s) before it can be clicked again, so you can see it return. `Insert` starts the same fade immediately.
