@@ -442,7 +442,11 @@ namespace WebAnnotationModel
 
         IStructureTypeReadOnly IStructureReadOnly.Type => this.Type;
 
-        public string TagsXML => this.TagsXML;
+        /// <summary>
+        /// The structure's attributes as the raw XML the server sent, the same text <see cref="Attributes"/> parses.
+        /// Null when the structure has no attributes, matching the WCF structure adapter.
+        /// </summary>
+        public string TagsXML => Data.AttributesXml;
 
         protected override StructureObj OnMissingParent() => Store.Structures.GetObjectByID(ParentID.Value, true);
 

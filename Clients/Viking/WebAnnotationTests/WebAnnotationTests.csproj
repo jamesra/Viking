@@ -64,6 +64,7 @@
         <Compile Include="HiddenStructuresTests.cs" />
         <Compile Include="ObjAttributeTests.cs" />
         <Compile Include="StructureLinkKeyTests.cs" />
+        <Compile Include="StructureObjTagsXmlTests.cs" />
         <Compile Include="StructureTypeObjColorTests.cs" />
         <Compile Include="PermittedStructureLinkSaveQueueTests.cs" />
         <Compile Include="PenInteractionLogExtensionsTests.cs" />
