@@ -28,7 +28,8 @@ namespace Viking.Identity.Server.Extensions.Services
             if (resourceTypeId != null)
                 resourceTypes = new string[] { resourceTypeId };
 
-            if (resourceTypeId == nameof(AnnotationContext))
+            // Contexts are listed only through Access, whatever the caller's spelling of the type name.
+            if (string.Equals(resourceTypeId, nameof(AnnotationContext), StringComparison.OrdinalIgnoreCase))
                 return await VolumesWithPermissionsAsync(await _context.UserAnnotationContextPermissionsAsync(userId));
 
             var userPermittedResources = await _context.UserResourcePermissionsByType(userId, resourceTypes);
@@ -54,14 +55,13 @@ namespace Viking.Identity.Server.Extensions.Services
 
         public async Task<List<UserResourcePermissions>> GetUserPermissionsAsync(string userId)
         {
+            // Annotation contexts are left out of the grant query on purpose: a context the user holds some grant on
+            // but not Access (a leftover data right, say) must not be sent to the client. They are added below, and
+            // only through Access.
             var resourceTypeIds = await _context.ResourceTypes
+                .Where(rt => rt.Id != nameof(AnnotationContext))
                 .Select(rt => rt.Id)
                 .ToArrayAsync();
-
-            if (resourceTypeIds.Length == 0)
-            {
-                return new List<UserResourcePermissions>();
-            }
 
             var userPermittedResources = await _context.UserResourcePermissionsByType(userId, resourceTypeIds);
 

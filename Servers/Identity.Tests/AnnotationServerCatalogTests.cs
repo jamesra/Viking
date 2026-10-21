@@ -328,6 +328,38 @@ namespace TestIdentityModel
         }
 
         [Fact]
+        public async Task ContextsWithoutAccess_AreSentByNoListingTheClientCanCall()
+        {
+            await using var db = CatalogDb.Create();
+            var (server, hidden, shown) = await CatalogDb.AddSharedServerAsync(db);
+            var userId = db.CreateUser("mixed", "x");
+            await db.SaveChangesAsync();
+            db.GrantedUserPermissions.Add(Grant(server.Id, "Read", userId));
+            db.GrantedUserPermissions.Add(Grant(hidden.Id, "Annotate", userId)); // a leftover data right, but no Access
+            db.GrantedUserPermissions.Add(Grant(shown.Id, "Access", userId));
+            await db.SaveChangesAsync();
+            var service = new PermissionService(db, Microsoft.Extensions.Logging.Abstractions.NullLogger<PermissionService>.Instance, new NoDebugLogging());
+
+            var everything = await service.GetUserPermissionsAsync(userId);
+            Assert.Equal(new[] { shown.Id }, everything.Where(p => p.ResourceType == nameof(AnnotationContext)).Select(p => p.Id));
+
+            Assert.Equal(new[] { shown.Id }, (await service.GetUserAccessibleAnnotationContextsAsync(userId)).Keys);
+            Assert.Equal(new[] { shown.Id }, (await service.GetUserPermissionsByTypeAsync(userId, "annotationcontext")).Keys);
+
+            var treeIds = new List<long>();
+            void Collect(IEnumerable<VolumeTreeNode> nodes)
+            {
+                foreach (var node in nodes)
+                {
+                    treeIds.AddRange(node.Volumes.Select(v => v.Id));
+                    Collect(node.Children);
+                }
+            }
+            Collect(await service.GetUserAccessibleVolumeTreeAsync(userId));
+            Assert.Equal(new[] { shown.Id }, treeIds);
+        }
+
+        [Fact]
         public async Task DataRightsGrantedOnAContext_AreIgnored()
         {
             await using var db = CatalogDb.Create();
