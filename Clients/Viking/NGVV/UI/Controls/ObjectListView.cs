@@ -171,14 +171,6 @@ namespace Viking.UI.BaseClasses
             set => DisplayObjects(value);
         }
 
-        public void SelectObject(object Object)
-        {
-            foreach (ListViewItem Item in this.Items)
-            {
-                Item.Selected = Item.Tag.Equals(Object) == true;
-            }
-        }
-
         protected ListViewItem ItemForObject(object Object)
         {
             foreach (ListViewItem Item in this.Items)
@@ -743,20 +735,6 @@ namespace Viking.UI.BaseClasses
                 return key.ToString();
             }
         }
-        #region Public Methods
-
-        /// <summary>
-        /// Returns true if the ListView contains the provided object. Otherwise false.
-        /// </summary>
-        /// <param name="Obj"></param>
-        /// <returns></returns>
-        public bool ContainsObj(object Obj) => ItemForObject(Obj) != null;
-
-
-        public void ExportToExcel() => throw new NotImplementedException("Coming soon");//PlantMap.Utils.OfficeDocExporter.ToExcel(this);
-
-
-        #endregion
 
         protected void parentForm_Closing(object sender, CancelEventArgs e)
         {
