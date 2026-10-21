@@ -1,11 +1,16 @@
 # Viking changelog
 
-Committed application version: **1.2.115.0**  
+Committed application version: **1.2.116.0**  
 (1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109; their changes are listed under 1.2.109.)
 
 Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Documentation/source/Client/versionhistory.rst).
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
+
+## 1.2.116 — 2026-10-20 (Viking Test, unsigned)
+
+* `Del` and `Insert` now also hide and bring back the auto-segmentation ring under the mouse (the ring is checked first, then the annotation). A hidden ring stays hidden for the Hide annotation time, then fades back in before it can be clicked again.
+* Closing Viking no longer waits on segmentation or section-correction requests that are still running; they are cancelled when the window closes. If closing still stalls for 3 seconds, Viking writes a dump of the stuck process before it exits.
 
 ## 1.2.115 — 2026-10-20 (Viking Test, unsigned)
 
