@@ -1606,8 +1606,8 @@ break;
                 "F11: Open goto structure ID dialog",
                 "SHIFT + F8: Send the circles in view to auto-polygonize again",
                 "Numpad * or SHIFT + 8: Toggle Pen Mode",
-                "DEL: Hide the annotation under the mouse on this section for a while, to reach one beneath it",
-                "INSERT: Bring back the hidden annotation under the mouse"
+                "DEL: Hide the annotation under the mouse on this section for a while (time is in Annotation Preferences) to reach one beneath it; it fades back in",
+                "INSERT: Bring back the hidden annotation under the mouse now"
             };
         }
 
@@ -1883,15 +1883,15 @@ break;
             return true;
         }
 
-        /// <summary>Redraws the viewer when the next hidden annotation's time runs out, so it reappears without a mouse move.</summary>
+        /// <summary>Redraws the viewer as a hidden annotation starts and finishes fading back in, so it reappears without a mouse move.</summary>
         private void ScheduleHiddenAnnotationRedraw()
         {
             int generation = Interlocked.Increment(ref hiddenAnnotationRedrawGeneration);
-            TimeSpan? wait = hiddenAnnotations.TimeUntilNextExpiry();
+            TimeSpan? wait = hiddenAnnotations.TimeUntilNextRedraw();
             if (wait is null)
                 return;
 
-            Task.Delay(wait.Value + TimeSpan.FromMilliseconds(50)).ContinueWith(_ =>
+            Task.Delay(wait.Value).ContinueWith(_ =>
             {
                 if (_isShutdown || generation != Volatile.Read(ref hiddenAnnotationRedrawGeneration))
                     return;
@@ -3000,12 +3000,16 @@ break;
             ISet<long>? hiddenStructures = (_Parent.CurrentCommand as AnnotationOverlayPenFreeDrawCommandV2)?.HiddenStructureIDs;
 
             ICollection<LocationCanvasView> Locations = currentSectionAnnotations.GetLocations(scene.VisibleWorldBounds);
-            List<LocationCanvasView> listLocationsToDraw = hiddenAnnotations.Exclude(HiddenStructures.ExcludeLocations(FindVisibleLocations(Locations, scene), hiddenStructures));
+            List<LocationCanvasView> listLocationsToDraw = hiddenAnnotations.VisibleToDraw(HiddenStructures.ExcludeLocations(FindVisibleLocations(Locations, scene), hiddenStructures));
             ICollection<LocationCanvasView> RefLocations = currentSectionAnnotations.AdjacentLocationsNotOverlappedInRegion(Bounds);
             List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = HiddenStructures.ExcludeLocations(FindVisibleAdjacentLocations(RefLocations, scene), hiddenStructures); //Find the locations on the adjacent sections
 
             //Draw all of the locations on the current section
-            WebAnnotation.LocationObjRenderer.DrawBackgrounds(listLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, Parent.LumaOverlayCurveManager, scene, SectionNumber);
+            //An annotation Del hid fades back in over the end of its hide time; scale its alpha for this draw only.
+            using (hiddenAnnotations.ApplyFade(listLocationsToDraw))
+            {
+                WebAnnotation.LocationObjRenderer.DrawBackgrounds(listLocationsToDraw, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, Parent.LumaOverlayCurveManager, scene, SectionNumber);
+            }
 
             nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1; //Record the next open stencil value for later draw calls that can overwrite the backgrounds
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);

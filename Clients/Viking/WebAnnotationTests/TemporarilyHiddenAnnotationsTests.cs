@@ -4,6 +4,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.Serialization;
 using System.Windows.Forms;
 using WebAnnotation;
 using WebAnnotation.UI;
@@ -54,28 +56,88 @@ namespace WebAnnotationTests
         }
 
         [TestMethod]
-        public void RestoreBringsBackOnlyAHiddenAnnotation()
+        public void RestoreOnlyAffectsAHiddenAnnotationAndFadesItInBeforeItIsClickable()
         {
             TemporarilyHiddenAnnotations hidden = Create();
             hidden.Hide(5, TimeSpan.FromSeconds(30));
 
             Assert.IsFalse(hidden.Restore(6), "6 was never hidden");
             Assert.IsTrue(hidden.Restore(5));
-            Assert.IsFalse(hidden.IsHidden(5));
+            Assert.IsTrue(hidden.IsHidden(5), "not clickable while it fades in");
+            Assert.AreEqual(0f, hidden.FadeIn(5), 1e-6, "fade starts from invisible");
+
+            now += TimeSpan.FromSeconds(1.4);
+            Assert.IsTrue(hidden.IsHidden(5));
+            now += TimeSpan.FromSeconds(0.2);
+            Assert.IsFalse(hidden.IsHidden(5), "clickable once the 1.5 s fade is done");
             Assert.IsFalse(hidden.Restore(5), "already restored");
         }
 
         [TestMethod]
-        public void NextExpiryIsTheSoonestOfTheHiddenAnnotations()
+        public void AnnotationIsInvisibleUntilTheLastFivePercentOfTheHideTime()
         {
             TemporarilyHiddenAnnotations hidden = Create();
-            Assert.IsNull(hidden.TimeUntilNextExpiry());
+            hidden.Hide(5, TimeSpan.FromSeconds(30));
+
+            Assert.AreEqual(1f, hidden.FadeIn(7), "an annotation that is not hidden is fully opaque");
+            now += TimeSpan.FromSeconds(28.5);
+            Assert.AreEqual(0f, hidden.FadeIn(5), "the fade starts at 95%, from invisible");
+            now += TimeSpan.FromSeconds(0.75);
+            Assert.AreEqual(Math.Sin(Math.PI / 4), hidden.FadeIn(5), 1e-4, "halfway through the fade is sin(45 degrees)");
+            now += TimeSpan.FromSeconds(0.7499);
+            Assert.AreEqual(1.0, hidden.FadeIn(5), 1e-3, "nearly the whole quarter wave: almost fully opaque");
+            now += TimeSpan.FromSeconds(0.01);
+            Assert.AreEqual(1f, hidden.FadeIn(5), "back to normal once it is clickable");
+        }
+
+        [TestMethod]
+        public void TheFadeRisesAlongAQuarterSineWave()
+        {
+            TemporarilyHiddenAnnotations hidden = Create();
+            hidden.Hide(5, TimeSpan.FromSeconds(100));
+            now += TimeSpan.FromSeconds(95);
+
+            float previous = 0f;
+            for (int step = 1; step <= 10; step++)
+            {
+                now += TimeSpan.FromSeconds(0.45);
+                float fade = hidden.FadeIn(5);
+                Assert.AreEqual(Math.Sin(step / 11.1111111 * Math.PI / 2), fade, 1e-2);
+                Assert.IsTrue(fade > previous, "rising");
+                previous = fade;
+            }
+        }
+
+        [TestMethod]
+        public void RedrawIsDueWhenTheFadeStartsThenEveryFrameUntilItEnds()
+        {
+            TemporarilyHiddenAnnotations hidden = Create();
+            Assert.IsNull(hidden.TimeUntilNextRedraw());
 
             hidden.Hide(1, TimeSpan.FromSeconds(30));
-            now += TimeSpan.FromSeconds(10);
-            hidden.Hide(2, TimeSpan.FromSeconds(30));
+            Assert.AreEqual(TimeSpan.FromSeconds(28.5), hidden.TimeUntilNextRedraw());
 
-            Assert.AreEqual(TimeSpan.FromSeconds(20), hidden.TimeUntilNextExpiry());
+            now += TimeSpan.FromSeconds(28.5);
+            Assert.AreEqual(TemporarilyHiddenAnnotations.FadeFrameInterval, hidden.TimeUntilNextRedraw());
+
+            now += TimeSpan.FromSeconds(1.49);
+            Assert.IsTrue(hidden.TimeUntilNextRedraw() < TemporarilyHiddenAnnotations.FadeFrameInterval, "one last frame after the fade ends");
+        }
+
+        [TestMethod]
+        public void AViewWithoutAlphaAppearsHalfwayThroughTheFade()
+        {
+            TemporarilyHiddenAnnotations hidden = Create();
+            StubLine line = Line(1, Section);
+            hidden.Hide(1, TimeSpan.FromSeconds(30));
+
+            Assert.AreEqual(0, hidden.VisibleToDraw([line]).Count, "invisible before the fade");
+            now += TimeSpan.FromSeconds(28.5 + 0.2);
+            Assert.AreEqual(0, hidden.VisibleToDraw([line]).Count, "sin is still under 0.5");
+            now += TimeSpan.FromSeconds(0.4);
+            Assert.AreEqual(1, hidden.VisibleToDraw([line]).Count, "sin passes 0.5 a third of the way through the fade");
+            now += TimeSpan.FromSeconds(2);
+            Assert.AreEqual(1, hidden.VisibleToDraw([line]).Count, "visible after it is back");
         }
 
         [TestMethod]
@@ -154,11 +216,23 @@ namespace WebAnnotationTests
 
         private static HitTestResult Hit(StubLine view, double distance) => new(view, (int)view.Z, 0, distance);
 
-        private static StubLine Line(long id, int section) =>
-            new(new LocationObj(new Location { ID = id, ParentID = id, Position = new AnnotationPoint(0, 0, section) }));
-
-        private sealed class StubLine(LocationObj obj) : LocationLineViewBase(obj, null!)
+        /// <summary>
+        /// A line view that skips the constructor (which needs a real shape and transform) and only knows its location,
+        /// which is all the ID and Z the hit ranking reads.
+        /// </summary>
+        private static StubLine Line(long id, int section)
         {
+            StubLine view = (StubLine)FormatterServices.GetUninitializedObject(typeof(StubLine));
+            FieldInfo field = typeof(LocationCanvasView).GetField("modelObj", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(field);
+            field.SetValue(view, new LocationObj(new Location { ID = id, ParentID = id, Position = new AnnotationPoint(0, 0, section) }));
+            return view;
+        }
+
+        private sealed class StubLine : LocationLineViewBase
+        {
+            public StubLine() : base(null!, null!) { }
+
             public override double LineWidth => 2;
             public override double ControlPointRadius => 1;
             public override SqlGeometry VolumeShapeAsRendered => throw new NotSupportedException();

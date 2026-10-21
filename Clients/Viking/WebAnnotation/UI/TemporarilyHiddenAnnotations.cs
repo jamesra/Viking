@@ -8,12 +8,22 @@ namespace WebAnnotation.UI
     /// <summary>
     /// Annotations on the section being viewed that the user hid with Del for a while, so an annotation beneath them
     /// (usually one from an adjacent section) can be reached. A hidden annotation is neither drawn nor hit-tested until
-    /// its time runs out or Insert restores it. Thread-safe: drawing, mouse handling and the expiry timer all read it.
+    /// its time runs out or Insert restores it. During the last <see cref="FadeFraction"/> of the time it fades back in
+    /// (a quarter sine wave, from invisible to fully opaque) but is still not clickable, so the user sees it return before
+    /// it can be picked. Thread-safe: drawing, mouse handling and the redraw timer all read it.
     /// </summary>
     internal sealed class TemporarilyHiddenAnnotations(Func<DateTime> utcNow)
     {
+        /// <summary>Share of the hide time, at its end, spent fading the annotation back in.</summary>
+        public const double FadeFraction = 0.05;
+
+        /// <summary>How often the viewer redraws while an annotation fades in.</summary>
+        public static readonly TimeSpan FadeFrameInterval = TimeSpan.FromMilliseconds(33);
+
+        private readonly record struct Entry(DateTime FadeStart, DateTime Expiry, TimeSpan FadeLength);
+
         private readonly object gate = new();
-        private readonly Dictionary<long, DateTime> expiryByLocationId = [];
+        private readonly Dictionary<long, Entry> entryByLocationId = [];
 
         public TemporarilyHiddenAnnotations() : this(() => DateTime.UtcNow)
         {
@@ -27,51 +37,101 @@ namespace WebAnnotation.UI
                 lock (gate)
                 {
                     Prune();
-                    return expiryByLocationId.Count == 0;
+                    return entryByLocationId.Count == 0;
                 }
             }
         }
 
-        /// <summary>Hides <paramref name="locationId"/> for <paramref name="duration"/>, restarting the time if it is already hidden.</summary>
+        /// <summary>
+        /// Hides <paramref name="locationId"/> for <paramref name="duration"/>, restarting the time if it is already hidden.
+        /// It is invisible until the last <see cref="FadeFraction"/> of that time, then fades back in.
+        /// </summary>
         public void Hide(long locationId, TimeSpan duration)
         {
             lock (gate)
             {
-                expiryByLocationId[locationId] = utcNow() + duration;
+                TimeSpan fadeLength = TimeSpan.FromTicks((long)(duration.Ticks * FadeFraction));
+                DateTime expiry = utcNow() + duration;
+                entryByLocationId[locationId] = new Entry(expiry - fadeLength, expiry, fadeLength);
             }
         }
 
-        /// <summary>Brings <paramref name="locationId"/> back now. False when it was not hidden.</summary>
+        /// <summary>
+        /// Starts bringing <paramref name="locationId"/> back now: it fades in over the usual fade length and is clickable
+        /// when that ends. False when it was not hidden. An annotation already fading in is left to finish.
+        /// </summary>
         public bool Restore(long locationId)
         {
             lock (gate)
             {
                 Prune();
-                return expiryByLocationId.Remove(locationId);
-            }
-        }
+                if (!entryByLocationId.TryGetValue(locationId, out Entry entry))
+                    return false;
 
-        /// <summary>True while <paramref name="locationId"/> is hidden and its time has not run out.</summary>
-        public bool IsHidden(long locationId)
-        {
-            lock (gate)
-            {
-                return expiryByLocationId.TryGetValue(locationId, out DateTime expiry) && expiry > utcNow();
+                DateTime now = utcNow();
+                if (now < entry.FadeStart)
+                    entryByLocationId[locationId] = entry with { FadeStart = now, Expiry = now + entry.FadeLength };
+
+                return true;
             }
         }
 
         /// <summary>
-        /// How long until the next hidden annotation reappears, or null when none is hidden. A redraw is due then.
+        /// True while <paramref name="locationId"/> cannot be picked: hidden, or still fading back in. It is clickable again
+        /// when the fade ends.
         /// </summary>
-        public TimeSpan? TimeUntilNextExpiry()
+        public bool IsHidden(long locationId)
+        {
+            lock (gate)
+            {
+                return entryByLocationId.TryGetValue(locationId, out Entry entry) && entry.Expiry > utcNow();
+            }
+        }
+
+        /// <summary>
+        /// How opaque <paramref name="locationId"/> is drawn: 1 when it is not hidden, 0 before its fade starts, then the
+        /// first quarter of a sine wave (0 rising to 1, steepest at the start) over the fade.
+        /// </summary>
+        public float FadeIn(long locationId)
+        {
+            lock (gate)
+            {
+                DateTime now = utcNow();
+                if (!entryByLocationId.TryGetValue(locationId, out Entry entry) || entry.Expiry <= now)
+                    return 1f;
+
+                if (now <= entry.FadeStart)
+                    return 0f;
+
+                double progress = (now - entry.FadeStart).TotalMilliseconds / entry.FadeLength.TotalMilliseconds;
+                return (float)Math.Sin(Math.Min(progress, 1.0) * Math.PI / 2.0);
+            }
+        }
+
+        /// <summary>
+        /// How long until the viewer next needs a redraw because of a hidden annotation, or null when none is hidden:
+        /// the start of the next fade, or one animation frame while any annotation is fading.
+        /// </summary>
+        public TimeSpan? TimeUntilNextRedraw()
         {
             lock (gate)
             {
                 Prune();
-                if (expiryByLocationId.Count == 0)
+                if (entryByLocationId.Count == 0)
                     return null;
 
-                return expiryByLocationId.Values.Min() - utcNow();
+                DateTime now = utcNow();
+                TimeSpan wait = TimeSpan.MaxValue;
+                foreach (Entry entry in entryByLocationId.Values)
+                {
+                    TimeSpan next = now < entry.FadeStart
+                        ? entry.FadeStart - now
+                        : TimeSpan.FromTicks(Math.Min(FadeFrameInterval.Ticks, (entry.Expiry - now).Ticks + TimeSpan.TicksPerMillisecond * 10));
+                    if (next < wait)
+                        wait = next;
+                }
+
+                return wait;
             }
         }
 
@@ -84,13 +144,79 @@ namespace WebAnnotation.UI
             return [.. hits.Where(h => !(h.obj is LocationCanvasView view && IsHidden(view.ID)))];
         }
 
-        /// <summary>The locations that are not hidden.</summary>
-        public List<LocationCanvasView> Exclude(IEnumerable<LocationCanvasView> locations)
+        /// <summary>
+        /// The locations to draw: not hidden, or fading back in. A view without an alpha (a polyline) cannot fade, so it
+        /// appears when the fade is half done.
+        /// </summary>
+        public List<LocationCanvasView> VisibleToDraw(IEnumerable<LocationCanvasView> locations)
         {
             if (IsEmpty)
                 return [.. locations];
 
-            return [.. locations.Where(l => !IsHidden(l.ID))];
+            return [.. locations.Where(l =>
+            {
+                float fade = FadeIn(l.ID);
+                return CanFade(l) ? fade > 0f : fade >= 0.5f;
+            })];
+        }
+
+        /// <summary>
+        /// Scales the alpha of each fading view in <paramref name="locations"/> by <see cref="FadeIn"/>. Dispose the result
+        /// after drawing to put the alphas back.
+        /// </summary>
+        public IDisposable ApplyFade(IEnumerable<LocationCanvasView> locations)
+        {
+            List<(LocationCanvasView View, float Alpha)> originals = [];
+            if (!IsEmpty)
+            {
+                foreach (LocationCanvasView view in locations)
+                {
+                    float fade = FadeIn(view.ID);
+                    if (fade >= 1f || !CanFade(view))
+                        continue;
+
+                    float original = AlphaOf(view);
+                    originals.Add((view, original));
+                    SetAlpha(view, original * fade);
+                }
+            }
+
+            return new Restorer(originals);
+        }
+
+        private static bool CanFade(LocationCanvasView view) => view is LocationCircleView or LocationPolygonView or LocationCurveView;
+
+        private static float AlphaOf(LocationCanvasView view) => view switch
+        {
+            LocationCircleView circle => circle.Alpha,
+            LocationPolygonView polygon => polygon.Alpha,
+            LocationCurveView curve => curve.Alpha,
+            _ => 1f,
+        };
+
+        private static void SetAlpha(LocationCanvasView view, float alpha)
+        {
+            switch (view)
+            {
+                case LocationCircleView circle:
+                    circle.Alpha = alpha;
+                    break;
+                case LocationPolygonView polygon:
+                    polygon.Alpha = alpha;
+                    break;
+                case LocationCurveView curve:
+                    curve.Alpha = alpha;
+                    break;
+            }
+        }
+
+        private sealed class Restorer(List<(LocationCanvasView View, float Alpha)> originals) : IDisposable
+        {
+            public void Dispose()
+            {
+                foreach ((LocationCanvasView view, float alpha) in originals)
+                    SetAlpha(view, alpha);
+            }
         }
 
         /// <summary>
@@ -122,8 +248,8 @@ namespace WebAnnotation.UI
         private void Prune()
         {
             DateTime now = utcNow();
-            foreach (long id in expiryByLocationId.Where(e => e.Value <= now).Select(e => e.Key).ToList())
-                expiryByLocationId.Remove(id);
+            foreach (long id in entryByLocationId.Where(e => e.Value.Expiry <= now).Select(e => e.Key).ToList())
+                entryByLocationId.Remove(id);
         }
     }
 }
