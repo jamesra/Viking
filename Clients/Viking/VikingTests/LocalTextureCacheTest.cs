@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Viking;
 
 
@@ -124,6 +125,8 @@ namespace VikingTests
                 TempFiles.Add(TempFile);
             }
 
+            List<Task<bool>> addTasks = new(NumTests);
+
             for (int iTest = 0; iTest < NumTests; iTest++)
             {
                 int NumBytes = (NumTests - iTest) * 100;
@@ -131,7 +134,15 @@ namespace VikingTests
 
                 r.NextBytes(bytes);
 
-                this.cache.AddAsync(TempFiles[iTest], bytes);
+                addTasks.Add(this.cache.AddAsync(TempFiles[iTest], bytes));
+            }
+
+            //Fetch returns null for an entry that is not registered yet, so wait for every add before reading
+            Task.WaitAll(addTasks.ToArray());
+
+            for (int iTest = 0; iTest < NumTests; iTest++)
+            {
+                Assert.IsTrue(addTasks[iTest].Result, "AddAsync should have stored " + TempFiles[iTest]);
             }
 
             //Touch every file so it has a checkpoint flag
