@@ -21,8 +21,11 @@ namespace gRPCAnnotationService
     /// </summary>
     public static class PolicySchemeSelector
     {
+        /// <summary>Name of the authentication scheme that resolves opaque reference tokens at the introspection endpoint.</summary>
         public const string IntrospectionScheme = "Introspection";
 
+        /// <summary>Picks the authentication scheme for a request from its Authorization header.</summary>
+        /// <returns>The JWT bearer scheme for a dotted token, <see cref="IntrospectionScheme"/> for a reference token, or null when the header is not a Bearer credential.</returns>
         public static string SchemeSelector(HttpContext context)
         {
             var (scheme, token) = GetSchemeAndCredential(context);
@@ -56,16 +59,19 @@ namespace gRPCAnnotationService
 
         private const string ProtectedScopePolicy = "protectedScope";
 
+        /// <summary>Application configuration (connection strings, IdentityServer settings).</summary>
         public IConfiguration Configuration { get; }
 
         private readonly IWebHostEnvironment _env;
 
+        /// <summary>Receives the host configuration and environment from the generic host.</summary>
         public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
             Configuration = configuration;
             _env = env;
         }
 
+        /// <summary>Registers the AnnotationContext, authentication (JWT and introspection), the scope policy, and gRPC.</summary>
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddDbContext<Viking.DataModel.Annotation.AnnotationContext>(options =>
@@ -174,6 +180,7 @@ namespace gRPCAnnotationService
                 });
         }
 
+        /// <summary>Builds the request pipeline and maps each gRPC service behind the Viking.Annotation scope policy.</summary>
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())

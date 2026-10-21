@@ -12,6 +12,7 @@ namespace gRPCAnnotationService
     /// </summary>
     public class Program
     {
+        /// <summary>Builds and runs the host; blocks until shutdown.</summary>
         public static void Main(string[] args)
         {
             CreateHostBuilder(args).Build().Run();
@@ -19,6 +20,7 @@ namespace gRPCAnnotationService
 
         // Additional configuration is required to successfully run gRPC on macOS.
         // For instructions on how to configure Kestrel and gRPC clients on macOS, visit https://go.microsoft.com/fwlink/?linkid=2099682
+        /// <summary>Creates the host builder: Kestrel endpoints (Docker or launch-settings) and <see cref="Startup"/>.</summary>
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
