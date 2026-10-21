@@ -455,6 +455,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Creates the gRPC stub from <see cref="ServiceLocator.GrpcChannelManager"/>. Safe to call repeatedly.
+        /// Every call carries <see cref="Viking.ApplicationShutdown.Token"/>, so closing Viking cancels it.
         /// </summary>
         public bool TryInitializeClient()
         {
@@ -467,7 +468,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     return false;
                 }
 
-                grpcClient = new SegmentationServiceTypes.SegmentationService.SegmentationServiceClient(channel);
+                grpcClient = new SegmentationServiceTypes.SegmentationService.SegmentationServiceClient(
+                    Grpc.Core.Interceptors.ChannelExtensions.Intercept(channel, Viking.Services.Grpc.ShutdownCancellationInterceptor.Instance));
                 BeginModelCapabilitiesRefresh(grpcClient);
                 SegmentationDiag.Log("TryInitializeClient: ok");
                 return true;

@@ -93,6 +93,11 @@ namespace Viking
         [STAThread]
         static void Main(string[] args)
         { 
+            // The exit watchdog relaunches Viking.exe to dump the stalled process. That copy must not run
+            // Velopack hooks, take the single-instance pipes or show UI, so it is handled before everything else.
+            if (ExitStallDump.TryRunHelper(args))
+                return;
+
             // Velopack must run first to handle setup/uninstall/update hooks
             // Note: Velopack version 0.0.1298 doesn't have OnFirstRun/OnAfterUpdate hooks
             // Version will be displayed in About dialog from Assembly.GetEntryAssembly().GetName().Version
@@ -473,6 +478,8 @@ namespace Viking
         /// <summary>
         /// Builds the source that asks the correction service for section offsets. Uses Grpc.Core, like the
         /// segmentation client, with one channel per service address kept for the life of the process.
+        /// Calls carry <see cref="ApplicationShutdown.Token"/>, and the channels close with the rest in
+        /// <see cref="Viking.Services.Grpc.GrpcChannelManager.ShutdownEnvironment"/>.
         /// </summary>
         private static Viking.SectionCorrectionClient.ISectionShimSource CreateCorrectionShimSource()
         {
@@ -483,7 +490,9 @@ namespace Viking
                     uri.Host,
                     uri.Port,
                     uri.Scheme == Uri.UriSchemeHttps ? new Grpc.Core.SslCredentials() : Grpc.Core.ChannelCredentials.Insecure));
-                return new Grpc.Core.DefaultCallInvoker(channel);
+                return Grpc.Core.Interceptors.CallInvokerExtensions.Intercept(
+                    new Grpc.Core.DefaultCallInvoker(channel),
+                    Viking.Services.Grpc.ShutdownCancellationInterceptor.Instance);
             });
         }
 
