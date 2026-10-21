@@ -37,6 +37,9 @@ namespace gRPCAnnotationService
 
         #region Reads
 
+        /// <summary>
+        /// One structure by ID, with its links attached. Throws NotFound when the ID does not exist.
+        /// </summary>
         public override async Task<GetStructureByIDResponse> GetStructureByID(GetStructureByIDRequest request, ServerCallContext context)
         {
             try
@@ -77,6 +80,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructuresByID), e, context); }
         }
 
+        /// <summary>
+        /// Every structure in the database, with links attached. Unfiltered, so large volumes return a large response.
+        /// </summary>
         public override async Task<GetStructuresResponse> GetStructures(GetStructuresRequest request, ServerCallContext context)
         {
             try
@@ -117,6 +123,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructuresForSection), e, context); }
         }
 
+        /// <summary>
+        /// Structures with a location in the region on section Z, tested in mosaic space. MinRadius is a location radius filter. DeletedIds is every structure deleted after the watermark.
+        /// </summary>
         public override async Task<GetStructuresInMosaicRegionResponse> GetStructuresInMosaicRegion(GetStructuresInMosaicRegionRequest request, ServerCallContext context)
         {
             try
@@ -139,6 +148,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructuresInMosaicRegion), e, context); }
         }
 
+        /// <summary>
+        /// As GetStructuresInMosaicRegion, but the region is tested in volume space.
+        /// </summary>
         public override async Task<GetStructuresInVolumeRegionResponse> GetStructuresInVolumeRegion(GetStructuresInVolumeRegionRequest request, ServerCallContext context)
         {
             try
@@ -161,6 +173,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructuresInVolumeRegion), e, context); }
         }
 
+        /// <summary>
+        /// All structures whose TypeId equals the request ID, with links attached.
+        /// </summary>
         public override async Task<GetStructuresOfTypeResponse> GetStructuresOfType(GetStructuresOfTypeRequest request, ServerCallContext context)
         {
             try
@@ -177,6 +192,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructuresOfType), e, context); }
         }
 
+        /// <summary>
+        /// Direct children of StructureId (ParentId match), with links attached. Not recursive.
+        /// </summary>
         public override async Task<GetChildStructuresResponse> GetChildStructures(GetChildStructuresRequest request, ServerCallContext context)
         {
             try
@@ -193,6 +211,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetChildStructures), e, context); }
         }
 
+        /// <summary>
+        /// Structure links in which the ID is source or target, in either direction. Returns the links, not the structures.
+        /// </summary>
         public override async Task<GetLinkedStructuresResponse> GetLinkedStructures(GetLinkedStructuresRequest request, ServerCallContext context)
         {
             try
@@ -208,6 +229,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetLinkedStructures), e, context); }
         }
 
+        /// <summary>
+        /// Count of locations whose ParentId is the structure ID. Zero for an unknown ID.
+        /// </summary>
         public override async Task<NumberOfLocationsResponse> NumberOfLocations(NumberOfLocationsRequest request, ServerCallContext context)
         {
             try
@@ -219,6 +243,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(NumberOfLocations), e, context); }
         }
 
+        /// <summary>
+        /// IDs of structures within NumHops links of the requested IDs, via SelectNetworkStructureIDs.
+        /// </summary>
         public override async Task<GetNetworkedStructuresResponse> GetNetworkedStructures(GetNetworkedStructuresRequest request, ServerCallContext context)
         {
             try
@@ -233,6 +260,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetNetworkedStructures), e, context); }
         }
 
+        /// <summary>
+        /// Structures that are children of the networked structures within NumHops links, via SelectNetworkChildStructures. ParentId is left unset for root structures. Links are not attached.
+        /// </summary>
         public override async Task<GetChildStructuresInNetworkResponse> GetChildStructuresInNetwork(GetChildStructuresInNetworkRequest request, ServerCallContext context)
         {
             try
@@ -270,6 +300,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetChildStructuresInNetwork), e, context); }
         }
 
+        /// <summary>
+        /// Structure links within NumHops of the requested IDs, via SelectNetworkStructureLinks.
+        /// </summary>
         public override async Task<GetStructureLinksInNetworkResponse> GetStructureLinksInNetwork(GetStructureLinksInNetworkRequest request, ServerCallContext context)
         {
             try
@@ -291,6 +324,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructureLinksInNetwork), e, context); }
         }
 
+        /// <summary>
+        /// IDs of the unfinished branch locations of a structure, via SelectUnfinishedStructureBranches.
+        /// </summary>
         public override async Task<GetUnfinishedLocationsResponse> GetUnfinishedLocations(GetUnfinishedLocationsRequest request, ServerCallContext context)
         {
             try
@@ -304,6 +340,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetUnfinishedLocations), e, context); }
         }
 
+        /// <summary>
+        /// As GetUnfinishedLocations, with each location's position and radius (0 when null).
+        /// </summary>
         public override async Task<GetUnfinishedLocationsWithPositionResponse> GetUnfinishedLocationsWithPosition(GetUnfinishedLocationsWithPositionRequest request, ServerCallContext context)
         {
             try
@@ -322,6 +361,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetUnfinishedLocationsWithPosition), e, context); }
         }
 
+        /// <summary>
+        /// Always throws Unimplemented; see the comment in the body.
+        /// </summary>
         public override Task<GetStructureChangeLogResponse> GetStructureChangeLog(GetStructureChangeLogRequest request, ServerCallContext context)
         {
             // SelectStructureChangeLogResult was scaffolded with no columns, so the procedure's
@@ -390,6 +432,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreateStructure), e, context); }
         }
 
+        /// <summary>
+        /// Batch of create, update, and delete changes in one transaction, one result per request row in order. An update of a missing ID reports Success = false instead of failing the batch. Delete runs DeepDeleteStructure, which also removes the structure's locations, links, and children.
+        /// </summary>
         public override async Task<UpdateStructuresResponse> Update(UpdateStructuresRequest request, ServerCallContext context)
         {
             try
@@ -457,6 +502,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(Update), e, context); }
         }
 
+        /// <summary>
+        /// Creates one link. Throws InvalidArgument when source and target are the same structure.
+        /// </summary>
         public override async Task<CreateStructureLinkResponse> CreateStructureLink(CreateStructureLinkRequest request, ServerCallContext context)
         {
             try
@@ -486,6 +534,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreateStructureLink), e, context); }
         }
 
+        /// <summary>
+        /// Upsert by (SourceId, TargetId): updates Bidirectional and Tags on an existing link, inserts a missing one. Returns an empty response.
+        /// </summary>
         public override async Task<UpdateStructureLinksResponse> UpdateLinks(UpdateStructureLinksRequest request, ServerCallContext context)
         {
             try
@@ -526,6 +577,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(UpdateLinks), e, context); }
         }
 
+        /// <summary>
+        /// Deletes the link (SourceId, TargetId). Throws NotFound when it does not exist.
+        /// </summary>
         public override async Task<DeleteStructureLinkResponse> DeleteStructureLink(DeleteStructureLinkRequest request, ServerCallContext context)
         {
             try
