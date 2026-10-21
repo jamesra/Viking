@@ -38,6 +38,7 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetPermittedStructureLinks), e, context); }
         }
 
+        /// <summary>Inserts one permitted link and returns the stored row.</summary>
         public override async Task<CreatePermittedStructureLinkResponse> CreatePermittedStructureLink(CreatePermittedStructureLinkRequest request, ServerCallContext context)
         {
             try
@@ -55,6 +56,11 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreatePermittedStructureLink), e, context); }
         }
 
+        /// <summary>
+        /// Applies a batch of insert, update, and delete changes in one save. Each change gets a
+        /// response with <c>Sucess</c> false when its row (keyed by source and target type) does not
+        /// exist. Only <c>Bidirectional</c> can change on update. A delete echoes the request key.
+        /// </summary>
         public override async Task<UpdatePermittedStructureLinksResponse> UpdatePermittedStructureLinks(UpdatePermittedStructureLinksRequest request, ServerCallContext context)
         {
             try

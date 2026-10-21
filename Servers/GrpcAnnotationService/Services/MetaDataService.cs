@@ -24,6 +24,11 @@ namespace gRPCAnnotationService
             _logger = logger;
         }
 
+        /// <summary>
+        /// Returns the volume scale read from the database's scalar functions. X and Y share the
+        /// XY scale; Z is set only when the database defines a Z scale. A missing XY value is
+        /// reported as 0 with empty units rather than an error.
+        /// </summary>
         public override async Task<ScaleResponse> Scale(ScaleRequest request, ServerCallContext context)
         {
             try
