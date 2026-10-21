@@ -3023,17 +3023,8 @@ namespace Viking.UI.Controls
                 int Z = (int)Math.Round(frame.Z);
                 if (State.volume.SectionViewModels.ContainsKey(Z) == false)
                     continue;
-                // {
-                //   DialogResult mbResult = MessageBox.Show("Could not location section #" + Z.ToString() + " in volume, skipping", "Info", MessageBoxButtons.OKCancel);
-                //   if (mbResult == DialogResult.Cancel)
-                //       break;
-                //   else
-                //       continue;
-                //  } 
                 await this.ExportImage(frame.Filename, frame.Rect, Z, frame.downsample, frame.IncludeOverlay);
-                //task.Wait();
                 progressForm.ShowProgress("Exported frame: " + frame.Filename, (double)i / (double)form.Frames.Length);
-                //System.Windows.Forms.Application.DoEvents();
                 if (progressForm.DialogResult == DialogResult.Cancel)
                     break;
             }
