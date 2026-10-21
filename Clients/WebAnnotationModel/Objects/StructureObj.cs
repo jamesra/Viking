@@ -444,7 +444,8 @@ namespace WebAnnotationModel
 
         /// <summary>
         /// The structure's attributes as the raw XML the server sent, the same text <see cref="Attributes"/> parses.
-        /// Null when the structure has no attributes, matching the WCF structure adapter.
+        /// Null when no attribute XML has been set (a new structure, or all attributes removed); the WCF server sends an
+        /// empty string for a structure with no tags.
         /// </summary>
         public string TagsXML => Data.AttributesXml;
 
