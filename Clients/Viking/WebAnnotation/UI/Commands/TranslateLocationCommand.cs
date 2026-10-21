@@ -261,7 +261,7 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
                 Geometry.Vector2 translatedPosition = TranslatedVolumePosition;
                 OriginalVolumePosition = OriginalVolumeControlPoints.Average();
                 VolumePositionDeltaSum = new Geometry.Vector2(0, 0);
-                curveView = CreateView(OriginalVolumeControlPoints, curveView.Color);
+                curveView = CreateView(CalculateTranslatedMosaicControlPoints(), curveView.Color);
             }
             else
             {
