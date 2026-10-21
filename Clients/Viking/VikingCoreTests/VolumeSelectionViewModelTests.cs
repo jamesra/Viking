@@ -29,6 +29,7 @@ namespace VikingCoreTests
         [DataRow("http://host/data/volume.vikingxml/", "volume", DisplayName = "trailing slash")]
         [DataRow("http://host/data/volume", "volume", DisplayName = "no extension")]
         [DataRow("http://host/data/.hidden", ".hidden", DisplayName = "a leading dot is not an extension")]
+        [DataRow("http://host/data/a.vikingxml", "a", DisplayName = "a one-character name")]
         public void ARecentVolumeSavedByUrlIsNamedAfterTheFileWithoutItsExtension(string url, string expected)
         {
             Assert.AreEqual(expected, NameOfRecentVolume(url));
