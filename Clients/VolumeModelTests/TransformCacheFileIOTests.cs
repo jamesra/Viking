@@ -50,7 +50,8 @@ namespace VolumeModelTests
 
         private static object Call(string method, Type generic, params object[] args)
         {
-            MethodInfo m = IO.GetMethod(method, BindingFlags.Public | BindingFlags.Static);
+            MethodInfo m = IO.GetMethod(method, BindingFlags.Public | BindingFlags.Static)
+                ?? throw new MissingMethodException(IO.FullName, method);
             if (generic != null)
                 m = m.MakeGenericMethod(generic);
             try
