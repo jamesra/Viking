@@ -10,7 +10,8 @@ namespace VolumeModelTests
     /// Pins <see cref="VolumeToSectionMappingExtensions.TryMapShapeSectionToVolume(IVolumeToSectionTransform, Polygon)"/> and
     /// <see cref="VolumeToSectionMappingExtensions.TryMapShapeVolumeToSection(IVolumeToSectionTransform, Polygon)"/>:
     /// a polygon is unmappable (null) when any vertex of its exterior ring or of any interior ring cannot be mapped,
-    /// and a fully mappable polygon keeps its holes.
+    /// and a fully mappable polygon keeps its holes. The <see cref="Polyline"/> overloads follow the same rule:
+    /// null when any point cannot be mapped, otherwise the mapped points with <see cref="Polyline.AllowsSelfIntersection"/> kept.
     /// </summary>
     [TestClass]
     public class TryMapShapeInteriorRingTests
@@ -92,6 +93,34 @@ namespace VolumeModelTests
 
             Assert.IsNull(mapper.TryMapShapeSectionToVolume(SquareWithHole()));
             Assert.IsNull(mapper.TryMapShapeVolumeToSection(SquareWithHole()));
+        }
+
+        private static Polyline OpenLine(bool allowsSelfIntersection) =>
+            new([new Vector2(0, 0), new Vector2(50_000, 20_000), new Vector2(100_000, 0)], allowsSelfIntersection);
+
+        [TestMethod]
+        public void Polyline_UnmappablePoint_ReturnsNull()
+        {
+            MaskedIdentityTransform mapper = new(p => p != new Vector2(50_000, 20_000));
+
+            Assert.IsNull(mapper.TryMapShapeSectionToVolume(OpenLine(false)));
+            Assert.IsNull(mapper.TryMapShapeVolumeToSection(OpenLine(false)));
+        }
+
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void Polyline_FullyMappable_KeepsPointsAndSelfIntersectionSetting(bool allowsSelfIntersection)
+        {
+            Polyline line = OpenLine(allowsSelfIntersection);
+            MaskedIdentityTransform mapper = new(_ => true);
+
+            foreach (Polyline mapped in new[] { mapper.TryMapShapeSectionToVolume(line), mapper.TryMapShapeVolumeToSection(line) })
+            {
+                Assert.IsNotNull(mapped);
+                CollectionAssert.AreEqual(line.Points.ToArray(), mapped.Points.ToArray());
+                Assert.AreEqual(allowsSelfIntersection, mapped.AllowsSelfIntersection);
+            }
         }
 
         private static void AssertSameRings(Polygon expected, Polygon actual)
