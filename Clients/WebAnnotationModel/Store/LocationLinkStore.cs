@@ -87,18 +87,6 @@ namespace WebAnnotationModel
             }
         }
 
-        public ConcurrentDictionary<LocationLinkKey, LocationLinkObj> GetLinksCrossingSection(int SectionNumber)
-        {
-            ConcurrentDictionary<LocationLinkKey, LocationLinkObj> SectionLocationLinks = new();
-            SectionLocationLinks = SectionToLocationLinks.GetOrAdd(SectionNumber, SectionLocationLinks);
-
-            //Request updates after fetching the list so we don't update the list mid-query
-            GetObjectsForSectionAsynch(SectionNumber, null);
-
-            return SectionLocationLinks;
-        }
-
-
         #region GetLocationLinksForSection
 
         public override ConcurrentDictionary<LocationLinkKey, LocationLinkObj> GetLocalObjectsForSection(long SectionNumber)
