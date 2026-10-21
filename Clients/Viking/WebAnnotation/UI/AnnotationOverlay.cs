@@ -84,6 +84,12 @@ namespace WebAnnotation
         /// </summary>
         private bool _isShutdown;
 
+        /// <summary>Annotations on the current section that Del hid, see <see cref="HideAnnotationUnderMouse"/>.</summary>
+        private readonly TemporarilyHiddenAnnotations hiddenAnnotations = new();
+
+        /// <summary>Bumped for each redraw timer so only the newest one runs.</summary>
+        private int hiddenAnnotationRedrawGeneration;
+
         protected TransformChangedEventHandler SectionChangedEventHandler;
         private readonly EventHandler AnnotationChangedEventHandler;
 
@@ -549,8 +555,8 @@ namespace WebAnnotation
                 return null;
             }
 
-            //Get the overlapping locations, filter out non-location annotations
-            return [.. locView.GetAnnotations(position).Where(hr => hr.obj is LocationCanvasView)];
+            //Get the overlapping locations, filter out non-location annotations and the ones Del hid
+            return [.. hiddenAnnotations.Exclude(locView.GetAnnotations(position)).Where(hr => hr.obj is LocationCanvasView)];
         }
 
         /// <summary>
@@ -571,7 +577,7 @@ namespace WebAnnotation
 
             ICanvasGeometryView bestObj = null;
 
-            List<HitTestResult> listObjects = locView.GetAnnotations(position);
+            List<HitTestResult> listObjects = hiddenAnnotations.Exclude(locView.GetAnnotations(position));
 
             HitTestResult bestHit = listObjects.NearestObjectOnCurrentSectionThenAdjacent(CurrentSectionNumber, preferCloserLocationLinks: true);
 
@@ -1599,7 +1605,9 @@ break;
                 "F12: Open goto location ID dialog",
                 "F11: Open goto structure ID dialog",
                 "SHIFT + F8: Send the circles in view to auto-polygonize again",
-                "Numpad * or SHIFT + 8: Toggle Pen Mode"
+                "Numpad * or SHIFT + 8: Toggle Pen Mode",
+                "DEL: Hide the annotation under the mouse on this section for a while, to reach one beneath it",
+                "INSERT: Bring back the hidden annotation under the mouse"
             };
         }
 
@@ -1796,6 +1804,14 @@ break;
                     System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(StructureTypeManagementForm);
                     StructureTypeManagementForm.Show();
                     return;
+                case Keys.Delete:
+                    e.Handled = true;
+                    HideAnnotationUnderMouse();
+                    return;
+                case Keys.Insert:
+                    e.Handled = true;
+                    RestoreAnnotationUnderMouse();
+                    return;
                 case Keys.Back:
                     if (Global.LastEditedAnnotationID.HasValue)
                         GoToLocation(Global.LastEditedAnnotationID.Value);
@@ -1817,6 +1833,82 @@ break;
                     AnnotationMenu.OnPenMode(sender, EventArgs.Empty);
                     return;
             }
+        }
+
+        /// <summary>
+        /// Del: hides the annotation on the current section under the mouse for <see cref="Global.AnnotationSettings.HideAnnotationSeconds"/>,
+        /// so an annotation beneath it (for example one from an adjacent section) can be picked and dragged.
+        /// </summary>
+        private void HideAnnotationUnderMouse()
+        {
+            if (!IsCommandDefault() || !TryGetAnnotationsUnderMouse(out List<HitTestResult> hits))
+                return;
+
+            LocationCanvasView target = hiddenAnnotations.PickToHide(hits, CurrentSectionNumber);
+            if (target is null)
+                return;
+
+            hiddenAnnotations.Hide(target.ID, TimeSpan.FromSeconds(Global.AnnotationSettings.HideAnnotationSeconds));
+            Trace.WriteLine($"Hid location {target.ID} for {Global.AnnotationSettings.HideAnnotationSeconds} s");
+            ScheduleHiddenAnnotationRedraw();
+            _Parent.Invalidate();
+        }
+
+        /// <summary>Insert: brings back the hidden annotation under the mouse before its time runs out.</summary>
+        private void RestoreAnnotationUnderMouse()
+        {
+            if (!IsCommandDefault() || !TryGetAnnotationsUnderMouse(out List<HitTestResult> hits))
+                return;
+
+            LocationCanvasView target = hiddenAnnotations.PickToRestore(hits, CurrentSectionNumber);
+            if (target is null || !hiddenAnnotations.Restore(target.ID))
+                return;
+
+            Trace.WriteLine($"Restored location {target.ID}");
+            ScheduleHiddenAnnotationRedraw();
+            _Parent.Invalidate();
+        }
+
+        /// <summary>Every annotation hit at the mouse on the current section, including hidden ones.</summary>
+        private bool TryGetAnnotationsUnderMouse(out List<HitTestResult> hits)
+        {
+            hits = null;
+            SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
+            if (locView is null)
+                return false;
+
+            System.Drawing.Point clientPoint = _Parent.PointToClient(System.Windows.Forms.Control.MousePosition);
+            Geometry.Vector2 worldPos = _Parent.ScreenToWorld(clientPoint.X, clientPoint.Y);
+            hits = locView.GetAnnotations(worldPos);
+            return true;
+        }
+
+        /// <summary>Redraws the viewer when the next hidden annotation's time runs out, so it reappears without a mouse move.</summary>
+        private void ScheduleHiddenAnnotationRedraw()
+        {
+            int generation = Interlocked.Increment(ref hiddenAnnotationRedrawGeneration);
+            TimeSpan? wait = hiddenAnnotations.TimeUntilNextExpiry();
+            if (wait is null)
+                return;
+
+            Task.Delay(wait.Value + TimeSpan.FromMilliseconds(50)).ContinueWith(_ =>
+            {
+                if (_isShutdown || generation != Volatile.Read(ref hiddenAnnotationRedrawGeneration))
+                    return;
+
+                try
+                {
+                    _Parent.BeginInvoke(new System.Action(() =>
+                    {
+                        _Parent.Invalidate();
+                        ScheduleHiddenAnnotationRedraw();
+                    }));
+                }
+                catch (InvalidOperationException)
+                {
+                    //The viewer closed while we waited.
+                }
+            }, TaskScheduler.Default);
         }
 
         protected void OnKeyDown(object sender, KeyEventArgs e)
@@ -2908,7 +3000,7 @@ break;
             ISet<long>? hiddenStructures = (_Parent.CurrentCommand as AnnotationOverlayPenFreeDrawCommandV2)?.HiddenStructureIDs;
 
             ICollection<LocationCanvasView> Locations = currentSectionAnnotations.GetLocations(scene.VisibleWorldBounds);
-            List<LocationCanvasView> listLocationsToDraw = HiddenStructures.ExcludeLocations(FindVisibleLocations(Locations, scene), hiddenStructures);
+            List<LocationCanvasView> listLocationsToDraw = hiddenAnnotations.Exclude(HiddenStructures.ExcludeLocations(FindVisibleLocations(Locations, scene), hiddenStructures));
             ICollection<LocationCanvasView> RefLocations = currentSectionAnnotations.AdjacentLocationsNotOverlappedInRegion(Bounds);
             List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = HiddenStructures.ExcludeLocations(FindVisibleAdjacentLocations(RefLocations, scene), hiddenStructures); //Find the locations on the adjacent sections
 

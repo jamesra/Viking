@@ -403,6 +403,34 @@ namespace WebAnnotation
                 }
             }
 
+            /// <summary>Shortest accepted <see cref="HideAnnotationSeconds"/>.</summary>
+            public const int MIN_HIDE_ANNOTATION_SECONDS = 1;
+
+            /// <summary>Longest accepted <see cref="HideAnnotationSeconds"/>.</summary>
+            public const int MAX_HIDE_ANNOTATION_SECONDS = 600;
+
+            /// <summary>Starting <see cref="HideAnnotationSeconds"/>. Must match the DefaultSettingValue in Settings.LocationLinks.cs.</summary>
+            public const int DEFAULT_HIDE_ANNOTATION_SECONDS = 30;
+
+            /// <summary>
+            /// Seconds an annotation hidden with the Del key stays hidden, clamped to the MIN/MAX_HIDE_ANNOTATION_SECONDS range.
+            /// </summary>
+            public static int HideAnnotationSeconds
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.HideAnnotationSeconds,
+                    MIN_HIDE_ANNOTATION_SECONDS,
+                    MAX_HIDE_ANNOTATION_SECONDS);
+                set
+                {
+                    Properties.Settings.Default.HideAnnotationSeconds = MathUtils.Clamp(
+                        value,
+                        MIN_HIDE_ANNOTATION_SECONDS,
+                        MAX_HIDE_ANNOTATION_SECONDS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
             /// <summary>
             /// Whether a location link is also drawn under its two location markers, as a round end the size of each marker.
             /// False draws nothing under the markers.
@@ -1091,6 +1119,7 @@ namespace WebAnnotation
                 Properties.Settings.Default.AdjacentLocationRadiusScalar = 0.5;
                 Properties.Settings.Default.LocationLinkWaistPixels = DEFAULT_LOCATION_LINK_WAIST_PIXELS;
                 Properties.Settings.Default.LocationLinkDrawUnderMarkers = false;
+                Properties.Settings.Default.HideAnnotationSeconds = DEFAULT_HIDE_ANNOTATION_SECONDS;
                 Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = 3;
                 Properties.Settings.Default.PenSimplifyThreshold = 3;
                 Properties.Settings.Default.MinRadius = 0.5;

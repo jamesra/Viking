@@ -200,7 +200,8 @@ namespace WebAnnotation
                 Global.AnnotationSettings.SegmentLinkedAnnotations,
                 Global.AnnotationSettings.LocationLinkWaistPixels,
                 Global.AnnotationSettings.LocationLinkDrawUnderMarkers,
-                Global.AnnotationSettings.AutoPolygonizeShimmerStyle
+                Global.AnnotationSettings.AutoPolygonizeShimmerStyle,
+                Global.AnnotationSettings.HideAnnotationSeconds
             );
 
             VikingXNA.Scene scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
@@ -402,6 +403,7 @@ namespace WebAnnotation
             Global.AnnotationSettings.AdjacentLocationRadiusScalar = viewModel.AdjacentLocationRadiusScalar;
             Global.AnnotationSettings.LocationLinkWaistPixels = viewModel.LocationLinkWaistPixels;
             Global.AnnotationSettings.LocationLinkDrawUnderMarkers = viewModel.LocationLinkDrawUnderMarkers;
+            Global.AnnotationSettings.HideAnnotationSeconds = viewModel.HideAnnotationSeconds;
             Global.AnnotationSettings.NumClosedCurveInterpolationPointsForDisplay = viewModel.NumClosedCurveInterpolationPointsForDisplay;
             Global.AnnotationSettings.PenSimplifyThreshold = viewModel.PenSimplifyThreshold;
             Global.AnnotationSettings.MinRadius = viewModel.MinRadius;

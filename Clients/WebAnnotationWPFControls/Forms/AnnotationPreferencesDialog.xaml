@@ -312,6 +312,30 @@
                                    TextWrapping="Wrap"
                                    Text="Also draws each link under its two location markers as a round end the size of each marker. Off draws nothing under the markers."/>
 
+                        <!-- Hide Annotation Seconds -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Hide annotation time (seconds):"/>
+                            <xctk:IntegerUpDown Grid.Row="0" Grid.Column="1"
+                                              Value="{Binding HideAnnotationSeconds}"
+                                              Minimum="1"
+                                              Maximum="600"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Del hides the annotation under the mouse on the current section for this long, so an annotation beneath it can be reached. Insert brings it back early."/>
+                        </Grid>
+
                         <!-- Num Curve Interpolation Points -->
                         <Grid>
                             <Grid.ColumnDefinitions>
