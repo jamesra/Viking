@@ -1,11 +1,15 @@
 # Viking changelog
 
-Committed application version: **1.2.113.0**  
+Committed application version: **1.2.114.0**  
 (1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109; their changes are listed under 1.2.109.)
 
 Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Documentation/source/Client/versionhistory.rst).
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
+
+## 1.2.114 — 2026-10-20 (Viking Test, unsigned)
+
+* An annotation hidden with Del now fades back in over the last 5% of its hide time (1.5 s of the default 30 s) before it can be clicked again, so you can see it return. `Insert` starts the same fade immediately.
 
 ## 1.2.113 — 2026-10-20 (Viking Test, unsigned)
 
