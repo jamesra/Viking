@@ -41,7 +41,7 @@ On every tick, follow this request verbatim:
 
 7. On wake, read that payload only. Do not re-read this skill’s peer files or the `loop` skill. Run Phase A in the parent; dispatch or resume Task workers for work threads; never run Phase B in the parent. Arm the next wake. Stop only when the user asks: kill the sleeper PID and do not arm another wake.
 
-Work hours are Monday–Friday 09:00–17:00 America/Los_Angeles. Every other time is off hours. The cap is the one in force when you arm the next wake.
+Work hours are Monday–Friday from 08:00 America/New_York (05:00 Pacific) to 17:00 America/Los_Angeles, as Rebecca Pfeiffer requested in `#ai-requests` on 2026-10-21. Every other time is off hours. The cap is the one in force when you arm the next wake.
 
 ## Parent = thin dispatcher
 
