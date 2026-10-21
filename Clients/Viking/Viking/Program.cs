@@ -759,8 +759,7 @@ namespace Viking
         private static void CreateDebugListener()
         {
             string LogPath = System.Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Viking\\Logs";
-            if (!Directory.Exists(LogPath))
-                Directory.CreateDirectory(LogPath);
+            Directory.CreateDirectory(LogPath);
 
             string FileName = LogPath + "\\" + DateTime.Now.ToString("MM.dd.yyyy HH.mm.ss") + ".log";
 

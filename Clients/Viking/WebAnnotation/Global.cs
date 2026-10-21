@@ -1573,15 +1573,13 @@ namespace WebAnnotation
             switch (elem.Name.LocalName)
             {
                 case "Volume":
-                    IEnumerable<XElement> SettingsElements = elem.Elements().Where(e => e.Name.LocalName == "DefaultWebAnnotationUserSettings");
-                    UserSettingsElement = SettingsElements.Count() > 0
-                        ? SettingsElements.First()
-                        : throw new XMLMissingDataException("The Volume Element is missing the <DefaultWebAnnotationUserSettings> element");
+                    UserSettingsElement = elem.Elements().FirstOrDefault(e => e.Name.LocalName == "DefaultWebAnnotationUserSettings")
+                        ?? throw new XMLMissingDataException("The Volume Element is missing the <DefaultWebAnnotationUserSettings> element");
 
-                    IEnumerable<XElement> MappingElements = elem.Elements().Where(e => e.Name.LocalName == "VolumeToEndpoint");
+                    XElement MappingElement = elem.Elements().FirstOrDefault(e => e.Name.LocalName == "VolumeToEndpoint");
 
-                    if (MappingElements.Count() > 0)
-                        Global.PopulateEndpointStateFromVolumeToEndpointElement(MappingElements.First());
+                    if (MappingElement is not null)
+                        Global.PopulateEndpointStateFromVolumeToEndpointElement(MappingElement);
                     else
                         Global.ApplyIdentityAnnotationEndpointOnly();
 

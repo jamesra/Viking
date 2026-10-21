@@ -413,8 +413,7 @@ namespace MonogameTestbed
 
         private static void CreateLogger()
         {
-            if (!Directory.Exists(LogPath))
-                Directory.CreateDirectory(LogPath);
+            Directory.CreateDirectory(LogPath);
 
             DebugLogFile = System.IO.File.CreateText(LogFullPath);
 
