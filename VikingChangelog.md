@@ -1,13 +1,13 @@
 # Viking changelog
 
-Committed application version: **1.2.114.0**  
+Committed application version: **1.2.115.0**  
 (1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109; their changes are listed under 1.2.109.)
 
 Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Documentation/source/Client/versionhistory.rst).
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
-## 1.2.115 - unreleased
+## 1.2.115 — 2026-10-20 (Viking Test, unsigned)
 
 * Annotation text (structure ID, tags, parent ID) is drawn with a thin white outline so it stays readable over both light and dark images. In Annotation Preferences, **Outline annotation text** turns it on or off, and **Outline colors** switches between black text with a white outline (the default) and white text with a black outline. Text in another color, such as the orange of an unverified terminal, keeps its color.
 
