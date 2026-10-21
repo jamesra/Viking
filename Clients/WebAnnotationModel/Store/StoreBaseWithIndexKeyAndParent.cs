@@ -80,7 +80,7 @@ namespace WebAnnotationModel
             if (added && PropertyChanged != null)
             {
                 _readOnlyRootObjects = null;
-                PropertyChanged.RaiseEventOnUIThread(new PropertyChangedEventArgs("RootObjects"));
+                PropertyChanged.RaiseEventOnUIThread(this, new PropertyChangedEventArgs("RootObjects"));
             }
 
             return added;
@@ -125,7 +125,7 @@ namespace WebAnnotationModel
             if (added && PropertyChanged != null)
             {
                 _readOnlyRootObjects = null;
-                PropertyChanged.RaiseEventOnUIThread(new PropertyChangedEventArgs("RootObjects"));
+                PropertyChanged.RaiseEventOnUIThread(this, new PropertyChangedEventArgs("RootObjects"));
             }
 
             return added;

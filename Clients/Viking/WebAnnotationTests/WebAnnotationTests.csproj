@@ -31,6 +31,7 @@
         <Compile Include="View\StructureLinkRestoreAfterRemovalTests.cs" />
         <Compile Include="Actions\ChangeTypeActionTests.cs" />
         <Compile Include="LocationShapeUpdateTests.cs" />
+        <Compile Include="WebAnnotationModelExtensionsTests.cs" />
         <Compile Include="Actions\ChangeContourActionTests.cs" />
         <Compile Include="Actions\PolygonCutTests.cs" />
         <Compile Include="Actions\CreateNewLinkedLocationActionTests.cs" />

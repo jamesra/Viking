@@ -59,7 +59,8 @@ namespace WebAnnotationModel
             }
         }
 
-        public static void RaiseEventOnUIThread(this PropertyChangedEventHandler theEvent, PropertyChangedEventArgs args) => theEvent.RaiseEventOnUIThread([args]);
+        /// <summary>Raises a PropertyChanged handler with the (sender, args) pair its signature requires.</summary>
+        public static void RaiseEventOnUIThread(this PropertyChangedEventHandler theEvent, object sender, PropertyChangedEventArgs args) => theEvent.RaiseEventOnUIThread([sender, args]);
     }
 
 
