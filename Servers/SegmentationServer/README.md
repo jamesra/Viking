@@ -326,6 +326,10 @@ Each container has its own cache folders, because the server deletes the other c
 at start-up. The shared certificate carries every name, and `viking-certs` restarts every container labelled
 `viking.tls-reload` when it renews. See `Documentation/source/deployment/segmentation.rst`.
 
+Weights with no sidecar (`<stem>.model.json`) are reported with `SEGMENTATION_MODEL_NAME` (each service sets it to
+its prefix) as display name and the file stem as version; their `model_id` stays `unknown` so requests naming a model
+are not refused.
+
 `SegmentVolumes` is the auto-segmentation stream. The client sends one foreground/background set at a time for a cached `image_id`, and the server writes one `SegmentationResponse` per set. Interactive clicks stay on unary `SegmentImage`.
 
 Optional arguments:

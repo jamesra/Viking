@@ -34,7 +34,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// <summary>
     /// 1024x1024 partition anchored at the volume origin, at the resolved tile downsample
     /// (camera ceil, capped by <c>SegmentationTileDownsample</c>, currently max DS1). Mosaic pixels are world divided by
-    /// downsample, Y up. The segmentation server flips Y inside each tile image, which is stored top-left.
+    /// downsample, Y up. Tile images are stored top-left; a mask PNG's row 0 is its y_max.
+    /// The proto's "mosaic" space is Viking's volume space (after the section's stos warp), not section pixels.
     /// </summary>
     public static class SegmentationTileGrid
     {
@@ -113,6 +114,27 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (downsample <= 0)
                 throw new ArgumentOutOfRangeException(nameof(downsample));
             return ((int)Math.Floor(worldX / downsample), (int)Math.Floor(worldY / downsample));
+        }
+
+        /// <summary>
+        /// Map a response polygon vertex back to world. The server reports vertices at pixel centres
+        /// (Y down from the top of the image); this places them on pixel edges, so it adds half a pixel
+        /// in X and takes half a pixel off the row before flipping Y.
+        /// originX/originY are the mosaic's bottom-left in downsample pixels.
+        /// </summary>
+        public static Vector2 PolygonPointToWorld(
+            int originX,
+            int originY,
+            int pixelX,
+            int pixelYFromTop,
+            int mosaicHeight,
+            int downsample)
+        {
+            if (downsample <= 0)
+                throw new ArgumentOutOfRangeException(nameof(downsample));
+            return new Vector2(
+                (originX + pixelX + 0.5) * downsample,
+                (originY + mosaicHeight - (pixelYFromTop + 0.5)) * downsample);
         }
 
         /// <summary>

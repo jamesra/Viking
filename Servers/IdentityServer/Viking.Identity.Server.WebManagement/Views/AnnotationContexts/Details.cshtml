@@ -207,15 +207,12 @@
                     @if (Model.AnnotationServer != null)
                     {
                         <p class="text-muted">
-                            <strong>Access</strong> decides who sees this volume in Viking and is granted here.
-                            Read, Annotate and Review are granted on its annotation server, <strong>@Model.AnnotationServer.Name</strong>,
-                            and cover every volume that shares that database.
+                            <strong>Access</strong> decides who sees this volume in Viking.
+                            Read, Annotate and Review are granted on its annotation database, <strong>@Model.AnnotationServer.Name</strong>,
+                            and cover every volume that shares it. Both are edited on one page.
                         </p>
                         <a asp-controller="GrantedPermissions" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
-                            <i class="bi bi-shield-check"></i> Manage Access to this Volume
-                        </a>
-                        <a asp-controller="GrantedPermissions" asp-action="Edit" asp-route-id="@Model.AnnotationServer.Id" class="btn btn-outline-primary">
-                            Manage Annotation Server Permissions
+                            <i class="bi bi-shield-check"></i> Manage Permissions
                         </a>
                     }
                     else

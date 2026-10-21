@@ -151,3 +151,39 @@ def test_a_correction_role_reaches_the_encoder_through_the_walk() -> None:
     )
 
     assert world.mask_prompts[0].max() == pytest.approx(enc.CORRECTION_LOGIT, abs=0.2)
+
+
+def test_the_background_logits_are_the_trainers_negatives_at_prompt_size() -> None:
+    neighbour = MaskShape((2500, 2200, 2700, 2400))
+
+    ours = EdgeConfidenceEncoder({}).background_logits(CELL, [neighbour])
+    canvas = enc.encode_dense_canvas((CELL_SIZE, CELL_SIZE), negatives=[neighbour.window_full(CELL)])
+
+    assert ours is not None and ours.shape == (256, 256)
+    assert np.array_equal(ours, enc.area_resize(canvas, enc.LOW_RES))
+    assert ours.max() <= 0.0 and ours.min() < -5.0
+
+
+def test_background_logits_are_none_when_no_mask_reaches_the_window() -> None:
+    far = MaskShape((9000, 9000, 9100, 9100))
+
+    assert EdgeConfidenceEncoder({}).background_logits(CELL, [far]) is None
+    assert EdgeConfidenceEncoder({}).background_logits(CELL, []) is None
+
+
+def test_a_continuation_window_gets_the_encoders_background_not_the_flat_value() -> None:
+    carve = (1500, 2200, 1600, 2400)  # in the cell west of the seed's, which the walk grows into
+
+    def continuation_prompts(**kwargs):
+        world = World(ellipse(2304, 2304, 700, 700, 0.0))
+        square, points = client_square(2304, 2304, 300)
+        grow_segmentation(points, [], world.predict, masks=[MaskShape(square)], background_masks=[carve], **kwargs)
+        return [prompt for prompt in world.mask_prompts[1:] if prompt is not None]
+
+    legacy = continuation_prompts()
+    encoded = continuation_prompts(prompt_encoder=EdgeConfidenceEncoder({}))
+
+    assert any(prompt.min() == -8.0 for prompt in legacy), "without an encoder the carve is the flat -8"
+    assert encoded, "the walk grew into a continuation window"
+    assert not any((prompt == -8.0).any() for prompt in encoded), "no flat legacy value reaches an encoded window"
+    assert any(prompt.min() < -5.0 for prompt in encoded), "the carve is still a negative there"

@@ -17,6 +17,20 @@ namespace Viking.SectionCorrection
 
         [JsonPropertyName("z")]
         public List<long> Z { get; set; }
+
+        /// <summary>
+        /// Version of the build algorithm that wrote the sections; 0 when the manifest predates section fingerprints.
+        /// A different version forces a full rebuild.
+        /// </summary>
+        [JsonPropertyName("builder_version")]
+        public int BuilderVersion { get; set; }
+
+        /// <summary>
+        /// What each published section was built from, keyed by Z. Null for manifests written before section
+        /// fingerprints, which forces one rebuild.
+        /// </summary>
+        [JsonPropertyName("section_fingerprints")]
+        public Dictionary<long, SectionFingerprintDto> SectionFingerprints { get; set; }
     }
 
     public sealed class CorrectionProvenanceDto
@@ -35,6 +49,10 @@ namespace Viking.SectionCorrection
 
         [JsonPropertyName("min_annotation_votes")]
         public int MinAnnotationVotes { get; set; }
+
+        /// <summary>Smallest structure (location count) that contributed residuals; 0 when not recorded.</summary>
+        [JsonPropertyName("min_locations")]
+        public int MinLocations { get; set; }
 
         [JsonPropertyName("residual_window")]
         public ResidualWindowDto ResidualWindow { get; set; }
@@ -70,11 +88,16 @@ namespace Viking.SectionCorrection
         [JsonPropertyName("held_out_triples")]
         public int HeldOutTriples { get; set; }
 
+        /// <summary>Median held-out second difference without correction; null when there were no held-out triples.</summary>
         [JsonPropertyName("held_out_raw_median_nm")]
-        public double HeldOutRawMedianNm { get; set; }
+        public double? HeldOutRawMedianNm { get; set; }
 
+        /// <summary>
+        /// Median held-out second difference with the chosen field; null when too few triples were held out to score
+        /// candidates (the solver then publishes the identity).
+        /// </summary>
         [JsonPropertyName("held_out_corrected_median_nm")]
-        public double HeldOutCorrectedMedianNm { get; set; }
+        public double? HeldOutCorrectedMedianNm { get; set; }
     }
 
     public sealed class ResidualWindowDto

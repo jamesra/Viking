@@ -28,9 +28,20 @@ namespace gRPCAnnotationService
                 await SendFile(context, groupFile(context, PublishedCorrectionSet.ManifestFileName), "application/json");
             }).RequireAuthorization(policy);
 
+            // Not stored at publish: built from the section files on first request and cached until the next publish.
             endpoints.MapGet("/corrections/{group}/volume.npz", async context =>
             {
-                await SendFile(context, groupFile(context, PublishedCorrectionSet.VolumeFileName), "application/octet-stream");
+                string manifest = groupFile(context, PublishedCorrectionSet.ManifestFileName);
+                if (manifest == null)
+                {
+                    context.Response.StatusCode = StatusCodes.Status404NotFound;
+                    return;
+                }
+
+                string archive = await System.Threading.Tasks.Task.Run(
+                    () => VolumeArchiveCache.EnsureArchive(Path.GetDirectoryName(manifest)),
+                    context.RequestAborted);
+                await SendFile(context, archive, "application/octet-stream");
             }).RequireAuthorization(policy);
 
             endpoints.MapGet("/corrections/{group}/{file}", async context =>

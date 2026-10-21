@@ -1,0 +1,94 @@
+@model Viking.Identity.Server.WebManagement.Models.UserViewModels.ContextPermissionsEditViewModel
+
+@{
+    ViewData["Title"] = "Permissions Granted";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-shield-check"></i> Manage Permissions: @Model.ContextName</h2>
+    <a asp-controller="AnnotationContexts" asp-action="Details" asp-route-id="@Model.ContextId" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle"></i> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="alert alert-info mb-3">
+    <i class="bi bi-info-circle"></i> <strong>How to change permissions:</strong> Toggle the switches in the tables below to grant or revoke permissions for users and groups. Changes to both sections are saved together when you click "Update Permissions".
+</div>
+
+<form asp-action="EditContext" asp-route-id="@Model.ContextId" id="permissionsForm">
+    <input type="hidden" asp-for="ContextId" />
+    <input type="hidden" asp-for="ContextName" />
+    <input type="hidden" asp-for="DatabaseId" />
+    <input type="hidden" asp-for="DatabaseName" />
+
+    <h3 class="h5 mb-2"><i class="bi bi-hdd-stack"></i> Access to this volume</h3>
+    <p class="text-muted small">
+        <strong>Access</strong> decides who sees <strong>@Model.ContextName</strong> in Viking and may open it.
+    </p>
+    <partial name="~/Views/Shared/_ResourcePermissionsGridViewPartialView.cshtml" for="@Model.Context" />
+
+    <hr class="my-4" />
+
+    @if (Model.Database != null)
+    {
+        <h3 class="h5 mb-2">
+            <i class="bi bi-database"></i> Annotation database:
+            <a asp-controller="AnnotationServers" asp-action="Details" asp-route-id="@Model.DatabaseId">@Model.DatabaseName</a>
+        </h3>
+        <p class="text-muted small">
+            <strong>Read</strong>, <strong>Annotate</strong> and <strong>Review</strong> apply to every volume that stores its
+            annotations in this database, and Annotate or Review also allows viewing the images.
+        </p>
+        <partial name="~/Views/Shared/_ResourcePermissionsGridViewPartialView.cshtml" for="@Model.Database" />
+    }
+    else if (Model.DatabaseNotEditable)
+    {
+        <h3 class="h5 mb-2"><i class="bi bi-database"></i> Annotation database: @Model.DatabaseName</h3>
+        <div class="alert alert-secondary">
+            <i class="bi bi-lock"></i> You cannot edit the permissions of this volume's annotation database.
+        </div>
+    }
+    else
+    {
+        <h3 class="h5 mb-2"><i class="bi bi-database"></i> Annotation database</h3>
+        <div class="alert alert-secondary">
+            <i class="bi bi-slash-circle"></i> This volume has no annotation database, so it has no annotations. <strong>Access</strong> is its only permission.
+        </div>
+    }
+
+    <div class="form-group mt-4">
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="bi bi-save"></i> Update Permissions
+        </button>
+        <a asp-controller="AnnotationContexts" asp-action="Details" asp-route-id="@Model.ContextId" class="btn btn-outline-secondary btn-lg ms-2">
+            <i class="bi bi-x-circle"></i> Cancel
+        </a>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            var successAlert = $('.alert-success');
+            if (successAlert.length) {
+                setTimeout(function() {
+                    successAlert.fadeOut();
+                }, 5000);
+            }
+
+            $('.permission-checkbox').change(function() {
+                var checkbox = $(this);
+                checkbox.closest('td').toggleClass('table-success', checkbox.is(':checked'));
+            });
+        });
+    </script>
+}

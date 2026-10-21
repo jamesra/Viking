@@ -65,7 +65,10 @@
                             <a asp-action="CreateChild" asp-controller="Resources" asp-route-ParentId="@item.Id" class="btn btn-outline-success">
                                 <i class="bi bi-plus"></i> Create Child
                             </a>
-                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-primary">
+                            <a asp-action="Edit" asp-controller="GrantedPermissions" asp-route-id="@item.Id" class="btn btn-outline-primary">
+                                <i class="bi bi-shield-check"></i> Permissions
+                            </a>
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-secondary">
                                 <i class="bi bi-pencil"></i> Edit
                             </a>
                             <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger">

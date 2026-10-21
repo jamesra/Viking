@@ -110,13 +110,10 @@ namespace ConnectomeODataV4
 
         private static void AddScaleType(ODataConventionModelBuilder builder)
         {
-            builder.ComplexType<UnitsAndScale.AxisUnits>().Property(c => c.Units);
-            builder.ComplexType<UnitsAndScale.AxisUnits>().Property<double>(c => c.Value);
-            builder.ComplexType<UnitsAndScale.Scale>().ComplexProperty<UnitsAndScale.IAxisUnits>(c => c.X);
-            builder.ComplexType<UnitsAndScale.Scale>().ComplexProperty<UnitsAndScale.IAxisUnits>(c => c.Y);
-            builder.ComplexType<UnitsAndScale.Scale>().ComplexProperty<UnitsAndScale.IAxisUnits>(c => c.Z);
+            builder.ComplexType<AxisUnits>();
+            builder.ComplexType<Scale>();
 
-            builder.Function("Scale").Returns<UnitsAndScale.Scale>();
+            builder.Function("Scale").Returns<Scale>();
         }
 
         private static Microsoft.OData.Edm.IEdmModel AddStructureLocationLinks(ODataConventionModelBuilder builder, IEdmModel edmModel)

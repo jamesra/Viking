@@ -250,7 +250,7 @@ namespace ConnectomeODataV4.Controllers
         public IHttpActionResult GetScale()
         {
             UnitsAndScale.Scale scale = VikingWebAppSettings.AppSettings.GetScale();
-            return Ok(scale);
+            return Ok(ConnectomeODataV4.Scale.From(scale));
         }
 
         // GET: odata/StructureLocationLinks

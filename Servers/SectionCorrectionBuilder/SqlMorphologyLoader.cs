@@ -57,15 +57,6 @@ namespace Viking.SectionCorrectionBuilder
                 new AxisUnits(z, string.IsNullOrWhiteSpace(zUnits) ? "nm" : zUnits));
         }
 
-        public static async Task<DateTime> LoadWatermarkAsync(AnnotationContext db)
-        {
-            DateTime loc = await db.Locations.AsNoTracking().MaxAsync(l => (DateTime?)l.LastModified).ConfigureAwait(false)
-                ?? DateTime.MinValue;
-            DateTime link = await db.LocationLinks.AsNoTracking().MaxAsync(l => (DateTime?)l.Created).ConfigureAwait(false)
-                ?? DateTime.MinValue;
-            return loc > link ? loc : link;
-        }
-
         /// <summary>
         /// Loads residual-field candidate locations and links for a rebuild.
         /// Called by <see cref="CorrectionPublisher"/>. SELECT must project every

@@ -35,8 +35,21 @@ annotation database; without it the service reads through the OData endpoint Ide
 Rebuilds
 ========
 
-``Rebuild__Cron`` is a 5-field cron in UTC (default ``0 2 * * 0``, Sunday 02:00).
-``Rebuild__RunOnStartup=true`` rebuilds every assigned volume at start.
+``Rebuild__RunOnStartup=true`` checks every assigned volume at start.
+
+After startup the service checks for annotation changes every ``Rebuild__CheckInterval``
+(``d.hh:mm:ss``, default ``24:00:00``; ``00:00:00`` turns the check off). A check reads one
+fingerprint per section (row count, newest edit, ID sums, stos file time). The joint registration
+fit couples every section, so if any section changed the whole group is rebuilt; otherwise it is
+left alone. A change waits for a later check until its newest edit is ``Rebuild__QuietMinutes`` old
+(default 60), so an editing session is not rebuilt halfway through. A new builder version, a new
+``MinLocations`` or a set from the old leave-one-out method is rebuilt regardless.
+
+``Rebuild__Cron`` is a 5-field cron in UTC (default ``0 2 * * 0``, Sunday 02:00) that forces a
+rebuild of everything, as a safety net for changes the fingerprints cannot see.
+
+``volume.npz`` is not written at publish. ``GET /corrections/{group}/volume.npz`` builds it from
+the section files on first request and caches it until the next publish.
 
 Console menu (status and manual refresh)::
 
