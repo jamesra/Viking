@@ -237,27 +237,31 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
 
         protected override void OnTranslationChanged() => curveView = CreateView(CalculateTranslatedMosaicControlPoints(), curveView.Color);
 
+        /// <summary>
+        /// Picks the hit nearest the query point, so Ctrl-copy takes the curve under the mouse instead of whichever the R-tree listed first.
+        /// </summary>
+        /// <param name="hits">Candidate hits; may be null, as <see cref="AnnotationOverlay.GetAnnotations(Geometry.Vector2)"/> returns null when the section has no annotations.</param>
+        /// <returns>The hit with the smallest <see cref="HitTestResult.Distance"/> (the first listed wins a tie), or null when <paramref name="hits"/> is null or empty.</returns>
+        internal static HitTestResult PickNearest(IEnumerable<HitTestResult> hits) => hits?.OrderBy(h => h.Distance).FirstOrDefault();
+
         protected override void OnKeyDown(object sender, KeyEventArgs e)
         {
             if (e.Control)
             {
                 Geometry.Vector2 WorldPosition = oldWorldPosition;
                 List<HitTestResult> listHitResults = Overlay.GetAnnotations(WorldPosition);
-                List<HitTestResult> listCurves = [.. listHitResults.Where(h => h.Z == Parent.Section.Number && h.obj as LocationOpenCurveView != null)];
+                HitTestResult nearest = PickNearest(listHitResults?.Where(h => h.Z == Parent.Section.Number && h.obj is LocationOpenCurveView));
 
-                if (listCurves.Count == 0)
+                if (nearest?.obj is not LocationOpenCurveView curveToCopy)
                 {
                     return;
                 }
 
-                listCurves.OrderBy(c => c.Distance);
-
-                LocationOpenCurveView curveToCopy = listCurves.First().obj as LocationOpenCurveView;
                 OriginalVolumeControlPoints = curveToCopy.VolumeControlPoints;
                 Geometry.Vector2 translatedPosition = TranslatedVolumePosition;
                 OriginalVolumePosition = OriginalVolumeControlPoints.Average();
                 VolumePositionDeltaSum = new Geometry.Vector2(0, 0);
-                CreateView(OriginalVolumeControlPoints, curveView.Color);
+                curveView = CreateView(OriginalVolumeControlPoints, curveView.Color);
             }
             else
             {

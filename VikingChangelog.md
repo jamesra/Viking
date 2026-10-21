@@ -7,6 +7,10 @@ Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Docum
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
+## 1.2.118 - unreleased
+
+* Ctrl-copying a curve's control points while moving or reshaping an open curve now copies from the curve nearest the mouse instead of an arbitrary one under it, and the copied shape shows right away. It no longer errors when the section has no annotations.
+
 ## 1.2.117 — 2026-10-20 (Viking Test, unsigned)
 
 * No change you can see. Internal fixes: location views with very large IDs no longer drop out of the adjacent-section list, and a structure's tag text can no longer overflow the stack when something reads it.
