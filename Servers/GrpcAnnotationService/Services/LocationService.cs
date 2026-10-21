@@ -40,6 +40,9 @@ namespace gRPCAnnotationService
 
         #region Reads
 
+        /// <summary>
+        /// One location by ID, with its links attached. Throws NotFound when the ID does not exist.
+        /// </summary>
         public override async Task<GetLocationByIDResponse> GetLocationByID(GetLocationByIDRequest request, ServerCallContext context)
         {
             var ct = context.CancellationToken;
@@ -95,6 +98,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetLastModifiedLocation), e, context); }
         }
 
+        /// <summary>
+        /// IDs of the locations linked to the requested location, in either link direction.
+        /// </summary>
         public override async Task<GetLinkedLocationsResponse> GetLinkedLocations(GetLinkedLocationsRequest request, ServerCallContext context)
         {
             try
@@ -106,6 +112,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetLinkedLocations), e, context); }
         }
 
+        /// <summary>
+        /// All locations on a section (Z), with links attached. QueryExecutedTime is stamped before the read so a polling caller cannot miss a concurrent write.
+        /// </summary>
         public override async Task<GetLocationsForSectionResponse> GetLocationsForSection(GetLocationsForSectionRequest request, ServerCallContext context)
         {
             try
@@ -129,6 +138,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetLocationsForSection), e, context); }
         }
 
+        /// <summary>
+        /// All locations belonging to a structure (ParentId), with links attached.
+        /// </summary>
         public override async Task<GetStructureLocationsResponse> GetStructureLocations(GetStructureLocationsRequest request, ServerCallContext context)
         {
             try
@@ -340,6 +352,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(StreamAnnotationsInMosaicRegion), e, context); }
         }
 
+        /// <summary>
+        /// Links touching a section, plus links deleted since ModifiedAfterThisTime. Pre-SQL dates mean no lower bound. Deleted is empty when the deleted-links table is missing.
+        /// </summary>
         public override async Task<GetLocationLinksForSectionResponse> GetLocationLinksForSection(GetLocationLinksForSectionRequest request, ServerCallContext context)
         {
             try
@@ -383,6 +398,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetLocationLinksForSection), e, context); }
         }
 
+        /// <summary>
+        /// Links touching any location on the section whose position is inside the mosaic bounding box and whose radius is at least MinRadius.
+        /// </summary>
         public override async Task<GetLocationLinksForSectionInMosaicRegionResponse> GetLocationLinksForSectionInMosaicRegion(GetLocationLinksForSectionInMosaicRegionRequest request, ServerCallContext context)
         {
             try
@@ -558,6 +576,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(Update), e, context); }
         }
 
+        /// <summary>
+        /// Creates the link between two locations; a link that already exists is left as is.
+        /// </summary>
         public override async Task<CreateLocationLinkResponse> CreateLocationLink(CreateLocationLinkRequest request, ServerCallContext context)
         {
             try
@@ -570,6 +591,9 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreateLocationLink), e, context); }
         }
 
+        /// <summary>
+        /// Deletes the link between two locations, recording it in the deleted-links log. Throws NotFound when no such link exists.
+        /// </summary>
         public override async Task<DeleteLocationLinkResponse> DeleteLocationLink(DeleteLocationLinkRequest request, ServerCallContext context)
         {
             try
@@ -592,6 +616,9 @@ namespace gRPCAnnotationService
 
         #endregion
 
+        /// <summary>
+        /// Always Unimplemented: the audit tables are not mapped by the EF Core model.
+        /// </summary>
         public override Task<GetLocationChangeLogResponse> GetLocationChangeLog(GetLocationChangeLogRequest request, ServerCallContext context)
         {
             // The change log lives in audit tables the EF Core model does not map. Reporting
