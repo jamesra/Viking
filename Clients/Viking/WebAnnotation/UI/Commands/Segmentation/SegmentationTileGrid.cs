@@ -83,9 +83,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Distinct cells that contain <paramref name="worldPoints"/>.
-        /// SegmentTiles names these cells, not every cell in the viewport.
-        /// The server keeps a few dozen embeddings; listing a whole DS1 view
-        /// evicts the prompt cells and the RPC returns TILE_NOT_FOUND.
+        /// SegmentTiles names these cells, not every cell in the viewport: the server
+        /// asks for further cells only as the mask reaches them.
         /// </summary>
         public static List<TileCell> CellsContainingPoints(IReadOnlyList<Vector2> worldPoints, int downsample)
         {

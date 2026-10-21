@@ -130,13 +130,18 @@ async def test_upload_tile_reports_a_repeat_of_the_same_bytes_as_already_cached(
 
 
 @pytest.mark.asyncio
-async def test_upload_tile_with_new_bytes_replaces_the_cached_tile() -> None:
+async def test_upload_tile_with_other_bytes_keeps_the_cached_tile() -> None:
     servicer = _servicer()
-    await servicer.UploadTile(_tile(), AsyncMock())
+    first = _tile()
+    await servicer.UploadTile(first, AsyncMock())
     other = np.full((1024, 1024, 3), 7, dtype=np.uint8)
     ok, encoded = cv2.imencode(".png", other)
 
     response = await servicer.UploadTile(_tile(image_data=encoded.tobytes()), AsyncMock())
 
-    assert response.already_cached is False
+    assert response.already_cached is True
     assert (await servicer.image_cache.get_stats())["total_images"] == 1
+    key = ("v", 1, "c", "t", 1, 0, 0)
+    pinned = await servicer.image_cache.get_image_by_tile(key)
+    assert pinned is not None and pinned[1] == first.image_data
+    await servicer.image_cache.release_image(pinned[0])

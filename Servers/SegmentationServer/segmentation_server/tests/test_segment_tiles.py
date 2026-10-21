@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Callable, List, Optional
+import inspect
+from typing import Awaitable, Callable, List, Optional, Union
 from unittest.mock import AsyncMock, MagicMock
 
 import cv2
@@ -21,6 +22,7 @@ from segmentation_grpc import (
     TileCoord,
     TilesAnswer,
     TilesNeeded,
+    UploadTileRequest,
 )
 from segmentation_grpc.segmentation_pb2 import RESPONSE_CONTENT_LOGITS, RESPONSE_CONTENT_MASKS, RESPONSE_CONTENT_NO_UPSCALE
 from segmentation_server.image_cache import ImageCache
@@ -28,7 +30,7 @@ from segmentation_server.server import SegmentationServicer
 
 _VOLUME_KEY = ("RC2", 1305, "TEM", "SliceToVolume1|", 1)
 
-AnswerFor = Callable[[TilesNeeded], Optional[TilesAnswer]]
+AnswerFor = Callable[[TilesNeeded], Union[Optional[TilesAnswer], Awaitable[Optional[TilesAnswer]]]]
 
 
 def _servicer(cache: ImageCache) -> SegmentationServicer:
@@ -108,6 +110,8 @@ async def _converse(
         updates.append(update)
         if update.WhichOneof("update") == "needed":
             answer = answer_for(update.needed)
+            if inspect.isawaitable(answer):
+                answer = await answer
             if answer is not None:
                 # This client has no neighbouring annotations: every BACKGROUND tile the server asks for is unavailable.
                 listed = {(coord.row, coord.col) for coord in answer.masks_unavailable}
@@ -253,20 +257,48 @@ async def test_click_near_a_tile_corner_asks_for_the_neighbor_tiles_instead_of_a
 
 @pytest.mark.asyncio
 async def test_uploaded_tiles_let_the_same_walk_continue_and_finish() -> None:
-    """The server asks once, the client supplies the tiles, and the walk predicts without starting over."""
+    """The server asks once, the client uploads the tiles, and the walk predicts without starting over."""
+    # UploadTile hands the decoded pixels to the predictor factory too.
+    cache = ImageCache(max_memory_bytes=100_000_000, ttl_seconds=60, create_predictor_func=lambda *_args: object())
+    png = _png()
+    await _upload(cache, 0, 0, png)
+    servicer = _servicer(cache)
+    servicer.model.predict_ephemeral.return_value = (np.ones((4, 4), dtype=np.bool_), None, 0.8)
+    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=10, y=10)]))
+    context = _context()
+
+    async def upload_and_answer(needed: TilesNeeded) -> TilesAnswer:
+        for coord in needed.tiles:
+            await servicer.UploadTile(UploadTileRequest(coord=coord, image_data=png, width=1024, height=1024), _context())
+        return TilesAnswer(ready=list(needed.tiles))
+
+    updates = await _converse(servicer, request, context, answer_for=upload_and_answer)
+
+    context.abort.assert_not_awaited()
+    assert _needed_tiles(updates)[0] >= {(-1, -1), (-1, 0), (0, -1)}
+    assert servicer.model.predict_ephemeral.call_count >= 1
+    assert _result(updates).segments
+    assert all(entry.in_use == 0 for entry in cache._cache.values())
+
+
+@pytest.mark.asyncio
+async def test_tiles_the_server_already_holds_are_not_asked_of_the_client() -> None:
+    """Tiles another user or an earlier session left in the image cache are pinned at once: no TilesNeeded names them."""
     cache = _cache()
     png = _png()
-    for row, col in ((0, 0), (-1, -1), (-1, 0), (0, -1)):
+    held = {(0, 0), (-1, -1), (-1, 0), (0, -1)}
+    for row, col in held:
         await _upload(cache, row, col, png)
     servicer = _servicer(cache)
     servicer.model.predict_ephemeral.return_value = (np.ones((4, 4), dtype=np.bool_), None, 0.8)
     request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=10, y=10)]))
     context = _context()
 
-    updates = await _converse(servicer, request, context, answer_for=_all_ready)
+    updates = await _converse(servicer, request, context, answer_for=_all_unavailable)
 
     context.abort.assert_not_awaited()
-    assert _needed_tiles(updates)[0] >= {(-1, -1), (-1, 0), (0, -1)}
+    asked = {tile for tiles in _needed_tiles(updates) for tile in tiles}
+    assert not asked & held
     assert servicer.model.predict_ephemeral.call_count >= 1
     assert _result(updates).segments
     assert all(entry.in_use == 0 for entry in cache._cache.values())
@@ -346,7 +378,8 @@ async def test_a_message_other_than_an_answer_while_tiles_are_awaited_is_rejecte
 
 
 @pytest.mark.asyncio
-async def test_missing_foreground_tile_is_not_found() -> None:
+async def test_a_start_tile_the_server_lacks_is_asked_for_instead_of_failing_the_call() -> None:
+    """A client names the cells under its clicks without uploading them; the server asks for the ones it lacks."""
     cache = _cache()
     await _upload(cache, 0, 0, b"other")
     servicer = _servicer(cache)
@@ -356,12 +389,12 @@ async def test_missing_foreground_tile_is_not_found() -> None:
     )
     context = _context()
 
-    await _converse(servicer, request, context)
+    updates = await _converse(servicer, request, context)
 
-    context.abort.assert_awaited()
-    assert context.abort.await_args.args[0] == grpc.StatusCode.NOT_FOUND
-    assert "row=0 col=1" in context.abort.await_args.args[1]
-    servicer.model.predict_tile.assert_not_called()
+    context.abort.assert_not_awaited()
+    assert (0, 1) in _needed_tiles(updates)[0]
+    assert (0, 0) not in _needed_tiles(updates)[0]
+    assert _result(updates) is not None
     assert all(entry.in_use == 0 for entry in cache._cache.values())
 
 @pytest.mark.asyncio

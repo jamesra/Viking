@@ -464,6 +464,45 @@ namespace Viking.UI.Controls
             }
         }
 
+        /// <summary>
+        /// What a capture of this view draws besides its section, transform and position: the current channel, the
+        /// colour a single coloured channel is drawn in, each blended channel's name, colour and source section, and the
+        /// view options that draw into a capture. Two captures with the same key at the same place are the same picture,
+        /// so a cache shared between viewers can key tiles on it. A plain greyscale view is just the channel name.
+        /// Read on the UI thread.
+        /// </summary>
+        [System.ComponentModel.Browsable(false)]
+        public string CaptureChannelKey => CaptureChannelKeyFor(
+            CurrentChannel, CurrentChannelset, ColorizeTiles, Viking.UI.State.ShowTileMesh, Viking.UI.State.ShowStosMesh);
+
+        /// <summary><see cref="CaptureChannelKey"/> for the given view state.</summary>
+        internal static string CaptureChannelKeyFor(
+            string? channel, ChannelInfo[] channelset, bool colorizeTiles, bool showTileMesh, bool showStosMesh)
+        {
+            List<string> parts = [];
+            if (channelset.Length == 1)
+            {
+                // DrawSection draws the current channel in the single channel's colour.
+                if (!channelset[0].Greyscale)
+                    parts.Add("color=" + Rgba(channelset[0]));
+            }
+            else if (channelset.Length > 1)
+            {
+                parts.Add("blend=" + string.Join("|", channelset.Select(c =>
+                    $"{c.ChannelName}:{Rgba(c)}@{c.SectionSource}{c.FixedSectionNumber}")));
+            }
+
+            if (colorizeTiles)
+                parts.Add("colorize");
+            if (showTileMesh)
+                parts.Add("tilemesh");
+            if (showStosMesh)
+                parts.Add("stosmesh");
+            return parts.Count == 0 ? channel ?? "" : $"{channel}[{string.Join(";", parts)}]";
+
+            static string Rgba(ChannelInfo c) => $"{c.Color.R},{c.Color.G},{c.Color.B},{c.Color.A}";
+        }
+
         private ElementHost commandHelpTextScrollerHost;
         private Viking.UI.WPF.StringArrayAutoScroller commandHelpText;
 

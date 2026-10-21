@@ -180,12 +180,15 @@ class EmbeddingStore:
 
     ``mode`` separates eager-encoder files from compiled-encoder files. A load
     refreshes mtime so a cell that is still in use is not the first eviction.
+    ``suffix`` names the files; only files with it are indexed, so another store can
+    keep its own files under this root (the tile store keeps ``.png`` tiles here).
     """
 
-    def __init__(self, root: str, stamp: str, max_bytes: Optional[int]) -> None:
+    def __init__(self, root: str, stamp: str, max_bytes: Optional[int], suffix: str = ".pt") -> None:
         self._root = Path(root)
         self._stamp = stamp
         self._max_bytes = max_bytes
+        self._suffix = suffix
         self._lock = threading.Lock()
         self._files: Dict[str, _FileRecord] = {}
         self._total_bytes = 0
@@ -293,7 +296,7 @@ class EmbeddingStore:
     def _path(self, digest: str, mode: str) -> Optional[Path]:
         if not _DIGEST_RE.match(digest) or not _MODE_RE.match(mode):
             return None
-        return self._root / self._stamp / mode / digest[:2] / f"{digest}.pt"
+        return self._root / self._stamp / mode / digest[:2] / f"{digest}{self._suffix}"
 
     def _purge_other_stamps(self) -> None:
         """Delete cache folders left by other checkpoints.
@@ -331,7 +334,7 @@ class EmbeddingStore:
             return
         for dirpath, _dirnames, filenames in os.walk(self._root):
             for name in filenames:
-                if not name.endswith(".pt"):
+                if not name.endswith(self._suffix):
                     continue
                 path = Path(dirpath) / name
                 try:

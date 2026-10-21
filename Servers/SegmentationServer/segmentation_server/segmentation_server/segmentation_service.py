@@ -53,6 +53,8 @@ DEFAULT_MODEL_CFG = "configs/sam2.1/sam2.1_hiera_l.yaml"
 DEFAULT_CHECKPOINT_NAME = "sam2.1_hiera_large.pt"
 
 _GENERATION_ATTR = "_viking_encoder_generation"
+# The pixel digest a tile predictor's embedding is filed under, so a later use can refresh the disk file without hashing the image.
+_DIGEST_ATTR = "_viking_pixel_digest"
 # SAM2's mask decoder works at 1/4 of its 1024 input, and its prompt encoder takes a mask prompt at that size.
 _SAM2_LOW_RES = 256
 # Logits handed to SAM2 as a mask prompt are kept within this magnitude.
@@ -333,6 +335,7 @@ class SegmentationModel:
             mode = self._embedding_mode
         predictor = SAM2ImagePredictor(model)
         setattr(predictor, _GENERATION_ATTR, mode)
+        setattr(predictor, _DIGEST_ATTR, digest)
         if self._try_load_disk_embedding(predictor, digest, mode):
             return predictor
         self._encode_image(predictor, image_np)
@@ -353,6 +356,19 @@ class SegmentationModel:
         digest = _image_digest(image_np)
         with self._swap_lock:
             mode = self._embedding_mode
+        store.touch(digest, mode)
+
+    def note_predictor_used(self, predictor: Any) -> None:
+        """Bump the disk mtime of a cached tile predictor's embedding when a request pins it.
+
+        A request finds a cached tile without an upload, so this is what keeps the file of a cell that stays hot on
+        the GPU from looking idle to the disk cap. Cheap: the digest was kept when the predictor was built.
+        """
+        store = self._embedding_store
+        digest = getattr(predictor, _DIGEST_ATTR, None)
+        mode = getattr(predictor, _GENERATION_ATTR, None)
+        if store is None or not isinstance(digest, str) or not isinstance(mode, str):
+            return
         store.touch(digest, mode)
 
     def _try_load_disk_embedding(

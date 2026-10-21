@@ -30,6 +30,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         string SectionTransform { get; }
 
+        /// <summary>
+        /// The channel part of the tile key: everything besides volume, section, transforms and position that changes
+        /// what a capture shows (for Viking's viewer, the channel set and the view options drawn into captures). The
+        /// server shares tiles between clients by key, so two different pictures must never get the same value.
+        /// </summary>
         string Channel { get; }
 
         /// <summary>True when one channel is shown, so captures are encoded as grayscale.</summary>
@@ -63,7 +68,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         public string SectionTransform => viewer.CurrentTransform ?? string.Empty;
 
-        public string Channel => viewer.CurrentChannel ?? string.Empty;
+        public string Channel => viewer.CaptureChannelKey;
 
         public bool IsGrayscale => viewer.CurrentChannelset.Length == 1;
 

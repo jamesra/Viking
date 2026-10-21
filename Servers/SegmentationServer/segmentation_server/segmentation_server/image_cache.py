@@ -298,20 +298,22 @@ class ImageCache:
     ) -> Tuple[int, bool]:
         """Store a grid cell under tile_key (the cross-client reusable identity).
 
-        Identical bytes for an existing key refresh TTL and skip set_image().
-        Different bytes replace the entry and encode again. The returned image_id is
-        an internal predictor handle; callers that speak gRPC use TileCoord, not this id.
-        Logs on this call name the cell: volume, section (z), column (x), row (y).
+        A key that is already cached keeps its entry, whatever bytes come with the upload: the key names
+        everything that makes up the image, so other bytes for it are the same picture rendered a little
+        differently by another client. Replacing it would run the encoder again and swap the pixels under
+        streams already predicting on them. The returned image_id is an internal predictor handle; callers
+        that speak gRPC use TileCoord, not this id. Logs on this call name the cell: volume, section (z),
+        column (x), row (y).
 
         Returns:
-            (image_id, already_cached). already_cached is True only for the identical-bytes hit.
+            (image_id, already_cached). already_cached is True when the key was already cached.
         """
         volume, section, _channel, _transform, _downsample, row, col = tile_key
         with tile_work(volume, section, col, row):
             # One upload per key at a time. The body releases the cache lock while it encodes, so
             # two uploads of the same key would otherwise both miss, both encode, and the one
             # indexed first would be orphaned in the cache. Serialized, the second sees the
-            # first's entry: identical bytes are a hit, different bytes replace it cleanly.
+            # first's entry and keeps it.
             async with self._tile_upload_slot(tile_key):
                 return await self._upload_tile_body(tile_key, image_data, width, height, executor, decoded)
 
@@ -343,14 +345,16 @@ class ImageCache:
         async with self._lock:
             await self._cleanup_expired()
             existing_id = self._coord_index.get(tile_key)
-            if existing_id is not None:
-                cached = self._cache.get(existing_id)
-                if cached is not None and cached.image_data == image_data:
-                    cached.last_access_time = self._time_fn()
+            cached = self._cache.get(existing_id) if existing_id is not None else None
+            if cached is not None:
+                cached.last_access_time = self._time_fn()
+                if cached.image_data == image_data:
                     logger.info("Tile cache hit (bytes unchanged): key=%s id=%s", tile_key, existing_id)
-                    return existing_id, True
-                if cached is not None:
-                    await self._delete_image_internal(existing_id)
+                else:
+                    logger.info(
+                        "Tile cache hit (other bytes for the key, cached entry kept): key=%s id=%s", tile_key, existing_id
+                    )
+                return existing_id, True
 
         image_id = await self.upload_image(
             image_data,

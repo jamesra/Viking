@@ -89,25 +89,25 @@ class SegmentationServiceServicer:
         raise NotImplementedError('Method not implemented!')
 
     def UploadTile(self, request, context):
-        """Upload one 1024x1024 grid cell. A repeat of the same TileCoord with identical bytes
-        refreshes the cache entry and does not re-encode.
+        """Upload one 1024x1024 grid cell. A TileCoord already cached keeps its entry, whatever bytes come
+        with the upload, and is not re-encoded (already_cached is true).
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def SegmentTilesStream(self, request_iterator, context):
-        """Segment using uploaded grid cells. The server owns the request: it grows the mask over the
-        cells it has, then streams TilesNeeded for the cells the mask reached that it does not have,
-        waits for the client's TilesAnswer, and continues the same growth with them. When nothing more
-        is needed it streams the finished SegmentationResponse and ends the call.
+        """Segment using grid cells. The server owns the request: it takes each cell it needs, the ones named in
+        `start` included, from its own caches (GPU, then stored tiles), or from another stream already
+        fetching it, then streams TilesNeeded for the cells none of those hold, waits for the client's
+        TilesAnswer, and continues the same growth with them. A client need not upload before `start`.
+        When nothing more is needed it streams the finished SegmentationResponse and ends the call.
         The client sends exactly one `start`, then its foreground_mask_tile_count FOREGROUND tiles in mask_tiles
         messages, then one `answer` per TilesNeeded, sending BACKGROUND mask_tiles before an answer for the masks asked for.
-        
+
         Ending: after `result` the call ends OK. A client that cancels gets no result (the call is gone).
         A client that leaves TilesNeeded unanswered for the server's idle limit (default 60 s) gets
         DEADLINE_EXCEEDED. Other statuses: INVALID_ARGUMENT for a malformed conversation or request,
-        NOT_FOUND ("TILE_NOT_FOUND row=.. col=..") when a tile holding a foreground click is not cached,
         RESOURCE_EXHAUSTED also when the foreground mask is over the server's tile limit (see MaskTile),
         FAILED_PRECONDITION ("NO_MATCHING_MASK ...") when the starting cell yields no mask that fits the
         prompt, RESOURCE_EXHAUSTED when the request is over the server's size limits, UNAVAILABLE when the

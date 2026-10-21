@@ -126,6 +126,7 @@ namespace Viking.VolumeView
 
         string ISegmentationViewport.SectionTransform => SectionTransformFor(SectionNumber);
 
+        /// <summary>Jotunn draws the one channel in greyscale with no view options, so the channel name says all a capture shows.</summary>
         string ISegmentationViewport.Channel => ChannelFor(SectionNumber);
 
         /// <summary>Jotunn draws one channel per cell.</summary>

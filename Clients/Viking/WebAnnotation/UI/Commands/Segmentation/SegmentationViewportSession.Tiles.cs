@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Viking.gRPC.SegmentationServiceTypes.V1;
@@ -167,12 +166,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private const int SegmentStreamDeadlineSeconds = 300;
 
         /// <summary>
-        /// One SegmentTilesStream call for <paramref name="cells"/> only. Other keys in the session stay
-        /// out of the request so an earlier viewport upload cannot overflow the server cache.
-        /// The server owns the growth: it sends <c>needed</c> when the mask reaches cells it lacks, this
-        /// method uploads them and answers, and the server continues the same walk. The finished mask
-        /// arrives as <c>result</c>. A NOT_FOUND status for a prompt cell surfaces as an
-        /// <see cref="RpcException"/> for <see cref="SegmentWithMissingTileRetriesAsync"/> to handle.
+        /// One SegmentTilesStream call naming <paramref name="cells"/>, which need not be uploaded: the
+        /// server takes the ones it holds from its own caches. The server owns the growth: it sends
+        /// <c>needed</c> for the cells it lacks (a prompt cell included), this method renders and uploads
+        /// them and answers, and the server continues the same walk. The finished mask arrives as <c>result</c>.
         /// </summary>
         private async Task<SegmentationResponse> SegmentTilesStreamAsync(
             TileSignature signature,
@@ -198,15 +195,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 ResponseContent = (uint)RequestedContent
             };
             foreach (TileCell cell in cells)
-            {
-                if (!uploadedTileKeys.Contains(TileKey(signature, cell.Row, cell.Col)))
-                    continue;
-
                 request.Tiles.Add(ToCoord(signature, cell));
-            }
 
             if (request.Tiles.Count == 0)
-                throw new InvalidOperationException("No uploaded tiles cover the segmentation prompts.");
+                throw new InvalidOperationException("No tile cells cover the segmentation prompts.");
 
             // The model id comes from the status query a connection starts. The first request after the app starts, or the first after
             // a model change reset what was known, may get here before it has answered, so (re)start it if nothing is known and wait.
@@ -407,22 +399,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return answer;
         }
 
-        private static bool TryParseMissingTile(string detail, out int row, out int col)
-        {
-            row = 0;
-            col = 0;
-            if (string.IsNullOrEmpty(detail))
-                return false;
-
-            Match match = Regex.Match(detail, @"row=(-?\d+)\s+col=(-?\d+)");
-            if (!match.Success)
-                return false;
-
-            row = int.Parse(match.Groups[1].Value);
-            col = int.Parse(match.Groups[2].Value);
-            return true;
-        }
-
         /// <summary>
         /// Renders one cell and encodes it for SAM2. <paramref name="onGray"/>, when given, receives the blurred grayscale
         /// copy kept for the edge snap (<see cref="SegmentationTileImages.PrepareGray"/>) once the capture is valid.
@@ -436,90 +412,40 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             try
             {
-                CancellationToken renderToken = PrepareCancellationToken(cancellationToken);
-                double cellWorld = SegmentationTileGrid.TileSize * (double)downsample;
-                float centerX = (float)((cell.Col + 0.5) * cellWorld);
-                float centerY = (float)((cell.Row + 0.5) * cellWorld);
-                Camera camera = new() { Downsample = downsample, LookAt = new Microsoft.Xna.Framework.Vector2(centerX, centerY) };
-                VikingXNA.Scene tileScene = new(
-                    new Viewport(0, 0, SegmentationTileGrid.TileSize, SegmentationTileGrid.TileSize),
-                    camera);
-                Geometry.Rectangle worldBounds = tileScene.VisibleWorldBounds;
-                SegmentationDiag.Log(
-                    $"CaptureTile start row={cell.Row} col={cell.Col} center=({centerX},{centerY}) ds={downsample} " +
-                    $"viewport={tileScene.Viewport.Width}x{tileScene.Viewport.Height} " +
-                    $"world=({worldBounds.Left},{worldBounds.Bottom})-({worldBounds.Right},{worldBounds.Top}) " +
-                    $"worldSize={worldBounds.Width}x{worldBounds.Height}");
-                RenderTarget2D renderTarget = await parent.RenderSceneToTexture(
-                    tileScene,
-                    centerX,
-                    centerY,
-                    parent.SectionNumber,
-                    showOverlays: false,
-                    asyncTextureLoad: false,
-                    renderToken).ConfigureAwait(false);
-                if (renderTarget is null)
+                Color[]? pixels = await RenderTilePixelsAsync(cell, downsample, cancellationToken).ConfigureAwait(false);
+                if (pixels is null)
                     return (null, 0, 0);
 
-                try
+                int width = SegmentationTileGrid.TileSize;
+                int height = SegmentationTileGrid.TileSize;
+                // Awaiting the dispatcher task can resume this method on the UI thread; encoding a 1024x1024
+                // tile there stalls the viewer, so it is pushed to the pool explicitly.
+                Task<byte[]> grayTask = onGray is null
+                    ? Task.FromResult<byte[]>([])
+                    : Task.Run(() => GrayFor(pixels, grayscale), cancellationToken);
+                byte[] pngData = await Task.Run(
+                    () => SegmentationCaptureEncoder.EncodeToPng(pixels, width, height, grayscale),
+                    cancellationToken).ConfigureAwait(false);
+                byte[] gray = await grayTask.ConfigureAwait(false);
+                SegmentationCaptureEncoder.SaveCaptureForReview(
+                    pngData,
+                    width,
+                    height,
+                    $"s{parent.SectionNumber}_ds{downsample}_r{cell.Row}_c{cell.Col}");
+                var (isValid, errorMessage) = CapturedPng.Validate(pngData, width, height);
+                SegmentationDiag.Log(
+                    $"CaptureTile encoded row={cell.Row} col={cell.Col} " +
+                    $"png={CapturedPng.DescribeDimensions(pngData)} bytes={pngData.Length} valid={isValid}");
+                if (!isValid)
                 {
-                    int width = SegmentationTileGrid.TileSize;
-                    int height = SegmentationTileGrid.TileSize;
-                    SegmentationDiag.Log(
-                        $"CaptureTile target row={cell.Row} col={cell.Col} " +
-                        $"requested={width}x{height} actual={renderTarget.Width}x{renderTarget.Height}");
-                    if (renderTarget.Width != width || renderTarget.Height != height)
-                    {
-                        SegmentationDiag.Log(
-                            $"CaptureTile rejected row={cell.Row} col={cell.Col}: " +
-                            $"render target mismatch {renderTarget.Width}x{renderTarget.Height}");
-                        return (null, 0, 0);
-                    }
-
-                    Color[] pixels = await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
-                    {
-                        Color[] buffer = new Color[width * height];
-                        renderTarget.GetData(buffer);
-                        return buffer;
-                    }).Task.ConfigureAwait(false);
-                    // Awaiting the dispatcher task can resume this method on the UI thread; encoding a 1024x1024
-                    // tile there stalls the viewer, so it is pushed to the pool explicitly.
-                    Task<byte[]> grayTask = onGray is null
-                        ? Task.FromResult<byte[]>([])
-                        : Task.Run(
-                            () => SegmentationTileImages.PrepareGray(
-                                SegmentationCaptureEncoder.StretchedLuma(pixels, grayscale),
-                                width,
-                                height),
-                            cancellationToken);
-                    byte[] pngData = await Task.Run(
-                        () => SegmentationCaptureEncoder.EncodeToPng(pixels, width, height, grayscale),
-                        cancellationToken).ConfigureAwait(false);
-                    byte[] gray = await grayTask.ConfigureAwait(false);
-                    SegmentationCaptureEncoder.SaveCaptureForReview(
-                        pngData,
-                        width,
-                        height,
-                        $"s{parent.SectionNumber}_ds{downsample}_r{cell.Row}_c{cell.Col}");
-                    var (isValid, errorMessage) = CapturedPng.Validate(pngData, width, height);
-                    SegmentationDiag.Log(
-                        $"CaptureTile encoded row={cell.Row} col={cell.Col} " +
-                        $"png={CapturedPng.DescribeDimensions(pngData)} bytes={pngData.Length} valid={isValid}");
-                    if (!isValid)
-                    {
-                        Debug.WriteLine($"Tile capture failed validation: {errorMessage}");
-                        return (null, 0, 0);
-                    }
-
-                    if (onGray is not null && gray.Length == width * height)
-                        onGray(gray);
-
-                    return (pngData, width, height);
+                    Debug.WriteLine($"Tile capture failed validation: {errorMessage}");
+                    return (null, 0, 0);
                 }
-                finally
-                {
-                    Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() => renderTarget.Dispose()));
-                }
+
+                if (onGray is not null && gray.Length == width * height)
+                    onGray(gray);
+
+                return (pngData, width, height);
             }
             catch (OperationCanceledException)
             {
@@ -529,6 +455,124 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 Debug.WriteLine($"Error capturing tile row={cell.Row} col={cell.Col}: {ex.Message}");
                 return (null, 0, 0);
+            }
+        }
+
+        /// <summary>
+        /// Captures, for the edge snap, the cells under <paramref name="response"/> this session holds no image of. The
+        /// server takes cells from its own caches without asking, so a mask can cover cells this client never rendered.
+        /// Only the grayscale copy is made: nothing is encoded or uploaded. Does nothing while the edge snap is off, and
+        /// stops at <see cref="SegmentationTileImages.Capacity"/> cells, as many as the store keeps.
+        /// </summary>
+        private async Task CaptureMissingTileImagesAsync(
+            SegmentationResponse response,
+            TileSignature signature,
+            int downsample,
+            bool grayscale,
+            CancellationToken token)
+        {
+            if (!WebAnnotation.Global.AnnotationSettings.SegmentationEdgeSnapEnabled || response.Segments.Count == 0)
+                return;
+
+            Geometry.Rectangle bounds = MosaicWorldBounds(response, downsample);
+            List<TileCell> cells = SegmentationTileGrid.CellsCovering(
+                bounds.LowerLeft.X,
+                bounds.LowerLeft.Y,
+                bounds.UpperRight.X,
+                bounds.UpperRight.Y,
+                downsample);
+            int captured = 0;
+            foreach (TileCell cell in cells)
+            {
+                string key = TileKey(signature, cell.Row, cell.Col);
+                if (tileImages.Get(key) is not null)
+                    continue;
+
+                if (captured >= SegmentationTileImages.Capacity)
+                    break;
+
+                token.ThrowIfCancellationRequested();
+                captured++;
+                try
+                {
+                    Color[]? pixels = await RenderTilePixelsAsync(cell, downsample, token).ConfigureAwait(false);
+                    if (pixels is not null)
+                        tileImages.Store(key, await Task.Run(() => GrayFor(pixels, grayscale), token).ConfigureAwait(false));
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // The mask is already here; a cell the edge snap cannot see is only left unsnapped.
+                    Debug.WriteLine($"Error capturing tile image row={cell.Row} col={cell.Col}: {ex.Message}");
+                }
+            }
+
+            if (captured > 0)
+                SegmentationDiag.Log($"EdgeSnap captured {captured} tile image(s) the server had taken from its caches");
+        }
+
+        /// <summary>The blurred grayscale copy of a rendered cell that the edge snap samples.</summary>
+        private static byte[] GrayFor(Color[] pixels, bool grayscale) =>
+            SegmentationTileImages.PrepareGray(
+                SegmentationCaptureEncoder.StretchedLuma(pixels, grayscale),
+                SegmentationTileGrid.TileSize,
+                SegmentationTileGrid.TileSize);
+
+        /// <summary>
+        /// Renders one cell of the current view and reads back its pixels; null when the render was cancelled or did
+        /// not come back at the tile size.
+        /// </summary>
+        private async Task<Color[]?> RenderTilePixelsAsync(TileCell cell, int downsample, CancellationToken cancellationToken)
+        {
+            CancellationToken renderToken = PrepareCancellationToken(cancellationToken);
+            double cellWorld = SegmentationTileGrid.TileSize * (double)downsample;
+            float centerX = (float)((cell.Col + 0.5) * cellWorld);
+            float centerY = (float)((cell.Row + 0.5) * cellWorld);
+            Camera camera = new() { Downsample = downsample, LookAt = new Microsoft.Xna.Framework.Vector2(centerX, centerY) };
+            VikingXNA.Scene tileScene = new(
+                new Viewport(0, 0, SegmentationTileGrid.TileSize, SegmentationTileGrid.TileSize),
+                camera);
+            Geometry.Rectangle worldBounds = tileScene.VisibleWorldBounds;
+            SegmentationDiag.Log(
+                $"CaptureTile start row={cell.Row} col={cell.Col} center=({centerX},{centerY}) ds={downsample} " +
+                $"viewport={tileScene.Viewport.Width}x{tileScene.Viewport.Height} " +
+                $"world=({worldBounds.Left},{worldBounds.Bottom})-({worldBounds.Right},{worldBounds.Top}) " +
+                $"worldSize={worldBounds.Width}x{worldBounds.Height}");
+            RenderTarget2D renderTarget = await parent.RenderSceneToTexture(
+                tileScene,
+                centerX,
+                centerY,
+                parent.SectionNumber,
+                showOverlays: false,
+                asyncTextureLoad: false,
+                renderToken).ConfigureAwait(false);
+            if (renderTarget is null)
+                return null;
+
+            try
+            {
+                int width = SegmentationTileGrid.TileSize;
+                int height = SegmentationTileGrid.TileSize;
+                SegmentationDiag.Log(
+                    $"CaptureTile target row={cell.Row} col={cell.Col} " +
+                    $"requested={width}x{height} actual={renderTarget.Width}x{renderTarget.Height}");
+                if (renderTarget.Width != width || renderTarget.Height != height)
+                {
+                    SegmentationDiag.Log(
+                        $"CaptureTile rejected row={cell.Row} col={cell.Col}: " +
+                        $"render target mismatch {renderTarget.Width}x{renderTarget.Height}");
+                    return null;
+                }
+
+                return await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
+                {
+                    Color[] buffer = new Color[width * height];
+                    renderTarget.GetData(buffer);
+                    return buffer;
+                }).Task.ConfigureAwait(false);
+            }
+            finally
+            {
+                Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() => renderTarget.Dispose()));
             }
         }
 

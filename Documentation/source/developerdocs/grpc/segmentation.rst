@@ -13,7 +13,7 @@ Interactive tracing. The client uploads a mosaic image, or the 1024×1024 tiles 
 
 Points are pixels in the image that was uploaded. For tiles, X increases to the right and Y increases upward (world divided by the tile downsample). ``TileCoord.row`` and ``col`` are ``floor(world / (1024 * downsample))``. Row increases with world Y.
 
-``TileCoord`` is the cache key shared by clients: ``volume``, ``section``, ``channel``, ``transform``, ``downsample``, ``row``, ``col``. Do not invent a second id for the same cell.
+``TileCoord`` is the cache key shared by clients: ``volume``, ``section``, ``channel``, ``transform``, ``downsample``, ``row``, ``col``. Do not invent a second id for the same cell. The server treats two uploads with one key as the same picture and hands one client's tile to another, so the key must name everything that changes the render. Viking puts the channel set it blends (each channel's name, colour and source section) and the view options drawn into a capture into ``channel``; a plain greyscale view sends just the channel name.
 
 Upload and cache
 ================
@@ -27,7 +27,7 @@ Upload and cache
    * - ``UploadImage``
      - Stores one image (``image_data``, ``width``, ``height``) and returns ``image_id``. Later calls pass that id and skip re-encoding.
    * - ``UploadTile``
-     - Stores one 1024×1024 cell. Uploading the same ``TileCoord`` with the same bytes refreshes the entry and does not re-encode. ``already_cached`` is true in that case. There is no image id. ``SegmentTiles`` addresses the cell by ``TileCoord``.
+     - Stores one 1024×1024 cell. A ``TileCoord`` that is already cached keeps its entry, whatever bytes come with the upload, and is not re-encoded. ``already_cached`` is true in that case. There is no image id. ``SegmentTiles`` addresses the cell by ``TileCoord``. The server also keeps each new tile's bytes in host memory and, with the embedding disk cache on, on disk, so it can rebuild the tile after the GPU cache drops it without asking a client.
    * - ``DeleteImage``
      - Drops a cached ``image_id``.
    * - ``GetServerStatus``
@@ -43,7 +43,7 @@ Segment
    * - RPC
      - Behavior
    * - ``SegmentTilesStream``
-     - Bidirectional stream. The client sends one ``start`` (``SegmentTilesRequest``): the tiles it uploaded, plus foreground and background points in the fused mosaic. The server grows the mask over the cells it has. When the mask reaches cells it does not have, it sends ``needed`` (``TilesNeeded``) and waits. The client uploads those cells with ``UploadTile`` and sends an ``answer`` (``TilesAnswer``) listing each tile as ``ready`` or ``unavailable``. The server continues the same growth, so nothing already predicted is repeated. When nothing more is needed it sends ``result`` (the ``SegmentationResponse``, polygons in the mosaic space) and ends the call.
+     - Bidirectional stream. The client sends one ``start`` (``SegmentTilesRequest``): the cells under its prompt, which it need not have uploaded, plus foreground and background points in the fused mosaic. For every cell it needs, the start cells included, the server looks in its GPU cache, then in its stored tiles, then waits for another stream that is already fetching the cell, and only then asks this client. When the mask reaches cells none of those supply, it sends ``needed`` (``TilesNeeded``) and waits. The client uploads those cells with ``UploadTile`` and sends an ``answer`` (``TilesAnswer``) listing each tile as ``ready`` or ``unavailable``. The server continues the same growth, so nothing already predicted is repeated. When nothing more is needed it sends ``result`` (the ``SegmentationResponse``, polygons in the mosaic space) and ends the call.
    * - ``SegmentImage``
      - One point set on one image. Non-zero ``image_id`` uses the cache and ignores ``image_data``. ``image_id`` 0 sends ``image_data`` and re-encodes every call. ``coordinates`` and ``labels`` are parallel arrays (label 1 foreground, 0 background). ``omit_labeled_image`` skips the full-frame PNG. Viking sets it.
    * - ``SegmentImageSets``

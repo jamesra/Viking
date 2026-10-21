@@ -571,10 +571,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Records the live viewport as the tile-mode capture. Does not upload every visible cell.
-        /// SegmentAsync uploads the cells that contain foreground points, then any cells growth asks for.
-        /// A full DS1 view is often larger than the server embedding cache (32). Uploading it first
-        /// evicts the prompt cells, and the following SegmentTiles call returns TILE_NOT_FOUND.
+        /// Records the live viewport as the tile-mode capture. Does not upload any cell: SegmentAsync names
+        /// the cells that contain foreground points and uploads only the cells the server asks for.
         /// Tile mode does not use UploadImage; CurrentImageId stays unset.
         /// </summary>
         /// <returns>True when the camera is inside the tile-submission range and the viewport was recorded.</returns>
@@ -636,78 +634,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Calls SegmentTiles. On TILE_NOT_FOUND, drops that cell and uploads it again.
-        /// One retry is not enough: the cache evicts several prompt cells, and the second
-        /// missing cell used to abort the whole request.
-        /// Returns null when a cell still cannot be uploaded.
-        /// </summary>
-        private async Task<SegmentationResponse?> SegmentWithMissingTileRetriesAsync(
-            TileSignature signature,
-            List<TileCell> needed,
-            IReadOnlyList<Geometry.Vector2> foregroundPoints,
-            IReadOnlyList<Geometry.Vector2> backgroundPoints,
-            bool grayscale,
-            CancellationToken cancellationToken,
-            IReadOnlyList<SegmentationSeed>? foregroundBoxes = null,
-            SegmentationMaskUnion? backgroundMask = null,
-            ulong requestId = 0)
-        {
-            const int maxNotFoundRetries = 16;
-            string? lastMissingKey = null;
-            int sameTileMisses = 0;
-            for (int attempt = 0; attempt <= maxNotFoundRetries; attempt++)
-            {
-                try
-                {
-                    return await SegmentTilesStreamAsync(
-                        signature,
-                        needed,
-                        foregroundPoints,
-                        backgroundPoints,
-                        grayscale,
-                        cancellationToken,
-                        foregroundBoxes,
-                        backgroundMask,
-                        requestId).ConfigureAwait(false);
-                }
-                catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound &&
-                    TryParseMissingTile(rpcEx.Status.Detail, out int missingRow, out int missingCol))
-                {
-                    string missingKey = TileKey(signature, missingRow, missingCol);
-                    if (missingKey == lastMissingKey)
-                    {
-                        sameTileMisses++;
-                        if (sameTileMisses >= 2)
-                            throw;
-                    }
-                    else
-                    {
-                        lastMissingKey = missingKey;
-                        sameTileMisses = 0;
-                    }
-
-                    SegmentationDiag.Log(
-                        $"SegmentTiles TILE_NOT_FOUND row={missingRow} col={missingCol} retry={attempt}");
-                    uploadedTileKeys.Remove(missingKey);
-                    TileCell missing = new(missingRow, missingCol);
-                    if (!needed.Any(cell => cell.Row == missingRow && cell.Col == missingCol))
-                        needed.Add(missing);
-
-                    if (!await UploadMissingTilesAsync(
-                        signature,
-                        [missing],
-                        grayscale,
-                        cancellationToken).ConfigureAwait(false))
-                    {
-                        return null;
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
         /// Best-effort DeleteImage RPC, then clears CurrentImageId. Failures are logged only.
         /// </summary>
         public async Task DeleteCurrentImageAsync()
@@ -735,9 +661,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Uploads the cells that contain foreground points, then runs one SegmentTilesStream call.
-        /// The server grows the mask and asks for further cells as the mask reaches them; the client
-        /// uploads those and the call returns the finished mask. Does not name every viewport cell.
+        /// Runs one SegmentTilesStream call naming the cells that contain foreground points. The server
+        /// takes every cell it can from its own caches, which other users and earlier sessions fill too,
+        /// grows the mask, and asks for the cells it lacks; the client renders and uploads only those, and
+        /// the call returns the finished mask. Does not name every viewport cell.
         /// Returns null when no mask could be produced.
         /// <paramref name="requestId"/> is sent with the request and echoed by the server; it only
         /// correlates log lines. Deciding whether a result is still wanted stays with the caller.
@@ -785,15 +712,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     return null;
                 }
 
-                if (!await UploadMissingTilesAsync(signature, needed, grayscale, cancellationToken).ConfigureAwait(false))
-                {
-                    SegmentationDiag.Log("SegmentAsync: UploadMissingTilesAsync returned false");
-                    Debug.WriteLine("No segmentation tiles could be uploaded");
-                    RecordSkip(SegmentationSkipKind.UploadFailed);
-                    return null;
-                }
-
-                SegmentationResponse? response = await SegmentWithMissingTileRetriesAsync(
+                // The prompt cells are named, not uploaded: the server takes what it already holds from its own
+                // caches and asks for the rest in the stream.
+                SegmentationResponse response = await SegmentTilesStreamAsync(
                     signature,
                     needed,
                     foregroundPoints,
@@ -803,13 +724,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     foregroundBoxes,
                     backgroundMask,
                     requestId).ConfigureAwait(false);
-                if (response is null)
-                {
-                    RecordSkip(SegmentationSkipKind.TilesUnavailable);
-                    return null;
-                }
 
                 resultContexts.Record(response, downsample);
+                await CaptureMissingTileImagesAsync(response, signature, downsample, grayscale, cancellationToken).ConfigureAwait(false);
                 AttachTileImages(response, signature, downsample);
                 mosaicOriginX = response.OriginX;
                 mosaicOriginY = response.OriginY;

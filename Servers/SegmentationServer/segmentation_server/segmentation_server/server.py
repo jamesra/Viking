@@ -50,6 +50,7 @@ from segmentation_server.image_cache import (
     DEFAULT_MAX_MEMORY_BYTES,
     DEFAULT_TTL_SECONDS,
     ImageCache,
+    PredictorCreationError,
     TileCacheKey,
 )
 from segmentation_server.debug_dump import dump_enabled, dump_growth
@@ -68,6 +69,7 @@ from segmentation_server.mask_utils import (
 )
 from segmentation_server.mask_tiles import MaskTileCollector, MaskTileError
 from segmentation_server.tile_requests import TileRequestRegistry
+from segmentation_server.tile_store import TileStore, open_tile_store
 from segmentation_server.tile_work import (
     install_sam2_log_filter,
     install_tile_work_logging,
@@ -81,7 +83,6 @@ from segmentation_server.cell_grid import (
     TileIndex,
     crop_window,
     is_aligned,
-    tile_of_point,
     tiles_for_cell,
 )
 from segmentation_server.tile_growth import (
@@ -357,10 +358,12 @@ class TileImages:
         self._encoded: dict[Tuple[int, int], bytes] = {}
         self._decoded: dict[Tuple[int, int], NDArray[np.uint8]] = {}
 
-    def add(self, row: int, col: int, image_bytes: bytes) -> None:
-        """Remember a tile's encoded bytes (a tile already held keeps its bytes)."""
+    def add(self, row: int, col: int, image_bytes: bytes, decoded: Optional[NDArray[np.uint8]] = None) -> None:
+        """Remember a tile's encoded bytes, and its pixels when the caller already decoded them (a tile already held keeps its own)."""
         if image_bytes and (row, col) not in self._encoded:
             self._encoded[(row, col)] = image_bytes
+            if decoded is not None:
+                self._decoded[(row, col)] = decoded
 
     def __contains__(self, key: object) -> bool:
         return key in self._encoded
@@ -501,6 +504,7 @@ class SegmentationServicer(SegmentationServiceServicer):
         inference_workers: int = 1,
         exit_process: Callable[[int], None] = os._exit,
         compile_image_encoder: bool = True,
+        tile_store: Optional[TileStore] = None,
     ) -> None:
         """
         Args:
@@ -516,6 +520,7 @@ class SegmentationServicer(SegmentationServiceServicer):
             inference_workers: Size of the inference thread pool, reported in GetServerStatus.
             exit_process: Called after an unrecoverable GPU error (inject in tests).
             compile_image_encoder: torch.compile the SAM2 Hiera encoder (CUDA only).
+            tile_store: Uploaded tiles kept after the image cache drops them; read from the environment if omitted.
         """
         if model is None:
             from segmentation_server.segmentation_service import SegmentationModel as _SegmentationModel
@@ -546,6 +551,7 @@ class SegmentationServicer(SegmentationServiceServicer):
         self._tile_answer_timeout = tile_answer_timeout_seconds()
         self._tile_share_timeout = tile_share_timeout_seconds()
         self._tile_requests = TileRequestRegistry()
+        self._tile_store = tile_store if tile_store is not None else open_tile_store()
         self._limits = RequestLimits.from_env()
         self._active_streams = 0
         # Image decoding and response encoding are CPU work. They get their own small pool so a
@@ -1226,7 +1232,11 @@ class SegmentationServicer(SegmentationServiceServicer):
         request: UploadTileRequest,
         context: ServicerContext,
     ) -> UploadTileResponse:
-        """Cache one grid cell. Identical bytes for the same coord skip set_image()."""
+        """Cache one grid cell. A coord already cached keeps its entry and skips set_image().
+
+        A newly cached cell also goes in the tile store, so the server can rebuild it without asking a client
+        after the image cache drops it.
+        """
         if not await self._submission_ok("UploadTile", True, context):
             return UploadTileResponse()
         coord = request.coord
@@ -1285,6 +1295,8 @@ class SegmentationServicer(SegmentationServiceServicer):
             return UploadTileResponse()
         finally:
             self._load.end(time.perf_counter() - start_time)
+        if not already_cached:
+            self._keep_tile(tile_key, image_data)
         woken = self._tile_requests.arrived(tile_key)
         if woken:
             logger.info("UploadTile row=%s col=%s woke %d stream(s) waiting for it", coord.row, coord.col, woken)
@@ -1356,7 +1368,7 @@ class SegmentationServicer(SegmentationServiceServicer):
             prompts = _prompts_from(request, mask_tiles)
             foreground = prompts.foreground
             background = prompts.background
-            if not await self._pin_start_tiles(session, request, foreground, context):
+            if not await self._pin_start_tiles(session, request, context):
                 return
             try:
                 await self._absorb_early_mask_tiles(reader, session)
@@ -1618,50 +1630,34 @@ class SegmentationServicer(SegmentationServiceServicer):
         self,
         session: "_TileSession",
         request: SegmentTilesRequest,
-        foreground: List[Tuple[int, int]],
         context: ServicerContext,
     ) -> bool:
-        """Pin every uploaded tile the request names, for the whole call.
+        """Pin every tile the request names that the server holds, for the whole call. False after an abort.
 
-        A tile that holds a foreground point must be cached and have a predictor, or the call
-        aborts (``NOT_FOUND`` / ``UNAVAILABLE``) and False is returned. Other missing tiles are
-        skipped; the walk asks for them if it reaches them.
+        A tile the server does not hold is not an error, even one under a click: the walk asks the client for it in
+        its first round. So a client names the cells under its prompt without uploading them first, and renders
+        only the ones the server turns out not to have.
         """
         seen: set[TileCacheKey] = set()
-        for tile in request.tiles:
-            key = _tile_cache_key(tile)
-            if key in seen:
-                continue
-            seen.add(key)
-            holds_foreground = _tile_contains_foreground(tile, foreground)
-            pinned = await self.image_cache.get_image_by_tile(key)
-            if pinned is None:
-                if holds_foreground:
-                    await context.abort(
-                        grpc.StatusCode.NOT_FOUND,
-                        f"TILE_NOT_FOUND row={tile.row} col={tile.col} downsample={tile.downsample}",
-                    )
-                    return False
+        try:
+            for tile in request.tiles:
+                key = _tile_cache_key(tile)
+                if key in seen:
+                    continue
+                seen.add(key)
+                index = TileIndex(row=int(tile.row), col=int(tile.col))
+                if await self._pin_tile(session, index):
+                    session.uploaded.append(index)
+                    continue
                 logger.info(
-                    "SegmentTiles skip uncached tile row=%s col=%s ds=%s (no foreground)",
+                    "SegmentTiles start tile row=%s col=%s ds=%s is not held; the walk asks for it",
                     tile.row,
                     tile.col,
                     tile.downsample,
                 )
-                continue
-            image_id, image_bytes, width, height, predictor, predictor_lock = pinned
-            session.pinned_ids.append(image_id)
-            _remember_tile_image(session.images, int(tile.row), int(tile.col), image_bytes)
-            if predictor is None:
-                if holds_foreground:
-                    await context.abort(
-                        grpc.StatusCode.UNAVAILABLE,
-                        f"Predictor for tile row={tile.row} col={tile.col} is not ready.",
-                    )
-                    return False
-                continue
-            session.predictors[(tile.row, tile.col)] = (predictor, predictor_lock, height, width)
-            session.uploaded.append(TileIndex(row=int(tile.row), col=int(tile.col)))
+        except UnrecoverableGpuError as e:
+            await self._abort_unrecoverable_gpu(e, context)
+            return False
         return True
 
     def _cell_predictor(self, session: "_TileSession", settings: "_PredictSettings") -> CellPredict:
@@ -1824,21 +1820,33 @@ class SegmentationServicer(SegmentationServiceServicer):
     async def _begin_tile_wait(
         self, session: "_TileSession", needed: List[TileIndex], masks: Sequence[TileIndex] = ()
     ) -> "_TileWait":
-        """Decide, tile by tile, whether to ask this stream's client or wait for another stream's upload.
+        """Decide, tile by tile, where each needed tile comes from.
 
-        A tile some other stream has already asked its client for is subscribed to, not asked
-        again. Every other tile is asked of this client, and is recorded as in flight so a stream
-        that needs it later can subscribe in turn.
+        The server's own caches come first (:meth:`_pin_tile`: the image cache, then the tile
+        store), so a tile another user or an earlier session left there is not rendered and
+        uploaded again. A tile some other stream has already asked its client for is subscribed
+        to, not asked again. Every other tile is asked of this client, and is recorded as in
+        flight so a stream that needs it later can subscribe in turn.
+
+        Raises:
+            UnrecoverableGpuError: Rebuilding a stored tile found the CUDA context dead.
         """
         wait = _TileWait()
-        loop = asyncio.get_running_loop()
-        now = loop.time()
         for tile in masks:
             # A background tile the client sent early is already held and is not asked for again.
             if session.masks is not None and not session.masks.background.is_known((tile.row, tile.col)):
                 session.masks.asked_background.add((tile.row, tile.col))
                 wait.ask_mask(tile)
-        for tile in needed:
+        # One at a time: a pin taken by a lookup still running after the stream ended would never be released.
+        missing = [tile for tile in needed if not await self._pin_tile(session, tile)]
+        if len(missing) < len(needed):
+            logger.info(
+                "SegmentTiles %d of %d needed tiles were held by the server; the client is not asked for them",
+                len(needed) - len(missing),
+                len(needed),
+            )
+        now = asyncio.get_running_loop().time()
+        for tile in missing:
             key = _tile_cache_key(_coord_for(session.identity, tile))
             if self._tile_share_timeout <= 0:
                 self._tile_requests.join(key, session.token)
@@ -1924,9 +1932,7 @@ class SegmentationServicer(SegmentationServiceServicer):
             elif shared.future.cancelled() or not shared.future.result():
                 reason = "the stream fetching it gave up"
             else:
-                if await self._pin_arrived_tile(
-                    session.identity, shared.tile, session.predictors, session.images, session.pinned_ids
-                ):
+                if await self._pin_tile(session, shared.tile):
                     logger.info(
                         "SegmentTiles tile row=%s col=%s arrived from another stream's upload",
                         shared.tile.row,
@@ -1999,9 +2005,7 @@ class SegmentationServicer(SegmentationServiceServicer):
             wait.asked.discard((index.row, index.col))
             progressed = True
             key = _tile_cache_key(_coord_for(session.identity, index))
-            if await self._pin_arrived_tile(
-                session.identity, index, session.predictors, session.images, session.pinned_ids
-            ):
+            if await self._pin_tile(session, index):
                 self._tile_requests.arrived(key)
                 continue
             logger.info("SegmentTiles tile row=%s col=%s was reported ready but is not cached", index.row, index.col)
@@ -2009,26 +2013,106 @@ class SegmentationServicer(SegmentationServiceServicer):
             self._tile_requests.release(key, session.token)
         return progressed
 
-    async def _pin_arrived_tile(
-        self,
-        identity: TileCoord,
-        index: TileIndex,
-        predictors: dict,
-        images: TileImages,
-        pinned_ids: List[int],
-    ) -> bool:
-        """Pin one uploaded tile for the rest of the request. False when it cannot be used."""
-        pinned = await self.image_cache.get_image_by_tile(_tile_cache_key(_coord_for(identity, index)))
-        if pinned is None:
-            return False
+    async def _pin_tile(self, session: "_TileSession", index: TileIndex) -> bool:
+        """Pin one tile for the rest of the request from the server's own caches. False when none holds it.
+
+        The image cache comes first. Then the tile store, whose bytes go back into the image cache
+        (the disk embedding store usually spares the encoder) and wake any stream waiting for that
+        tile. A stored tile the image cache cannot take back is still used from its pixels: its
+        windows are predicted on throwaway predictors.
+
+        Raises:
+            UnrecoverableGpuError: Rebuilding the tile's embedding found the CUDA context dead.
+        """
+        key = _tile_cache_key(_coord_for(session.identity, index))
+        pinned = await self.image_cache.get_image_by_tile(key)
+        if pinned is not None:
+            self._note_tile_used(key, pinned[4])
+        else:
+            data = await self._stored_tile(key)
+            if data is None:
+                return False
+            decoded = await self._decode_stored_tile(key, data)
+            if decoded is None:
+                return False
+            try:
+                await self.image_cache.upload_tile(
+                    key, data, TILE_SIZE, TILE_SIZE, executor=self.inference_executor, decoded=decoded
+                )
+                pinned = await self.image_cache.get_image_by_tile(key)
+            except (CacheFullError, PredictorCreationError) as e:
+                logger.warning("Stored tile key=%s could not go back in the image cache (%s); using its pixels", key, e)
+            if pinned is None:
+                session.images.add(index.row, index.col, data, decoded)
+                return True
+            logger.info("SegmentTiles tile row=%s col=%s rebuilt from the tile store", index.row, index.col)
+            self._tile_requests.arrived(key)
         image_id, image_bytes, width, height, predictor, predictor_lock = pinned
-        pinned_ids.append(image_id)
-        _remember_tile_image(images, index.row, index.col, image_bytes)
-        if (index.row, index.col) not in images:
+        session.pinned_ids.append(image_id)
+        _remember_tile_image(session.images, index.row, index.col, image_bytes)
+        if (index.row, index.col) not in session.images:
             return False
         if predictor is not None:
-            predictors[(index.row, index.col)] = (predictor, predictor_lock, height, width)
+            session.predictors[(index.row, index.col)] = (predictor, predictor_lock, height, width)
         return True
+
+    async def _stored_tile(self, key: TileCacheKey) -> Optional[bytes]:
+        """The tile store's bytes for ``key``: from memory on the loop, from disk on a worker thread."""
+        data = self._tile_store.recall(key)
+        if data is None and self._tile_store.has_disk:
+            data = await asyncio.get_running_loop().run_in_executor(self._cpu_executor, self._tile_store.load, key)
+        return data
+
+    async def _decode_stored_tile(self, key: TileCacheKey, data: bytes) -> Optional[NDArray[np.uint8]]:
+        """The stored tile's pixels, or None (and the tile forgotten) when they are not a whole tile."""
+        loop = asyncio.get_running_loop()
+        try:
+            decoded = await loop.run_in_executor(self._cpu_executor, prepare_image_for_sam2, data)
+        except (OSError, ValueError):
+            decoded = None
+        if decoded is not None and decoded.shape[:2] == (TILE_SIZE, TILE_SIZE):
+            return decoded
+        logger.warning("Stored tile key=%s is not a %sx%s image; forgetting it", key, TILE_SIZE, TILE_SIZE)
+        await loop.run_in_executor(self._cpu_executor, self._tile_store.forget, key)
+        return None
+
+    def _keep_tile(self, key: TileCacheKey, data: bytes) -> None:
+        """Put a newly cached tile in the tile store: memory now, disk on a worker thread the upload does not wait for."""
+        self._tile_store.remember(key, data)
+        if self._tile_store.has_disk:
+            self._in_background(self._tile_store.persist, key, data)
+
+    def _note_tile_used(self, key: TileCacheKey, predictor: Any) -> None:
+        """Refresh the disk files of a tile found in the image cache, so a tile that stays hot is not evicted from disk.
+
+        Without an upload nothing else touches them: the walk no longer asks a client for a tile the cache holds.
+        """
+        note = getattr(self.model, "note_predictor_used", None)
+        if not callable(note):
+            note = None
+        if not self._tile_store.has_disk and (note is None or predictor is None):
+            return
+
+        def touch() -> None:
+            self._tile_store.touch(key)
+            if note is not None and predictor is not None:
+                note(predictor)
+
+        self._in_background(touch)
+
+    def _in_background(self, work: Callable[..., None], *args: Any) -> None:
+        """Run ``work`` on the CPU pool without waiting for it. Failures are logged."""
+
+        def run() -> None:
+            try:
+                work(*args)
+            except Exception:
+                logger.exception("Background tile store work failed")
+
+        try:
+            self._cpu_executor.submit(run)
+        except RuntimeError:
+            logger.debug("CPU pool is shut down; background tile store work skipped")
 
     async def SegmentImage(
         self,
@@ -2206,17 +2290,6 @@ def _client_boxes(boxes: Any) -> List[Tuple[int, int, int, int]]:
         if x1 > x0 and y1 > y0:
             result.append((x0, y0, x1, y1))
     return sorted(result)
-
-
-def _tile_contains_foreground(tile: TileCoord, foreground: List[Tuple[int, int]]) -> bool:
-    """True when a mosaic foreground point lies in this cell.
-
-    SegmentTiles returns NOT_FOUND for that cell so the client re-uploads the seed.
-    A missing cell with no foreground point is left out of the uploaded set; growth
-    asks for it only when the mask reaches the shared border.
-    """
-    target = TileIndex(row=int(tile.row), col=int(tile.col))
-    return any(tile_of_point(int(x), int(y)) == target for x, y in foreground)
 
 
 def _tile_cache_key(coord: TileCoord) -> TileCacheKey:

@@ -57,6 +57,9 @@ x-segmentation-env: &segmentation-env
   # Tile embeddings (not weights). Survives eviction and container restart.
   SEGMENTATION_EMBEDDING_CACHE: /var/cache/segmentation-embeddings
   SEGMENTATION_EMBEDDING_CACHE_MAX_BYTES: ${SEGMENTATION_EMBEDDING_CACHE_MAX_BYTES:-}
+  # Uploaded tile bytes, so a tile the GPU cache dropped is rebuilt without asking a client. Disk copies go under the embedding cache.
+  SEGMENTATION_TILE_RAM_BYTES: ${SEGMENTATION_TILE_RAM_BYTES:-}
+  SEGMENTATION_TILE_CACHE_MAX_BYTES: ${SEGMENTATION_TILE_CACHE_MAX_BYTES:-}
   # 1 writes the newest 40 growth results to <embedding cache>/debug-dumps for offline inspection.
   SEGMENTATION_DEBUG_DUMP: ${SEGMENTATION_DEBUG_DUMP:-}
   # 1 asks SAM2 for three candidate masks on box prompts. Off until judged on real sections.

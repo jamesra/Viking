@@ -336,22 +336,24 @@ async def test_upload_tile_coord_key_shared_across_callers() -> None:
 
 
 @pytest.mark.asyncio
-async def test_upload_tile_new_bytes_replace_entry() -> None:
+async def test_upload_tile_other_bytes_keep_the_cached_entry() -> None:
+    """The key names the whole picture, so a second render of it neither re-encodes nor swaps the pixels."""
     created: list[bytes] = []
     cache = ImageCache(
         max_memory_bytes=1024,
         ttl_seconds=60,
         create_predictor_func=lambda data: created.append(data) or data,
     )
-    await cache.upload_tile(_TILE_KEY, b"old", 8, 8)
+    first_id, _hit = await cache.upload_tile(_TILE_KEY, b"old", 8, 8)
     image_id, already = await cache.upload_tile(_TILE_KEY, b"new", 8, 8)
-    assert already is False
+    assert already is True
+    assert image_id == first_id
     pinned = await cache.get_image_by_tile(_TILE_KEY)
     assert pinned is not None
-    assert pinned[0] == image_id
-    assert pinned[1] == b"new"
-    await cache.release_image(image_id)
-    assert created == [b"old", b"new"]
+    assert pinned[0] == first_id
+    assert pinned[1] == b"old"
+    await cache.release_image(first_id)
+    assert created == [b"old"]
 
 
 def _tile_key(row: int) -> tuple:
