@@ -1,11 +1,15 @@
 # Viking changelog
 
-Committed application version: **1.2.116.0**  
+Committed application version: **1.2.117.0**  
 (1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109; their changes are listed under 1.2.109.)
 
 Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Documentation/source/Client/versionhistory.rst).
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
+
+## 1.2.117 — 2026-10-20 (Viking Test, unsigned)
+
+* No change you can see. Internal fixes: location views with very large IDs no longer drop out of the adjacent-section list, and a structure's tag text can no longer overflow the stack when something reads it.
 
 ## 1.2.116 — 2026-10-20 (Viking Test, unsigned)
 
