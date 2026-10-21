@@ -19,6 +19,9 @@ Close any running `Viking.exe` first; it locks the Debug output files. The whole
 dotnet test Clients/CommonTests/CommonTests.csproj
 dotnet test Clients/VolumeModelTests/VolumeModelTests.csproj
 dotnet test Clients/Viking/LocalBookmarksTests/LocalBookmarksTests.csproj
+dotnet test Clients/Viking/VikingCoreTests/VikingCoreTests.csproj
+dotnet test Clients/Viking/WebAnnotationTests/WebAnnotationTests.csproj
+dotnet test Clients/Viking/VikingTests/VikingTests.csproj
 dotnet test GeometryTests/GeometryTests.csproj
 ```
 
