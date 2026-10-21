@@ -131,6 +131,7 @@
     <Compile Include="PidControllerTests.cs" />
     <Compile Include="LocationParentFetchTests.cs" />
     <Compile Include="IntToBrushConverterTests.cs" />
+    <Compile Include="SectionReferenceSettingsTests.cs" />
     <Compile Include="TranslateCurveLocationCommandTests.cs" />
   </ItemGroup>
   <ItemGroup>
