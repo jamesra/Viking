@@ -151,6 +151,11 @@ namespace WebAnnotationModel
             Trace.WriteLine("GetAllStructures, End", "WebAnnotation");
         }
 
+        /// <summary>
+        /// Deletes the cached structure <paramref name="ID"/> without asking when the server reports it has no locations left.
+        /// Called after a location is deleted. Does nothing when the structure is not cached; a failed location count
+        /// shows the standard error message and deletes nothing. Exceptions from <c>Save</c> reach the caller.
+        /// </summary>
         public void CheckForOrphan(long ID)
         {
             StructureObj obj = GetObjectByID(ID);
@@ -161,10 +166,7 @@ namespace WebAnnotationModel
             try
             {
                 IClientChannel proxy = CreateProxy();
-                {
-
-                    numLocs = ((IAnnotateStructures)proxy).NumberOfLocationsForStructure(ID);
-                }
+                numLocs = ((IAnnotateStructures)proxy).NumberOfLocationsForStructure(ID);
             }
             catch (Exception e)
             {
@@ -174,35 +176,9 @@ namespace WebAnnotationModel
 
             if (numLocs == 0)
             {
-                /*
-                string name; 
-                if(obj.Type != null)
-                    name = obj.Type.Name + " " + obj.ID.ToString();
-                else
-                    name = obj.ID.ToString();
-                */
-                /*
-                System.Windows.Forms.DialogResult result = System.Windows.Forms.MessageBox.Show("Structure " + name + " has no locations, do you wish to delete from the database?", 
-                                                            "Continue Delete?",
-                                                            System.Windows.Forms.MessageBoxButtons.YesNo);
-
-                //Delete on yes
-                if (result == System.Windows.Forms.DialogResult.Yes)
-                {*/
-                try
-                {
-                    //TODO
-                    Remove(obj);
-                    Save();
-                    Trace.WriteLine("Removing childless structure: " + obj.ToString(), "WebAnnotation");
-
-                }
-                catch (FaultException)
-                {
-                    //             System.Windows.Forms.MessageBox.Show("Delete failed.  Structure may have had child location added or already been deleted. Exception: " + e.ToString(), "Survivable error"); 
-                    throw;
-                }
-                //  }
+                Remove(obj);
+                Save();
+                Trace.WriteLine("Removing childless structure: " + obj.ToString(), "WebAnnotation");
             }
         }
 
