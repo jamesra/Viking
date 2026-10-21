@@ -1,7 +1,4 @@
-using Viking.AnnotationServiceTypes.Interfaces;
 using Geometry;
-using Microsoft.SqlServer.Types;
-using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,27 +10,6 @@ namespace WebAnnotationModel
         public static AnnotationService.Types.BoundingRectangle ToBoundingRectangle(this Rectangle rect) => new AnnotationService.Types.BoundingRectangle() { XMin = rect.Left, XMax = rect.Right, YMin = rect.Bottom, YMax = rect.Top };
 
         public static Rectangle ToRectangle(this AnnotationService.Types.BoundingRectangle bbox) => new Rectangle(bbox.XMin, bbox.XMax, bbox.YMin, bbox.YMax);
-
-        public static SqlGeometry ToGeometry(Vector2[] points, double Z, double radius, LocationType type)
-        {
-            if (points is null)
-            {
-                throw new ArgumentNullException(nameof(points));
-            }
-
-            switch (type)
-            {
-                case LocationType.CIRCLE:
-                    if (points.Length == 4)
-                        return points.ToCurvePolygon();
-                    else
-                        return SqlGeometryUtils.Extensions.ToCircle(points[0].X, points[1].Y, Z, radius);
-                case LocationType.OPENCURVE:
-                    return points.ToSqlGeometry();
-            }
-
-            throw new ArgumentException(string.Format("Unknown location type {0}", type));
-        }
 
         /// <summary>
         /// A helper function to raise events on the UI thread if needed. 

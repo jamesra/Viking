@@ -2,15 +2,13 @@ using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.ComponentModel;
-using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel;
 
 namespace WebAnnotationTests
 {
     /// <summary>
     /// Pins the SQL-free helpers in <c>WebAnnotationModel/Extensions.cs</c>: the bounding rectangle
-    /// conversions the region queries send to the server, the argument checks of
-    /// <see cref="Extensions.ToGeometry"/>, and the null-safe event raiser.
+    /// conversions the region queries send to the server, and the null-safe event raiser.
     /// </summary>
     [TestClass]
     public class WebAnnotationModelExtensionsTests
@@ -38,14 +36,6 @@ namespace WebAnnotationTests
             Assert.AreEqual(original.Bottom, back.Bottom);
             Assert.AreEqual(original.Top, back.Top);
         }
-
-        [TestMethod]
-        public void ToGeometry_NullPoints_Throws() =>
-            Assert.ThrowsException<ArgumentNullException>(() => Extensions.ToGeometry(null, 0, 1, LocationType.CIRCLE));
-
-        [TestMethod]
-        public void ToGeometry_UnsupportedLocationType_Throws() =>
-            Assert.ThrowsException<ArgumentException>(() => Extensions.ToGeometry([new Vector2(0, 0)], 0, 1, LocationType.POINT));
 
         [TestMethod]
         public void RaiseEventOnUIThread_NullEvent_DoesNothing()
