@@ -6,6 +6,7 @@ namespace gRPCAnnotationService.Protos
     /// </summary>
     public static class StructureTypeEFExtensions
     {
+        /// <summary>Builds the EF structure type from the proto. A missing ParentId becomes null; Color is cast unchecked to signed.</summary>
         public static Viking.DataModel.Annotation.StructureType ToStructureType(this global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.StructureType src)
         {
             var converted = new Viking.DataModel.Annotation.StructureType
@@ -39,6 +40,10 @@ namespace gRPCAnnotationService.Protos
             return converted;
         }
 
+        /// <summary>
+        /// Copies the proto fields onto an existing EF row. A missing LastModified is stamped with the current UTC time;
+        /// a missing Created leaves the row's value alone.
+        /// </summary>
         public static void Sync(this global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.StructureType src,
           ref Viking.DataModel.Annotation.StructureType converted)
         {

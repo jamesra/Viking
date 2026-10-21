@@ -9,6 +9,8 @@ namespace gRPCAnnotationService.Protos
     /// </summary>
     public static class NetTopologyGeometryExtensions
     {
+        /// <summary>Reads the proto geometry as WKT or WKB.</summary>
+        /// <exception cref="ArgumentException">The message has neither text nor binary encoding.</exception>
         public static NetTopologySuite.Geometries.Geometry ToNetTopologyGeometry(this global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry src)
         {
             switch (src.EncodingCase)

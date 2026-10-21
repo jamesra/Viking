@@ -21,6 +21,11 @@ namespace gRPCAnnotationService.Protos
             @"CIRCULARSTRING\s*",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+        /// <summary>
+        /// Builds the EF location from the proto. Circles keep only their center point here (the real shape is
+        /// written by PersistCircleShapesAsync after SaveChanges); other types use the proto shape, falling back to the
+        /// position, and the volume shape falls back to the mosaic shape.
+        /// </summary>
         public static Viking.DataModel.Annotation.Location ToLocation(this global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location src)
         {
             NtsGeometry mosaicShape;

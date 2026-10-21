@@ -5,6 +5,7 @@
     /// </summary>
     public static class PermitterStructureLinkEFExtensions
     {
+        /// <summary>Builds the EF row from the proto; the key is SourceTypeId and TargetTypeId.</summary>
         public static Viking.DataModel.Annotation.PermittedStructureLink ToPermittedStructureLink(this global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.PermittedStructureLink src)
         {
             var converted = new Viking.DataModel.Annotation.PermittedStructureLink

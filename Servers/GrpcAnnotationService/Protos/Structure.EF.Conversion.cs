@@ -6,6 +6,7 @@ namespace gRPCAnnotationService.Protos
     /// </summary>
     public static class StructureEFExtensions
     {
+        /// <summary>Builds the EF structure from the proto. A missing ParentId becomes null; empty attributes become null Tags.</summary>
         public static Viking.DataModel.Annotation.Structure ToStructure(this global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Structure src)
         {
             var converted = new Viking.DataModel.Annotation.Structure
