@@ -871,6 +871,9 @@ namespace Viking.VolumeModel
             listSectionLoadingTasks.Add(newSection.InitializeFromXML(elem, token));
         }
 
+        /// <summary>Limits concurrent .stos downloads from the server.</summary>
+        private static readonly SemaphoreSlim StosServerFetchSemaphore = new(32);
+
         private async Task<LoadStosResult> LoadStos(XElement elem, bool HaveStosCache, string stosGroupName = null)
         {
             LoadStosResult result = null;
@@ -901,6 +904,9 @@ namespace Viking.VolumeModel
                 if (result is null)
                 {
                     //    Trace.WriteLine("Loading " + StosFileName + " from HTTP Server", "VolumeModel");
+                    // A volume can queue ~1800 stos loads at once. Cap simultaneous server fetches so the burst
+                    // of new connections is not refused by the server or firewall.
+                    await StosServerFetchSemaphore.WaitAsync().ConfigureAwait(false);
                     try
                     {
                         result = await LoadStosResult.LoadAsync(stosPath, this.UserCredentials, elem).ConfigureAwait(false);
@@ -910,6 +916,10 @@ namespace Viking.VolumeModel
                         Console.WriteLine($"Exception loading {stosPath}.\n{e?.InnerException}");
                         Trace.WriteLine($"Exception loading {stosPath}.\n{e?.InnerException}");
                         throw;
+                    }
+                    finally
+                    {
+                        StosServerFetchSemaphore.Release();
                     }
                 }
             }
