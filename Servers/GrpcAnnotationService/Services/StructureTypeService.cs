@@ -25,6 +25,10 @@ namespace gRPCAnnotationService
             _context = context;
         }
 
+        /// <summary>
+        /// Inserts one type, stamping the caller name and Created/LastModified server-side.
+        /// The response carries the row with its database-assigned Id.
+        /// </summary>
         public override async Task<CreateStructureTypeResponse> CreateStructureType(CreateStructureTypeRequest request, ServerCallContext context)
         {
             try
@@ -43,6 +47,7 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreateStructureType), e, context); }
         }
 
+        /// <summary>Single type by Id; throws RpcException NotFound (not Internal) when it does not exist.</summary>
         public override async Task<GetStructureTypeByIDResponse> GetStructureTypeByID(GetStructureTypeByIDRequest request, ServerCallContext context)
         {
             var obj = await _context.StructureTypes.AsNoTracking()
@@ -66,6 +71,7 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetStructureTypes), e, context); }
         }
 
+        /// <summary>Types for the requested Ids, queried in chunks; Ids that do not exist are silently omitted.</summary>
         public override async Task<GetStructureTypesByIDsResponse> GetStructureTypesByIDs(GetStructureTypesByIDsRequest request, ServerCallContext context)
         {
             try
