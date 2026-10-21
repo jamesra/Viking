@@ -129,6 +129,7 @@
     <Compile Include="GpuDeviceRemovedDiagnosticsTests.cs" />
     <Compile Include="PidControllerTests.cs" />
     <Compile Include="LocationParentFetchTests.cs" />
+    <Compile Include="IntToBrushConverterTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
@@ -143,6 +144,8 @@
 	    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
 	    <!-- Pen commands derive from types that touch WPF's DependencyObject; tests that call their static members need it to compile. -->
 	    <Reference Include="WindowsBase" />
+	    <!-- IntToBrushConverterTests uses System.Windows.Media.Color and SolidColorBrush. -->
+	    <Reference Include="PresentationCore" />
     </ItemGroup>
     <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
 	    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
