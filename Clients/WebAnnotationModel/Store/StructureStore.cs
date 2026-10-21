@@ -153,7 +153,7 @@ namespace WebAnnotationModel
 
         /// <summary>
         /// Deletes the cached structure <paramref name="ID"/> without asking when the server reports it has no locations left.
-        /// Called after a location is deleted. Does nothing when the structure is not cached; a failed location count
+        /// Called after a location is deleted. Does nothing when neither the cache nor the server knows the structure; a failed location count
         /// shows the standard error message and deletes nothing. Exceptions from <c>Save</c> reach the caller.
         /// </summary>
         public void CheckForOrphan(long ID)
