@@ -1606,8 +1606,8 @@ break;
                 "F11: Open goto structure ID dialog",
                 "SHIFT + F8: Send the circles in view to auto-polygonize again",
                 "Numpad * or SHIFT + 8: Toggle Pen Mode",
-                "DEL: Hide the annotation under the mouse on this section for a while (time is in Annotation Preferences) to reach one beneath it; it fades back in",
-                "INSERT: Bring back the hidden annotation under the mouse now"
+                "DEL: Hide the auto-segmentation ring or annotation under the mouse for a while (time is in Annotation Preferences) to reach one beneath it; it fades back in",
+                "INSERT: Bring back the hidden ring or annotation under the mouse now"
             };
         }
 
@@ -1841,7 +1841,18 @@ break;
         /// </summary>
         private void HideAnnotationUnderMouse()
         {
-            if (!IsCommandDefault() || !TryGetAnnotationsUnderMouse(out List<HitTestResult> hits))
+            if (!IsCommandDefault())
+                return;
+
+            // An auto-segmentation ring is drawn over the annotations, so a ring under the mouse goes first.
+            TimeSpan hideFor = TimeSpan.FromSeconds(Global.AnnotationSettings.HideAnnotationSeconds);
+            if (autoPolygonizeController?.TryHideProposalAt(GetMouseWorldPosition(), hideFor) == true)
+            {
+                ScheduleHiddenAnnotationRedraw();
+                return;
+            }
+
+            if (!TryGetAnnotationsUnderMouse(out List<HitTestResult> hits))
                 return;
 
             LocationCanvasView target = hiddenAnnotations.PickToHide(hits, CurrentSectionNumber);
@@ -1857,7 +1868,16 @@ break;
         /// <summary>Insert: brings back the hidden annotation under the mouse before its time runs out.</summary>
         private void RestoreAnnotationUnderMouse()
         {
-            if (!IsCommandDefault() || !TryGetAnnotationsUnderMouse(out List<HitTestResult> hits))
+            if (!IsCommandDefault())
+                return;
+
+            if (autoPolygonizeController?.TryRestoreProposalAt(GetMouseWorldPosition()) == true)
+            {
+                ScheduleHiddenAnnotationRedraw();
+                return;
+            }
+
+            if (!TryGetAnnotationsUnderMouse(out List<HitTestResult> hits))
                 return;
 
             LocationCanvasView target = hiddenAnnotations.PickToRestore(hits, CurrentSectionNumber);
@@ -1877,17 +1897,26 @@ break;
             if (locView is null)
                 return false;
 
-            System.Drawing.Point clientPoint = _Parent.PointToClient(System.Windows.Forms.Control.MousePosition);
-            Geometry.Vector2 worldPos = _Parent.ScreenToWorld(clientPoint.X, clientPoint.Y);
-            hits = locView.GetAnnotations(worldPos);
+            hits = locView.GetAnnotations(GetMouseWorldPosition());
             return true;
+        }
+
+        /// <summary>The mouse position in volume (world) coordinates.</summary>
+        private Geometry.Vector2 GetMouseWorldPosition()
+        {
+            System.Drawing.Point clientPoint = _Parent.PointToClient(System.Windows.Forms.Control.MousePosition);
+            return _Parent.ScreenToWorld(clientPoint.X, clientPoint.Y);
         }
 
         /// <summary>Redraws the viewer as a hidden annotation starts and finishes fading back in, so it reappears without a mouse move.</summary>
         private void ScheduleHiddenAnnotationRedraw()
         {
             int generation = Interlocked.Increment(ref hiddenAnnotationRedrawGeneration);
-            TimeSpan? wait = hiddenAnnotations.TimeUntilNextRedraw();
+            TimeSpan? annotationWait = hiddenAnnotations.TimeUntilNextRedraw();
+            TimeSpan? ringWait = autoPolygonizeController?.TimeUntilNextHiddenRedraw();
+            TimeSpan? wait = annotationWait is null ? ringWait
+                : ringWait is null ? annotationWait
+                : (annotationWait < ringWait ? annotationWait : ringWait);
             if (wait is null)
                 return;
 

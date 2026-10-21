@@ -701,6 +701,12 @@ namespace WebAnnotation.UI.AutoPolygonize
             return false;
         }
 
+        /// <summary>
+        /// How opaque the ring is drawn, 0 to 1. The controller sets it each frame while a ring that Del hid fades back in.
+        /// At 0 nothing is drawn; below 1 only the ring is drawn.
+        /// </summary>
+        public float FadeIn { get; set; } = 1f;
+
         public bool TryHit(Geometry.Vector2 worldPosition, double worldThreshold, out double distance)
         {
             distance = AutoPolygonizeSelection.DistanceToAnyRing(Polygon, worldPosition);
@@ -749,6 +755,9 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         public void Draw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
         {
+            if (FadeIn <= 0f)
+                return;
+
             bool refining = IsRefining;
             EnsureRingStyle(refining, scene.Camera.Downsample);
             if (Global.AnnotationSettings.AutoPolygonizeShowSegmentationRings)
@@ -757,9 +766,19 @@ namespace WebAnnotation.UI.AutoPolygonize
                 foreach (CurveView ringView in RingViews)
                 {
                     ringView.LineWidth = lineWidth;
+                    float ringAlpha = ringView.Alpha;
+                    if (FadeIn < 1f)
+                        ringView.Alpha = ringAlpha * FadeIn;
+
                     ringView.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+                    if (FadeIn < 1f)
+                        ringView.Alpha = ringAlpha;
                 }
             }
+
+            // While the ring fades back in only the ring shows; the mask, hatching, shimmer and prompts return with it.
+            if (FadeIn < 1f)
+                return;
 
             if (refining)
             {
