@@ -80,7 +80,7 @@ namespace Viking.VolumeModel
 
         public RegistrationTreeNode(int sectionNumber, int parentSection) : this(sectionNumber)
         {
-            Parent = new int?(sectionNumber);
+            Parent = new int?(parentSection);
         }
 
         public override int GetHashCode() => SectionNumber;
