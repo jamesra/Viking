@@ -1,15 +1,18 @@
 # Viking changelog
 
-Committed application version: **1.2.112.0**  
+Committed application version: **1.2.113.0**  
 (1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109; their changes are listed under 1.2.109.)
 
 Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Documentation/source/Client/versionhistory.rst).
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
-## 1.2.112 — 2026-10-19 (Viking Test, unsigned)
+## 1.2.113 — 2026-10-20 (Viking Test, unsigned)
 
 * Del hides the annotation on the current section under the mouse for 30 seconds, so an annotation beneath it (for example one from an adjacent section that you want to drag onto this section to create a linked location) can be picked. Insert brings the hidden annotation under the mouse back early. The time is **Hide annotation time (seconds)** in the annotation preferences.
+
+## 1.2.112 — 2026-10-19 (Viking Test, unsigned)
+
 * Deleting a location no longer hides the structure link lines of its structure on that section while the structure still has other locations there. Before, the lines between it and its linked structures disappeared until the section was reloaded; they now stay, drawn to the nearest remaining location. Deleting a structure's last location on the section still removes its link lines.
 * Loading a section's .mosaic or a .stos transform file that ends before its reported size (for example a file cut short while it was being copied or downloaded) no longer freezes Viking. Before, the read waited forever for the missing bytes; it now uses the lines that are present.
 * Mapping between the volume and a section no longer fails when a transform's points repeat a volume position. Before, the repeated section position was kept, which could break mapping in both directions near that point; repeats of both kinds are now dropped.
