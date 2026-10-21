@@ -471,11 +471,14 @@ namespace AnnotationVizLib.OData
                 scaleY = 1.0;
             }
 
+            //Whole volume pixels, widened outward: a full-precision double such as 3512.4280275812266 is written to
+            //the $filter as a 17-digit literal, which the server's URI parser reads as Edm.Decimal and then refuses
+            //to compare with the Edm.Double VolumeX/VolumeY columns (HTTP 400 on every section query).
             double pad = Math.Max(0, radiusNm);
-            double minX = (union.MinCorner.X - pad) / scaleX;
-            double maxX = (union.MaxCorner.X + pad) / scaleX;
-            double minY = (union.MinCorner.Y - pad) / scaleY;
-            double maxY = (union.MaxCorner.Y + pad) / scaleY;
+            double minX = Math.Floor((union.MinCorner.X - pad) / scaleX);
+            double maxX = Math.Ceiling((union.MaxCorner.X + pad) / scaleX);
+            double minY = Math.Floor((union.MinCorner.Y - pad) / scaleY);
+            double maxY = Math.Ceiling((union.MaxCorner.Y + pad) / scaleY);
 
             int[] allSections = [.. cells
                 .SelectMany(c => c.Nodes.Values.Select(n => (int)Math.Round(n.UnscaledZ)))
