@@ -78,20 +78,6 @@ namespace Viking.UI.BaseClasses
             }
         }
 
-        public ListViewItem FindItem(IUIObject Obj)
-        {
-            if (Obj is null)
-                return null;
-
-            foreach (ListViewItem Item in ListItems.Items)
-            {
-                if (Item.Tag is IUIObject ItemObj && Obj == ItemObj)
-                    return Item;
-            }
-
-            return null;
-        }
-
         public void ClearItems()
         {
             this.ListItems.BeginUpdate();
@@ -112,13 +98,6 @@ namespace Viking.UI.BaseClasses
                 Obj.BeforeDelete -= this.BeforeDeleteEventHandler;
                 Obj.AfterDelete -= this.OnDeleteEventHandler;
             }
-        }
-
-        public void RemoveItem(ListViewItem Item)
-        {
-            IUIObject Obj = Item.Tag as IUIObject;
-            RemoveEvents(Obj);
-            ListItems.Items.Remove(Item);
         }
 
         /// <summary>
