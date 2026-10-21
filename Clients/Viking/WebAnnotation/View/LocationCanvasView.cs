@@ -326,12 +326,9 @@ namespace WebAnnotation.View
         public int GetHashCode(LocationObj obj) => obj.GetHashCode();
 
         /// <summary>
-        /// Orders views by location ID. Compares the 64-bit IDs directly: casting the difference to <c>int</c>
-        /// wraps once IDs differ by 2^31 or more, which made distinct locations compare equal (and drop out of a
-        /// <see cref="SortedSet{T}"/>) or out of order.
+        /// Orders views by 64-bit location ID; a null view sorts first.
         /// </summary>
-        /// <param name="other">The view to compare with; a null view sorts first.</param>
-        /// <returns>Negative, zero, or positive as this view's ID is less than, equal to, or greater than <paramref name="other"/>'s.</returns>
+        /// <param name="other">The view to compare with.</param>
         int IComparable<LocationCanvasView>.CompareTo(LocationCanvasView other)
         {
             if (other is null)
