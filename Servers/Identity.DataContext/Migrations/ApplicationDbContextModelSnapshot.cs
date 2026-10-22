@@ -417,6 +417,21 @@ namespace Viking.Identity.Data.Migrations
                     b.UseTphMappingStrategy();
                 });
 
+            modelBuilder.Entity("Viking.Identity.Models.ResourceToGroupAssignment", b =>
+                {
+                    b.Property<long>("GroupId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ResourceId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("GroupId", "ResourceId");
+
+                    b.HasIndex("ResourceId");
+
+                    b.ToTable("ResourceToGroupAssignments", (string)null);
+                });
+
             modelBuilder.Entity("Viking.Identity.Models.ResourceType", b =>
                 {
                     b.Property<string>("Id")
@@ -541,6 +556,21 @@ namespace Viking.Identity.Data.Migrations
                             PermissionId = "User",
                             Description = "Use the correction service"
                         });
+                });
+
+            modelBuilder.Entity("Viking.Identity.Models.SegmentationServiceLocalResource", b =>
+                {
+                    b.Property<long>("SegmentationServiceId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ResourceId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("SegmentationServiceId", "ResourceId");
+
+                    b.HasIndex("ResourceId");
+
+                    b.ToTable("SegmentationServiceLocalResources", (string)null);
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.UserToGroupAssignment", b =>
@@ -996,6 +1026,25 @@ namespace Viking.Identity.Data.Migrations
                     b.Navigation("ResourceType");
                 });
 
+            modelBuilder.Entity("Viking.Identity.Models.ResourceToGroupAssignment", b =>
+                {
+                    b.HasOne("Viking.Identity.Models.Group", "Group")
+                        .WithMany("MemberResources")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .IsRequired();
+
+                    b.HasOne("Viking.Identity.Models.Resource", "Resource")
+                        .WithMany("MemberOfResourceGroups")
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Resource");
+                });
+
             modelBuilder.Entity("Viking.Identity.Models.ResourceTypePermission", b =>
                 {
                     b.HasOne("Viking.Identity.Models.ResourceType", "ResourceType")
@@ -1005,6 +1054,25 @@ namespace Viking.Identity.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("ResourceType");
+                });
+
+            modelBuilder.Entity("Viking.Identity.Models.SegmentationServiceLocalResource", b =>
+                {
+                    b.HasOne("Viking.Identity.Models.Resource", "Resource")
+                        .WithMany()
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .IsRequired();
+
+                    b.HasOne("Viking.Identity.Models.SegmentationService", "SegmentationService")
+                        .WithMany("LocalResources")
+                        .HasForeignKey("SegmentationServiceId")
+                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .IsRequired();
+
+                    b.Navigation("Resource");
+
+                    b.Navigation("SegmentationService");
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.UserToGroupAssignment", b =>
@@ -1109,6 +1177,8 @@ namespace Viking.Identity.Data.Migrations
                 {
                     b.Navigation("GroupsWithPermissions");
 
+                    b.Navigation("MemberOfResourceGroups");
+
                     b.Navigation("UsersWithPermissions");
                 });
 
@@ -1156,6 +1226,8 @@ namespace Viking.Identity.Data.Migrations
 
                     b.Navigation("MemberOfGroups");
 
+                    b.Navigation("MemberResources");
+
                     b.Navigation("MemberUsers");
 
                     b.Navigation("PermissionsHeld");
@@ -1164,6 +1236,11 @@ namespace Viking.Identity.Data.Migrations
             modelBuilder.Entity("Viking.Identity.Models.OrganizationalUnit", b =>
                 {
                     b.Navigation("Children");
+                });
+
+            modelBuilder.Entity("Viking.Identity.Models.SegmentationService", b =>
+                {
+                    b.Navigation("LocalResources");
                 });
 #pragma warning restore 612, 618
         }

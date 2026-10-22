@@ -74,6 +74,48 @@
             </div>
         </div>
 
+        @{
+            var localResources = (IList<Viking.Identity.Models.Resource>)ViewBag.LocalResources;
+            var localContexts = (IList<Viking.Identity.Data.LocalAnnotationContext>)ViewBag.LocalContexts;
+        }
+        <div class="card card-modern mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-hdd-network"></i> Local Annotation Contexts
+                    <span class="badge bg-light text-dark ms-2">@localContexts.Count</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">
+                    The service reads tiles itself for these contexts. They are reached from its local resources:
+                    @if (localResources.Any())
+                    {
+                        @foreach (var resource in localResources)
+                        {
+                            <a asp-controller="@Viking.Identity.Server.WebManagement.Models.UserViewModels.ResourceSelectedViewModel.ControllerFor(resource.ResourceTypeId)"
+                               asp-action="Details" asp-route-id="@resource.Id" class="badge bg-light text-dark text-decoration-none me-1">@resource.ResourceTypeId: @resource.Name</a>
+                        }
+                    }
+                    else
+                    {
+                        <span>none listed.</span>
+                    }
+                </p>
+                @if (localContexts.Any())
+                {
+                    <div class="list-group">
+                        @foreach (var local in localContexts)
+                        {
+                            <a asp-controller="AnnotationContexts" asp-action="Details" asp-route-id="@local.Context.Id" class="list-group-item list-group-item-action d-flex justify-content-between">
+                                <span><i class="bi bi-hdd-stack"></i> @local.Context.Name</span>
+                                <small class="text-muted">via @local.Via.Name</small>
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
         @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, Model)))
         {
             <div class="card card-modern">

@@ -1,5 +1,8 @@
 using System;
+using System.Linq;
 using System.Security.Policy;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -53,6 +56,16 @@ namespace Viking.Identity.Data
             builder.Entity<GroupToGroupAssignment>().HasKey(gga => new { gga.ContainerGroupId, gga.MemberGroupId });
             builder.Entity<GroupToGroupAssignment>().HasOne(gga => gga.Container).WithMany(nameof(Models.Group.MemberGroups)).HasForeignKey(gga => gga.ContainerGroupId).OnDelete(DeleteBehavior.ClientCascade);
             builder.Entity<GroupToGroupAssignment>().HasOne(gga => gga.Member).WithMany(nameof(Models.Group.MemberOfGroups)).HasForeignKey(gga => gga.MemberGroupId);
+
+            // Both keys are rows of the Resource table, so SQL Server rejects two cascade paths. ClientCascade deletes the rows EF
+            // tracks; SaveChanges removes the untracked ones (RemoveLinksOfDeletedResources).
+            builder.Entity<ResourceToGroupAssignment>().ToTable("ResourceToGroupAssignments").HasKey(rga => new { rga.GroupId, rga.ResourceId });
+            builder.Entity<ResourceToGroupAssignment>().HasOne(rga => rga.Group).WithMany(g => g.MemberResources).HasForeignKey(rga => rga.GroupId).OnDelete(DeleteBehavior.ClientCascade);
+            builder.Entity<ResourceToGroupAssignment>().HasOne(rga => rga.Resource).WithMany(r => r.MemberOfResourceGroups).HasForeignKey(rga => rga.ResourceId).OnDelete(DeleteBehavior.ClientCascade);
+
+            builder.Entity<SegmentationServiceLocalResource>().ToTable("SegmentationServiceLocalResources").HasKey(l => new { l.SegmentationServiceId, l.ResourceId });
+            builder.Entity<SegmentationServiceLocalResource>().HasOne(l => l.SegmentationService).WithMany(s => s.LocalResources).HasForeignKey(l => l.SegmentationServiceId).OnDelete(DeleteBehavior.ClientCascade);
+            builder.Entity<SegmentationServiceLocalResource>().HasOne(l => l.Resource).WithMany().HasForeignKey(l => l.ResourceId).OnDelete(DeleteBehavior.ClientCascade);
 
             builder.Entity<ResourceTypePermission>().HasKey(c => new { c.ResourceTypeId, c.PermissionId });
 
@@ -356,6 +369,38 @@ namespace Viking.Identity.Data
             return userId;
         }
 
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+            RemoveLinksOfDeletedResources();
+            return base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+
+        public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            RemoveLinksOfDeletedResources();
+            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+
+        /// <summary>
+        /// Removes the group-membership and segmentation-local rows of every resource being deleted. Their foreign keys
+        /// both point at the Resource table, where SQL Server allows no cascade, so every delete of a resource goes
+        /// through here instead of each controller remembering to do it.
+        /// </summary>
+        private void RemoveLinksOfDeletedResources()
+        {
+            var deleted = ChangeTracker.Entries<Resource>()
+                .Where(e => e.State == EntityState.Deleted)
+                .Select(e => e.Entity.Id)
+                .ToList();
+            if (deleted.Count == 0)
+                return;
+
+            ResourceToGroupAssignments.RemoveRange(ResourceToGroupAssignments
+                .Where(a => deleted.Contains(a.GroupId) || deleted.Contains(a.ResourceId)));
+            SegmentationServiceLocalResources.RemoveRange(SegmentationServiceLocalResources
+                .Where(l => deleted.Contains(l.SegmentationServiceId) || deleted.Contains(l.ResourceId)));
+        }
+
         private void LogShadowProperties()
         {
             DbContextOptionsBuilder builderShadow = new DbContextOptionsBuilder<ApplicationDbContext>()
@@ -400,6 +445,10 @@ namespace Viking.Identity.Data
         public DbSet<UserToGroupAssignment> UserToGroupAssignments { get; set; }
 
         public DbSet<GroupToGroupAssignment> GroupToGroupAssignments { get; set; }
+
+        public DbSet<ResourceToGroupAssignment> ResourceToGroupAssignments { get; set; }
+
+        public DbSet<SegmentationServiceLocalResource> SegmentationServiceLocalResources { get; set; }
          
         public DbSet<ResourceTypePermission> Permissions { get; set; }
 

@@ -60,6 +60,13 @@ namespace Viking.Identity.Models
         public virtual ICollection<GrantedUserPermission> UsersWithPermissions { get; } = new List<GrantedUserPermission>();
 
         /// <summary>
+        /// Groups this resource is a member of. Never set for a <see cref="Group"/>, which nests through
+        /// <see cref="GroupToGroupAssignment"/>.
+        /// </summary>
+        [Display(Name = "Member Of Groups", Description = "Groups this resource is a member of")]
+        public virtual ICollection<ResourceToGroupAssignment> MemberOfResourceGroups { get; } = new List<ResourceToGroupAssignment>();
+
+        /// <summary>
         /// The permissions this group can grant to others
         /// </summar
         [NotMapped]

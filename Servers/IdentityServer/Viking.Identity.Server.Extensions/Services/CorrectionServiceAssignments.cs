@@ -8,8 +8,8 @@ using Viking.Identity.Data;
 namespace Viking.Identity.Server.Extensions.Services
 {
     /// <summary>
-    /// One annotation context assigned to a correction service, with what the service needs to run the
-    /// corrections math: the VikingXML (for stos transforms) and the annotation database to read.
+    /// One annotation context assigned to a correction or segmentation service, with what the service needs: the
+    /// VikingXML (stos transforms for corrections, tilesets for segmentation) and the annotation database to read.
     /// </summary>
     public class AssignedAnnotationContext
     {
@@ -36,6 +36,23 @@ namespace Viking.Identity.Server.Extensions.Services
         public string AnnotationEndpoint { get; set; }
 
         public string ODataEndpoint { get; set; }
+
+        /// <summary>The assignment row for <paramref name="c"/>, loaded with <see cref="VolumeMetadata.WithCatalog"/>.</summary>
+        public static AssignedAnnotationContext From(Viking.Identity.Models.AnnotationContext c)
+        {
+            var server = VolumeMetadata.DefaultServer(c);
+            return new AssignedAnnotationContext
+            {
+                AnnotationContextId = c.Id,
+                Name = c.Name,
+                Endpoint = c.Endpoint?.ToString(),
+                RegistrationName = c.RegistrationName,
+                AnnotationDatabaseName = VolumeMetadata.CorrectionDatabaseName(server),
+                BaseUrl = server?.BaseUrl,
+                AnnotationEndpoint = AnnotationServiceUrls.AnnotationUrl(server),
+                ODataEndpoint = AnnotationServiceUrls.ODataUrl(server)
+            };
+        }
     }
 
     /// <summary>
@@ -64,21 +81,7 @@ namespace Viking.Identity.Server.Extensions.Services
                 .OrderBy(c => c.Name)
                 .ToListAsync(cancellationToken);
 
-            return contexts.Select(c =>
-            {
-                var server = VolumeMetadata.DefaultServer(c);
-                return new AssignedAnnotationContext
-                {
-                    AnnotationContextId = c.Id,
-                    Name = c.Name,
-                    Endpoint = c.Endpoint?.ToString(),
-                    RegistrationName = c.RegistrationName,
-                    AnnotationDatabaseName = VolumeMetadata.CorrectionDatabaseName(server),
-                    BaseUrl = server?.BaseUrl,
-                    AnnotationEndpoint = AnnotationServiceUrls.AnnotationUrl(server),
-                    ODataEndpoint = AnnotationServiceUrls.ODataUrl(server)
-                };
-            }).ToList();
+            return contexts.Select(AssignedAnnotationContext.From).ToList();
         }
     }
 }

@@ -40,6 +40,12 @@ namespace Viking.Identity.Server
         public string CorrectionServiceClientSecret { get; set; } = string.Empty;
 
         /// <summary>
+        /// Confidential secret for the "segmentation" client used by segmentation server containers to list the
+        /// annotation contexts they read tiles for. When empty the client is not served at all.
+        /// </summary>
+        public string SegmentationServiceClientSecret { get; set; } = string.Empty;
+
+        /// <summary>
         /// Confidential secret for the "sam2-gallery-tem" client (https://tem.gallery.codepharm.net, SAM2 annotation
         /// gallery for TEM). When empty the client is not served at all.
         /// </summary>
@@ -124,6 +130,7 @@ namespace Viking.Identity.Server
                 "ro.viking" => (RoVikingSecret, nameof(RoVikingSecret)),
                 "sbfsem-tools" => (SbfsemToolsClientSecret, nameof(SbfsemToolsClientSecret)),
                 "correction" => (CorrectionServiceClientSecret, nameof(CorrectionServiceClientSecret)),
+                "segmentation" => (SegmentationServiceClientSecret, nameof(SegmentationServiceClientSecret)),
                 "sam2-gallery-tem" => (GalleryTemClientSecret, nameof(GalleryTemClientSecret)),
                 "sam2-gallery-sem" => (GallerySemClientSecret, nameof(GallerySemClientSecret)),
                 _ => throw new InvalidOperationException($"Unknown OAuth client id '{clientId}'.")

@@ -162,22 +162,26 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
         }
 
         /// <summary>
-        /// Lists the annotation contexts assigned to a correction service. Called by the correction container at
-        /// startup and on refresh with a client-credentials token, so there is no user: access is limited to the
-        /// "correction" OAuth client.
+        /// Lists the annotation contexts assigned to a correction service, or local to a segmentation service. Called by
+        /// the container at startup and on refresh with a client-credentials token, so there is no user: access is limited
+        /// to the "correction" and "segmentation" OAuth clients, and the client id picks which kind of service
+        /// <paramref name="service"/> names.
         /// </summary>
-        /// <param name="service">Name of the CorrectionService resource the container is configured with.</param>
+        /// <param name="service">Name of the CorrectionService or SegmentationService resource the container is configured with.</param>
         /// <param name="cancellationToken">Request abort.</param>
         [HttpGet("AssignedAnnotationContexts")]
         public async Task<ActionResult<List<AssignedAnnotationContext>>> AssignedAnnotationContexts(
             [FromQuery] string service, CancellationToken cancellationToken)
         {
-            if (User.FindFirst("client_id")?.Value != CorrectionClientId)
+            string clientId = User.FindFirst("client_id")?.Value;
+            if (clientId != CorrectionClientId && clientId != SegmentationClientId)
                 return Forbid();
             if (string.IsNullOrWhiteSpace(service))
                 return BadRequest("service is required");
 
-            var assigned = await CorrectionServiceAssignments.ListAsync(_context, service, cancellationToken);
+            var assigned = clientId == CorrectionClientId
+                ? await CorrectionServiceAssignments.ListAsync(_context, service, cancellationToken)
+                : await SegmentationServiceAssignments.ListAsync(_context, service, cancellationToken);
             if (assigned == null)
                 return NotFound();
             return assigned;
@@ -185,6 +189,9 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
 
         /// <summary>OAuth client id issued to correction service containers (see IdentityServerVikingClientStore).</summary>
         private const string CorrectionClientId = "correction";
+
+        /// <summary>OAuth client id issued to segmentation server containers (see IdentityServerVikingClientStore).</summary>
+        private const string SegmentationClientId = "segmentation";
 
         private async Task<ApplicationUser> GetAuthenticatedUserAsync()
         {

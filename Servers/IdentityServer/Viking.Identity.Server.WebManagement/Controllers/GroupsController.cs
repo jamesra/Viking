@@ -65,6 +65,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 .Include(g => g.MemberOfGroups)
                 .Include(g => g.PermissionsHeld)
                 .Include(g => g.MemberOfGroups).ThenInclude(mog => mog.Container)
+                .Include(g => g.MemberResources).ThenInclude(mr => mr.Resource)
                .SingleOrDefaultAsync(m => m.Id == id);
 
             if (organization == null)
@@ -110,6 +111,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                         Name = mg.Name,
                         Selected = false
                     }).ToList(),
+                    ResourceList = await ResourceSelectedViewModel.ListAsync(_context, ResourceSelectedViewModelExtensions.GroupMemberResourceTypes, new HashSet<long>()),
                 }
             };
 
@@ -124,7 +126,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         }
 
         [HttpGet]
-        public IActionResult CreateContinue([Bind("Id,Name,Description,ParentId")] CreateResourceViewModel model)
+        public async Task<IActionResult> CreateContinue([Bind("Id,Name,Description,ParentId")] CreateResourceViewModel model)
         {
             //Continues creation after user selects a resource type
 
@@ -147,6 +149,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                         Name = mg.Name,
                         Selected = false
                     }).ToList(),
+                    ResourceList = await ResourceSelectedViewModel.ListAsync(_context, ResourceSelectedViewModelExtensions.GroupMemberResourceTypes, new HashSet<long>()),
                 } 
             };
 
@@ -182,6 +185,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             {
                 group.UpdateUserMembership(model.Members.UserList);
                 group.UpdateGroupMembership(model.Members.GroupList);
+                group.UpdateResourceMembership(model.Members.ResourceList);
                 _context.Group.Add(group);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
@@ -224,6 +228,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 .Include(g => g.PermissionsHeld)
                 .Include(g => g.MemberUsers)
                 .Include(g => g.MemberGroups)
+                .Include(g => g.MemberResources)
                 .Include(g => g.Parent)
                 .SingleOrDefaultAsync(g => g.Id == id);
 
@@ -246,6 +251,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                             .Select(mg => new { mg.Id, mg.Name }).ToListAsync())
                             .Where(mg => mg.Id != group.Id && alreadyMemberOfIds.Contains(mg.Id) == false)
                             .Select(mg => new GroupSelectedViewModel { Id = mg.Id, Name = mg.Name, Selected = memberGroupIds.Contains(mg.Id) }).ToList(),
+                        ResourceList = await ResourceSelectedViewModel.ListAsync(_context, ResourceSelectedViewModelExtensions.GroupMemberResourceTypes,
+                            group.MemberResources.Select(m => m.ResourceId).ToHashSet()),
                     },
                     AlreadyMemberOf = AlreadyMemberOf.Select(am => am.Name).ToList()
                 };
@@ -295,6 +302,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 .Include(g => g.PermissionsHeld)
                 .Include(g => g.MemberUsers)
                 .Include(g => g.MemberGroups)
+                .Include(g => g.MemberResources)
                 .SingleOrDefaultAsync(m => m.Id == id);
 
             if (group == null)
@@ -331,6 +339,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
                     group.UpdateUserMembership(groupDetails.Members.UserList);
                     group.UpdateGroupMembership(groupDetails.Members.GroupList);
+                    group.UpdateResourceMembership(groupDetails.Members.ResourceList);
                     /*
                     foreach(UserSelectedViewModel user in usersSelected)
                     {

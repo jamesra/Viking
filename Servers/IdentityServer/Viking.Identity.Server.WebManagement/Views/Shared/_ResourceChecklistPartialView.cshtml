@@ -1,0 +1,41 @@
+@model IList<Viking.Identity.Server.WebManagement.Models.UserViewModels.ResourceSelectedViewModel>
+
+@if (Model != null && Model.Any())
+{
+    var listId = "resources_" + Guid.NewGuid().ToString("N");
+    <input type="search" class="form-control form-control-sm mb-2" placeholder="Filter by name or type" data-resource-filter="@listId" />
+    <div class="resource-checklist" id="@listId">
+        @{ string currentType = null; }
+        @for (var i = 0; i < Model.Count; i++)
+        {
+            if (Model[i].ResourceTypeId != currentType)
+            {
+                currentType = Model[i].ResourceTypeId;
+                <div class="small text-muted text-uppercase fw-bold mt-2" data-resource-type-header="@currentType">@currentType</div>
+            }
+            <div class="form-check mb-1" data-resource-row data-resource-text="@($"{Model[i].Name} {Model[i].ResourceTypeId}".ToLowerInvariant())">
+                @Html.HiddenFor(x => Model[i].Id)
+                @Html.HiddenFor(x => Model[i].Name)
+                @Html.HiddenFor(x => Model[i].ResourceTypeId)
+                @Html.CheckBoxFor(x => Model[i].Selected, new { @class = "form-check-input", id = $"{listId}_{Model[i].Id}" })
+                <label class="form-check-label" for="@($"{listId}_{Model[i].Id}")">@Model[i].Name</label>
+            </div>
+        }
+    </div>
+    <script>
+        (function () {
+            var input = document.querySelector('[data-resource-filter="@listId"]');
+            var list = document.getElementById('@listId');
+            input.addEventListener('input', function () {
+                var text = input.value.trim().toLowerCase();
+                list.querySelectorAll('[data-resource-row]').forEach(function (row) {
+                    row.style.display = text === '' || row.dataset.resourceText.indexOf(text) >= 0 ? '' : 'none';
+                });
+            });
+        })();
+    </script>
+}
+else
+{
+    <p class="text-muted">No resources available.</p>
+}

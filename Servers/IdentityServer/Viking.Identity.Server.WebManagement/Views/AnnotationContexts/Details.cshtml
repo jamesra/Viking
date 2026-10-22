@@ -172,6 +172,21 @@
                         }
                     </dd>
 
+                    <dt class="col-sm-3">Member of Groups</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.MemberOfResourceGroups.Any())
+                        {
+                            @foreach (var membership in Model.MemberOfResourceGroups.OrderBy(m => m.Group.Name))
+                            {
+                                <a asp-controller="Groups" asp-action="Details" asp-route-id="@membership.Group.Id" class="badge bg-light text-dark text-decoration-none me-1">@membership.Group.Name</a>
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-muted">None</span>
+                        }
+                    </dd>
+
                     <dt class="col-sm-3">Last Catalog Sync</dt>
                     <dd class="col-sm-9">
                         @(Model.CatalogSyncedUtc?.ToString("u") ?? "never")

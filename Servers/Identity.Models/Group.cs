@@ -45,6 +45,9 @@ namespace Viking.Identity.Models
         [Display(Name = "Member Of", Description = "Groups we are a member of")]
         public virtual List<Group> MemberOf => MemberOfGroups.Select(oa => oa.Container).ToList();
 
+        [Display(Name = "Member Resources", Description = "Resources other than groups assigned to group")]
+        public virtual List<ResourceToGroupAssignment> MemberResources { get; set; } = new List<ResourceToGroupAssignment>();
+
         //public ICollection<GrantedGroupPermission> HasPermissions { get; } = new List<GrantedGroupPermission>();
 
         [Display(Name = "Permissions Held", Description="Permissions this group has been granted to other resources")]

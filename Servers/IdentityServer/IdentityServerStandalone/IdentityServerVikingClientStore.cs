@@ -27,6 +27,12 @@ namespace Viking.Identity
         /// </summary>
         public const string CorrectionClientId = "correction";
 
+        /// <summary>
+        /// Client id shared by segmentation server containers, to list the annotation contexts they read tiles for.
+        /// Like <see cref="CorrectionClientId"/> it carries only the Viking.Annotation scope.
+        /// </summary>
+        public const string SegmentationClientId = "segmentation";
+
         /// <summary>Client ids of the SAM2 annotation galleries: confidential web apps that sign users in.</summary>
         public const string GalleryTemClientId = "sam2-gallery-tem";
         public const string GallerySemClientId = "sam2-gallery-sem";
@@ -47,7 +53,7 @@ namespace Viking.Identity
         public async Task<Client> FindClientByIdAsync(string clientId)
         {
             if (clientId != "ro.viking" && clientId != "mvc" && clientId != "Viking" && clientId != "api" &&
-                clientId != SbfsemToolsClientId && clientId != CorrectionClientId &&
+                clientId != SbfsemToolsClientId && clientId != CorrectionClientId && clientId != SegmentationClientId &&
                 clientId != GalleryTemClientId && clientId != GallerySemClientId)
                 return null;
 
@@ -56,6 +62,8 @@ namespace Viking.Identity
             if (clientId == SbfsemToolsClientId && string.IsNullOrWhiteSpace(_options.SbfsemToolsClientSecret))
                 return null;
             if (clientId == CorrectionClientId && string.IsNullOrWhiteSpace(_options.CorrectionServiceClientSecret))
+                return null;
+            if (clientId == SegmentationClientId && string.IsNullOrWhiteSpace(_options.SegmentationServiceClientSecret))
                 return null;
             if (clientId == GalleryTemClientId && string.IsNullOrWhiteSpace(_options.GalleryTemClientSecret))
                 return null;
@@ -114,12 +122,12 @@ namespace Viking.Identity
                     AccessTokenType = AccessTokenType.Reference
                 };
             }
-            else if (clientId == CorrectionClientId) /* Correction service containers (machine to machine) */
+            else if (clientId == CorrectionClientId || clientId == SegmentationClientId) /* Correction and segmentation service containers (machine to machine) */
             {
                 return new Client
                 {
                     ClientId = clientId,
-                    ClientName = "Correction Service",
+                    ClientName = clientId == CorrectionClientId ? "Correction Service" : "Segmentation Service",
                     AllowedGrantTypes = GrantTypes.ClientCredentials,
                     ClientSecrets = { clientSecret },
                     AllowedScopes = IdentityServerCustomResourceStore.StandardScopes.Select(s => s.Name).ToList(),

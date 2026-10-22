@@ -231,6 +231,36 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Member Resources -->
+            <div class="col-12 mb-4">
+                <div class="card card-modern">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-collection"></i> Member Resources
+                            <span class="badge bg-light text-dark ms-2">@Model.MemberResources.Count</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.MemberResources.Any())
+                        {
+                            <div class="list-group">
+                                @foreach (var resource in Model.MemberResources.Select(m => m.Resource).OrderBy(r => r.ResourceTypeId).ThenBy(r => r.Name))
+                                {
+                                    <a asp-controller="@Viking.Identity.Server.WebManagement.Models.UserViewModels.ResourceSelectedViewModel.ControllerFor(resource.ResourceTypeId)"
+                                       asp-action="Details" asp-route-id="@resource.Id" class="list-group-item list-group-item-action">
+                                        <span class="badge bg-light text-dark me-2">@resource.ResourceTypeId</span> @resource.Name
+                                    </a>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted">No other resources are members of this group.</p>
+                        }
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

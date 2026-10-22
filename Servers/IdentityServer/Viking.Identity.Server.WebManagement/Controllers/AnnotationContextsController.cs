@@ -66,6 +66,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 .Include(v => v.ResourceType)
                 .Include(v => v.UsersWithPermissions)
                 .Include(v => v.GroupsWithPermissions)
+                .Include(v => v.MemberOfResourceGroups).ThenInclude(m => m.Group)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (volume == null)
             {

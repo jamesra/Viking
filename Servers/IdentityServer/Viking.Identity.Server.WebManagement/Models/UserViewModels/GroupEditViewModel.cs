@@ -18,6 +18,12 @@ namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
         /// </summary>
         [Display(Name = "Member Groups")]
         public IList<GroupSelectedViewModel> GroupList { get; set; }
+
+        /// <summary>
+        /// Resources other than groups (contexts, services, organizational units), the selected property is true if they are a member of the Group
+        /// </summary>
+        [Display(Name = "Member Resources")]
+        public IList<ResourceSelectedViewModel> ResourceList { get; set; }
     }
 
     [BindProperties]
