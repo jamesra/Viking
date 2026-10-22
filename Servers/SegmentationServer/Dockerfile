@@ -130,4 +130,8 @@ STOPSIGNAL SIGTERM
 HEALTHCHECK --interval=30s --timeout=15s --start-period=600s --retries=3 \
     CMD ["python3", "-m", "segmentation_server.healthcheck"]
 
+# Links the GHCR package (nornir-docker/docker-push.ps1 -Images segmentation) to this repo.
+LABEL org.opencontainers.image.source="https://github.com/jamesra/Viking" \
+      org.opencontainers.image.title="viking-segmentation-server"
+
 ENTRYPOINT ["/home/user/start.sh"]

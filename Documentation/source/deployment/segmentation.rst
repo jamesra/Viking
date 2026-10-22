@@ -24,6 +24,33 @@ This stack replaces the ``docker-compose.models.yml`` that ``rebuild-and-start.p
 ``models.json`` and the ``segmentation-server-v4`` / ``segmentation-certbot-renewer`` services of
 the old root compose file.
 
+Prebuilt image
+==============
+
+By default the target builds the image (``viking-segmentation-server:latest``), which takes a long
+time for CUDA and torch. To build once and pull everywhere else, push it to GHCR from the machine
+that built it (nornir checkout; ``docker login ghcr.io`` with a PAT that has ``write:packages``):
+
+.. code-block:: powershell
+
+   stack.ps1 viking-segmentation build
+   nornir-docker\docker-push.ps1 -Images segmentation
+
+This pushes ``ghcr.io/jamesra/viking-segmentation-server:latest`` and ``:<Viking short SHA>``. The
+image holds no weights other than Meta's public checkpoint, and no certificates or secrets. A new
+GHCR package is private, so each pulling host needs ``docker login ghcr.io`` with ``read:packages``.
+
+On the new host, use either of these:
+
+- ``nornir-docker/docker-pull.ps1 -Images segmentation`` pulls ``:latest`` and tags it
+  ``viking-segmentation-server:latest``. Then ``stack.ps1 viking-segmentation up`` starts it without
+  building.
+- Set ``SEGMENTATION_IMAGE=ghcr.io/jamesra/viking-segmentation-server:latest`` (or a SHA tag) in the run
+  env. Then ``stack.ps1 viking-segmentation up -Target compute -Images ghcr``, run from the dev box,
+  pulls it first.
+
+Use ``up`` or ``restart`` to pick up a new image, not ``rebuild``, because ``rebuild`` builds on the host.
+
 Models
 ======
 
