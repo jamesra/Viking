@@ -589,7 +589,8 @@ namespace Geometry
         /// <summary>
         /// Pad the requested amount onto the bounding box
         /// </summary>
-        /// <param name="Radius"></param>
+        /// <param name="rect"></param>
+        /// <param name="radius"></param>
         /// <returns></returns>
         public static Rectangle Pad(in Rectangle rect, in double radius) => new Rectangle(rect.Left - radius, rect.Right + radius, rect.Bottom - radius, rect.Top + radius);
 
@@ -619,8 +620,8 @@ namespace Geometry
         /// <summary>
         /// Returns a rectangle bounding the passed rectangles
         /// </summary>
-        /// <param name="A"></param>
-        /// <param name="B"></param>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
         /// <returns></returns>
         public static Rectangle Union(in IShape2D a, in IShape2D b) => Rectangle.Union(a.BoundingBox, b.BoundingBox);
 
@@ -644,6 +645,7 @@ namespace Geometry
         /// Expands the rectange to contain the specified point.
         /// Returns true if the rectangle expands, otherwise false.
         /// </summary>
+        /// <param name="rect"></param>
         /// <param name="point"></param>
         /// <returns></returns>
         public static Rectangle Union(in Rectangle rect, in Vector2 point)

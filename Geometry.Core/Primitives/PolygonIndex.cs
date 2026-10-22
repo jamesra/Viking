@@ -765,6 +765,7 @@ namespace Geometry
         /// <summary>
         /// Return a copy of this PointIndex that refers to the inner polygon index as an exterior polygon coordinate
         /// </summary>
+        /// <param name="iInner"></param>
         /// <param name="ShapeIndex">Passing -1 will use the innerPolygon's index as the new ShapeIndex value.  Useful for referencing into arrays of interior polygons from a parent polygon.</param>
         /// <returns></returns>
         public PolygonIndex ReindexToInner(int iInner, int ShapeIndex = 0)

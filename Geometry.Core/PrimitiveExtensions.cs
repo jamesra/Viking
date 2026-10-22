@@ -451,6 +451,7 @@ namespace Geometry
         /// Create a polyline from points in the collection
         /// </summary>
         /// <param name="points"></param>
+        /// <param name="AllowSelfIntersection"></param>
         /// <returns></returns>
         public static Polyline ToPolyline(this ICollection<Vector2> points, bool AllowSelfIntersection = false)
         {
@@ -795,6 +796,7 @@ namespace Geometry
         /// Given a set of points, return the closest distance between any two points
         /// </summary>
         /// <param name="points"></param>
+        /// <param name="FirstIndex"></param>
         /// <returns></returns>
         public static double MinDistanceBetweenSequentialPoints(this IReadOnlyList<Vector2> points, out int FirstIndex)
         {

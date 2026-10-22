@@ -339,7 +339,7 @@ namespace Geometry
         /// </summary>
         /// <param name="line">Line we add points to</param>
         /// <param name="lines">Lines we are testing for intersection</param>
-        /// <param name="IntersectionPoints">The intersection points on the line, in increasing order of distance from line.A to line.B</param>
+        /// <param name="EndpointsOnRingDoNotIntersect"></param>
         /// <returns>The lines that intersect the line parameter</returns>
         public static bool Intersects(this in LineSegment line, in IEnumerable<LineSegment> lines, bool EndpointsOnRingDoNotIntersect = false)
         {
@@ -401,10 +401,10 @@ namespace Geometry
         /// <summary>
         /// Return a list of lines the passed line intersects and the intersection points
         /// </summary>
-        /// <param name="line">Line we are checking</param>
-        /// <param name="lines">Lines we are testing for intersection</param>
+        /// <param name="ALines">Lines we are checking</param>
+        /// <param name="BLines">Lines we are testing for intersection</param>
         /// <param name="EndpointsOnLineDoNotIntersect"></param>
-        /// <param name="IntersectionPoints">The intersection points on the line, in increasing order of distance from line.A to line.B</param>
+        /// <param name="IntersectionPoints">The intersection points, in the order the line pairs are returned</param>
         /// <returns>The lines that intersect the line parameter</returns>
         public static List<Tuple<LineSegment, LineSegment>> Intersections(this IEnumerable<LineSegment> ALines, IReadOnlyList<LineSegment> BLines, bool EndpointsOnLineDoNotIntersect, out Vector2[] IntersectionPoints)
         {
@@ -424,10 +424,9 @@ namespace Geometry
         /// <summary>
         /// Return the list line pairs that intersect between the two sets of lines
         /// </summary>
-        /// <param name="line">Line we are checking</param>
-        /// <param name="lines">Lines we are testing for intersection</param>
+        /// <param name="ALines">Lines we are checking</param>
+        /// <param name="BLines">Lines we are testing for intersection</param>
         /// <param name="EndpointsOnLineDoNotIntersect"></param>
-        /// <param name="IntersectionPoints">The intersection points on the line, in increasing order of distance from line.A to line.B</param>
         /// <returns>The lines that intersect the line parameter</returns>
         public static List<ArrayIntersection<LineSegment>> Intersections(this IReadOnlyList<LineSegment> ALines, IReadOnlyList<LineSegment> BLines, bool EndpointsOnLineDoNotIntersect)
         {
