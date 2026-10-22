@@ -417,7 +417,6 @@ namespace Geometry.Transforms
         /// <summary>
         /// Express the transform using the itk transform text format.  Any reference point transform can be a mesh, so we default to that representation
         /// </summary>
-        /// <param name="stream"></param>
         public virtual string GetITKTransform()
         {
             double Downsample = 1.0;

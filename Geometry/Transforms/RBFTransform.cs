@@ -277,7 +277,7 @@ namespace Geometry.Transforms
 
         public override Vector2 InverseTransform(in Vector2 Point) => RBFTransform.Transform(Point, ControlToMappedSpaceWeights, ControlPointsArray, this.BasisFunction);
 
-        /// <summary>Maps control space points back to mapped space; see <see cref="Transform(Vector2[])"/> for the batching rules.</summary>
+        /// <summary>Maps control space points back to mapped space; see <see cref="Transform(in Vector2[])"/> for the batching rules.</summary>
         public override Vector2[] InverseTransform(in Vector2[] Points)
         {
             if (Points is null)

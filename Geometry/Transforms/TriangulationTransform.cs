@@ -65,8 +65,6 @@ namespace Geometry.Transforms
         /// <summary>
         /// This stores the list of edges connected to each point in the triangulation.
         /// </summary>
-        /// <param name="mapPoints"></param>
-        /// <param name="info"></param>
         public abstract List<int>[] Edges { get; protected set; }
 
         protected TriangulationTransform(MappingVector2[] mapPoints, TransformBasicInfo info) : base(mapPoints, info)
@@ -134,7 +132,6 @@ namespace Geometry.Transforms
         /// Transform point from mapped space to control space
         /// </summary>
         /// <param name="Points"></param>
-        /// <param name="Point"></param>
         /// <returns></returns>
         public override Vector2[] Transform(in Vector2[] Points)
         {
@@ -153,6 +150,7 @@ namespace Geometry.Transforms
         /// Transform point from mapped space to control space
         /// </summary>
         /// <param name="Point"></param>
+        /// <param name="v"></param>
         /// <returns></returns>
         public override bool TryTransform(in Vector2 Point, out Vector2 v)
         {
@@ -171,7 +169,6 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Points"></param>
         /// <param name="output"></param>
-        /// <param name="Point"></param>
         /// <returns></returns>
         public override bool[] TryTransform(in Vector2[] Points, out Vector2[] output)
         {
@@ -216,7 +213,6 @@ namespace Geometry.Transforms
         /// Transform point from mapped space to control space
         /// </summary>
         /// <param name="Points"></param>
-        /// <param name="Point"></param>
         /// <returns></returns>
         public override Vector2[] InverseTransform(in Vector2[] Points)
         {
@@ -254,7 +250,6 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="Points"></param>
         /// <param name="output"></param>
-        /// <param name="Point"></param>
         /// <returns></returns>
         public override bool[] TryInverseTransform(in Vector2[] Points, out Vector2[] output)
         {
@@ -538,6 +533,7 @@ namespace Geometry.Transforms
         /// If include adjacent is set to true we include points with an edge that crosses the border of the requested rectangle
         /// </summary>
         /// <param name="gridRect"></param>
+        /// <param name="pointTreeWithUniqueValues"></param>
         /// <returns></returns>
         private List<MappingVector2> IntersectingRectangle(in Rectangle gridRect,
                                                                QuadTreeWithUniqueValues<List<MappingTriangle>> pointTreeWithUniqueValues)

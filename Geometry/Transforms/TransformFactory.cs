@@ -28,8 +28,8 @@ namespace Geometry.Transforms
         /// <summary>
         /// Read parameters from an enumerator of strings and return an array of numbers.  First value is number of values.  Remaining strings are values themselves.
         /// </summary>
-        /// <param name="NumParameters">Space delimited string, first value is number of parameters.</param>
-        /// <param name="parts"></param>
+        /// <param name="parts">Space delimited string, first value is number of parameters.</param>
+        /// <param name="iStart"></param>
         /// <returns></returns>
         private static double[] ReadParameterValues(string[] parts, long iStart)
         {
@@ -435,7 +435,7 @@ namespace Geometry.Transforms
         /// <summary>
         /// This code was reverse engineered from original stos polynomial transform source
         /// </summary>
-        /// <param name="parts"></param>
+        /// <param name="transform"></param>
         /// <param name="pixelSpacing"></param>
         /// <param name="iFixedParameters"></param>
         /// <param name="iVariableParameters"></param>
@@ -531,8 +531,9 @@ namespace Geometry.Transforms
         /// <summary>
         /// Load mosaic from specified file and add it to transforms list using specified key
         /// </summary>
-        /// <param name="file"></param>
-        /// <param name="Key"></param>
+        /// <param name="path"></param>
+        /// <param name="mosaic"></param>
+        /// <param name="lastModified"></param>
         public static ITransform[] LoadMosaic(string path, string[] mosaic, DateTime lastModified)
         {
             if (mosaic is null)

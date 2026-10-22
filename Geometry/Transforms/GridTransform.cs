@@ -271,6 +271,10 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="x"></param>
         /// <param name="y"></param>
+        /// <param name="gridWidth"></param>
+        /// <param name="gridHeight"></param>
+        /// <param name="MappedWidth"></param>
+        /// <param name="MappedHeight"></param>
         /// <returns></returns>
         public static Vector2 CoordinateFromGridPos(int x, int y, double gridWidth, double gridHeight, double MappedWidth, double MappedHeight) => new Vector2(((x) / (gridWidth - 1)) * MappedWidth, (y / (gridHeight - 1)) * MappedHeight);
 
@@ -279,6 +283,8 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="x"></param>
         /// <param name="y"></param>
+        /// <param name="gridWidth"></param>
+        /// <param name="gridHeight"></param>
         /// <returns></returns>
         public Vector2 CoordinateFromGridPos(int x, int y, double gridWidth, double gridHeight) => new Vector2(((x) / (gridWidth - 1)) * (double)MappedBounds.Width, (y / (gridHeight - 1)) * (double)MappedBounds.Height);
 
@@ -426,7 +432,7 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="iX"></param>
         /// <param name="iY"></param>
-        /// <param name="Dir"></param>
+        /// <param name="IntersectDir"></param>
         /// <returns></returns>
         private LineSegmentPair LinesForCoord(int iX, int iY, Direction IntersectDir)
         {
