@@ -13,6 +13,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 * Ctrl-copying a curve's control points while moving or reshaping an open curve now copies from the curve nearest the mouse instead of an arbitrary one under it, and the copied shape shows right away. It no longer errors when the section has no annotations.
 * Per-channel colors saved in the section reference settings (section-references.json) now come back with their transparency intact. They were reloaded with the opacity inverted (fully opaque became fully transparent), which hid or washed out the channel in the section view.
 * Adding or removing a root structure type while the Structure Types form (F7) is open no longer throws an error; the form is refreshed instead.
+* A password containing the `|` character is now remembered correctly by the saved-login option. Before, the stored login was cut short at the `|` and signing in with it failed.
 
 ## 1.2.117 — 2026-10-20 (Viking Test, unsigned)
 

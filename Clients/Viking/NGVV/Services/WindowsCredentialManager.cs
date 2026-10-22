@@ -181,27 +181,36 @@ namespace Viking.Services
         /// <summary>
         /// Serializes credential data to JSON-like format.
         /// </summary>
-        private static string SerializeCredentialData(CredentialData data) => $"{data.Username}|{data.Password}|{data.ServerUrl ?? ""}|{data.SavedAt:O}";
+        internal static string SerializeCredentialData(CredentialData data) => $"{data.Username}|{data.Password}|{data.ServerUrl ?? ""}|{data.SavedAt:O}";
 
         /// <summary>
-        /// Deserializes credential data from JSON-like format.
+        /// Deserializes credential data written by <see cref="SerializeCredentialData"/>.
+        /// The password may itself contain '|', so the password is the text between the first
+        /// separator and the third-from-last one; the server URL and timestamp never contain '|'.
         /// </summary>
-        private static CredentialData DeserializeCredentialData(string data)
+        /// <exception cref="FormatException">The text does not contain the four '|'-separated fields.</exception>
+        internal static CredentialData DeserializeCredentialData(string data)
         {
-            var parts = data.Split('|');
+            int lastSeparator = data.LastIndexOf('|');
+            int urlSeparator = lastSeparator > 0 ? data.LastIndexOf('|', lastSeparator - 1) : -1;
+            int firstSeparator = data.IndexOf('|');
+            if (firstSeparator < 0 || urlSeparator <= firstSeparator)
+                throw new FormatException("Stored credential data is not in the expected format.");
+
+            string serverUrl = data.Substring(urlSeparator + 1, lastSeparator - urlSeparator - 1);
             return new CredentialData
             {
-                Username = parts[0],
-                Password = parts[1],
-                ServerUrl = string.IsNullOrEmpty(parts[2]) ? null : parts[2],
-                SavedAt = DateTime.Parse(parts[3])
+                Username = data.Substring(0, firstSeparator),
+                Password = data.Substring(firstSeparator + 1, urlSeparator - firstSeparator - 1),
+                ServerUrl = string.IsNullOrEmpty(serverUrl) ? null : serverUrl,
+                SavedAt = DateTime.Parse(data.Substring(lastSeparator + 1))
             };
         }
 
         /// <summary>
         /// Internal data structure for credential information.
         /// </summary>
-        private class CredentialData
+        internal class CredentialData
         {
             public string Username { get; set; }
             public string Password { get; set; }
