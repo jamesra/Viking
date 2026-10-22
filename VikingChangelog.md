@@ -7,6 +7,10 @@ Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Docum
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
+## 1.2.120 — not yet released
+
+* A login that cannot reach the identity server (server down, firewall, no network) now shows the friendly "did not respond in time, check your network" message instead of the raw "An error occurred while sending the request."
+
 ## 1.2.119 — 2026-10-22 (Viking Test, unsigned)
 
 * A structure hotkey in `UserSettings.xml` whose `Tags` list has a blank entry (empty `Tags=""`, a trailing `;`, or `;;`) no longer adds a nameless tag to the new structure, and spaces around a tag are ignored. A tag listed twice no longer switches itself off again.
