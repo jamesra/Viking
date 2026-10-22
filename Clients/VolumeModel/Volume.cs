@@ -941,6 +941,17 @@ namespace Viking.VolumeModel
             return result;
         }
 
+        private readonly List<string> _StosLoadFailures = new();
+
+        /// <summary>
+        /// Paths of .stos files that answered the server with an error (after retries) and so have no transform.
+        /// Filled during <see cref="Initialize"/>; empty when every transform loaded.
+        /// </summary>
+        public IReadOnlyList<string> StosLoadFailures
+        {
+            get { lock (_StosLoadFailures) return _StosLoadFailures.ToArray(); }
+        }
+
         private readonly SemaphoreSlim StosTransformLoadSemaphore = new(1);
         private async Task OnStosTransformLoadComplete(ITransform Transform, XElement element, string stosGroupName = null)
         {
@@ -1028,7 +1039,7 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="ListSectionThreadingObj"></param>
         /// <param name="workerThread"></param>
-        private static async Task WaitForLoadStosTransformThreads(List<Task<LoadStosResult>> ListStosTransformTasks, IProgress<ProgressInfo> workerThread, CancellationToken token)
+        private async Task WaitForLoadStosTransformThreads(List<Task<LoadStosResult>> ListStosTransformTasks, IProgress<ProgressInfo> workerThread, CancellationToken token)
         {
             workerThread?.Report(new ProgressInfo("Waiting for Stos Transform Loading Threads", 0));
             int countFinished = 0;
@@ -1056,6 +1067,10 @@ namespace Viking.VolumeModel
                 int Progress = NumStosFiles > 0 ? (countFinished * 100) / NumStosFiles : 100;
                 if (result.Transform is null)
                 {
+                    string failedPath = result.element?.GetAttributeCaseInsensitive("path")?.Value ?? result.element?.ToString() ?? "unknown";
+                    Trace.WriteLine($"No transform loaded for .stos {failedPath}; the section pair is drawn without it.", "VolumeModel");
+                    lock (_StosLoadFailures)
+                        _StosLoadFailures.Add(failedPath);
                     workerThread?.Report(new ProgressInfo($"Failed Loading {result.element}", Progress, 100));
                     continue;
                 }

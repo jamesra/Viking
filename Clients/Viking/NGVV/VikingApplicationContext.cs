@@ -72,6 +72,17 @@ namespace Viking
                 return;
             }
 
+            var stosFailures = UI.State.volume?.StosLoadFailures;
+            if (stosFailures is { Count: > 0 })
+            {
+                Trace.WriteLine($"{stosFailures.Count} .stos transforms did not load:" + Environment.NewLine + string.Join(Environment.NewLine, stosFailures));
+                MessageBox.Show(
+                    $"{stosFailures.Count} section transforms (.stos) could not be loaded from the server, so those sections " +
+                    "are shown without their transform. The list is in the Viking log. Reopening the volume usually fixes it." + Environment.NewLine + Environment.NewLine +
+                    $"First: {stosFailures[0]}",
+                    "Transforms Missing", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+
             Trace.WriteLine($"Showing VikingMain window");
             UI.State.Appwindow = new VikingMain();
             this.MainForm = UI.State.Appwindow;

@@ -149,6 +149,20 @@ namespace Geometry.Transforms
 
         }
 
+        /// <summary>
+        /// True for HTTP statuses that usually clear on a later attempt (timeout, throttling, a busy or restarting
+        /// server or gateway), so a .stos that answers one of them is retried instead of being skipped.
+        /// </summary>
+        public static bool IsTransientStosStatus(System.Net.HttpStatusCode status)
+        {
+            return status == System.Net.HttpStatusCode.RequestTimeout
+                || status == (System.Net.HttpStatusCode)429
+                || status == System.Net.HttpStatusCode.InternalServerError
+                || status == System.Net.HttpStatusCode.BadGateway
+                || status == System.Net.HttpStatusCode.ServiceUnavailable
+                || status == System.Net.HttpStatusCode.GatewayTimeout;
+        }
+
         public static async Task<ITransform> ParseStos(Uri stosURI, XElement elem, System.Net.NetworkCredential UserCredentials)
         {
             if (elem is null)
@@ -171,8 +185,7 @@ namespace Geometry.Transforms
                 response = await client.GetAsync(stosURI, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
                 if (false == response.IsSuccessStatusCode)
                 {
-                    if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
-                        response.StatusCode == System.Net.HttpStatusCode.RequestTimeout)
+                    if (IsTransientStosStatus(response.StatusCode))
                     {
                         nRetries--;
                         Debug.WriteLine($"Failed to load {stosURI} : Delaying for retry");

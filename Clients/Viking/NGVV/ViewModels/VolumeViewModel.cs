@@ -21,6 +21,9 @@ namespace Viking.ViewModels
 
         public bool IsLocal => _Volume.IsLocal;
 
+        /// <summary>Paths of .stos files whose transform did not load; see <see cref="Volume.StosLoadFailures"/>.</summary>
+        public System.Collections.Generic.IReadOnlyList<string> StosLoadFailures => _Volume.StosLoadFailures;
+
         public int? DefaultTileWidth => _Volume.DefaultTileWidth;
 
         public UnitsAndScale.IAxisUnits DefaultXYScale => _Volume.DefaultXYScale;
