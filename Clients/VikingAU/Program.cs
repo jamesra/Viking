@@ -23,10 +23,10 @@ namespace Viking.AU
         [Option('v', "VolumeURL", Required = true, HelpText = "URL of VolumeXML file")]
         public string VolumeURL { get; set; }
 
-        [Option('u', "username", Required = false, HelpText = "URL of VolumeXML file")]
+        [Option('u', "username", Required = false, HelpText = "User name for the annotation server")]
         public string Username { get; set; } = "Anonymous";
 
-        [Option('p', "password", Required = false, HelpText = "URL of VolumeXML file")]
+        [Option('p', "password", Required = false, HelpText = "Password for the annotation server")]
         public string Password { get; set; } = "connectome";
 
         [Option('c', "closed_interpolation_points", Required = false, HelpText = "Number of closed curve interpolation points")]

@@ -34,10 +34,10 @@ namespace Viking
         [Option('v', "Volume", Required = true, HelpText = "URL of VolumeXML file")]
         public string VolumeURL { get; set; } = string.Empty;
 
-        [Option('u', "user", Default = "Anonymous", Required = false, HelpText = "URL of VolumeXML file")]
+        [Option('u', "user", Default = "Anonymous", Required = false, HelpText = "User name for the annotation server")]
         public string Username { get; set; } = string.Empty;
 
-        [Option('p', "pwd", Default = "connectome", Required = false, HelpText = "URL of VolumeXML file")]
+        [Option('p', "pwd", Default = "connectome", Required = false, HelpText = "Password for the annotation server")]
         public string Password { get; set; } = string.Empty;
 
         //[Option('c', "position", Required = false, HelpText= "Position to start viewer at")] 
