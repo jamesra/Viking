@@ -69,7 +69,7 @@ namespace Viking.AU
 
 
         /// <summary>
-        /// Convert a string of two integers seperated by a hyphen to a list of integers
+        /// Convert a string of two integers separated by a hyphen to a list of integers
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>

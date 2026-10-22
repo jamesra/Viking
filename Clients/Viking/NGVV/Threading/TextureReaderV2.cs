@@ -173,7 +173,7 @@ class TextureReaderV2 : IDisposable
         {
             if (Interlocked.Read(ref TriedToCreateDirectory) == 0)
             {
-                Trace.WriteLine($"Failed To delete cache file from non-existant directory (probably OK): {CacheFilename}", "TextureUse");
+                Trace.WriteLine($"Failed To delete cache file from non-existent directory (probably OK): {CacheFilename}", "TextureUse");
                 TryCreatingCacheDirectory(CacheFilename);
             }
         }

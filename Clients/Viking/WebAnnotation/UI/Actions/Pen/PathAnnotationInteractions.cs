@@ -64,7 +64,7 @@ namespace WebAnnotation.UI
         public readonly ICanvasView Annotation = annotation;
 
         /// <summary>
-        /// Index into the path/polyline where this event occured.
+        /// Index into the path/polyline where this event occurred.
         /// </summary>
         public readonly int Index = index;
 

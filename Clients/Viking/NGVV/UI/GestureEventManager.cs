@@ -46,7 +46,7 @@ namespace Viking.UI
     public class BeginGestureEventArgs : GestureEventArgs
     {
         /// <summary>
-        /// Position when BEGIN message was recieved
+        /// Position when BEGIN message was received
         /// </summary>
         public System.Drawing.Point BeginPt { get; internal set; }
     }
@@ -56,7 +56,7 @@ namespace Viking.UI
     public class ZoomGestureEventArgs : GestureEventArgs
     {
         /// <summary>
-        /// Position when BEGIN message was recieved
+        /// Position when BEGIN message was received
         /// </summary>
         public System.Drawing.Point BeginPt { get; internal set; }
 
@@ -84,7 +84,7 @@ namespace Viking.UI
     public class PanGestureEventArgs : GestureEventArgs
     {
         /// <summary>
-        /// Position when BEGIN message was recieved
+        /// Position when BEGIN message was received
         /// </summary>
         public System.Drawing.Point BeginPt { get; internal set; }
 

@@ -1003,7 +1003,7 @@ namespace Viking.UI.Controls
         }
 
         /// <summary>
-        /// Recieves the event from the section when the reference has changed and fires an event to any listeners
+        /// Receives the event from the section when the reference has changed and fires an event to any listeners
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -1618,7 +1618,7 @@ namespace Viking.UI.Controls
             GraphicsDevice graphicsDevice = Device;
             */
 
-            //TODO: These coordinates on the screen should be from 0 to 1 with a seperate worldviewproj matrix.  However to get this running I'm just
+            //TODO: These coordinates on the screen should be from 0 to 1 with a separate worldviewproj matrix.  However to get this running I'm just
             //calculating in volume spce. 
 
             Geometry.Vector2 TopLeft = scene.ScreenToWorld(0, scene.Viewport.Height);
