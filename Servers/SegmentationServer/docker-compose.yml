@@ -64,6 +64,11 @@ x-segmentation-env: &segmentation-env
   SEGMENTATION_DEBUG_DUMP: ${SEGMENTATION_DEBUG_DUMP:-}
   # 1 asks SAM2 for three candidate masks on box prompts. Off until judged on real sections.
   SEGMENTATION_BOX_MULTIMASK: ${SEGMENTATION_BOX_MULTIMASK:-0}
+  # Identity "segmentation" client: lists the annotation contexts each container is local to, so it reads their
+  # tilesets itself instead of asking clients for every cell. Unset leaves every cell to the clients.
+  IdentityServer__Endpoint: ${SEGMENTATION_IDENTITY_ENDPOINT:-}
+  IdentityServer__ApiEndpoint: ${SEGMENTATION_IDENTITY_API_ENDPOINT:-}
+  IdentityServer__ClientSecret: ${SEGMENTATION_SERVICE_CLIENT_SECRET:-}
 
 services:
   # One-shot: creates the cache folders and hands them to the image's non-root user, which a
@@ -94,6 +99,7 @@ services:
     environment:
       <<: *segmentation-env
       SAM2_CHECKPOINT: ${SAM2_CHECKPOINT:-/models/best_TEM_model.pt}
+      SEGMENTATION_SERVICE_NAME: ${SEGMENTATION_SERVICE_NAME:-}
       SEGMENTATION_MODEL_NAME: ${SEGMENTATION_MODEL_NAME:-default}
       SEGMENTATION_DEMO_SITE: ${SEGMENTATION_DEMO_SITE:-0}
       SEGMENTATION_DEMO_PLAINTEXT: ${SEGMENTATION_DEMO_PLAINTEXT:-0}
@@ -116,6 +122,7 @@ services:
     environment:
       <<: *segmentation-env
       SAM2_CHECKPOINT: ${SEG_V3_CHECKPOINT:-/models/sam2_em_v3_epoch_9.pt}
+      SEGMENTATION_SERVICE_NAME: ${SEG_V3_SERVICE_NAME:-}
       SEGMENTATION_MODEL_NAME: "v3"
       SEGMENTATION_DEMO_SITE: ${SEGMENTATION_MODEL_DEMO_SITE:-1}
       SEGMENTATION_DEMO_PLAINTEXT: "1"
@@ -135,6 +142,7 @@ services:
     environment:
       <<: *segmentation-env
       SAM2_CHECKPOINT: ${SEG_V4_CHECKPOINT:-/models/v4.epoch0.pt}
+      SEGMENTATION_SERVICE_NAME: ${SEG_V4_SERVICE_NAME:-}
       SEGMENTATION_MODEL_NAME: "v4"
       SEGMENTATION_DEMO_SITE: ${SEGMENTATION_MODEL_DEMO_SITE:-1}
       SEGMENTATION_DEMO_PLAINTEXT: "1"
@@ -154,6 +162,7 @@ services:
     environment:
       <<: *segmentation-env
       SAM2_CHECKPOINT: ${SEG_SEM_V1_CHECKPOINT:-/models/sem-v1.5.pt}
+      SEGMENTATION_SERVICE_NAME: ${SEG_SEM_V1_SERVICE_NAME:-}
       SEGMENTATION_MODEL_NAME: "sem-v1"
       SEGMENTATION_DEMO_SITE: ${SEGMENTATION_MODEL_DEMO_SITE:-1}
       SEGMENTATION_DEMO_PLAINTEXT: "1"

@@ -11,7 +11,9 @@ Host: the SAM2 segmentation server
 
 Interactive tracing. The client uploads a mosaic image, or the 1024×1024 tiles that cover the view, and sends foreground and background points. The server returns polygons. Viking draws those polygons as a location. It does not use the labeled-image PNG.
 
-Points are pixels in the image that was uploaded. For tiles, X increases to the right and Y increases upward (world divided by the tile downsample). ``TileCoord.row`` and ``col`` are ``floor(world / (1024 * downsample))``. Row increases with world Y.
+Points are pixels in the image that was uploaded. For tiles, X increases to the right and Y increases upward (the section's mosaic coordinates divided by the tile downsample). ``TileCoord.row`` and ``col`` are ``floor(mosaic / (1024 * downsample))``. Row increases with mosaic Y. Mosaic space is the assembled section before any slice-to-volume registration: ``transform`` is ``"<volume transform>|<tile transform>"`` with an empty volume part, and the client maps prompts into mosaic space and results back to volume space itself.
+
+``SegmentTilesRequest.annotation_context_id`` names the Identity annotation context the client has open. A server that context is local to (the SegmentationService's local resources in Identity) reads plain greyscale cells from the context's VikingXML tileset and does not ask the client for them.
 
 ``TileCoord`` is the cache key shared by clients: ``volume``, ``section``, ``channel``, ``transform``, ``downsample``, ``row``, ``col``. Do not invent a second id for the same cell. The server treats two uploads with one key as the same picture and hands one client's tile to another, so the key must name everything that changes the render. Viking puts the channel set it blends (each channel's name, colour and source section) and the view options drawn into a capture into ``channel``; a plain greyscale view sends just the channel name.
 

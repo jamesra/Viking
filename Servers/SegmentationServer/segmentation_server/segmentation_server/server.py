@@ -70,6 +70,7 @@ from segmentation_server.mask_utils import (
 from segmentation_server.mask_tiles import MaskTileCollector, MaskTileError
 from segmentation_server.tile_requests import TileRequestRegistry
 from segmentation_server.tile_store import TileStore, open_tile_store
+from segmentation_server.tile_source import TileSource, open_tile_source
 from segmentation_server.tile_work import (
     install_sam2_log_filter,
     install_tile_work_logging,
@@ -418,6 +419,8 @@ class _TileSession:
     token: object = field(default_factory=object)
     # The request's mask tiles, when it sent any: the foreground, and the background as the walk asks for it.
     masks: Optional[MaskTileCollector] = None
+    # The Identity annotation context the client has open (0 for none); it lets the server read the context's tiles.
+    annotation_context_id: int = 0
 
 
 @dataclass(frozen=True)
@@ -505,6 +508,7 @@ class SegmentationServicer(SegmentationServiceServicer):
         exit_process: Callable[[int], None] = os._exit,
         compile_image_encoder: bool = True,
         tile_store: Optional[TileStore] = None,
+        tile_source: Optional[TileSource] = None,
     ) -> None:
         """
         Args:
@@ -521,6 +525,8 @@ class SegmentationServicer(SegmentationServiceServicer):
             exit_process: Called after an unrecoverable GPU error (inject in tests).
             compile_image_encoder: torch.compile the SAM2 Hiera encoder (CUDA only).
             tile_store: Uploaded tiles kept after the image cache drops them; read from the environment if omitted.
+            tile_source: Reads cells of the annotation contexts this server is local to, so their clients need not
+                upload them; read from the environment if omitted (None there when Identity is not configured).
         """
         if model is None:
             from segmentation_server.segmentation_service import SegmentationModel as _SegmentationModel
@@ -552,6 +558,7 @@ class SegmentationServicer(SegmentationServiceServicer):
         self._tile_share_timeout = tile_share_timeout_seconds()
         self._tile_requests = TileRequestRegistry()
         self._tile_store = tile_store if tile_store is not None else open_tile_store()
+        self._tile_source = tile_source if tile_source is not None else open_tile_source()
         self._limits = RequestLimits.from_env()
         self._active_streams = 0
         # Image decoding and response encoding are CPU work. They get their own small pool so a
@@ -567,8 +574,11 @@ class SegmentationServicer(SegmentationServiceServicer):
             self.model.set_on_compiled_ready(self._flush_cache_after_compile)
 
     def close(self) -> None:
-        """Release the servicer's own thread pool. The inference pool belongs to whoever passed it in."""
+        """Release the servicer's own thread pools. The inference pool belongs to whoever passed it in."""
         self._cpu_executor.shutdown(wait=False, cancel_futures=True)
+        close_source = getattr(self._tile_source, "close", None)
+        if callable(close_source):
+            close_source()
 
     def _gpu_under_pressure(self) -> bool:
         """True when the model says the next shared-tile embedding needs GPU memory."""
@@ -1359,7 +1369,9 @@ class SegmentationServicer(SegmentationServiceServicer):
             )
             return
 
-        session = _TileSession(identity=identity, masks=mask_tiles)
+        session = _TileSession(
+            identity=identity, masks=mask_tiles, annotation_context_id=int(request.annotation_context_id)
+        )
         reader = _StreamReader(request_iterator)
         self._active_streams += 1
         self._load.begin()
@@ -1825,8 +1837,10 @@ class SegmentationServicer(SegmentationServiceServicer):
         The server's own caches come first (:meth:`_pin_tile`: the image cache, then the tile
         store), so a tile another user or an earlier session left there is not rendered and
         uploaded again. A tile some other stream has already asked its client for is subscribed
-        to, not asked again. Every other tile is asked of this client, and is recorded as in
-        flight so a stream that needs it later can subscribe in turn.
+        to, not asked again. Every other tile is claimed, recorded as in flight so a stream that
+        needs it later can subscribe in turn, then read from the server's tile source when the
+        stream's annotation context is local here (:meth:`_source_tiles`); what that cannot read
+        is asked of this client.
 
         Raises:
             UnrecoverableGpuError: Rebuilding a stored tile found the CUDA context dead.
@@ -1846,6 +1860,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                 len(needed),
             )
         now = asyncio.get_running_loop().time()
+        claimed: List[TileIndex] = []
         for tile in missing:
             key = _tile_cache_key(_coord_for(session.identity, tile))
             if self._tile_share_timeout <= 0:
@@ -1854,7 +1869,7 @@ class SegmentationServicer(SegmentationServiceServicer):
             else:
                 subscription = self._tile_requests.claim(key, session.token)
             if subscription is None:
-                wait.ask(tile)
+                claimed.append(tile)
                 continue
             wait.shared[(tile.row, tile.col)] = _SharedTile(
                 tile=tile, key=key, future=subscription, deadline=now + self._tile_share_timeout
@@ -1865,8 +1880,52 @@ class SegmentationServicer(SegmentationServiceServicer):
                 tile.col,
                 self._tile_share_timeout,
             )
-        wait.answer_deadline = now + self._tile_answer_timeout
+        for tile in await self._source_tiles(session, claimed):
+            wait.ask(tile)
+        wait.answer_deadline = asyncio.get_running_loop().time() + self._tile_answer_timeout
         return wait
+
+    async def _source_tiles(self, session: "_TileSession", claimed: List[TileIndex]) -> List[TileIndex]:
+        """Read the tiles this stream just claimed from the server's own tile source. Returns the ones it could not.
+
+        Only tiles this stream claimed are read, so two streams never fetch the same cell: a stream that needs a
+        tile another is reading subscribes to that claim like any other. A read cell goes in the tile store and is
+        pinned from there (:meth:`_pin_tile`), the same path a cell rebuilt after a restart takes.
+
+        Raises:
+            UnrecoverableGpuError: Encoding a read tile found the CUDA context dead.
+        """
+        if self._tile_source is None or session.annotation_context_id <= 0 or not claimed:
+            return claimed
+        coords = [_coord_for(session.identity, tile) for tile in claimed]
+        results = await asyncio.gather(
+            *(self._tile_source.fetch(session.annotation_context_id, coord) for coord in coords),
+            return_exceptions=True,
+        )
+        unsourced: List[TileIndex] = []
+        sourced = 0
+        for tile, coord, data in zip(claimed, coords, results):
+            if isinstance(data, BaseException):
+                logger.warning("Tile source failed row=%s col=%s: %s", tile.row, tile.col, data)
+                data = None
+            if not data:
+                unsourced.append(tile)
+                continue
+            key = _tile_cache_key(coord)
+            self._keep_tile(key, data)
+            if await self._pin_tile(session, tile):
+                self._tile_requests.arrived(key)
+                sourced += 1
+            else:
+                unsourced.append(tile)
+        if sourced:
+            logger.info(
+                "SegmentTiles read %d of %d claimed tiles from context %s; the client is not asked for them",
+                sourced,
+                len(claimed),
+                session.annotation_context_id,
+            )
+        return unsourced
 
     async def _receive_tiles(
         self,

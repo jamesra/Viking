@@ -43,6 +43,26 @@ Each container has its own torch inductor and tile-embedding cache under
 one-shot ``segmentation-init`` creates the folders and gives them to the image's non-root user. On
 the Windows dev box, set ``SEGMENTATION_CACHE_DIR=D:/Docker/cache`` to keep the old model caches.
 
+Local tilesets
+==============
+
+A container can read the tiles of some annotation contexts itself instead of asking the Viking
+client to render and upload every cell. In the Identity management site, give the container's
+SegmentationService resource **Local resources**: annotation contexts, or the groups and
+organizational units that hold them (a group can hold resources, so group contexts by where their
+storage is). Then set, in the run env:
+
+- ``SEGMENTATION_IDENTITY_ENDPOINT`` (and ``SEGMENTATION_IDENTITY_API_ENDPOINT`` when the
+  Permissions API is elsewhere) and ``SEGMENTATION_SERVICE_CLIENT_SECRET``, equal to the
+  identity run env's secret for the ``segmentation`` client;
+- ``SEGMENTATION_SERVICE_NAME`` (and ``SEG_V3_SERVICE_NAME`` etc. for the extra models): the
+  resource name of each container's SegmentationService.
+
+The server reads plain greyscale cells in mosaic space from the context's VikingXML tilesets over
+HTTP and keeps them in its tile store; anything else (pyramid-only sections, blended or coloured
+channels, volume-space views) is still uploaded by the client. Without these settings every cell
+comes from the client, as before.
+
 TLS
 ===
 
