@@ -119,6 +119,7 @@
     <Compile Include="RegionRefreshTimingTests.cs" />
     <Compile Include="SectionLocationPollPolicyTests.cs" />
     <Compile Include="ReviewChangeFeedTests.cs" />
+    <Compile Include="FlagFeedbackAnimationTests.cs" />
     <Compile Include="RegionLoaderInvalidateSectionTests.cs" />
     <Compile Include="RegionLoaderTests.cs" />
     <Compile Include="SectionRangeParserTests.cs" />

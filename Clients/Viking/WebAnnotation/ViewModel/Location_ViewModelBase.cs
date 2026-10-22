@@ -435,6 +435,8 @@ namespace WebAnnotation.ViewModel
             {
                 Store.Locations.Save();
                 UndoManager.PushLocationFlags("Toggle Terminal", modelObj, oldTerminal, oldOffEdge);
+                if (modelObj.Terminal)
+                    AnnotationOverlay.CurrentOverlay?.PlayFlagFeedback(UI.FlagFeedbackKind.Celebration, modelObj.VolumePosition);
             }
             catch (System.ServiceModel.FaultException ex)
             {
@@ -879,6 +881,8 @@ namespace WebAnnotation.ViewModel
             {
                 Store.Locations.Save();
                 UndoManager.PushLocationFlags("Toggle OffEdge", modelObj, oldTerminal, oldOffEdge);
+                if (modelObj.OffEdge)
+                    AnnotationOverlay.CurrentOverlay?.PlayFlagFeedback(UI.FlagFeedbackKind.Frown, modelObj.VolumePosition);
             }
             catch (System.ServiceModel.FaultException ex)
             {

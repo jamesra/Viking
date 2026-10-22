@@ -114,6 +114,20 @@ namespace WebAnnotation
         private readonly MouseOverLocationCanvasViewEffect mouseOverEffect = new();
         private AutoCirclePolygonizeController autoPolygonizeController;
 
+        private readonly FlagFeedbackRenderer flagFeedback = new();
+
+        /// <summary>
+        /// Plays the short client-side confetti (Terminal turned on) or frown (Off Edge turned on) animation at a location.
+        /// Draws only; it makes no tile or server requests. Call from the UI thread after the flag change was saved.
+        /// </summary>
+        /// <param name="kind">Which animation to play.</param>
+        /// <param name="worldAnchor">Volume-space position of the annotation the flag was set on.</param>
+        internal void PlayFlagFeedback(FlagFeedbackKind kind, Geometry.Vector2 worldAnchor)
+        {
+            flagFeedback.Start(kind, worldAnchor);
+            _Parent?.Invalidate();
+        }
+
         /// <summary>SAM2 image holds shared by auto-polygonize and segmentation commands.</summary>
         internal AutoPolygonizeCache? PolygonizeImageCache => autoPolygonizeController?.ImageCache;
 
@@ -924,6 +938,8 @@ namespace WebAnnotation
         {
             if (_Parent != null)
                 _Parent.Disposed -= OnParentDisposed;
+
+            flagFeedback.Dispose();
 
             Store.Locations.OnCollectionChanged -= OnLocationCollectionChanged;
             Store.LocationLinks.OnCollectionChanged -= OnLocationLinksCollectionChanged;
@@ -3170,6 +3186,10 @@ break;
         /// <returns></returns>
         private Microsoft.Xna.Framework.Color GetLocationLinkColor(System.Drawing.Color structure_type_color, int section_span_distance, double direction, bool IsMouseOver)
         {
+            // Time-based like the shimmer: ask for the next frame until the animation ends.
+            if (flagFeedback.Draw(_Parent.spriteBatch, scene))
+                _Parent.Invalidate();
+
             int red = (int)((float)(structure_type_color.R * .5) + (128 * direction));
             red = 255 - (red / section_span_distance);
             red = red > 255 ? 255 : red;
