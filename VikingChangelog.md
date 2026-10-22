@@ -1,13 +1,13 @@
 # Viking changelog
 
-Committed application version: **1.2.117.0**  
+Committed application version: **1.2.118.0**  
 (1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109; their changes are listed under 1.2.109.)
 
 Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Documentation/source/Client/versionhistory.rst).
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
-## 1.2.118 - unreleased
+## 1.2.118 — 2026-10-21 (Viking Test, unsigned)
 
 * A recent volume that was saved by its URL now shows its file name without the extension (for example `SliceToVolume`). Before, the last letter was cut off too (`SliceToVolum`), and any extension other than `.vikingxml` was left on. Entries saved earlier keep the name they were saved with.
 * Ctrl-copying a curve's control points while moving or reshaping an open curve now copies from the curve nearest the mouse instead of an arbitrary one under it, and the copied shape shows right away. It no longer errors when the section has no annotations.
