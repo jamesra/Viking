@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -407,7 +408,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return answer;
         }
 
-        private static bool TryParseMissingTile(string detail, out int row, out int col)
+        /// <summary>
+        /// Reads the tile from a server NotFound detail of the form <c>row=R col=C</c>. Digits are read with the
+        /// invariant culture, so a locale with another minus sign cannot break the parse, and a number too large
+        /// for an int returns false instead of throwing.
+        /// </summary>
+        internal static bool TryParseMissingTile(string? detail, out int row, out int col)
         {
             row = 0;
             col = 0;
@@ -418,8 +424,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (!match.Success)
                 return false;
 
-            row = int.Parse(match.Groups[1].Value);
-            col = int.Parse(match.Groups[2].Value);
+            if (!int.TryParse(match.Groups[1].Value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out int parsedRow)
+                || !int.TryParse(match.Groups[2].Value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out int parsedCol))
+            {
+                return false;
+            }
+
+            row = parsedRow;
+            col = parsedCol;
             return true;
         }
 
