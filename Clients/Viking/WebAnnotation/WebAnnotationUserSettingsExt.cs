@@ -2,6 +2,7 @@
 namespace rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd
 {
     using System;
+    using System.Linq;
     //using Xml.Schema.Linq;
     using System.Windows.Forms;
 
@@ -44,6 +45,12 @@ namespace rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd
 
     public partial class CreateStructureCommandAction
     {
+        /// <summary>
+        /// The tags named by <see cref="Tags"/>, split on ';' with surrounding spaces trimmed and blank entries
+        /// and repeats dropped. <c>UserSettings.xml</c> is hand-edited, and the caller toggles each tag on the
+        /// new structure: a blank entry (from <c>Tags=""</c> or a trailing ';') would add a nameless attribute,
+        /// and a repeated tag would switch itself off again.
+        /// </summary>
         public string[] AttributeList
         {
             get
@@ -53,7 +60,11 @@ namespace rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd
                     return [];
                 }
 
-                return Tags.Split(';');
+                return Tags.Split(';')
+                           .Select(tag => tag.Trim())
+                           .Where(tag => tag.Length > 0)
+                           .Distinct()
+                           .ToArray();
             }
         }
     }

@@ -7,6 +7,10 @@ Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Docum
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
+## 1.2.119 — not yet released
+
+* A structure hotkey in `UserSettings.xml` whose `Tags` list has a blank entry (empty `Tags=""`, a trailing `;`, or `;;`) no longer adds a nameless tag to the new structure, and spaces around a tag are ignored. A tag listed twice no longer switches itself off again.
+
 ## 1.2.118 — 2026-10-21 (Viking Test, unsigned)
 
 * A recent volume that was saved by its URL now shows its file name without the extension (for example `SliceToVolume`). Before, the last letter was cut off too (`SliceToVolum`), and any extension other than `.vikingxml` was left on. Entries saved earlier keep the name they were saved with.
