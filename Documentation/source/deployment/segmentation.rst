@@ -45,7 +45,8 @@ On the new host, use either of these:
 - ``nornir-docker/docker-pull.ps1 -Images segmentation`` pulls ``:latest`` and tags it
   ``viking-segmentation-server:latest``. Then ``stack.ps1 viking-segmentation up`` starts it without
   building.
-- Set ``SEGMENTATION_IMAGE=ghcr.io/jamesra/viking-segmentation-server:latest`` (or a SHA tag) in the run
+- Set ``VIKING_SEGMENTATION_IMAGE=ghcr.io/jamesra/viking-segmentation-server:latest`` (or a SHA tag;
+  ``SEGMENTATION_IMAGE`` is the older name) in the run
   env. Then ``stack.ps1 viking-segmentation up -Target compute -Images ghcr``, run from the dev box,
   pulls it first.
 
@@ -79,9 +80,10 @@ SegmentationService resource **Local resources**: annotation contexts, or the gr
 organizational units that hold them (a group can hold resources, so group contexts by where their
 storage is). Then set, in the run env:
 
-- ``SEGMENTATION_IDENTITY_ENDPOINT`` (and ``SEGMENTATION_IDENTITY_API_ENDPOINT`` when the
-  Permissions API is elsewhere) and ``SEGMENTATION_SERVICE_CLIENT_SECRET``, equal to the
-  identity run env's secret for the ``segmentation`` client;
+- ``SEGMENTATION_SERVICE_CLIENT_SECRET``, equal to the identity run env's secret for the
+  ``segmentation`` client. The issuer and Permissions API default to the host-wide
+  ``VIKING_IDENTITY_URL`` / ``VIKING_IDENTITY_API_URL``; ``SEGMENTATION_IDENTITY_ENDPOINT`` /
+  ``SEGMENTATION_IDENTITY_API_ENDPOINT`` override them;
 - ``SEGMENTATION_SERVICE_NAME`` (and ``SEG_V3_SERVICE_NAME`` etc. for the extra models): the
   resource name of each container's SegmentationService.
 

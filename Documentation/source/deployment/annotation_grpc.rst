@@ -41,8 +41,9 @@ environment; ASP.NET Core reads ``Section__Key`` as ``Section:Key``:
 * ``IdentityServer__Endpoint`` / ``ClientId`` / ``ClientSecret``: a confidential client registered in
   Identity with introspection rights for ``Viking.Annotation``. A token from one issuer is a 401
   against another.
-* ``GRPC_ANNOTATION_CORRECTIONS_PATH``: host folder whose ``corrections`` subfolder
-  ``viking-corrections`` publishes (default ``<root>/Data/viking-corrections``).
+* ``VIKING_CORRECTIONS_DIR`` (``host.env``, shared with ``viking-corrections``): host folder whose
+  ``corrections`` subfolder ``viking-corrections`` publishes (default
+  ``<root>/Data/viking-corrections``). ``GRPC_ANNOTATION_CORRECTIONS_PATH`` is the older per-stack name.
 
 One deployment per annotation database
 ======================================

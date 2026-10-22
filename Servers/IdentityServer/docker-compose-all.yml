@@ -43,8 +43,8 @@ services:
   identity-init:
     platform: linux/amd64
     build: *identity-build
-    # IDENTITY_IMAGE=ghcr.io/jamesra/viking-identity:<tag> runs the published image (stack.ps1 pull).
-    image: ${IDENTITY_IMAGE:-viking-identity:latest}
+    # VIKING_IDENTITY_IMAGE=ghcr.io/jamesra/viking-identity:<tag> runs the published image (stack.ps1 pull).
+    image: ${VIKING_IDENTITY_IMAGE:-viking-identity:latest}
     user: "0"
     entrypoint: ["/bin/sh", "-c"]
     command:
@@ -63,7 +63,7 @@ services:
     env_file:
       - ${STACK_RUN_DIR:?STACK_RUN_DIR must be set (stack.ps1 exports it)}/${STACK_NAME:-viking-identity}.run.env
     build: *identity-build
-    image: ${IDENTITY_IMAGE:-viking-identity:latest}
+    image: ${VIKING_IDENTITY_IMAGE:-viking-identity:latest}
     labels:
       viking.tls-reload: "true"
     depends_on:
@@ -89,9 +89,7 @@ services:
       - ConnectionStrings__IdentityConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT:-1433};Database=${SQL_SERVER_IDENTITY_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
       - ConnectionStrings__ConfigConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT:-1433};Database=${SQL_SERVER_CONFIG_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
       - ConnectionStrings__PersistedGrantConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT:-1433};Database=${SQL_SERVER_GRANTS_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
-      # TLS: the shared certificate published by viking-certs.
-      - SSL_CERT_PATH=/certs/${TLS_CERT_NAME:-viking}/fullchain.pem
-      - SSL_KEY_PATH=/certs/${TLS_CERT_NAME:-viking}/privkey.pem
+      # TLS: the shared certificate published by viking-certs (the apps read the SSL section).
       - SSL__CertificatePath=/certs/${TLS_CERT_NAME:-viking}/fullchain.pem
       - SSL__KeyPath=/certs/${TLS_CERT_NAME:-viking}/privkey.pem
       - SSL__Password=
@@ -104,8 +102,7 @@ services:
       # IDENTITY_AUTHORITY / IDENTITY_WEBAPI_PUBLIC_URL in this stack's run env still win over them.
       # To go back to direct-port URLs, set those and IDENTITY_MANAGEMENT_PUBLIC_URL, and clear the
       # two *_PATH_BASE values.
-      - AUTHORITY=${IDENTITY_AUTHORITY:-${VIKING_IDENTITY_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN:?VIKING_DOMAIN must be set}}/}}
-      - VikingIdentityServerOptions__Authority=${IDENTITY_AUTHORITY:-${VIKING_IDENTITY_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}/}}
+      - VikingIdentityServerOptions__Authority=${IDENTITY_AUTHORITY:-${VIKING_IDENTITY_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN:?VIKING_DOMAIN must be set}}/}}
       - VikingIdentityServerOptions__ManagementPublicUrl=${IDENTITY_MANAGEMENT_PUBLIC_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}/manage/}
       - JwtBearerOptions__Authority=${IDENTITY_AUTHORITY:-${VIKING_IDENTITY_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}/}}
       - OAuth2IntrospectionOptions__Authority=${IDENTITY_AUTHORITY:-${VIKING_IDENTITY_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}/}}
@@ -140,8 +137,6 @@ services:
       - IDENTITY_MANAGEMENT_HTTPS_PORT=${IDENTITY_MANAGEMENT_HTTPS_PORT:-4001}
       - IDENTITY_MANAGEMENT_CONTAINER_HTTP_PORT=${IDENTITY_MANAGEMENT_CONTAINER_HTTP_PORT:-4000}
       - IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT=${IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT:-4001}
-      - IDENTITY_SERVER_HTTP_PORT=${IDENTITY_SERVER_HTTP_PORT:-5000}
-      - IDENTITY_SERVER_HTTPS_PORT=${IDENTITY_SERVER_HTTPS_PORT:-5001}
       - IDENTITY_STANDALONE_HTTPS_PORT=${IDENTITY_STANDALONE_HTTPS_PORT:-5001}
       # Remote debugging configuration
       - IDENTITY_ENABLE_REMOTE_DEBUG=${IDENTITY_ENABLE_REMOTE_DEBUG:-false}

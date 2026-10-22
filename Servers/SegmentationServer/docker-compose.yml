@@ -30,7 +30,8 @@ x-segmentation-build: &segmentation-build
 
 x-segmentation-common: &segmentation-common
   build: *segmentation-build
-  image: ${SEGMENTATION_IMAGE:-viking-segmentation-server:latest}
+  # VIKING_SEGMENTATION_IMAGE (older name SEGMENTATION_IMAGE) runs a published image instead.
+  image: ${VIKING_SEGMENTATION_IMAGE:-${SEGMENTATION_IMAGE:-viking-segmentation-server:latest}}
   restart: unless-stopped
   cap_add:
     - NET_BIND_SERVICE
@@ -79,7 +80,7 @@ services:
   # freshly created Linux bind mount (owned by root) would otherwise refuse. Harmless on Docker Desktop.
   segmentation-init:
     build: *segmentation-build
-    image: ${SEGMENTATION_IMAGE:-viking-segmentation-server:latest}
+    image: ${VIKING_SEGMENTATION_IMAGE:-${SEGMENTATION_IMAGE:-viking-segmentation-server:latest}}
     user: "0"
     entrypoint: ["/bin/sh", "-c"]
     command:

@@ -23,7 +23,8 @@ The proxy never terminates TLS (port 443 is SNI passthrough), so it needs no cer
 Modes
 =====
 
-``TLS_MODE`` in ``<root>/Run/viking-certs/viking-certs.run.env``:
+``TLS_MODE`` in ``<root>/Run/_host/host.env`` (the other certificate settings live there too, because
+``stack.ps1 certs`` reads them; a value in ``viking-certs.run.env`` still wins):
 
 ``letsencrypt``
    Let's Encrypt with HTTP-01. certbot writes challenge files to the webroot

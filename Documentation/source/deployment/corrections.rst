@@ -16,8 +16,9 @@ Container      Host    Use
 
 Data (defaults under ``<root>/Data/viking-corrections``): ``corrections/`` is the published output,
 also mounted read-only by ``viking-annotation`` (keep both stacks on one host, or point
-``GRPC_ANNOTATION_CORRECTIONS_PATH`` at shared storage); ``cache/`` is the stos cache. Override with
-``GRPC_ANNOTATION_CORRECTIONS_PATH`` and ``SECTION_CORRECTION_CONFIG_PATH``.
+``VIKING_CORRECTIONS_DIR`` in ``host.env`` at shared storage); ``cache/`` is the stos cache. Override with
+``VIKING_CORRECTIONS_DIR`` (host-wide, also read by ``viking-annotation``) and ``VIKING_CORRECTIONS_CACHE_DIR``
+(older names: ``GRPC_ANNOTATION_CORRECTIONS_PATH``, and ``SECTION_CORRECTION_CONFIG_PATH`` as the parent of ``cache/``).
 
 Identity setup
 ==============

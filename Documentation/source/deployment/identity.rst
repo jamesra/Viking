@@ -62,8 +62,11 @@ direct-port URLs set ``IDENTITY_AUTHORITY``, ``IDENTITY_MANAGEMENT_PUBLIC_URL`` 
 
 Consumers that need the new URLs:
 
-* ``viking-annotation`` / ``viking-corrections``: ``IdentityServer__Endpoint=https://<identity host>/``
-  and ``IdentityServer__ApiEndpoint=https://<identity host>/webapi/``.
+* ``viking-annotation``, ``viking-corrections``, ``viking-segmentation``: nothing to set. Their issuer
+  and WebApi URLs default to the host-wide ``VIKING_IDENTITY_URL`` (``https://<identity host>/``) and
+  ``VIKING_IDENTITY_API_URL`` (``.../webapi/``), which derive from ``VIKING_HOSTNAME_IDENTITY``. Set
+  those in ``host.env`` to change every service at once; ``IdentityServer__Endpoint`` /
+  ``IdentityServer__ApiEndpoint`` in one stack's run env still override it for that stack.
 * SAM2 gallery: OIDC authority ``https://<identity host>/``; its callback URIs are
   ``VikingIdentityServerOptions__GalleryTemRedirectUris__0`` / ``…Sem…`` in the identity run env.
 * VikingXML ``IdentityApi`` / ``Authentication``: ``https://<identity host>/``. Viking desktop clients

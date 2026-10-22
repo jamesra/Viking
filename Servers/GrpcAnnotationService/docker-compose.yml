@@ -25,8 +25,8 @@ services:
       dockerfile: Servers/GrpcAnnotationService/Dockerfile
       args:
         SOURCE_REVISION: ${STACK_SOURCE_REVISION:-}
-    # GRPC_ANNOTATION_IMAGE=ghcr.io/jamesra/viking-annotation:<tag> runs the published image (stack.ps1 pull).
-    image: ${GRPC_ANNOTATION_IMAGE:-viking-annotation:latest}
+    # VIKING_ANNOTATION_IMAGE=ghcr.io/jamesra/viking-annotation:<tag> runs the published image (stack.ps1 pull).
+    image: ${VIKING_ANNOTATION_IMAGE:-viking-annotation:latest}
     restart: unless-stopped
     env_file:
       - ${GRPC_ANNOTATION_ENV_FILE:-${STACK_RUN_DIR:?STACK_RUN_DIR must be set (stack.ps1 exports it)}/${STACK_NAME:-viking-annotation}.run.env}
@@ -38,8 +38,9 @@ services:
     volumes:
       - ./appsettings.json:/app/appsettings.json:ro
       - ./appsettings.Development.json:/app/appsettings.Development.json:ro
-      # Published residual-correction maps, written by viking-corrections on the same host.
-      - ${GRPC_ANNOTATION_CORRECTIONS_PATH:-${NORNIR_DOCKER_USER_ROOT:?NORNIR_DOCKER_USER_ROOT must be set (stack.ps1 exports it)}/Data/viking-corrections}/corrections:/corrections
+      # Published residual-correction maps, written by viking-corrections on the same host: the host-wide
+      # VIKING_CORRECTIONS_DIR (GRPC_ANNOTATION_CORRECTIONS_PATH is the older name, still read first).
+      - ${GRPC_ANNOTATION_CORRECTIONS_PATH:-${VIKING_CORRECTIONS_DIR:-${NORNIR_DOCKER_USER_ROOT:?NORNIR_DOCKER_USER_ROOT must be set (stack.ps1 exports it)}/Data/viking-corrections}}/corrections:/corrections
       - ${DOCKER_CERTS_DIR:?DOCKER_CERTS_DIR must be set (stack.ps1 exports it)}:/certs:ro
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
