@@ -110,19 +110,6 @@ namespace Viking
             return link;
         }
 
-        public static bool TryGetVolumeUrl(string vikingUrl, out string? volumeUrl)
-        {
-            volumeUrl = null;
-            if (!TryParse(vikingUrl, out VikingDeepLink? link) || link is null)
-                return false;
-
-            if (string.IsNullOrWhiteSpace(link.VolumeUrl))
-                return false;
-
-            volumeUrl = link.VolumeUrl;
-            return true;
-        }
-
         public static Dictionary<string, string> ParseQueryString(string query)
         {
             var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -279,16 +266,6 @@ namespace Viking
                 && uri != null
                 && (string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
                     || string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase));
-        }
-
-        public static bool HasPlace(NameValueCollection? place)
-        {
-            if (place is null)
-                return false;
-            return !string.IsNullOrWhiteSpace(place["Location"])
-                || (!string.IsNullOrWhiteSpace(place["X"])
-                    && !string.IsNullOrWhiteSpace(place["Y"])
-                    && !string.IsNullOrWhiteSpace(place["Z"]));
         }
 
         private static void CopyQueryKey(Dictionary<string, string> query, NameValueCollection args, string queryKey, string startupKey)
