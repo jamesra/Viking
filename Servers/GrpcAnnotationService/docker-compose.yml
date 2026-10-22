@@ -53,8 +53,8 @@ services:
       # IdentityServer__Endpoint in the run env still wins.
       - IdentityServer__Endpoint=${IdentityServer__Endpoint:-${VIKING_IDENTITY_URL:-https://${VIKING_HOSTNAME_IDENTITY:?set VIKING_DOMAIN in host.env, or IdentityServer__Endpoint}/}}
       # Program.cs loads this PEM pair for :443 when both files exist, else the image's dev certificate.
-      - SSL_CERT_PATH=/certs/${TLS_CERT_NAME:-viking}/fullchain.pem
-      - SSL_KEY_PATH=/certs/${TLS_CERT_NAME:-viking}/privkey.pem
+      - SSL_CERT_PATH=/certs/${TLS_CERT_NAME:-${VIKING_DOMAIN:-viking}}/fullchain.pem
+      - SSL_KEY_PATH=/certs/${TLS_CERT_NAME:-${VIKING_DOMAIN:-viking}}/privkey.pem
     depends_on:
       annotation-sql:
         condition: service_healthy

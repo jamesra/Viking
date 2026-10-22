@@ -45,7 +45,7 @@ services:
       <<: *viking-hostnames
       TLS_MODE: ${TLS_MODE:-manual}
       TLS_EMAIL: ${TLS_EMAIL:-}
-      TLS_CERT_NAME: ${TLS_CERT_NAME:-viking}
+      TLS_CERT_NAME: ${TLS_CERT_NAME:-${VIKING_DOMAIN:-viking}}
       # Comma list. Empty = every VIKING_HOSTNAME_* above.
       TLS_HOSTNAMES: ${TLS_HOSTNAMES:-}
       TLS_ACME_SERVER: ${TLS_ACME_SERVER:-}

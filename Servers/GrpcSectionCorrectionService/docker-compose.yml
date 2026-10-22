@@ -52,5 +52,5 @@ services:
       # (default https://<VIKING_HOSTNAME_IDENTITY>/ and .../webapi/); the run env's IdentityServer__* still win.
       - IdentityServer__Endpoint=${IdentityServer__Endpoint:-${VIKING_IDENTITY_URL:-https://${VIKING_HOSTNAME_IDENTITY:?set VIKING_DOMAIN in host.env, or IdentityServer__Endpoint}/}}
       - IdentityServer__ApiEndpoint=${IdentityServer__ApiEndpoint:-${VIKING_IDENTITY_API_URL:-https://${VIKING_HOSTNAME_IDENTITY}/webapi/}}
-      - SSL_CERT_PATH=/certs/${TLS_CERT_NAME:-viking}/fullchain.pem
-      - SSL_KEY_PATH=/certs/${TLS_CERT_NAME:-viking}/privkey.pem
+      - SSL_CERT_PATH=/certs/${TLS_CERT_NAME:-${VIKING_DOMAIN:-viking}}/fullchain.pem
+      - SSL_KEY_PATH=/certs/${TLS_CERT_NAME:-${VIKING_DOMAIN:-viking}}/privkey.pem

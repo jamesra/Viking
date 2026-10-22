@@ -90,8 +90,8 @@ services:
       - ConnectionStrings__ConfigConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT:-1433};Database=${SQL_SERVER_CONFIG_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
       - ConnectionStrings__PersistedGrantConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT:-1433};Database=${SQL_SERVER_GRANTS_DB};Trusted_Connection=False;User ID=${SQL_SERVER_USER};Password=${SQL_SERVER_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
       # TLS: the shared certificate published by viking-certs (the apps read the SSL section).
-      - SSL__CertificatePath=/certs/${TLS_CERT_NAME:-viking}/fullchain.pem
-      - SSL__KeyPath=/certs/${TLS_CERT_NAME:-viking}/privkey.pem
+      - SSL__CertificatePath=/certs/${TLS_CERT_NAME:-${VIKING_DOMAIN:-viking}}/fullchain.pem
+      - SSL__KeyPath=/certs/${TLS_CERT_NAME:-${VIKING_DOMAIN:-viking}}/privkey.pem
       - SSL__Password=
       # Public URLs. Everything is served on 443 through viking-proxy, which terminates TLS for the
       # Identity hostname and routes by path: /manage/ -> management (:4001), /webapi/ -> WebApi

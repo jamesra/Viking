@@ -53,7 +53,7 @@ services:
       VIKING_UPSTREAM_IDENTITY_MANAGEMENT: ${VIKING_UPSTREAM_IDENTITY_MANAGEMENT:-host.docker.internal:4001}
       VIKING_UPSTREAM_IDENTITY_WEBAPI: ${VIKING_UPSTREAM_IDENTITY_WEBAPI:-host.docker.internal:6001}
       # Certificate the Identity listener presents (DOCKER_CERTS_DIR/<name>/ mounted at /certs).
-      TLS_CERT_NAME: ${TLS_CERT_NAME:-viking}
+      TLS_CERT_NAME: ${TLS_CERT_NAME:-${VIKING_DOMAIN:-viking}}
       VIKING_UPSTREAM_ANNOTATION: ${VIKING_UPSTREAM_ANNOTATION:-host.docker.internal:5011}
       VIKING_UPSTREAM_CORRECTIONS: ${VIKING_UPSTREAM_CORRECTIONS:-host.docker.internal:41443}
       VIKING_UPSTREAM_GALLERY: ${VIKING_UPSTREAM_GALLERY:-host.docker.internal:8442}

@@ -54,8 +54,8 @@ x-segmentation-env: &segmentation-env
   TORCHINDUCTOR_FX_GRAPH_CACHE: "1"
   TRITON_CACHE_DIR: /home/user/.cache/torch_inductor/triton
   TORCHINDUCTOR_PERSISTENT_AUTOTUNE_DIR: /home/user/.cache/torch_inductor/autotune
-  SSL_CERT_PATH: /certs/${TLS_CERT_NAME:-viking}/fullchain.pem
-  SSL_KEY_PATH: /certs/${TLS_CERT_NAME:-viking}/privkey.pem
+  SSL_CERT_PATH: /certs/${TLS_CERT_NAME:-${VIKING_DOMAIN:-viking}}/fullchain.pem
+  SSL_KEY_PATH: /certs/${TLS_CERT_NAME:-${VIKING_DOMAIN:-viking}}/privkey.pem
   SEGMENTATION_TLS_WAIT_SECONDS: ${SEGMENTATION_TLS_WAIT_SECONDS:-120}
   # Tile embeddings (not weights). Survives eviction and container restart.
   SEGMENTATION_EMBEDDING_CACHE: /var/cache/segmentation-embeddings
