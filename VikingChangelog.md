@@ -15,6 +15,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 * Adding or removing a root structure type while the Structure Types form (F7) is open no longer throws an error; the form is refreshed instead.
 * The Structure Types panel has an eye at the right edge of each type. Clicking it hides every annotation of that type from the section view and from mouse picking; clicking a parent type's eye also hides or shows all of its child types, and a parent whose children are partly hidden shows a half-filled eye. The hidden set is kept only on your computer for the current session; nothing is saved to the server.
 * After rotating or scaling a Ctrl-copied curve, the preview now shows the rotation and scale right away instead of looking unrotated until the mouse moves.
+* A password containing the `|` character is now remembered correctly by the saved-login option. Before, the stored login was cut short at the `|` and signing in with it failed.
 
 ## 1.2.117 — 2026-10-20 (Viking Test, unsigned)
 
