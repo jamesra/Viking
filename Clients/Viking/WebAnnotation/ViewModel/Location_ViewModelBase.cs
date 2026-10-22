@@ -233,17 +233,17 @@ namespace WebAnnotation.ViewModel
             };
             menuNetwork.Click += ContextMenu_ExportNetwork;
 
-            ToolStripMenuItem menuOneHop = new("1 degree  of seperation")
+            ToolStripMenuItem menuOneHop = new("1 degree of separation")
             {
                 Tag = new long?(1)
             };
             menuOneHop.Click += ContextMenu_ExportNetwork;
-            ToolStripMenuItem menuTwoHop = new("2 degrees of seperation")
+            ToolStripMenuItem menuTwoHop = new("2 degrees of separation")
             {
                 Tag = new long?(2)
             };
             menuTwoHop.Click += ContextMenu_ExportNetwork;
-            ToolStripMenuItem menuThreeHop = new("3 degrees of seperation")
+            ToolStripMenuItem menuThreeHop = new("3 degrees of separation")
             {
                 Tag = new long?(3)
             };
