@@ -57,5 +57,88 @@ namespace WebAnnotationTests
                 Assert.AreEqual((byte)255, color.B);
             }
         }
+
+        /// <summary>Runs <paramref name="body"/> with an empty scratch directory standing in for a volume's local cache directory.</summary>
+        private static void WithVolumeDir(System.Action<string> body)
+        {
+            string dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "SectionRefTests_" + System.Guid.NewGuid().ToString("N"));
+            try
+            {
+                body(dir);
+            }
+            finally
+            {
+                if (System.IO.Directory.Exists(dir))
+                {
+                    System.IO.Directory.Delete(dir, true);
+                }
+            }
+        }
+
+        [TestMethod]
+        public void SaveThenLoad_RoundTripsReferencesAndChannels()
+        {
+            WithVolumeDir(dir =>
+            {
+                var saved = new System.Collections.Generic.Dictionary<int, SectionReferences>
+                {
+                    [12] = new SectionReferences { ReferenceAbove = 20, ReferenceBelow = null, Channels = [SectionReferenceSettings.ToDto(Channel(200, 1, 2, 3))] },
+                    [-3] = new SectionReferences { ReferenceAbove = null, ReferenceBelow = 9 },
+                };
+
+                SectionReferenceSettings.SaveForVolume(dir, saved);
+                var loaded = SectionReferenceSettings.LoadForVolume(dir);
+
+                Assert.AreEqual(2, loaded.Count);
+                Assert.AreEqual(20, loaded[12].ReferenceAbove);
+                Assert.IsNull(loaded[12].ReferenceBelow);
+                Assert.AreEqual("#C8010203", loaded[12].Channels[0].ColorHex);
+                Assert.IsNull(loaded[-3].ReferenceAbove);
+                Assert.AreEqual(9, loaded[-3].ReferenceBelow);
+                Assert.IsNull(loaded[-3].Channels);
+            });
+        }
+
+        [TestMethod]
+        public void SaveForVolume_EmptySettings_DeletesTheFile()
+        {
+            WithVolumeDir(dir =>
+            {
+                SectionReferenceSettings.SaveForVolume(dir, new() { [1] = new SectionReferences { ReferenceAbove = 5 } });
+                Assert.AreEqual(1, SectionReferenceSettings.LoadForVolume(dir).Count);
+
+                SectionReferenceSettings.SaveForVolume(dir, new());
+
+                Assert.AreEqual(0, SectionReferenceSettings.LoadForVolume(dir).Count);
+                Assert.AreEqual(0, System.IO.Directory.GetFiles(dir).Length);
+            });
+        }
+
+        [TestMethod]
+        public void LoadForVolume_MissingDirectoryBlankPathOrCorruptFile_ReturnsEmpty()
+        {
+            Assert.AreEqual(0, SectionReferenceSettings.LoadForVolume(null).Count);
+            Assert.AreEqual(0, SectionReferenceSettings.LoadForVolume("  ").Count);
+
+            WithVolumeDir(dir =>
+            {
+                Assert.AreEqual(0, SectionReferenceSettings.LoadForVolume(dir).Count);
+
+                System.IO.Directory.CreateDirectory(dir);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "section-references.json"), "{ not json");
+                Assert.AreEqual(0, SectionReferenceSettings.LoadForVolume(dir).Count);
+            });
+        }
+
+        [TestMethod]
+        public void IsNonDefault_DefaultsAreOneAboveAndOneBelow()
+        {
+            Assert.AreEqual((11, 9), SectionReferenceSettings.GetDefaultReferences(10));
+            Assert.IsFalse(SectionReferenceSettings.IsNonDefault(10, 11, 9));
+            Assert.IsTrue(SectionReferenceSettings.IsNonDefault(10, 12, 9));
+            Assert.IsTrue(SectionReferenceSettings.IsNonDefault(10, 11, 8));
+            Assert.IsTrue(SectionReferenceSettings.IsNonDefault(10, null, 9));
+            Assert.IsTrue(SectionReferenceSettings.IsNonDefault(10, 11, null));
+        }
     }
 }
