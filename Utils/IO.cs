@@ -93,20 +93,20 @@ namespace Utils
             StringBuilder sb = new();
             foreach (XElement elem in list)
             {
-                sb.Append('\t' * tablevel);
+                sb.Append('\t', tablevel++);
                 sb.Append('<');
                 sb.Append(elem.Name);
                 if (elem.HasAttributeCaseInsensitive("name"))
                 {
                     var attrib = elem.GetAttributeCaseInsensitive("name");
                     sb.Append(" name=");
-                    sb.Append(attrib);
+                    sb.Append(attrib.Value);
                 }
                 if (elem.HasAttributeCaseInsensitive("path"))
                 {
                     var attrib = elem.GetAttributeCaseInsensitive("path");
                     sb.Append(" path=");
-                    sb.Append(attrib);
+                    sb.Append(attrib.Value);
                 }
                 sb.Append(">\n");
             }
