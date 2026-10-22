@@ -24,13 +24,5 @@ namespace VikingXNAGraphics
 
             return new Microsoft.Xna.Framework.Vector3((float)v[0], (float)v[1], (float)v[2]);
         }
-
-        public static Microsoft.Xna.Framework.Vector2 ToXNAVector2(this MathNet.Numerics.LinearAlgebra.Vector<double> v)
-        {
-            if (v.Count < 2)
-                throw new ArgumentException("MathNet.Vector must have at least 2 elements to create XNA vector 2");
-
-            return new Microsoft.Xna.Framework.Vector2((float)v[0], (float)v[1]);
-        }
     }
 }
