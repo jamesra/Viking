@@ -278,7 +278,6 @@ namespace Geometry
         /// <param name="p1"></param>
         /// <param name="p2"></param>
         /// <param name="p3"></param>
-        /// <param name="tPoints">If null then [NumInterpolations] points are evenly spaced along the curve </param>
         /// <param name="NumInterpolations"></param>
         /// <returns></returns>
         public static Vector2[] RecursivelyFitCurveSegment(in Vector2 p0, in Vector2 p1,
@@ -500,7 +499,10 @@ namespace Geometry
         /// <summary>
         /// Take a high density path, fit a curve to it using catmull rom, and remove control points until we have a smaller number of control points where all points are within a minimum distance from the curve. 
         /// </summary>
-        /// <param name="path"></param>
+        /// <param name="input">High density path to simplify</param>
+        /// <param name="MaxDistanceFromSimplifiedToIdeal">Largest distance allowed between a path point and the fitted curve</param>
+        /// <param name="IsClosed">True if the path is a closed ring</param>
+        /// <param name="NumInterpolations">Number of points generated along each curve segment</param>
         public static List<Vector2> IdentifyControlPoints(this IReadOnlyList<Vector2> input, double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
         {
             //Copy the path so we don't modify the input

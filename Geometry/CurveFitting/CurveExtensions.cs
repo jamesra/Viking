@@ -159,7 +159,9 @@ namespace Geometry
         /// <summary>
         /// Add more TPoints where the angle is too high
         /// </summary>
+        /// <param name="output">Points of the curve, evaluated at the TPoints</param>
         /// <param name="TPoints">The positions where we evaluate the curve, from 0 to 1</param>
+        /// <param name="angleThresholdInDegrees">Angle above which more TPoints are added</param>
         /// <returns>False if no points were added</returns>
         public static bool TryAddTPointsAboveThreshold(Vector2[] output, ref SortedSet<double> TPoints, double angleThresholdInDegrees = 10.0)
         {
@@ -338,6 +340,7 @@ namespace Geometry
         /// </summary>
         /// <param name="Points">The points.</param>
         /// <param name="Tolerance">The tolerance.</param>
+        /// <param name="PointsToPreserve">Points that must be kept in the result</param>
         /// <returns></returns>
         public static List<Vector2> DouglasPeuckerReduction(this IList<Vector2> Points, Double Tolerance, ICollection<Vector2> PointsToPreserve)
         {
@@ -367,6 +370,7 @@ namespace Geometry
         /// </summary>
         /// <param name="Points">The points.</param>
         /// <param name="Tolerance">The tolerance.</param>
+        /// <param name="PointsToPreserveIndicies">Indices of points that must be kept in the result</param>
         /// <returns></returns>
         public static List<Vector2> DouglasPeuckerReduction
         (this IList<Vector2> Points, Double Tolerance, IEnumerable<int> PointsToPreserveIndicies = null)

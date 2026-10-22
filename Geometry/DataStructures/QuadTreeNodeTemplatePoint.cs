@@ -89,7 +89,8 @@ namespace Geometry
         /// <summary>
         /// This constructor is used to create the root node
         /// </summary>
-        /// <param name="border"></param>
+        /// <param name="tree">Tree that owns the node</param>
+        /// <param name="border">Area covered by the node</param>
         public QuadTreeNodeTemplatePoint(QuadTreeTemplatePoint<TPoint, TValue> tree, Rectangle border)
         {
             this.Tree = tree;
@@ -161,7 +162,8 @@ namespace Geometry
         /// <summary>
         /// Inserts a point into the treeWithUniqueValues.  Returns the new QuadTreeNode the caller should point to as the root of the treeWithUniqueValues
         /// </summary>
-        /// <param name="Point"></param>
+        /// <param name="point">Point to insert</param>
+        /// <param name="value">Value stored at the point</param>
         /// <returns></returns>
         public QuadTreeNodeTemplatePoint<TPoint, TValue> Insert(TPoint point, TValue value)
         {

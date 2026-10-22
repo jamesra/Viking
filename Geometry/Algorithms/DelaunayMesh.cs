@@ -1186,7 +1186,9 @@ namespace Geometry
         /// <summary>
         /// Helper function to track pairs of faces
         /// </summary>
-        /// <param name="AlreadyFlipped"></param>
+        /// <param name="dict">Map from each face to the faces paired with it</param>
+        /// <param name="A">First face of the pair</param>
+        /// <param name="B">Second face of the pair</param>
         static void AddFacePair(Dictionary<IFace, SortedSet<IFace>> dict, IFace A, IFace B)
         {
             if (false == dict.TryGetValue(A, out var ASet))

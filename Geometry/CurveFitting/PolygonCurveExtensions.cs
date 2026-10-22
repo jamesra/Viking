@@ -17,6 +17,8 @@ namespace Geometry
         /// When the result is still not a valid ring the unsmoothed polygon is returned, so a display-only
         /// smoothing step never throws. Called while building pen action previews on the UI thread.
         /// </summary>
+        /// <param name="poly">Polygon to smooth</param>
+        /// <param name="numInterpolationPoints">Number of points generated along each curve segment</param>
         /// <param name="minPointSpacing">
         /// The maximum error, in the polygon's own units (pixels), that the caller accepts. Control points
         /// closer than this to the previously kept point are dropped before the curve is fitted, so no two

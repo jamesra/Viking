@@ -783,7 +783,9 @@ namespace Geometry
         /// Search size, number of cells to search
         /// Border Only, only search cells around the edge
         /// </summary>
-        /// <param name="L"></param>
+        /// <param name="position">Center of the cells to search</param>
+        /// <param name="SearchSize">Number of cells to search</param>
+        /// <param name="BorderOnly">Only search cells around the edge</param>
         /// <returns></returns>
         private List<LineSegment> GetPotentialIntersections(Vector2 position, int SearchSize, bool BorderOnly)
         {
@@ -874,7 +876,7 @@ namespace Geometry
         /// <summary>
         /// Returns a list of GridLineSegments that could possible intersect the passed line
         /// </summary>
-        /// <param name="L"></param>
+        /// <param name="line">Line to test for potential intersections</param>
         /// <returns></returns>
         public IEnumerable<LineSegment> GetPotentialIntersections(in LineSegment line) => GetPotentialIntersections(in line, true);
 
@@ -882,7 +884,8 @@ namespace Geometry
         /// Returns a list of GridLineSegments that could possible intersect the passed line
         /// Called internally.  When the spinlock is held set TakeSpinLock to false
         /// </summary>
-        /// <param name="L"></param>
+        /// <param name="line">Line to test for potential intersections</param>
+        /// <param name="TakeSpinLock">False when the caller already holds the spinlock</param>
         /// <returns></returns>
         private IEnumerable<LineSegment> GetPotentialIntersections(in LineSegment line, bool TakeSpinLock)
         {
@@ -916,7 +919,7 @@ namespace Geometry
         /// <summary>
         /// Returns a list of GridLineSegments that could possible intersect the passed line
         /// </summary>
-        /// <param name="L"></param>
+        /// <param name="line">Line to test for potential intersections</param>
         /// <returns></returns>
         public T[] GetValues(LineSegment line)
         {
@@ -946,7 +949,7 @@ namespace Geometry
         /// <summary>
         /// Returns a list of GridLineSegments that could possible intersect the passed line
         /// </summary>
-        /// <param name="L"></param>
+        /// <param name="rect">Rectangle to search</param>
         /// <returns></returns>
         public T[] GetValues(in Rectangle rect)
         {
@@ -1037,9 +1040,9 @@ namespace Geometry
         /// <summary>
         /// Return the object nearest to the passed line
         /// </summary>
-        /// <param name="TestLine"></param>
-        /// <param name="intersection"></param>
-        /// <param name="nearestIntersect"></param>
+        /// <param name="Position">Point to find the nearest object to</param>
+        /// <param name="BestIntersection">Point on the nearest object closest to Position</param>
+        /// <param name="ClosestDistance">Distance from Position to BestIntersection</param>
         /// <returns></returns>
         public T GetNearest(Vector2 Position, out Vector2 BestIntersection, out double ClosestDistance)
         {

@@ -48,7 +48,7 @@ namespace Geometry
         /// <summary>
         /// Return TPoints for the control points and points spaced evenly along the interval of 0 to 1
         /// </summary>
-        /// <param name="cp"></param>
+        /// <param name="ControlPointTValues">T values of the control points, from 0 to 1</param>
         /// <param name="NumInterpolations"></param>
         /// <returns></returns>
         private static SortedSet<double> GenerateTPoints(double[] ControlPointTValues, int NumInterpolations)
@@ -70,7 +70,8 @@ namespace Geometry
         /// <summary>
         /// Return points along a curve described by three points
         /// </summary>
-        /// <param name="points"></param>
+        /// <param name="cp">The three control points</param>
+        /// <param name="NumInterpolations">Number of points generated along the curve</param>
         public static Vector2[] FitCurve(Vector2[] cp, int NumInterpolations)
         {
             int nPoints = cp.Length;
@@ -115,7 +116,7 @@ namespace Geometry
         /// </summary>
         /// <param name="T"></param>
         /// <param name="TArray">1-D distance along curve as a 0 to 1.0 scalar</param>
-        /// <param name="InputValues"></param>
+        /// <param name="j">Index of the control point the weight is computed for</param>
         /// <returns></returns>
         private static double WeightForT(double T, IReadOnlyList<double> TArray, int j)
         {

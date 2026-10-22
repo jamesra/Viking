@@ -169,7 +169,7 @@ namespace Geometry
         /// <summary>
         /// Returns the value nearest to the point p
         /// </summary>
-        /// <param name="value"></param>
+        /// <param name="p">Point to find the nearest value to</param>
         /// <returns></returns>
         public T this[Vector2 p]
         {
@@ -507,7 +507,9 @@ namespace Geometry
         /// <summary>
         /// Return all points and values in the quadtree which fall inside the rectangle. Indices correspond
         /// </summary>
-        /// <param name="gridRect"></param>
+        /// <param name="gridRect">Rectangle to search</param>
+        /// <param name="outPoints">Points inside the rectangle</param>
+        /// <param name="outValues">Values at outPoints, in the same order</param>
         /// <returns></returns>
         public void Intersect(in Rectangle gridRect, out List<Vector2> outPoints, out List<T> outValues)
         {

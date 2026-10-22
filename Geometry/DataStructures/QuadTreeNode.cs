@@ -120,7 +120,7 @@ namespace Geometry
         /// <summary>
         /// This constructor is used to create the root node
         /// </summary>
-        /// <param name="border"></param>
+        /// <param name="tree">Tree that owns the node</param>
         public QuadTreeNode(QuadTree<T> tree)
         {
             this.Tree = tree;
@@ -129,7 +129,8 @@ namespace Geometry
         /// <summary>
         /// This constructor is used to create the root node
         /// </summary>
-        /// <param name="border"></param>
+        /// <param name="tree">Tree that owns the node</param>
+        /// <param name="border">Area covered by the node</param>
         public QuadTreeNode(QuadTree<T> tree, Rectangle border)
         {
             this.Tree = tree;
@@ -216,8 +217,8 @@ namespace Geometry
         /// <summary>
         /// Inserts a point into the treeWithUniqueValues.  Returns the new QuadTreeNode the caller should point to as the root of the treeWithUniqueValues
         /// </summary>
-        /// <param name="Point"></param>
-        /// <param name="output">The node the new point was added to</param>
+        /// <param name="insertingPoint">Point to insert</param>
+        /// <param name="value">Value stored at the point</param>
         /// <returns></returns>
         public QuadTreeNode<T> Insert(Vector2 insertingPoint, T value)
         {
@@ -303,7 +304,8 @@ namespace Geometry
         /// <summary>
         /// Insert nodes at the root to expand our borders large enough to include the point
         /// </summary>
-        /// <param name="point"></param>
+        /// <param name="point">Point the border must include</param>
+        /// <param name="new_root">The new root node if the border expanded</param>
         /// <returns>The new root node if the border expanded or was defined</returns>
 
         internal bool ExpandBorder(in Vector2 point, out QuadTreeNode<T> new_root)
@@ -614,8 +616,8 @@ namespace Geometry
         /// Returns the value associated with the point nearest to the passed input parameter point
         /// </summary>
         /// <param name="point">Query point</param>
-        /// <param name="nodePoint">Nearest point in QuadTreeWithUniqueValues to query point</param>
-        /// <param name="distance">Distance from query point to nodePoint</param>
+        /// <param name="nPoints">Number of nearest points to find</param>
+        /// <param name="distanceList">Receives the nearest points and their distances</param>
         /// <returns>Data value associated with nearest point</returns>
         public bool FindNearestPoints(Vector2 point, int nPoints, ref FixedSizeDistanceList<T> distanceList)
         {

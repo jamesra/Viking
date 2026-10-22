@@ -62,6 +62,8 @@ namespace Geometry
         /// <see cref="Triangulate(Vector2[], Vector2[])"/> with the pairwise de-duplication limit exposed so tests can force
         /// either de-duplication path. Both paths return the same triangles in the same order.
         /// </summary>
+        /// <param name="points">Vertices to triangulate</param>
+        /// <param name="BoundingPoints">Points of the enclosing bounding triangle</param>
         /// <param name="pairwiseEdgeLimit">Cavities with more edges than this use the hashed de-duplication</param>
         internal static int[] TriangulateCore(Vector2[] points, Vector2[] BoundingPoints, int pairwiseEdgeLimit)
         {
