@@ -108,3 +108,54 @@ The default model's HTTPS demo page (container 8443, host 40444) is off unless
 ``SEGMENTATION_DEMO_SITE=1``; to reach it from the proxy also set ``SEGMENTATION_DEMO_BIND=0.0.0.0``,
 ``SEGMENTATION_DEMO_HOST_BIND=0.0.0.0`` and a ``SEGMENTATION_DEMO_TOKEN``. The extra models serve a
 plain-HTTP demo page on host 40545-40547, bound to loopback (``SEGMENTATION_MODEL_DEMO_HOST_BIND``).
+
+Own MAC address and IP
+======================
+
+The default server (``segmentation-server``) can run on its own MAC address and IP on the LAN instead of
+the host's ports, for example to take its address from a DHCP reservation. It uses a Docker ``macvlan``
+network through the overlay ``stacks/viking-segmentation/compose.macvlan.yaml`` in connectomes-deploy,
+so the host runs that repo's ``stack.ps1``.
+
+Requirements:
+
+- A Linux host with a wired NIC on that LAN and Docker Engine 25 or newer. Docker Desktop cannot do this
+  (its VM hides the container from the LAN), and Wi-Fi interfaces do not support macvlan.
+- The switch port must accept a second MAC address (port security).
+- A MAC address for the container and a DHCP reservation for it. Pick a locally administered MAC (first
+  byte ``02``, but not ``02:42``, which Docker uses), e.g. on the host:
+  ``printf 02; od -An -N5 -tx1 /dev/urandom | tr ' ' ':'``.
+
+Then set, in ``Run/viking-segmentation/viking-segmentation.run.env`` (template block "Own MAC address
+and IP"):
+
+.. code-block:: none
+
+   STACK_COMPOSE_OVERLAYS=stacks/viking-segmentation/compose.macvlan.yaml
+   STACK_PROFILES=none
+   SEGMENTATION_MACVLAN_PARENT=eno1
+   SEGMENTATION_LAN_SUBNET=10.20.30.0/24
+   SEGMENTATION_LAN_GATEWAY=10.20.30.1
+   SEGMENTATION_MAC_ADDRESS=02:5e:10:00:00:01
+   SEGMENTATION_LAN_IP=10.20.30.40
+
+``STACK_PROFILES=none`` starts only the default server. Docker gives the container that MAC and the
+reserved IP. A small ``segmentation-net`` container holds the network (``segmentation-server`` shares
+it) and runs a DHCP client, so the DHCP server and any DHCP snooping on the switch see a real lease for
+the MAC. Its log shows each lease; if DHCP offers a different address it logs an error and turns
+unhealthy, and the container keeps the reserved IP. While no DHCP server answers, it keeps serving.
+``SEGMENTATION_DHCP=0`` skips DHCP.
+
+What differs from the default setup:
+
+- The server listens on ``<IP>:443`` itself; nothing is published on the host, and the demo page stays
+  on the container's loopback.
+- macvlan traffic bypasses the host firewall (ufw and the ``DOCKER-USER`` chain); filter on the network.
+- The host cannot reach the container's IP. Test from another machine, e.g.
+  ``openssl s_client -connect <IP>:443 -servername segmentation.<domain>``.
+- ``segmentation-server`` uses ``segmentation-net``'s network. If ``segmentation-net`` is restarted on its
+  own, restart the server too; ``stack.ps1 viking-segmentation restart`` does both.
+
+To move ``segmentation.<domain>`` to this server, set ``VIKING_UPSTREAM_SEGMENTATION=<IP>:443`` in the web
+host's ``viking-proxy`` run env and restart the proxy (or point DNS at the IP to bypass the proxy), then
+stop the old host's default server.
