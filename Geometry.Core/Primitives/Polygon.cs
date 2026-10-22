@@ -1219,8 +1219,8 @@ namespace Geometry
         /// <summary>
         /// Return true if the point is one of the polygon verticies
         /// </summary>
-        /// <param name="point">The PointIndex of the point if it is a vertex</param>
-        /// <returns></returns>
+        /// <param name="point">The point to look up</param>
+        /// <param name="index">The PolygonIndex of the point if it is a vertex</param>
         public bool TryGetIndex(in Vector2 point, out PolygonIndex index)
         {
 
@@ -1298,7 +1298,7 @@ namespace Geometry
         /// Returns true if the vertex on the exterior ring is concave
         /// </summary>
         /// <param name="iVert"></param>
-        /// <returns></returns>
+        /// <param name="Angle">The interior angle at the vertex</param>
         public Concavity IsVertexConcave(int iVert, out double Angle)
         {
             int A = iVert - 1 < 0 ? ExteriorRing.Length - 2 : iVert - 1;
