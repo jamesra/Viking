@@ -41,7 +41,8 @@ services:
       - ${VIKING_CORRECTIONS_CACHE_DIR:-${SECTION_CORRECTION_CONFIG_PATH:-${STACK_DATA_DIR}}/cache}:/cache
       - ${DOCKER_CERTS_DIR:?DOCKER_CERTS_DIR must be set (stack.ps1 exports it)}:/certs:ro
     environment:
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      # Production unless the run env says Development (Debug logging, developer exception page).
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
       - ASPNETCORE_URLS=
       - ASPNETCORE_HTTP_PORTS=
       - ASPNETCORE_HTTPS_PORTS=

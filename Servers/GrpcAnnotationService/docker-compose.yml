@@ -43,7 +43,9 @@ services:
       - ${GRPC_ANNOTATION_CORRECTIONS_PATH:-${VIKING_CORRECTIONS_DIR:-${NORNIR_DOCKER_USER_ROOT:?NORNIR_DOCKER_USER_ROOT must be set (stack.ps1 exports it)}/Data/viking-corrections}}/corrections:/corrections
       - ${DOCKER_CERTS_DIR:?DOCKER_CERTS_DIR must be set (stack.ps1 exports it)}:/certs:ro
     environment:
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      # Production unless the run env says Development (Debug logging, developer exception page, and
+      # EF sensitive-data logging of SQL parameter values), which is for diagnosis only.
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
       - ASPNETCORE_URLS=
       - ASPNETCORE_HTTP_PORTS=
       - ASPNETCORE_HTTPS_PORTS=
