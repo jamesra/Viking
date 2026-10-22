@@ -128,7 +128,6 @@ namespace Geometry.Meshing
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="FaceDuplicator">Constructor to use when replacing the original face with the new split face</param>
         public void ConvertAllFacesToTriangles()
         {
             if (CreateOffsetFace is null)
@@ -146,7 +145,8 @@ namespace Geometry.Meshing
         /// Given a face that is not a triangle, return an array of triangles describing the face.
         /// For now this assumes convex faces with 3 or 4 verticies.  It does not remove or add the face from the mesh
         /// </summary>
-        /// <param name="Duplicator">A constructor that can copy attributes of a face object</param>
+        /// <param name="mesh">The mesh the face belongs to</param>
+        /// <param name="face">The face to split</param>
         /// <returns></returns>
         public static IFace[] SplitFace(Mesh3D mesh, IFace face)
         {
@@ -180,7 +180,7 @@ namespace Geometry.Meshing
         /// Given a face that is not a triangle, return an array of triangles describing the face.
         /// For now this assumes convex faces with 3 or 4 verticies.  It removes the face and adds the split faces from the mesh
         /// </summary>
-        /// <param name="Duplicator">A constructor that can copy attributes of a face object</param>
+        /// <param name="face">The face to split</param>
         /// <returns></returns>
         public override void SplitFace(IFace face)
         {
@@ -218,7 +218,7 @@ namespace Geometry.Meshing
         /// <summary>
         /// Returns the normal vector for a triangular face
         /// </summary>
-        /// <param name="f"></param>
+        /// <param name="iVerts">Indices of the face verticies, in order</param>
         /// <returns></returns>
         public Vector3 Normal(IEnumerable<int> iVerts)
         {
@@ -373,9 +373,6 @@ namespace Geometry.Meshing
         /// 
         /// </summary>
         /// <param name="other"></param>
-        /// <param name="VertexDuplicator">Takes a VERTEX and offset and returns a new VERTEX</param>
-        /// <param name="EdgeDuplicator">Takes a EDGE and offset and returns a new EDGE, retaining all pertinent data from the original EDGE</param>
-        /// <param name="FaceDuplicator">Takes a FACE and offset and returns a new FACE, retaining all pertinent data from the original FACE</param>
         /// <returns></returns>
         public virtual int Append(MeshBase3D<VERTEX> other)
         {

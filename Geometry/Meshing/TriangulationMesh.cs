@@ -127,7 +127,7 @@ namespace Geometry.Meshing
         /// <summary>
         /// Measure angle of edge to the origin vector
         /// </summary>
-        /// <param name="A"></param>
+        /// <param name="APoint">Index of the vertex whose edge angle is measured</param>
         /// <returns></returns>
         public double MeasureAngle(long APoint) =>
             //We are measuring the angle from the line in one direction, so don't allow negative angles
@@ -323,7 +323,7 @@ namespace Geometry.Meshing
         /// <summary>
         /// For a triangular face, return the vertex opposite the edge
         /// </summary>
-        /// <param name=""></param>
+        /// <param name="edge">An edge of this face</param>
         /// <returns></returns>
         public int OppositeVertex(IEdgeKey edge)
         {
@@ -342,7 +342,7 @@ namespace Geometry.Meshing
         /// <summary>
         /// For a triangular face, return the vertex opposite the edge
         /// </summary>
-        /// <param name=""></param>
+        /// <param name="vertex">A vertex of this face</param>
         /// <returns></returns>
         public IEdgeKey OppositeEdge(int vertex)
         {
@@ -371,7 +371,6 @@ namespace Geometry.Meshing
         /// This function does not change the mesh, it indicates how the mesh would change
         /// </summary>
         /// <param name="edge"></param>
-        /// <param name="mesh"></param>
         /// <returns></returns>
         public static Tuple<TriangleFace, TriangleFace> Flip(IEdge edge)
         {
@@ -396,8 +395,8 @@ namespace Geometry.Meshing
         /// 
         /// This function does not change the mesh, it indicates how the mesh would change
         /// </summary>
-        /// <param name="edge"></param>
-        /// <param name="mesh"></param>
+        /// <param name="existing">The edge being replaced</param>
+        /// <param name="flipped">The edge that replaces it</param>
         /// <returns></returns>
         public static Tuple<TriangleFace, TriangleFace> Flip(IEdge existing, IEdge flipped)
         {
