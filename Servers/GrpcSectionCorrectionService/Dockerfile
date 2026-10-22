@@ -69,4 +69,10 @@ ENV ASPNETCORE_URLS=http://+:80
 RUN printf '#!/bin/sh\nexec dotnet /app/GrpcSectionCorrectionService.dll menu "$@"\n' > /usr/local/bin/correction-menu \
     && chmod +x /usr/local/bin/correction-menu
 
+# SOURCE_REVISION: the Viking commit, passed by the compose build (STACK_SOURCE_REVISION from stack.ps1).
+ARG SOURCE_REVISION=
+LABEL org.opencontainers.image.source="https://github.com/jamesra/Viking" \
+      org.opencontainers.image.title="viking-corrections" \
+      org.opencontainers.image.revision="${SOURCE_REVISION}"
+
 ENTRYPOINT ["dotnet", "GrpcSectionCorrectionService.dll"]

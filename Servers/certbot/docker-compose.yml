@@ -36,7 +36,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: viking-certs:latest
+      args:
+        SOURCE_REVISION: ${STACK_SOURCE_REVISION:-}
+    # VIKING_CERTS_IMAGE=ghcr.io/jamesra/viking-certs:<tag> runs the published image (stack.ps1 pull).
+    image: ${VIKING_CERTS_IMAGE:-viking-certs:latest}
     restart: unless-stopped
     environment:
       <<: *viking-hostnames

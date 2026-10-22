@@ -4,8 +4,9 @@
 #   container 80  -> host GRPC_ANNOTATION_HTTP_PORT  (5010)  h2c, tests and modern .NET clients
 #   container 443 -> host GRPC_ANNOTATION_HTTPS_PORT (5011)  TLS for Viking (.NET 4.8 WinHttpHandler);
 #                    the proxy's VIKING_UPSTREAM_ANNOTATION points here.
-# TLS uses ${DOCKER_CERTS_DIR}/${TLS_CERT_NAME}/ (mounted at /certs) when present and otherwise the
-# image's self-signed localhost certificate, so a dev box without certificates still starts.
+# TLS uses ${DOCKER_CERTS_DIR}/${TLS_CERT_NAME}/ (mounted at /certs) when present and otherwise a
+# self-signed localhost certificate the container makes at start, so a dev box without certificates
+# still starts.
 #
 # annotation-sql (profile local-sql): a throwaway SQL Server for integration tests and dev. Production
 # points ConnectionStrings__AnnotationConnection at the external annotation SQL Server instead.
@@ -22,6 +23,10 @@ services:
     build:
       context: ../..
       dockerfile: Servers/GrpcAnnotationService/Dockerfile
+      args:
+        SOURCE_REVISION: ${STACK_SOURCE_REVISION:-}
+    # GRPC_ANNOTATION_IMAGE=ghcr.io/jamesra/viking-annotation:<tag> runs the published image (stack.ps1 pull).
+    image: ${GRPC_ANNOTATION_IMAGE:-viking-annotation:latest}
     restart: unless-stopped
     env_file:
       - ${GRPC_ANNOTATION_ENV_FILE:-${STACK_RUN_DIR:?STACK_RUN_DIR must be set (stack.ps1 exports it)}/${STACK_NAME:-viking-annotation}.run.env}

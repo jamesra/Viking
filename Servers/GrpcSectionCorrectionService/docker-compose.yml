@@ -18,6 +18,10 @@ services:
     build:
       context: ../..
       dockerfile: Servers/GrpcSectionCorrectionService/Dockerfile
+      args:
+        SOURCE_REVISION: ${STACK_SOURCE_REVISION:-}
+    # SECTION_CORRECTION_IMAGE=ghcr.io/jamesra/viking-corrections:<tag> runs the published image (stack.ps1 pull).
+    image: ${SECTION_CORRECTION_IMAGE:-viking-corrections:latest}
     restart: unless-stopped
     env_file:
       - ${SECTION_CORRECTION_ENV_FILE:-${STACK_RUN_DIR:?STACK_RUN_DIR must be set (stack.ps1 exports it)}/${STACK_NAME:-viking-corrections}.run.env}

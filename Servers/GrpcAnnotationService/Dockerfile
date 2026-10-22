@@ -52,22 +52,43 @@ WORKDIR /src/Servers/GrpcAnnotationService
 RUN --mount=type=cache,id=viking-nuget,target=/root/.nuget/packages \
     dotnet publish "GrpcAnnotationService.csproj" -c Release -o /app/publish --configfile nuget.docker.config
 
-# Self-signed localhost cert, the fallback when /certs/${TLS_CERT_NAME}/ (SSL_CERT_PATH/SSL_KEY_PATH,
-# see Program.cs) is not mounted, so Viking (.NET Framework / WinHttpHandler) can
-# call gRPC over TLS. h2c on :80 remains for tests and modern .NET clients.
-RUN mkdir -p /https && dotnet dev-certs https -ep /https/aspnetapp.pfx -p GrpcDevCert
-
 FROM base AS final
+RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app/publish .
-COPY --from=build /https/aspnetapp.pfx /https/aspnetapp.pfx
 
 # Bind-mount appsettings at run time (compose / run-with-config.cmd). Do not
 # declare VOLUME on those files — Docker treats VOLUME as a directory and
 # fails to start when the image already contains the files.
 
 ENV ASPNETCORE_URLS=http://+:80;https://+:443
-ENV ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
-ENV ASPNETCORE_Kestrel__Certificates__Default__Password=GrpcDevCert
 
-ENTRYPOINT ["dotnet", "GrpcAnnotationService.dll"]
+# HTTPS fallback when /certs/${TLS_CERT_NAME}/ (SSL_CERT_PATH/SSL_KEY_PATH, see Program.cs) is not
+# mounted, so Viking (.NET Framework / WinHttpHandler) can still call gRPC over TLS; h2c on :80
+# remains for tests and modern .NET clients. The self-signed localhost certificate is made when the
+# container starts: a key generated at build time would ship in the published image.
+COPY --chmod=755 <<'EOF' /usr/local/bin/annotation-entrypoint.sh
+#!/bin/sh
+set -e
+if [ -z "${ASPNETCORE_Kestrel__Certificates__Default__Path:-}" ]; then
+    dir=/tmp/https
+    if [ ! -f "$dir/cert.pem" ]; then
+        mkdir -p "$dir"
+        openssl req -x509 -newkey rsa:2048 -nodes -days 825 -subj /CN=localhost \
+            -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
+            -keyout "$dir/key.pem" -out "$dir/cert.pem" 2>/dev/null
+        chmod 600 "$dir/key.pem"
+    fi
+    export ASPNETCORE_Kestrel__Certificates__Default__Path="$dir/cert.pem"
+    export ASPNETCORE_Kestrel__Certificates__Default__KeyPath="$dir/key.pem"
+fi
+exec dotnet /app/GrpcAnnotationService.dll "$@"
+EOF
+
+# SOURCE_REVISION: the Viking commit, passed by the compose build (STACK_SOURCE_REVISION from stack.ps1).
+ARG SOURCE_REVISION=
+LABEL org.opencontainers.image.source="https://github.com/jamesra/Viking" \
+      org.opencontainers.image.title="viking-annotation" \
+      org.opencontainers.image.revision="${SOURCE_REVISION}"
+
+ENTRYPOINT ["/usr/local/bin/annotation-entrypoint.sh"]

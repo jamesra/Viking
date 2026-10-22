@@ -35,6 +35,7 @@ x-identity-build: &identity-build
     HOSTING_ENVIRONMENT: ${HOSTING_ENVIRONMENT:-Docker}
     BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-Release}
     IMAGE_VERSION: ${IMAGE_VERSION:-latest}
+    SOURCE_REVISION: ${STACK_SOURCE_REVISION:-}
 
 services:
   # One-shot: creates the bind-mounted state folders and gives them to the image's app user
@@ -42,7 +43,8 @@ services:
   identity-init:
     platform: linux/amd64
     build: *identity-build
-    image: ${IMAGE_REGISTRY:-}identity-all-services:${IMAGE_VERSION:-latest}
+    # IDENTITY_IMAGE=ghcr.io/jamesra/viking-identity:<tag> runs the published image (stack.ps1 pull).
+    image: ${IDENTITY_IMAGE:-viking-identity:latest}
     user: "0"
     entrypoint: ["/bin/sh", "-c"]
     command:
@@ -61,7 +63,7 @@ services:
     env_file:
       - ${STACK_RUN_DIR:?STACK_RUN_DIR must be set (stack.ps1 exports it)}/${STACK_NAME:-viking-identity}.run.env
     build: *identity-build
-    image: ${IMAGE_REGISTRY:-}identity-all-services:${IMAGE_VERSION:-latest}
+    image: ${IDENTITY_IMAGE:-viking-identity:latest}
     labels:
       viking.tls-reload: "true"
     depends_on:

@@ -25,6 +25,8 @@
 x-segmentation-build: &segmentation-build
   context: ../..
   dockerfile: Servers/SegmentationServer/Dockerfile
+  args:
+    SOURCE_REVISION: ${STACK_SOURCE_REVISION:-}
 
 x-segmentation-common: &segmentation-common
   build: *segmentation-build

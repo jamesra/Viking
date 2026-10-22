@@ -1,0 +1,19 @@
+# Ignore file for IdentityServer.Dockerfile (BuildKit reads <Dockerfile>.dockerignore next to the Dockerfile).
+# Its build context is Servers/, which the repo-root .dockerignore does not cover. Keep build output,
+# local config, logs and secrets out of the image: it is published publicly.
+**/bin/
+**/obj/
+**/.vs/
+**/logs/
+# Rolling log files (e.g. IdentityServerApiLogs20250910.json) would otherwise publish as content.
+**/*[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].json
+**/.env
+**/.env.*
+**/secrets*.json
+**/*.pfx
+**/*.p12
+**/*.key
+**/*.pem
+**/DataProtectionKeys/
+**/mounted-config/
+**/config-template/

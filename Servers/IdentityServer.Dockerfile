@@ -84,11 +84,10 @@ WORKDIR "/src/IdentityServer/Viking.Identity.Server.WebManagement"
 RUN dotnet publish "IdentityManagementWebsite.csproj" -c $BUILD_CONFIGURATION -o /app/publish/identity-server /p:UseAppHost=false --runtime linux-x64 --self-contained false /p:DebugType=portable
 # secrets.json is not copied into the image; load it at runtime via docker-compose volume from IDENTITY_CONFIG_PATH (e.g. D:/Docker/mounted-configs/IdentityServer)
 
-# Generate Data Protection keys (consistent keys across restarts; used to protect data stored on disk)
-FROM build AS keygenerator
-ARG BUILD_CONFIGURATION=Release
+# The Data Protection key generator ships as a tool and runs on first start (start-services.sh), so every
+# deployment gets its own keys. Keys generated here would be baked into the image and shared by everyone who pulls it.
 WORKDIR "/src/IdentityServer/KeyGenerator"
-RUN dotnet run -c $BUILD_CONFIGURATION -- /app/DataProtectionKeys VikingIdentityServer
+RUN dotnet publish "KeyGenerator.csproj" -c $BUILD_CONFIGURATION -o /app/publish/keygen /p:UseAppHost=false --runtime linux-x64 --self-contained false
 
 # Final stage
 FROM base AS final
@@ -112,11 +111,7 @@ RUN mkdir /app/wwwroot/
 COPY --from=publish /app/publish/identity-standalone /app/identity-standalone/
 COPY --from=publish /app/publish/identity-webapi /app/identity-webapi/
 COPY --from=publish /app/publish/identity-server /app/identity-server/
-
-# Copy Data Protection keys (from keygenerator stage; consistent across restarts)
-COPY --from=keygenerator /app/DataProtectionKeys /app/DataProtectionKeys
-# Keep a copy to seed the volume when it is mounted empty (avoids "key not found in key ring" on first run)
-COPY --from=keygenerator /app/DataProtectionKeys /app/DataProtectionKeysBuild
+COPY --from=publish /app/publish/keygen /app/keygen/
 
 # Create supervisor configuration
 RUN mkdir -p /etc/supervisor/conf.d
@@ -204,10 +199,10 @@ RUN echo '#!/bin/bash' > /app/start-services.sh && \
     echo '  echo "Remote debugger ready on port $DEBUG_PORT"' >> /app/start-services.sh && \
     echo 'fi' >> /app/start-services.sh && \
     echo '' >> /app/start-services.sh && \
-    echo '# Seed Data Protection keys if volume is empty (prevents "key not found in key ring" when mount overwrites image keys)' >> /app/start-services.sh && \
+    echo '# First start: create this deployment Data Protection key ring before the three apps start, so they share one key' >> /app/start-services.sh && \
     echo 'DP_KEY_COUNT=$(find /app/DataProtectionKeys -maxdepth 1 -name "*.xml" 2>/dev/null | wc -l)' >> /app/start-services.sh && \
-    echo 'if [ "$DP_KEY_COUNT" -eq 0 ] && [ -d /app/DataProtectionKeysBuild ]; then' >> /app/start-services.sh && \
-    echo '  cp -n /app/DataProtectionKeysBuild/*.xml /app/DataProtectionKeys/ 2>/dev/null && echo "Seeded Data Protection keys from image into volume"' >> /app/start-services.sh && \
+    echo 'if [ "$DP_KEY_COUNT" -eq 0 ]; then' >> /app/start-services.sh && \
+    echo '  dotnet /app/keygen/KeyGenerator.dll /app/DataProtectionKeys VikingIdentityServer || exit 1' >> /app/start-services.sh && \
     echo 'fi' >> /app/start-services.sh && \
     echo '' >> /app/start-services.sh && \
     echo '# Wait for SQL Server (DB VM often starts after this container on host reboot)' >> /app/start-services.sh && \
@@ -287,6 +282,12 @@ RUN dos2unix /app/health-check.sh /app/start-services.sh /app/wait-for-sql.sh \
         /app/run-identity-standalone.sh /app/run-identity-webapi.sh /app/run-identity-server.sh && \
     chmod +x /app/health-check.sh /app/start-services.sh /app/wait-for-sql.sh \
         /app/run-identity-standalone.sh /app/run-identity-webapi.sh /app/run-identity-server.sh
+
+# SOURCE_REVISION: the Viking commit, passed by the compose build (STACK_SOURCE_REVISION from stack.ps1).
+ARG SOURCE_REVISION=
+LABEL org.opencontainers.image.source="https://github.com/jamesra/Viking" \
+      org.opencontainers.image.title="viking-identity" \
+      org.opencontainers.image.revision="${SOURCE_REVISION}"
 
 # Switch to non-root user
 USER 1654

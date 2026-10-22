@@ -131,7 +131,10 @@ HEALTHCHECK --interval=30s --timeout=15s --start-period=600s --retries=3 \
     CMD ["python3", "-m", "segmentation_server.healthcheck"]
 
 # Links the GHCR package (nornir-docker/docker-push.ps1 -Images segmentation) to this repo.
+# SOURCE_REVISION: the Viking commit, passed by the compose build (STACK_SOURCE_REVISION from stack.ps1).
+ARG SOURCE_REVISION=
 LABEL org.opencontainers.image.source="https://github.com/jamesra/Viking" \
-      org.opencontainers.image.title="viking-segmentation-server"
+      org.opencontainers.image.title="viking-segmentation-server" \
+      org.opencontainers.image.revision="${SOURCE_REVISION}"
 
 ENTRYPOINT ["/home/user/start.sh"]
