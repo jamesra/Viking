@@ -210,26 +210,6 @@ namespace RTree
         }
 
         /**
-         * Determine whether this rectangle is contained by the passed rectangle
-         * 
-         * @param r The rectangle that might contain this rectangle
-         * 
-         * @return true if the passed rectangle contains this rectangle, false if
-         *         it does not
-         */
-        internal bool containedBy(Rectangle r)
-        {
-            for (int i = 0; i < DIMENSIONS; i++)
-            {
-                if (max[i] > r.max[i] || min[i] < r.min[i])
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        /**
          * Return the distance between this rectangle and the passed point.
          * If the rectangle contains the point, the distance is zero.
          * 
@@ -273,47 +253,6 @@ namespace RTree
                     distanceSquared += ((greatestMin - leastMax) * (greatestMin - leastMax));
                 }
             }
-            return (double)Math.Sqrt(distanceSquared);
-        }
-
-        /**
-         * Return the squared distance from this rectangle to the passed point
-         */
-        internal double distanceSquared(int dimension, double point)
-        {
-            double distanceSquared = 0;
-            double tempDistance = point - max[dimension];
-            for (int i = 0; i < 2; i++)
-            {
-                if (tempDistance > 0)
-                {
-                    distanceSquared = (tempDistance * tempDistance);
-                    break;
-                }
-                tempDistance = min[dimension] - point;
-            }
-            return distanceSquared;
-        }
-
-        /**
-         * Return the furthst possible distance between this rectangle and
-         * the passed rectangle. 
-         * 
-         * Find the distance between this rectangle and each corner of the
-         * passed rectangle, and use the maximum.
-         *
-         */
-        internal double furthestDistance(Rectangle r)
-        {
-            double distanceSquared = 0;
-
-            for (int i = 0; i < DIMENSIONS; i++)
-            {
-                distanceSquared += Math.Max(r.min[i], r.max[i]);
-#warning possible didn't convert properly
-                //distanceSquared += Math.Max(distanceSquared(i, r.min[i]), distanceSquared(i, r.max[i]));
-            }
-
             return (double)Math.Sqrt(distanceSquared);
         }
 
