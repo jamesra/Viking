@@ -60,8 +60,6 @@ namespace Viking.UI.Controls
         /// </summary>
         public double DoubleValue => double.TryParse(this.Text, out double val) ? val : 0;
 
-        public decimal DecimalValue => Decimal.Parse(this.Text);
-
         public bool AllowSpace
         {
             set => this.allowSpace = value;
