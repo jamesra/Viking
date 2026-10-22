@@ -9,6 +9,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.119 — not yet released
 
+* A login that cannot reach the identity server (server down, firewall, no network) now shows the friendly "did not respond in time, check your network" message instead of the raw "An error occurred while sending the request."
 * A structure hotkey in `UserSettings.xml` whose `Tags` list has a blank entry (empty `Tags=""`, a trailing `;`, or `;;`) no longer adds a nameless tag to the new structure, and spaces around a tag are ignored. A tag listed twice no longer switches itself off again.
 
 ## 1.2.118 — 2026-10-21 (Viking Test, unsigned)

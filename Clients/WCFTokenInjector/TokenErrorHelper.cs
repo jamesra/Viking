@@ -54,8 +54,10 @@ namespace Viking.Tokens
             if (ex is TaskCanceledException)
                 return TimeoutNetworkMessage;
 
+            // On .NET Framework the HttpRequestException message is always "An error occurred while sending the request.";
+            // the real cause (for example "Unable to connect to the remote server") is on the inner exception.
             if (ex is HttpRequestException)
-                return IsConnectivityFailure(ex.Message) ? TimeoutNetworkMessage : (ex.Message ?? TimeoutNetworkMessage);
+                return IsConnectivityFailure(ex.InnerException?.Message ?? ex.Message) ? TimeoutNetworkMessage : (ex.Message ?? TimeoutNetworkMessage);
 
             var msg = ex.InnerException?.Message ?? ex.Message;
             if (msg is null)
