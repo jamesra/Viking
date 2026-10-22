@@ -99,14 +99,17 @@ services:
       # Identity hostname and routes by path: /manage/ -> management (:4001), /webapi/ -> WebApi
       # (:6001), everything else -> the issuer (:5001). The appsettings files still name
       # identity.codepharm.net with ports; these environment variables win over them.
-      # Override IDENTITY_AUTHORITY / IDENTITY_MANAGEMENT_PUBLIC_URL / IDENTITY_WEBAPI_PUBLIC_URL to go
-      # back to direct-port URLs (and clear the two *_PATH_BASE values).
-      - AUTHORITY=${IDENTITY_AUTHORITY:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN:?VIKING_DOMAIN must be set}}/}
-      - VikingIdentityServerOptions__Authority=${IDENTITY_AUTHORITY:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}/}
+      # The issuer and WebApi URLs are the host-wide VIKING_IDENTITY_URL / VIKING_IDENTITY_API_URL that
+      # every identity client also uses (default https://<VIKING_HOSTNAME_IDENTITY>/ and .../webapi/).
+      # IDENTITY_AUTHORITY / IDENTITY_WEBAPI_PUBLIC_URL in this stack's run env still win over them.
+      # To go back to direct-port URLs, set those and IDENTITY_MANAGEMENT_PUBLIC_URL, and clear the
+      # two *_PATH_BASE values.
+      - AUTHORITY=${IDENTITY_AUTHORITY:-${VIKING_IDENTITY_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN:?VIKING_DOMAIN must be set}}/}}
+      - VikingIdentityServerOptions__Authority=${IDENTITY_AUTHORITY:-${VIKING_IDENTITY_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}/}}
       - VikingIdentityServerOptions__ManagementPublicUrl=${IDENTITY_MANAGEMENT_PUBLIC_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}/manage/}
-      - JwtBearerOptions__Authority=${IDENTITY_AUTHORITY:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}/}
-      - OAuth2IntrospectionOptions__Authority=${IDENTITY_AUTHORITY:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}/}
-      - WebApiOptions__BaseUrl=${IDENTITY_WEBAPI_PUBLIC_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}/webapi/}
+      - JwtBearerOptions__Authority=${IDENTITY_AUTHORITY:-${VIKING_IDENTITY_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}/}}
+      - OAuth2IntrospectionOptions__Authority=${IDENTITY_AUTHORITY:-${VIKING_IDENTITY_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}/}}
+      - WebApiOptions__BaseUrl=${IDENTITY_WEBAPI_PUBLIC_URL:-${VIKING_IDENTITY_API_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN}}/webapi/}}
       # Path prefixes the proxy keeps on the request; each app strips its own with UsePathBase.
       - IDENTITY_MANAGEMENT_PATH_BASE=${IDENTITY_MANAGEMENT_PATH_BASE-/manage}
       - IDENTITY_WEBAPI_PATH_BASE=${IDENTITY_WEBAPI_PATH_BASE-/webapi}

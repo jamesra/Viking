@@ -46,5 +46,9 @@ services:
       - Kestrel__UseDockerPorts=true
       - Corrections__RootDirectory=/corrections
       - Corrections__CachePath=/cache
+      # Identity issuer and permissions WebApi: the host-wide VIKING_IDENTITY_URL / VIKING_IDENTITY_API_URL
+      # (default https://<VIKING_HOSTNAME_IDENTITY>/ and .../webapi/); the run env's IdentityServer__* still win.
+      - IdentityServer__Endpoint=${IdentityServer__Endpoint:-${VIKING_IDENTITY_URL:-https://${VIKING_HOSTNAME_IDENTITY:?set VIKING_DOMAIN in host.env, or IdentityServer__Endpoint}/}}
+      - IdentityServer__ApiEndpoint=${IdentityServer__ApiEndpoint:-${VIKING_IDENTITY_API_URL:-https://${VIKING_HOSTNAME_IDENTITY}/webapi/}}
       - SSL_CERT_PATH=/certs/${TLS_CERT_NAME:-viking}/fullchain.pem
       - SSL_KEY_PATH=/certs/${TLS_CERT_NAME:-viking}/privkey.pem

@@ -67,9 +67,11 @@ x-segmentation-env: &segmentation-env
   # 1 asks SAM2 for three candidate masks on box prompts. Off until judged on real sections.
   SEGMENTATION_BOX_MULTIMASK: ${SEGMENTATION_BOX_MULTIMASK:-0}
   # Identity "segmentation" client: lists the annotation contexts each container is local to, so it reads their
-  # tilesets itself instead of asking clients for every cell. Unset leaves every cell to the clients.
-  IdentityServer__Endpoint: ${SEGMENTATION_IDENTITY_ENDPOINT:-}
-  IdentityServer__ApiEndpoint: ${SEGMENTATION_IDENTITY_API_ENDPOINT:-}
+  # tilesets itself instead of asking clients for every cell. It runs only when the client secret and
+  # SEGMENTATION_SERVICE_NAME are set; otherwise every cell is left to the clients. The URLs are the
+  # host-wide VIKING_IDENTITY_URL / VIKING_IDENTITY_API_URL unless SEGMENTATION_IDENTITY_* override them.
+  IdentityServer__Endpoint: ${SEGMENTATION_IDENTITY_ENDPOINT:-${VIKING_IDENTITY_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN:-}}/}}
+  IdentityServer__ApiEndpoint: ${SEGMENTATION_IDENTITY_API_ENDPOINT:-${VIKING_IDENTITY_API_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN:-}}/webapi/}}
   IdentityServer__ClientSecret: ${SEGMENTATION_SERVICE_CLIENT_SECRET:-}
 
 services:

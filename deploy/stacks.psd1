@@ -80,7 +80,7 @@
             Required     = @(
                 'VIKING_HOSTNAME_ANNOTATION', 'TLS_CERT_NAME',
                 'ConnectionStrings__AnnotationConnection',
-                'IdentityServer__Endpoint', 'IdentityServer__ClientId', 'IdentityServer__ClientSecret'
+                'IdentityServer__ClientId', 'IdentityServer__ClientSecret'
             )
             Example      = 'deploy/examples/example.viking-annotation.run.env'
             Secrets      = @()
@@ -97,7 +97,7 @@
             Profiles     = @()
             Required     = @(
                 'VIKING_HOSTNAME_CORRECTIONS', 'TLS_CERT_NAME',
-                'IdentityServer__Endpoint', 'IdentityServer__ClientSecret', 'CorrectionService__Name'
+                'IdentityServer__ClientSecret', 'CorrectionService__Name'
             )
             Example      = 'deploy/examples/example.viking-corrections.run.env'
             Secrets      = @()
