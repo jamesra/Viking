@@ -13,10 +13,7 @@ namespace Viking.Common
         /// <summary>
         /// Convert a texture to a bitmap
         /// </summary>
-        /// <param name="textureData"></param>
-        /// <param name="width"></param>
-        /// <param name="height"></param>
-        /// <param name="filename"></param>
+        /// <param name="texture">The texture to convert.</param>
         /// <returns></returns>
         public static Bitmap ToBmp(this Texture2D texture)
         {
@@ -27,10 +24,7 @@ namespace Viking.Common
         /// <summary>
         /// Convert a texture to a Bitmap
         /// </summary>
-        /// <param name="textureData"></param>
-        /// <param name="width"></param>
-        /// <param name="height"></param>
-        /// <param name="filename"></param>
+        /// <param name="texture">The texture to convert.</param>
         /// <returns></returns>
         public static Task<Bitmap> ToBmpAsync(this Texture2D texture)
         {
@@ -41,10 +35,9 @@ namespace Viking.Common
         /// <summary>
         /// Save a texture as a file
         /// </summary>
-        /// <param name="textureData"></param>
-        /// <param name="width"></param>
-        /// <param name="height"></param>
-        /// <param name="filename"></param>
+        /// <param name="texture">The texture to save.</param>
+        /// <param name="filename">Destination file path.</param>
+        /// <param name="format">Image format to write; PNG when null.</param>
         /// <returns></returns>
         public static void Save(this Texture2D texture, String filename, ImageFormat? format = null)
         {
@@ -55,10 +48,9 @@ namespace Viking.Common
         /// <summary>
         /// Save a texture as a file
         /// </summary>
-        /// <param name="textureData"></param>
-        /// <param name="width"></param>
-        /// <param name="height"></param>
-        /// <param name="filename"></param>
+        /// <param name="texture">The texture to save.</param>
+        /// <param name="filename">Destination file path.</param>
+        /// <param name="format">Image format to write; PNG when null.</param>
         /// <returns></returns>
         public static Task SaveAsync(this Texture2D texture, String filename, ImageFormat? format = null)
         {
@@ -73,7 +65,6 @@ namespace Viking.Common
         /// <param name="textureData"></param>
         /// <param name="width"></param>
         /// <param name="height"></param>
-        /// <param name="filename"></param>
         /// <returns></returns>
         public static Bitmap ToBmp(this byte[] textureData, int width, int height)
         {
@@ -125,7 +116,6 @@ namespace Viking.Common
         /// <param name="textureData"></param>
         /// <param name="width"></param>
         /// <param name="height"></param>
-        /// <param name="filename"></param>
         /// <returns></returns>
         public static Task<Bitmap> ToBmpAsync(this byte[] textureData, int width, int height) => Task.Run(() => ToBmp(textureData, width, height));
 
@@ -135,7 +125,8 @@ namespace Viking.Common
         /// <param name="textureData"></param>
         /// <param name="width"></param>
         /// <param name="height"></param>
-        /// <param name="filename"></param>
+        /// <param name="filename">Destination file path.</param>
+        /// <param name="format">Image format to write; PNG when null.</param>
         /// <returns></returns>
         public static Task SaveBmpAsync(this byte[] textureData, int width, int height, string filename, ImageFormat? format = null) => Task.Run(() => SaveBmp(textureData, width, height, filename, format));
 

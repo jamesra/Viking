@@ -52,7 +52,8 @@ namespace Viking
         /// <summary>
         /// Add all textures found under the specified directory to the cache
         /// </summary>
-        /// <param name="path"></param>
+        /// <param name="path">Root directory to scan.</param>
+        /// <param name="token">Cancels the scan.</param>
         private async System.Threading.Tasks.Task _PopulateCacheThreadStart(string path, CancellationToken token)
         {
             DateTime Start = DateTime.Now;
@@ -72,7 +73,8 @@ namespace Viking
         /// <summary>
         /// Recursively check the supplied directory and all subdirectories, adding files to cache lists
         /// </summary>
-        /// <param name="path"></param>
+        /// <param name="path">Directory to scan.</param>
+        /// <param name="token">Cancels the scan.</param>
         private async Task CheckDirectory(DirectoryInfo path, CancellationToken token)
         {
             if (path.Exists == false)
@@ -132,7 +134,7 @@ namespace Viking
         /// Creates a file for the texture passed.
         /// </summary>
         /// <param name="filename"></param>
-        /// <param name="textureStream"></param>
+        /// <param name="textureBuffer">Encoded texture bytes to write.</param>
         protected override LocalTextureCacheEntry CreateEntry(string filename, byte[] textureBuffer)
         {
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
@@ -161,14 +163,14 @@ namespace Viking
         /// Creates a file for the texture passed.
         /// </summary>
         /// <param name="filename"></param>
-        /// <param name="textureStream"></param>
+        /// <param name="textureBufferFactory">Produces the encoded texture bytes for the file name.</param>
         protected override LocalTextureCacheEntry CreateEntry(string filename, Func<string, byte[]> textureBufferFactory) => CreateEntry(filename, textureBufferFactory(filename));
 
         /// <summary>
         /// Creates a file for the texture passed.
         /// </summary>
         /// <param name="filename"></param>
-        /// <param name="textureStream"></param>
+        /// <param name="textureBuffer">Encoded texture bytes to write.</param>
         protected override async Task<LocalTextureCacheEntry> CreateEntryAsync(string filename, byte[] textureBuffer)
         {
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(filename));
@@ -197,7 +199,7 @@ namespace Viking
         /// Creates a file for the texture passed.
         /// </summary>
         /// <param name="filename"></param>
-        /// <param name="textureStream"></param>
+        /// <param name="textureBuffer">Stream of encoded texture bytes to write.</param>
         protected async Task<LocalTextureCacheEntry> CreateEntryAsync(string filename, Stream textureBuffer)
         {
             if (filename is null)
@@ -269,8 +271,8 @@ namespace Viking
         /// <summary>
         /// Creates a file for the texture passed.
         /// </summary>
-        /// <param name="filename"></param>
-        /// <param name="textureStream"></param>
+        /// <param name="key">Cache file name.</param>
+        /// <param name="value">Stream of encoded texture bytes to write.</param>
         public virtual async Task<bool> AddAsync(string key, Stream value)
         {
             var entry = await CreateEntryAsync(key, value);

@@ -41,6 +41,10 @@ namespace Viking.Common
         /// The frame is rendered in one pass when both captured dimensions fit in <see cref="SingleTileMaxPixels"/>;
         /// otherwise it is cut into the fewest equal tiles whose captured size is at most <paramref name="maxTilePixels"/> on each axis.
         /// </summary>
+        /// <param name="centerX">Frame center X in volume space.</param>
+        /// <param name="centerY">Frame center Y in volume space.</param>
+        /// <param name="worldWidth">Frame width in volume space.</param>
+        /// <param name="worldHeight">Frame height in volume space.</param>
         /// <param name="downsample">Volume-space pixels per output pixel; captured sizes are world sizes divided by this.</param>
         /// <param name="maxTilePixels">Largest captured tile width or height, in output pixels, when the frame must be split (the device's maximum render target side).</param>
         public FrameExportPlan(double centerX, double centerY, double worldWidth, double worldHeight, double downsample, int maxTilePixels)
