@@ -141,7 +141,7 @@ async def test_upload_tile_with_other_bytes_keeps_the_cached_tile() -> None:
 
     assert response.already_cached is True
     assert (await servicer.image_cache.get_stats())["total_images"] == 1
-    key = ("v", 1, "c", "t", 1, 0, 0)
+    key = ("v", 1, "c", "t", "volume", 1, 0, 0)
     pinned = await servicer.image_cache.get_image_by_tile(key)
     assert pinned is not None and pinned[1] == first.image_data
     await servicer.image_cache.release_image(pinned[0])

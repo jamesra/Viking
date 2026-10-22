@@ -3,7 +3,7 @@
 Only what the server can draw exactly as the client would is read:
 
 * a plain greyscale channel (a ``TileCoord.channel`` with no ``[...]`` suffix of blend, colour or view options),
-* in the section's mosaic space (``TileCoord.transform`` is ``"|<tile transform>"``: no volume transform),
+* in the section's mosaic space (``TileCoord.space`` is ``COORDINATE_SPACE_MOSAIC``),
 * whose channel names a VikingXML tileset of the section at the cell's downsample.
 
 A cell is stitched from the tileset tiles it overlaps, flipped so its first row is its high mosaic Y (the capture's
@@ -25,7 +25,7 @@ import cv2
 import numpy as np
 from numpy.typing import NDArray
 
-from segmentation_grpc import TileCoord
+from segmentation_grpc import CoordinateSpace, TileCoord
 from segmentation_server.capture_encoder import encode_capture
 from segmentation_server.identity_client import IdentityAssignments, IdentityOptions
 from segmentation_server.viking_volume import VikingVolume, parse_viking_xml
@@ -59,8 +59,12 @@ def _http_get(url: str) -> Optional[bytes]:
 
 def is_plain_mosaic_cell(coord: TileCoord) -> bool:
     """True for a plain greyscale channel in mosaic space: the only cells a server draws as the client would."""
-    volume_transform = coord.transform.partition("|")[0]
-    return bool(coord.channel) and "[" not in coord.channel and volume_transform == "" and coord.downsample > 0
+    return (
+        coord.space == CoordinateSpace.COORDINATE_SPACE_MOSAIC
+        and bool(coord.channel)
+        and "[" not in coord.channel
+        and coord.downsample > 0
+    )
 
 
 def _luma(data: bytes) -> Optional[NDArray[np.uint8]]:

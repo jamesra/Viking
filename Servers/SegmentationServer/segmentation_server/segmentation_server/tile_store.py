@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_RAM_BYTES = 2 * 1024**3
 DEFAULT_DISK_BYTES = 8 * 1024**3
 # How a key becomes a file name. It is the disk store's stamp, so changing it purges the files made the old way.
-KEY_SCHEME = "tile-key-v1"
+KEY_SCHEME = "tile-key-v2"
 _MODE = "png"
 _SUFFIX = ".png"
 

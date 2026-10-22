@@ -54,7 +54,7 @@ def _servicer(**cache_args) -> SegmentationServicer:
 @pytest.mark.asyncio
 async def test_a_stream_over_the_concurrent_limit_is_refused_and_the_count_returns_to_zero() -> None:
     servicer = _servicer_with_tile_zero()
-    await servicer.image_cache.upload_tile(("RC2", 1305, "TEM", "SliceToVolume1|", 1, 0, 0), _tile_png(), 1024, 1024)
+    await servicer.image_cache.upload_tile(("RC2", 1305, "TEM", "SliceToVolume1|", "volume", 1, 0, 0), _tile_png(), 1024, 1024)
     servicer._limits = RequestLimits(max_concurrent_streams=1)
     first = _Client(servicer, _request())
     await first.next_needed()
@@ -140,7 +140,7 @@ async def test_a_decode_failure_names_the_problem_without_the_decoders_own_text(
 @pytest.mark.asyncio
 async def test_a_tile_stream_failure_does_not_echo_the_exception(monkeypatch) -> None:
     servicer = _servicer_with_tile_zero()
-    await servicer.image_cache.upload_tile(("RC2", 1305, "TEM", "SliceToVolume1|", 1, 0, 0), _tile_png(), 1024, 1024)
+    await servicer.image_cache.upload_tile(("RC2", 1305, "TEM", "SliceToVolume1|", "volume", 1, 0, 0), _tile_png(), 1024, 1024)
 
     class Failing(server_module.GrowthWalk):
         def advance(self) -> None:
@@ -191,7 +191,7 @@ async def test_multi_segment_image_honours_omit_labeled_image(omit: bool) -> Non
 
 # --- single-flight tile uploads ----------------------------------------------------------------
 
-KEY = ("v", 1, "c", "t", 1, 0, 0)
+KEY = ("v", 1, "c", "t", "volume", 1, 0, 0)
 
 
 def _slow_cache(builds: list) -> ImageCache:
@@ -237,7 +237,7 @@ async def test_two_uploads_of_one_tile_with_different_bytes_leave_one_entry() ->
 async def test_uploads_of_different_tiles_do_not_wait_for_each_other() -> None:
     builds: list = []
     cache = _slow_cache(builds)
-    other = ("v", 1, "c", "t", 1, 0, 1)
+    other = ("v", 1, "c", "t", "volume", 1, 0, 1)
 
     started = time.monotonic()
     await asyncio.gather(cache.upload_tile(KEY, b"aaaa", 1, 1), cache.upload_tile(other, b"bbbb", 1, 1))

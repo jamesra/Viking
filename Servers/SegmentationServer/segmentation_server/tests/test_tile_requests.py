@@ -6,8 +6,8 @@ import pytest
 
 from segmentation_server.tile_requests import TileRequestRegistry
 
-KEY = ("RC2", 1305, "TEM", "SliceToVolume1|", 1, 0, 0)
-OTHER = ("RC2", 1305, "TEM", "SliceToVolume1|", 1, 0, 1)
+KEY = ("RC2", 1305, "TEM", "SliceToVolume1|", "volume", 1, 0, 0)
+OTHER = ("RC2", 1305, "TEM", "SliceToVolume1|", "volume", 1, 0, 1)
 
 
 @pytest.mark.asyncio
@@ -83,7 +83,7 @@ async def test_release_all_gives_up_every_tile_the_stream_held_and_drops_its_sub
     registry.claim(KEY, "a")
     registry.claim(OTHER, "a")
     waiting_on_a = registry.claim(KEY, "b")
-    held_by_b = ("RC2", 1305, "TEM", "SliceToVolume1|", 1, 5, 5)
+    held_by_b = ("RC2", 1305, "TEM", "SliceToVolume1|", "volume", 1, 5, 5)
     registry.claim(held_by_b, "b")
     a_waiting_on_b = registry.claim(held_by_b, "a")
 

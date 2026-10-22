@@ -28,7 +28,7 @@ from segmentation_grpc.segmentation_pb2 import RESPONSE_CONTENT_LOGITS, RESPONSE
 from segmentation_server.image_cache import ImageCache
 from segmentation_server.server import SegmentationServicer
 
-_VOLUME_KEY = ("RC2", 1305, "TEM", "SliceToVolume1|", 1)
+_VOLUME_KEY = ("RC2", 1305, "TEM", "SliceToVolume1|", "volume", 1)
 
 AnswerFor = Callable[[TilesNeeded], Union[Optional[TilesAnswer], Awaitable[Optional[TilesAnswer]]]]
 

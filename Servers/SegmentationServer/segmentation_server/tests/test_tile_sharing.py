@@ -102,7 +102,7 @@ async def _wait_until(condition, timeout: float = 5.0) -> None:
 
 
 def _key(row: int, col: int):
-    return ("RC2", 1305, "TEM", "SliceToVolume1|", 1, row, col)
+    return ("RC2", 1305, "TEM", "SliceToVolume1|", "volume", 1, row, col)
 
 
 async def _two_streams_wanting_the_neighbours(servicer: SegmentationServicer):

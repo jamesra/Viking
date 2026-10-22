@@ -287,7 +287,7 @@ async def test_delete_while_pinned_defers_predictor_reset() -> None:
     await cache.release_image(image_id)
     assert released == ["pred"]
 
-_TILE_KEY = ("vol", 3, "TEM", "none|rigid", 1, 0, 1)
+_TILE_KEY = ("vol", 3, "TEM", "none|rigid", "volume", 1, 0, 1)
 
 
 @pytest.mark.asyncio
@@ -326,7 +326,7 @@ async def test_upload_tile_coord_key_shared_across_callers() -> None:
     assert b_hit is True
     assert client_a_id == client_b_id
     assert created == [b"shared-png"]
-    other_key = ("vol", 3, "TEM", "none|rigid", 1, 0, 2)
+    other_key = ("vol", 3, "TEM", "none|rigid", "volume", 1, 0, 2)
     other_id, other_hit = await cache.upload_tile(other_key, b"shared-png", 8, 8)
     assert other_hit is False
     assert other_id != client_a_id
@@ -357,7 +357,7 @@ async def test_upload_tile_other_bytes_keep_the_cached_entry() -> None:
 
 
 def _tile_key(row: int) -> tuple:
-    return ("vol", 1, "TEM", "grid", 1, row, 0)
+    return ("vol", 1, "TEM", "grid", "volume", 1, row, 0)
 
 
 @pytest.mark.asyncio

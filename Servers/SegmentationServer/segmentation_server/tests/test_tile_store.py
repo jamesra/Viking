@@ -13,7 +13,7 @@ from test_segment_tiles import _all_unavailable, _context, _converse, _needed_ti
 
 
 def _key(row: int = 0, col: int = 0):
-    return ("RC2", 1305, "TEM", "SliceToVolume1|", 1, row, col)
+    return ("RC2", 1305, "TEM", "SliceToVolume1|", "volume", 1, row, col)
 
 
 def test_memory_drops_the_least_recently_used_tile_over_the_byte_cap() -> None:

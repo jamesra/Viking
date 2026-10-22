@@ -7,6 +7,7 @@ Stubs are committed next to this package. Regenerate with
 from .generate_grpc import generate_grpc_code
 from .segmentation_pb2 import (
     BoundingBox,
+    CoordinateSpace,
     DeleteImageRequest,
     DeleteImageResponse,
     Feature,
@@ -55,6 +56,7 @@ __all__: list[str] = [
     'UploadTileRequest',
     'UploadTileResponse',
     'TileCoord',
+    'CoordinateSpace',
     'SegmentTilesRequest',
     'SegmentTilesStreamRequest',
     'SegmentTilesStreamResponse',

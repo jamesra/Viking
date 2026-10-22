@@ -26,8 +26,8 @@ DEFAULT_TTL_SECONDS = 300
 # gpu_under_pressure is. The count only bounds host bookkeeping for ad-hoc uploads.
 DEFAULT_MAX_ENTRIES = 4096
 
-# volume, section, channel, transform, downsample, row, col
-TileCacheKey = Tuple[str, int, str, str, int, int, int]
+# volume, section, channel, transform, space ("mosaic" or "volume"), downsample, row, col
+TileCacheKey = Tuple[str, int, str, str, str, int, int, int]
 
 
 @dataclass
@@ -154,7 +154,7 @@ class ImageCache:
         """
         if tile_key is None:
             return self._create_predictor_body(image_data, image_id, decoded)
-        volume, section, _channel, _transform, _downsample, row, col = tile_key
+        volume, section, _channel, _transform, _space, _downsample, row, col = tile_key
         with tile_work(volume, section, col, row):
             return self._create_predictor_body(image_data, image_id, decoded)
 
@@ -308,7 +308,7 @@ class ImageCache:
         Returns:
             (image_id, already_cached). already_cached is True when the key was already cached.
         """
-        volume, section, _channel, _transform, _downsample, row, col = tile_key
+        volume, section, _channel, _transform, _space, _downsample, row, col = tile_key
         with tile_work(volume, section, col, row):
             # One upload per key at a time. The body releases the cache lock while it encodes, so
             # two uploads of the same key would otherwise both miss, both encode, and the one

@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 import pytest
 
-from segmentation_grpc import TileCoord
+from segmentation_grpc import CoordinateSpace, TileCoord
 from segmentation_server.capture_encoder import encode_capture, stretch_range
 from segmentation_server.identity_client import IdentityAssignments, IdentityOptions
 from segmentation_server.tile_source import VikingTilesetSource, is_plain_mosaic_cell
@@ -75,18 +75,23 @@ def test_a_flat_image_keeps_its_value() -> None:
     assert np.all(decoded == 77)
 
 
+MOSAIC = CoordinateSpace.COORDINATE_SPACE_MOSAIC
+VOLUME = CoordinateSpace.COORDINATE_SPACE_VOLUME
+UNSPECIFIED = CoordinateSpace.COORDINATE_SPACE_UNSPECIFIED
+
+
 @pytest.mark.parametrize(
-    "channel, transform, plain",
+    "channel, space, plain",
     [
-        ("mosaic", "|grid.mosaic", True),
-        ("mosaic", "", True),
-        ("mosaic", "Grid 16|grid.mosaic", False),
-        ("mosaic[color=255,0,0,255]", "|", False),
-        ("", "|", False),
+        ("mosaic", MOSAIC, True),
+        ("mosaic", VOLUME, False),
+        ("mosaic", UNSPECIFIED, False),
+        ("mosaic[color=255,0,0,255]", MOSAIC, False),
+        ("", MOSAIC, False),
     ],
 )
-def test_only_plain_mosaic_cells_are_read(channel: str, transform: str, plain: bool) -> None:
-    assert is_plain_mosaic_cell(_coord(channel=channel, transform=transform)) is plain
+def test_only_plain_mosaic_cells_are_read(channel: str, space: int, plain: bool) -> None:
+    assert is_plain_mosaic_cell(_coord(channel=channel, space=space)) is plain
 
 
 class _Assignments:
@@ -106,8 +111,10 @@ def _png(image: np.ndarray) -> bytes:
     return encoded.tobytes()
 
 
-def _coord(row: int = 0, col: int = 0, channel: str = "mosaic", transform: str = "|grid.mosaic", ds: int = 1) -> TileCoord:
-    return TileCoord(volume="Rabbit", section=30, channel=channel, transform=transform, downsample=ds, row=row, col=col)
+def _coord(row: int = 0, col: int = 0, channel: str = "mosaic", space: int = MOSAIC, ds: int = 1) -> TileCoord:
+    return TileCoord(
+        volume="Rabbit", section=30, channel=channel, transform="|grid.mosaic", space=space, downsample=ds, row=row, col=col
+    )
 
 
 def _storage(tiles: Dict[str, bytes]) -> "tuple[List[str], callable]":
@@ -163,8 +170,9 @@ async def test_tiles_outside_the_grid_are_not_requested() -> None:
         (6, _coord()),  # not a local context
         (5, _coord(channel="8-bit")),  # a pyramid, not a tileset
         (5, _coord(ds=2)),  # no tileset level at that downsample
-        (5, TileCoord(volume="Other", section=30, channel="mosaic", transform="|", downsample=1)),
-        (5, _coord(transform="Grid 16|grid.mosaic")),  # volume space
+        (5, TileCoord(volume="Other", section=30, channel="mosaic", transform="|", space=MOSAIC, downsample=1)),
+        (5, _coord(space=VOLUME)),
+        (5, _coord(space=UNSPECIFIED)),  # what clients sent before TileCoord.space: volume space
     ],
 )
 async def test_cells_the_source_cannot_draw_are_left_to_the_client(context_id: int, coord: TileCoord) -> None:
@@ -258,3 +266,12 @@ def test_identity_options_need_endpoint_secret_and_name(monkeypatch) -> None:
     monkeypatch.setenv("SEGMENTATION_SERVICE_NAME", "seg")
     options = IdentityOptions.from_env()
     assert options is not None and options.api_endpoint == "https://identity.example/" and options.client_id == "segmentation"
+
+
+def test_the_cache_key_separates_mosaic_from_volume_and_takes_unspecified_as_volume() -> None:
+    from segmentation_server.server import _tile_cache_key
+
+    mosaic, volume, unspecified = (_tile_cache_key(_coord(space=space)) for space in (MOSAIC, VOLUME, UNSPECIFIED))
+
+    assert mosaic != volume
+    assert unspecified == volume

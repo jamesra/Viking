@@ -21,6 +21,7 @@ from grpc.aio import ServicerContext
 from numpy.typing import NDArray
 
 from segmentation_grpc import (
+    CoordinateSpace,
     DeleteImageRequest,
     DeleteImageResponse,
     MaskRole,
@@ -333,12 +334,13 @@ async def _next_message(
 
 
 def _coord_for(identity: TileCoord, tile: TileIndex) -> TileCoord:
-    """The TileCoord of ``tile`` in the same volume, section, channel, transform and downsample as ``identity``."""
+    """The TileCoord of ``tile`` in the same volume, section, channel, transform, space and downsample as ``identity``."""
     return TileCoord(
         volume=identity.volume,
         section=identity.section,
         channel=identity.channel,
         transform=identity.transform,
+        space=identity.space,
         downsample=identity.downsample,
         row=tile.row,
         col=tile.col,
@@ -2351,12 +2353,22 @@ def _client_boxes(boxes: Any) -> List[Tuple[int, int, int, int]]:
     return sorted(result)
 
 
+def tile_space(coord: TileCoord) -> str:
+    """The cell's coordinate space as the cache key names it.
+
+    COORDINATE_SPACE_UNSPECIFIED is what clients sent before TileCoord.space existed, all of them in volume space,
+    so it shares the volume entries. Drop that once every released client sets the space.
+    """
+    return "mosaic" if coord.space == CoordinateSpace.COORDINATE_SPACE_MOSAIC else "volume"
+
+
 def _tile_cache_key(coord: TileCoord) -> TileCacheKey:
     return (
         coord.volume,
         int(coord.section),
         coord.channel,
         coord.transform,
+        tile_space(coord),
         int(coord.downsample),
         int(coord.row),
         int(coord.col),
@@ -2369,6 +2381,7 @@ def _same_tile_identity(left: TileCoord, right: TileCoord) -> bool:
         and left.section == right.section
         and left.channel == right.channel
         and left.transform == right.transform
+        and tile_space(left) == tile_space(right)
         and left.downsample == right.downsample
     )
 
