@@ -13,6 +13,8 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 * Ctrl-copying a curve's control points while moving or reshaping an open curve now copies from the curve nearest the mouse instead of an arbitrary one under it, and the copied shape shows right away. It no longer errors when the section has no annotations.
 * Per-channel colors saved in the section reference settings (section-references.json) now come back with their transparency intact. They were reloaded with the opacity inverted (fully opaque became fully transparent), which hid or washed out the channel in the section view.
 * Adding or removing a root structure type while the Structure Types form (F7) is open no longer throws an error; the form is refreshed instead.
+* The Structure Types panel has an eye at the right edge of each type. Clicking it hides every annotation of that type from the section view and from mouse picking; clicking a parent type's eye also hides or shows all of its child types, and a parent whose children are partly hidden shows a half-filled eye. The hidden set is kept only on your computer for the current session; nothing is saved to the server.
+* After rotating or scaling a Ctrl-copied curve, the preview now shows the rotation and scale right away instead of looking unrotated until the mouse moves.
 
 ## 1.2.117 — 2026-10-20 (Viking Test, unsigned)
 
