@@ -110,7 +110,7 @@ namespace Viking.Common
         /// Add the ID if it is not in the set and the function returns true
         /// </summary>
         /// <param name="ID"></param>
-        /// <param name="a"></param>
+        /// <param name="CanAdd">Function that must return true for the ID to be added</param>
         /// <returns></returns>
         public bool TryAdd(T ID, Func<bool> CanAdd)
         {
@@ -235,7 +235,7 @@ namespace Viking.Common
         /// Add the ID.  If it is added execute the action.
         /// </summary>
         /// <param name="ID"></param>
-        /// <param name="a">Action to execute if this is the first reference taken to the key</param>
+        /// <param name="OnFirstReferenceAction">Action to execute if this is the first reference taken to the key</param>
         /// <returns></returns>
         public void AddRef(T ID, Action<T> OnFirstReferenceAction = null)
         {
@@ -282,7 +282,7 @@ namespace Viking.Common
         /// Try to remove the ID.  If the ID is removed execute the action
         /// </summary>
         /// <param name="ID">Key to release</param>
-        /// <param name="a">Action to take if this removes the last refe</param>
+        /// <param name="OnLastReferenceReleasedAction">Action to take if this removes the last reference</param>
         /// <returns>True if the key was present</returns>
         public bool ReleaseRef(T ID, Action<T> OnLastReferenceReleasedAction = null)
         {

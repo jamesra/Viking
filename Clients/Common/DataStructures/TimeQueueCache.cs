@@ -135,8 +135,8 @@ namespace Viking.Common
         /// <summary>
         /// Creates a file for the texture passed.
         /// </summary>
-        /// <param name="filename"></param>
-        /// <param name="textureStream"></param>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
         public virtual bool Add(KEY key, ADDTYPE value)
         {
             CACHEENTRY entry = CreateEntry(key, value);
@@ -149,8 +149,8 @@ namespace Viking.Common
         /// <summary>
         /// Creates a file for the texture passed.
         /// </summary>
-        /// <param name="filename"></param>
-        /// <param name="textureStream"></param>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
         public virtual async Task<bool> AddAsync(KEY key, ADDTYPE value)
         {
             var entry = await CreateEntryAsync(key, value);
@@ -195,7 +195,7 @@ namespace Viking.Common
         /// Return the cache entry for the key or create a new entry for the key if it does not exist
         /// </summary>
         /// <param name="key"></param>
-        /// <param name="value"></param>
+        /// <param name="newEntryGenerator"></param>
         /// <returns></returns>
         public virtual FETCHTYPE GetOrAdd(KEY key, Func<KEY, ADDTYPE> newEntryGenerator)
         {
