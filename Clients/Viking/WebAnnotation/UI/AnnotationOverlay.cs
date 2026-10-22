@@ -2571,7 +2571,83 @@ break;
                 if (s > 0)
                     RequestSectionAnnotationsLoad(s);
             }
+
+            ScheduleSectionLoadCheck(B);
             await Task.CompletedTask;
+        }
+
+        private CancellationTokenSource? _sectionLoadCheckCts;
+        private int _loadCheckPreviousSection;
+        private int _loadCheckDirection;
+        private int _loadCheckRun;
+
+        /// <summary>
+        /// Runs <see cref="CheckSectionLoaded"/> once, <see cref="SectionLoadCheck.Delay"/> after a section change. A newer
+        /// section change replaces the pending check, so only the section a run of steps ends on is checked.
+        /// </summary>
+        private void ScheduleSectionLoadCheck(int section)
+        {
+            SectionLoadCheck.UpdateRun(_loadCheckPreviousSection, section, _loadCheckDirection, _loadCheckRun, out int direction, out int run);
+            _loadCheckPreviousSection = section;
+            _loadCheckDirection = direction;
+            _loadCheckRun = run;
+
+            CancellationTokenSource next = CancellationTokenSource.CreateLinkedTokenSource(_annotationLoadWorkerCts.Token);
+            CancellationTokenSource? previous = Interlocked.Exchange(ref _sectionLoadCheckCts, next);
+            if (previous is not null)
+            {
+                previous.Cancel();
+                previous.Dispose();
+            }
+
+            CancellationToken token = next.Token;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(SectionLoadCheck.Delay, token).ConfigureAwait(false);
+                    Parent?.BeginInvoke(new System.Action(() => CheckSectionLoaded(section, direction, run, token)));
+                }
+                catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException or InvalidOperationException)
+                {
+                    // Superseded by a newer section change, or the view is closing.
+                }
+            });
+        }
+
+        /// <summary>
+        /// UI thread. If the section is still current and its region cells never finished a server query while no load is
+        /// queued or running, queue the load again; when the queries did finish, queue it again anyway (warm cells are
+        /// answered from the local cache without a server request) and repaint, which covers a reply that was cached
+        /// without a redraw. Every check is logged by <see cref="SectionLoadCheck"/>.
+        /// </summary>
+        private void CheckSectionLoaded(int section, int direction, int run, CancellationToken token)
+        {
+            if (token.IsCancellationRequested || section != _currentSectionNumber || Parent?.Scene is null || !_Parent.ShowOverlays)
+                return;
+
+            SectionAnnotationsView sectionView = GetOrCreateAnnotationsForSection(section);
+            if (sectionView is null)
+                return;
+
+            Geometry.Rectangle? mosaicBounds = Parent.Scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(sectionView.mapper);
+            bool complete = Store.LocationsByRegion.AreRegionQueriesComplete(mosaicBounds, Parent.Scene.ScreenPixelSizeInVolume, section);
+
+            bool queuedOrRunning;
+            lock (_sectionAnnotationLoadLock)
+            {
+                queuedOrRunning = _requestedSectionNumbers.Contains(section) || _loadingSectionNumbers.Contains(section);
+            }
+
+            SectionLoadCheckOutcome outcome = SectionLoadCheck.Classify(complete, queuedOrRunning);
+            bool again = SectionLoadCheck.ShouldRequestAgain(outcome);
+            SectionLoadCheck.Append(SectionLoadCheck.FormatLine(section, Parent.Camera.Downsample, direction, run, outcome, again));
+
+            if (again)
+            {
+                RequestSectionAnnotationsLoad(section);
+                InvalidateParent();
+            }
         }
 
         protected void OnAnnotationChanged(object sender, EventArgs e) =>
@@ -3110,6 +3186,10 @@ break;
 
             autoPolygonizeController?.Draw(graphicsDevice, scene);
 
+            // Time-based like the shimmer: ask for the next frame until the animation ends.
+            if (flagFeedback.Draw(_Parent.spriteBatch, scene))
+                _Parent.Invalidate();
+
             if (OriginalRasterState != null && !OriginalRasterState.IsDisposed)
             {
                 graphicsDevice.RasterizerState = OriginalRasterState;
@@ -3186,10 +3266,6 @@ break;
         /// <returns></returns>
         private Microsoft.Xna.Framework.Color GetLocationLinkColor(System.Drawing.Color structure_type_color, int section_span_distance, double direction, bool IsMouseOver)
         {
-            // Time-based like the shimmer: ask for the next frame until the animation ends.
-            if (flagFeedback.Draw(_Parent.spriteBatch, scene))
-                _Parent.Invalidate();
-
             int red = (int)((float)(structure_type_color.R * .5) + (128 * direction));
             red = 255 - (red / section_span_distance);
             red = red > 255 ? 255 : red;

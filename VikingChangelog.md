@@ -10,8 +10,9 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 ## 1.2.119 — not yet released
 
 * A structure hotkey in `UserSettings.xml` whose `Tags` list has a blank entry (empty `Tags=""`, a trailing `;`, or `;;`) no longer adds a nameless tag to the new structure, and spaces around a tag are ignored. A tag listed twice no longer switches itself off again.
-
+* After stepping to a new section, annotations that had not loaded or been drawn no longer wait for a pan or zoom: Viking checks about 0.25 s after the step and asks for them again. Each check is also written to `%TEMP%\viking-section-load-check.log` (section, zoom, step direction and run length, what it found) to show which case occurs.
 * Marking an annotation Terminal now plays a short confetti burst from the annotation, and marking it Off Edge shows a frown face that slides down and fades (about 1.5 to 2 seconds). Drawn on the screen only, with no extra server or tile requests; clearing either flag shows nothing.
+
 ## 1.2.118 — 2026-10-21 (Viking Test, unsigned)
 
 * A recent volume that was saved by its URL now shows its file name without the extension (for example `SliceToVolume`). Before, the last letter was cut off too (`SliceToVolum`), and any extension other than `.vikingxml` was left on. Entries saved earlier keep the name they were saved with.
