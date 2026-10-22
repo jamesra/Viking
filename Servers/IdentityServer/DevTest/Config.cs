@@ -24,7 +24,24 @@ namespace DevTest
         {
             return new List<ApiResource>
             {
-                new ApiResource("api1", "My API")
+                new ApiResource("api1", "My API"),
+
+                // The gRPC annotation service (Servers/GrpcAnnotationService) requires this scope and also
+                // accepts the Viking.Annotation.API audience. Its introspection client below authenticates
+                // with the secret that docker-env-template.txt ships.
+                new ApiResource("Viking.Annotation.API", "Viking annotation service")
+                {
+                    Scopes = { "Viking.Annotation" }
+                }
+            };
+        }
+
+        public static IEnumerable<ApiScope> GetApiScopes()
+        {
+            return new List<ApiScope>
+            {
+                new ApiScope("api1", "My API"),
+                new ApiScope("Viking.Annotation", "Viking annotation service")
             };
         }
 
@@ -56,7 +73,21 @@ namespace DevTest
                     {
                         new Secret("secret".Sha256())
                     },
-                    AllowedScopes = { "api1" }
+                    AllowedScopes = { "api1", "Viking.Annotation" }
+                },
+
+                // Introspection client of the gRPC annotation service (IdentityServer__ClientId/ClientSecret
+                // in the container env file). Holding the scope lets it introspect reference tokens that carry it.
+                new Client
+                {
+                    ClientId = "grpc-annotation",
+                    AllowedGrantTypes = GrantTypes.ClientCredentials,
+
+                    ClientSecrets =
+                    {
+                        new Secret("DevTestIntrospectionSecret".Sha256())
+                    },
+                    AllowedScopes = { "Viking.Annotation" }
                 },
 
                 // OpenID Connect hybrid flow and client credentials client (MVC)

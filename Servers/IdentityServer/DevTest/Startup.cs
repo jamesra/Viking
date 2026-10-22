@@ -22,6 +22,7 @@ namespace DevTest
         {
             services.AddIdentityServer()
                 .AddDeveloperSigningCredential()
+                .AddInMemoryApiScopes(Config.GetApiScopes())
                 .AddInMemoryApiResources(Config.GetApiResources())
                 .AddInMemoryClients(Config.GetClients());
         }
