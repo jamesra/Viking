@@ -328,9 +328,9 @@ namespace Geometry
         /// <summary>
         /// 
         /// </summary>
+        /// <param name="set">The values the sequence indexes into</param>
         /// <param name="startIndex"></param>
-        /// <param name="wrapIndex">The value we never reach, we wrap before</param>
-        /// <param name="count">Total number of values in the sequence</param>
+        /// <param name="reverse"></param>
         public InfiniteIndexSet(IReadOnlyList<long> set, long startIndex = 0, bool reverse = false)
             : base(0, set.Count, startIndex, reverse)
         {
@@ -340,9 +340,11 @@ namespace Geometry
         /// <summary>
         /// 
         /// </summary>
+        /// <param name="set">The values the sequence indexes into</param>
+        /// <param name="minIndex"></param>
+        /// <param name="maxIndex"></param>
         /// <param name="startIndex"></param>
-        /// <param name="wrapIndex">The value we never reach, we wrap before</param>
-        /// <param name="count">Total number of values in the sequence</param>
+        /// <param name="reverse"></param>
         public InfiniteIndexSet(IReadOnlyList<long> set, long minIndex, long maxIndex, long startIndex, bool reverse = false)
             : base(minIndex, maxIndex, startIndex, reverse)
         {
@@ -428,9 +430,10 @@ namespace Geometry
         /// <summary>
         /// 
         /// </summary>
+        /// <param name="minIndex"></param>
+        /// <param name="maxIndex"></param>
         /// <param name="startIndex"></param>
-        /// <param name="wrapIndex">The value we never reach, we wrap before</param>
-        /// <param name="count">Total number of values in the sequence</param>
+        /// <param name="reverse"></param>
         public InfiniteSequentialIndexSet(long minIndex, long maxIndex, long startIndex, bool reverse = false)
         {
             if (maxIndex < minIndex)
@@ -475,9 +478,10 @@ namespace Geometry
     /// <remarks>
     /// 
     /// </remarks>
+    /// <param name="minIndex"></param>
+    /// <param name="maxIndex"></param>
     /// <param name="startIndex"></param>
-    /// <param name="wrapIndex">The value we never reach, we wrap before</param>
-    /// <param name="count">Total number of values in the sequence</param>
+    /// <param name="reverse"></param>
     public class FiniteWrappedIndexSet(long minIndex, long maxIndex, long startIndex, bool reverse = false) : InfiniteSequentialIndexSet(minIndex, maxIndex, startIndex, reverse)
     {
 

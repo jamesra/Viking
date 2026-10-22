@@ -39,7 +39,7 @@ namespace Geometry.Meshing
         /// Duplicate functions are used to create a copy of the face, with index numbers adjusted by the offset, without any edge data.
         /// This method is used to merge meshes
         /// </summary>
-        /// <param name="oldVertex"></param>
+        /// <param name="oldFace"></param>
         /// <param name="offset"></param>
         /// <returns></returns>
         public static Face CreateOffsetCopy(Face oldFace, int offset)
