@@ -1031,8 +1031,6 @@ namespace Viking.UI.Controls
         /// <summary>
         /// Activates when the user adds a command to the command queue
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
         private void OnPendingTextureQueueBecameEmpty()
         {
             this.Invalidate();
@@ -1142,6 +1140,9 @@ namespace Viking.UI.Controls
         /// and downsample to the base name. A tile whose file already exists is skipped, not re-rendered. At most two tiles render and
         /// save at a time. Called by the frame capture export.
         /// </summary>
+        /// <param name="Filename">Base file name that each tile name is built from.</param>
+        /// <param name="MyRect">Volume-space rectangle to export.</param>
+        /// <param name="Z">Section number to export.</param>
         /// <param name="Downsample">Volume-space pixels per output pixel.</param>
         /// <param name="IncludeOverlays">True to draw annotation overlays on each tile.</param>
         public async Task ExportImage(string Filename, Geometry.Rectangle MyRect, int Z, double Downsample, bool IncludeOverlays)
@@ -1862,6 +1863,7 @@ namespace Viking.UI.Controls
         /// </summary>
         /// <param name="scene"></param>
         /// <param name="Z"></param>
+        /// <param name="token">Cancels the check.</param>
         /// <returns></returns>
         protected async Task<bool> SceneHasTextures(Scene scene, int Z, CancellationToken token)
         {
@@ -2167,6 +2169,10 @@ namespace Viking.UI.Controls
         /// <summary>
         /// Draws the tiles of one section and channel into a viewport-sized render target.
         /// </summary>
+        /// <param name="graphicsDevice">Device that creates and draws the render target.</param>
+        /// <param name="section">Section to draw.</param>
+        /// <param name="channel">Channel of the section to draw.</param>
+        /// <param name="scene">Scene that supplies the viewport and downsample.</param>
         /// <param name="reuseRenderTarget">
         /// True to draw into the control's cached target, which the caller must not dispose. False to draw into a new target
         /// that the caller owns and must dispose. Several channels are live at once while merging, so they need new targets.
@@ -2553,6 +2559,7 @@ namespace Viking.UI.Controls
         /// </summary>
         /// <param name="graphicsDevice"></param>
         /// <param name="scene"></param>
+        /// <param name="background"></param>
         /// <param name="channels"></param>
         /// <param name="Colors"></param>
         /// <returns></returns>
