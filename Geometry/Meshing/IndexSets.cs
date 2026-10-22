@@ -197,7 +197,7 @@ namespace Geometry
 
 
     /// <summary>
-    /// Represents a set of index values that will loop back to the begining once the last value has been enumerated
+    /// Represents a set of index values that will loop back to the beginning once the last value has been enumerated
     /// </summary>
     public class IndexSetEnumerator(IIndexSet set) : IEnumerator<long>
     {
@@ -224,7 +224,7 @@ namespace Geometry
     }
 
     /// <summary>
-    /// Represents a set of index values that will loop back to the begining once the last value has been enumerated
+    /// Represents a set of index values that will loop back to the beginning once the last value has been enumerated
     /// </summary>
     public class ContinuousWrappedIndexSetEnumerator : IEnumerator<long>
     {
