@@ -84,6 +84,8 @@ if [ -z "${ASPNETCORE_Kestrel__Certificates__Default__Path:-}" ]; then
 fi
 exec dotnet /app/GrpcAnnotationService.dll "$@"
 EOF
+# A Windows checkout (core.autocrlf) gives the heredoc CRLF line ends, which breaks the shebang.
+RUN sed -i 's/\r$//' /usr/local/bin/annotation-entrypoint.sh
 
 # SOURCE_REVISION: the Viking commit, passed by the compose build (STACK_SOURCE_REVISION from stack.ps1).
 ARG SOURCE_REVISION=
