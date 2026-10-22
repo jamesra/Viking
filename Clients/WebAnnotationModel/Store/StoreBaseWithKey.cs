@@ -224,7 +224,7 @@ namespace WebAnnotationModel
         /// Remove the passed object from the store. The item will be
         /// deleted from the server until save is called
         /// </summary>
-        /// <param name="obj"></param>
+        /// <param name="ID"></param>
         /// <returns></returns>
         public virtual bool Remove(KEY ID)
         {
@@ -270,7 +270,7 @@ namespace WebAnnotationModel
         /// 
         /// These methods should fire collection changed notifications
         /// </summary>
-        /// <param name="updateObj"></param>
+        /// <param name="newObj"></param>
         /// <returns></returns>
         protected ChangeInventory<OBJECT> InternalAdd(OBJECT newObj)
         {
@@ -286,7 +286,7 @@ namespace WebAnnotationModel
         /// 
         /// These methods should fire collection changed notifications
         /// </summary>
-        /// <param name="updateObj"></param>
+        /// <param name="newObj"></param>
         /// <returns></returns>
         internal OBJECT InternalUpdate(OBJECT newObj)
         {
@@ -304,7 +304,7 @@ namespace WebAnnotationModel
         /// 
         /// These methods should fire collection changed notifications
         /// </summary>
-        /// <param name="updateObj"></param>
+        /// <param name="ID"></param>
         /// <returns></returns>
         protected OBJECT InternalDelete(KEY ID)
         {
@@ -332,7 +332,7 @@ namespace WebAnnotationModel
         /// 
         /// These methods should fire collection changed notifications
         /// </summary>
-        /// <param name="updateObj"></param>
+        /// <param name="newObjs"></param>
         /// <returns></returns>
         internal abstract OBJECT[] InternalAdd(OBJECT[] newObjs);
 
@@ -347,7 +347,7 @@ namespace WebAnnotationModel
         /// 
         /// These methods should fire collection changed notifications
         /// </summary>
-        /// <param name="updateObj"></param>
+        /// <param name="newObjs"></param>
         /// <returns></returns>
         internal abstract OBJECT[] InternalUpdate(OBJECT[] newObjs);
 

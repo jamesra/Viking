@@ -163,14 +163,14 @@ namespace WebAnnotationModel
         /// <summary>
         /// Used to populate cache when a call returns from the server
         /// </summary>
-        /// <param name="updateObj"></param>
+        /// <param name="newType"></param>
         /// <returns></returns>
         protected override ChangeInventory<OBJECT> InternalAdd(OBJECT[] newType) => InternalAdd(newType, false);
 
         /// <summary>
         /// Used to populate cache when a call returns from the server
         /// </summary>
-        /// <param name="updateObj"></param>
+        /// <param name="addObjs"></param>
         /// <returns></returns>
         protected virtual ChangeInventory<OBJECT> InternalAdd(OBJECT[] addObjs, bool LoadParents)
         {
@@ -318,7 +318,7 @@ namespace WebAnnotationModel
         /// <summary>
         /// Used to populate cache when a call returns from the server
         /// </summary>
-        /// <param name="updateObj"></param>
+        /// <param name="IDs"></param>
         /// <returns></returns>
         protected override List<OBJECT> InternalDelete(KEY[] IDs)
         {

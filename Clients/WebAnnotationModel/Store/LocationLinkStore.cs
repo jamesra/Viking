@@ -143,7 +143,7 @@ namespace WebAnnotationModel
         /// <summary>
         /// We override this because if the Locations are not loaded the only information we have about which sections locationLinks belong to is with the query state
         /// </summary>
-        /// <param name="locations"></param>
+        /// <param name="newLinks"></param>
         /// <param name="state"></param>
         /// <param name="DeletedLocations"></param>
         public override ChangeInventory<LocationLinkObj> ParseQuery(LocationLink[] newLinks,

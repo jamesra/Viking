@@ -208,7 +208,7 @@ namespace WebAnnotationModel
         /// <param name="VolumeBounds"></param>
         /// <param name="ScreenPixelSizeInVolume"></param>
         /// <param name="SectionNumber"></param>
-        /// <param name="callback">A thread-safe callback function to hand the loaded objects to</param>
+        /// <param name="OnServerObjectsLoadedCallback">A thread-safe callback function to hand the loaded objects to</param>
         public void LoadSectionAnnotationsInRegion(Rectangle? VolumeBounds,
                                                     double ScreenPixelSizeInVolume,
                                                     int SectionNumber,
