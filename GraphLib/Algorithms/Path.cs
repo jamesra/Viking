@@ -28,7 +28,7 @@ namespace GraphLib
         /// </summary>
         /// <param name="graph"></param>
         /// <param name="Origin"></param>
-        /// <param name="predicate"></param>
+        /// <param name="IsMatch"></param>
         /// <returns></returns>
         public static IList<KEY> ShortestPath<KEY, NODETYPE, EDGETYPE>(this Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, Func<NODETYPE, bool> IsMatch)
             where KEY : IComparable<KEY>, IEquatable<KEY>
@@ -41,7 +41,7 @@ namespace GraphLib
         /// </summary>
         /// <param name="graph"></param>
         /// <param name="Origin"></param>
-        /// <param name="predicate"></param>
+        /// <param name="Destination"></param>
         /// <returns></returns>
         public static IList<KEY> ShortestPath<KEY, NODETYPE, EDGETYPE>(this Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, KEY Destination)
             where KEY : IComparable<KEY>, IEquatable<KEY>
@@ -128,7 +128,7 @@ namespace GraphLib
         /// </summary>
         /// <param name="graph"></param>
         /// <param name="Origin"></param>
-        /// <param name="predicate"></param>
+        /// <param name="IsMatch"></param>
         /// <returns></returns>
         public static IList<KEY> ShortestPath(Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, Func<NODETYPE, bool> IsMatch)
         {
@@ -141,7 +141,7 @@ namespace GraphLib
         /// </summary>
         /// <param name="graph"></param>
         /// <param name="Origin"></param>
-        /// <param name="predicate"></param>
+        /// <param name="Destination"></param>
         /// <returns></returns>
         public static IList<KEY> ShortestPath(Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, KEY Destination)
         {
@@ -152,9 +152,11 @@ namespace GraphLib
         /// <summary>
         /// Return the path to the nearest node matching the predicate
         /// </summary>
+        /// <param name="testedNodes"></param>
         /// <param name="graph"></param>
         /// <param name="Origin"></param>
-        /// <param name="predicate"></param>
+        /// <param name="IsMatch"></param>
+        /// <param name="CanTravelEdge"></param>
         /// <returns></returns>
         internal static IList<KEY> RecursePath(ref SortedSet<KEY> testedNodes, Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, Func<NODETYPE, bool> IsMatch, Func<KEY, EDGETYPE, bool> CanTravelEdge = null)
         {
@@ -230,7 +232,6 @@ namespace GraphLib
         /// Some edges are direction.  This test checks if we can travel an edge going from the node key
         /// </summary>
         /// <param name="Source"></param>
-        /// <param name="Destination"></param>
         /// <param name="edge"></param>
         protected static bool CanTravelPath(KEY Source, EDGETYPE edge)
         {
@@ -248,8 +249,8 @@ namespace GraphLib
         /// Some edges are direction.  This test checks if we can travel an edge going from the node key
         /// </summary>
         /// <param name="Source"></param>
-        /// <param name="Destination"></param>
-        /// <param name="edge"></param>
+        /// <param name="edges"></param>
+        /// <param name="CanTravelEdge"></param>
         protected static bool CanTravelPath(KEY Source, ICollection<EDGETYPE> edges, Func<KEY, EDGETYPE, bool> CanTravelEdge) => edges.Any(e => CanTravelEdge(Source, e));/*foreach (EDGETYPE edge in edges)
             {
                 if (CanTravelPath(Source, edge))
@@ -276,9 +277,11 @@ namespace GraphLib
         /// <summary>
         /// Return the path to the nearest node matching the predicate
         /// </summary>
+        /// <param name="testedNodes"></param>
+        /// <param name="matchingNodes"></param>
         /// <param name="graph"></param>
         /// <param name="Origin"></param>
-        /// <param name="predicate"></param>
+        /// <param name="IsMatch"></param>
         /// <returns></returns>
         internal static void RecurseReachableNodes(ref SortedSet<KEY> testedNodes, ref SortedSet<KEY> matchingNodes, Graph<KEY, NODETYPE, EDGETYPE> graph, KEY Origin, Func<NODETYPE, bool> IsMatch)
         {
