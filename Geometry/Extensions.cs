@@ -42,6 +42,7 @@ namespace Geometry
         /// Converts to an RTree.Rectangle, but pads an epsilon value to the bounding box
         /// </summary>
         /// <param name="rect"></param>
+        /// <param name="Z"></param>
         /// <returns></returns>
         public static RTree.Rectangle ToRTreeRectEpsilonPadded(this in Rectangle rect, double Z = 0) => new RTree.Rectangle(rect.Left - Global.Epsilon, rect.Bottom - Global.Epsilon, rect.Right + Global.Epsilon, rect.Top + Global.Epsilon, (double)Z, (double)Z);
 

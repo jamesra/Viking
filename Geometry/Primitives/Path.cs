@@ -315,7 +315,7 @@ namespace Geometry
         /// <summary>
         /// Erase the path to the closest vertex to the passed point
         /// </summary>
-        /// <param name="p"></param>
+        /// <param name="input"></param>
         /// <returns>True if part of the path was erased</returns>
         public bool Erase(Vector2 input)
         {
@@ -380,7 +380,7 @@ namespace Geometry
         /// <summary>
         /// If we add the passed point will it intersect our path?
         /// </summary>
-        /// <param name="new_point"></param>
+        /// <param name="p"></param>
         /// <returns>True if a NEW loop was found</returns>
         public bool CheckForSelfIntersectionBeforePush(in Vector2 p)
         {
@@ -513,8 +513,7 @@ namespace Geometry
         /// <summary>
         /// If we pop the top point will it remove an existing self-intersection?
         /// </summary>
-        /// <param name="new_point"></param>
-        /// <returns>True if popping the point will break an existing loop</returns>
+        /// /// <returns>True if popping the point will break an existing loop</returns>
         private bool CheckForSelfIntersectionLossBeforePop()
         {
             if (false == this.HasSegment)

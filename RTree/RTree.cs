@@ -339,7 +339,6 @@ namespace RTree
         /// <summary>
         /// Deletes an item from the spatial index
         /// </summary>
-        /// <param name="r"></param>
         /// <param name="item"></param>
         /// <param name="removedItem">The item which we pointed to, which may be a separate object instance from the remove request</param>
         /// <returns></returns>
@@ -651,7 +650,8 @@ namespace RTree
         /// <summary>
         /// Retrieve items which intersect with Rectangle whose opposite corners are points A,B
         /// </summary>
-        /// <param name="r"></param>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
         /// <returns></returns>
         public List<T> Intersects(Point A, Point B)
         {
@@ -717,7 +717,7 @@ namespace RTree
 
         /// <summary>
         /// Has the object been inserted into the RTree?</summary>
-        /// <param name="r"></param>
+        /// <param name="obj"></param>
         /// <returns></returns>
         public bool Contains(T obj)
         {
@@ -1253,7 +1253,6 @@ namespace RTree
         /// doesn't slow it down.
         /// </summary>
         /// <param name="r"></param>
-        /// <param name="v"></param>
         /// <param name="n"></param>
         private IEnumerable<int> intersects(Rectangle r, Node<T> n)
         {
