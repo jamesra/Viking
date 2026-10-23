@@ -49,6 +49,54 @@ namespace Viking.SectionCorrectionClient
         public int NodeCount => _nodes.Count;
 
         /// <summary>
+        /// Axis-aligned lattice bounds in nanometres: origin at the minimum node cell, width/height in cell counts.
+        /// Empty fields return a zero-size box at the origin.
+        /// </summary>
+        public (double OriginX, double OriginY, int Width, int Height) OccupiedRasterBounds()
+        {
+            if (_nodes.Count == 0)
+                return (0, 0, 0, 0);
+
+            int gxMin = int.MaxValue, gxMax = int.MinValue, gyMin = int.MaxValue, gyMax = int.MinValue;
+            foreach ((int gx, int gy) in _nodes.Keys)
+            {
+                if (gx < gxMin) gxMin = gx;
+                if (gx > gxMax) gxMax = gx;
+                if (gy < gyMin) gyMin = gy;
+                if (gy > gyMax) gyMax = gy;
+            }
+
+            return (gxMin * PitchNm, gyMin * PitchNm, gxMax - gxMin + 1, gyMax - gyMin + 1);
+        }
+
+        /// <summary>
+        /// Even display grid of trusted samples, matching the SectionCorrectionBuilder quiver preview.
+        /// </summary>
+        public IEnumerable<(double OriginX, double OriginY, double Dx, double Dy)> EnumerateTrustedDisplaySamples(double displayPitchNm)
+        {
+            (double originX, double originY, int width, int height) = OccupiedRasterBounds();
+            if (width <= 0 || height <= 0)
+                yield break;
+
+            double extentX = width * PitchNm;
+            double extentY = height * PitchNm;
+            double pitch = displayPitchNm > 0 ? displayPitchNm : PitchNm * 0.5;
+            for (double y = originY; y <= originY + extentY + 0.5 * pitch; y += pitch)
+            {
+                for (double x = originX; x <= originX + extentX + 0.5 * pitch; x += pitch)
+                {
+                    (double dx, double dy, bool trusted) = Sample(x, y);
+                    if (!trusted)
+                        continue;
+                    double mag = Math.Sqrt(dx * dx + dy * dy);
+                    if (mag <= 1e-6)
+                        continue;
+                    yield return (x, y, dx, dy);
+                }
+            }
+        }
+
+        /// <summary>
         /// Offset at a point in volume space. Bilinear when the four surrounding nodes exist, otherwise inverse-distance
         /// weighted over the nodes within the kernel radius.
         /// </summary>
