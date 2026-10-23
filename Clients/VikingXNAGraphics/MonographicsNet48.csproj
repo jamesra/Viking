@@ -35,7 +35,8 @@
 	
 	<!-- Collect all .fx files and content files as inputs for dependency tracking -->
 	<ItemGroup>
-		<MGCBShaderFiles Include="$(MSBuildThisFileDirectory)Content\**\*.fx" />
+		<!-- The shaders in MonogameXNAGraphicsShared are #included by the ones here, so editing them must rebuild the content. -->
+		<MGCBShaderFiles Include="$(MSBuildThisFileDirectory)Content\**\*.fx;$(MSBuildThisFileDirectory)..\MonogameXNAGraphicsShared\Content\**\*.fx" />
 		<MGCBContentFiles Include="$(MSBuildThisFileDirectory)Content\**\*.*" Exclude="@(MGCBShaderFiles);**\bin\**;**\obj\**" />
 		<MGCBConfigFile Include="$(MSBuildThisFileDirectory)Content\Content.mgcb" />
 	</ItemGroup>

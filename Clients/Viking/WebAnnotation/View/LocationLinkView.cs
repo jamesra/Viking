@@ -139,6 +139,19 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         internal const float WaistOpacity = 0.5f;
 
+        /// <summary>Width in screen pixels of the contrasting border drawn just inside a link's outline.</summary>
+        internal const float BorderPixels = 1.5f;
+
+        /// <summary>
+        /// The border color for a link of color <paramref name="linkColor"/>: black for a light link and white for a dark
+        /// one, judged by perceived brightness, so the link's edge stands out from the image under it.
+        /// </summary>
+        internal static Color BorderColorFor(Color linkColor)
+        {
+            float brightness = ((0.3f * linkColor.R) + (0.59f * linkColor.G) + (0.11f * linkColor.B)) / 255f;
+            return brightness > 0.5f ? Color.Black : Color.White;
+        }
+
         /// <summary>
         /// Waist half width in world units at the zoom links were last drawn at. Hit tests have no scene, and every
         /// link is drawn with the same camera, so they use this.
@@ -611,7 +624,12 @@ namespace WebAnnotation.ViewModel
                     (float)Math.Min(waistRadius, Math.Min(l.A.Radius, l.B.Radius)),
                     0f))];
 
-                lineManager.DrawPinched(lines, shapes, group.Key, scene.ViewProj, time, drawCaps, WaistOpacity);
+                // The group key is in HCL form for the HSL manager, so the border is too.
+                Color border = BorderColorFor(group.First().Color);
+                if (lineManager.UseHSLColor)
+                    border = border.ConvertToHCL();
+
+                lineManager.DrawPinched(lines, shapes, group.Key, scene.ViewProj, time, drawCaps, WaistOpacity, border, BorderPixels);
             }
         }
 

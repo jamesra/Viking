@@ -24,6 +24,11 @@ float pinchedWaistOpacity = 0.5;
 // Width in screen pixels over which the outline fades from opaque to clear, half inside it and half outside.
 static const float pinchedFeatherPixels = 3;
 
+// A border drawn just inside the outline so the link stands out from the image under it. The colour is in the same
+// HCL form as lineColor and should be opaque; the width is in screen pixels, and 0 draws no border.
+float4 pinchedBorderColor = float4(0, 0, 0, 1);
+float pinchedBorderPixels = 0;
+
 //NOTE: THE VERTEX SHADER OUTPUT AND PIXEL SHADER INPUT MUST MATCH EXACTLY WHEN USING MONOGAME
 struct PINCHED_VS_OUTPUT
 {
@@ -175,7 +180,14 @@ Color_Depth_Output MyPSPinchedHSV(PINCHED_PS_INPUT input)
 
 	Color_Depth_Output output;
 	// Blend the colour exactly as the Standard line does; only the coverage alpha fades toward the waist.
-	output.Color = BlendHCLColorOverBackground(lineColor, RGBBackgroundColor, 1.0f - lineColor.a);
+	float4 fillColor = BlendHCLColorOverBackground(lineColor, RGBBackgroundColor, 1.0f - lineColor.a);
+	float4 borderColor = BlendHCLColorOverBackground(pinchedBorderColor, RGBBackgroundColor, 1.0f - pinchedBorderColor.a);
+
+	// d is a distance in world units, so dividing by its change per pixel gives pixels in from the outline. The border
+	// is full strength out to pinchedBorderPixels in from it, then fades over one pixel into the fill.
+	float pixelsFromOutline = d / max(fwidth(d), 1e-6);
+	float borderMix = pinchedBorderPixels > 0 ? 1 - saturate(pixelsFromOutline - pinchedBorderPixels + 0.5) : 0;
+	output.Color = lerp(fillColor, borderColor, borderMix);
 	output.Color.a = alpha * coverage;
 	output.Depth = 0;
 	return output;
