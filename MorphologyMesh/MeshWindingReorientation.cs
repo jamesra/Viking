@@ -233,6 +233,14 @@ namespace MorphologyMesh
                         throw;
 
                     patchFailures.Add(ex.Message);
+                    if (ex.Data.Contains(NonOrientableKey))
+                    {
+                        //Skipping a non-orientable patch kept every face's incoming winding.  On an assembled cell
+                        //that is the whole surface (RC1 410: one 196,735-face patch), so a single twisted slice
+                        //stopped the composite pass from fixing every slice that came out of its own pass wrong.
+                        plans.Add(PlanNonOrientablePatch(mesh, componentFaces, options, interiorSeedsByShape));
+                    }
+
                     continue;
                 }
 
@@ -325,14 +333,15 @@ namespace MorphologyMesh
             List<IFace> component,
             Options options,
             IReadOnlyDictionary<int, WindingInteriorSeed[]> seedsByShape,
-            HashSet<IFace> facesToReverse)
+            HashSet<IFace> facesToReverse,
+            bool? closedOverride = null)
         {
             if (options.InteriorSeeds is null || options.InteriorSeeds.Count == 0)
                 ThrowRaySeedFailure(component, options, "no interior seed was recorded");
 
             WindingInteriorSeed originSeed = SelectInteriorSeed(mesh, component, seedsByShape, options);
             Vector3 origin = originSeed.Position;
-            bool closed = ComponentHasBoundaryEdge(mesh, component) == false;
+            bool closed = closedOverride ?? ComponentHasBoundaryEdge(mesh, component) == false;
             double scale = ComponentScale(mesh, component);
             if (closed == false && SeedIsLocalToPatch(origin, mesh, component, scale) == false)
             {
@@ -656,7 +665,179 @@ namespace MorphologyMesh
                 $"Non-orientable patch: contradictory winding assignments around a cycle in {context}; " +
                 $"faces={component.Count}, conflict at edge {edge.A}-{edge.B}.";
             Trace.WriteLine(message);
-            throw new InvalidOperationException(message);
+            InvalidOperationException error = new(message);
+            error.Data[NonOrientableKey] = true;
+            throw error;
+        }
+
+        /// <summary>Marks the exception from <see cref="ThrowNonOrientablePatch"/> so a skipping caller can split the patch.</summary>
+        private const string NonOrientableKey = "MeshWindingReorientation.NonOrientable";
+
+        /// <summary>
+        /// Orient a patch that has no consistent winding by splitting it into the largest groups that do.
+        /// Every orientable edge is a parity constraint between its two faces; a union-find with parity adds
+        /// the edges whose faces already agree first and the disagreeing ones after, dropping any edge that would
+        /// close an odd cycle.  Trusting the incoming winding first matters: the per-slice passes are right
+        /// almost everywhere, so the cut lands inside the twisted slice instead of wherever two breadth-first
+        /// fronts happen to meet, which could invert half a cell.  Each group is then oriented outward by the
+        /// interior ray, or, when no ray can seed it, by flipping the smaller of its two parity classes.
+        /// </summary>
+        private static PatchPlan PlanNonOrientablePatch(
+            Mesh3D<MorphMeshVertex> mesh,
+            List<IFace> component,
+            Options options,
+            IReadOnlyDictionary<int, WindingInteriorSeed[]> seedsByShape)
+        {
+            Dictionary<IFace, int> faceIndex = new(component.Count);
+            for (int i = 0; i < component.Count; i++)
+                faceIndex[component[i]] = i;
+
+            List<(int A, int B, bool MustDiffer)> agreeing = [];
+            List<(int A, int B, bool MustDiffer)> disagreeing = [];
+            HashSet<IEdgeKey> seen = [];
+            foreach (IFace face in component)
+            {
+                foreach (IEdgeKey ek in face.Edges)
+                {
+                    if (seen.Add(ek) == false || IsOrientableManifoldEdge(mesh, ek) == false)
+                        continue;
+
+                    IFace[] faces = [.. mesh.Edges[ek].Faces];
+                    if (faceIndex.TryGetValue(faces[0], out int a) == false || faceIndex.TryGetValue(faces[1], out int b) == false)
+                        continue;
+
+                    //Two faces agree when they traverse the shared edge in opposite directions.
+                    bool mustDiffer = TraversesForward(faces[0].iVerts, ek.A, ek.B) == TraversesForward(faces[1].iVerts, ek.A, ek.B);
+                    (mustDiffer ? disagreeing : agreeing).Add((a, b, mustDiffer));
+                }
+            }
+
+            ParityUnionFind groups = new(component.Count);
+            int droppedEdges = 0;
+            foreach ((int a, int b, bool mustDiffer) in agreeing.Concat(disagreeing))
+            {
+                if (groups.Union(a, b, mustDiffer) == false)
+                    droppedEdges++;
+            }
+
+            Dictionary<int, List<int>> members = [];
+            for (int i = 0; i < component.Count; i++)
+            {
+                int root = groups.Find(i, out _);
+                if (members.TryGetValue(root, out List<int> list) == false)
+                    members[root] = list = [];
+                list.Add(i);
+            }
+
+            Options strict = options with { SkipFailedPatches = false };
+            bool requiresOutwardSeed = options.SeedByInteriorRay
+                && ComponentRequiresOutwardSeed(mesh, component, options.OutwardShapeIndices);
+
+            HashSet<IFace> facesToReverse = [];
+            int unseededGroups = 0;
+            foreach (List<int> group in members.Values)
+            {
+                List<IFace> groupFaces = [.. group.Select(i => component[i])];
+                bool[] parity = [.. group.Select(i => { groups.Find(i, out bool p); return p; })];
+
+                //Flipping the parity-true class keeps the incoming winding wherever the group agrees with it.
+                bool flipParityTrue = parity.Count(p => p) <= parity.Length / 2;
+                if (requiresOutwardSeed && ComponentRequiresOutwardSeed(mesh, groupFaces, options.OutwardShapeIndices))
+                {
+                    try
+                    {
+                        HashSet<IFace> authorityFlip = [];
+                        IFace authority = PlanSeedByInteriorRay(
+                            mesh, groupFaces, strict, seedsByShape, authorityFlip, closedOverride: false);
+                        bool authorityParity = parity[groupFaces.IndexOf(authority)];
+                        bool authorityMustFlip = authorityFlip.Contains(authority);
+                        flipParityTrue = authorityParity == authorityMustFlip;
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        unseededGroups++;
+                    }
+                }
+
+                for (int i = 0; i < groupFaces.Count; i++)
+                {
+                    if (parity[i] == flipParityTrue)
+                        facesToReverse.Add(groupFaces[i]);
+                }
+            }
+
+            string summary =
+                $"Non-orientable patch in {options.FailureContext ?? "unknown mesh"} split into {members.Count} orientable " +
+                $"groups at {droppedEdges} conflicting edges; {unseededGroups} groups kept their majority winding.";
+            Trace.WriteLine(summary);
+
+            return new PatchPlan(facesToReverse, false);
+        }
+
+        /// <summary>
+        /// Union-find over faces where each node carries whether it must be reversed relative to its root.
+        /// </summary>
+        private sealed class ParityUnionFind
+        {
+            private readonly int[] _parent;
+            private readonly bool[] _parityToParent;
+            private readonly byte[] _rank;
+
+            public ParityUnionFind(int count)
+            {
+                _parent = new int[count];
+                _parityToParent = new bool[count];
+                _rank = new byte[count];
+                for (int i = 0; i < count; i++)
+                    _parent[i] = i;
+            }
+
+            /// <summary>Root of <paramref name="x"/>; <paramref name="parity"/> is true when x is reversed relative to it.</summary>
+            public int Find(int x, out bool parity)
+            {
+                //Iterative so a long chain of faces cannot overflow the stack.
+                bool total = false;
+                int root = x;
+                while (_parent[root] != root)
+                {
+                    total ^= _parityToParent[root];
+                    root = _parent[root];
+                }
+
+                bool remaining = total;
+                int node = x;
+                while (_parent[node] != root && node != root)
+                {
+                    int next = _parent[node];
+                    bool nodeParity = _parityToParent[node];
+                    _parent[node] = root;
+                    _parityToParent[node] = remaining;
+                    remaining ^= nodeParity;
+                    node = next;
+                }
+
+                parity = total;
+                return root;
+            }
+
+            /// <summary>Require a and b to differ in reversal when <paramref name="mustDiffer"/>; false if that contradicts earlier edges.</summary>
+            public bool Union(int a, int b, bool mustDiffer)
+            {
+                int rootA = Find(a, out bool parityA);
+                int rootB = Find(b, out bool parityB);
+                if (rootA == rootB)
+                    return (parityA ^ parityB) == mustDiffer;
+
+                if (_rank[rootA] < _rank[rootB])
+                    (rootA, rootB) = (rootB, rootA);
+
+                _parent[rootB] = rootA;
+                _parityToParent[rootB] = parityA ^ parityB ^ mustDiffer;
+                if (_rank[rootA] == _rank[rootB])
+                    _rank[rootA]++;
+
+                return true;
+            }
         }
 
         private static bool IsAnchorFace(Mesh3D<MorphMeshVertex> mesh, IFace f, Options options)

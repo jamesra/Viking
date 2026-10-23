@@ -504,6 +504,26 @@ namespace MorphologyMeshTest
         }
 
         /// <summary>
+        /// Skipping a non-orientable patch left every face with its incoming winding; on RC1 410 that patch was the
+        /// whole assembled cell, so wrongly wound slices were never fixed.  The patch is now split at the fewest
+        /// conflicting edges, leaving only the one seam a Möbius strip cannot avoid.
+        /// </summary>
+        [TestMethod]
+        public void Reorient_MobiusStrip_WhenNotThrowing_LeavesOnlyOneInconsistentEdge()
+        {
+            Mesh3D<MorphMeshVertex> mesh = MobiusStrip();
+            var options = RaySeedOptions([new WindingInteriorSeed(new Vector3(1, 0.5, 0.1), 0)]) with
+            {
+                SkipFailedPatches = true
+            };
+
+            MeshWindingReorientation.Result result = MeshWindingReorientation.Reorient(mesh, options);
+
+            Assert.AreEqual(1, result.AfterInconsistent,
+                $"A Möbius strip needs exactly one seam; before={result.BeforeInconsistent}.");
+        }
+
+        /// <summary>
         /// A Möbius patch must not block winding of a separate closed shell, or a giant cell-body slice
         /// loses every correctly tiled region because one 174-face cycle conflicted.
         /// </summary>
