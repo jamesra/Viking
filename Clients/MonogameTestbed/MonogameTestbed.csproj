@@ -78,6 +78,7 @@
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.8" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
+		<PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
 	</ItemGroup>
 	<ItemGroup>
 		<MonoGameContentReference Include="Content\Content.mgcb" />
@@ -102,6 +103,7 @@
 		<ProjectReference Include="..\Monographics\Monographics.csproj" />
 		<ProjectReference Include="..\..\ODataClient\ODataClient.csproj" />
 		<ProjectReference Include="..\..\Servers\SectionCorrection\SectionCorrection.csproj" />
+		<ProjectReference Include="..\Viking.SectionCorrectionClient\Viking.SectionCorrectionClient.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<Content Include="SqlServerTypes\x64\msvcr120.dll" CopyToOutputDirectory="Always" />

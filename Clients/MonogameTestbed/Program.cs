@@ -173,13 +173,29 @@ namespace MonogameTestbed
                 HelpText = "Curvefit leave-one-out half-window size (default 7).")]
             public int CorrectionCurveFitWindow { get; set; }
 
-            [Option("corrections-dir", HelpText = "Published correction root ({StosGroup}/manifest.json). When set, --correction neighbor loads this field instead of OData neighbors.")]
+            [Option("corrections-dir", HelpText = "Published correction root ({StosGroup}/manifest.json). When set (and --correction-url is not), --correction neighbor loads this field instead of OData neighbors.")]
             public string CorrectionsDirectory { get; set; }
 
-            [Option("stos-group", HelpText = "StosGroup name under --corrections-dir (default: first set in the directory).")]
+            /// <summary>
+            /// Live AnnotateSectionCorrections gRPC base URL (Identity CorrectionServiceUrl). Preferred over
+            /// <see cref="CorrectionsDirectory"/> so mesh runs use the same published maps as Viking/Jotunn.
+            /// Defaults to the public host; pass an empty value to fall back to <c>--corrections-dir</c> or OData neighbors.
+            /// </summary>
+            [Option("correction-url", Default = "https://corrections.codepharm.net/",
+                HelpText = "Correction service URL (gRPC). Downloads the published residual field for --correction neighbor|all. Preferred over --corrections-dir. Default https://corrections.codepharm.net/.")]
+            public string CorrectionServiceUrl { get; set; }
+
+            /// <summary>
+            /// Annotation database / volume key the correction service catalogs under. When omitted, resolved via the
+            /// service's ListVolumes against -e (Endpoint name and/or OData URI).
+            /// </summary>
+            [Option("correction-volume", HelpText = "Correction-set volume key (annotation database name). When omitted, auto-resolved from the correction service ListVolumes using -e.")]
+            public string CorrectionVolume { get; set; }
+
+            [Option("stos-group", HelpText = "StosGroup under --correction-url or --corrections-dir (default: first set for that volume/directory).")]
             public string CorrectionStosGroup { get; set; }
 
-            [Option("show-correction-field", Default = false, HelpText = "Draw the published residual quiver on BajajTest 2D views.")]
+            [Option("show-correction-field", Default = false, HelpText = "Draw the published/service residual quiver on BajajTest 2D views.")]
             public bool ShowCorrectionField { get; set; }
 
             /// <summary>

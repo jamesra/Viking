@@ -1,21 +1,35 @@
 using AnnotationVizLib;
+using Geometry;
+using Grpc.Core;
 using MorphologyMesh;
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
+using Grpc.Net.Client;
 using Viking.Common;
 using Viking.SectionCorrection;
+using Viking.SectionCorrectionClient;
 
 namespace MonogameTestbed
 {
     /// <summary>
     /// Runs the <see cref="CorrectionMode"/> flags on a morphology graph before SliceGraph.Create.
     /// Each flag is an independent fix; <see cref="CorrectionMode.All"/> (default) enables every fix, in order.
+    /// Residual fields prefer a live correction-service URL, then a local <c>--corrections-dir</c>, then OData neighbors.
     /// </summary>
     static class MorphologyRegistration
     {
+        static readonly ConcurrentDictionary<Uri, GrpcChannel> CorrectionChannels = new();
+
         public static PublishedCorrectionSet LoadedPublishedSet { get; private set; }
+
+        /// <summary>Field downloaded from <c>--correction-url</c>, when that path was used.</summary>
+        public static DownloadedCorrectionSet LoadedServiceSet { get; private set; }
 
         /// <summary>
         /// Apply enabled registration fixes. Neighbor is the spatial residual field; CurveFit is a later
@@ -33,7 +47,7 @@ namespace MonogameTestbed
             if (mode == CorrectionMode.None)
             {
                 Console.WriteLine("Registration correction: none");
-                TryLoadPublishedSet(options);
+                await TryLoadPublishedOrServiceSetAsync(options).ConfigureAwait(false);
                 return;
             }
 
@@ -42,10 +56,20 @@ namespace MonogameTestbed
             if (mode.HasFlag(CorrectionMode.Neighbor))
                 await ApplyResidualFieldAsync(graph, options).ConfigureAwait(false);
             else
-                TryLoadPublishedSet(options);
+                await TryLoadPublishedOrServiceSetAsync(options).ConfigureAwait(false);
 
             if (mode.HasFlag(CorrectionMode.CurveFit))
                 ApplyOutlierCurveFit(graph, options);
+        }
+
+        /// <summary>
+        /// Loads a published or service field for overlay / inspection without applying Neighbor correction.
+        /// </summary>
+        public static async Task<bool> TryLoadPublishedOrServiceSetAsync(Program.CommandLineOptions options)
+        {
+            if (await TryLoadServiceSetAsync(options).ConfigureAwait(false))
+                return true;
+            return TryLoadPublishedSet(options);
         }
 
         public static bool TryLoadPublishedSet(Program.CommandLineOptions options)
@@ -83,11 +107,127 @@ namespace MonogameTestbed
             return true;
         }
 
+        static async Task<bool> TryLoadServiceSetAsync(Program.CommandLineOptions options)
+        {
+            if (LoadedServiceSet != null)
+                return true;
+            if (options is null)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(options.CorrectionServiceUrl))
+            {
+                LogCorrectionService(
+                    "Correction service omitted (--correction-url empty). " +
+                    "Residual field will use --corrections-dir if set, otherwise OData neighbor rebuild.");
+                return false;
+            }
+
+            if (!Uri.TryCreate(options.CorrectionServiceUrl.Trim(), UriKind.Absolute, out Uri serviceUrl))
+            {
+                LogCorrectionService(
+                    $"Correction service cannot be used: invalid --correction-url '{options.CorrectionServiceUrl}'.");
+                throw new ArgumentException($"Invalid --correction-url '{options.CorrectionServiceUrl}'.");
+            }
+
+            string explicitVolume = string.IsNullOrWhiteSpace(options.CorrectionVolume)
+                ? null
+                : options.CorrectionVolume.Trim();
+            // EndpointUri already maps -e RC1 → OData URL, or accepts a raw OData URI.
+            string volumeHint = VolumeNameHint(options);
+            Uri morphologyUri = options.EndpointUri;
+
+            var loader = new GrpcPublishedCorrectionLoader(uri =>
+                CorrectionChannels.GetOrAdd(uri, u => GrpcChannel.ForAddress(u)).CreateCallInvoker());
+
+            LogCorrectionService(
+                $"Downloading residual field from {serviceUrl}" +
+                (explicitVolume != null
+                    ? $" volume={explicitVolume}"
+                    : $" (auto volume from ListVolumes; hint={volumeHint ?? "none"}, uri={morphologyUri?.AbsoluteUri ?? "none"})") +
+                (string.IsNullOrWhiteSpace(options.CorrectionStosGroup)
+                    ? " (first StosGroup)"
+                    : $" stos={options.CorrectionStosGroup}"));
+
+            try
+            {
+                DownloadedCorrectionSet set = await loader
+                    .LoadAsync(
+                        serviceUrl,
+                        explicitVolume,
+                        options.CorrectionStosGroup,
+                        volumeNameHint: volumeHint,
+                        annotationOrODataUri: morphologyUri)
+                    .ConfigureAwait(false);
+
+                if (!set.HasSections)
+                {
+                    LogCorrectionService(
+                        $"Correction service cannot be used: no section lattices for '{set.VolumeName}' '{set.StosGroup}' at {serviceUrl}. " +
+                        "Falling back to --corrections-dir or OData neighbors.");
+                    return false;
+                }
+
+                LoadedServiceSet = set;
+                LogCorrectionService(
+                    $"Loaded service residual field {set.VolumeName}/{set.StosGroup} ({set.Sections.Count} sections, pitch={set.PitchNm:F0}nm) from {serviceUrl}");
+                return true;
+            }
+            catch (Exception ex) when (ex is RpcException or InvalidOperationException or HttpRequestException or IOException or TimeoutException)
+            {
+                LogCorrectionService(
+                    $"Correction service cannot be used ({serviceUrl}): {ex.GetType().Name}: {ex.Message}. " +
+                    "Falling back to --corrections-dir or OData neighbors.");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Console plus <see cref="Trace"/> so <c>-l</c>/<c>-v</c> capture correction-service availability.
+        /// </summary>
+        static void LogCorrectionService(string message)
+        {
+            Console.WriteLine(message);
+            Trace.WriteLine(message);
+        }
+
+        /// <summary>
+        /// Name hint for gRPC volume auto-resolve: explicit <c>--correction-volume</c>, else the -e Endpoint enum name
+        /// (<c>RC1</c>, …). The real <c>volume_name</c> is confirmed against the service's <c>ListVolumes</c> catalog.
+        /// </summary>
+        public static string VolumeNameHint(Program.CommandLineOptions options)
+        {
+            if (options is null)
+                return null;
+            if (!string.IsNullOrWhiteSpace(options.CorrectionVolume))
+                return options.CorrectionVolume.Trim();
+
+            if (!string.IsNullOrWhiteSpace(options.EndpointParam))
+            {
+                try
+                {
+                    return options.EndpointParam.ToEnum<Endpoint>().ToString();
+                }
+                catch
+                {
+                    // Custom OData URL: ListVolumes matches the URI path instead.
+                }
+            }
+
+            return null;
+        }
+
         static NeighborResidualField ToNeighborField(PublishedCorrectionSet set)
         {
             double pitch = set.Provenance?.PitchNm > 0 ? set.Provenance.PitchNm : NeighborResidualField.GridSizeNm;
             double kernel = set.Provenance?.KernelRadiusNm > 0 ? set.Provenance.KernelRadiusNm : NeighborResidualField.KernelRadiusNm;
             return NeighborResidualField.FromLattice(set.EnumerateLattice(), pitch, kernel);
+        }
+
+        static NeighborResidualField ToNeighborField(DownloadedCorrectionSet set)
+        {
+            IEnumerable<(int Z, int Gx, int Gy, Vector2 Offset, int Votes)> nodes = set.EnumerateLatticeNodes()
+                .Select(n => (n.Z, n.Gx, n.Gy, new Vector2(n.Dx, n.Dy), n.Votes));
+            return NeighborResidualField.FromLattice(nodes, set.PitchNm, set.KernelRadiusNm);
         }
 
         /// <summary>
@@ -97,9 +237,24 @@ namespace MonogameTestbed
         /// </summary>
         static async Task ApplyResidualFieldAsync(MorphologyGraph graph, Program.CommandLineOptions options)
         {
+            if (await TryLoadServiceSetAsync(options).ConfigureAwait(false) && LoadedServiceSet != null)
+            {
+                LogCorrectionService(
+                    $"Residual field: correction service {LoadedServiceSet.VolumeName}/{LoadedServiceSet.StosGroup}");
+                using (MeshPhaseTimings.Measure(MeshPhase.NeighborCorrection))
+                {
+                    MorphologyGraph.ApplyResidualField(
+                        graph,
+                        ToNeighborField(LoadedServiceSet),
+                        options.CorrectionMaxOffsetNm);
+                }
+                return;
+            }
+
             if (TryLoadPublishedSet(options) && LoadedPublishedSet != null)
             {
-                Console.WriteLine($"Residual field: published {LoadedPublishedSet.StosGroup}");
+                LogCorrectionService(
+                    $"Residual field: published directory {LoadedPublishedSet.StosGroup} (correction service not used).");
                 using (MeshPhaseTimings.Measure(MeshPhase.NeighborCorrection))
                 {
                     MorphologyGraph.ApplyResidualField(
@@ -112,7 +267,9 @@ namespace MonogameTestbed
 
             Uri neighborEndpoint = options.EndpointUri ?? DataSource.EndpointMap[Endpoint.RC1];
             double radiusNm = options.CorrectionRadiusNm;
-            Console.WriteLine($"Residual field: neighbor radius={radiusNm:F0} nm");
+            LogCorrectionService(
+                $"Residual field: OData neighbor rebuild radius={radiusNm:F0} nm at {neighborEndpoint} " +
+                "(correction service not used).");
 
             using (MeshPhaseTimings.Measure(MeshPhase.NeighborCorrection))
             {
