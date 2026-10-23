@@ -1437,6 +1437,88 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void SubtractDoesNotCutOffAGreenPoint()
+        {
+            Polygon proposed = Square(0, 0, 10);
+            Polygon neighbor = Square(6, 0, 10);
+            Vector2 green = new(8, 5);
+
+            Polygon unprotected = AutoPolygonizeSelection.SubtractOverlappingPolygons(proposed, [neighbor], new Vector2(2, 5));
+            Assert.IsFalse(unprotected.Covers(green), "Precondition: the plain carve removes the point.");
+
+            Polygon result = AutoPolygonizeSelection.SubtractOverlappingPolygons(
+                proposed, [neighbor], new Vector2(2, 5), [green]);
+
+            Assert.IsTrue(result.Covers(green));
+        }
+
+        [TestMethod]
+        public void SubtractStillCarvesWhereNoGreenPointIsAffected()
+        {
+            Polygon proposed = Square(0, 0, 10);
+            Polygon neighbor = Square(6, 0, 10);
+
+            Polygon result = AutoPolygonizeSelection.SubtractOverlappingPolygons(
+                proposed, [neighbor], new Vector2(2, 5), [new Vector2(2, 5)]);
+
+            Assert.IsFalse(result.Covers(new Vector2(8, 5)));
+            Assert.IsTrue(result.Covers(new Vector2(2, 5)));
+        }
+
+        [TestMethod]
+        public void SubtractKeepsTheGreenPointOnTheOtherSideOfASplit()
+        {
+            // A bar across the middle splits the square; the keep point picks the left part, the green point is in the right.
+            Polygon proposed = Square(0, 0, 10);
+            Polygon bar = new([new Vector2(4, -1), new Vector2(6, -1), new Vector2(6, 11), new Vector2(4, 11), new Vector2(4, -1)]);
+            Vector2 green = new(8, 5);
+
+            Polygon result = AutoPolygonizeSelection.SubtractOverlappingPolygons(
+                proposed, [bar], new Vector2(2, 5), [green]);
+
+            Assert.IsTrue(result.Covers(green));
+        }
+
+        [TestMethod]
+        public void SimplifyProposalKeepsAGreenPointAtASpike()
+        {
+            // A thin spike that Douglas-Peucker at this tolerance shaves off; the green point sits in its tip.
+            Polygon spiky = new([
+                new Vector2(0, 0), new Vector2(50, 0), new Vector2(50, 20), new Vector2(51, 20), new Vector2(51, 60),
+                new Vector2(52, 20), new Vector2(100, 20), new Vector2(100, 100), new Vector2(0, 100), new Vector2(0, 0)]);
+            Vector2 green = new(51, 55);
+            Assert.IsTrue(spiky.Covers(green) || spiky.Contains(green), "Precondition: the tip is inside the input.");
+
+            Polygon result = AutoPolygonizeSelection.SimplifyProposal(spiky, 30, [green]);
+
+            Assert.IsTrue(result.Covers(green));
+        }
+
+        [TestMethod]
+        public void SimplifyForSaveKeepsAGreenPointAtASpike()
+        {
+            Polygon spiky = new([
+                new Vector2(0, 0), new Vector2(50, 0), new Vector2(50, 20), new Vector2(51, 20), new Vector2(51, 60),
+                new Vector2(52, 20), new Vector2(100, 20), new Vector2(100, 100), new Vector2(0, 100), new Vector2(0, 0)]);
+            Vector2 green = new(51, 55);
+
+            Polygon result = AutoPolygonizeSelection.SimplifyForSave(spiky, [green]);
+
+            Assert.IsTrue(result.Covers(green));
+        }
+
+        [TestMethod]
+        public void KeepsCoveredPointsIgnoresPointsTheOriginalNeverCovered()
+        {
+            Polygon original = Square(0, 0, 10);
+            Polygon smaller = Square(0, 0, 5);
+
+            Assert.IsTrue(AutoPolygonizeSelection.KeepsCoveredPoints(original, smaller, [new Vector2(50, 50)]));
+            Assert.IsFalse(AutoPolygonizeSelection.KeepsCoveredPoints(original, smaller, [new Vector2(8, 8)]));
+            Assert.IsFalse(AutoPolygonizeSelection.KeepsCoveredPoints(original, null, [new Vector2(8, 8)]));
+        }
+
+        [TestMethod]
         public void SubtractPartialOverlapRemovesExistingArea()
         {
             Polygon proposed = Square(0, 0, 10);

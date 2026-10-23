@@ -306,7 +306,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             int edgeCleanupRadius,
             double simplifyTolerance,
             out Polygon? polygon,
-            out AutoPolygonizeMaskOverlay? displayMask)
+            out AutoPolygonizeMaskOverlay? displayMask,
+            IReadOnlyList<Geometry.Vector2>? mustContain = null)
         {
             polygon = null;
             displayMask = null;
@@ -322,7 +323,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 Polygon? traced = source.CreatePolygon(holeDropFraction, edgeCleanupRadius);
                 if (traced is not null)
-                    parts.Add(AutoPolygonizeSelection.SimplifyProposal(traced, simplifyTolerance));
+                    parts.Add(AutoPolygonizeSelection.SimplifyProposal(traced, simplifyTolerance, mustContain));
 
                 // The picture is the server's mask; cleanup and snapping change only the outline.
                 cleaned.Add(new AutoPolygonizeMaskOverlay(
@@ -353,7 +354,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return false;
 
             if (parts.Count > 1)
-                merged = AutoPolygonizeSelection.SimplifyProposal(merged, simplifyTolerance);
+                merged = AutoPolygonizeSelection.SimplifyProposal(merged, simplifyTolerance, mustContain);
 
             polygon = merged;
             displayMask = AutoPolygonizeMaskOverlay.TryOr(cleaned);

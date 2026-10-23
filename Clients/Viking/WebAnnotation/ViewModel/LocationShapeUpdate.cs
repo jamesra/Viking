@@ -27,7 +27,11 @@ namespace WebAnnotation.ViewModel
         /// this is the choke point that keeps the database ring at CreatedShapeSimplify size.
         /// </summary>
         /// <returns>False when the location, polygon, or section is missing, or save throws.</returns>
-        public static bool ApplyVolumePolygon(LocationObj modelObj, Polygon volumePolygon, SectionViewerControl parent)
+        public static bool ApplyVolumePolygon(
+            LocationObj modelObj,
+            Polygon volumePolygon,
+            SectionViewerControl parent,
+            IReadOnlyList<Vector2>? mustContain = null)
         {
             if (modelObj is null || volumePolygon is null || parent?.Section is null)
                 return false;
@@ -38,7 +42,8 @@ namespace WebAnnotation.ViewModel
                     modelObj,
                     volumePolygon,
                     parent.Section.ActiveSectionToVolumeTransform,
-                    parent.Downsample);
+                    parent.Downsample,
+                    mustContain);
                 Store.Locations.Save();
                 // In-place shape updates do not raise Location CollectionChanged Add/Replace.
                 ReviewChangeFeedIngress.PushUpsert(modelObj);
@@ -58,6 +63,7 @@ namespace WebAnnotation.ViewModel
         /// One <see cref="AutoPolygonizeSelection.SimplifyForSave"/> pass (the context-menu
         /// "Simplify Polygon" tolerance), then mosaic control points + smoothed volume shape.
         /// <paramref name="downsample"/> is retained for callers but no longer affects the fit.
+        /// <paramref name="mustContain"/> (the user's green points) must stay inside the reduced ring; see <see cref="AutoPolygonizeSelection.SimplifyForSave"/>.
         /// Callers that enqueue a later Save (new structure create) use this; Accept uses
         /// <see cref="ApplyVolumePolygon"/> which saves immediately.
         /// </summary>
@@ -65,7 +71,8 @@ namespace WebAnnotation.ViewModel
             LocationObj modelObj,
             Polygon volumePolygon,
             IVolumeToSectionTransform transform,
-            double downsample)
+            double downsample,
+            IReadOnlyList<Vector2>? mustContain = null)
         {
             if (modelObj is null)
                 throw new ArgumentNullException(nameof(modelObj));
@@ -75,7 +82,7 @@ namespace WebAnnotation.ViewModel
                 throw new ArgumentNullException(nameof(transform));
 
             // Single save-time pass at the "Simplify Polygon" menu tolerance; no second fit follows.
-            Polygon simplified = AutoPolygonizeSelection.SimplifyForSave(volumePolygon);
+            Polygon simplified = AutoPolygonizeSelection.SimplifyForSave(volumePolygon, mustContain);
             modelObj.TypeCode = LocationType.CURVEPOLYGON;
 
             ICollection<Vector2[]> interior = simplified.HasInteriorRings
