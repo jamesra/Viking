@@ -399,6 +399,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
             ClearSegmentationResults();
         }
 
+        /// <summary>
+        /// Last step on an answer's polygons before they are shown. Returns them unchanged here; the paintbrush merges overlapping
+        /// ones. May run on a worker thread, so it must use only its arguments.
+        /// </summary>
+        /// <param name="polygons">The answer's polygons, volume space.</param>
+        /// <param name="foreground">The foreground clicks the answer was made from.</param>
+        protected virtual IReadOnlyList<Polygon> MergeResultPolygons(IReadOnlyList<Polygon> polygons, IReadOnlyList<Geometry.Vector2> foreground) => polygons;
+
         /// <summary>The polygons of the segmentation shown now, largest first. UI thread only.</summary>
         protected IReadOnlyList<Polygon> ResultPolygons =>
             [.. segmentPolygonViews.Select(view => view?.InputPolygon).OfType<Polygon>().OrderByDescending(polygon => polygon.Area)];
@@ -1246,7 +1254,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
-            polygons = SimplifyPreviewRings(polygons);
+            polygons = MergeResultPolygons(SimplifyPreviewRings(polygons), foreground);
 
             if (cancellationToken.IsCancellationRequested || !requestCoalescer.ShouldApply(generation))
                 return;
@@ -1311,12 +1319,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             double? holeDropFraction = null,
             int? edgeCleanupRadius = null)
         {
-            IReadOnlyList<Polygon> polygons = SimplifyPreviewRings(viewportSession.CreatePolygonsFromResponse(
+            IReadOnlyList<Polygon> polygons = MergeResultPolygons(SimplifyPreviewRings(viewportSession.CreatePolygonsFromResponse(
                 response,
                 holeDropFraction,
                 lastSegmentationBackground,
                 edgeCleanupRadius,
-                keepComponentsContainingWorldPoints: lastSegmentationForeground));
+                keepComponentsContainingWorldPoints: lastSegmentationForeground)), lastSegmentationForeground);
             ApplyPolygonViews(polygons, response.Segments.Count);
 #if DEBUG
             CreateDebugMaskOverlay(response, edgeCleanupRadius);

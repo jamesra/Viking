@@ -231,6 +231,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return polygons.FirstOrDefault(polygon => lastForegroundClicks.Any(click => polygon.Covers(click))) ?? polygons[0];
         }
 
+        /// <summary>Overlapping polygons of one answer are shown, and accepted, as one (see <see cref="SegmentationResultMerge"/>).</summary>
+        protected override System.Collections.Generic.IReadOnlyList<Geometry.Polygon> MergeResultPolygons(
+            System.Collections.Generic.IReadOnlyList<Geometry.Polygon> polygons,
+            System.Collections.Generic.IReadOnlyList<GVector2> foreground) =>
+            SegmentationResultMerge.MergeOverlapping(polygons, foreground);
+
         /// <inheritdoc />
         protected override void AcceptBestPolygon()
         {
