@@ -103,7 +103,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <c>SegmentationTileDownsample</c> (default 1). Camera zoom may submit a finer
         /// level down to 1; never coarser than this. A coarser camera still uploads at this
         /// level until <see cref="WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>,
-        /// which cannot exceed 4 (default 2). A camera coarser than that preference does not upload.
+        /// which cannot exceed 6 (default 2). A camera coarser than that preference does not upload.
         /// </summary>
         public static int MaxTileDownsample { get; } =
             int.TryParse(ConfigurationManager.AppSettings["SegmentationTileDownsample"], out int ds) && ds >= 1
@@ -304,7 +304,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// False when this session enforces the auto-polygonize cutoff (<see cref="EnforceAutoDownsampleLimit"/>)
         /// and the live camera is coarser than
         /// <see cref="WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>.
-        /// Equality still submits. The preference is capped at DS 4 (default 2), so a camera at DS 5
+        /// Equality still submits. The preference is capped at DS 6 (default 2), so a camera at DS 7
         /// never uploads. Called by <see cref="UploadCurrentImageAsync"/> and
         /// <see cref="SegmentAsync"/> before any tile is sent. Auto-segment checks the same
         /// cutoff earlier so an idle batch never starts. A manual operation (Resegment, add points,

@@ -45,6 +45,17 @@ namespace WebAnnotationTests
             Assert.IsTrue(vm.SegmentationUseMaskInput);
         }
 
+        /// <summary>The Max Auto-Segment Downsample preference reaches 6 (Muller cell main columns) and no further.</summary>
+        [TestMethod]
+        public void AutoPolygonizeMaxDownsample_AcceptsSixAndClampsAboveIt()
+        {
+            var vm = new AnnotationPreferencesDialogViewModel();
+            vm.AutoPolygonizeMaxDownsample = 6.0;
+            Assert.AreEqual(6.0, vm.AutoPolygonizeMaxDownsample, Tolerance);
+            vm.AutoPolygonizeMaxDownsample = 9.0;
+            Assert.AreEqual(6.0, vm.AutoPolygonizeMaxDownsample, Tolerance);
+        }
+
         [TestMethod]
         public void RevertToOriginal_AfterApplyThenPreview_RestoresAppliedValues()
         {

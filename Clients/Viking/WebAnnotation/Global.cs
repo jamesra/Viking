@@ -210,7 +210,7 @@ namespace WebAnnotation
             private const double MIN_AUTOPOLYGONIZE_RADIUS_NANOMETERS = 0.0;
             private const double MAX_AUTOPOLYGONIZE_RADIUS_NANOMETERS = 10000.0;
             private const double MIN_AUTOPOLYGONIZE_MAX_DOWNSAMPLE = 1.0;
-            private const double MAX_AUTOPOLYGONIZE_MAX_DOWNSAMPLE = 4.0;
+            private const double MAX_AUTOPOLYGONIZE_MAX_DOWNSAMPLE = 6.0;
 
             // Use shared MathUtils.Clamp methods (Math.Clamp not available in .NET Framework 4.8)
 
@@ -873,8 +873,8 @@ namespace WebAnnotation
 
             /// <summary>
             /// Coarsest camera downsample at which auto-segment and tile submit still run. Default 2.
-            /// The preference allows 1 to 4: the value itself still submits and anything coarser does not.
-            /// A saved value above 4 is clamped to 4; a lower saved value still wins.
+            /// The preference allows 1 to 6 (6 is needed for Muller cell main columns): the value itself still submits and anything coarser does not.
+            /// A saved value above 6 is clamped to 6; a lower saved value still wins.
             /// Changing it restarts the idle timer so a view that is now allowed can run without a camera nudge.
             /// </summary>
             public static double AutoPolygonizeMaxDownsample

@@ -824,7 +824,7 @@ namespace WebAnnotation.WPF.Forms
 
         /// <summary>
         /// Coarsest camera downsample at which auto-segment still runs. Default <see cref="DefaultAutoPolygonizeMaxDownsample"/>.
-        /// The preference allows 1 to 4. The value itself still runs; anything coarser is not sent
+        /// The preference allows 1 to 6. The value itself still runs; anything coarser is not sent
         /// to the segmentation service.
         /// </summary>
         private double _autoPolygonizeMaxDownsample;
@@ -833,8 +833,8 @@ namespace WebAnnotation.WPF.Forms
             get => _autoPolygonizeMaxDownsample;
             set
             {
-                // Preference slider steps by 0.25 over [1, 4]; snap so keyboard/bindings match ticks.
-                double clamped = MathUtils.Clamp(Math.Round(value * 4.0) / 4.0, 1.0, 4.0);
+                // Preference slider steps by 0.25 over [1, 6]; snap so keyboard/bindings match ticks.
+                double clamped = MathUtils.Clamp(Math.Round(value * 4.0) / 4.0, 1.0, 6.0);
                 if (Math.Abs(_autoPolygonizeMaxDownsample - clamped) > 0.001)
                 {
                     _autoPolygonizeMaxDownsample = clamped;

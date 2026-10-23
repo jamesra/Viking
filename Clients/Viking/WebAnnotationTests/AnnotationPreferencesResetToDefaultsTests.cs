@@ -85,9 +85,9 @@ namespace WebAnnotationTests
         [TestMethod]
         public void ResetMaxAutoSegmentDownsampleIsInsideTheSliderRange()
         {
-            // AnnotationPreferencesDialog.xaml: the slider runs 1 to 4 in 0.25 steps.
+            // AnnotationPreferencesDialog.xaml: the slider runs 1 to 6 in 0.25 steps.
             double value = ResetViewModel().AutoPolygonizeMaxDownsample;
-            Assert.IsTrue(value >= 1.0 && value <= 4.0, $"Reset value {value} is outside the slider's 1 to 4 range.");
+            Assert.IsTrue(value >= 1.0 && value <= 6.0, $"Reset value {value} is outside the slider's 1 to 6 range.");
             Assert.AreEqual(0.0, Math.IEEERemainder(value * 4.0, 1.0), 1e-9, "Reset value is not on a 0.25 slider tick.");
         }
     }

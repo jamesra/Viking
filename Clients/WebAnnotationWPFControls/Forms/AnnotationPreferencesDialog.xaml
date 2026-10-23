@@ -898,7 +898,7 @@
                             <Slider Grid.Row="0" Grid.Column="1"
                                     Value="{Binding AutoPolygonizeMaxDownsample, Mode=TwoWay}"
                                     Minimum="1"
-                                    Maximum="4"
+                                    Maximum="6"
                                     TickFrequency="0.25"
                                     IsSnapToTickEnabled="True"
                                     SmallChange="0.25"
@@ -916,7 +916,7 @@
                                      FontSize="10"
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
-                                     Text="Auto-segment does not run when the view is zoomed out past this downsample. The value itself still runs, so at 2, DS 2 runs and DS 3 does not. The maximum is 4."/>
+                                     Text="Auto-segment does not run when the view is zoomed out past this downsample. The value itself still runs, so at 2, DS 2 runs and DS 3 does not. The maximum is 6."/>
                         </Grid>
 
                         <CheckBox Margin="0,10,0,0"
