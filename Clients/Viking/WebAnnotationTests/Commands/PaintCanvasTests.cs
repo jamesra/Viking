@@ -197,6 +197,94 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void InteriorPoints_TwoSeparateBlobs_GiveOnePointInEach()
+        {
+            PaintCanvas canvas = NewCanvas();
+            GVector2 left = CenterOf(canvas, 20, 50), right = CenterOf(canvas, 70, 50);
+            canvas.PaintDisc(left, 5, PaintCanvas.Foreground);
+            canvas.PaintDisc(right, 5, PaintCanvas.Foreground);
+
+            var points = canvas.InteriorPoints(PaintCanvas.Foreground);
+
+            Assert.AreEqual(2, points.Count);
+            Assert.IsTrue(points.Exists(p => GVector2.Distance(p, left) <= 2), "a point near the left blob's middle");
+            Assert.IsTrue(points.Exists(p => GVector2.Distance(p, right) <= 2), "a point near the right blob's middle");
+        }
+
+        [TestMethod]
+        public void InteriorPoints_OverlappingStrokes_MergeIntoOnePoint()
+        {
+            PaintCanvas canvas = NewCanvas();
+            canvas.PaintDisc(CenterOf(canvas, 40, 50), 5, PaintCanvas.Foreground);
+            canvas.PaintDisc(CenterOf(canvas, 46, 50), 5, PaintCanvas.Foreground);
+
+            Assert.AreEqual(1, canvas.InteriorPoints(PaintCanvas.Foreground).Count);
+        }
+
+        [TestMethod]
+        public void InteriorPoints_BlobsJoinedLater_BecomeOnePoint()
+        {
+            PaintCanvas canvas = NewCanvas();
+            canvas.PaintDisc(CenterOf(canvas, 20, 50), 4, PaintCanvas.Foreground);
+            canvas.PaintDisc(CenterOf(canvas, 40, 50), 4, PaintCanvas.Foreground);
+            Assert.AreEqual(2, canvas.InteriorPoints(PaintCanvas.Foreground).Count);
+
+            canvas.PaintStroke(CenterOf(canvas, 20, 50), CenterOf(canvas, 40, 50), 3, PaintCanvas.Foreground, erase: false);
+
+            Assert.AreEqual(1, canvas.InteriorPoints(PaintCanvas.Foreground).Count);
+        }
+
+        [TestMethod]
+        public void InteriorPoints_DiagonalNeighboursAreOnePiece()
+        {
+            PaintCanvas canvas = NewCanvas();
+            Dot(canvas, 10, 10, PaintCanvas.Foreground);
+            Dot(canvas, 11, 11, PaintCanvas.Foreground);
+
+            Assert.AreEqual(1, canvas.InteriorPoints(PaintCanvas.Foreground).Count);
+        }
+
+        [TestMethod]
+        public void InteriorPoints_ErasingABlob_DropsItsPoint()
+        {
+            PaintCanvas canvas = NewCanvas();
+            GVector2 left = CenterOf(canvas, 20, 50), right = CenterOf(canvas, 70, 50);
+            canvas.PaintDisc(left, 5, PaintCanvas.Foreground);
+            canvas.PaintDisc(right, 5, PaintCanvas.Foreground);
+
+            canvas.EraseDisc(left, 10, PaintCanvas.Foreground);
+
+            var points = canvas.InteriorPoints(PaintCanvas.Foreground);
+            Assert.AreEqual(1, points.Count);
+            Assert.IsTrue(GVector2.Distance(points[0], right) <= 2);
+        }
+
+        [TestMethod]
+        public void InteriorPoints_IgnoresTheOtherTypeAndEmptyCanvas()
+        {
+            PaintCanvas canvas = NewCanvas();
+            Assert.AreEqual(0, canvas.InteriorPoints(PaintCanvas.Foreground).Count);
+
+            canvas.PaintDisc(CenterOf(canvas, 50, 50), 5, PaintCanvas.Background);
+
+            Assert.AreEqual(0, canvas.InteriorPoints(PaintCanvas.Foreground).Count);
+            Assert.AreEqual(1, canvas.InteriorPoints(PaintCanvas.Background).Count);
+        }
+
+        [TestMethod]
+        public void ComponentMasks_AreCroppedToEachPiece()
+        {
+            PaintCanvas canvas = NewCanvas();
+            canvas.PaintDisc(CenterOf(canvas, 20, 50), 2, PaintCanvas.Foreground);
+            canvas.PaintDisc(CenterOf(canvas, 70, 50), 4, PaintCanvas.Foreground);
+
+            var pieces = canvas.ComponentMasks(PaintCanvas.Foreground);
+
+            Assert.AreEqual(2, pieces.Count);
+            CollectionAssert.AreEquivalent(new[] { 5, 9 }, new[] { pieces[0].Width, pieces[1].Width });
+        }
+
+        [TestMethod]
         public void ToMask_PreservesTheCoarseScale()
         {
             PaintCanvas canvas = new(new MaskLayout(0, 199, 200, 200, 2), 1);

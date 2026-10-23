@@ -189,6 +189,76 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (maxColumn < 0)
                 return null;
 
+            return Crop(minColumn, maxColumn, minRow, maxRow, index => Pixels[index] == value);
+        }
+
+        /// <summary>
+        /// One cropped mask per separate piece of <paramref name="value"/> paint. Pixels that touch, diagonally too, are one piece, so
+        /// strokes that overlap or meet merge into one; pieces ordered top to bottom, left to right by their first pixel.
+        /// </summary>
+        public System.Collections.Generic.List<RasterMask> ComponentMasks(byte value)
+        {
+            System.Collections.Generic.List<RasterMask> masks = [];
+            bool[] visited = new bool[Pixels.Length];
+            System.Collections.Generic.Stack<int> pending = new();
+            for (int start = 0; start < Pixels.Length; start++)
+            {
+                if (visited[start] || Pixels[start] != value)
+                    continue;
+
+                System.Collections.Generic.HashSet<int> members = [];
+                int minColumn = int.MaxValue, maxColumn = -1, minRow = int.MaxValue, maxRow = -1;
+                visited[start] = true;
+                pending.Push(start);
+                while (pending.Count > 0)
+                {
+                    int index = pending.Pop();
+                    members.Add(index);
+                    int column = index % Width, row = index / Width;
+                    minColumn = Math.Min(minColumn, column);
+                    maxColumn = Math.Max(maxColumn, column);
+                    minRow = Math.Min(minRow, row);
+                    maxRow = Math.Max(maxRow, row);
+                    for (int dy = -1; dy <= 1; dy++)
+                    {
+                        for (int dx = -1; dx <= 1; dx++)
+                        {
+                            int c = column + dx, r = row + dy;
+                            if (c < 0 || r < 0 || c >= Width || r >= Height)
+                                continue;
+
+                            int neighbour = r * Width + c;
+                            if (visited[neighbour] || Pixels[neighbour] != value)
+                                continue;
+
+                            visited[neighbour] = true;
+                            pending.Push(neighbour);
+                        }
+                    }
+                }
+
+                masks.Add(Crop(minColumn, maxColumn, minRow, maxRow, members.Contains));
+            }
+
+            return masks;
+        }
+
+        /// <summary>One interior point (see <see cref="RasterMask.InteriorPoint"/>) for each separate piece of <paramref name="value"/> paint.</summary>
+        public System.Collections.Generic.List<Vector2> InteriorPoints(byte value)
+        {
+            System.Collections.Generic.List<Vector2> points = [];
+            foreach (RasterMask piece in ComponentMasks(value))
+            {
+                if (piece.InteriorPoint() is Vector2 point)
+                    points.Add(point);
+            }
+
+            return points;
+        }
+
+        /// <summary>The raster rectangle as a mask (255 where <paramref name="include"/> says the canvas index belongs), placed in volume space.</summary>
+        private RasterMask Crop(int minColumn, int maxColumn, int minRow, int maxRow, Func<int, bool> include)
+        {
             int width = maxColumn - minColumn + 1, height = maxRow - minRow + 1;
             byte[] cropped = new byte[width * height];
             for (int row = 0; row < height; row++)
@@ -196,7 +266,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 int source = (minRow + row) * Width + minColumn;
                 int target = row * width;
                 for (int column = 0; column < width; column++)
-                    cropped[target + column] = Pixels[source + column] == value ? (byte)255 : (byte)0;
+                    cropped[target + column] = include(source + column) ? (byte)255 : (byte)0;
             }
 
             return new RasterMask(

@@ -58,7 +58,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private GVector2? cursorWorld;
         private CurveView? ringView;
         private (GVector2 Center, double Radius, PaintMode Mode, bool Painting)? ringKey;
-        private GVector2? lastForegroundCenter;
+        private System.Collections.Generic.IReadOnlyList<GVector2> lastForegroundClicks = [];
 
         /// <param name="parent">The viewer the command runs in.</param>
         /// <param name="success_callback">Receives the accepted polygon, volume space.</param>
@@ -187,7 +187,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             SegmentationSeed? seed = foreground is null ? null : SegmentationSeed.FromMask(foreground);
             if (seed is null || foreground is null)
             {
-                lastForegroundCenter = null;
+                lastForegroundClicks = [];
                 SetPromptMasks(null, null);
                 RequestSegmentationFromPrompts();
                 return;
@@ -211,13 +211,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 background.Add(backgroundSeed);
             }
 
-            lastForegroundCenter = seed.Value.Center;
-            SetPromptMasks(seed, background);
+            // One click inside each separate piece of paint; pieces that touch or overlap are one piece and share one click.
+            System.Collections.Generic.List<GVector2> clicks = canvas.InteriorPoints(PaintCanvas.Foreground);
+            lastForegroundClicks = clicks;
+            SetPromptMasks(seed, background, clicks);
             RequestSegmentationFromPrompts();
         }
 
         /// <summary>
-        /// The polygon the user most likely means: the largest result that covers the foreground paint's centre, otherwise the largest.
+        /// The polygon the user most likely means: the largest result that covers a foreground click, otherwise the largest.
         /// Null when there is no result yet.
         /// </summary>
         private Geometry.Polygon? BestPolygon()
@@ -226,9 +228,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (polygons.Count == 0)
                 return null;
 
-            return lastForegroundCenter is GVector2 center
-                ? polygons.FirstOrDefault(polygon => polygon.Covers(center)) ?? polygons[0]
-                : polygons[0];
+            return polygons.FirstOrDefault(polygon => lastForegroundClicks.Any(click => polygon.Covers(click))) ?? polygons[0];
         }
 
         /// <inheritdoc />

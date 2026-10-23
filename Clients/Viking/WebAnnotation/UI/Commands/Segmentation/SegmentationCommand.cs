@@ -364,16 +364,18 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Replaces the mask prompts sent with every request: <paramref name="foreground"/> is the object, <paramref name="background"/>
         /// is what it must not include. Either may be null. Call <see cref="RequestSegmentationFromPrompts"/> afterwards. UI thread only.
         /// </summary>
-        protected void SetPromptMasks(SegmentationSeed? foreground, SegmentationMaskUnion? background)
+        protected void SetPromptMasks(SegmentationSeed? foreground, SegmentationMaskUnion? background, IReadOnlyList<Geometry.Vector2>? foregroundClicks = null)
         {
             startingBoxes = foreground is SegmentationSeed seed ? [seed] : [];
             derivedBackgroundMask = background;
 
-            // SegmentAsync refuses a request with no click, and the result is trimmed to the pieces holding a foreground point, so the
-            // seed's interior point goes along as the one click, as the edited-mask path does.
+            // SegmentAsync refuses a request with no click, and the result is trimmed to the pieces holding a foreground point, so
+            // each separate piece of the object needs a click inside it (the seed's own interior point when none are given).
             foregroundPoints.Clear();
             backgroundPoints.Clear();
-            if (foreground is SegmentationSeed clickSeed)
+            if (foregroundClicks is { Count: > 0 })
+                foregroundPoints.AddRange(foregroundClicks);
+            else if (foreground is SegmentationSeed clickSeed)
                 foregroundPoints.Add(clickSeed.Center);
         }
 
