@@ -61,7 +61,8 @@ namespace Viking.SectionCorrectionBuilder
         /// Version of the build algorithm stamped into manifests. Bump it whenever a change to the fit or pooling code
         /// would alter published values, so existing sets are rebuilt.
         /// </summary>
-        public const int BuilderVersion = 1;
+        /// <remarks>2: process triples no longer use a branch node as A, B or C (JointRegistrationSolver.IsBranchTriple).</remarks>
+        public const int BuilderVersion = 2;
 
         /// <summary>Provenance method of sets built by <see cref="JointRegistrationSolver"/>.</summary>
         const string JointMethod = "joint-second-difference-v1";
