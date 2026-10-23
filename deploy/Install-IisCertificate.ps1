@@ -33,6 +33,8 @@
 
 .PARAMETER RemoveOld
     Delete the previous certificate from LocalMachine\My after rebinding, when no binding uses it any more.
+    Also deletes any other LocalMachine\My certificate with the same subject as the new one, so a
+    FindBySubjectName serviceCertificate stays unambiguous after every renewal. Always pass it on renewals.
 
 .EXAMPLE
     .\Install-IisCertificate.ps1 -PfxPath C:\certs\viking\cert.pfx -HostHeader websvc.connectomes.pitt.edu
@@ -113,6 +115,13 @@ foreach ($h in $HostHeader) {
 }
 
 if ($RemoveOld) {
+    # Also collect every other LocalMachine\My cert with the same subject: WCF serviceCertificate
+    # x509FindType="FindBySubjectName" throws "Found multiple X.509 certificates" (HTTP 500 on every
+    # Service.svc) when a renewal leaves the superseded certificate beside the new one, even if no
+    # binding references the old one any more.
+    Get-ChildItem Cert:\LocalMachine\My |
+        Where-Object { $_.Subject -eq $probe.Subject -and $_.Thumbprint -ne $thumb } |
+        ForEach-Object { $oldThumbs.Add($_.Thumbprint) }
     $inUse = @(Get-WebBinding -Protocol https | ForEach-Object { $_.certificateHash })
     foreach ($old in ($oldThumbs | Select-Object -Unique)) {
         if ($inUse -contains $old) { continue }

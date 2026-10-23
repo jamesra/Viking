@@ -180,7 +180,7 @@ foreach ($a in $Action) {
             Assert-Setting 'PfxPath' $PfxPath 'VIKING_IIS_PFX_PATH'
             Assert-Setting 'VIKING_HOSTNAME_WEBSVC' $env:VIKING_HOSTNAME_WEBSVC 'VIKING_HOSTNAME_WEBSVC'
             $script = Join-Path $PSScriptRoot 'Install-IisCertificate.ps1'
-            $certArgs = @{ PfxPath = $PfxPath; HostHeader = @($env:VIKING_HOSTNAME_WEBSVC); SiteName = $SiteName }
+            $certArgs = @{ PfxPath = $PfxPath; HostHeader = @($env:VIKING_HOSTNAME_WEBSVC); SiteName = $SiteName; RemoveOld = $true }
             if ($PfxPassword) { $certArgs.PfxPassword = $PfxPassword }
             if ($PSCmdlet.ShouldProcess($PfxPath, 'Import certificate and rebind https')) {
                 & $script @certArgs
