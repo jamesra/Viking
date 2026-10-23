@@ -178,6 +178,32 @@ namespace Viking.VolumeModel
             return innerPolygons.Any(ip => ip is null) ? null : WithInteriorRings(new Polygon(SectionPositions), innerPolygons);
         }
 
+        /// <summary>
+        /// Maps a section-space circle into volume space. The result is a circle whose centre is the mapped centre and whose radius
+        /// follows the transform's scale, estimated by mapping four rim points too (VikingAU's rule, see <see cref="CircleMapping"/>).
+        /// </summary>
+        /// <returns>The volume-space circle, or null when the centre, or every rim point, cannot be mapped.</returns>
+        public static Circle? TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Circle shape) =>
+            TryMapCircle(mapper, shape, sectionToVolume: true);
+
+        /// <summary>
+        /// Maps a volume-space circle into section space; see <see cref="TryMapShapeSectionToVolume(IVolumeToSectionTransform, Circle)"/>.
+        /// </summary>
+        /// <returns>The section-space circle, or null when the centre, or every rim point, cannot be mapped.</returns>
+        public static Circle? TryMapShapeVolumeToSection(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Circle shape) =>
+            TryMapCircle(mapper, shape, sectionToVolume: false);
+
+        private static Circle? TryMapCircle(Viking.VolumeModel.IVolumeToSectionTransform mapper, Circle shape, bool sectionToVolume)
+        {
+            Vector2[] points = CircleMapping.SamplePoints(shape.Center, shape.Radius);
+            bool[] mapped = sectionToVolume ? mapper.TrySectionToVolume(points, out Vector2[] mappedPoints) : mapper.TryVolumeToSection(points, out mappedPoints);
+            if (CircleMapping.TryCircleFromMappedPoints(shape.Radius, mappedPoints, mapped, out Circle result))
+                return result;
+
+            Trace.WriteLine("TryMapCircle: circle " + shape + " was unmappable.", "WebAnnotation");
+            return null;
+        }
+
         private static Polygon WithInteriorRings(Polygon exterior, Polygon[] innerPolygons)
         {
             foreach (Polygon inner_poly in innerPolygons)

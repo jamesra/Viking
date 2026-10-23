@@ -53,7 +53,14 @@ namespace WebAnnotation.Tools
                 if (shapeType == LocationType.OPENCURVE || shapeType == LocationType.CLOSEDCURVE)
                     location.Width = 8.0; // Viking's width for new curves
                 if (shapeType == LocationType.CIRCLE)
-                    LocationActions.UpdateCircleLocationNoSaveCallback(location, world, mosaic, 16);
+                {
+                    // 16 is a volume-space radius (the user draws on screen); the mosaic circle is mapped from it.
+                    if (!LocationActions.UpdateCircleLocationNoSaveCallback(location, mapper, world, 16))
+                    {
+                        context.SetStatus("This circle could not be mapped onto the section");
+                        return;
+                    }
+                }
                 else if (volumePoints != null && volumePoints.Length > 0)
                     location.SetShapeFromPointsInVolume(mapper, volumePoints, null);
 
@@ -108,7 +115,14 @@ namespace WebAnnotation.Tools
                 LocationType type = shapeType == LocationType.CIRCLE ? LocationType.CIRCLE : existing.TypeCode;
                 LocationObj created = new(existing.Parent, context.SectionNumber, type);
                 if (type == LocationType.CIRCLE)
-                    LocationActions.UpdateCircleLocationNoSaveCallback(created, world, mosaic, Math.Max(existing.Radius, Global.MinRadius));
+                {
+                    // Keep the size the location has in the volume: its volume radius (its mosaic Radius mapped through its own
+                    // section's transform), then map that circle into this section.
+                    Circle? existingVolumeCircle = LocationActions.TryGetVolumeCircle(existing, context.Transforms.GetSectionToVolumeTransform(existingSection));
+                    double volumeRadius = existingVolumeCircle?.Radius ?? Global.MinRadius;
+                    if (!LocationActions.UpdateCircleLocationNoSaveCallback(created, mapper, world, volumeRadius))
+                        return;
+                }
                 else if (volumePoints != null && volumePoints.Length > 0)
                     created.SetShapeFromPointsInVolume(mapper, volumePoints, null);
 

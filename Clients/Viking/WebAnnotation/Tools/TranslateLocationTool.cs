@@ -15,6 +15,8 @@ namespace WebAnnotation.Tools
         readonly AnnotationToolContext _context;
         readonly LocationObj _location;
         readonly LocationTypeKind _kind;
+        /// <summary>A circle keeps its size in the volume (what the user sees) as it is dragged; its mosaic radius is mapped at each new position. Null when it cannot be mapped.</summary>
+        readonly double? _volumeRadius;
         readonly IShape2D _originalMosaic;
         readonly IShape2D _originalVolume;
         readonly Viking.AnnotationServiceTypes.Interfaces.DBACTION _originalAction;
@@ -30,6 +32,7 @@ namespace WebAnnotation.Tools
                 || location.TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POINT
                 ? LocationTypeKind.Circle
                 : LocationTypeKind.Shape;
+            _volumeRadius = LocationActions.TryGetVolumeCircle(location, context.Mapper)?.Radius;
             _originalMosaic = location.MosaicShape;
             _originalVolume = location.VolumeShape;
             _originalAction = location.DBAction;
@@ -48,8 +51,11 @@ namespace WebAnnotation.Tools
             if (!mapper.TryVolumeToSection(world, out Vector2 mosaic))
                 return;
 
-            if (_kind == LocationTypeKind.Circle)
-                LocationActions.UpdateCircleLocationNoSaveCallback(_location, world, mosaic, _location.Radius);
+            if (_kind == LocationTypeKind.Circle && _volumeRadius is double volumeRadius)
+            {
+                if (!LocationActions.UpdateCircleLocationNoSaveCallback(_location, mapper, world, volumeRadius))
+                    return;
+            }
             else
             {
                 if (_location.MosaicShape != null)

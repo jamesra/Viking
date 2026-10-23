@@ -20,6 +20,7 @@ The `.mdc` frontmatter `globs:` line says which paths each rule covers.
 |------|-----------|
 | `.cursor/rules/Content-Pipeline.mdc` | Monogame content pipeline (`Content.mgcb`, `Content/**`) |
 | `.cursor/rules/Database-persistence.mdc` | `DataContext*`/`DataModel*`, `Migrations/**`, `Servers/SQL/**`, `appsettings*.json` |
+| `.cursor/rules/circle-mapping-scale.mdc` | Circle annotations: centre from `X,Y`/`VolumeX,VolumeY`; radius across mosaic/volume by five-point mean scale (`Clients/VolumeModel`, mapping/annotation geometry, `WebAnnotation`, annotation servers) |
 | `.cursor/rules/contours-to-mesh.mdc` | `MorphologyMesh/**`, Bajaj/Mesh tests in MonogameTestbed, `Geometry/**/Meshing/**` |
 | `.cursor/rules/coordinate-precision.mdc` | `Geometry/Transforms`, `Primitives`, `CurveFitting`, `Meshing`, `Clients/VolumeModel` |
 | `.cursor/rules/coordinate-spaces.mdc` | `Geometry`, `Annotation*`, `WebAnnotation`, `Morphology*`, views/viewmodels (mosaic vs volume vs screen) |

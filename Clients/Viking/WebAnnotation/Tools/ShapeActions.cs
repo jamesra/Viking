@@ -28,7 +28,7 @@ namespace WebAnnotation.Tools
         {
             IVolumeToSectionTransform mapper = context.Mapper;
             Vector2 mosaicCenter = location.Position;
-            if (!mapper.TrySectionToVolume(mosaicCenter, out Vector2 volumeCenter))
+            if (!mapper.TrySectionToVolume(mosaicCenter, out _))
             {
                 context.SetStatus("This location could not be mapped onto the volume");
                 return Task.CompletedTask;
@@ -36,9 +36,12 @@ namespace WebAnnotation.Tools
 
             return ChangeAndSaveAsync(context, location, "Change Shape", () =>
             {
-                double radius = location.Radius;
+                // location.Radius is a mosaic radius: the circle starts in mosaic space and its volume circle is mapped from it.
+                double mosaicRadius = location.Radius;
+                if (!LocationActions.UpdateCircleLocationFromMosaicNoSaveCallback(location, mapper, mosaicCenter, mosaicRadius))
+                    return false;
+
                 location.TypeCode = LocationType.CIRCLE;
-                LocationActions.UpdateCircleLocationNoSaveCallback(location, volumeCenter, mosaicCenter, radius);
                 return true;
             });
         }

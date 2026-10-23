@@ -324,10 +324,19 @@ namespace WebAnnotation.ReviewFeed
             double maxY = bbox.Top;
             if (ring.Length == 0 && (maxX - minX) <= 1e-6 && (maxY - minY) <= 1e-6)
             {
-                // No polygon: circle from radius. Prefer volume center when present.
-                bool haveVx = TryReadDouble(Prop(row, "VolumeX"), out double vx);
-                bool haveVy = TryReadDouble(Prop(row, "VolumeY"), out double vy);
-                if (haveVx && haveVy)
+                // No polygon: a circle from its centre and Radius. OData's Radius is the MOSAIC radius, so it pairs with the mosaic
+                // centre X, Y; pairing it with the volume centre would draw a volume-space box with a mosaic-space radius
+                // (the scale differs; see .cursor/rules/circle-mapping-scale.mdc). The volume centre is used only when
+                // X, Y are missing, and then the box is approximate.
+                bool haveX = TryReadDouble(Prop(row, "X"), out double mosaicX);
+                bool haveY = TryReadDouble(Prop(row, "Y"), out double mosaicY);
+                if (haveX && haveY)
+                {
+                    centerX = mosaicX;
+                    centerY = mosaicY;
+                    space = ReviewChangeCoordinateSpace.Mosaic;
+                }
+                else if (TryReadDouble(Prop(row, "VolumeX"), out double vx) & TryReadDouble(Prop(row, "VolumeY"), out double vy))
                 {
                     centerX = vx;
                     centerY = vy;
@@ -335,10 +344,8 @@ namespace WebAnnotation.ReviewFeed
                 }
                 else
                 {
-                    if (!TryReadDouble(Prop(row, "X"), out centerX))
-                        centerX = 0;
-                    if (!TryReadDouble(Prop(row, "Y"), out centerY))
-                        centerY = 0;
+                    centerX = 0;
+                    centerY = 0;
                     space = ReviewChangeCoordinateSpace.Mosaic;
                 }
 

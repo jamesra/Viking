@@ -114,9 +114,7 @@ namespace WebAnnotation.Tools
                 return false;
 
             Circle mosaicCircle = new(circle.Position, circle.Radius);
-            return CircleSegmentationPrompts.TryCreateStartingPrompt(
-                CircleSegmentationPrompts.ToVolumePoints(CircleSegmentationPrompts.CreateMosaicRadiusPoints(mosaicCircle), mapper),
-                out prompt);
+            return CircleSegmentationPrompts.TryCreateStartingPrompt(mosaicCircle, mapper, out prompt);
         }
 
         public string StatusText => _session.HasClient

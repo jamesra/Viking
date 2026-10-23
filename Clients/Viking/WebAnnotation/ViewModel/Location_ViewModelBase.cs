@@ -624,10 +624,7 @@ namespace WebAnnotation.ViewModel
                 // The same starting prompt auto-polygonize sends: the inscribed square and four axis clicks.
                 Circle mosaic_circle = GetCircleFromLocation();
                 if (!CircleSegmentationPrompts.TryCreateStartingPrompt(
-                        CircleSegmentationPrompts.ToVolumePoints(
-                            CircleSegmentationPrompts.CreateMosaicRadiusPoints(mosaic_circle),
-                            parent.Section.ActiveSectionToVolumeTransform),
-                        out CircleSegmentationPrompts.StartingPrompt startingPrompt))
+                        mosaic_circle, parent.Section.ActiveSectionToVolumeTransform, out CircleSegmentationPrompts.StartingPrompt startingPrompt))
                 {
                     MessageBox.Show("This circle could not be mapped onto the volume.", "Segment", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;

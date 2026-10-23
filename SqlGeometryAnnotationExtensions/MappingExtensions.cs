@@ -121,8 +121,8 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
-        /// In Viking CURVEPOLYGONS are always circles.  When we map the points through a transform the results are not a circle. 
-        /// This function maps the center and preserves the radius, at the cost of not adapting the radius.  
+        /// In Viking CURVEPOLYGONS are always circles.  When we map the points through a transform the results are not a circle.
+        /// This maps the centre and four rim points and averages the scale they give, so the radius follows the transform (see <see cref="Geometry.CircleMapping"/>).
         /// </summary>
         /// <param name="mapper"></param>
         /// <param name="shape"></param>
@@ -130,8 +130,8 @@ namespace Viking.VolumeModel
         private static Microsoft.SqlServer.Types.SqlGeometry TryMapCurvePolygonSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape) => TryMapCurvePolygonCircle(mapper, shape, useSectionToVolumeDirection: true);
 
         /// <summary>
-        /// In Viking CURVEPOLYGONS are always circles.  When we map the points through a transform the results are not a circle. 
-        /// This function maps the center and preserves the radius, at the cost of not adapting the radius.
+        /// In Viking CURVEPOLYGONS are always circles.  When we map the points through a transform the results are not a circle.
+        /// This maps the centre and four rim points and averages the scale they give, so the radius follows the transform (see <see cref="Geometry.CircleMapping"/>).
         /// </summary>
         /// <param name="mapper"></param>
         /// <param name="shape"></param>
@@ -147,35 +147,21 @@ namespace Viking.VolumeModel
                 throw new ArgumentException("CURVEPOLYGON shape argument required");
             }
 
+            // The ring of a circle is symmetric about its centre, so the centroid is the centre and the bounding box spans the diameter.
             Vector2 center = shape.Centroid();
             Rectangle bbox = shape.BoundingBox();
+            double radius = Math.Max(bbox.Width, bbox.Height) / 2.0;
 
-            //In some cases the transform can have significant distortions corrected.  To handle this we map points on the circle at the cardinal directions and then recalculate the radius
-            Vector2[] points =
-            [
-                center,
-                new(bbox.Left, center.Y),
-                new(center.X, bbox.Bottom),
-                new(bbox.Right, center.Y),
-                new(center.X, bbox.Top)
-            ];
-
-            bool[] mappedCorrectly = useSectionToVolumeDirection ?
-                mapper.TrySectionToVolume(points, out Vector2[] mappedPoints) :
-                mapper.TryVolumeToSection(points, out mappedPoints);
-
-            if (!mappedCorrectly[0])
+            // Five-point scale rule (see CircleMapping): the radius follows the transform's scale.
+            Circle source = new(center, radius);
+            Circle? mapped = useSectionToVolumeDirection ? mapper.TryMapShapeSectionToVolume(source) : mapper.TryMapShapeVolumeToSection(source);
+            if (mapped is not Circle result)
             {
-                Trace.WriteLine("TryMapCurvePolygonSectionToVolume: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
+                Trace.WriteLine("TryMapCurvePolygonCircle: Shape #" + shape.ToString() + " was unmappable.", "WebAnnotation");
                 return null;
             }
 
-            Vector2 mappedCenter = mappedPoints[0];
-
-            double radiiSquared = mappedPoints.Where((p, i) => i > 0 && mappedCorrectly[i]).Select(p => Vector2.DistanceSquared(mappedCenter, p)).Median();
-            double radius = Math.Sqrt(radiiSquared);
-
-            return SqlGeometryUtils.Extensions.ToCircle(mappedCenter.X, mappedCenter.Y, 0, radius);
+            return SqlGeometryUtils.Extensions.ToCircle(result.Center.X, result.Center.Y, 0, result.Radius);
         }
     }
 }

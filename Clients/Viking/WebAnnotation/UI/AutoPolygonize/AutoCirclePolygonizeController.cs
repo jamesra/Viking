@@ -897,10 +897,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     return false;
 
                 if (!CircleSegmentationPrompts.TryCreateStartingPrompt(
-                        CircleSegmentationPrompts.ToVolumePoints(
-                            CircleSegmentationPrompts.CreateMosaicRadiusPoints(new Circle(circle.Position, circle.Radius)),
-                            parent.ActiveSectionToVolumeTransform),
-                        out CircleSegmentationPrompts.StartingPrompt startingPrompt))
+                        new Circle(circle.Position, circle.Radius), parent.ActiveSectionToVolumeTransform, out CircleSegmentationPrompts.StartingPrompt startingPrompt))
                 {
                     return false;
                 }
@@ -1338,10 +1335,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                     Stopwatch proposalTimer = Stopwatch.StartNew();
                     if (!CircleSegmentationPrompts.TryCreateStartingPrompt(
-                            CircleSegmentationPrompts.ToVolumePoints(
-                                CircleSegmentationPrompts.CreateMosaicRadiusPoints(new Circle(circle.Position, circle.Radius)),
-                                transform),
-                            out CircleSegmentationPrompts.StartingPrompt startingPrompt))
+                        new Circle(circle.Position, circle.Radius), transform, out CircleSegmentationPrompts.StartingPrompt startingPrompt))
                     {
                         continue;
                     }
@@ -2189,10 +2183,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 IVolumeToSectionTransform transform = parent.ActiveSectionToVolumeTransform;
                 if (!CircleSegmentationPrompts.TryCreateStartingPrompt(
-                        CircleSegmentationPrompts.ToVolumePoints(
-                            CircleSegmentationPrompts.CreateMosaicRadiusPoints(new Circle(circle.Position, circle.Radius)),
-                            transform),
-                        out CircleSegmentationPrompts.StartingPrompt startingPrompt))
+                        new Circle(circle.Position, circle.Radius), transform, out CircleSegmentationPrompts.StartingPrompt startingPrompt))
                 {
                     return;
                 }
@@ -2647,7 +2638,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 excludeParentId);
             // Circle annotations of other structures count as well, so a cell that is still only a circle is not painted over.
             List<Polygon> circleDisks = AutoPolygonizeSelection.CollectOverlappingCircleDisks(
-                AutoPolygonizeSelection.ToCircleFootprints(nearby),
+                AutoPolygonizeSelection.ToCircleFootprints(nearby, parent.ActiveSectionToVolumeTransform),
                 proposed,
                 excludeLocationIds,
                 parent.SectionNumber,

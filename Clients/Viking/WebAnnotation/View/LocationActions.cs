@@ -153,18 +153,21 @@ namespace WebAnnotation
                     return null;
                 case LocationAction.SCALETRANSLATE:
                 case LocationAction.TRANSLATE:
-                    VolumeCircleCenter = section_mapper.SectionToVolume(loc.Position);
+                    // The command works in volume space, so it gets the circle's volume radius (mapped, not the mosaic Radius).
+                    if (TryGetVolumeCircle(loc, section_mapper) is not Circle volumeCircle)
+                        return null;
+
                     return new TranslateCircleLocationCommand(Parent,
-                                                              new Circle(VolumeCircleCenter, loc.Radius),
+                                                              volumeCircle,
                                                               volumePosition,
                                                               loc.Parent.Type.Color.ToXNAColor(1f),
-                                                              (NewVolumePosition, NewMosaicPosition, NewRadius) => UpdateCircleLocationCallback(loc, NewVolumePosition, NewMosaicPosition, NewRadius));
+                                                              (NewVolumePosition, NewMosaicPosition, NewRadius) => UpdateCircleLocationCallback(loc, section_mapper, NewVolumePosition, NewRadius));
                 case LocationAction.SCALE:
                     VolumeCircleCenter = section_mapper.SectionToVolume(loc.Position);
                     return new ResizeCircleCommand(Parent,
                             System.Drawing.Color.FromArgb((int)loc.Parent.Type.Color).SetAlpha(0.5f),
                             VolumeCircleCenter,
-                            (radius) => WebAnnotation.LocationActions.UpdateCircleLocationCallback(loc, loc.VolumePosition, loc.Position, radius));
+                            (radius) => WebAnnotation.LocationActions.UpdateCircleLocationCallback(loc, section_mapper, VolumeCircleCenter, radius));
                 case LocationAction.ADJUST:
                     return null;
                 case LocationAction.CREATESTRUCTURE:
@@ -175,8 +178,12 @@ namespace WebAnnotation
                     if (loc.Parent?.Type is null)
                         return null;
 
+                    // The source circle is on another section: its volume radius comes from that section's own transform.
+                    if (TryGetVolumeCircle(loc, Parent.Volume.GetSectionToVolumeTransform((int)loc.Z)) is not Circle sourceVolumeCircle)
+                        return null;
+
                     return new TranslateCircleLocationCommand(Parent,
-                                                                new Circle(volumePosition, loc.Radius),
+                                                                new Circle(volumePosition, sourceVolumeCircle.Radius),
                                                                 loc.Parent.Type.Color.ToXNAColor(1f),
                                                                 new TranslateCircleLocationCommand.OnCommandSuccess((NewVolumePosition, NewMosaicPosition, NewRadius) =>
                                                                     QueueLinkedCircle(Parent, loc, NewVolumePosition, NewRadius)));
@@ -657,8 +664,14 @@ namespace WebAnnotation
                 return;
             }
 
+            // newRadius is a volume radius (the drag happened in volume space); the open section's mosaic radius is mapped from it.
             LocationObj newLoc = new(source.Parent, parent.Section.Number, source.TypeCode);
-            UpdateCircleLocationNoSaveCallback(newLoc, newVolumePosition, mosaic, newRadius);
+            if (!UpdateCircleLocationNoSaveCallback(newLoc, destination, newVolumePosition, newRadius))
+            {
+                MessageBox.Show(parent, "The circle is outside mappable volume space, location not created", "Recoverable Error");
+                return;
+            }
+
             parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [parent, source, newLoc]);
         }
 
@@ -701,10 +714,14 @@ namespace WebAnnotation
             loc.Width = NewWidth;
         }
 
-        public static void UpdateCircleLocationCallback(LocationObj loc, Geometry.Vector2 WorldPosition, Geometry.Vector2 MosaicPosition, double NewRadius)
+        /// <summary>
+        /// Sets a circle from a circle in volume space (what the user drew on screen) and saves. The mosaic circle is derived by
+        /// mapping, so its radius follows the section's scale. See <see cref="UpdateCircleLocationNoSaveCallback(LocationObj, IVolumeToSectionTransform, Geometry.Vector2, double)"/>.
+        /// </summary>
+        public static void UpdateCircleLocationCallback(LocationObj loc, IVolumeToSectionTransform mapper, Geometry.Vector2 volumeCenter, double volumeRadius)
         {
-            UpdateCircleLocationNoSaveCallback(loc, WorldPosition, MosaicPosition, NewRadius);
-            _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+            if (UpdateCircleLocationNoSaveCallback(loc, mapper, volumeCenter, volumeRadius))
+                _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
         }
 
         public static void UpdateCircleLocationCallback(LocationObj loc, Geometry.Vector2 WorldPosition, Geometry.Vector2 MosaicPosition)
@@ -744,22 +761,59 @@ namespace WebAnnotation
 
         }
 
-        public static void UpdateCircleLocationNoSaveCallback(LocationObj loc, Geometry.Vector2 WorldPosition, Geometry.Vector2 MosaicPosition, double NewRadius)
+        /// <summary>
+        /// Sets a circle from a circle in volume space, which is what the user sees and draws. <c>VolumeShape</c> is that circle;
+        /// <c>MosaicShape</c> is the same circle mapped through <paramref name="mapper"/> with the five-point scale rule
+        /// (<see cref="Geometry.CircleMapping"/>), so the mosaic radius follows the section's scale and is never a copy of the volume radius.
+        /// Radii below <see cref="WebAnnotation.Global.MinRadius"/> are raised to it. Nothing is changed when the circle cannot be mapped.
+        /// </summary>
+        /// <returns>False when the circle could not be mapped into the section.</returns>
+        public static bool UpdateCircleLocationNoSaveCallback(LocationObj loc, IVolumeToSectionTransform mapper, Geometry.Vector2 volumeCenter, double volumeRadius)
         {
-            if (NewRadius < WebAnnotation.Global.MinRadius)
+            volumeRadius = Math.Max(volumeRadius, WebAnnotation.Global.MinRadius);
+            if (mapper.TryMapShapeVolumeToSection(new Circle(volumeCenter, volumeRadius)) is not Circle mosaic)
             {
-                NewRadius = WebAnnotation.Global.MinRadius;
+                System.Diagnostics.Trace.WriteLine($"Circle {loc.ID} could not be mapped into section {loc.Z}; it was left unchanged.", "WebAnnotation");
+                return false;
             }
 
-            loc.MosaicShape = SqlGeometryUtils.Extensions.ToCircle(MosaicPosition.X,
-                                           MosaicPosition.Y,
-                                           loc.Z,
-                                           NewRadius).ToShape2D();
+            loc.MosaicShape = SqlGeometryUtils.Extensions.ToCircle(mosaic.Center.X, mosaic.Center.Y, loc.Z, mosaic.Radius).ToShape2D();
+            loc.VolumeShape = SqlGeometryUtils.Extensions.ToCircle(volumeCenter.X, volumeCenter.Y, loc.Z, volumeRadius).ToShape2D();
+            return true;
+        }
 
-            loc.VolumeShape = SqlGeometryUtils.Extensions.ToCircle(WorldPosition.X,
-                                   WorldPosition.Y,
-                                   loc.Z,
-                                   NewRadius).ToShape2D();
+        /// <summary>
+        /// Sets a circle from a circle in mosaic space (for example "Convert to circle" from a location's mosaic radius).
+        /// <c>MosaicShape</c> is that circle; <c>VolumeShape</c> is the same circle mapped to volume space with the five-point
+        /// scale rule. Radii below <see cref="WebAnnotation.Global.MinRadius"/> are raised to it. Nothing is changed when it cannot be mapped.
+        /// </summary>
+        /// <returns>False when the circle could not be mapped onto the volume.</returns>
+        public static bool UpdateCircleLocationFromMosaicNoSaveCallback(LocationObj loc, IVolumeToSectionTransform mapper, Geometry.Vector2 mosaicCenter, double mosaicRadius)
+        {
+            mosaicRadius = Math.Max(mosaicRadius, WebAnnotation.Global.MinRadius);
+            if (mapper.TryMapShapeSectionToVolume(new Circle(mosaicCenter, mosaicRadius)) is not Circle volume)
+            {
+                System.Diagnostics.Trace.WriteLine($"Circle {loc.ID} could not be mapped onto the volume from section {loc.Z}; it was left unchanged.", "WebAnnotation");
+                return false;
+            }
+
+            loc.MosaicShape = SqlGeometryUtils.Extensions.ToCircle(mosaicCenter.X, mosaicCenter.Y, loc.Z, mosaicRadius).ToShape2D();
+            loc.VolumeShape = SqlGeometryUtils.Extensions.ToCircle(volume.Center.X, volume.Center.Y, loc.Z, volume.Radius).ToShape2D();
+            return true;
+        }
+
+        /// <summary>
+        /// The location's circle in volume space, mapped from its mosaic circle (centre <see cref="LocationObj.Position"/>,
+        /// radius <see cref="LocationObj.Radius"/>, which is a mosaic radius) with the five-point scale rule. The stored
+        /// <c>VolumeShape</c> is not used: the server does not return a circle's volume radius, and a stale shape moves a circle during a command.
+        /// </summary>
+        /// <returns>The circle, or null when it cannot be mapped onto the volume.</returns>
+        public static Circle? TryGetVolumeCircle(LocationObj loc, IVolumeToSectionTransform mapper)
+        {
+            if (mapper.TryMapShapeSectionToVolume(new Circle(loc.Position, loc.Radius)) is not Circle volume)
+                return null;
+
+            return new Circle(new Geometry.Vector2(volume.Center.X, volume.Center.Y), volume.Radius);
         }
     }
 }

@@ -149,8 +149,8 @@ namespace WebAnnotationModel
         }
          
         /// <summary>
-        /// In Viking CURVEPOLYGONS are always circles.  When we map the points through a transform the results are not a circle. 
-        /// This function maps the center and preserves the radius, at the cost of not adapting the radius.  
+        /// In Viking CURVEPOLYGONS are always circles.  When we map the points through a transform the results are not a circle.
+        /// This maps the centre and four rim points and averages the scale they give, so the radius follows the transform (see <see cref="CircleMapping"/>).
         /// </summary>
         /// <param name="mapper"></param>
         /// <param name="shape"></param>
@@ -161,8 +161,8 @@ namespace WebAnnotationModel
         }
 
         /// <summary>
-        /// In Viking CURVEPOLYGONS are always circles.  When we map the points through a transform the results are not a circle. 
-        /// This function maps the center and preserves the radius, at the cost of not adapting the radius.
+        /// In Viking CURVEPOLYGONS are always circles.  When we map the points through a transform the results are not a circle.
+        /// This maps the centre and four rim points and averages the scale they give, so the radius follows the transform (see <see cref="CircleMapping"/>).
         /// </summary>
         /// <param name="mapper"></param>
         /// <param name="shape"></param>
@@ -181,37 +181,32 @@ namespace WebAnnotationModel
                 throw new ArgumentException($"{nameof(shape.ShapeType)} must be {nameof(ShapeType2D.Circle)}");
             }
 
-            Vector2 center = ((ICentroid)shape).Centroid.ToVector2(); 
-            Rectangle bbox = shape.BoundingBox;
-
-            //In some cases the transform can have significant distortions corrected.  To handle this we map points on the circle at the cardinal directions and then recalculate the radius
-            var points = new Vector2[]
+            Vector2 center;
+            double radius;
+            if (shape is ICircle2D circle)
             {
-                center,
-                new Vector2(bbox.Left, center.Y),
-                new Vector2(center.X, bbox.Bottom),
-                new Vector2(bbox.Right, center.Y),
-                new Vector2(center.X, bbox.Top)
-            };
-
-            Vector2[] mappedPoints;
-            bool[] mappedCorrectly = direction == TransformDirection.SectionToVolume ? 
-                mapper.TrySectionToVolume(points, out mappedPoints) : 
-                mapper.TryVolumeToSection(points, out mappedPoints);
-                
-            if (!mappedCorrectly[0])
+                center = new Vector2(circle.Center.X, circle.Center.Y);
+                radius = circle.Radius;
+            }
+            else
             {
-                Trace.WriteLine($"TryMapCurvePolygonSectionToVolume: Shape #{shape} was unmappable.", "WebAnnotation");
+                center = ((ICentroid)shape).Centroid.ToVector2();
+                Rectangle bbox = shape.BoundingBox;
+                radius = Math.Max(bbox.Width, bbox.Height) / 2.0;
+            }
+
+            // Five-point scale rule (see CircleMapping): the radius follows the transform's scale.
+            Circle source = new Circle(center, radius);
+            Circle? mapped = direction == TransformDirection.SectionToVolume
+                ? Viking.VolumeModel.VolumeToSectionMappingExtensions.TryMapShapeSectionToVolume(mapper, source)
+                : Viking.VolumeModel.VolumeToSectionMappingExtensions.TryMapShapeVolumeToSection(mapper, source);
+            if (!mapped.HasValue)
+            {
+                Trace.WriteLine($"TryMapCurvePolygonCircle: Shape #{shape} was unmappable.", "WebAnnotation");
                 return null;
             }
 
-            Vector2 mappedCenter = mappedPoints[0];
-
-            //Take the median radius measurement from the four cardinal points to adjust the radius of the circle for the transformation
-            double radiiSquared = mappedPoints.Where((p, i) => i > 0 && mappedCorrectly[i]).Select(p => Vector2.DistanceSquared(mappedCenter, p)).Median();
-            double radius = Math.Sqrt(radiiSquared);
-              
-            return new Circle(mappedCenter, radius);
+            return mapped.Value;
         }
     }
 }

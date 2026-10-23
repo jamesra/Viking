@@ -715,10 +715,8 @@ namespace WebAnnotationModel.Objects
             //this.Data.MosaicShape = mosaicShape.ToDbGeometry();
             //this.Data.VolumeShape = volumeShape.ToDbGeometry();
 
-            // Parameter names are mosaic then volume; assignment is swapped. Callers that pass
-            // two different shapes must keep this pairing — do not fix one side only.
-            this._VolumeShape = mosaicShape;
-            this._MosaicShape = volumeShape; 
+            this._MosaicShape = mosaicShape;
+            this._VolumeShape = volumeShape;
         }
 
         /// <summary>

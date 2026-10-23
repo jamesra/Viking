@@ -508,9 +508,12 @@ namespace WebAnnotation.UI.AutoPolygonize
         internal readonly record struct CircleFootprint(long Id, long? ParentId, int Section, Vector2 Center, double Radius);
 
         /// <summary>
-        /// The circle annotations among <paramref name="annotations"/> as footprints. Other shapes are skipped.
+        /// The circle annotations among <paramref name="annotations"/> as footprints in volume space. Other shapes are skipped.
+        /// <see cref="LocationObj.Radius"/> is a mosaic radius, so each footprint is the location's mosaic circle mapped through
+        /// <paramref name="mapper"/> (centre and scale, see <c>.cursor/rules/circle-mapping-scale.mdc</c>); a circle that cannot be mapped is skipped.
         /// </summary>
-        internal static List<CircleFootprint> ToCircleFootprints(IEnumerable<LocationObj>? annotations)
+        /// <param name="mapper">Section-to-volume transform of the section the annotations are on.</param>
+        internal static List<CircleFootprint> ToCircleFootprints(IEnumerable<LocationObj>? annotations, IVolumeToSectionTransform mapper)
         {
             List<CircleFootprint> result = [];
             if (annotations is null)
@@ -518,8 +521,9 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             foreach (LocationObj location in annotations)
             {
-                if (location is not null && location.TypeCode == LocationType.CIRCLE)
-                    result.Add(new CircleFootprint(location.ID, location.ParentID, (int)location.Section, location.VolumePosition, location.Radius));
+                if (location is not null && location.TypeCode == LocationType.CIRCLE
+                    && LocationActions.TryGetVolumeCircle(location, mapper) is Circle volume)
+                    result.Add(new CircleFootprint(location.ID, location.ParentID, (int)location.Section, volume.Center, volume.Radius));
             }
 
             return result;
