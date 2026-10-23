@@ -292,6 +292,37 @@ namespace Viking.GrpcSectionCorrectionService
             }
         }
 
+        /// <summary>
+        /// The structures' current annotation fingerprint from SQL aggregates alone, so a client can check cached
+        /// <see cref="CorrectStructures"/> offsets in milliseconds.  Covers the same structures CorrectStructures does
+        /// for the same <c>include_children</c>.
+        /// </summary>
+        public override async Task<GetStructureFingerprintResponse> GetStructureFingerprint(
+            GetStructureFingerprintRequest request,
+            ServerCallContext context)
+        {
+            if (request.StructureIds is null || request.StructureIds.Count == 0)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "structure_ids is empty"));
+
+            string connection = _connections.Resolve(request.VolumeName);
+            if (string.IsNullOrWhiteSpace(connection))
+                throw new RpcException(new Status(StatusCode.FailedPrecondition, $"no annotation SQL mapping for '{request.VolumeName}'"));
+
+            StructureFingerprint fingerprint = await SqlMorphologyLoader.LoadStructureFingerprintAsync(
+                connection, request.StructureIds, request.IncludeChildren, context.CancellationToken).ConfigureAwait(false);
+
+            GetStructureFingerprintResponse response = new()
+            {
+                VolumeName = request.VolumeName ?? "",
+                AnnotationFingerprint = fingerprint.Token,
+                ServiceVersion = RebuildStatusStore.ServiceVersion
+            };
+            if (fingerprint.Newest is DateTime watermark)
+                response.AnnotationWatermark = ToTimestamp(watermark);
+
+            return response;
+        }
+
         public override async Task<CorrectStructuresResponse> CorrectStructures(
             CorrectStructuresRequest request,
             ServerCallContext context)
@@ -340,7 +371,8 @@ namespace Viking.GrpcSectionCorrectionService
                 StosGroup = request.StosGroup ?? "",
                 ServiceVersion = RebuildStatusStore.ServiceVersion
             };
-            if (loaded.AnnotationWatermark is DateTime watermark)
+            response.AnnotationFingerprint = loaded.Fingerprint.Token;
+            if (loaded.Fingerprint.Newest is DateTime watermark)
                 response.AnnotationWatermark = ToTimestamp(watermark);
 
             foreach (MorphologyGraph cell in loaded.Cells)
