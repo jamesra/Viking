@@ -49,5 +49,15 @@ Same `SKILL.md` format as Claude skills. Read the SKILL.md when the task matches
 | `docker-letsencrypt-sidecar` | Adding HTTPS to a container from the single `viking-certs` renewer (`/certs`, `viking.tls-reload`) |
 | `slack-ai-channel` | Posting/reading Slack #ai with the `[Viking-Server]` protocol |
 | `viking-server-ai-watch` | Launching the self-pacing Slack #ai server watch |
+| `viking-server-improve-loop` | Launching the timed gRPC client / server / SQL improvement loop (branch `dev`) |
+
+The two loop skills set `disable-model-invocation: true`, so they are not in the model's skill list: the user launches
+them by typing `/viking-server-ai-watch` or `/viking-server-improve-loop` in a session started in this repo. Their
+client counterparts (`viking-client-ai-loop`, `viking-client-improve-loop`) live in `d:\src\git\VikingLegacy`.
+
+`viking-server-ai-watch` is written for Cursor. In Claude Code: a `Task` worker is an Agent tool subagent
+(`general-purpose`), and resuming it by `agentId` is `SendMessage` to that agent; the loop skill's monitored-shell
+wake is the same `Start-Sleep` + sentinel `Write-Output` command run with `run_in_background: true` (Claude is woken
+when it exits, with the payload in its output); `GetDynamicTools` is `ToolSearch`.
 
 Plans in `.cursor/plans/` are historical working notes (gitignored); read one only if asked.

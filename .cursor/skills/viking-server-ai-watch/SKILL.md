@@ -37,7 +37,7 @@ The long-lived watch chat stays small. The parent:
 
 Local session: use the Cursor loop skill's **dynamic** one-shot wake (monitored shell). Do not use a fixed `while` loop. Cloud session: use the loop skill's subscription timer the same way (unsubscribe, then resubscribe, whenever the delay changes).
 
-**Work hours:** Monday–Friday 09:00–17:00 America/Los_Angeles. All other times are off hours.
+**Work hours:** Monday–Friday 05:00–17:00 America/Los_Angeles (08:00 Eastern start, extended from 09:00 Pacific at Becca Pfeiffer's request on 2026-10-21; James Anderson approved). All other times are off hours.
 
 **Caps:** 20 minutes during work hours, 60 minutes off hours.
 
