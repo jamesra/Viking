@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using AnnotationVizLib;
@@ -351,13 +352,25 @@ namespace Viking.GrpcSectionCorrectionService
                     _configuration["Corrections:CachePath"],
                     context.CancellationToken).ConfigureAwait(false);
             }
-            catch (Exception ex) when (ex is ObjectDisposedException or WebException or HttpRequestException or IOException)
+            catch (Exception ex) when (IsTransientVolumeFailure(ex, context.CancellationToken))
             {
                 // Volume XML / stos HTTP load shares the host with rebuild traffic; map transient load
                 // failures to UNAVAILABLE so clients can wait rather than treat UNKNOWN as a hard fault.
+                // The stos/section loads fault tasks, so the failure usually arrives wrapped in an
+                // AggregateException (Task.Result) and the volume host refusing a connection is a SocketException.
+                _logger.LogWarning(ex, "Volume load failed for '{Volume}'.", request.VolumeName);
                 throw new RpcException(new Status(
                     StatusCode.Unavailable,
                     $"volume mapping temporarily unavailable for '{request.VolumeName}': {ex.Message}"));
+            }
+            catch (Exception ex) when (IsSqlTimeout(ex))
+            {
+                // A slow or blocked annotation database is transient; UNAVAILABLE lets clients retry and keep
+                // cached offsets instead of holding UNKNOWN as a hard fault.
+                _logger.LogWarning(ex, "Annotation SQL timeout loading structures for '{Volume}'.", request.VolumeName);
+                throw new RpcException(new Status(
+                    StatusCode.Unavailable,
+                    $"annotation database timed out for '{request.VolumeName}'; retry shortly"));
             }
 
             NeighborResidualField field = null;
@@ -405,6 +418,41 @@ namespace Viking.GrpcSectionCorrectionService
             }
 
             return response;
+        }
+
+        /// <summary>
+        /// True when a volume load failed because the volume host (or the network to it) is unreachable or slow:
+        /// <see cref="WebException"/>, <see cref="HttpRequestException"/>, <see cref="SocketException"/>,
+        /// <see cref="IOException"/>, <see cref="ObjectDisposedException"/>, or an HTTP timeout
+        /// (<see cref="OperationCanceledException"/> while <paramref name="callCancellation"/> is not cancelled),
+        /// found at the top level or anywhere in the <see cref="Exception.InnerException"/> /
+        /// <see cref="AggregateException"/> tree. Caller cancellation is excluded so it surfaces as CANCELLED.
+        /// </summary>
+        public static bool IsTransientVolumeFailure(Exception ex, CancellationToken callCancellation)
+        {
+            if (ex is null)
+                return false;
+            if (ex is WebException or HttpRequestException or SocketException or IOException or ObjectDisposedException)
+                return true;
+            if (ex is OperationCanceledException)
+                return !callCancellation.IsCancellationRequested;
+            if (ex is AggregateException aggregate)
+                return aggregate.InnerExceptions.Any(e => IsTransientVolumeFailure(e, callCancellation));
+            return IsTransientVolumeFailure(ex.InnerException, callCancellation);
+        }
+
+        /// <summary>
+        /// True when <paramref name="ex"/> (or an inner exception) is a SQL Server command timeout
+        /// (<c>SqlException.Number</c> -2, "Execution Timeout Expired").
+        /// </summary>
+        internal static bool IsSqlTimeout(Exception ex)
+        {
+            for (Exception e = ex; e is not null; e = e.InnerException)
+            {
+                if (e is Microsoft.Data.SqlClient.SqlException sql && sql.Number == -2)
+                    return true;
+            }
+            return false;
         }
 
         static FitMode ResolveMode(bool hasCorrection, ProtoFitMode value)
