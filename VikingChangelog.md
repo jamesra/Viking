@@ -9,6 +9,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.120 — not yet released
 
+* A structure's **Locations** tab no longer holds Viking up while it loads. The locations are fetched in the background and the list fills in when the server answers, with a wait cursor in between, and opening another structure's properties starts a fresh list instead of keeping the previous structure's. A failed load is tried again the next time the tab is shown.
 * A login that cannot reach the identity server (server down, firewall, no network) now shows the friendly "did not respond in time, check your network" message instead of the raw "An error occurred while sending the request."
 * Tab (new structure) now segments by painting instead of placing points: drag the left button to paint the object (green), Shift+drag to paint what is not the object (red), Shift+drag starting on paint erases the nearest kind of paint. A moment after you release, the painted masks are sent to the segmentation server and the result is shown; double-click the result or press Enter to accept, Escape to cancel. The sideways wheel or Shift+wheel changes the brush size.
 * Pen: the same painting with the pen's barrel button in place of Shift; the on-screen check button accepts and the red X cancels.
