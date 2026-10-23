@@ -58,6 +58,10 @@
         <Compile Include="GoToActionFormIdTests.cs" />
         <Compile Include="AnnotationPreferencesResetToDefaultsTests.cs" />
         <Compile Include="AnnotationPreferencesRevertTests.cs" />
+        <Compile Include="AnnotationPreferencesBarrelButtonTests.cs" />
+        <Compile Include="BarrelButtonBindingTests.cs" />
+        <Compile Include="Commands\PaintCanvasTests.cs" />
+        <Compile Include="Commands\PaintBrushTests.cs" />
         <Compile Include="SplitStructuresFormTests.cs" />
         <Compile Include="HotkeyKeyCodeTests.cs" />
         <Compile Include="CreateStructureCommandActionAttributeListTests.cs" />

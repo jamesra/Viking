@@ -266,6 +266,7 @@ namespace Viking.UI.Commands
         MouseEventHandler MyMouseDown;
         MouseEventHandler MyMouseUp;
         MouseEventHandler MyMouseWheel;
+        MouseEventHandler MyMouseHWheel;
         MouseEventHandler MyMouseMove;
         EventHandler MyMouseHover;
         EventHandler MyMouseLeave;
@@ -344,6 +345,7 @@ namespace Viking.UI.Commands
             // #endregion
             MyMouseUp = new MouseEventHandler(this.OnMouseUp);
             MyMouseWheel = new MouseEventHandler(this.OnMouseWheel);
+            MyMouseHWheel = new MouseEventHandler(this.OnMouseHWheel);
             MyMouseMove = new MouseEventHandler(this.OnMouseMove);
 
             MyMouseHover = new EventHandler(this.OnMouseHover);
@@ -361,6 +363,7 @@ namespace Viking.UI.Commands
             Parent.MouseDown += MyMouseDown;
             Parent.MouseUp += MyMouseUp;
             Parent.MouseWheel += MyMouseWheel;
+            Parent.MouseHWheel += MyMouseHWheel;
             Parent.MouseMove += MyMouseMove;
             Parent.MouseHover += MyMouseHover;
             Parent.MouseLeave += MyMouseLeave;
@@ -401,6 +404,7 @@ namespace Viking.UI.Commands
             Parent.MouseDown -= MyMouseDown;
             Parent.MouseUp -= MyMouseUp;
             Parent.MouseWheel -= MyMouseWheel;
+            Parent.MouseHWheel -= MyMouseHWheel;
             Parent.MouseMove -= MyMouseMove;
 
             Parent.MouseHover -= MyMouseHover;
@@ -535,6 +539,14 @@ namespace Viking.UI.Commands
         }
 
         protected virtual void OnMouseUp(object sender, MouseEventArgs e)
+        {
+        }
+
+        /// <summary>
+        /// The sideways (tilt) wheel moved: <see cref="MouseEventArgs.Delta"/> is positive for a tilt to the right. Does nothing
+        /// by default; commands that want the wheel override it.
+        /// </summary>
+        protected virtual void OnMouseHWheel(object sender, MouseEventArgs e)
         {
         }
 

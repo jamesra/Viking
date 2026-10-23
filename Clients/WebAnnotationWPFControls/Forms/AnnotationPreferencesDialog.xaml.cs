@@ -39,6 +39,31 @@ namespace WebAnnotation.WPF.Forms
             IsClosed = false;
         }
 
+        private bool _capturingBarrelButton;
+
+        /// <summary>Arms the capture: the next pen button pressed over the button becomes the barrel button.</summary>
+        private void CaptureBarrelButton_Click(object sender, RoutedEventArgs e)
+        {
+            _capturingBarrelButton = true;
+            CaptureBarrelButton.Content = "Press the pen button now...";
+        }
+
+        /// <summary>Takes the pen button that was pressed while capturing as the barrel button.</summary>
+        private void CaptureBarrelButton_StylusButtonDown(object sender, System.Windows.Input.StylusButtonEventArgs e)
+        {
+            if (!_capturingBarrelButton)
+                return;
+
+            string name = StylusButtonCapture.NameFor(e.StylusButton.Guid);
+            if (name is null)
+                return;
+
+            ViewModel.BarrelButton = name;
+            _capturingBarrelButton = false;
+            CaptureBarrelButton.Content = "Click your pen button...";
+            e.Handled = true;
+        }
+
         /// <summary>
         /// Closing the window without OK or Cancel (title bar X, Alt+F4, or the app closing it) cancels, so the live
         /// preview is reverted to the values from opening or the last Apply, exactly as the Cancel button does.

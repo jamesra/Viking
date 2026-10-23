@@ -910,6 +910,36 @@ namespace WebAnnotation.WPF.Forms
             }
         }
 
+        /// <summary>The stored name of the pen report that is the barrel button when nothing else is chosen.</summary>
+        public const string DefaultBarrelButton = "Barrel";
+
+        private string _barrelButton = DefaultBarrelButton;
+        private string _originalBarrelButton = DefaultBarrelButton;
+
+        /// <summary>
+        /// Which pen report Viking treats as the pen's barrel button: "Barrel" (Windows' own barrel flag, the default) or "Eraser"
+        /// for pens whose side button is reported as the eraser. The dialog sets it when the user clicks their pen button.
+        /// </summary>
+        public string BarrelButton
+        {
+            get => _barrelButton;
+            set
+            {
+                string next = string.IsNullOrEmpty(value) ? DefaultBarrelButton : value;
+                if (_barrelButton != next)
+                {
+                    _barrelButton = next;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(BarrelButtonDescription));
+                }
+            }
+        }
+
+        /// <summary>The chosen barrel button in words, for the preferences page.</summary>
+        public string BarrelButtonDescription => _barrelButton == "Eraser"
+            ? "Pen eraser button"
+            : "Pen barrel button (Windows default)";
+
         private double _smallestRenderedSize;
         public double SmallestRenderedSize
         {
@@ -995,8 +1025,10 @@ namespace WebAnnotation.WPF.Forms
             AutoPolygonizeShimmerStyle autoPolygonizeShimmerStyle = DefaultAutoPolygonizeShimmerStyle,
             int hideAnnotationSeconds = DefaultHideAnnotationSeconds,
             bool labelOutlineEnabled = true,
-            bool labelOutlineWhiteText = false)
+            bool labelOutlineWhiteText = false,
+            string barrelButton = DefaultBarrelButton)
         {
+            _barrelButton = _originalBarrelButton = string.IsNullOrEmpty(barrelButton) ? DefaultBarrelButton : barrelButton;
             _polygonPointOpacity = _originalPolygonPointOpacity = polygonPointOpacity;
             _hidePolygonPointsInPenMode = _originalHidePolygonPointsInPenMode = hidePolygonPointsInPenMode;
 
@@ -1176,6 +1208,7 @@ namespace WebAnnotation.WPF.Forms
             _originalPolygonPointRadius = _polygonPointRadius;
             _originalPolygonPointOpacity = _polygonPointOpacity;
             _originalHidePolygonPointsInPenMode = _hidePolygonPointsInPenMode;
+            _originalBarrelButton = _barrelButton;
             _originalSmallestRenderedSize = _smallestRenderedSize;
         }
 
@@ -1226,6 +1259,7 @@ namespace WebAnnotation.WPF.Forms
             _polygonPointRadius = _originalPolygonPointRadius;
             _polygonPointOpacity = _originalPolygonPointOpacity;
             _hidePolygonPointsInPenMode = _originalHidePolygonPointsInPenMode;
+            _barrelButton = _originalBarrelButton;
             _smallestRenderedSize = _originalSmallestRenderedSize;
 
             OnPropertyChanged(string.Empty); // Notify all properties changed
@@ -1283,6 +1317,7 @@ namespace WebAnnotation.WPF.Forms
             _polygonPointRadius = 6.0;
             _polygonPointOpacity = 0.75;
             _hidePolygonPointsInPenMode = true;
+            _barrelButton = DefaultBarrelButton;
             _smallestRenderedSize = 0.5;
 
             OnPropertyChanged(string.Empty); // Notify all properties changed

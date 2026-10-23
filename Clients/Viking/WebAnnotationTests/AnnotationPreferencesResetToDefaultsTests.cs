@@ -68,6 +68,8 @@ namespace WebAnnotationTests
 
                 if (expected is bool expectedFlag)
                     Assert.AreEqual(expectedFlag, (bool)actual, setting.Name);
+                else if (expected is string expectedText)
+                    Assert.AreEqual(expectedText, (string)actual, setting.Name);
                 else
                     // float settings (opacities) are double in the view model; 1e-6 covers the float rounding of 0.33.
                     Assert.AreEqual(Convert.ToDouble(expected, CultureInfo.InvariantCulture),

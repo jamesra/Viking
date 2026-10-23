@@ -89,11 +89,12 @@ namespace Viking.UI
         }
 
         /// <inheritdoc/>
-        public bool Erase => (Pen.flags & PenFlags.Eraser) > 0;
+        public bool Erase => BarrelButtonBinding.IsEraserDown(Pen.flags);
         /// <inheritdoc/>
         public bool Inverted => (Pen.flags & PenFlags.Inverted) > 0;
         /// <inheritdoc/>
-        public bool Barrel => (Pen.flags & PenFlags.Barrel) > 0;
+        /// <remarks>Follows <see cref="BarrelButtonBinding"/>, so it is the button the user chose in Preferences.</remarks>
+        public bool Barrel => BarrelButtonBinding.IsDown(Pen.flags);
 
         /// <inheritdoc/>
         public bool InContact => (Pen.pointerInfo.pointerFlags & PointerFlags.InContact) > 0;
@@ -283,8 +284,8 @@ namespace Viking.UI
                     FireOnPenMove(args);
                 }
 
-                bool wasBarrel = (previousPenState.Value.flags & PenFlags.Barrel) != 0;
-                bool isBarrel = (penState.flags & PenFlags.Barrel) != 0;
+                bool wasBarrel = BarrelButtonBinding.IsDown(previousPenState.Value.flags);
+                bool isBarrel = BarrelButtonBinding.IsDown(penState.flags);
                 if (!wasBarrel && isBarrel)
                     FireOnPenButtonDown(args);
                 else if (wasBarrel && !isBarrel)

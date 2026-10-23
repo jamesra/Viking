@@ -1122,6 +1122,24 @@ namespace WebAnnotation
                 }
             }
 
+            /// <summary>
+            /// Which pen report Viking treats as the pen's barrel button (see <see cref="Viking.UI.BarrelButtonBinding"/>).
+            /// Setting it saves it and applies it to every pen event at once.
+            /// </summary>
+            public static Viking.UI.BarrelButtonKind BarrelButton
+            {
+                get => Viking.UI.BarrelButtonBinding.Parse(Properties.Settings.Default.BarrelButton);
+                set
+                {
+                    Properties.Settings.Default.BarrelButton = Viking.UI.BarrelButtonBinding.Format(value);
+                    Properties.Settings.Default.Save();
+                    Viking.UI.BarrelButtonBinding.Current = value;
+                }
+            }
+
+            /// <summary>Makes the saved <see cref="BarrelButton"/> the one pen events use; called when a viewer opens.</summary>
+            public static void ApplyBarrelButton() => Viking.UI.BarrelButtonBinding.Current = BarrelButton;
+
             public static double SmallestRenderedSize
             {
                 get => Math.Max(MIN_SMALLEST_RENDERED_SIZE, Properties.Settings.Default.SmallestRenderedSize);
@@ -1185,6 +1203,8 @@ namespace WebAnnotation
                 Properties.Settings.Default.PolygonPointRadius = 6.0;
                 Properties.Settings.Default.PolygonPointOpacity = 0.75;
                 Properties.Settings.Default.HidePolygonPointsInPenMode = true;
+                Properties.Settings.Default.BarrelButton = Viking.UI.BarrelButtonBinding.Format(Viking.UI.BarrelButtonKind.Barrel);
+                Viking.UI.BarrelButtonBinding.Current = Viking.UI.BarrelButtonKind.Barrel;
                 Properties.Settings.Default.SmallestRenderedSize = 0.5;
                 Properties.Settings.Default.Save();
                 OnSettingsChanged();

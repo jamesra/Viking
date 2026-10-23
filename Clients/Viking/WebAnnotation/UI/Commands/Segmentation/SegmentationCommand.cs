@@ -353,6 +353,58 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
         #endregion
 
+        #region Members for subclasses that supply their own prompts
+        /// <summary>
+        /// True (the default) when clicks place foreground and background points. A subclass that supplies its own prompts
+        /// through <see cref="SetPromptMasks"/> returns false so this class's mouse handlers leave input to it.
+        /// </summary>
+        protected virtual bool PlacesPoints => true;
+
+        /// <summary>
+        /// Replaces the mask prompts sent with every request: <paramref name="foreground"/> is the object, <paramref name="background"/>
+        /// is what it must not include. Either may be null. Call <see cref="RequestSegmentationFromPrompts"/> afterwards. UI thread only.
+        /// </summary>
+        protected void SetPromptMasks(SegmentationSeed? foreground, SegmentationMaskUnion? background)
+        {
+            startingBoxes = foreground is SegmentationSeed seed ? [seed] : [];
+            derivedBackgroundMask = background;
+        }
+
+        /// <summary>
+        /// Requests segmentation of the prompts last given to <see cref="SetPromptMasks"/>. While a request is running this records a
+        /// follow-up, so the newest prompts are always the last ones answered.
+        /// </summary>
+        protected void RequestSegmentationFromPrompts()
+        {
+            if (startingBoxes.Count == 0)
+                ClearPromptResults();
+            else
+                _ = RequestSegmentation();
+        }
+
+        /// <summary>Drops the shown segmentation and ignores any answer still in flight.</summary>
+        protected void ClearPromptResults()
+        {
+            requestCoalescer.Invalidate();
+            CancelProcessSegmentationResponse();
+            ClearSegmentationResults();
+        }
+
+        /// <summary>The polygons of the segmentation shown now, largest first. UI thread only.</summary>
+        protected IReadOnlyList<Polygon> ResultPolygons =>
+            [.. segmentPolygonViews.Select(view => view?.InputPolygon).OfType<Polygon>().OrderByDescending(polygon => polygon.Area)];
+
+        /// <summary>Accepts <paramref name="polygon"/> as the result: the success callback runs and the command ends.</summary>
+        protected void AcceptPolygon(Polygon polygon)
+        {
+            selectedPolygon = polygon;
+            Execute();
+        }
+
+        /// <summary>True once the command has delivered its result or been abandoned.</summary>
+        protected bool IsFinished => placementFinished || Deactivated;
+        #endregion
+
         #region Lifecycle Methods
         public override void OnActivate()
         {
@@ -448,6 +500,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
+            if (!PlacesPoints)
+            {
+                base.OnMouseDown(sender, e);
+                return;
+            }
+
             Geometry.Vector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
             bool ctrlHeld = Control.ModifierKeys.HasFlag(Keys.Control);
 
@@ -501,7 +559,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Accepts the segmented polygon a pen user most likely means: among the polygons holding a foreground point,
         /// the largest; if none holds one, the largest of all. Does nothing while no polygon exists yet.
         /// </summary>
-        private void AcceptBestPolygon()
+        protected virtual void AcceptBestPolygon()
         {
             List<Polygon> candidates = [.. segmentPolygonViews.Select(view => view?.InputPolygon).OfType<Polygon>()];
             if (candidates.Count == 0)
@@ -551,7 +609,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
         {
-            if (!placementFinished && e.Button.Left() && !Control.ModifierKeys.HasFlag(Keys.Control))
+            if (PlacesPoints && !placementFinished && e.Button.Left() && !Control.ModifierKeys.HasFlag(Keys.Control))
             {
                 Geometry.Vector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
                 Polygon clickedPolygon = ForegroundPointsContain(worldPos)
@@ -616,6 +674,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
+            if (!PlacesPoints)
+            {
+                base.OnMouseMove(sender, e);
+                CheckForViewportChange();
+                return;
+            }
+
             bool ctrlHeld = Control.ModifierKeys.HasFlag(Keys.Control);
             // When Ctrl+RMB is held we delete background points; do not let base command pan the scene
             if (!(ctrlHeld && e.Button.Right()))
@@ -758,7 +823,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 UpdatePointViews();
             }
 
-            if (foregroundPoints.Count == 0 && backgroundPoints.Count == 0)
+            if (foregroundPoints.Count == 0 && backgroundPoints.Count == 0 && startingBoxes.Count == 0)
             {
                 Debug.WriteLine("Viewport settled, no points present - no upload needed");
                 return;
@@ -972,7 +1037,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
-            if (foregroundPoints.Count == 0 && backgroundPoints.Count == 0)
+            if (foregroundPoints.Count == 0 && backgroundPoints.Count == 0 && startingBoxes.Count == 0)
             {
                 SegmentationDiag.Log("RequestSegmentation skip: no points");
                 return;

@@ -490,6 +490,24 @@
                                   IsChecked="{Binding HidePolygonPointsInPenMode, Mode=TwoWay}"
                                   Margin="5,5,5,10"/>
 
+                        <!-- Barrel button: the user clicks the button on their pen to tell Viking which report it sends -->
+                        <StackPanel Margin="5,0,5,10">
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Barrel button:"/>
+                                <TextBlock Text="{Binding BarrelButtonDescription}" VerticalAlignment="Center" Margin="5,0,10,0"/>
+                                <Button x:Name="CaptureBarrelButton"
+                                        Content="Click your pen button..."
+                                        Padding="8,2"
+                                        Click="CaptureBarrelButton_Click"
+                                        PreviewStylusButtonDown="CaptureBarrelButton_StylusButtonDown"/>
+                            </StackPanel>
+                            <TextBlock Margin="5,0,0,0"
+                                       FontSize="10"
+                                       Foreground="Gray"
+                                       TextWrapping="Wrap"
+                                       Text="Press this button, then press the button on the side of your pen while the pen is over it. Commands that use the barrel button (such as the paintbrush segmentation) will use that button."/>
+                        </StackPanel>
+
                         <!-- Polygon Opacity Parentless -->
                         <Grid>
                             <Grid.ColumnDefinitions>

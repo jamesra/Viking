@@ -668,6 +668,12 @@ namespace Viking.UI.Controls
         }
         */
 
+        /// <summary>
+        /// The sideways (tilt) mouse wheel moved. <see cref="MouseEventArgs.Delta"/> is positive for a tilt to the right, in
+        /// multiples of 120; the position is in client coordinates. WinForms has no event for this wheel.
+        /// </summary>
+        public event MouseEventHandler MouseHWheel;
+
         protected override void WndProc(ref Message msg)
         {
             /*
@@ -695,6 +701,13 @@ namespace Viking.UI.Controls
                     break;
             }
             */
+
+            if (HorizontalWheelMessage.IsHorizontalWheel(msg.Msg))
+            {
+                System.Drawing.Point client = PointToClient(HorizontalWheelMessage.ScreenPosition(msg.LParam));
+                MouseHWheel?.Invoke(this, new MouseEventArgs(MouseButtons.None, 0, client.X, client.Y, HorizontalWheelMessage.Delta(msg.WParam)));
+                return;
+            }
 
             if (penEventManager != null && penEventManager.ProcessPenMessages(ref msg))
             {

@@ -190,6 +190,8 @@ namespace WebAnnotation
 
         public AnnotationOverlay()
         {
+            Global.AnnotationSettings.ApplyBarrelButton();
+
             SectionChangedEventHandler = new TransformChangedEventHandler(OnSectionTransformChanged);
 
             AnnotationChangedEventHandler = new EventHandler(OnAnnotationChanged);
@@ -2108,7 +2110,7 @@ break;
 
 
         /// <summary>
-        /// Tab starts <see cref="SegmentationCommand"/> so clicks place a new structure.
+        /// Tab starts <see cref="SegmentationPaintCommand"/> so the user paints the object for a new structure.
         /// Called from <see cref="OnKeyDown"/> when the default command is active.
         /// The saved type is the structure selected in the list, or cell type 1.
         /// Accepting the mask saves through <see cref="SegmentationCommand.CreateAnnotationFromPolygon"/>.
@@ -2128,10 +2130,12 @@ break;
                 ? selected.ID
                 : Store.StructureTypes[1].ID;
 
-            Parent.CurrentCommand = new SegmentationCommand(
+            // The point placing SegmentationCommand stays in the code (the context menus still start it) but Tab now paints a mask.
+            // TODO: restore `new SegmentationCommand(..., structureTypeId: structureTypeId)` here if the paintbrush is withdrawn;
+            // the paintbrush passes no structure type, so it adds no background prompts from other structures.
+            Parent.CurrentCommand = new SegmentationPaintCommand(
                 Parent,
-                outputPolygon => SegmentationCommand.CreateAnnotationFromPolygon(Parent, null, outputPolygon),
-                structureTypeId: structureTypeId);
+                outputPolygon => SegmentationCommand.CreateAnnotationFromPolygon(Parent, null, outputPolygon));
         }
 
         /// <summary>

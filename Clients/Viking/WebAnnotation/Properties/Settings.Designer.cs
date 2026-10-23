@@ -346,6 +346,18 @@ namespace WebAnnotation.Properties {
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Barrel")]
+        public string BarrelButton {
+            get {
+                return ((string)(this["BarrelButton"]));
+            }
+            set {
+                this["BarrelButton"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("1.0")]
         public double SmallestRenderedSize {
             get {

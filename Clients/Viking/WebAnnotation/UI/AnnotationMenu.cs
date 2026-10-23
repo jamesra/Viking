@@ -203,7 +203,8 @@ namespace WebAnnotation
                 Global.AnnotationSettings.AutoPolygonizeShimmerStyle,
                 Global.AnnotationSettings.HideAnnotationSeconds,
                 Global.AnnotationSettings.LabelOutlineEnabled,
-                Global.AnnotationSettings.LabelOutlineWhiteText
+                Global.AnnotationSettings.LabelOutlineWhiteText,
+                Viking.UI.BarrelButtonBinding.Format(Global.AnnotationSettings.BarrelButton)
             );
 
             VikingXNA.Scene scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
@@ -444,6 +445,7 @@ namespace WebAnnotation
             Global.AnnotationSettings.PolygonPointRadius = viewModel.PolygonPointRadius;
             Global.AnnotationSettings.PolygonPointOpacity = viewModel.PolygonPointOpacity;
             Global.AnnotationSettings.HidePolygonPointsInPenMode = viewModel.HidePolygonPointsInPenMode;
+            Global.AnnotationSettings.BarrelButton = Viking.UI.BarrelButtonBinding.Parse(viewModel.BarrelButton);
             Global.AnnotationSettings.SmallestRenderedSize = viewModel.SmallestRenderedSize;
 
             // Update static accessor properties
