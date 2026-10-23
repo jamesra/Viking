@@ -308,10 +308,10 @@ namespace Viking.GrpcSectionCorrectionService
             if (string.IsNullOrWhiteSpace(volumeUrl))
                 throw new RpcException(new Status(StatusCode.NotFound, $"no VikingXML endpoint for '{request.VolumeName}'"));
 
-            List<MorphologyGraph> cells;
+            SqlMorphologyLoader.StructuresLoadResult loaded;
             try
             {
-                cells = await SqlMorphologyLoader.LoadStructuresAsync(
+                loaded = await SqlMorphologyLoader.LoadStructuresAsync(
                     connection,
                     volumeUrl,
                     request.StosGroup,
@@ -340,7 +340,10 @@ namespace Viking.GrpcSectionCorrectionService
                 StosGroup = request.StosGroup ?? "",
                 ServiceVersion = RebuildStatusStore.ServiceVersion
             };
-            foreach (MorphologyGraph cell in cells)
+            if (loaded.AnnotationWatermark is DateTime watermark)
+                response.AnnotationWatermark = ToTimestamp(watermark);
+
+            foreach (MorphologyGraph cell in loaded.Cells)
             {
                 Dictionary<ulong, Vector2> before = [];
                 foreach (MorphologyNode node in cell.Nodes.Values)

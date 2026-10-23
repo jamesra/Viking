@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using UnitsAndScale;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.DataModel.Annotation;
+using Viking.SectionCorrection;
 using Viking.VolumeModel;
 
 namespace Viking.SectionCorrectionBuilder
@@ -248,7 +249,30 @@ AND LK.B IN (
         /// is taken with SQL <c>STCentroid</c> so CurvePolygon never materializes through NetTopologySuite
         /// (NTS throws <c>Unsupported type: CurvePolygon</c> on outline-traced cells such as RC1 c410).
         /// </summary>
-        public static async Task<List<MorphologyGraph>> LoadStructuresAsync(
+        public sealed class StructuresLoadResult
+        {
+            public List<MorphologyGraph> Cells { get; init; }
+
+            /// <summary>Newest annotation edit among the loaded rows; see <see cref="AnnotationWatermark"/>.</summary>
+            public DateTime? AnnotationWatermark { get; init; }
+        }
+
+        /// <summary>
+        /// Newest location <c>LastModified</c> or link <c>Created</c> among <paramref name="candidates"/> and
+        /// <paramref name="links"/>, the same definition the rebuild uses per section (<see cref="SectionFingerprintDto.Newest"/>).
+        /// Null when there are no rows.  It moves on every insert or edit, but not on a delete: removing a location or a
+        /// link leaves the newest remaining time unchanged (see SectionFingerprintTests).
+        /// </summary>
+        public static DateTime? AnnotationWatermark(IEnumerable<CandidateRow> candidates, IEnumerable<LinkRow> links)
+        {
+            Dictionary<long, SectionFingerprintDto> fingerprints = SectionFingerprintBuilder.Compute(
+                candidates.Select(c => (c.ID, c.ParentID, c.Z, c.LastModified)),
+                links.Select(l => (l.A, l.B, l.Created)));
+            DateTime newest = SectionFingerprintDiff.Newest(fingerprints.Values);
+            return newest == DateTime.MinValue ? null : newest;
+        }
+
+        public static async Task<StructuresLoadResult> LoadStructuresAsync(
             string annotationConnection,
             string volumeUrl,
             string stosGroup,
@@ -260,7 +284,7 @@ AND LK.B IN (
             ArgumentException.ThrowIfNullOrWhiteSpace(annotationConnection);
             ArgumentException.ThrowIfNullOrWhiteSpace(volumeUrl);
             if (structureIds is null || structureIds.Count == 0)
-                return [];
+                return new StructuresLoadResult { Cells = [] };
 
             // Keep NTS for the Location geometry columns on the model; never SELECT those
             // columns into entities here — STCentroid runs in SQL and returns floats only.
@@ -310,7 +334,11 @@ WHERE L.ParentID IN ({idList})")
             Directory.CreateDirectory(cache);
             Volume volume = await Volume.CreateAsync(volumeUrl, cache, null, cancellationToken).ConfigureAwait(false);
             await volume.Initialize(cancellationToken).ConfigureAwait(false);
-            return BuildCells(candidates, links, volume, scale, stosGroup);
+            return new StructuresLoadResult
+            {
+                Cells = BuildCells(candidates, links, volume, scale, stosGroup),
+                AnnotationWatermark = AnnotationWatermark(candidates, links)
+            };
         }
 
         static async Task<T> ScalarAsync<T>(AnnotationContext db, string sql)
