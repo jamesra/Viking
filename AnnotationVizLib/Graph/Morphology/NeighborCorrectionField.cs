@@ -122,10 +122,13 @@ namespace AnnotationVizLib
 
                 foreach (ulong[] process in cell.Processes())
                 {
-                    if (process.Length < 3)
+                    // Processes() ends each chain on the branch it runs into; that anchor's centroid is the middle of
+                    // the merged area, not a point on this process, so it must not shape the leave-one-out curve.
+                    // See JointRegistrationSolver.IsBranchTriple for why both the parent and daughter sides drop it.
+                    MorphologyNode[] nodes = [.. process.Select(id => cell.Nodes[id]).Where(n => !n.IsBranchAnchor(cell))];
+                    if (nodes.Length < 3)
                         continue;
 
-                    MorphologyNode[] nodes = [.. process.Select(id => cell.Nodes[id])];
                     Vector2[] centroids = [.. nodes.Select(n => n.Center.XY())];
                     double[] z = [.. nodes.Select(n => n.Z)];
 
@@ -148,6 +151,12 @@ namespace AnnotationVizLib
                         int below = i;
                         int above = nodes.Length - 1 - i;
                         bool oneSided = below == 0 || above == 0;
+
+                        // Only a process tip is legitimately one-sided.  A node whose chain end is one-sided because
+                        // the branch beyond it was dropped above still has a neighbour there; scoring it as a tip
+                        // would bring back a residual at every split.
+                        if (oneSided && !node.IsProcessTerminal())
+                            continue;
 
                         residuals.Add(new ResidualSample(
                             cell.StructureID,

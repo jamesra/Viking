@@ -138,6 +138,8 @@ namespace AnnotationVizLib
                     for (int i = 1; i + 1 < nodes.Length; i++)
                     {
                         MorphologyNode a = nodes[i - 1], b = nodes[i], c = nodes[i + 1];
+                        if (IsBranchTriple(cell, a, b, c))
+                            continue;
                         int za = (int)Math.Round(a.UnscaledZ), zb = (int)Math.Round(b.UnscaledZ), zc = (int)Math.Round(c.UnscaledZ);
                         if (zb - za <= 0 || zb - za > maxSectionGap || zc - zb <= 0 || zc - zb > maxSectionGap)
                             continue;
@@ -148,6 +150,25 @@ namespace AnnotationVizLib
             }
             return triples;
         }
+
+        /// <summary>
+        /// True when any point of the triple is a branch. <see cref="MorphologyGraph.Processes"/> ends each chain on
+        /// the branch it runs into, so a branch is never B but was A or C of the triple next to it.
+        /// <para>
+        /// Daughter side (branch, d1, d2): the branch centroid is the middle of the merged area, off to one side of
+        /// each daughter's centre line, so d1 read as misregistered by about half the gap between the daughters, in
+        /// opposite directions for the two daughters.  That is what made the published shift jump at a split.
+        /// </para>
+        /// <para>
+        /// Parent side (p2, p1, branch): the branch is the same object as p1 one section up, so this triple is usually
+        /// valid and could be kept.  It is dropped because the merged area often widens or forms two lobes before it
+        /// separates, which moves its centroid off the parent's centre line for reasons of shape, not registration;
+        /// and because "no branch is ever A, B or C" is a rule a property test can check.  It costs one triple per
+        /// split.
+        /// </para>
+        /// </summary>
+        internal static bool IsBranchTriple(MorphologyGraph cell, MorphologyNode a, MorphologyNode b, MorphologyNode c) =>
+            a.IsBranchAnchor(cell) || b.IsBranchAnchor(cell) || c.IsBranchAnchor(cell);
 
         /// <summary>True for structures held out of the ridge-selection fit.</summary>
         public static bool IsHeldOut(ulong structureId, int percent) => (structureId * 2654435761UL) % 100UL < (ulong)percent;

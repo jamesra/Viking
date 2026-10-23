@@ -127,6 +127,18 @@ else
         }
 
         /// <summary>
+        /// A junction: more than two LocationLinks, or two or more to the same adjacent Z. Its centroid is the middle
+        /// of the merged area rather than a point on any one process's centre line.
+        /// <see cref="MorphologyGraph.Processes"/> still appends these as chain end points so curvefit has anchors;
+        /// registration estimates must skip them.
+        /// </summary>
+        public bool IsBranchAnchor(MorphologyGraph graph = null)
+        {
+            graph ??= this.Graph;
+            return Edges.Count > 2 || IsSameSectionBranch(graph);
+        }
+
+        /// <summary>
         /// Return edges conneted to nodes above this node in Z
         /// </summary>
         public IEnumerable<IGrouping<double, MorphologyNode>> GetConnectedNodesGroupedByZ(MorphologyGraph graph = null)
