@@ -82,6 +82,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>True when no pixel is inside the mask.</summary>
         public bool IsEmpty => Array.TrueForAll(Pixels, value => value == 0);
 
+        /// <summary>True when the raster pixel holding the volume position <paramref name="world"/> is set; false outside the raster.</summary>
+        public bool Contains(Vector2 world)
+        {
+            int column = (int)Math.Floor((world.X / Downsample - XMin) / Scale);
+            int row = (int)Math.Floor((YMax + 1 - world.Y / Downsample) / Scale);
+            return column >= 0 && row >= 0 && column < Width && row < Height && Pixels[row * Width + column] != 0;
+        }
+
         /// <summary>This mask's pixels replaced by <paramref name="pixels"/>, same placement.</summary>
         public RasterMask WithPixels(byte[] pixels) => new(Downsample, XMin, YMax, Width, Height, pixels, Scale);
 

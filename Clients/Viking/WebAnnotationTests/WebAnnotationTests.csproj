@@ -62,6 +62,7 @@
         <Compile Include="BarrelButtonBindingTests.cs" />
         <Compile Include="Commands\PaintCanvasTests.cs" />
         <Compile Include="Commands\PaintBrushTests.cs" />
+        <Compile Include="Commands\PaintCanvasSeedTests.cs" />
         <Compile Include="Commands\SegmentationResultMergeTests.cs" />
         <Compile Include="SplitStructuresFormTests.cs" />
         <Compile Include="HotkeyKeyCodeTests.cs" />

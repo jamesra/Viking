@@ -63,15 +63,23 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <param name="parent">The viewer the command runs in.</param>
         /// <param name="success_callback">Receives the accepted polygon, volume space.</param>
         /// <param name="grpcChannelManager">The segmentation service channel; null uses the selected service.</param>
+        /// <param name="seedRings">
+        /// An existing mask to start from, as polygon rings in volume space (exterior ring first, then holes). It is painted as foreground
+        /// when the command starts and segmented at once, so its result is shown before the user touches anything. Null starts empty.
+        /// </param>
         public SegmentationPaintCommand(
             SectionViewerControl parent,
             OnCommandSuccess? success_callback = null,
-            IGrpcChannelManager? grpcChannelManager = null)
+            IGrpcChannelManager? grpcChannelManager = null,
+            System.Collections.Generic.IReadOnlyList<GVector2[]>? seedRings = null)
             : base(parent, success_callback, grpcChannelManager)
         {
             paintCancelButton = new PenCancelButton(parent);
             ShowPenButtons = Global.ShowPenActionButtons;
+            this.seedRings = seedRings;
         }
+
+        private readonly System.Collections.Generic.IReadOnlyList<GVector2[]>? seedRings;
 
         /// <inheritdoc />
         protected override bool PlacesPoints => false;
@@ -106,11 +114,20 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             base.OnActivate();
 
-            canvas = PaintCanvas.ForView(
-                Parent.Scene.VisibleWorldBounds,
-                Math.Max(1, (int)Math.Ceiling(Parent.Camera?.Downsample ?? Parent.Downsample)),
-                Math.Min(Parent.MaxTextureSide, MaxCanvasSide));
+            int downsample = Math.Max(1, (int)Math.Ceiling(Parent.Camera?.Downsample ?? Parent.Downsample));
+            int maxSide = Math.Min(Parent.MaxTextureSide, MaxCanvasSide);
+            Geometry.Rectangle area = Parent.Scene.VisibleWorldBounds;
+            if (seedRings is { Count: > 0 })
+                area = Geometry.Rectangle.Union(area, RasterMask.BoundsOf(seedRings[0]));
+
+            canvas = PaintCanvas.ForView(area, downsample, maxSide);
             submitDebouncer = new PanZoomDebouncer(SubmitPauseMilliseconds, SubmitPaint, action => Viking.UI.State.MainThreadDispatcher?.BeginInvoke(action));
+
+            if (seedRings is { Count: > 0 } && RasterMask.FromRings(seedRings, canvas.Downsample, 0, maxSide) is RasterMask seed)
+            {
+                canvas.Fill(seed, PaintCanvas.Foreground);
+                SubmitPaint();
+            }
         }
 
         /// <inheritdoc />

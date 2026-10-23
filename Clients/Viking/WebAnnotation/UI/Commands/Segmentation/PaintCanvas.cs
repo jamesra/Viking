@@ -139,6 +139,35 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
+        /// Paints <paramref name="value"/> on every canvas pixel whose centre is inside the set pixels of <paramref name="mask"/>, however the two
+        /// rasters' scales compare, so an existing mask (a rasterized polygon) can seed the canvas. Returns the number of pixels that changed.
+        /// </summary>
+        public int Fill(RasterMask mask, byte value)
+        {
+            Rectangle bounds = mask.WorldBounds;
+            int minColumn = Math.Max(0, (int)Math.Floor((bounds.Left / Downsample - layout.XMin) / layout.Scale));
+            int maxColumn = Math.Min(Width - 1, (int)Math.Ceiling((bounds.Right / Downsample - layout.XMin) / layout.Scale));
+            int minRow = Math.Max(0, (int)Math.Floor((layout.YMax + 1 - bounds.Top / Downsample) / layout.Scale));
+            int maxRow = Math.Min(Height - 1, (int)Math.Ceiling((layout.YMax + 1 - bounds.Bottom / Downsample) / layout.Scale));
+            int changed = 0;
+            for (int row = minRow; row <= maxRow; row++)
+            {
+                for (int column = minColumn; column <= maxColumn; column++)
+                {
+                    int index = row * Width + column;
+                    if (Pixels[index] == value || !mask.Contains(PixelCenter(column, row)))
+                        continue;
+
+                    Pixels[index] = value;
+                    changed++;
+                    MarkDirty(column, row);
+                }
+            }
+
+            return changed;
+        }
+
+        /// <summary>
         /// What is painted under a disc: the number of pixels of each type and the distance from the centre to the nearest pixel centre of
         /// each type (<see cref="double.PositiveInfinity"/> when none).
         /// </summary>
