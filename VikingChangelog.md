@@ -1,15 +1,20 @@
 # Viking changelog
 
-Committed application version: **1.2.120.0**  
+Committed application version: **1.2.121.0**  
 (1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109; their changes are listed under 1.2.109.)
 
 Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Documentation/source/Client/versionhistory.rst).
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
-## 1.2.120 — 2026-10-22 (Viking Test, unsigned)
+## 1.2.121 — 2026-10-23 (Viking Test, unsigned)
 
 * Segment to Polygon, Resegment and linked polygon placement now open the paintbrush segmentation (the polygon is painted as the starting mask) instead of point placing segmentation. The proposal menu's Add points entry is gone; use Paint mask.
+* Annotation Preferences: "Max Auto-Segment Downsample" can now be set up to 6 (it stopped at 4), for the main columns of large cells such as Muller cells.
+* Auto-segmented polygons keep every green point you placed: simplifying the outline or cutting it away from neighboring annotations no longer drops one. Where a green point lies inside a neighbor, the new polygon overlaps that neighbor instead.
+
+## 1.2.120 — 2026-10-22 (Viking Test, unsigned)
+
 * Location links (the hourglass between two markers) now have a thin border, black on a light link and white on a dark one, so they stand out from both light and dark images.
 * A structure's **Locations** tab no longer holds Viking up while it loads. The locations are fetched in the background and the list fills in when the server answers, with a wait cursor in between, and opening another structure's properties starts a fresh list instead of keeping the previous structure's. A failed load is tried again the next time the tab is shown.
 * A login that cannot reach the identity server (server down, firewall, no network) now shows the friendly "did not respond in time, check your network" message instead of the raw "An error occurred while sending the request."
