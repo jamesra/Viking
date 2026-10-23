@@ -521,6 +521,7 @@ namespace AnnotationVizLib
             MorphologyNode[] nodes = [.. process.Select(id => graph.Nodes[id])];
             Vector2[] centroids = [.. nodes.Select(n => n.Center.XY())];
             double[] z = [.. nodes.Select(n => n.Z)];
+            bool[] isControl = CurveFitControlMask(nodes, graph);
 
             List<(int Index, double Residual)> movable = [];
             for (int i = 0; i < nodes.Length; i++)
@@ -531,7 +532,7 @@ namespace AnnotationVizLib
                 if (options.OnlyLocationIds is not null && !options.OnlyLocationIds.Contains(node.Key))
                     continue;
 
-                Vector2 fitted = EvaluateLeaveOneOutCentroid(centroids, z, i, options.HalfWindow);
+                Vector2 fitted = EvaluateLeaveOneOutCentroid(centroids, z, i, options.HalfWindow, isControl);
                 double residual = Vector2.Distance(centroids[i], fitted);
                 movable.Add((i, residual));
             }
@@ -544,7 +545,7 @@ namespace AnnotationVizLib
             foreach ((int i, _) in movable)
             {
                 MorphologyNode node = nodes[i];
-                Vector2 fitted = EvaluateLeaveOneOutCentroid(centroids, z, i, options.HalfWindow);
+                Vector2 fitted = EvaluateLeaveOneOutCentroid(centroids, z, i, options.HalfWindow, isControl);
                 Vector2 offset = fitted - centroids[i];
                 offset = ClampProcessOffset(node, offset, options.MaxOffsetNm);
                 if (offset.Magnitude <= Tolerance.Epsilon)
@@ -601,11 +602,15 @@ namespace AnnotationVizLib
         {
             Vector2 origin = node.Center.XY();
             double before = IncidentLinkLengthSum(node, origin);
+
+            // Rounding slack only.  Tolerance.Epsilon (0.001 nm) per move added up across a chain's moves and broke the
+            // chain-level assert in CurveFitProcessChain, whose own slack is that same 0.001 nm in total.
+            double slack = 1e-9 * Math.Max(1.0, before);
             Vector2 candidate = offset;
             for (int attempt = 0; attempt < 4; attempt++)
             {
                 double after = IncidentLinkLengthSum(node, origin + candidate);
-                if (after <= before + Tolerance.Epsilon)
+                if (after <= before + slack)
                     return candidate;
 
                 candidate *= 0.5;
@@ -644,19 +649,74 @@ namespace AnnotationVizLib
         /// on each side, excluding the node itself so its jitter does not enter the fit.
         /// Used by <see cref="CurveFitProcesses"/>; always returns a prediction (may copy a lone neighbor).
         /// </summary>
-        internal static Vector2 EvaluateLeaveOneOutCentroid(Vector2[] centroids, double[] z, int i, int halfWindow)
+        internal static Vector2 EvaluateLeaveOneOutCentroid(Vector2[] centroids, double[] z, int i, int halfWindow,
+            bool[] isControl = null)
         {
             List<int> controlIdx = [];
+            bool skipped = false;
             int lo = Math.Max(0, i - halfWindow);
             int hi = Math.Min(centroids.Length - 1, i + halfWindow);
             for (int j = lo; j <= hi; j++)
             {
                 if (j == i)
                     continue;
+                if (isControl is not null && !isControl[j])
+                {
+                    skipped = true;
+                    continue;
+                }
+
                 controlIdx.Add(j);
             }
 
+            // With a junction left out there may be no curve left; copying the lone remaining neighbour is not a
+            // correction (it is what pulled a process tip onto its shaft next to a soma, RC1/InferiorMonkey c1178).
+            if (skipped && controlIdx.Count < 2)
+                return centroids[i];
+
             return FitLeaveOneOutAtZ(centroids, z, i, controlIdx) ?? centroids[i];
+        }
+
+        /// <summary>
+        /// Which points of a <see cref="MorphologyGraph.Processes"/> chain curvefit may fit through.  Every point is a
+        /// fitting point except a branch end point (<see cref="MorphologyNode.IsBranchAnchor"/>) seen from its side with
+        /// two or more links.  From the side with exactly one link, the branch is simply the next section of this
+        /// process, so its centroid lies on this process's centre line and it stays a fitting point.  From the other
+        /// side it is the merged cross-section of several objects, and its centroid is on none of their centre lines.
+        /// A branch with a link on its own section is never a fitting point.  Branches are never moved either way.
+        /// <para>
+        /// Deliberately different from the correction field (<see cref="JointRegistrationSolver.IsBranchTriple"/>),
+        /// which drops a branch on both sides.  Do not "unify" them.  The field averages many cells and can afford to
+        /// lose the parent-side sample to avoid bias; curvefit fits one chain, where losing the branch leaves the
+        /// parent's last node predicted by extrapolation alone.  The cost accepted here: just before a split the
+        /// merged area may widen or form two lobes, which moves its centroid off the parent's line by shape rather
+        /// than registration, and nothing in the annotation tells those apart.  The link-length gate bounds the
+        /// resulting move.
+        /// </para>
+        /// </summary>
+        internal static bool[] CurveFitControlMask(MorphologyNode[] chain, MorphologyGraph graph)
+        {
+            bool[] isControl = new bool[chain.Length];
+            for (int j = 0; j < chain.Length; j++)
+            {
+                MorphologyNode node = chain[j];
+                if (!node.IsBranchAnchor(graph))
+                {
+                    isControl[j] = true;
+                    continue;
+                }
+
+                // A chain is sorted by Z, so a branch below every other point is reached from above, and vice versa.
+                bool chainIsAbove = chain.Where((_, k) => k != j).All(other => other.Z > node.Z);
+                bool chainIsBelow = chain.Where((_, k) => k != j).All(other => other.Z < node.Z);
+                int above = node.GetEdgesAbove(graph).Length;
+                int below = node.GetEdgesBelow(graph).Length;
+                bool lateral = above + below != node.Edges.Count;
+                isControl[j] = !lateral
+                    && ((chainIsAbove && above == 1) || (chainIsBelow && below == 1));
+            }
+
+            return isControl;
         }
 
         /// <summary>

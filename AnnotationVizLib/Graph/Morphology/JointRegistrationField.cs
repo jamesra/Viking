@@ -166,6 +166,12 @@ namespace AnnotationVizLib
         /// and because "no branch is ever A, B or C" is a rule a property test can check.  It costs one triple per
         /// split.
         /// </para>
+        /// <para>
+        /// Curvefit deliberately keeps the branch on its one-link side (<see cref="MorphologyGraph.CurveFitControlMask"/>).
+        /// The difference is intended; do not "unify" the two.  This field averages many cells and can afford to lose
+        /// that sample to avoid bias, while curvefit fits one chain and would otherwise lose the parent's only fitting
+        /// point above its last node.
+        /// </para>
         /// </summary>
         internal static bool IsBranchTriple(MorphologyGraph cell, MorphologyNode a, MorphologyNode b, MorphologyNode c) =>
             a.IsBranchAnchor(cell) || b.IsBranchAnchor(cell) || c.IsBranchAnchor(cell);
