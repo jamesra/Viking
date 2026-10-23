@@ -67,12 +67,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// An existing mask to start from, as polygon rings in volume space (exterior ring first, then holes). It is painted as foreground
         /// when the command starts and segmented at once, so its result is shown before the user touches anything. Null starts empty.
         /// </param>
+        /// <param name="onAbandoned">Runs when the command ends without an accepted polygon (Escape, the red X, another command).</param>
         public SegmentationPaintCommand(
             SectionViewerControl parent,
             OnCommandSuccess? success_callback = null,
             IGrpcChannelManager? grpcChannelManager = null,
-            System.Collections.Generic.IReadOnlyList<GVector2[]>? seedRings = null)
-            : base(parent, success_callback, grpcChannelManager)
+            System.Collections.Generic.IReadOnlyList<GVector2[]>? seedRings = null,
+            Action? onAbandoned = null)
+            : base(parent, success_callback, grpcChannelManager, onAbandoned: onAbandoned)
         {
             paintCancelButton = new PenCancelButton(parent);
             ShowPenButtons = Global.ShowPenActionButtons;

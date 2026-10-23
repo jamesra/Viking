@@ -13,7 +13,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 * Tab (new structure) now segments by painting instead of placing points: drag the left button to paint the object (green), Shift+drag to paint what is not the object (red), Shift+drag starting on paint erases the nearest kind of paint. A moment after you release, the painted masks are sent to the segmentation server and the result is shown; double-click the result or press Enter to accept, Escape to cancel. The sideways wheel or Shift+wheel changes the brush size.
 * Pen: the same painting with the pen's barrel button in place of Shift; the on-screen check button accepts and the red X cancels.
 * Annotation Preferences has a new "Barrel button" setting: press "Click your pen button..." and then the button on your pen, so every command that uses the barrel button uses yours.
-* Right-click a polygon > Shape > "Paint mask..." (new, next to "Dilate/erode mask...") opens the mask painter with the polygon already painted as the object and segmented; paint, erase or add background to adjust it, then double-click the result or press Enter to replace the polygon.
+* The menu of an auto-segment proposal (double right-click the ring) has a new "Paint mask" item next to "Add points": it opens the mask painter with the proposed polygon already painted as the object and segmented; paint, erase or add background to adjust it, then double-click the result or press Enter to accept. Escape brings the proposal back.
 
 ## 1.2.119 — 2026-10-22 (Viking Test, unsigned)
 

@@ -919,6 +919,57 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
+        /// Parks the proposal overlay and opens <see cref="SegmentationPaintCommand"/> with the proposal's polygon already painted as
+        /// foreground, so the user can paint, erase or add background before accepting. Accepting writes through
+        /// <see cref="Accept(AutoPolygonizeProposal, Polygon)"/>; Escape restores the parked overlay, as Add points does.
+        /// </summary>
+        public void BeginPaintMask(AutoPolygonizeProposal proposal)
+        {
+            if (proposal is null || !AreProposalMembersValid(proposal))
+                return;
+
+            if (proposal.Polygon is null || proposal.Polygon.ExteriorRing.Length < 3)
+            {
+                MessageBox.Show(
+                    "This proposal has no outline to paint from.",
+                    "Paint mask",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            if (parkedForAddPoints is not null && !ReferenceEquals(parkedForAddPoints, proposal))
+                RestoreParkedProposal();
+
+            List<Vector2[]> rings = [proposal.Polygon.ExteriorRing, .. proposal.Polygon.InteriorRings];
+
+            CancelProcessPhase();
+            RemoveProposal(proposal.LocationId);
+            parkedForAddPoints = proposal;
+            parent.Invalidate();
+
+            AutoPolygonizeProposal parked = proposal;
+            void onSuccess(Polygon refined) => Accept(parked, refined);
+
+            try
+            {
+                IGrpcChannelManager channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
+                parent.CurrentCommand = new SegmentationPaintCommand(
+                    parent, onSuccess, channelManager, seedRings: rings, onAbandoned: RestoreParkedProposal);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"BeginPaintMask failed: {ex.Message}");
+                RestoreParkedProposal();
+                MessageBox.Show(
+                    $"Failed to open the mask painter: {ex.Message}",
+                    "Paint mask",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
         /// Rebuilds FG clicks and seed boxes when the proposal did not store them (older overlays).
         /// Single-id circles use the inscribed square; multi-id uses the group prompt from the union ring.
         /// </summary>

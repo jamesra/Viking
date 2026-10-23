@@ -366,15 +366,6 @@ namespace WebAnnotation.ViewModel
                 menuShape.DropDownItems.Add(menuEditMask);
             }
 
-            if ((TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON ||
-                TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON) &&
-                Global.IsSegmentationServiceAvailable)
-            {
-                ToolStripMenuItem menuPaintMask = new("Paint mask...");
-                menuPaintMask.Click += ContextMenu_PaintPolygonMask;
-                menuShape.DropDownItems.Add(menuPaintMask);
-            }
-
             menu.Items.Add(menuShape);
         }
 
@@ -730,53 +721,6 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        /// <summary>
-        /// Opens the mask painter on this polygon. The polygon is painted as foreground to start with and segmented at once; the user
-        /// then paints, erases or adds background, and accepting the result replaces this location's shape, as Resegment does. Cancelling
-        /// changes nothing.
-        /// </summary>
-        protected void ContextMenu_PaintPolygonMask(object sender, EventArgs e)
-        {
-            try
-            {
-                var parent = AnnotationOverlay.CurrentOverlay?.Parent;
-                if (parent is null)
-                {
-                    MessageBox.Show("There is no open section viewer.", "Paint mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-
-                if (!Global.IsSegmentationServiceAvailable)
-                {
-                    MessageBox.Show("There is no segmentation service to send the mask to.", "Paint mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-
-                Polygon mosaicPolygon = modelObj.MosaicShape.ToPolygon();
-                List<Geometry.Vector2[]> volumeRings = [];
-                foreach (Geometry.Vector2[] ring in new[] { mosaicPolygon.ExteriorRing }.Concat(mosaicPolygon.InteriorRings))
-                {
-                    bool[] mapped = parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(ring, out Geometry.Vector2[] volumeRing);
-                    if (mapped.Any(ok => !ok))
-                    {
-                        MessageBox.Show("This polygon could not be mapped onto the volume.", "Paint mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        return;
-                    }
-
-                    volumeRings.Add(volumeRing);
-                }
-
-                var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                parent.CurrentCommand = new SegmentationPaintCommand(
-                    parent, UpdateLocationShapeFromVolumePolygon, channelManager, seedRings: volumeRings);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error launching mask painter: {ex.Message}");
-                SegmentationDiag.Log($"PaintMask failed: {ex}");
-                MessageBox.Show($"Failed to launch the mask painter: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
         /// <summary>
         /// Rasterizes this polygon and starts <see cref="SegmentationMaskEditCommand"/> on it so the mask can be grown and
         /// shrunk with the wheel. When the user accepts the edited mask it is sent to the segmentation server as the

@@ -653,11 +653,11 @@ namespace WebAnnotation.UI.AutoPolygonize
         public string[] HelpStrings =>
         [
             "Double-click: Accept polygonalization",
-            "Double right-click: Proposal menu (Accept / Add points / Reject)"
+            "Double right-click: Proposal menu (Accept / Add points / Paint mask / Reject)"
         ];
 
         /// <summary>
-        /// Accept, refine with extra points, or Reject for the ring.
+        /// Accept, refine with extra points, adjust by painting a mask, or Reject for the ring.
         /// </summary>
         public ContextMenuStrip ContextMenu
         {
@@ -671,6 +671,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                 ToolStripMenuItem addPoints = new("Add points");
                 addPoints.Click += (_, _) => controller.BeginAddPoints(this);
                 menu.Items.Add(addPoints);
+
+                ToolStripMenuItem paintMask = new("Paint mask");
+                paintMask.Click += (_, _) => controller.BeginPaintMask(this);
+                menu.Items.Add(paintMask);
 
                 ToolStripMenuItem reject = new("Reject proposal");
                 reject.Click += (_, _) => controller.Dismiss(this);
