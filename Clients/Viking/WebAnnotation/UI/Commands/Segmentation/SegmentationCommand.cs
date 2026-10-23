@@ -31,10 +31,12 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
+    /// RETIRED: replaced by <see cref="SegmentationPaintCommand"/>, which no caller starts any more. Kept for now because
+    /// <see cref="SegmentationPaintCommand"/> derives from it and shares its request, polygonizing and accept code, and because
+    /// the mask edit path (<c>SubmitEditedMask</c>) still sends a starting mask through it.
     /// Interactive segmentation command that uses AI (SAM2) to segment images based on user-placed points.
     /// Users place foreground (green) and background (red) points, and the system generates a segmentation mask
     /// via gRPC, which can then be converted to a polygon annotation.
-    /// 
     /// </summary>
     internal class SegmentationCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {

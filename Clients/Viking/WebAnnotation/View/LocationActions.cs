@@ -560,22 +560,18 @@ namespace WebAnnotation
                             color,
                             (polygon, _) =>
                             {
-                                IReadOnlyList<Geometry.Vector2> foreground = PolygonSegmentationPrompts.CreateVolumeForegroundPoints(
-                                    polygon,
-                                    Parent.Section.ActiveSectionToVolumeTransform);
-
-                                if (foreground.Count == 0)
+                                Polygon volumeFallback = Parent.Section.ActiveSectionToVolumeTransform.TryMapShapeSectionToVolume(polygon);
+                                if (volumeFallback is null || volumeFallback.ExteriorRing.Length < 3)
                                 {
                                     PlaceLinkedMosaicPolygon(polygon);
                                     return;
                                 }
 
-                                Polygon volumeFallback = Parent.Section.ActiveSectionToVolumeTransform.TryMapShapeSectionToVolume(polygon);
+                                // The dropped polygon is painted as foreground and segmented at once; Escape or the red X places it as dropped.
+                                List<Geometry.Vector2[]> seedRings = [volumeFallback.ExteriorRing, .. volumeFallback.InteriorRings];
                                 var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                                Parent.CommandQueue.EnqueueCommand(new SegmentationCommand(
+                                Parent.CommandQueue.EnqueueCommand(new SegmentationPaintCommand(
                                     Parent,
-                                    foreground,
-                                    Array.Empty<Geometry.Vector2>(),
                                     segmentedVolumePolygon =>
                                     {
                                         LocationObj newLoc = new(loc.Parent,
@@ -596,10 +592,8 @@ namespace WebAnnotation
                                         }
                                     },
                                     channelManager,
-                                    loc.Parent.TypeID,
-                                    loc.ID,
-                                    loc.ParentID,
-                                    volumeFallback)
+                                    seedRings,
+                                    onAbandoned: () => PlaceLinkedMosaicPolygon(polygon))
                                 {
                                     ShowPenButtons = true
                                 });

@@ -2130,8 +2130,8 @@ break;
                 ? selected.ID
                 : Store.StructureTypes[1].ID;
 
-            // The point placing SegmentationCommand stays in the code (the context menus still start it) but Tab now paints a mask.
-            // TODO: restore `new SegmentationCommand(..., structureTypeId: structureTypeId)` here if the paintbrush is withdrawn;
+            // The point placing SegmentationCommand is retired and no longer started from anywhere; Tab and the context menus paint a mask.
+            // TODO: restore `new SegmentationCommand(..., structureTypeId: structureTypeId)` here only if the paintbrush is withdrawn;
             // the paintbrush passes no structure type, so it adds no background prompts from other structures.
             Parent.CurrentCommand = new SegmentationPaintCommand(
                 Parent,

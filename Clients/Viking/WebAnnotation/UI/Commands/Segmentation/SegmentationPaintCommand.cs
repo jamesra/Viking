@@ -25,8 +25,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// started over paint erases the type of paint nearest the cursor until the button is released. The brush grows and shrinks with the
     /// sideways wheel, or Shift plus the ordinary wheel. Pen: the same with the pen's barrel button (see <see cref="BarrelButtonBinding"/>)
     /// in place of Shift, the on-screen check button to accept and the red X to cancel. Double-clicking the result, Enter and the check
-    /// button accept; Escape and the red X cancel. The point placing <see cref="SegmentationCommand"/> is unchanged and reached from the
-    /// places that still start it. Everything here runs on the UI thread; the server request and the polygonizing are the base class's.
+    /// button accept; Escape and the red X cancel. The point placing <see cref="SegmentationCommand"/> it derives from is retired; this command replaces it. Everything here runs on the UI thread; the server request and the polygonizing are the base class's.
     /// </remarks>
     internal sealed class SegmentationPaintCommand : SegmentationCommand, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {

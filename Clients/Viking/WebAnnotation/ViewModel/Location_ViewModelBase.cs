@@ -627,40 +627,14 @@ namespace WebAnnotation.ViewModel
                     return;
                 }
 
-                // Get the circle geometry
-                // The same starting prompt auto-polygonize sends: the inscribed square and four axis clicks.
-                Circle mosaic_circle = GetCircleFromLocation();
-                if (!CircleSegmentationPrompts.TryCreateStartingPrompt(
-                        CircleSegmentationPrompts.ToVolumePoints(
-                            CircleSegmentationPrompts.CreateMosaicRadiusPoints(mosaic_circle),
-                            parent.Section.ActiveSectionToVolumeTransform),
-                        out CircleSegmentationPrompts.StartingPrompt startingPrompt))
-                {
-                    MessageBox.Show("This circle could not be mapped onto the volume.", "Segment", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-
-                IReadOnlyList<Geometry.Vector2> volume_points = startingPrompt.Points;
-
+                // A circle has no outline to seed, so the user paints the object from an empty mask.
                 void callback(Polygon outputPolygon)
                 {
                     UpdateLocationShapeFromVolumePolygon(outputPolygon);
                 }
 
-                // Launch segmentation command
                 var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                SegmentationCommand segmentCommand = new(
-                    parent,
-                    volume_points,
-                    Array.Empty<Geometry.Vector2>(), // no background points initially
-                    callback,
-                    channelManager,
-                    modelObj.Parent.TypeID,
-                    modelObj.ID,
-                    modelObj.ParentID,
-                    startingBoxes: [startingPrompt.Seed]);
-
-                parent.CurrentCommand = segmentCommand;
+                parent.CurrentCommand = new SegmentationPaintCommand(parent, callback, channelManager);
             }
             catch (Exception ex)
             {
@@ -671,7 +645,7 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// Resegment this polygon. Clicks are the unsmoothed mosaic triangle centroids, the same set linked placement sends.
+        /// Resegment this polygon: starts <see cref="SegmentationPaintCommand"/> with the polygon painted as foreground.
         /// </summary>
         protected void ContextMenu_SegmentPolygon(object sender, EventArgs e)
         {
@@ -690,10 +664,15 @@ namespace WebAnnotation.ViewModel
                 }
 
                 Polygon controlRing = modelObj.MosaicShape.ToPolygon();
-                IReadOnlyList<Geometry.Vector2> foregroundPoints =
-                    PolygonSegmentationPrompts.CreateVolumeForegroundPoints(
-                        controlRing,
-                        parent.Section.ActiveSectionToVolumeTransform);
+                Polygon? volumePolygon = parent.Section.ActiveSectionToVolumeTransform.TryMapShapeSectionToVolume(controlRing);
+                if (volumePolygon is null || volumePolygon.ExteriorRing.Length < 3)
+                {
+                    MessageBox.Show("This polygon could not be mapped onto the volume.", "Segment", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // The polygon is painted as foreground, so its result is shown before the user touches anything.
+                List<Geometry.Vector2[]> seedRings = [volumePolygon.ExteriorRing, .. volumePolygon.InteriorRings];
 
                 void callback(Polygon volume_poly)
                 {
@@ -701,17 +680,7 @@ namespace WebAnnotation.ViewModel
                 }
 
                 var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                SegmentationCommand segmentCommand = new(
-                    parent,
-                    foregroundPoints,
-                    Array.Empty<Geometry.Vector2>(), // no background points initially
-                    callback,
-                    channelManager,
-                    modelObj.Parent.TypeID,
-                    modelObj.ID,
-                    modelObj.ParentID);
-
-                parent.CurrentCommand = segmentCommand;
+                parent.CurrentCommand = new SegmentationPaintCommand(parent, callback, channelManager, seedRings: seedRings);
             }
             catch (Exception ex)
             {

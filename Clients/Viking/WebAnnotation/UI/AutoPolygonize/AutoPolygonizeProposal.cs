@@ -601,8 +601,8 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Volume-space seed rectangles, sent as <c>foreground_feature.mask</c>, from the same SegmentImage (inscribed circle square or
-        /// group seed box). Empty when the request had none. Kept so Add points can reopen
-        /// <see cref="SegmentationCommand"/> without remasking clicks alone.
+        /// group seed box). Empty when the request had none. Kept with the proposal for the
+        /// retired point placing <see cref="SegmentationCommand"/>.
         /// </summary>
         public IReadOnlyList<WebAnnotation.UI.Commands.Segmentation.SegmentationSeed> StartingBoxes { get; }
 
@@ -654,11 +654,11 @@ namespace WebAnnotation.UI.AutoPolygonize
         public string[] HelpStrings =>
         [
             "Double-click: Accept polygonalization",
-            "Double right-click: Proposal menu (Accept / Add points / Paint mask / Reject)"
+            "Double right-click: Proposal menu (Accept / Paint mask / Reject)"
         ];
 
         /// <summary>
-        /// Accept, refine with extra points, adjust by painting a mask, or Reject for the ring.
+        /// Accept, adjust by painting a mask, or Reject for the ring.
         /// </summary>
         public ContextMenuStrip ContextMenu
         {
@@ -668,10 +668,6 @@ namespace WebAnnotation.UI.AutoPolygonize
                 ToolStripMenuItem accept = new("Accept polygonalization");
                 accept.Click += (_, _) => controller.Accept(this);
                 menu.Items.Add(accept);
-
-                ToolStripMenuItem addPoints = new("Add points");
-                addPoints.Click += (_, _) => controller.BeginAddPoints(this);
-                menu.Items.Add(addPoints);
 
                 ToolStripMenuItem paintMask = new("Paint mask");
                 paintMask.Click += (_, _) => controller.BeginPaintMask(this);

@@ -90,8 +90,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         private AutoPolygonizeProposal? hoveredProposal;
 
         /// <summary>
-        /// Proposal removed from the overlay while <see cref="BeginAddPoints"/> runs an interactive
-        /// <see cref="SegmentationCommand"/>. Escape restores it; accept clears it.
+        /// Proposal removed from the overlay while <see cref="BeginPaintMask"/> runs an interactive
+        /// <see cref="SegmentationPaintCommand"/>. Escape restores it; accept clears it.
         /// </summary>
         private AutoPolygonizeProposal? parkedForAddPoints;
 
@@ -756,7 +756,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Writes <paramref name="polygon"/> onto the survivor for <paramref name="proposal"/>.
-        /// Used by Accept polygonalization and by Add points after interactive refinement.
+        /// Used by Accept polygonalization and by Paint mask after interactive refinement.
         /// </summary>
         public void Accept(AutoPolygonizeProposal proposal, Polygon? polygon)
         {
@@ -808,7 +808,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             // #endregion
             if (!dbgApplied)
             {
-                // Overlay Accept keeps the ring; Add points restores the parked proposal so the user can retry.
+                // Overlay Accept keeps the ring; Paint mask restores the parked proposal so the user can retry.
                 parent.ShowTransientStatus("Could not save the auto-segment outline for this annotation.");
                 if (ReferenceEquals(parkedForAddPoints, proposal))
                     RestoreParkedProposal();
@@ -837,94 +837,9 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Parks the proposal overlay and opens <see cref="SegmentationCommand"/> seeded with its
-        /// prompts and starting boxes so the user can add foreground/background points before accept.
-        /// Escape restores the parked overlay; accept writes through <see cref="Accept(AutoPolygonizeProposal, Polygon)"/>.
-        /// </summary>
-        public void BeginAddPoints(AutoPolygonizeProposal proposal)
-        {
-            if (proposal is null || !AreProposalMembersValid(proposal))
-                return;
-
-            if (parkedForAddPoints is not null && !ReferenceEquals(parkedForAddPoints, proposal))
-                RestoreParkedProposal();
-
-            LocationObj? seedLoc = Store.Locations.GetObjectByID(proposal.LocationId, false);
-            if (seedLoc?.Parent is null)
-            {
-                parent.ShowTransientStatus("This proposal has no structure to segment.");
-                return;
-            }
-
-            IReadOnlyList<Vector2> foreground = proposal.ForegroundPrompts;
-            IReadOnlyList<SegmentationSeed> startingBoxes = proposal.StartingBoxes;
-            if (foreground.Count == 0 || startingBoxes.Count == 0)
-            {
-                if (!TryResolveAddPointsSeed(proposal, out IReadOnlyList<Vector2> fallbackFg, out IReadOnlyList<SegmentationSeed> fallbackBoxes))
-                {
-                    MessageBox.Show(
-                        "This proposal has no segmentation prompts to edit.",
-                        "Add points",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
-                    return;
-                }
-
-                if (foreground.Count == 0)
-                    foreground = fallbackFg;
-                if (startingBoxes.Count == 0)
-                    startingBoxes = fallbackBoxes;
-            }
-
-            if (foreground.Count == 0)
-            {
-                MessageBox.Show(
-                    "This proposal has no foreground points to edit.",
-                    "Add points",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
-                return;
-            }
-
-            CancelProcessPhase();
-            RemoveProposal(proposal.LocationId);
-            parkedForAddPoints = proposal;
-            parent.Invalidate();
-
-            AutoPolygonizeProposal parked = proposal;
-            void onSuccess(Polygon refined) => Accept(parked, refined);
-
-            try
-            {
-                IGrpcChannelManager channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                parent.CurrentCommand = new SegmentationCommand(
-                    parent,
-                    foreground,
-                    Array.Empty<Vector2>(),
-                    onSuccess,
-                    channelManager,
-                    seedLoc.Parent.TypeID,
-                    proposal.LocationId,
-                    proposal.ParentID ?? seedLoc.ParentID,
-                    startingBoxes: startingBoxes,
-                    onAbandoned: RestoreParkedProposal);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"BeginAddPoints failed: {ex.Message}");
-                RestoreParkedProposal();
-                MessageBox.Show(
-                    $"Failed to open segmentation: {ex.Message}",
-                    "Add points",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-            }
-        }
-
-        /// <summary>
         /// Parks the proposal overlay and opens <see cref="SegmentationPaintCommand"/> with the proposal's polygon already painted as
         /// foreground, so the user can paint, erase or add background before accepting. Accepting writes through
-        /// <see cref="Accept(AutoPolygonizeProposal, Polygon)"/>; Escape restores the parked overlay, as Add points does.
+        /// <see cref="Accept(AutoPolygonizeProposal, Polygon)"/>; Escape restores the parked overlay.
         /// </summary>
         public void BeginPaintMask(AutoPolygonizeProposal proposal)
         {
@@ -972,49 +887,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
         }
 
-        /// <summary>
-        /// Rebuilds FG clicks and seed boxes when the proposal did not store them (older overlays).
-        /// Single-id circles use the inscribed square; multi-id uses the group prompt from the union ring.
-        /// </summary>
-        private bool TryResolveAddPointsSeed(
-            AutoPolygonizeProposal proposal,
-            out IReadOnlyList<Vector2> foreground,
-            out IReadOnlyList<SegmentationSeed> startingBoxes)
-        {
-            foreground = [];
-            startingBoxes = [];
-
-            if (proposal.LocationIds.Count == 1)
-            {
-                LocationObj? circle = Store.Locations.GetObjectByID(proposal.LocationId, false);
-                if (circle is null || circle.TypeCode != LocationType.CIRCLE || parent.Section is null)
-                    return false;
-
-                if (!CircleSegmentationPrompts.TryCreateStartingPrompt(
-                        CircleSegmentationPrompts.ToVolumePoints(
-                            CircleSegmentationPrompts.CreateMosaicRadiusPoints(new Circle(circle.Position, circle.Radius)),
-                            parent.Section.ActiveSectionToVolumeTransform),
-                        out CircleSegmentationPrompts.StartingPrompt startingPrompt))
-                {
-                    return false;
-                }
-
-                foreground = startingPrompt.Points;
-                startingBoxes = [startingPrompt.Seed];
-                return true;
-            }
-
-            CircleSegmentationPrompts.GroupPrompt groupPrompt =
-                CircleSegmentationPrompts.CreateGroupPromptFromPolygons([proposal.Polygon]);
-            if (groupPrompt.Foreground.Count == 0)
-                return false;
-
-            foreground = groupPrompt.Foreground;
-            startingBoxes = groupPrompt.Seeds;
-            return startingBoxes.Count > 0 || foreground.Count > 0;
-        }
-
-        /// <summary>Re-publishes the proposal parked by <see cref="BeginAddPoints"/> when still valid.</summary>
+        /// <summary>Re-publishes the proposal parked by <see cref="BeginPaintMask"/> when still valid.</summary>
         private void RestoreParkedProposal()
         {
             AutoPolygonizeProposal? parked = parkedForAddPoints;
