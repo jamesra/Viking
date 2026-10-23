@@ -358,13 +358,21 @@ namespace WebAnnotation.ViewModel
                 menuShape.DropDownItems.Add(menuSegmentPoly);
             }
 
+            if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON ||
+                TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON)
+            {
+                ToolStripMenuItem menuEditMask = new("Dilate/erode mask...");
+                menuEditMask.Click += ContextMenu_EditPolygonMask;
+                menuShape.DropDownItems.Add(menuEditMask);
+            }
+
             if ((TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON ||
                 TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON) &&
                 Global.IsSegmentationServiceAvailable)
             {
-                ToolStripMenuItem menuEditMask = new("Paint mask...");
-                menuEditMask.Click += ContextMenu_PaintPolygonMask;
-                menuShape.DropDownItems.Add(menuEditMask);
+                ToolStripMenuItem menuPaintMask = new("Paint mask...");
+                menuPaintMask.Click += ContextMenu_PaintPolygonMask;
+                menuShape.DropDownItems.Add(menuPaintMask);
             }
 
             menu.Items.Add(menuShape);
@@ -767,6 +775,132 @@ namespace WebAnnotation.ViewModel
                 Debug.WriteLine($"Error launching mask painter: {ex.Message}");
                 SegmentationDiag.Log($"PaintMask failed: {ex}");
                 MessageBox.Show($"Failed to launch the mask painter: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        /// <summary>
+        /// Rasterizes this polygon and starts <see cref="SegmentationMaskEditCommand"/> on it so the mask can be grown and
+        /// shrunk with the wheel. When the user accepts the edited mask it is sent to the segmentation server as the
+        /// starting mask by a new <see cref="SegmentationCommand"/>, whose result the user accepts or declines; only an
+        /// accepted result changes this location. Cancelling the edit changes nothing.
+        /// </summary>
+        /// <summary>Raster pixels left free around a polygon when it is rasterized for dilate/erode.</summary>
+        private const int EditMaskMarginPixels = 128;
+
+        protected void ContextMenu_EditPolygonMask(object sender, EventArgs e)
+        {
+            try
+            {
+                var parent = AnnotationOverlay.CurrentOverlay?.Parent;
+                if (parent is null)
+                {
+                    MessageBox.Show("There is no open section viewer.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                Polygon mosaicPolygon = modelObj.MosaicShape.ToPolygon();
+                List<Geometry.Vector2[]> volumeRings = [];
+                foreach (Geometry.Vector2[] ring in new[] { mosaicPolygon.ExteriorRing }.Concat(mosaicPolygon.InteriorRings))
+                {
+                    bool[] mapped = parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(ring, out Geometry.Vector2[] volumeRing);
+                    if (mapped.Any(ok => !ok))
+                    {
+                        MessageBox.Show("This polygon could not be mapped onto the volume.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+
+                    volumeRings.Add(volumeRing);
+                }
+
+                // The raster has the resolution of the view (a mosaic pixel is at least one volume unit), whatever the segmentation tile level.
+                int downsample = Math.Max(1, (int)Math.Ceiling(parent.Camera?.Downsample ?? parent.Downsample));
+
+                // The raster is edited in memory and drawn as one texture, so only the GPU limits it: a polygon too big for the
+                // texture is downsampled until it fits. The server's limits apply when the mask is sent (SubmitEditedMask).
+                Geometry.Rectangle polygonBounds = RasterMask.BoundsOf(volumeRings[0]);
+                SegmentationDiag.Log($"EditMask start ds={downsample} polygon={polygonBounds.Width:0}x{polygonBounds.Height:0} maxTexture={parent.MaxTextureSide}");
+                RasterMask mask = RasterMask.FromRings(
+                    volumeRings, downsample, marginPixels: EditMaskMarginPixels, maxRasterSide: parent.MaxTextureSide);
+                SegmentationDiag.Log(mask is null
+                    ? "EditMask raster is null: the polygon covers no pixel centre"
+                    : $"EditMask raster {mask.Width}x{mask.Height} scale={mask.Scale}");
+
+                if (mask is null)
+                {
+                    MessageBox.Show("This polygon is too small to make a mask.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                parent.CurrentCommand = new SegmentationMaskEditCommand(parent, mask, edited =>
+                {
+                    if (edited is null)
+                    {
+                        Trace.WriteLine("Mask edit cancelled");
+                        return;
+                    }
+
+                    Trace.WriteLine($"Mask edit accepted at downsample {edited.Downsample}: {edited.Pixels.Count(p => p != 0)} pixels");
+
+                    // The edit command finishes itself right after this callback returns, so start the next one afterwards.
+                    parent.BeginInvoke(() => SubmitEditedMask(parent, edited));
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error launching mask edit: {ex.Message}");
+                SegmentationDiag.Log($"EditMask failed: {ex}");
+                MessageBox.Show($"Failed to launch mask edit: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Starts a <see cref="SegmentationCommand"/> that sends <paramref name="edited"/> to the segmentation server as
+        /// the starting mask. The user accepts or declines the resulting segmentation; accepting replaces this location's
+        /// shape, declining leaves it as it was.
+        /// </summary>
+        private void SubmitEditedMask(Viking.UI.Controls.SectionViewerControl parent, RasterMask edited)
+        {
+            try
+            {
+                SegmentationSeed? seed = SegmentationSeed.FromMask(edited);
+                if (seed is null || !edited.TryGetSetWorldBounds(out Geometry.Rectangle setBounds))
+                {
+                    MessageBox.Show("The edited mask is empty, so there is nothing to segment from.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                if (!Global.IsSegmentationServiceAvailable)
+                {
+                    MessageBox.Show("There is no segmentation service to send the edited mask to.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // The mask reaches the server as grid tiles, and the server accepts at most MaxForegroundTiles of them.
+                long spanned = SegmentationMaskTiles.TilesSpanned(setBounds, edited.Downsample);
+                if (spanned > SegmentationMaskTiles.MaxForegroundTiles)
+                {
+                    MessageBox.Show(
+                        $"The edited mask spans {spanned} tiles. The segmentation server accepts a mask of at most {SegmentationMaskTiles.MaxForegroundTiles} tiles (about {(int)Math.Sqrt(SegmentationMaskTiles.MaxForegroundTiles) * SegmentationTileGrid.TileSize} pixels across).",
+                        "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // The bitmap itself is the foreground mask; one click inside it tells the server which object is meant.
+                var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
+                parent.CurrentCommand = new SegmentationCommand(
+                    parent,
+                    [seed.Value.Center],
+                    Array.Empty<Geometry.Vector2>(),
+                    UpdateLocationShapeFromVolumePolygon,
+                    channelManager,
+                    modelObj.Parent.TypeID,
+                    modelObj.ID,
+                    modelObj.ParentID,
+                    startingBoxes: [seed.Value]);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error submitting edited mask: {ex.Message}");
+                MessageBox.Show($"Failed to segment the edited mask: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
