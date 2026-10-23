@@ -113,7 +113,7 @@ namespace Viking.GrpcSectionCorrectionService
         async Task RunLockedAsync(string volumeName, bool force, CancellationToken cancellationToken)
         {
             // Begin first so an Identity outage still shows a start time and an error in GetRebuildStatus.
-            _status.Begin([]);
+            _status.Begin();
             string error = "";
             List<string> failures = [];
             try
@@ -127,7 +127,6 @@ namespace Viking.GrpcSectionCorrectionService
                         failures.Add($"No assigned volume named '{volumeName.Trim()}'.");
                 }
 
-                _status.SetVolumes([.. groups.Select(g => g.Key.Database).Distinct(StringComparer.OrdinalIgnoreCase)]);
                 _status.SetPlan(groups.Count);
                 foreach (IGrouping<(string Database, string StosGroup), IdentityVolumeRow> group in groups)
                 {

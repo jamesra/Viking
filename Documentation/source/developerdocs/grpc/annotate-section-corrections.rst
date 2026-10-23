@@ -49,17 +49,19 @@ Catalog
    * - ``ListVolumes``
      - Volumes this host rebuilds, plus any volume folder already on disk. Each ``VolumeInfo`` has ``volume_name``, the VikingXML URL, and the annotation endpoint.
    * - ``GetRebuildStatus``
-     - Whether a rebuild is running, when the last one started and finished, ``last_error``, and the volume names in that pass. ``service_version`` is the host assembly version. It changes when the algorithm or ``CorrectStructures`` changes even if ``built_utc`` on the field does not. Cache keys should include both.
+     - Whether a rebuild is running, when the last one started and finished, ``last_error``, and progress of the running pass (``current_volume``, ``current_step``, ``groups_done`` of ``groups_total``). ``service_version`` is the host assembly version. It changes when the algorithm or ``CorrectStructures`` changes even if ``built_utc`` on the field does not. Cache keys should include both.
    * - ``ListCorrectionSets``
      - Published sets. An empty ``volume_name`` lists every volume.
    * - ``ListCorrectedSections``
      - Z values for one volume and Stos group.
    * - ``GetCorrectionManifest``
-     - Provenance, ``volume_url`` for ``volume.npz`` when hosted (built from the section files on first request), and the Z list.
+     - Provenance and the Z list.
    * - ``GetSectionCorrection``
-     - Sparse lattice for one Z. Node world position is ``origin + grid index * pitch_nm``. Add ``dx`` and ``dy`` to a volume point.
+     - Sparse lattice for one Z. Node ``(gx, gy)`` sits at ``(gx * pitch_nm, gy * pitch_nm)`` in volume nanometers. Add ``dx`` and ``dy`` to a volume point.
+   * - ``GetStructureFingerprint``
+     - The current annotation fingerprint of ``structure_ids`` (and children when ``include_children`` is set), from SQL aggregates only: no volume load and no fit, so it answers in well under a second. See `Caching`_.
 
-Provenance fields match :doc:`annotate-corrections`: ``built_utc``, ``annotation_watermark``, ``pitch_nm``, ``kernel_radius_nm``, ``min_annotation_votes``, and ``ResidualWindow``.
+Provenance is ``built_utc`` (when the set was published), ``pitch_nm`` and ``kernel_radius_nm``.
 
 Sampling
 ========
@@ -69,3 +71,14 @@ Sampling
 ``CorrectStructures`` loads the locations for ``structure_ids`` from the annotation service named on that volume. ``include_children`` also loads child structures. It then applies ``correction`` (default All). Each ``CorrectedLocation`` is one location: ids, Z, corrected ``x`` and ``y``, and the delta. ``service_version`` is echoed so the client can key a cache without a separate status call.
 
 ``CorrectStructures`` is the call morphology and export use when they want warped contours. ``CorrectPoints`` is the call for a handful of positions the client already holds.
+
+Caching
+=======
+
+A cached ``CorrectStructures`` answer is stale when any of these changed since it was fetched:
+
+* ``service_version`` (``GetRebuildStatus``): the algorithm changed.
+* The set's ``CorrectionProvenance.built_utc`` (``ListCorrectionSets``): the residual field was rebuilt.
+* ``annotation_fingerprint`` (``GetStructureFingerprint``, same ``structure_ids`` and ``include_children``): an annotation of those structures was added, edited or deleted.
+
+``CorrectStructuresResponse`` also carries ``annotation_watermark``, the newest location or link edit time. It does not move when a location or link is deleted, so compare fingerprints, not watermarks. The response's fingerprint is read before its rows, so an edit made during the call shows up as a change on the next check.

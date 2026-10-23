@@ -160,11 +160,7 @@ namespace Viking.GrpcSectionCorrectionService
             ServerCallContext context)
         {
             PublishedCorrectionSet set = RequireSet(request.VolumeName, request.StosGroup);
-            ListCorrectedSectionsResponse response = new()
-            {
-                VolumeName = request.VolumeName,
-                StosGroup = set.StosGroup
-            };
+            ListCorrectedSectionsResponse response = new();
             response.Z.AddRange(set.Sections.Keys.OrderBy(z => z));
             return Task.FromResult(response);
         }
@@ -174,7 +170,7 @@ namespace Viking.GrpcSectionCorrectionService
             ServerCallContext context)
         {
             PublishedCorrectionSet set = RequireSet(request.VolumeName, request.StosGroup);
-            return Task.FromResult(ToManifestProto(request.VolumeName, set));
+            return Task.FromResult(ToManifestProto(set));
         }
 
         public override Task<SectionCorrectionMsg> GetSectionCorrection(
@@ -189,16 +185,7 @@ namespace Viking.GrpcSectionCorrectionService
                     $"no correction for section {request.Z} in '{request.VolumeName}' '{request.StosGroup}'"));
             }
 
-            (double originX, double originY, _, _) = field.OccupiedRasterBounds();
-            SectionCorrectionMsg message = new()
-            {
-                VolumeName = request.VolumeName,
-                StosGroup = set.StosGroup,
-                Z = field.Z,
-                OriginXNm = originX,
-                OriginYNm = originY,
-                PitchNm = field.PitchNm
-            };
+            SectionCorrectionMsg message = new() { PitchNm = field.PitchNm };
             foreach (LatticeNode node in field.Nodes)
             {
                 message.Nodes.Add(new LatticeVector
@@ -533,15 +520,9 @@ namespace Viking.GrpcSectionCorrectionService
             return set;
         }
 
-        static CorrectionManifest ToManifestProto(string volumeName, PublishedCorrectionSet set)
+        static CorrectionManifest ToManifestProto(PublishedCorrectionSet set)
         {
-            CorrectionManifest message = new()
-            {
-                VolumeName = volumeName,
-                StosGroup = set.StosGroup,
-                Provenance = ToProto(set.Provenance),
-                VolumeUrl = set.Manifest.VolumeUrl ?? ""
-            };
+            CorrectionManifest message = new() { Provenance = ToProto(set.Provenance) };
             message.Z.AddRange(set.Sections.Keys.OrderBy(z => z));
             return message;
         }
@@ -551,21 +532,11 @@ namespace Viking.GrpcSectionCorrectionService
             if (dto is null)
                 return new CorrectionProvenance();
 
-            ResidualWindowDto window = dto.ResidualWindow ?? new ResidualWindowDto();
             return new CorrectionProvenance
             {
                 BuiltUtc = ToTimestamp(dto.BuiltUtc),
-                AnnotationWatermark = ToTimestamp(dto.AnnotationWatermark),
                 PitchNm = dto.PitchNm,
-                KernelRadiusNm = dto.KernelRadiusNm,
-                MinAnnotationVotes = dto.MinAnnotationVotes,
-                ResidualWindow = new ResidualWindow
-                {
-                    MinBoth = window.MinBoth,
-                    MaxBoth = window.MaxBoth,
-                    MinOne = window.MinOne,
-                    MaxOne = window.MaxOne
-                }
+                KernelRadiusNm = dto.KernelRadiusNm
             };
         }
 

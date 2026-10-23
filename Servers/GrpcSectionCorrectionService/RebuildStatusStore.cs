@@ -21,7 +21,6 @@ namespace Viking.GrpcSectionCorrectionService
         DateTime? _lastStartedUtc;
         DateTime? _lastCompletedUtc;
         string _lastError = "";
-        List<string> _lastVolumes = [];
         string _currentVolume = "";
         string _currentStep = "";
         int _groupsDone;
@@ -47,15 +46,13 @@ namespace Viking.GrpcSectionCorrectionService
         /// <summary>
         /// Marks a rebuild as running, stamps the start time, and clears the previous error.
         /// </summary>
-        /// <param name="volumeNames">Annotation database names this rebuild covers; copied, must not be null.</param>
-        public void Begin(IReadOnlyList<string> volumeNames)
+        public void Begin()
         {
             lock (_gate)
             {
                 _inProgress = true;
                 _lastStartedUtc = DateTime.UtcNow;
                 _lastError = "";
-                _lastVolumes = [.. volumeNames];
                 _currentVolume = "";
                 _currentStep = "";
                 _groupsDone = 0;
@@ -107,16 +104,6 @@ namespace Viking.GrpcSectionCorrectionService
         }
 
         /// <summary>
-        /// Replaces the database names reported for the running rebuild, once Identity has listed them.
-        /// </summary>
-        /// <param name="volumeNames">Annotation database names; copied, must not be null.</param>
-        public void SetVolumes(IReadOnlyList<string> volumeNames)
-        {
-            lock (_gate)
-                _lastVolumes = [.. volumeNames];
-        }
-
-        /// <summary>
         /// Marks the running rebuild as finished and stamps the completion time. Call from a <c>finally</c> so a
         /// failed rebuild does not leave <c>InProgress</c> set.
         /// </summary>
@@ -155,7 +142,6 @@ namespace Viking.GrpcSectionCorrectionService
                     status.LastStartedUtc = Timestamp.FromDateTime(DateTime.SpecifyKind(_lastStartedUtc.Value, DateTimeKind.Utc));
                 if (_lastCompletedUtc.HasValue)
                     status.LastCompletedUtc = Timestamp.FromDateTime(DateTime.SpecifyKind(_lastCompletedUtc.Value, DateTimeKind.Utc));
-                status.LastVolumes.AddRange(_lastVolumes);
                 return status;
             }
         }

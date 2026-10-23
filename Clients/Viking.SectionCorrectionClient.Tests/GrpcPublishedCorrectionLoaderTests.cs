@@ -47,7 +47,7 @@ namespace Viking.SectionCorrectionClient.Tests
 
         static SectionCorrection Section(long z, double pitch, params (int Gx, int Gy, double Dx, double Dy, int Votes)[] nodes)
         {
-            var message = new SectionCorrection { Z = z, PitchNm = pitch };
+            var message = new SectionCorrection { PitchNm = pitch };
             foreach (var n in nodes)
                 message.Nodes.Add(new LatticeVector { Gx = n.Gx, Gy = n.Gy, Dx = n.Dx, Dy = n.Dy, VoteCount = n.Votes });
             return message;
@@ -119,8 +119,6 @@ namespace Viking.SectionCorrectionClient.Tests
                 },
                 GetCorrectionManifestRequest => new CorrectionManifest
                 {
-                    VolumeName = "RC1",
-                    StosGroup = "alpha",
                     Provenance = new CorrectionProvenance { PitchNm = 2000, KernelRadiusNm = 8000 },
                     Z = { 10, 11 }
                 },
@@ -169,7 +167,6 @@ namespace Viking.SectionCorrectionClient.Tests
         {
             CorrectPointsResponse canned = new()
             {
-                VolumeName = "RC1",
                 StosGroup = "grid",
                 Sections =
                 {

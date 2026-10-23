@@ -427,7 +427,7 @@ namespace Viking.SectionCorrectionClient.Tests
 
         static SectionCorrection SectionOf(long z)
         {
-            var message = new SectionCorrection { Z = z, PitchNm = 1000 };
+            var message = new SectionCorrection { PitchNm = 1000 };
             foreach ((int gx, int gy, double dx) in new[] { (0, 0, 10.0), (1, 0, 20.0), (0, 1, 10.0), (1, 1, 20.0) })
                 message.Nodes.Add(new LatticeVector { Gx = gx, Gy = gy, Dx = dx });
             return message;
