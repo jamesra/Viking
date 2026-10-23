@@ -74,6 +74,45 @@ namespace AnnotationVizLibTests
             Assert.IsNotNull(predicted);
         }
 
+        /// <summary>
+        /// A tip's prediction extends its process's trend.  Clamping to the nearest control put it on its neighbour's
+        /// centroid, so every tip of a slanted process read as misregistered by one section of slope.
+        /// </summary>
+        [TestMethod]
+        public void AsymmetricAdmission_TipOfSlantedLine_PredictsOnTheLine()
+        {
+            Vector2[] centroids = [.. Enumerable.Range(0, 6).Select(k => new Vector2(100 + k * 40, -30 + k * 25))];
+            double[] z = [.. Enumerable.Range(1, 6).Select(k => k * SectionZ)];
+
+            Vector2? bottom = MorphologyGraph.TryEvaluateAsymmetricLeaveOneOut(centroids, z, 0, MorphologyGraph.ResidualWindowOptions.Default);
+            Vector2? top = MorphologyGraph.TryEvaluateAsymmetricLeaveOneOut(centroids, z, 5, MorphologyGraph.ResidualWindowOptions.Default);
+
+            Assert.IsNotNull(bottom);
+            Assert.IsNotNull(top);
+            Assert.AreEqual(0, Vector2.Distance(bottom.Value, centroids[0]), 1e-6, $"bottom tip predicted at {bottom}");
+            Assert.AreEqual(0, Vector2.Distance(top.Value, centroids[5]), 1e-6, $"top tip predicted at {top}");
+        }
+
+        /// <summary>CurveFit must leave the tip of a straight slanted process where it is, not pull it onto its neighbour.</summary>
+        [TestMethod]
+        public void CurveFitProcesses_TipOfSlantedLine_IsNotMoved()
+        {
+            MorphologyGraph graph = BuildCell(1,
+            [
+                (1, 0, 0, 1),
+                (2, 40, 25, 2),
+                (3, 80, 50, 3),
+                (4, 120, 75, 4),
+                (5, 160, 100, 5),
+            ], LinkSequential(1, 5));
+            Vector2 tipBefore = graph.Nodes[1].Center.XY();
+
+            MorphologyGraph.CurveFitProcesses(graph);
+
+            Assert.AreEqual(0, Vector2.Distance(tipBefore, graph.Nodes[1].Center.XY()), 1e-6,
+                $"tip moved from {tipBefore} to {graph.Nodes[1].Center.XY()}");
+        }
+
         [TestMethod]
         public void AsymmetricAdmission_OneSidedWithFewerThanMinOne_Drops()
         {

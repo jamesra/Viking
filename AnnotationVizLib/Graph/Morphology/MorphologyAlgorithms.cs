@@ -720,6 +720,36 @@ namespace AnnotationVizLib
         }
 
         /// <summary>
+        /// Least-squares line through the controls' centroids as a function of Z, evaluated at <paramref name="queryZ"/>.
+        /// A fitted line rather than the two nearest controls, so one jittered neighbour does not swing the tip; a
+        /// line rather than Catmull-Rom, whose extrapolation overshoots.  Falls back to the nearest control when every
+        /// control shares one Z.
+        /// </summary>
+        static Vector2 ExtrapolateLinearAtZ(Vector2[] centroids, double[] z, List<int> controlIdx, double queryZ)
+        {
+            double meanZ = controlIdx.Average(j => z[j]);
+            double meanX = controlIdx.Average(j => centroids[j].X);
+            double meanY = controlIdx.Average(j => centroids[j].Y);
+            double szz = 0, szx = 0, szy = 0;
+            foreach (int j in controlIdx)
+            {
+                double dz = z[j] - meanZ;
+                szz += dz * dz;
+                szx += dz * (centroids[j].X - meanX);
+                szy += dz * (centroids[j].Y - meanY);
+            }
+
+            if (szz <= Tolerance.Epsilon)
+            {
+                int nearest = controlIdx.MinBy(j => Math.Abs(z[j] - queryZ));
+                return centroids[nearest];
+            }
+
+            double dq = queryZ - meanZ;
+            return new Vector2(meanX + (szx / szz) * dq, meanY + (szy / szz) * dq);
+        }
+
+        /// <summary>
         /// Catmull-Rom (or linear fallback) at <paramref name="i"/>'s Z using the given control indices.
         /// Null when controls cannot produce a prediction.
         /// </summary>
@@ -731,6 +761,13 @@ namespace AnnotationVizLib
                 return centroids[controlIdx[0]];
 
             double queryZ = z[i];
+
+            // A process tip has controls on one side only.  Clamping to the nearest control predicted the tip on its
+            // neighbour's centroid, so every tip of a slanted process read as misregistered by one section's worth
+            // of slope (and curvefit pulled tips onto their neighbours).  Extend the controls' trend instead.
+            if (queryZ < z[controlIdx[0]] || queryZ > z[controlIdx[^1]])
+                return ExtrapolateLinearAtZ(centroids, z, controlIdx, queryZ);
+
             int seg = 0;
             while (seg + 1 < controlIdx.Count && z[controlIdx[seg + 1]] < queryZ)
                 seg++;

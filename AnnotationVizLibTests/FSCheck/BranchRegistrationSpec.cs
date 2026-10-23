@@ -40,21 +40,17 @@ namespace AnnotationVizLibTests.FSCheck
             CurveFitCheck.Run(
                 Prop.ForAll(Arb.From(GenSplit()), split =>
                 {
-                    MorphologyGraph graph = Build(split);
-                    List<NeighborResidualField.ResidualSample> residuals = NeighborResidualField.CollectResiduals([graph]);
-
-                    // Process tips are excluded: a one-sided prediction clamps to the nearest neighbour instead of
-                    // extrapolating, so a tip on a sloped process always carries a residual.  That limitation predates
-                    // and is unrelated to branches; every other node of a straight process must read zero.
-                    return residuals
-                        .Where(r => !graph.Nodes[r.LocationID].IsProcessTerminal())
-                        .All(r => Math.Abs(r.DX) < Tolerance && Math.Abs(r.DY) < Tolerance);
+                    // Process tips included: a one-sided prediction extends the process's trend, so a tip of a straight
+                    // slanted process reads zero too.
+                    List<NeighborResidualField.ResidualSample> residuals = NeighborResidualField.CollectResiduals([Build(split)]);
+                    return residuals.Any(r => r.OneSided)
+                        && residuals.All(r => Math.Abs(r.DX) < Tolerance && Math.Abs(r.DY) < Tolerance);
                 }),
                 nameof(CollectResiduals_StraightYSplit_HasNoResidual));
 
         static Gen<YSplit> GenSplit() =>
-            from parentLength in Gen.Choose(3, 8)
-            from daughterLength in Gen.Choose(3, 8)
+            from parentLength in Gen.Choose(3, 10)
+            from daughterLength in Gen.Choose(6, 10)
             from parentSlope in Gen.ArrayOf(2, Gen.Choose(-60, 60))
             from lobeShift in Gen.ArrayOf(2, Gen.Choose(-1500, 1500))
             from gap in Gen.Choose(1000, 4000)
