@@ -368,6 +368,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             startingBoxes = foreground is SegmentationSeed seed ? [seed] : [];
             derivedBackgroundMask = background;
+
+            // SegmentAsync refuses a request with no click, and the result is trimmed to the pieces holding a foreground point, so the
+            // seed's interior point goes along as the one click, as the edited-mask path does.
+            foregroundPoints.Clear();
+            backgroundPoints.Clear();
+            if (foreground is SegmentationSeed clickSeed)
+                foregroundPoints.Add(clickSeed.Center);
         }
 
         /// <summary>
