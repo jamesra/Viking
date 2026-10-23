@@ -1,6 +1,11 @@
+using System.Collections.Concurrent;
 using AnnotationVizLib;
 using AnnotationVizLib.OData;
+using Grpc.Core;
+using Grpc.Net.Client;
 using ODataClient.ConnectomeDataModel;
+using Viking.SectionCorrectionClient;
+using Vector2 = Geometry.Vector2;
 
 namespace DataExport.Controllers;
 
@@ -12,6 +17,7 @@ namespace DataExport.Controllers;
 /// </remarks>
 /// <param name="env">The web host environment.</param>
 /// <param name="configuration">The configuration service.</param>
+/// <param name="logger">Logger for residual-field load diagnostics.</param>
 /*
  * The route prefix deliberately omits [action]. With it, the controller prefix already
  * resolved to "Morphology/GetTLP" and the action template "tlp" appended to it, so the
@@ -20,12 +26,17 @@ namespace DataExport.Controllers;
  */
 [ApiController]
 [Route("[controller]")]
-public class MorphologyController(IWebHostEnvironment env, IConfiguration configuration) : Controller
+public class MorphologyController(IWebHostEnvironment env, IConfiguration configuration, ILogger<MorphologyController> logger) : Controller
 {
     private readonly IWebHostEnvironment _env = env ?? throw new ArgumentNullException(nameof(env));
     private readonly IConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+    private readonly ILogger<MorphologyController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     private UnitsAndScale.Scale? _cachedScale;
     private readonly SemaphoreSlim _scaleLock = new(1, 1);
+    private readonly SemaphoreSlim _residualFieldLock = new(1, 1);
+    private NeighborResidualField? _cachedResidualField;
+    private bool _residualFieldResolved;
+    static readonly ConcurrentDictionary<Uri, GrpcChannel> CorrectionChannels = new();
 
     private Uri GetODataUrl()
     {
@@ -315,15 +326,144 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
             include_children: false,
             GetODataUrl(),
             scale);
-        ApplyPublishedResidualField(graph);
+        await ApplyPublishedResidualFieldAsync(graph, HttpContext.RequestAborted).ConfigureAwait(false);
         return graph;
     }
 
-    private void ApplyPublishedResidualField(MorphologyGraph graph)
+    /// <summary>
+    /// Applies the Neighbor residual field when one is available. Prefers
+    /// <c>Corrections:ServiceUrl</c> (same maps MonogameTestbed loads via <c>--correction-url</c>),
+    /// then a local <c>Corrections:RootDirectory</c>, then leaves the graph unchanged.
+    /// </summary>
+    private async Task ApplyPublishedResidualFieldAsync(MorphologyGraph graph, CancellationToken cancellationToken)
+    {
+        if (graph is null)
+            return;
+
+        NeighborResidualField? field = await GetOrLoadResidualFieldAsync(cancellationToken).ConfigureAwait(false);
+        if (field is null)
+            return;
+
+        MorphologyGraph.ApplyResidualField(graph, field);
+    }
+
+    private async Task<NeighborResidualField?> GetOrLoadResidualFieldAsync(CancellationToken cancellationToken)
+    {
+        if (_residualFieldResolved)
+            return _cachedResidualField;
+
+        await _residualFieldLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_residualFieldResolved)
+                return _cachedResidualField;
+
+            NeighborResidualField? fromService = await TryLoadServiceResidualFieldAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (fromService is not null)
+            {
+                _cachedResidualField = fromService;
+                _residualFieldResolved = true;
+                return _cachedResidualField;
+            }
+
+            _cachedResidualField = TryLoadDiskResidualField();
+            _residualFieldResolved = true;
+            return _cachedResidualField;
+        }
+        finally
+        {
+            _residualFieldLock.Release();
+        }
+    }
+
+    private async Task<NeighborResidualField?> TryLoadServiceResidualFieldAsync(CancellationToken cancellationToken)
+    {
+        string? serviceUrlText = _configuration["Corrections:ServiceUrl"];
+        if (string.IsNullOrWhiteSpace(serviceUrlText))
+        {
+            _logger.LogInformation(
+                "Correction service omitted (Corrections:ServiceUrl empty). " +
+                "Residual field will use Corrections:RootDirectory if set.");
+            return null;
+        }
+
+        if (!Uri.TryCreate(serviceUrlText.Trim(), UriKind.Absolute, out Uri? serviceUrl))
+        {
+            _logger.LogWarning(
+                "Correction service cannot be used: invalid Corrections:ServiceUrl '{ServiceUrl}'.",
+                serviceUrlText);
+            return null;
+        }
+
+        string? explicitVolume = _configuration["Corrections:VolumeName"];
+        string? stosGroup = _configuration["Corrections:StosGroup"];
+        Uri odataUri = GetODataUrl();
+
+        var loader = new GrpcPublishedCorrectionLoader(uri =>
+            CorrectionChannels.GetOrAdd(uri, u => GrpcChannel.ForAddress(u)).CreateCallInvoker());
+
+        _logger.LogInformation(
+            "Downloading residual field from {ServiceUrl} volume={Volume} stos={StosGroup}",
+            serviceUrl,
+            string.IsNullOrWhiteSpace(explicitVolume) ? "(auto from ListVolumes / OData URL)" : explicitVolume,
+            string.IsNullOrWhiteSpace(stosGroup) ? "(first StosGroup)" : stosGroup);
+
+        try
+        {
+            DownloadedCorrectionSet set = await loader
+                .LoadAsync(
+                    serviceUrl,
+                    string.IsNullOrWhiteSpace(explicitVolume) ? null : explicitVolume.Trim(),
+                    string.IsNullOrWhiteSpace(stosGroup) ? null : stosGroup.Trim(),
+                    volumeNameHint: string.IsNullOrWhiteSpace(explicitVolume) ? null : explicitVolume.Trim(),
+                    annotationOrODataUri: odataUri,
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!set.HasSections)
+            {
+                _logger.LogWarning(
+                    "Correction service cannot be used: no section lattices for '{Volume}' '{StosGroup}' at {ServiceUrl}. " +
+                    "Falling back to Corrections:RootDirectory.",
+                    set.VolumeName,
+                    set.StosGroup,
+                    serviceUrl);
+                return null;
+            }
+
+            _logger.LogInformation(
+                "Loaded service residual field {Volume}/{StosGroup} ({SectionCount} sections, pitch={PitchNm:F0}nm) from {ServiceUrl}",
+                set.VolumeName,
+                set.StosGroup,
+                set.Sections.Count,
+                set.PitchNm,
+                serviceUrl);
+
+            IEnumerable<(int Z, int Gx, int Gy, Vector2 Offset, int Votes)> nodes = set.EnumerateLatticeNodes()
+                .Select(n => (n.Z, n.Gx, n.Gy, new Vector2(n.Dx, n.Dy), n.Votes));
+            return NeighborResidualField.FromLattice(nodes, set.PitchNm, set.KernelRadiusNm);
+        }
+        catch (Exception ex) when (ex is RpcException or InvalidOperationException or HttpRequestException
+            or IOException or TimeoutException or ArgumentException)
+        {
+            _logger.LogWarning(
+                ex,
+                "Correction service cannot be used ({ServiceUrl}). Falling back to Corrections:RootDirectory.",
+                serviceUrl);
+            return null;
+        }
+    }
+
+    private NeighborResidualField? TryLoadDiskResidualField()
     {
         string? dir = _configuration["Corrections:RootDirectory"];
-        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir) || graph is null)
-            return;
+        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
+        {
+            _logger.LogInformation(
+                "Residual field: no published directory (Corrections:RootDirectory empty or missing); leaving morphology uncorrected.");
+            return null;
+        }
 
         using Viking.SectionCorrection.CorrectionCatalog catalog = new(dir);
         catalog.Load();
@@ -338,13 +478,20 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
         {
             set = catalog.Sets.OrderBy(s => s.StosGroup, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
             if (set is null)
-                return;
+            {
+                _logger.LogInformation("No published correction sets under {Directory}", dir);
+                return null;
+            }
         }
+
+        _logger.LogInformation(
+            "Residual field: published directory {StosGroup} under {Directory} (correction service not used).",
+            set.StosGroup,
+            dir);
 
         double pitch = set.Provenance?.PitchNm > 0 ? set.Provenance.PitchNm : NeighborResidualField.GridSizeNm;
         double kernel = set.Provenance?.KernelRadiusNm > 0 ? set.Provenance.KernelRadiusNm : NeighborResidualField.KernelRadiusNm;
-        NeighborResidualField field = NeighborResidualField.FromLattice(set.EnumerateLattice(), pitch, kernel);
-        MorphologyGraph.ApplyResidualField(graph, field);
+        return NeighborResidualField.FromLattice(set.EnumerateLattice(), pitch, kernel);
     }
 
     private bool RequestedStickFigure()
