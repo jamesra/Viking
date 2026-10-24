@@ -32,8 +32,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
     /// RETIRED: replaced by <see cref="SegmentationPaintCommand"/>, which no caller starts any more. Kept for now because
-    /// <see cref="SegmentationPaintCommand"/> derives from it and shares its request, polygonizing and accept code, and because
-    /// the mask edit path (<c>SubmitEditedMask</c>) still sends a starting mask through it.
+    /// <see cref="SegmentationPaintCommand"/> derives from it and shares its request, polygonizing and accept code.
     /// Interactive segmentation command that uses AI (SAM2) to segment images based on user-placed points.
     /// Users place foreground (green) and background (red) points, and the system generates a segmentation mask
     /// via gRPC, which can then be converted to a polygon annotation.

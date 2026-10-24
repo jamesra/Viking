@@ -22,7 +22,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// </summary>
     /// <remarks>
     /// Mouse: press the left button over unpainted ground to paint foreground and drag to continue. Shift+left paints background; Shift+left
-    /// started over paint erases the type of paint nearest the cursor until the button is released. The brush grows and shrinks with the
+    /// started over paint erases all paint, foreground and background, until the button is released. The brush grows and shrinks with the
     /// sideways wheel, or Shift plus the ordinary wheel. Pen: the same with the pen's barrel button (see <see cref="BarrelButtonBinding"/>)
     /// in place of Shift, the on-screen check button to accept and the red X to cancel. Double-clicking the result, Enter and the check
     /// button accept; Escape and the red X cancel. The point placing <see cref="SegmentationCommand"/> it derives from is retired; this command replaces it. Everything here runs on the UI thread; the server request and the polygonizing are the base class's.
@@ -70,20 +70,27 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// when the command starts and segmented at once, so its result is shown before the user touches anything. Null starts empty.
         /// </param>
         /// <param name="onAbandoned">Runs when the command ends without an accepted polygon (Escape, the red X, another command).</param>
+        /// <param name="seedMask">
+        /// An existing mask to start from as a raster in volume space (an edited bitmap, which polygon rings cannot describe). It is painted
+        /// as foreground and segmented at once, like <paramref name="seedRings"/>; both may be given. Null starts empty.
+        /// </param>
         public SegmentationPaintCommand(
             SectionViewerControl parent,
             OnCommandSuccess? success_callback = null,
             IGrpcChannelManager? grpcChannelManager = null,
             System.Collections.Generic.IReadOnlyList<GVector2[]>? seedRings = null,
-            Action? onAbandoned = null)
+            Action? onAbandoned = null,
+            RasterMask? seedMask = null)
             : base(parent, success_callback, grpcChannelManager, onAbandoned: onAbandoned)
         {
             paintCancelButton = new PenCancelButton(parent);
             ShowPenButtons = Global.ShowPenActionButtons;
             this.seedRings = seedRings;
+            this.seedMask = seedMask;
         }
 
         private readonly System.Collections.Generic.IReadOnlyList<GVector2[]>? seedRings;
+        private readonly RasterMask? seedMask;
 
         /// <inheritdoc />
         protected override bool PlacesPoints => false;
@@ -97,7 +104,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         [
             "Left-click + drag: Paint foreground (the object)",
             "Shift + Left-click + drag: Paint background (not the object)",
-            "Shift + Left-click on paint + drag: Erase the nearest kind of paint",
+            "Shift + Left-click on paint + drag: Erase paint (foreground and background)",
             "Pen: the barrel button works like Shift; the check button accepts, the red X cancels",
             "Sideways wheel or Shift + wheel: Brush size",
             "Double-click the result or press Enter: Accept",
@@ -123,15 +130,20 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Geometry.Rectangle area = Parent.Scene.VisibleWorldBounds;
             if (seedRings is { Count: > 0 })
                 area = Geometry.Rectangle.Union(area, RasterMask.BoundsOf(seedRings[0]));
+            if (seedMask is not null)
+                area = Geometry.Rectangle.Union(area, seedMask.WorldBounds);
 
             canvas = PaintCanvas.ForView(area, downsample, maxSide);
             submitDebouncer = new PanZoomDebouncer(SubmitPauseMilliseconds, SubmitPaint, action => Viking.UI.State.MainThreadDispatcher?.BeginInvoke(action));
 
+            int seeded = 0;
             if (seedRings is { Count: > 0 } && RasterMask.FromRings(seedRings, canvas.Downsample, 0, maxSide) is RasterMask seed)
-            {
-                canvas.Fill(seed, PaintCanvas.Foreground);
+                seeded += canvas.Fill(seed, PaintCanvas.Foreground);
+            if (seedMask is not null)
+                seeded += canvas.Fill(seedMask, PaintCanvas.Foreground);
+
+            if (seeded > 0)
                 SubmitPaint();
-            }
         }
 
         /// <inheritdoc />

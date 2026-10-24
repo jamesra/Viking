@@ -582,28 +582,14 @@ namespace WebAnnotation.ViewModel
                     return;
                 }
 
-                Circle mosaicCircle = GetCircleFromLocation();
-                Geometry.Vector2[] mosaicRing = new Geometry.Vector2[ManualCirclePolygonVertexCount + 1];
-                for (int i = 0; i < ManualCirclePolygonVertexCount; i++)
-                {
-                    double angle = 2.0 * Math.PI * i / ManualCirclePolygonVertexCount;
-                    mosaicRing[i] = new Geometry.Vector2(
-                        mosaicCircle.Center.X + mosaicCircle.Radius * Math.Cos(angle),
-                        mosaicCircle.Center.Y + mosaicCircle.Radius * Math.Sin(angle));
-                }
-
-                mosaicRing[ManualCirclePolygonVertexCount] = mosaicRing[0];
-
-                IReadOnlyList<Geometry.Vector2> volumeRing = CircleSegmentationPrompts.ToVolumePoints(
-                    mosaicRing,
-                    parent.Section.ActiveSectionToVolumeTransform);
-                if (volumeRing.Count != mosaicRing.Length)
+                Geometry.Vector2[]? volumeRing = TryGetCircleVolumeRing(parent);
+                if (volumeRing is null)
                 {
                     MessageBox.Show("This circle could not be mapped onto the volume.", "Convert to Polygon", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
-                UpdateLocationShapeFromVolumePolygon(new Polygon(volumeRing.ToArray()));
+                UpdateLocationShapeFromVolumePolygon(new Polygon(volumeRing));
             }
             catch (Exception ex)
             {
@@ -614,7 +600,32 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// Launch segmentation command to convert a circle location to a polygon using AI segmentation
+        /// This circle's outline as a closed ring of <see cref="ManualCirclePolygonVertexCount"/> corners built in mosaic space and
+        /// mapped to volume space; null when any corner cannot be mapped.
+        /// </summary>
+        private Geometry.Vector2[]? TryGetCircleVolumeRing(Viking.UI.Controls.SectionViewerControl parent)
+        {
+            Circle mosaicCircle = GetCircleFromLocation();
+            Geometry.Vector2[] mosaicRing = new Geometry.Vector2[ManualCirclePolygonVertexCount + 1];
+            for (int i = 0; i < ManualCirclePolygonVertexCount; i++)
+            {
+                double angle = 2.0 * Math.PI * i / ManualCirclePolygonVertexCount;
+                mosaicRing[i] = new Geometry.Vector2(
+                    mosaicCircle.Center.X + mosaicCircle.Radius * Math.Cos(angle),
+                    mosaicCircle.Center.Y + mosaicCircle.Radius * Math.Sin(angle));
+            }
+
+            mosaicRing[ManualCirclePolygonVertexCount] = mosaicRing[0];
+
+            IReadOnlyList<Geometry.Vector2> volumeRing = CircleSegmentationPrompts.ToVolumePoints(
+                mosaicRing,
+                parent.Section.ActiveSectionToVolumeTransform);
+            return volumeRing.Count == mosaicRing.Length ? volumeRing.ToArray() : null;
+        }
+
+        /// <summary>
+        /// Segment to Polygon for a circle: starts <see cref="SegmentationPaintCommand"/> with the circle's disc painted as foreground,
+        /// so its result is shown before the user touches anything.
         /// </summary>
         protected void ContextMenu_SegmentCircleToPolygon(object sender, EventArgs e)
         {
@@ -627,14 +638,20 @@ namespace WebAnnotation.ViewModel
                     return;
                 }
 
-                // A circle has no outline to seed, so the user paints the object from an empty mask.
+                Geometry.Vector2[]? volumeRing = TryGetCircleVolumeRing(parent);
+                if (volumeRing is null)
+                {
+                    MessageBox.Show("This circle could not be mapped onto the volume.", "Segment", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
                 void callback(Polygon outputPolygon)
                 {
                     UpdateLocationShapeFromVolumePolygon(outputPolygon);
                 }
 
                 var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                parent.CurrentCommand = new SegmentationPaintCommand(parent, callback, channelManager);
+                parent.CurrentCommand = new SegmentationPaintCommand(parent, callback, channelManager, seedRings: [volumeRing]);
             }
             catch (Exception ex)
             {
@@ -693,7 +710,7 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Rasterizes this polygon and starts <see cref="SegmentationMaskEditCommand"/> on it so the mask can be grown and
         /// shrunk with the wheel. When the user accepts the edited mask it is sent to the segmentation server as the
-        /// starting mask by a new <see cref="SegmentationCommand"/>, whose result the user accepts or declines; only an
+        /// starting mask by a new <see cref="SegmentationPaintCommand"/>, whose result the user accepts or declines; only an
         /// accepted result changes this location. Cancelling the edit changes nothing.
         /// </summary>
         /// <summary>Raster pixels left free around a polygon when it is rasterized for dilate/erode.</summary>
@@ -766,9 +783,9 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// Starts a <see cref="SegmentationCommand"/> that sends <paramref name="edited"/> to the segmentation server as
-        /// the starting mask. The user accepts or declines the resulting segmentation; accepting replaces this location's
-        /// shape, declining leaves it as it was.
+        /// Starts a <see cref="SegmentationPaintCommand"/> seeded with <paramref name="edited"/>, which sends it to the
+        /// segmentation server as the starting mask. The user accepts or declines the resulting segmentation; accepting
+        /// replaces this location's shape, declining leaves it as it was.
         /// </summary>
         private void SubmitEditedMask(Viking.UI.Controls.SectionViewerControl parent, RasterMask edited)
         {
@@ -797,18 +814,10 @@ namespace WebAnnotation.ViewModel
                     return;
                 }
 
-                // The bitmap itself is the foreground mask; one click inside it tells the server which object is meant.
+                // The bitmap itself is the foreground mask, painted onto the canvas and segmented at once.
                 var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                parent.CurrentCommand = new SegmentationCommand(
-                    parent,
-                    [seed.Value.Center],
-                    Array.Empty<Geometry.Vector2>(),
-                    UpdateLocationShapeFromVolumePolygon,
-                    channelManager,
-                    modelObj.Parent.TypeID,
-                    modelObj.ID,
-                    modelObj.ParentID,
-                    startingBoxes: [seed.Value]);
+                parent.CurrentCommand = new SegmentationPaintCommand(
+                    parent, UpdateLocationShapeFromVolumePolygon, channelManager, seedMask: edited);
             }
             catch (Exception ex)
             {

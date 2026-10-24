@@ -7,6 +7,11 @@ Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Docum
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
+## 1.2.122 — not yet released
+
+* Segment to Polygon on a circle now opens the paintbrush segmentation with the circle painted as the starting mask (it started empty in 1.2.121).
+* Edit mask (grow or shrink a polygon with the wheel) now sends the edited mask to the paintbrush segmentation, so you can paint on it before accepting, instead of the older point placing screen.
+
 ## 1.2.121 — 2026-10-23 (Viking Test, unsigned)
 
 * Segment to Polygon, Resegment and linked polygon placement now open the paintbrush segmentation (the polygon is painted as the starting mask) instead of point placing segmentation. The proposal menu's Add points entry is gone; use Paint mask.
