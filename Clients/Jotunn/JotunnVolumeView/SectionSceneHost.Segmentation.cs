@@ -75,6 +75,22 @@ namespace Viking.VolumeView
                 Dispatcher.BeginInvoke(new Action(() => TransientStatus?.Invoke(this, message)));
         }
 
+        /// <summary>Only a pointer over the active cell counts: auto-polygonize works on that cell's section.</summary>
+        bool IAutoPolygonizeHost.TryGetCursorWorldPosition(out Geometry.Vector2 world)
+        {
+            Geometry.Vector2? cursor = OnUiThread<Geometry.Vector2?>(() =>
+            {
+                if (!_pointerInView || !_lastPointer.HasValue || Scene == null || !IsInActiveCell(_lastPointer.Value))
+                    return null;
+
+                ApplyActiveCellViewport();
+                return ScreenToWorld(ActiveCellScreen(_lastPointer.Value));
+            });
+
+            world = cursor ?? default;
+            return cursor.HasValue;
+        }
+
         bool IAutoPolygonizeHost.IsIdle => AnnotationTools?.IsIdle ?? true;
 
         bool IAutoPolygonizeHost.IsSegmenting => AnnotationTools?.IsSegmenting ?? false;

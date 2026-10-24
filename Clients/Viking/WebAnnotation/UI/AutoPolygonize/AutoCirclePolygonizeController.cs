@@ -26,20 +26,29 @@ namespace WebAnnotation.UI.AutoPolygonize
     /// <summary>
     /// Idle-driven SAM2 proposals for circles in the current view. Owned by
     /// <see cref="AnnotationOverlay"/>; not a Viking command.
-        /// Capture uses a two-phase settle so a UI hitch cannot pass the 500ms idle
-        /// timer. A camera move cancels the upload and any in-flight SegmentTiles
-        /// queue, then the next idle batch orders circles from the new view center.
-        /// Section changes cancel both phases. An interactive
-        /// <see cref="SegmentationCommand"/> cancels proposal work but
-        /// leaves an in-flight viewport upload so that command can adopt the same image.
+    /// A batch starts once the view has been quiet for 500 ms. The view snapshot taken when that window opens is
+    /// compared with the live camera when it closes, so a UI hitch cannot pass the timer. Circles go out one at a
+    /// time, nearest the cursor first (the view centre when the cursor is off the view). The next circle is picked
+    /// again before each request. A camera move cancels the upload. It cancels the queue only when
+    /// <see cref="SegmentationCameraPolicy"/> says the move made results stale. Otherwise the queue keeps sending
+    /// its circles that are still on screen, and the next batch collects the ones that came into view.
+    /// Section changes cancel both phases. An interactive <see cref="SegmentationCommand"/> cancels proposal work
+    /// but leaves an in-flight viewport upload so that command can adopt the same image.
     /// </summary>
     internal sealed class AutoCirclePolygonizeController
     {
-        /// <summary>Wall-clock quiet time before arming a confirm snapshot. The timer keeps running during UI hitches.</summary>
+        /// <summary>
+        /// Wall-clock quiet time before a batch. The timer keeps running during UI hitches, so when it fires the
+        /// live view is compared with the snapshot taken when it started.
+        /// </summary>
         private const int IdleDebounceMs = 500;
 
-        /// <summary>Second delay after a snapshot. Capture starts only if bounds and downsample still match.</summary>
-        private const int ConfirmDelayMs = 1000;
+        /// <summary>
+        /// Requests a batch keeps open at once. The next circle is picked and sent as soon as a request goes out, so
+        /// the server always has the next one waiting instead of idling for each round trip and prompt build.
+        /// Kept small so the cursor still decides most of the order.
+        /// </summary>
+        private const int MaxRequestsInFlight = 2;
 
         private const int RegionPollMs = 150;
         private const int RegionWaitTimeoutMs = 10000;
@@ -55,14 +64,13 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         private bool enabled;
         private System.Timers.Timer? idleTimer;
-        private System.Timers.Timer? confirmTimer;
 
-        /// <summary>Viewport captured when the idle timer fired; compared again after <see cref="ConfirmDelayMs"/>.</summary>
+        /// <summary>Viewport captured when the idle timer started; compared with the live view when it fires.</summary>
         private Rectangle armedBounds;
         private double armedDownsample;
         private DateTime armedAtUtc;
 
-        /// <summary>Updated on the UI thread. A confirm callback aborts if this is newer than <see cref="armedAtUtc"/>.</summary>
+        /// <summary>Updated on the UI thread. An idle callback aborts if this is newer than <see cref="armedAtUtc"/>.</summary>
         private DateTime lastCameraChangeUtc;
 
         /// <summary>Cancelled on camera or section change. Stops capture and upload only.</summary>
@@ -133,8 +141,22 @@ namespace WebAnnotation.UI.AutoPolygonize
         {
             private int finishStarted;
 
+            private readonly List<Task> responseTasks = [];
+
             public SegmentationViewportSession Session { get; } = session;
-            public List<Task> ResponseTasks { get; } = [];
+
+            /// <summary>Called from each request's continuation; several finish at once while requests overlap.</summary>
+            public void AddResponseTask(Task task)
+            {
+                lock (responseTasks)
+                    responseTasks.Add(task);
+            }
+
+            public Task[] SnapshotResponseTasks()
+            {
+                lock (responseTasks)
+                    return [.. responseTasks];
+            }
 
             /// <summary>True for the first caller. Camera-move cancel and batch finally both finish the batch.</summary>
             public bool TryBeginFinish() => Interlocked.Exchange(ref finishStarted, 1) == 0;
@@ -179,7 +201,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             parent.IsIdle;
 
         /// <summary>
-        /// Starts or stops idle/confirm timers and location-store subscription.
+        /// Starts or stops the idle timer and location-store subscription.
         /// Called from the Auto Polygonize Circles setting.
         /// </summary>
         public void SetEnabled(bool value)
@@ -201,11 +223,6 @@ namespace WebAnnotation.UI.AutoPolygonize
                     AutoReset = false
                 };
                 idleTimer.Elapsed += OnIdleElapsed;
-                confirmTimer = new System.Timers.Timer(ConfirmDelayMs)
-                {
-                    AutoReset = false
-                };
-                confirmTimer.Elapsed += OnConfirmElapsed;
                 lastViewBounds = GetCurrentViewportBounds();
                 lastResolvedTileDownsample = SegmentationViewportSession.ResolveTileDownsample(GetCurrentDownsample());
                 lastCameraChangeUtc = DateTime.UtcNow;
@@ -231,8 +248,6 @@ namespace WebAnnotation.UI.AutoPolygonize
             StopSettleTimers();
             idleTimer?.Dispose();
             idleTimer = null;
-            confirmTimer?.Dispose();
-            confirmTimer = null;
             lock (proposalLock)
             {
                 foreach (AutoPolygonizeProposal proposal in proposals.Values)
@@ -326,7 +341,6 @@ namespace WebAnnotation.UI.AutoPolygonize
             CancelUploadPhase();
             if (response.CancelInFlightSegmentation)
                 CancelProcessPhase();
-            CancelConfirmTimer();
             RestartIdleTimer();
         }
 
@@ -408,7 +422,6 @@ namespace WebAnnotation.UI.AutoPolygonize
             Interlocked.Increment(ref cameraGeneration);
             CancelUploadPhase();
             CancelProcessPhase();
-            CancelConfirmTimer();
             RestartIdleTimer();
         }
 
@@ -978,44 +991,40 @@ namespace WebAnnotation.UI.AutoPolygonize
             parent.Invalidate();
         }
 
-        /// <summary>Cancels an armed confirm and starts a fresh 500ms idle. Used after any real camera/section change.</summary>
+        /// <summary>
+        /// Starts a fresh 500 ms idle and snapshots the view it must still show when the timer fires. Used after any
+        /// real camera or section change. Runs on the UI thread, so a call from a worker is marshalled there.
+        /// </summary>
         private void RestartIdleTimer()
         {
-            CancelConfirmTimer();
+            var dispatcher = Viking.UI.State.MainThreadDispatcher;
+            if (dispatcher is not null && !dispatcher.CheckAccess())
+            {
+                dispatcher.BeginInvoke(new Action(RestartIdleTimer));
+                return;
+            }
+
             if (idleTimer is null)
                 return;
 
             idleTimer.Stop();
+            armedBounds = GetCurrentViewportBounds();
+            armedDownsample = GetCurrentDownsample();
+            armedAtUtc = DateTime.UtcNow;
             idleTimer.Start();
         }
 
-        /// <summary>Stops the confirm timer without disposing it so a later idle can re-arm it.</summary>
-        private void CancelConfirmTimer()
-        {
-            confirmTimer?.Stop();
-        }
-
-        /// <summary>Stops both settle timers without disposing; Stop() disposes afterward.</summary>
+        /// <summary>Stops the settle timer without disposing; Stop() disposes afterward.</summary>
         private void StopSettleTimers()
         {
             idleTimer?.Stop();
-            confirmTimer?.Stop();
         }
 
         /// <summary>
-        /// System.Timers callback. Marshals to the UI thread to snapshot the view;
+        /// System.Timers callback. Marshals to the UI thread to compare the view with the snapshot;
         /// does not start capture here because the timer can fire during a hitch.
         /// </summary>
         private void OnIdleElapsed(object sender, System.Timers.ElapsedEventArgs e)
-        {
-            if (!enabled)
-                return;
-
-            Viking.UI.State.MainThreadDispatcher?.BeginInvoke(new Action(ArmConfirmIfStillQuiet));
-        }
-
-        /// <summary>Confirm-timer callback. Marshals to the UI thread to compare the armed snapshot to the live view.</summary>
-        private void OnConfirmElapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             if (!enabled)
                 return;
@@ -1024,12 +1033,12 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Records live bounds/downsample, then starts the 1s confirm. If a camera
-        /// event was processed after this method was queued, restarts idle instead.
-        /// When the camera is coarser than <see cref="Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>,
-        /// stops settling until a camera move or <see cref="RequestIdlePass"/> (preference change) re-arms.
+        /// Starts a batch only when no camera event was processed since the idle started and the live view still
+        /// matches its snapshot; otherwise restarts the idle. When the camera is coarser than
+        /// <see cref="Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>, stops settling until a camera move or
+        /// <see cref="RequestIdlePass"/> (preference change) restarts it.
         /// </summary>
-        private void ArmConfirmIfStillQuiet()
+        private void RunBatchIfViewStillMatches()
         {
             if (!enabled)
                 return;
@@ -1038,32 +1047,10 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (!IsWithinAutoSegmentDownsample())
             {
                 SegmentationDiag.Log(
-                    $"ArmConfirm skip: downsample out of range ds={GetCurrentDownsample()} " +
+                    $"Idle skip: downsample out of range ds={GetCurrentDownsample()} " +
                     $"max={Global.AnnotationSettings.AutoPolygonizeMaxDownsample}");
                 return;
             }
-
-            armedBounds = GetCurrentViewportBounds();
-            armedDownsample = GetCurrentDownsample();
-            armedAtUtc = DateTime.UtcNow;
-            if (lastCameraChangeUtc > armedAtUtc)
-            {
-                RestartIdleTimer();
-                return;
-            }
-
-            if (confirmTimer is null)
-                return;
-
-            confirmTimer.Stop();
-            confirmTimer.Start();
-        }
-
-        /// <summary>Starts a batch only when the confirm snapshot still matches the live camera.</summary>
-        private void RunBatchIfViewStillMatches()
-        {
-            if (!enabled)
-                return;
 
             if (lastCameraChangeUtc > armedAtUtc || !IsArmedViewStillCurrent())
             {
@@ -1131,14 +1118,14 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>Set when a newer view asked to run while a batch was still winding down.</summary>
         private int rerunAfterBatch;
 
-        /// <summary>Bumped on camera and section changes so a batch does not start SegmentTiles for a view it already left.</summary>
+        /// <summary>Bumped on camera and section changes so a timed-out wait retries once per view.</summary>
         private int cameraGeneration;
 
         /// <summary>
-        /// One capture/upload plus sequential SegmentTiles calls, nearest circle first.
-        /// A camera move cancels this batch. If the confirm timer fires before the
-        /// cancelled call returns, the finish path restarts the idle settle so the
-        /// new view is not dropped.
+        /// One capture/upload plus sequential SegmentTiles calls, nearest the cursor first. A camera move that makes
+        /// results stale cancels this batch; any other move lets it finish the queued circles still on screen. An idle
+        /// that fires while it runs queues a rerun, which starts as soon as this batch ends so circles that came into
+        /// view are not dropped.
         /// </summary>
         private async Task RunBatchAsync()
         {
@@ -1159,8 +1146,20 @@ namespace WebAnnotation.UI.AutoPolygonize
                 Interlocked.Exchange(ref batchRunning, 0);
                 global::WebAnnotation.UI.AnnotationStatusChips.Refresh();
                 if (Interlocked.Exchange(ref rerunAfterBatch, 0) == 1 && enabled)
-                    RestartIdleTimer();
+                    Viking.UI.State.MainThreadDispatcher?.BeginInvoke(new Action(RunQueuedRerun));
             }
+        }
+
+        /// <summary>
+        /// Starts the batch an idle asked for while the last one ran. Skipped while a newer idle is still counting:
+        /// that idle starts it. UI thread.
+        /// </summary>
+        private void RunQueuedRerun()
+        {
+            if (idleTimer is null || idleTimer.Enabled)
+                return;
+
+            RunBatchIfViewStillMatches();
         }
 
         /// <summary>Body of an auto-polygonize batch; only one runs at a time via <see cref="batchRunning"/>.</summary>
@@ -1257,7 +1256,15 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 localUploadSession.ViewportBounds = localUploadSession.GetCurrentViewportBounds();
                 Rectangle viewBounds = localUploadSession.ViewportBounds;
-                int viewGeneration = Volatile.Read(ref cameraGeneration);
+
+                // Taken before collecting so a stale-making camera move or a section change from here on stops this
+                // batch; other camera moves leave it running (see SegmentationCameraPolicy.OnCameraMoved).
+                CancellationToken processToken;
+                lock (lifecycleLock)
+                {
+                    processToken = processCts.Token;
+                }
+
                 Rectangle inset = AutoPolygonizeSelection.InsetBounds(viewBounds);
                 List<LocationObj> candidates = CollectEligibleCircles(viewBounds, inset);
                 SegmentationDiag.Log($"RunBatch candidates={candidates.Count} bounds={viewBounds}");
@@ -1306,38 +1313,22 @@ namespace WebAnnotation.UI.AutoPolygonize
                     processBatches.Add(processBatch);
                 }
 
-                CancellationToken processToken;
-                lock (lifecycleLock)
-                {
-                    processToken = processCts.Token;
-                }
-
-                // Avoid marks come from the other annotations in view. The view is fixed for this batch (a camera
-                // move cancels it), so one spatial query serves every circle instead of one per circle.
+                // Avoid marks come from the other annotations in view. One spatial query serves every circle until
+                // the view moves.
+                Rectangle promptBounds = viewBounds;
                 List<LocationObj> visibleForPrompts = [.. CollectVisibleLocationObjs(viewBounds)];
-                foreach (LocationObj circle in candidates)
+                List<LocationObj> queue = candidates;
+
+                // One circle's request. Returns once its response is handed to ProcessResponseAsync.
+                async Task SendCircleAsync(LocationObj circle, List<LocationObj> visibleForPrompts)
                 {
-                    if (processToken.IsCancellationRequested ||
-                        !enabled ||
-                        Volatile.Read(ref cameraGeneration) != viewGeneration)
-                        break;
-
-                    if (parent.IsSegmenting)
-                    {
-                        CancelProcessPhase();
-                        break;
-                    }
-
-                    if (!cache.ShouldProcess(circle.ID, sectionNumber, circle.LastModified, circle.TypeCode, downsample))
-                        continue;
-
                     int generation = cache.MarkPending(circle.ID, sectionNumber, circle, uploadContext);
 
                     Stopwatch proposalTimer = Stopwatch.StartNew();
                     if (!CircleSegmentationPrompts.TryCreateStartingPrompt(
                         new Circle(circle.Position, circle.Radius), transform, out CircleSegmentationPrompts.StartingPrompt startingPrompt))
                     {
-                        continue;
+                        return;
                     }
 
                     IReadOnlyList<Vector2> foreground = startingPrompt.Points;
@@ -1368,7 +1359,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                         backgroundMask: backgroundMask).ConfigureAwait(false);
                     long segmentMs = segmentTimer.ElapsedMilliseconds;
                     if (response is null)
-                        continue;
+                        return;
 
                     try
                     {
@@ -1395,16 +1386,50 @@ namespace WebAnnotation.UI.AutoPolygonize
                             requestTicket,
                             keepPoints,
                             startingBoxes);
-                        processBatch.ResponseTasks.Add(responseTask);
+                        processBatch.AddResponseTask(responseTask);
                     }
                     catch (OperationCanceledException)
                     {
-                        break;
                     }
                 }
 
-                if (processBatch.ResponseTasks.Count > 0)
-                    await Task.WhenAll(processBatch.ResponseTasks).ConfigureAwait(false);
+                List<Task> inFlight = [];
+                while (true)
+                {
+                    if (processToken.IsCancellationRequested || !enabled)
+                        break;
+
+                    if (parent.IsSegmenting)
+                    {
+                        CancelProcessPhase();
+                        break;
+                    }
+
+                    if (inFlight.Count >= MaxRequestsInFlight)
+                    {
+                        Task done = await Task.WhenAny(inFlight).ConfigureAwait(false);
+                        inFlight.Remove(done);
+                        await done.ConfigureAwait(false);
+                        continue;
+                    }
+
+                    QueuedCircle? next = await TakeNextQueuedCircleAsync(queue, sectionNumber, downsample).ConfigureAwait(false);
+                    if (next is null)
+                        break;
+
+                    if (!SegmentationViewportSession.AreViewportBoundsSimilar(promptBounds, next.Value.LiveBounds))
+                    {
+                        promptBounds = next.Value.LiveBounds;
+                        visibleForPrompts = [.. CollectVisibleLocationObjs(promptBounds)];
+                    }
+
+                    inFlight.Add(SendCircleAsync(next.Value.Circle, visibleForPrompts));
+                }
+
+                await Task.WhenAll(inFlight).ConfigureAwait(false);
+                Task[] responseTasks = processBatch.SnapshotResponseTasks();
+                if (responseTasks.Length > 0)
+                    await Task.WhenAll(responseTasks).ConfigureAwait(false);
 
                 ScheduleSavedSiblingOverlapScan();
             }
@@ -1419,6 +1444,48 @@ namespace WebAnnotation.UI.AutoPolygonize
             {
                 await FinishUploadOrProcessBatchAsync(localUploadSession, processBatch).ConfigureAwait(false);
             }
+        }
+
+        /// <summary>The circle the queue sends next, and the live view it was picked in.</summary>
+        private readonly record struct QueuedCircle(LocationObj Circle, Rectangle LiveBounds);
+
+        /// <summary>
+        /// Removes and returns the queued circle nearest the cursor (the view centre when the cursor is off the
+        /// view), reading the live camera on the UI thread. Circles that left the view, were segmented meanwhile or
+        /// are no longer circles are dropped; the next batch collects any that come back. Null when nothing queued
+        /// is still on screen or the camera zoomed out past the auto-segment limit.
+        /// </summary>
+        private async Task<QueuedCircle?> TakeNextQueuedCircleAsync(List<LocationObj> queue, int sectionNumber, double downsample)
+        {
+            (Rectangle Bounds, double Downsample, Vector2? Cursor) ReadLiveView()
+            {
+                Vector2? cursor = parent.TryGetCursorWorldPosition(out Vector2 world) ? world : null;
+                return (GetCurrentViewportBounds(), GetCurrentDownsample(), cursor);
+            }
+
+            var dispatcher = Viking.UI.State.MainThreadDispatcher;
+            (Rectangle liveBounds, double liveDownsample, Vector2? cursor) = dispatcher is null || dispatcher.CheckAccess()
+                ? ReadLiveView()
+                : await dispatcher.InvokeAsync(ReadLiveView).Task.ConfigureAwait(false);
+
+            if (liveDownsample > Global.AnnotationSettings.AutoPolygonizeMaxDownsample)
+                return null;
+
+            Rectangle liveInset = AutoPolygonizeSelection.InsetBounds(liveBounds);
+            queue.RemoveAll(circle =>
+                !cache.ShouldProcess(circle.ID, sectionNumber, circle.LastModified, circle.TypeCode, downsample) ||
+                !IsEligibleCircleInView(circle, liveBounds, liveInset));
+
+            int index = AutoPolygonizeSelection.IndexOfNearest(
+                queue,
+                circle => circle.VolumePosition,
+                AutoPolygonizeSelection.QueuePriorityPoint(cursor, liveBounds));
+            if (index < 0)
+                return null;
+
+            LocationObj next = queue[index];
+            queue.RemoveAt(index);
+            return new QueuedCircle(next, liveBounds);
         }
 
         /// <summary>
@@ -1798,35 +1865,39 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>
         /// Circles whose center is at least 5% from each edge, whose disk is fully
         /// on screen, large enough, and not already proposed or dismissed for this LastModified.
-        /// Ordered nearest-to-farthest from <paramref name="viewBounds"/> center.
+        /// Unordered: <see cref="TakeNextQueuedCircleAsync"/> picks the nearest to the cursor before each request.
         /// </summary>
         private List<LocationObj> CollectEligibleCircles(Rectangle viewBounds, Rectangle inset)
         {
             List<LocationObj> eligible = [];
-            double nmPerWorld = Global.Scale.X;
-            double minRadiusNm = Global.AnnotationSettings.AutoPolygonizeMinRadiusNanometers;
             foreach (LocationObj loc in CollectVisibleLocationObjs(viewBounds))
             {
                 if (!cache.ShouldProcess(loc.ID, (int)loc.Section, loc.LastModified, loc.TypeCode, GetCurrentDownsample()))
                     continue;
 
-                if (!AutoPolygonizeSelection.IsEligibleCircle(
-                        loc.TypeCode,
-                        loc.VolumePosition,
-                        inset,
-                        viewBounds,
-                        loc.Radius,
-                        nmPerWorld,
-                        minRadiusNm))
+                if (!IsEligibleCircleInView(loc, viewBounds, inset))
                     continue;
 
                 eligible.Add(loc);
             }
 
-            return AutoPolygonizeSelection.OrderByDistanceFromCenter(
-                eligible,
-                loc => loc.VolumePosition,
-                viewBounds.Center);
+            return eligible;
+        }
+
+        /// <summary>
+        /// A circle auto-polygonize may send for this view: away from the edges, wholly on screen and above the
+        /// minimum radius. See <see cref="AutoPolygonizeSelection"/>.IsEligibleCircle.
+        /// </summary>
+        private static bool IsEligibleCircleInView(LocationObj loc, Rectangle viewBounds, Rectangle inset)
+        {
+            return AutoPolygonizeSelection.IsEligibleCircle(
+                loc.TypeCode,
+                loc.VolumePosition,
+                inset,
+                viewBounds,
+                loc.Radius,
+                Global.Scale.X,
+                Global.AnnotationSettings.AutoPolygonizeMinRadiusNanometers);
         }
 
         /// <summary>Store objects for canvas views intersecting <paramref name="viewBounds"/>; used for candidates and background prompts.</summary>
@@ -1948,7 +2019,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             try
             {
-                Task[] pending = [.. batch.ResponseTasks];
+                Task[] pending = batch.SnapshotResponseTasks();
                 if (pending.Length > 0)
                     await Task.WhenAll(pending).ConfigureAwait(false);
             }

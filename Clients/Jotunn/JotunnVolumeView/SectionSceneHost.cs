@@ -755,6 +755,9 @@ namespace Viking.VolumeView
         /// <summary>Last pointer position over the host, for keyboard actions that act at the cursor (Ctrl+C, continue trace).</summary>
         Point? _lastPointer;
 
+        /// <summary>False once the pointer leaves the view, so <see cref="_lastPointer"/> no longer says where the cursor is.</summary>
+        bool _pointerInView;
+
         /// <summary>World position and section under the last pointer position, if the pointer has been over a cell.</summary>
         public bool TryGetPointerWorldPosition(out Geometry.Vector2 world, out int sectionNumber)
         {
@@ -809,6 +812,7 @@ namespace Viking.VolumeView
         public void HandleViewMouseMove(Point p, MouseButtonState leftButton, MouseButtonState rightButton)
         {
             _lastPointer = p;
+            _pointerInView = true;
             if (_annotating && leftButton == MouseButtonState.Pressed)
             {
                 ApplyActiveCellViewport();
@@ -1116,7 +1120,11 @@ namespace Viking.VolumeView
         /// matches the viewport set for that cell.
         /// </summary>
         /// <summary>The pointer left the view: hover feedback and hover-targeted hotkeys must not keep acting on what was under it.</summary>
-        public void HandleViewMouseLeave() => AnnotationTools?.ClearHover();
+        public void HandleViewMouseLeave()
+        {
+            _pointerInView = false;
+            AnnotationTools?.ClearHover();
+        }
 
         bool IsInActiveCell(Point p)
         {

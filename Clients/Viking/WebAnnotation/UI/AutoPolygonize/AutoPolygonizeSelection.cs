@@ -296,15 +296,37 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Stable nearest-first order around <paramref name="center"/>. Used by CollectEligibleCircles.
-        /// Equal distances keep input order.
+        /// Index of the item nearest <paramref name="point"/>, or -1 when <paramref name="items"/> is empty.
+        /// The first of equal distances wins. The auto-polygonize queue calls this before every request so a
+        /// moved cursor or view changes which circle goes next.
         /// </summary>
-        public static List<T> OrderByDistanceFromCenter<T>(
-            IEnumerable<T> items,
+        public static int IndexOfNearest<T>(
+            IReadOnlyList<T> items,
             Func<T, Vector2> position,
-            Vector2 center)
+            Vector2 point)
         {
-            return [.. items.OrderBy(item => Vector2.DistanceSquared(position(item), center))];
+            int best = -1;
+            double bestDistance = double.MaxValue;
+            for (int i = 0; i < items.Count; i++)
+            {
+                double distance = Vector2.DistanceSquared(position(items[i]), point);
+                if (distance < bestDistance)
+                {
+                    best = i;
+                    bestDistance = distance;
+                }
+            }
+
+            return best;
+        }
+
+        /// <summary>
+        /// The cursor when it is over the visible bounds, otherwise their centre. Auto-polygonize orders its queue
+        /// nearest this point first.
+        /// </summary>
+        public static Vector2 QueuePriorityPoint(Vector2? cursor, Rectangle viewBounds)
+        {
+            return cursor is Vector2 point && viewBounds.Covers(point) ? point : viewBounds.Center;
         }
 
         /// <summary>

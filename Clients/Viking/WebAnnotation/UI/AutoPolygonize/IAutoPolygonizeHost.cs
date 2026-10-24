@@ -48,6 +48,12 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         void ShowTransientStatus(string message);
 
+        /// <summary>
+        /// World position under the mouse cursor. False when the cursor is not over the view, so auto-polygonize
+        /// orders its queue from the view centre instead. Reads the cursor on the UI thread when called from a worker.
+        /// </summary>
+        bool TryGetCursorWorldPosition(out Vector2 world);
+
         /// <summary>True when the user is not in the middle of a command, so idle proposals may run and show.</summary>
         bool IsIdle { get; }
 
@@ -109,6 +115,27 @@ namespace WebAnnotation.UI.AutoPolygonize
         public void Invalidate() => viewer.Invalidate();
 
         public void ShowTransientStatus(string message) => viewer.ShowTransientStatus(message);
+
+        public bool TryGetCursorWorldPosition(out Vector2 world)
+        {
+            Vector2? cursor = viewer.InvokeRequired
+                ? (Vector2?)viewer.Invoke(new Func<Vector2?>(ReadCursor))
+                : ReadCursor();
+            world = cursor ?? default;
+            return cursor.HasValue;
+        }
+
+        private Vector2? ReadCursor()
+        {
+            if (viewer.Scene is null)
+                return null;
+
+            System.Drawing.Point client = viewer.PointToClient(System.Windows.Forms.Control.MousePosition);
+            if (!viewer.ClientRectangle.Contains(client))
+                return null;
+
+            return viewer.ScreenToWorld(client.X, client.Y);
+        }
 
         public bool IsIdle =>
             viewer.CurrentCommand is null ||

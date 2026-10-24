@@ -32,8 +32,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             public bool DropFinishedResults { get; }
 
             /// <summary>
-            /// Stop starting circles from the old ordering once the current one returns,
-            /// so the next idle batch orders the remaining circles from the new view center.
+            /// The view moved. Unless <see cref="CancelInFlightSegmentation"/> stops it, the running batch keeps
+            /// sending its queued circles that are still on screen, nearest the cursor or the new view centre first.
+            /// The next idle batch collects circles that came into view.
             /// </summary>
             public bool ReorderQueue { get; }
         }

@@ -53,38 +53,69 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void OrderByDistanceFromCenterIsNearestFirst()
+        public void IndexOfNearestPicksTheClosestItem()
         {
-            Rectangle view = new(0, 100, 0, 100);
-            Vector2 center = view.Center;
             Vector2 onCenter = new(50, 50);
             Vector2 near = new(60, 50);
             Vector2 far = new(90, 90);
 
-            List<Vector2> ordered = AutoPolygonizeSelection.OrderByDistanceFromCenter(
+            int index = AutoPolygonizeSelection.IndexOfNearest(
                 [far, near, onCenter],
                 position => position,
-                center);
+                new Vector2(50, 50));
 
-            Assert.AreEqual(onCenter, ordered[0]);
-            Assert.AreEqual(near, ordered[1]);
-            Assert.AreEqual(far, ordered[2]);
+            Assert.AreEqual(2, index);
         }
 
         [TestMethod]
-        public void OrderByDistanceFromCenterKeepsEqualDistanceInputOrder()
+        public void IndexOfNearestKeepsEqualDistanceInputOrder()
         {
-            Vector2 center = new(50, 50);
             Vector2 right = new(60, 50);
             Vector2 left = new(40, 50);
 
-            List<Vector2> ordered = AutoPolygonizeSelection.OrderByDistanceFromCenter(
+            int index = AutoPolygonizeSelection.IndexOfNearest(
                 [right, left],
                 position => position,
-                center);
+                new Vector2(50, 50));
 
-            Assert.AreEqual(right, ordered[0]);
-            Assert.AreEqual(left, ordered[1]);
+            Assert.AreEqual(0, index);
+        }
+
+        [TestMethod]
+        public void IndexOfNearestIsMinusOneForAnEmptyQueue()
+        {
+            Assert.AreEqual(-1, AutoPolygonizeSelection.IndexOfNearest(
+                new List<Vector2>(),
+                position => position,
+                new Vector2(50, 50)));
+        }
+
+        [TestMethod]
+        public void IndexOfNearestFollowsAMovedPriorityPoint()
+        {
+            List<Vector2> queue = [new(10, 10), new(50, 50), new(90, 90)];
+
+            Assert.AreEqual(1, AutoPolygonizeSelection.IndexOfNearest(queue, position => position, new Vector2(50, 50)));
+            Assert.AreEqual(2, AutoPolygonizeSelection.IndexOfNearest(queue, position => position, new Vector2(85, 80)));
+            Assert.AreEqual(0, AutoPolygonizeSelection.IndexOfNearest(queue, position => position, new Vector2(0, 5)));
+        }
+
+        [TestMethod]
+        public void QueuePriorityPointIsTheCursorWhenItIsOverTheView()
+        {
+            Rectangle view = new(0, 100, 0, 100);
+            Vector2 cursor = new(20, 80);
+
+            Assert.AreEqual(cursor, AutoPolygonizeSelection.QueuePriorityPoint(cursor, view));
+        }
+
+        [TestMethod]
+        public void QueuePriorityPointIsTheViewCentreWithoutACursorOverTheView()
+        {
+            Rectangle view = new(0, 100, 0, 100);
+
+            Assert.AreEqual(view.Center, AutoPolygonizeSelection.QueuePriorityPoint(null, view));
+            Assert.AreEqual(view.Center, AutoPolygonizeSelection.QueuePriorityPoint(new Vector2(150, 50), view));
         }
 
         [TestMethod]
