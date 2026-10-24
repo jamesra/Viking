@@ -359,9 +359,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Upper bound for one whole SegmentTilesStream conversation, including the tile uploads the server asks for.
+        /// Longest a SegmentTilesStream conversation may go with no sign of progress. Every message from the server (a request for
+        /// tiles, the result) and every tile this client finishes uploading restarts it, so a large object that keeps the server
+        /// busy for longer is not cut off while tiles are still moving. On a cell of about 100 tiles the server went over two
+        /// minutes between requests for tiles.
         /// </summary>
-        private const int SegmentStreamDeadlineSeconds = 300;
+        private const int SegmentStreamIdleSeconds = 300;
+
+        /// <summary>Upper bound for one whole conversation, however busy, so a stream that never ends cannot hang the request.</summary>
+        private const int SegmentStreamMaxMinutes = 30;
 
         /// <summary>
         /// One SegmentTilesStream call for <paramref name="cells"/> only. Other keys in the session stay
@@ -440,44 +446,74 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (backgroundFeature is not null)
                 request.BackgroundFeature = backgroundFeature;
 
+            // The idle timer is restarted by every sign of progress (StreamAlive); when it runs out the stream is cancelled and the
+            // request fails as a timeout.
+            using CancellationTokenSource idle = new();
+            using CancellationTokenSource streamCancellation = CancellationTokenSource.CreateLinkedTokenSource(token, idle.Token);
+            void StreamAlive()
+            {
+                try
+                {
+                    idle.CancelAfter(TimeSpan.FromSeconds(SegmentStreamIdleSeconds));
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+            }
+
+            StreamAlive();
+            CancellationToken streamToken = streamCancellation.Token;
             CallOptions callOptions = new(
-                deadline: DateTime.UtcNow.AddSeconds(SegmentStreamDeadlineSeconds),
-                cancellationToken: token);
+                deadline: DateTime.UtcNow.AddMinutes(SegmentStreamMaxMinutes),
+                cancellationToken: streamToken);
             SegmentationResponse? response = null;
             List<string> requestedTileList = [];
-            using (AsyncDuplexStreamingCall<SegmentTilesStreamRequest, SegmentTilesStreamResponse> call =
-                grpcClient.SegmentTilesStream(callOptions))
+            try
             {
-                await call.RequestStream.WriteAsync(new SegmentTilesStreamRequest { Start = request }).ConfigureAwait(false);
-                // The seed's tiles first (the server starts growing only when all the announced ones have arrived), then the
-                // background of the start windows' tiles, which the server needs before it predicts them: asking would only cost
-                // a round trip.
-                HashSet<TileCell> backgroundSent = [];
-                foreach (SegmentationServiceTypes.MaskTile tile in startTiles.Background)
-                    backgroundSent.Add(new TileCell(tile.Coord.Row, tile.Coord.Col));
-
-                foreach (SegmentTilesStreamRequest message in startTiles.Messages())
-                    await call.RequestStream.WriteAsync(message).ConfigureAwait(false);
-
-                SegmentationDiag.Log($"SegmentTilesStream mask tiles foreground={startTiles.Foreground.Count} startBackground={startTiles.Background.Count} scale={maskTileScale}");
-
-                while (response is null && await call.ResponseStream.MoveNext(token).ConfigureAwait(false))
+                using (AsyncDuplexStreamingCall<SegmentTilesStreamRequest, SegmentTilesStreamResponse> call =
+                    grpcClient.SegmentTilesStream(callOptions))
                 {
-                    SegmentTilesStreamResponse update = call.ResponseStream.Current;
-                    if (update.UpdateCase == SegmentTilesStreamResponse.UpdateOneofCase.Result)
-                    {
-                        response = update.Result;
-                    }
-                    else if (update.UpdateCase == SegmentTilesStreamResponse.UpdateOneofCase.Needed)
-                    {
-                        requestedTileList.AddRange(update.Needed.Tiles.Select(tile => $"{tile.Row},{tile.Col}"));
-                        TilesAnswer answer = await UploadNeededTilesAsync(signature, update.Needed, grayscale, token).ConfigureAwait(false);
-                        if (update.Needed.Masks.Count > 0)
-                            await AnswerNeededMasksAsync(call.RequestStream, update.Needed, answer, signature, backgroundMask, backgroundSent, maskTileScale, token).ConfigureAwait(false);
+                    await call.RequestStream.WriteAsync(new SegmentTilesStreamRequest { Start = request }).ConfigureAwait(false);
+                    // The seed's tiles first (the server starts growing only when all the announced ones have arrived), then the
+                    // background of the start windows' tiles, which the server needs before it predicts them: asking would only cost
+                    // a round trip.
+                    HashSet<TileCell> backgroundSent = [];
+                    foreach (SegmentationServiceTypes.MaskTile tile in startTiles.Background)
+                        backgroundSent.Add(new TileCell(tile.Coord.Row, tile.Coord.Col));
 
-                        await call.RequestStream.WriteAsync(new SegmentTilesStreamRequest { Answer = answer }).ConfigureAwait(false);
+                    foreach (SegmentTilesStreamRequest message in startTiles.Messages())
+                        await call.RequestStream.WriteAsync(message).ConfigureAwait(false);
+
+                    SegmentationDiag.Log($"SegmentTilesStream mask tiles foreground={startTiles.Foreground.Count} startBackground={startTiles.Background.Count} scale={maskTileScale}");
+
+                    while (response is null && await call.ResponseStream.MoveNext(streamToken).ConfigureAwait(false))
+                    {
+                        StreamAlive();
+                        SegmentTilesStreamResponse update = call.ResponseStream.Current;
+                        if (update.UpdateCase == SegmentTilesStreamResponse.UpdateOneofCase.Result)
+                        {
+                            response = update.Result;
+                        }
+                        else if (update.UpdateCase == SegmentTilesStreamResponse.UpdateOneofCase.Needed)
+                        {
+                            requestedTileList.AddRange(update.Needed.Tiles.Select(tile => $"{tile.Row},{tile.Col}"));
+                            TilesAnswer answer = await UploadNeededTilesAsync(signature, update.Needed, grayscale, streamToken, StreamAlive).ConfigureAwait(false);
+                            if (update.Needed.Masks.Count > 0)
+                                await AnswerNeededMasksAsync(call.RequestStream, update.Needed, answer, signature, backgroundMask, backgroundSent, maskTileScale, streamToken).ConfigureAwait(false);
+
+                            await call.RequestStream.WriteAsync(new SegmentTilesStreamRequest { Answer = answer }).ConfigureAwait(false);
+                            StreamAlive();
+                        }
                     }
                 }
+            }
+            catch (Exception ex) when (idle.IsCancellationRequested && !token.IsCancellationRequested &&
+                (ex is OperationCanceledException || ex is RpcException { StatusCode: StatusCode.Cancelled }))
+            {
+                // The idle timer, not the caller, ended the stream: report it as the timeout it is.
+                throw new RpcException(new Status(
+                    StatusCode.DeadlineExceeded,
+                    $"no tile request, tile or result for {SegmentStreamIdleSeconds / 60} minutes"));
             }
 
             if (response is null)
@@ -572,11 +608,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// A cell that cannot be captured is unavailable, which tells the server not to grow into it.
         /// An <see cref="RpcException"/> from UploadTile is not caught: it ends the whole request.
         /// </summary>
+        /// <param name="onTileReady">Called after each tile is uploaded, so the stream's idle timer restarts.</param>
         private async Task<TilesAnswer> UploadNeededTilesAsync(
             TileSignature signature,
             TilesNeeded needed,
             bool grayscale,
-            CancellationToken token)
+            CancellationToken token,
+            Action? onTileReady = null)
         {
             TilesAnswer answer = new();
             foreach (TileCoord tile in needed.Tiles)
@@ -598,6 +636,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     grayscale,
                     token).ConfigureAwait(false);
                 (uploaded ? answer.Ready : answer.Unavailable).Add(tile);
+                onTileReady?.Invoke();
             }
 
             SegmentationDiag.Log(
