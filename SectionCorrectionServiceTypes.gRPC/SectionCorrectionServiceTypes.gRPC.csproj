@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Client stubs only: Viking (net48) calls the section-correction service. Package versions match gRPCAnnotationServiceTypes. -->
+  <!-- Client stubs only, protocol V2: Viking (net48) calls the section-correction service. Package versions match gRPCAnnotationServiceTypes. -->
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>latest</LangVersion>
-    <RootNamespace>Viking.SectionCorrectionServiceTypes.gRPC.V1</RootNamespace>
+    <RootNamespace>Viking.SectionCorrectionServiceTypes.gRPC.V2</RootNamespace>
     <AssemblyName>SectionCorrectionServiceTypes.gRPC</AssemblyName>
   </PropertyGroup>
 
@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="..\gRPC_Protos\SectionCorrection\section_correction.proto" GrpcServices="Client" />
+    <Protobuf Include="..\gRPC_Protos\SectionCorrection\section_correction_v2.proto" GrpcServices="Client" />
   </ItemGroup>
 
 </Project>

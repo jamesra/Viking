@@ -4,15 +4,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
-using Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos;
+using Viking.SectionCorrectionServiceTypes.gRPC.V2.Protos;
 
 namespace Viking.SectionCorrectionClient
 {
     /// <summary>
-    /// Downloads a full published residual field from an AnnotateSectionCorrections URL
-    /// (<c>ListCorrectionSets</c> / <c>GetCorrectionManifest</c> / <c>GetSectionCorrection</c>) and samples points
-    /// through <c>CorrectPoints</c>. Used by MonogameTestbed when <c>--correction-url</c> is set so mesh runs
+    /// Downloads a full published residual field from an AnnotateSectionCorrections URL (protocol V2:
+    /// <c>ListCorrectionSets</c> / <c>GetSectionCorrection</c>) and samples points through <c>CorrectPoints</c>. Used by MonogameTestbed when <c>--correction-url</c> is set so mesh runs
     /// consume the same maps the live correction service serves, without reading a local corrections directory.
     /// </summary>
     public sealed class GrpcPublishedCorrectionLoader
@@ -64,7 +64,7 @@ namespace Viking.SectionCorrectionClient
 
             var client = new AnnotateSectionCorrections.AnnotateSectionCorrectionsClient(_invokerFactory(serviceUrl));
             ListVolumesResponse listed = await client
-                .ListVolumesAsync(new ListVolumesRequest(), cancellationToken: cancellationToken)
+                .ListVolumesAsync(new Empty(), cancellationToken: cancellationToken)
                 .ResponseAsync.ConfigureAwait(false);
 
             string matched = MatchVolumeName(listed.Volumes, preferredName, annotationOrODataUri);
@@ -76,7 +76,7 @@ namespace Viking.SectionCorrectionClient
                 .ListCorrectionSetsAsync(new ListCorrectionSetsRequest(), cancellationToken: cancellationToken)
                 .ResponseAsync.ConfigureAwait(false);
             matched = MatchVolumeName(
-                sets.Sets.Select(s => new VolumeInfo { VolumeName = s.VolumeName }),
+                sets.Sets.Select(s => new VolumeInfo { VolumeName = s.Id?.VolumeName ?? "" }),
                 preferredName,
                 annotationOrODataUri);
             if (!string.IsNullOrWhiteSpace(matched))
@@ -134,7 +134,7 @@ namespace Viking.SectionCorrectionClient
         }
 
         /// <summary>
-        /// Resolves the StosGroup when omitted, then downloads the manifest and every section lattice for that set.
+        /// Resolves the StosGroup when omitted, then downloads every section lattice of that set.
         /// When <paramref name="volumeName"/> is blank, resolves it via <see cref="ResolveVolumeNameAsync"/> using
         /// <paramref name="volumeNameHint"/> and <paramref name="annotationOrODataUri"/>.
         /// </summary>
@@ -146,7 +146,7 @@ namespace Viking.SectionCorrectionClient
         /// </param>
         /// <param name="volumeNameHint">Preferred name when auto-resolving (e.g. Endpoint enum <c>RC1</c>).</param>
         /// <param name="annotationOrODataUri">Morphology OData/annotation URI used to match ListVolumes rows.</param>
-        /// <param name="cancellationToken">Cancels listing, the manifest read, or in-flight section downloads.</param>
+        /// <param name="cancellationToken">Cancels listing or in-flight section downloads.</param>
         /// <exception cref="ArgumentException">URL is missing, or volume cannot be resolved and no hint helps.</exception>
         /// <exception cref="InvalidOperationException">No correction set exists for the volume / StosGroup.</exception>
         /// <exception cref="RpcException">Transport or server errors other than per-section NotFound.</exception>
@@ -171,26 +171,13 @@ namespace Viking.SectionCorrectionClient
                 throw new ArgumentException("Correction volume (annotation database name) is required.", nameof(volumeName));
 
             var client = new AnnotateSectionCorrections.AnnotateSectionCorrectionsClient(_invokerFactory(serviceUrl));
-            string resolvedStos = await ResolveStosGroupAsync(client, volumeName, stosGroup, cancellationToken)
-                .ConfigureAwait(false);
+            CorrectionSet set = await FindSetAsync(client, volumeName, stosGroup, cancellationToken).ConfigureAwait(false);
+            CorrectionSetId setId = set.Id;
+            string resolvedStos = setId.StosGroup;
 
-            CorrectionManifest manifest = await client
-                .GetCorrectionManifestAsync(new GetCorrectionManifestRequest
-                {
-                    VolumeName = volumeName,
-                    StosGroup = resolvedStos
-                }, cancellationToken: cancellationToken).ResponseAsync.ConfigureAwait(false);
-
-            double pitch = manifest.Provenance?.PitchNm ?? 0;
-            double kernel = manifest.Provenance?.KernelRadiusNm ?? 0;
-            if (pitch <= 0)
-                pitch = SectionLatticeField.DefaultPitchNm;
-            if (kernel <= 0)
-                kernel = SectionLatticeField.DefaultKernelRadiusNm;
-
-            long[] zs = manifest.Z.Count > 0
-                ? [.. manifest.Z]
-                : await ListSectionZsAsync(client, volumeName, resolvedStos, cancellationToken).ConfigureAwait(false);
+            double pitch = set.PitchNm > 0 ? set.PitchNm : SectionLatticeField.DefaultPitchNm;
+            double kernel = set.KernelRadiusNm > 0 ? set.KernelRadiusNm : SectionLatticeField.DefaultKernelRadiusNm;
+            long[] zs = [.. set.Z];
 
             ConcurrentDictionary<long, SectionLatticeField> sections = new();
             ConcurrentBag<(int Z, int Gx, int Gy, double Dx, double Dy, int Votes)> nodes = [];
@@ -201,28 +188,24 @@ namespace Viking.SectionCorrectionClient
                 try
                 {
                     SectionCorrection response = await client.GetSectionCorrectionAsync(
-                        new GetSectionCorrectionRequest
-                        {
-                            VolumeName = volumeName,
-                            StosGroup = resolvedStos,
-                            Z = z
-                        }, cancellationToken: cancellationToken).ResponseAsync.ConfigureAwait(false);
+                        new GetSectionCorrectionRequest { Set = setId, Z = z },
+                        cancellationToken: cancellationToken).ResponseAsync.ConfigureAwait(false);
 
                     double sectionPitch = response.PitchNm > 0 ? response.PitchNm : pitch;
                     sections[z] = new SectionLatticeField(
                         sectionPitch,
                         kernel,
-                        response.Nodes.Select(n => (n.Gx, n.Gy, n.Dx, n.Dy)));
+                        response.Nodes.Select(n => (n.Gx, n.Gy, n.Offset?.X ?? 0, n.Offset?.Y ?? 0)));
 
-                    foreach (LatticeVector n in response.Nodes)
+                    foreach (LatticeNode n in response.Nodes)
                     {
-                        int votes = n.VoteCount > 0 ? n.VoteCount : 1;
-                        nodes.Add(((int)z, n.Gx, n.Gy, n.Dx, n.Dy, votes));
+                        int votes = n.Votes > 0 ? n.Votes : 1;
+                        nodes.Add(((int)z, n.Gx, n.Gy, n.Offset?.X ?? 0, n.Offset?.Y ?? 0, votes));
                     }
                 }
                 catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
                 {
-                    // Manifest Z can list a section whose npz was not published; skip like a disk catalog would.
+                    // The set can list a section whose npz was not published; skip like a disk catalog would.
                 }
             }, cancellationToken).ConfigureAwait(false);
 
@@ -236,15 +219,15 @@ namespace Viking.SectionCorrectionClient
         }
 
         /// <summary>
-        /// Maps volume XY points through the service's <c>CorrectPoints</c> RPC (Neighbor residual sampling).
-        /// Prefer this when validating that a URL-hosted field matches local <see cref="SectionLatticeField.Sample"/>.
+        /// Samples the service's published field at volume XY points through <c>CorrectPoints</c>: one
+        /// <see cref="SectionOffsets"/> per section, in order. Prefer this when validating that a URL-hosted field matches
+        /// local <see cref="SectionLatticeField.Sample"/>.
         /// </summary>
         public async Task<CorrectPointsResponse> CorrectPointsAsync(
             Uri serviceUrl,
             string volumeName,
             string stosGroup,
             IEnumerable<(long Z, IReadOnlyList<(double X, double Y)> Points)> sections,
-            CorrectionMode? mode = null,
             CancellationToken cancellationToken = default)
         {
             if (serviceUrl is null)
@@ -259,11 +242,8 @@ namespace Viking.SectionCorrectionClient
             var client = new AnnotateSectionCorrections.AnnotateSectionCorrectionsClient(_invokerFactory(serviceUrl));
             var request = new CorrectPointsRequest
             {
-                VolumeName = volumeName,
-                StosGroup = stosGroup
+                Set = new CorrectionSetId { VolumeName = volumeName, StosGroup = stosGroup }
             };
-            if (mode.HasValue)
-                request.Correction = mode.Value;
 
             foreach ((long z, IReadOnlyList<(double X, double Y)> points) in sections)
             {
@@ -271,7 +251,7 @@ namespace Viking.SectionCorrectionClient
                     throw new ArgumentException($"Section {z} has no points.", nameof(sections));
                 var section = new SectionPoints { Z = z };
                 foreach ((double x, double y) in points)
-                    section.Points.Add(new VolumeXY { X = x, Y = y });
+                    section.Points.Add(new Vector2 { X = x, Y = y });
                 request.Sections.Add(section);
             }
 
@@ -320,48 +300,35 @@ namespace Viking.SectionCorrectionClient
             "OData", "odata", "Annotation", "ConnectomeData.svc", "Services"
         };
 
-        static async Task<string> ResolveStosGroupAsync(
+        /// <summary>
+        /// The volume's set for <paramref name="stosGroup"/>, or its first set by StosGroup name when that is blank.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">The volume has no such published set.</exception>
+        static async Task<CorrectionSet> FindSetAsync(
             AnnotateSectionCorrections.AnnotateSectionCorrectionsClient client,
             string volumeName,
             string stosGroup,
             CancellationToken cancellationToken)
         {
-            if (!string.IsNullOrWhiteSpace(stosGroup))
-                return stosGroup.Trim();
-
             ListCorrectionSetsResponse listed = await client
                 .ListCorrectionSetsAsync(new ListCorrectionSetsRequest { VolumeName = volumeName },
                     cancellationToken: cancellationToken).ResponseAsync.ConfigureAwait(false);
 
-            CorrectionSetInfo chosen = listed.Sets
-                .Where(s => string.Equals(s.VolumeName, volumeName, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(s => s.StosGroup, StringComparer.OrdinalIgnoreCase)
-                .FirstOrDefault();
+            IEnumerable<CorrectionSet> candidates = listed.Sets
+                .Where(s => s.Id != null && string.Equals(s.Id.VolumeName, volumeName, StringComparison.OrdinalIgnoreCase));
+            CorrectionSet chosen = string.IsNullOrWhiteSpace(stosGroup)
+                ? candidates.OrderBy(s => s.Id.StosGroup, StringComparer.OrdinalIgnoreCase).FirstOrDefault()
+                : candidates.FirstOrDefault(s => string.Equals(s.Id.StosGroup, stosGroup.Trim(), StringComparison.OrdinalIgnoreCase));
 
-            if (chosen is null || string.IsNullOrWhiteSpace(chosen.StosGroup))
+            if (chosen is null || string.IsNullOrWhiteSpace(chosen.Id.StosGroup))
             {
+                string which = string.IsNullOrWhiteSpace(stosGroup) ? "" : $" StosGroup '{stosGroup.Trim()}'";
                 throw new InvalidOperationException(
-                    $"No published correction sets for volume '{volumeName}' on the correction service.");
+                    $"No published correction set for volume '{volumeName}'{which} on the correction service.");
             }
 
-            return chosen.StosGroup;
+            return chosen;
         }
-
-        static async Task<long[]> ListSectionZsAsync(
-            AnnotateSectionCorrections.AnnotateSectionCorrectionsClient client,
-            string volumeName,
-            string stosGroup,
-            CancellationToken cancellationToken)
-        {
-            ListCorrectedSectionsResponse listed = await client
-                .ListCorrectedSectionsAsync(new ListCorrectedSectionsRequest
-                {
-                    VolumeName = volumeName,
-                    StosGroup = stosGroup
-                }, cancellationToken: cancellationToken).ResponseAsync.ConfigureAwait(false);
-            return [.. listed.Z];
-        }
-
         static async Task ForEachAsync<T>(
             IReadOnlyList<T> items,
             int concurrency,

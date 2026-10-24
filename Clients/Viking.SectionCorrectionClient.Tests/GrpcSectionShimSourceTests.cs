@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos;
+using Viking.SectionCorrectionServiceTypes.gRPC.V2.Protos;
 
 namespace Viking.SectionCorrectionClient.Tests
 {
@@ -47,16 +47,25 @@ namespace Viking.SectionCorrectionClient.Tests
 
         static readonly Uri Url = new("https://c/");
 
-        static CorrectionManifest ManifestWithKernel(double kernel) => new()
+        static ListCorrectionSetsResponse SetsOf(params CorrectionSet[] sets)
         {
-            Provenance = new CorrectionProvenance { KernelRadiusNm = kernel }
+            var response = new ListCorrectionSetsResponse();
+            response.Sets.AddRange(sets);
+            return response;
+        }
+
+        static CorrectionSet SetOf(string database, string stos, double kernel = 0, DateTime? built = null) => new()
+        {
+            Id = new CorrectionSetId { VolumeName = database, StosGroup = stos },
+            KernelRadiusNm = kernel,
+            BuiltUtc = built is DateTime b ? Timestamp.FromDateTime(b) : null
         };
 
         static SectionCorrection SectionWithNodes(double pitch, params (int Gx, int Gy, double Dx, double Dy)[] nodes)
         {
             var message = new SectionCorrection { PitchNm = pitch };
             foreach (var n in nodes)
-                message.Nodes.Add(new LatticeVector { Gx = n.Gx, Gy = n.Gy, Dx = n.Dx, Dy = n.Dy });
+                message.Nodes.Add(new LatticeNode { Gx = n.Gx, Gy = n.Gy, Offset = new Vector2 { X = n.Dx, Y = n.Dy } });
             return message;
         }
 
@@ -85,8 +94,8 @@ namespace Viking.SectionCorrectionClient.Tests
         {
             var invoker = new FakeInvoker(request => request switch
             {
-                GetCorrectionManifestRequest => ManifestWithKernel(3333),
-                GetRebuildStatusRequest => new RebuildStatus(),
+                ListCorrectionSetsRequest => SetsOf(SetOf("db", "", 3333)),
+                Empty => new RebuildStatus(),
                 GetSectionCorrectionRequest => SectionWithNodes(1000, (0, 0, 1, 1)),
                 _ => throw new NotSupportedException()
             });
@@ -98,8 +107,7 @@ namespace Viking.SectionCorrectionClient.Tests
 
             Assert.AreEqual(3333, field.KernelRadiusNm);
             Assert.AreEqual(3333, nullGroupField.KernelRadiusNm);
-            Assert.IsTrue(invoker.Requests.OfType<GetCorrectionManifestRequest>().All(r => r.StosGroup == string.Empty));
-            Assert.IsTrue(invoker.Requests.OfType<GetSectionCorrectionRequest>().All(r => r.StosGroup == string.Empty));
+            Assert.IsTrue(invoker.Requests.OfType<GetSectionCorrectionRequest>().All(r => r.Set.StosGroup == string.Empty));
         }
 
         [TestMethod]
@@ -107,8 +115,10 @@ namespace Viking.SectionCorrectionClient.Tests
         {
             var invoker = new FakeInvoker(request => request switch
             {
-                GetCorrectionManifestRequest m => ManifestWithKernel(m.VolumeName == "a" ? (m.StosGroup == "x" ? 1000 : 2000) : 3000),
-                GetRebuildStatusRequest => new RebuildStatus(),
+                ListCorrectionSetsRequest l => l.VolumeName == "a"
+                    ? SetsOf(SetOf("a", "x", 1000), SetOf("a", "y", 2000))
+                    : SetsOf(SetOf("b", "x", 3000)),
+                Empty => new RebuildStatus(),
                 GetSectionCorrectionRequest => SectionWithNodes(1000, (0, 0, 1, 1)),
                 _ => throw new NotSupportedException()
             });
@@ -150,8 +160,8 @@ namespace Viking.SectionCorrectionClient.Tests
             DateTime built = new(2026, 3, 4, 5, 6, 7, DateTimeKind.Utc);
             var invoker = new FakeInvoker(request => request switch
             {
-                GetCorrectionManifestRequest => new CorrectionManifest { Provenance = new CorrectionProvenance { BuiltUtc = Timestamp.FromDateTime(built) } },
-                GetRebuildStatusRequest => new RebuildStatus { ServiceVersion = "2.5.1" },
+                ListCorrectionSetsRequest => SetsOf(SetOf("db", "g", built: built)),
+                Empty => new RebuildStatus { ServiceVersion = "2.5.1" },
                 _ => throw new NotSupportedException()
             });
             var source = new GrpcSectionShimSource(_ => invoker);
@@ -166,8 +176,8 @@ namespace Viking.SectionCorrectionClient.Tests
         {
             var invoker = new FakeInvoker(request => request switch
             {
-                GetCorrectionManifestRequest => new CorrectionManifest(),
-                GetRebuildStatusRequest => new RebuildStatus { ServiceVersion = "9" },
+                ListCorrectionSetsRequest => SetsOf(SetOf("db", "g")),
+                Empty => new RebuildStatus { ServiceVersion = "9" },
                 _ => throw new NotSupportedException()
             });
             var source = new GrpcSectionShimSource(_ => invoker);
@@ -181,8 +191,8 @@ namespace Viking.SectionCorrectionClient.Tests
             bool hasProvenance = true;
             var invoker = new FakeInvoker(request => request switch
             {
-                GetCorrectionManifestRequest => hasProvenance ? ManifestWithKernel(1234) : new CorrectionManifest(),
-                GetRebuildStatusRequest => new RebuildStatus(),
+                ListCorrectionSetsRequest => SetsOf(SetOf("db", "g", hasProvenance ? 1234 : 0)),
+                Empty => new RebuildStatus(),
                 GetSectionCorrectionRequest => SectionWithNodes(1000, (0, 0, 1, 1)),
                 _ => throw new NotSupportedException()
             });
@@ -203,8 +213,8 @@ namespace Viking.SectionCorrectionClient.Tests
             bool notFound = false;
             var invoker = new FakeInvoker(request => request switch
             {
-                GetCorrectionManifestRequest => notFound ? throw new RpcException(new Status(StatusCode.NotFound, "x")) : ManifestWithKernel(777),
-                GetRebuildStatusRequest => new RebuildStatus(),
+                ListCorrectionSetsRequest => notFound ? SetsOf() : SetsOf(SetOf("db", "g", 777)),
+                Empty => new RebuildStatus(),
                 GetSectionCorrectionRequest => SectionWithNodes(1000, (0, 0, 1, 1)),
                 _ => throw new NotSupportedException()
             });

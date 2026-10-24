@@ -5,7 +5,7 @@ using System.Linq;
 namespace Viking.SectionCorrectionClient
 {
     /// <summary>
-    /// One published residual field downloaded from an AnnotateSectionCorrections host (manifest + every section lattice).
+    /// One published residual field downloaded from an AnnotateSectionCorrections host (the correction set + every section lattice).
     /// Callers such as MonogameTestbed convert <see cref="EnumerateLatticeNodes"/> into AnnotationVizLib's
     /// <c>NeighborResidualField</c>; view overlays sample <see cref="Sections"/> locally.
     /// </summary>

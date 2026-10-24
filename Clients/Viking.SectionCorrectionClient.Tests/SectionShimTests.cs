@@ -5,7 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos;
+using Google.Protobuf.WellKnownTypes;
+using Viking.SectionCorrectionServiceTypes.gRPC.V2.Protos;
 
 namespace Viking.SectionCorrectionClient.Tests
 {
@@ -416,20 +417,24 @@ namespace Viking.SectionCorrectionClient.Tests
 
         static readonly Uri Url = new("https://c/");
 
-        static CorrectionManifest Manifest(DateTime builtUtc, double kernel) => new()
+        static ListCorrectionSetsResponse Sets(DateTime builtUtc, double kernel) => new()
         {
-            Provenance = new CorrectionProvenance
+            Sets =
             {
-                BuiltUtc = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(DateTime.SpecifyKind(builtUtc, DateTimeKind.Utc)),
-                KernelRadiusNm = kernel
+                new CorrectionSet
+                {
+                    Id = new CorrectionSetId { VolumeName = "RC1db", StosGroup = "grid" },
+                    BuiltUtc = Timestamp.FromDateTime(DateTime.SpecifyKind(builtUtc, DateTimeKind.Utc)),
+                    KernelRadiusNm = kernel
+                }
             }
         };
 
         static SectionCorrection SectionOf(long z)
         {
-            var message = new SectionCorrection { Z = z, PitchNm = 1000 };
+            var message = new SectionCorrection { PitchNm = 1000 };
             foreach ((int gx, int gy, double dx) in new[] { (0, 0, 10.0), (1, 0, 20.0), (0, 1, 10.0), (1, 1, 20.0) })
-                message.Nodes.Add(new LatticeVector { Gx = gx, Gy = gy, Dx = dx });
+                message.Nodes.Add(new LatticeNode { Gx = gx, Gy = gy, Offset = new Vector2 { X = dx } });
             return message;
         }
 
@@ -438,8 +443,8 @@ namespace Viking.SectionCorrectionClient.Tests
         {
             var invoker = new StubInvoker(request => request switch
             {
-                GetCorrectionManifestRequest => Manifest(new DateTime(2026, 1, 1), 1500),
-                GetRebuildStatusRequest => new RebuildStatus { ServiceVersion = "1.0" },
+                ListCorrectionSetsRequest => Sets(new DateTime(2026, 1, 1), 1500),
+                Empty => new RebuildStatus { ServiceVersion = "1.0" },
                 GetSectionCorrectionRequest r => SectionOf(r.Z),
                 _ => throw new NotSupportedException()
             });
@@ -449,8 +454,8 @@ namespace Viking.SectionCorrectionClient.Tests
             SectionLatticeField field = await source.GetLatticeAsync(Url, "RC1db", "grid", 7, CancellationToken.None);
 
             var request = invoker.Requests.OfType<GetSectionCorrectionRequest>().Single();
-            Assert.AreEqual("RC1db", request.VolumeName);
-            Assert.AreEqual("grid", request.StosGroup);
+            Assert.AreEqual("RC1db", request.Set.VolumeName);
+            Assert.AreEqual("grid", request.Set.StosGroup);
             Assert.AreEqual(7, request.Z);
             Assert.AreEqual(1000, field.PitchNm);
             Assert.AreEqual(1500, field.KernelRadiusNm);
@@ -474,8 +479,8 @@ namespace Viking.SectionCorrectionClient.Tests
             string serviceVersion = "1.0";
             var invoker = new StubInvoker(request => request switch
             {
-                GetCorrectionManifestRequest => Manifest(built, 8000),
-                GetRebuildStatusRequest => new RebuildStatus { ServiceVersion = serviceVersion },
+                ListCorrectionSetsRequest => Sets(built, 8000),
+                Empty => new RebuildStatus { ServiceVersion = serviceVersion },
                 _ => throw new NotSupportedException()
             });
             var source = new GrpcSectionShimSource(_ => invoker);
