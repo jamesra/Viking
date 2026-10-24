@@ -2,6 +2,7 @@ using System;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
@@ -46,10 +47,19 @@ namespace Viking.GrpcSectionCorrectionService
                                 return;
                             }
 
+                            X509Certificate2Collection intermediates = DockerTlsCertificate.LoadIntermediates(
+                                context.Configuration["SSL_CERT_PATH"], certificate);
+                            Console.WriteLine(
+                                $"HTTPS uses {certificate.Subject} (expires {certificate.NotAfter:u}) with {intermediates.Count} intermediate certificate(s).");
+
                             options.ListenAnyIP(443, listen =>
                             {
                                 listen.Protocols = HttpProtocols.Http1AndHttp2;
-                                listen.UseHttps(certificate);
+                                listen.UseHttps(new HttpsConnectionAdapterOptions
+                                {
+                                    ServerCertificate = certificate,
+                                    ServerCertificateChain = intermediates,
+                                });
                             });
                             return;
                         }

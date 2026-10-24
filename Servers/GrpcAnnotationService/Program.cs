@@ -2,6 +2,7 @@ using System;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
@@ -40,7 +41,11 @@ namespace gRPCAnnotationService
                                 context.Configuration["SSL_KEY_PATH"]);
                             Console.WriteLine(certificate is null
                                 ? "SSL_CERT_PATH/SSL_KEY_PATH not found; HTTPS uses the image's development certificate."
-                                : $"HTTPS uses {context.Configuration["SSL_CERT_PATH"]} ({certificate.Subject}, expires {certificate.NotAfter:u}).");
+                                : $"HTTPS uses {context.Configuration["SSL_CERT_PATH"]} ({certificate.Subject}, expires {certificate.NotAfter:u}) with its intermediate certificates.");
+
+                            X509Certificate2Collection intermediates = certificate is null
+                                ? null
+                                : DockerTlsCertificate.LoadIntermediates(context.Configuration["SSL_CERT_PATH"], certificate);
 
                             options.ListenAnyIP(443, listen =>
                             {
@@ -48,7 +53,11 @@ namespace gRPCAnnotationService
                                 if (certificate is null)
                                     listen.UseHttps();
                                 else
-                                    listen.UseHttps(certificate);
+                                    listen.UseHttps(new HttpsConnectionAdapterOptions
+                                    {
+                                        ServerCertificate = certificate,
+                                        ServerCertificateChain = intermediates,
+                                    });
                             });
                             return;
                         }

@@ -31,5 +31,33 @@ namespace gRPCAnnotationService
             byte[] pfx = pem.Export(X509ContentType.Pfx);
             return X509CertificateLoader.LoadPkcs12(pfx, password: null);
         }
+
+        /// <summary>
+        /// The certificates in <paramref name="certPath"/> other than <paramref name="leaf"/>, for
+        /// Kestrel's <c>HttpsConnectionAdapterOptions.ServerCertificateChain</c>. Empty when the file holds
+        /// only the leaf.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="X509Certificate2.CreateFromPemFile(string, string)"/> keeps only the first certificate,
+        /// so without this Kestrel rebuilds the chain from the container's own stores and can send the leaf
+        /// alone. Grpc.Core clients (Viking) do not fetch a missing intermediate and fail with
+        /// "Failed to pick subchannel"; the section-correction service hit exactly this.
+        /// </remarks>
+        /// <param name="certPath">The same fullchain.pem passed to <see cref="TryLoad"/>.</param>
+        /// <param name="leaf">The certificate <see cref="TryLoad"/> returned.</param>
+        public static X509Certificate2Collection LoadIntermediates(string certPath, X509Certificate2 leaf)
+        {
+            X509Certificate2Collection all = new();
+            all.ImportFromPemFile(certPath);
+
+            X509Certificate2Collection intermediates = new();
+            foreach (X509Certificate2 certificate in all)
+            {
+                if (certificate.Thumbprint != leaf.Thumbprint)
+                    intermediates.Add(certificate);
+            }
+
+            return intermediates;
+        }
     }
 }
