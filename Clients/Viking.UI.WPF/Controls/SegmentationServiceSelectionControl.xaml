@@ -59,9 +59,13 @@
                     <Style TargetType="TreeViewItem">
                         <Setter Property="Foreground" Value="#222222"/>
                         <Style.Triggers>
+                            <!-- Offline: grayed and disabled, so it can be seen but not clicked, keyboard-selected or
+                                 double-clicked. The view model refuses it as well. -->
                             <DataTrigger Binding="{Binding Service.IsUnreachable}" Value="True">
                                 <Setter Property="Foreground" Value="#888888"/>
                                 <Setter Property="Opacity" Value="0.55"/>
+                                <Setter Property="IsEnabled" Value="False"/>
+                                <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -84,12 +88,14 @@
                             <TextBlock Grid.Column="1"
                                        Text="{Binding Service.ModelSummary}"
                                        ToolTip="{Binding Service.ModelToolTip}"
+                                       ToolTipService.ShowOnDisabled="True"
                                        Margin="16,2,0,2"
                                        FontSize="11"
                                        VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="2"
                                        Text="{Binding Service.LoadSummary}"
                                        ToolTip="{Binding Service.LoadToolTip}"
+                                       ToolTipService.ShowOnDisabled="True"
                                        Margin="16,2,0,2"
                                        FontSize="11"
                                        Foreground="#666666"

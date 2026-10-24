@@ -29,7 +29,7 @@ namespace VikingCoreTests
 
             DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(15);
             // The status line is set last, after the first probe has ranked (cleared and refilled) the list.
-            while (vm.StatusMessage == null || !vm.StatusMessage.StartsWith("0 reachable, 2 unreachable.", StringComparison.Ordinal))
+            while (vm.StatusMessage == null || !vm.StatusMessage.StartsWith("0 reachable, 2 offline.", StringComparison.Ordinal))
             {
                 Assert.IsTrue(DateTime.UtcNow < deadline, "The first server probe never finished.");
                 Thread.Sleep(10);
@@ -155,6 +155,66 @@ namespace VikingCoreTests
             vm.StopLiveRefresh();
             vm.StopLiveRefresh();
             Assert.IsFalse(vm.IsLiveRefreshRunning);
+        }
+
+        // ---- offline servers are listed but cannot be selected ----
+
+        [TestMethod]
+        public void AnOfflineServer_CannotBeSelected()
+        {
+            var vm = ProbedPicker();
+            var alpha = vm.ServiceNodes.Single(n => n.Name == "Alpha");
+
+            vm.SelectedService = alpha;
+
+            Assert.IsNull(vm.SelectedService);
+            Assert.IsFalse(vm.SelectCommand.CanExecute(null));
+            Assert.AreEqual("offline", alpha.Service.LoadSummary);
+            Assert.AreEqual("—", alpha.Service.ModelSummary);
+        }
+
+        [TestMethod]
+        public void ALastUsedServerThatIsOffline_IsNotPreselected_NorKeptAsTheEndpoint()
+        {
+            var services = new Dictionary<long, object> { [1] = Svc("Alpha", "http://a.invalid") };
+            var vm = new SegmentationServiceSelectionViewModel(null, "https://identity.invalid", "http://a.invalid", services);
+
+            DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(15);
+            while (vm.StatusMessage == null || !vm.StatusMessage.StartsWith("0 reachable, 1 offline.", StringComparison.Ordinal))
+            {
+                Assert.IsTrue(DateTime.UtcNow < deadline, "The first server probe never finished.");
+                Thread.Sleep(10);
+            }
+
+            Assert.IsNull(vm.SelectedService);
+            Assert.AreEqual(string.Empty, vm.SelectedServiceEndpoint);
+            Assert.IsFalse(vm.SelectCommand.CanExecute(null));
+        }
+
+        [TestMethod]
+        public async Task ASelectedServerThatGoesOffline_IsDeselected_AndOneThatComesBack_CanBeSelected()
+        {
+            var vm = ProbedPicker();
+            var asked = new ConcurrentBag<string>();
+            int every = SegmentationServiceSelectionViewModel.OfflineRecheckEveryRefreshes;
+
+            await vm.RefreshOnceAsync(Probe(asked, _ => Up(0)), every, CancellationToken.None);
+            var alpha = vm.ServiceNodes.Single(n => n.Name == "Alpha");
+            vm.SelectedService = alpha;
+            Assert.AreSame(alpha, vm.SelectedService, "An online server can be selected.");
+            Assert.IsTrue(vm.SelectCommand.CanExecute(null));
+            StringAssert.StartsWith(vm.StatusMessage, "2 reachable, 0 offline.");
+
+            await vm.RefreshOnceAsync(Probe(asked, e => e == "http://a.invalid" ? new SegmentationServerProbeResult() : Up(0)), every + 1, CancellationToken.None);
+
+            Assert.IsNull(vm.SelectedService, "A server that went offline must not stay selected.");
+            Assert.IsFalse(vm.SelectCommand.CanExecute(null));
+            Assert.AreEqual("offline", alpha.Service.LoadSummary);
+            StringAssert.StartsWith(vm.StatusMessage, "1 reachable, 1 offline.");
+
+            await vm.RefreshOnceAsync(Probe(asked, _ => Up(0)), 2 * every, CancellationToken.None);
+            vm.SelectedService = alpha;
+            Assert.AreSame(alpha, vm.SelectedService, "A server that is back can be selected again.");
         }
     }
 }
