@@ -79,7 +79,11 @@ namespace Viking.UI.WPF.Controls
 
         private void treeServices_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            if (DataContext is SegmentationServiceSelectionViewModel viewModel && viewModel.SelectedService != null)
+            // Only a double-click on the selected row chooses it. A disabled (offline) row passes its clicks to the tree,
+            // which must not choose whatever was selected before.
+            var row = ItemsControl.ContainerFromElement(treeServices, e.OriginalSource as DependencyObject) as TreeViewItem;
+            if (DataContext is SegmentationServiceSelectionViewModel viewModel && viewModel.SelectedService != null
+                && row != null && ReferenceEquals(row.DataContext, viewModel.SelectedService))
             {
                 if (!viewModel.SelectedService.IsCategory && viewModel.SelectedService.Service != null)
                 {

@@ -371,6 +371,11 @@ namespace Viking.UI.WPF.Models
 
         private string BuildLoadToolTip()
         {
+            if (IsUnreachable)
+            {
+                return "Offline: the server did not answer. It is checked again every few seconds and can be selected once it is back.";
+            }
+
             if (!IsReachable)
             {
                 return StatusSummary;

@@ -117,7 +117,7 @@ namespace VikingCoreTests
             }
 
             Assert.AreEqual(
-                "0 reachable, 2 unreachable. Listed by preference (lowest load first). Unreachable servers are grayed out but can still be selected.",
+                "0 reachable, 2 offline. Listed by preference (lowest load first). Offline servers are grayed out and cannot be selected.",
                 vm.StatusMessage);
             Assert.IsTrue(vm.ServiceNodes.All(n => n.Service.IsUnreachable));
             Assert.IsFalse(vm.ShowManualEntry);

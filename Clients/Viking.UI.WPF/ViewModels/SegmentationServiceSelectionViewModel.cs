@@ -122,6 +122,12 @@ namespace Viking.UI.WPF.ViewModels
             get => _selectedService;
             set
             {
+                // An offline server cannot be chosen: it is listed, grayed, but never becomes the selection.
+                if (value?.Service?.IsUnreachable == true)
+                {
+                    return;
+                }
+
                 if (_selectedService != value)
                 {
                     _selectedService = value;
@@ -191,8 +197,10 @@ namespace Viking.UI.WPF.ViewModels
         {
             get
             {
-                // Use SelectedServiceEndpoint which handles both manual entry and selected service endpoint
-                bool canSelect = !IsLoading && !string.IsNullOrWhiteSpace(SelectedServiceEndpoint);
+                // Use SelectedServiceEndpoint which handles both manual entry and selected service endpoint.
+                // A listed server that has gone offline cannot be selected (a typed endpoint is the user's call).
+                bool selectedIsOffline = string.IsNullOrWhiteSpace(ManualServiceEndpoint) && SelectedService?.Service?.IsUnreachable == true;
+                bool canSelect = !IsLoading && !selectedIsOffline && !string.IsNullOrWhiteSpace(SelectedServiceEndpoint);
                 Trace.WriteLine($"[SegmentationSelection] CanSelect check - IsLoading: {IsLoading}, SelectedServiceEndpoint: '{SelectedServiceEndpoint}', Result: {canSelect}");
                 return canSelect;
             }
@@ -249,8 +257,13 @@ namespace Viking.UI.WPF.ViewModels
 
             if (node != null)
             {
-                SelectedService = node;
+                // The listed server decides: an offline one is not preselected, and its endpoint is not kept as a
+                // manual entry either, or Select would still connect to it.
                 ManualServiceEndpoint = string.Empty;
+                if (!node.Service.IsUnreachable)
+                {
+                    SelectedService = node;
+                }
             }
         }
 
@@ -417,10 +430,7 @@ namespace Viking.UI.WPF.ViewModels
                 }
 
                 ApplyPreferenceOrder();
-
-                int reachable = ServiceNodes.Count(node => node.Service?.IsReachable == true);
-                int unreachable = ServiceNodes.Count(node => node.Service?.IsUnreachable == true);
-                StatusMessage = $"{reachable} reachable, {unreachable} unreachable. Listed by preference (lowest load first). Unreachable servers are grayed out but can still be selected.";
+                StatusMessage = ReachabilityStatus();
             });
         }
 
@@ -505,9 +515,16 @@ namespace Viking.UI.WPF.ViewModels
 
             RunOnUi(() =>
             {
+                bool reachabilityChanged = false;
                 foreach (var (service, result) in completed)
                 {
+                    reachabilityChanged |= service.IsReachable != result.IsReachable;
                     ApplyProbeResult(service, result);
+                }
+
+                if (reachabilityChanged)
+                {
+                    AfterReachabilityChanged();
                 }
             });
         }
@@ -568,10 +585,21 @@ namespace Viking.UI.WPF.ViewModels
                 ServiceNodes.Add(node);
             }
 
+            // The last-used server is selected as soon as the list loads, before anyone knows whether it is up. If the
+            // probe found it offline, take that selection back.
+            if (SelectedService?.Service?.IsUnreachable == true)
+            {
+                SelectedService = null;
+            }
+
             if (!string.IsNullOrWhiteSpace(_preselectedEndpoint) || !string.IsNullOrWhiteSpace(selectedEndpoint))
             {
                 PreselectService(string.IsNullOrWhiteSpace(_preselectedEndpoint) ? selectedEndpoint : _preselectedEndpoint);
-                return;
+                if (SelectedService != null || !string.IsNullOrWhiteSpace(ManualServiceEndpoint))
+                {
+                    return;
+                }
+                // The last-used server is offline: fall through to the preferred online one.
             }
 
             var preferred = ServiceNodes.FirstOrDefault(node => node.Service?.IsPreferred == true);
@@ -579,6 +607,28 @@ namespace Viking.UI.WPF.ViewModels
             {
                 SelectedService = preferred;
             }
+        }
+
+        /// <summary>
+        /// After a live refresh: a selected server that went offline is deselected (it cannot be chosen), the Select
+        /// button is re-evaluated, and the status line keeps its reachable/offline count current.
+        /// </summary>
+        private void AfterReachabilityChanged()
+        {
+            if (SelectedService?.Service?.IsUnreachable == true)
+            {
+                SelectedService = null;
+            }
+
+            (SelectCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            StatusMessage = ReachabilityStatus();
+        }
+
+        private string ReachabilityStatus()
+        {
+            int reachable = ServiceNodes.Count(node => node.Service?.IsReachable == true);
+            int unreachable = ServiceNodes.Count(node => node.Service?.IsUnreachable == true);
+            return $"{reachable} reachable, {unreachable} offline. Listed by preference (lowest load first). Offline servers are grayed out and cannot be selected.";
         }
 
         private static void RunOnUi(Action action)
