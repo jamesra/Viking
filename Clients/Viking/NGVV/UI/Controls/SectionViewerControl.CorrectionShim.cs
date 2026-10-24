@@ -44,10 +44,64 @@ namespace Viking.UI.Controls
         void InitializeCorrectionStatus(StatusStrip statusBar)
         {
             _tsCorrection = new ToolStripLabel { AutoToolTip = false, Alignment = ToolStripItemAlignment.Right };
-            _tsCorrection.Click += (_, _) => ToggleCorrectionShim();
+            _tsCorrection.Click += (_, _) => OnCorrectionStatusClicked();
             statusBar.Items.Add(_tsCorrection);
             SectionShimContext.SettingsChanged += OnCorrectionSettingsChanged;
             UpdateCorrectionStatus();
+        }
+
+        /// <summary>
+        /// Click on the status item: shows the error text in a dialog while the service is in error, otherwise toggles
+        /// the shim.
+        /// </summary>
+        void OnCorrectionStatusClicked()
+        {
+            string? error = _correctionShim?.LastError;
+            if (error is null)
+            {
+                ToggleCorrectionShim();
+                return;
+            }
+
+            string details = ServiceErrorTracker.ToolTip("The correction service", error)
+                + $"\r\nService URL: {State.CorrectionServiceUrl ?? "(none)"}"
+                + $"\r\nDatabase: {State.CorrectionDatabaseName ?? "(none)"}";
+            using var dialog = new Form
+            {
+                Text = "Correction service error",
+                StartPosition = FormStartPosition.CenterParent,
+                ClientSize = new Size(640, 260),
+                MinimizeBox = false,
+                MaximizeBox = false,
+                ShowIcon = false,
+                ShowInTaskbar = false,
+                FormBorderStyle = FormBorderStyle.FixedDialog
+            };
+            var box = new TextBox
+            {
+                Multiline = true,
+                ReadOnly = true,
+                ScrollBars = ScrollBars.Vertical,
+                Dock = DockStyle.Fill,
+                Text = details.Replace("\r\n", "\n").Replace("\n", "\r\n")
+            };
+            var copy = new Button { Text = "Copy", DialogResult = DialogResult.None, Width = 80 };
+            copy.Click += (_, _) => Clipboard.SetText(box.Text);
+            var close = new Button { Text = "Close", DialogResult = DialogResult.OK, Width = 80 };
+            var buttons = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Bottom,
+                FlowDirection = FlowDirection.RightToLeft,
+                Height = 36,
+                Padding = new Padding(6)
+            };
+            buttons.Controls.Add(close);
+            buttons.Controls.Add(copy);
+            dialog.Controls.Add(box);
+            dialog.Controls.Add(buttons);
+            dialog.AcceptButton = close;
+            dialog.CancelButton = close;
+            dialog.ShowDialog(FindForm());
         }
 
         /// <summary>
@@ -106,7 +160,8 @@ namespace Viking.UI.Controls
             {
                 _tsCorrection.Text = "Corrections: " + ServiceErrorTracker.ErrorText;
                 _tsCorrection.ForeColor = ServiceErrorTracker.ErrorColor;
-                _tsCorrection.ToolTipText = ServiceErrorTracker.ToolTip("The correction service", error);
+                _tsCorrection.ToolTipText = ServiceErrorTracker.ToolTip("The correction service", error)
+                    + " Click to see the full message.";
                 RefreshStatusBarToolTip(_tsCorrection);
                 return;
             }

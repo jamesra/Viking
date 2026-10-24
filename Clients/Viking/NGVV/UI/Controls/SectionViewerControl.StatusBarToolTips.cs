@@ -99,7 +99,10 @@ namespace Viking.UI.Controls
             // The tooltip adds a margin and border around the text; the extra keeps its bottom edge clear of the strip.
             int y = -(textSize.Height + 12);
             // No duration: it stays until the mouse leaves the item, so long errors can be read.
-            _statusBarToolTip.Show(text, StatusBar, item.Bounds.Left, y);
+            // A right-aligned item sits near the screen edge; keep the tooltip's right edge inside the strip so a
+            // long error is not shown off-screen.
+            int x = Math.Max(0, Math.Min(item.Bounds.Left, StatusBar.Width - (textSize.Width + 16)));
+            _statusBarToolTip.Show(text, StatusBar, x, y);
             _statusBarToolTipShownText = text;
         }
 
