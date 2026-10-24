@@ -85,6 +85,23 @@ namespace WebAnnotation.UI.Commands.Segmentation
         };
 
         /// <summary>
+        /// Uploads that are running, by <see cref="TileKey"/>. A request that needs a tile already being rendered and
+        /// uploaded, by the prefetch or by another request in flight, waits for that upload instead of rendering it again.
+        /// </summary>
+        private readonly Dictionary<string, Task<bool>> tileUploadsInFlight = [];
+        private readonly object tileUploadsGate = new();
+
+        /// <summary>
+        /// Keys of tiles this client prefetched to the current segmentation server, kept across sessions so a
+        /// revisited view is not rendered and sent again. Only the prefetch reads it: a tile the server has since
+        /// dropped is still asked for during a request and uploaded then. Cleared when the endpoint changes.
+        /// </summary>
+        private static readonly TileUploadCache prefetchedToServer = new();
+
+        /// <summary>Forgets <see cref="prefetchedToServer"/>, for a new segmentation server.</summary>
+        internal static void ForgetPrefetchedTiles() => prefetchedToServer.Clear();
+
+        /// <summary>
         /// Renders and uploads cells that this session has not yet had accepted.
         /// Returns false when every needed cell failed to capture.
         /// </summary>
@@ -105,59 +122,190 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 if (!seen.Add((cell.Row, cell.Col)))
                     continue;
 
-                string key = TileKey(signature, cell.Row, cell.Col);
-                if (uploadedTileKeys.Contains(key))
-                {
+                if (await UploadTileAsync(signature, cell, grayscale, token).ConfigureAwait(false))
                     anyReady = true;
-                    continue;
-                }
-
-                var (png, width, height) = await CaptureTileImage(
-                    cell,
-                    signature.Downsample,
-                    grayscale,
-                    token,
-                    gray => tileImages.Store(key, gray)).ConfigureAwait(false);
-                if (png is null || png.Length == 0)
-                {
-                    SegmentationDiag.Log($"Capture failed row={cell.Row} col={cell.Col} ds={signature.Downsample}");
-                    Debug.WriteLine($"Failed to capture tile row={cell.Row} col={cell.Col}");
-                    continue;
-                }
-
-                UploadTileRequest upload = new()
-                {
-                    Coord = ToCoord(signature, cell),
-                    ImageData = Google.Protobuf.ByteString.CopyFrom(png),
-                    Width = width,
-                    Height = height
-                };
-                CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(30), cancellationToken: token);
-                SegmentationDiag.Log(
-                    $"UploadTile send row={cell.Row} col={cell.Col} ds={signature.Downsample} " +
-                    $"declared={upload.Width}x{upload.Height} encodedBytes={png.Length}");
-                Debug.WriteLine(
-                    $"UploadTile key=vol={signature.Volume}|sec={signature.Section}|ch={signature.Channel}|" +
-                    $"xf={signature.Transform}|ds={signature.Downsample}|row={cell.Row}|col={cell.Col} " +
-                    $"dimensions={upload.Width}x{upload.Height} bytes={png.Length}");
-                try
-                {
-                    UploadTileResponse response = await grpcClient.UploadTileAsync(upload, callOptions).ResponseAsync.ConfigureAwait(false);
-                    uploadedTileKeys.Add(key);
-                    anyReady = true;
-                    SegmentationDiag.Log($"UploadTile ok alreadyCached={response.AlreadyCached}");
-                    Debug.WriteLine(
-                        $"UploadTile accepted key=ds={signature.Downsample}|row={cell.Row}|col={cell.Col} " +
-                        $"alreadyCached={response.AlreadyCached}");
-                }
-                catch (RpcException rpcEx)
-                {
-                    SegmentationDiag.Log($"UploadTile RPC {rpcEx.StatusCode}: {rpcEx.Status.Detail}");
-                    throw;
-                }
             }
 
             return anyReady;
+        }
+
+        /// <summary>
+        /// True once the server holds <paramref name="cell"/>: already accepted in this session, or uploaded now.
+        /// Joins an upload of the same cell that is already running; if that one fails or is cancelled while this
+        /// caller still wants the cell, this caller tries once more itself. An <see cref="RpcException"/> from
+        /// UploadTile is not caught.
+        /// </summary>
+        private async Task<bool> UploadTileAsync(TileSignature signature, TileCell cell, bool grayscale, CancellationToken token)
+        {
+            string key = TileKey(signature, cell.Row, cell.Col);
+            for (int attempt = 0; attempt < 2; attempt++)
+            {
+                if (uploadedTileKeys.Contains(key))
+                    return true;
+
+                Task<bool> upload;
+                bool started = false;
+                lock (tileUploadsGate)
+                {
+                    if (!tileUploadsInFlight.TryGetValue(key, out upload))
+                    {
+                        upload = CaptureAndUploadTileAsync(signature, cell, key, grayscale, token);
+                        tileUploadsInFlight[key] = upload;
+                        started = true;
+                    }
+                }
+
+                try
+                {
+                    if (await upload.ConfigureAwait(false))
+                        return true;
+                }
+                catch (OperationCanceledException) when (!started && !token.IsCancellationRequested)
+                {
+                    // The caller that started the upload gave up on it; this one still wants the cell.
+                }
+                finally
+                {
+                    if (started)
+                    {
+                        lock (tileUploadsGate)
+                            tileUploadsInFlight.Remove(key);
+                    }
+                }
+
+                token.ThrowIfCancellationRequested();
+                if (started)
+                    return false;
+            }
+
+            return false;
+        }
+
+        /// <summary>One render, encode and UploadTile of <paramref name="cell"/>; false when the capture failed.</summary>
+        private async Task<bool> CaptureAndUploadTileAsync(
+            TileSignature signature,
+            TileCell cell,
+            string key,
+            bool grayscale,
+            CancellationToken token)
+        {
+            // Started under tileUploadsGate; the render and encode must run after the lock is released.
+            await Task.Yield();
+            if (grpcClient is null)
+                return false;
+
+            var (png, width, height) = await CaptureTileImage(
+                cell,
+                signature.Downsample,
+                grayscale,
+                token,
+                gray => tileImages.Store(key, gray)).ConfigureAwait(false);
+            if (png is null || png.Length == 0)
+            {
+                token.ThrowIfCancellationRequested();
+                SegmentationDiag.Log($"Capture failed row={cell.Row} col={cell.Col} ds={signature.Downsample}");
+                Debug.WriteLine($"Failed to capture tile row={cell.Row} col={cell.Col}");
+                return false;
+            }
+
+            UploadTileRequest upload = new()
+            {
+                Coord = ToCoord(signature, cell),
+                ImageData = Google.Protobuf.ByteString.CopyFrom(png),
+                Width = width,
+                Height = height
+            };
+            CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(30), cancellationToken: token);
+            SegmentationDiag.Log(
+                $"UploadTile send row={cell.Row} col={cell.Col} ds={signature.Downsample} " +
+                $"declared={upload.Width}x{upload.Height} encodedBytes={png.Length}");
+            Debug.WriteLine(
+                $"UploadTile key=vol={signature.Volume}|sec={signature.Section}|ch={signature.Channel}|" +
+                $"xf={signature.Transform}|ds={signature.Downsample}|row={cell.Row}|col={cell.Col} " +
+                $"dimensions={upload.Width}x{upload.Height} bytes={png.Length}");
+            try
+            {
+                UploadTileResponse response = await grpcClient.UploadTileAsync(upload, callOptions).ResponseAsync.ConfigureAwait(false);
+                uploadedTileKeys.Add(key);
+                prefetchedToServer.Add(key);
+                SegmentationDiag.Log($"UploadTile ok row={cell.Row} col={cell.Col} alreadyCached={response.AlreadyCached}");
+                Debug.WriteLine(
+                    $"UploadTile accepted key=ds={signature.Downsample}|row={cell.Row}|col={cell.Col} " +
+                    $"alreadyCached={response.AlreadyCached}");
+                return true;
+            }
+            catch (RpcException rpcEx)
+            {
+                SegmentationDiag.Log($"UploadTile RPC {rpcEx.StatusCode}: {rpcEx.Status.Detail}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Uploads, ahead of the requests that will need them, the cells covering each of <paramref name="regions"/>
+        /// (world space), in the order given and nearest each region's centre first. The server encodes a tile when
+        /// it arrives, so a request that finds its tiles already there skips the round trips of asking for them.
+        /// One tile at a time, so requests in flight still get their own tiles promptly; a request that needs a tile
+        /// the prefetch is sending waits for that upload. Stops on cancellation or an RPC error, which a request
+        /// would meet anyway.
+        /// </summary>
+        internal async Task PrefetchTilesAsync(IReadOnlyList<Geometry.Rectangle> regions, CancellationToken token)
+        {
+            if (grpcClient is null || regions.Count == 0 || !IsCameraWithinTileSubmission(recordSkip: false))
+                return;
+
+            Stopwatch timer = Stopwatch.StartNew();
+            int uploaded = 0;
+            int skipped = 0;
+            try
+            {
+                (int downsample, TileSignature signature, bool grayscale) = await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
+                {
+                    int level = ResolveTileDownsample(parent.CameraDownsample);
+                    return (level, CurrentTileSignature(level), parent.IsGrayscale);
+                }).Task.ConfigureAwait(false);
+
+                List<TileCell> cells = [];
+                HashSet<TileCell> seen = [];
+                foreach (Geometry.Rectangle region in regions)
+                {
+                    Geometry.Vector2 center = region.Center;
+                    double cellWorld = SegmentationTileGrid.TileSize * (double)downsample;
+                    IEnumerable<TileCell> covering = SegmentationTileGrid.CellsCovering(
+                            region.LowerLeft.X, region.LowerLeft.Y, region.UpperRight.X, region.UpperRight.Y, downsample)
+                        .OrderBy(cell => Geometry.Vector2.DistanceSquared(
+                            new Geometry.Vector2((cell.Col + 0.5) * cellWorld, (cell.Row + 0.5) * cellWorld), center));
+                    foreach (TileCell cell in covering)
+                    {
+                        if (seen.Add(cell))
+                            cells.Add(cell);
+                    }
+                }
+
+                SegmentationDiag.Log($"Prefetch start regions={regions.Count} tiles={cells.Count} ds={downsample}");
+                foreach (TileCell cell in cells)
+                {
+                    token.ThrowIfCancellationRequested();
+                    string key = TileKey(signature, cell.Row, cell.Col);
+                    if (prefetchedToServer.Contains(key) || uploadedTileKeys.Contains(key))
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    if (await UploadTileAsync(signature, cell, grayscale, token).ConfigureAwait(false))
+                        uploaded++;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (RpcException rpcEx)
+            {
+                SegmentationDiag.Log($"Prefetch stopped: UploadTile RPC {rpcEx.StatusCode}");
+            }
+
+            SegmentationDiag.Log($"Prefetch done uploaded={uploaded} alreadySent={skipped} ms={timer.ElapsedMilliseconds}");
         }
 
         /// <summary>
@@ -384,7 +532,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
                 // The server asks only for cells it does not hold. A key left from an earlier
                 // upload would skip the re-upload and the server would wait on a tile it never gets.
-                uploadedTileKeys.Remove(TileKey(signature, tile.Row, tile.Col));
+                string key = TileKey(signature, tile.Row, tile.Col);
+                uploadedTileKeys.Remove(key);
+                prefetchedToServer.Remove(key);
                 bool uploaded = await UploadMissingTilesAsync(
                     signature,
                     [new TileCell(tile.Row, tile.Col)],
@@ -414,7 +564,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 Color[]? pixels = await RenderTilePixelsAsync(cell, downsample, cancellationToken).ConfigureAwait(false);
                 if (pixels is null)
+                {
+                    SegmentationDiag.Log(
+                        $"CaptureTile no pixels row={cell.Row} col={cell.Col} " +
+                        $"cancelled={cancellationToken.IsCancellationRequested}");
                     return (null, 0, 0);
+                }
 
                 int width = SegmentationTileGrid.TileSize;
                 int height = SegmentationTileGrid.TileSize;
@@ -449,10 +604,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
             catch (OperationCanceledException)
             {
+                SegmentationDiag.Log($"CaptureTile cancelled row={cell.Row} col={cell.Col}");
                 return (null, 0, 0);
             }
             catch (Exception ex)
             {
+                SegmentationDiag.Log($"CaptureTile error row={cell.Row} col={cell.Col}: {ex.GetType().Name}: {ex.Message}");
                 Debug.WriteLine($"Error capturing tile row={cell.Row} col={cell.Col}: {ex.Message}");
                 return (null, 0, 0);
             }
@@ -523,7 +680,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         private async Task<Color[]?> RenderTilePixelsAsync(TileCell cell, int downsample, CancellationToken cancellationToken)
         {
-            CancellationToken renderToken = PrepareCancellationToken(cancellationToken);
+            using CancellationTokenSource renderCancellation = CreateRenderCancellation(cancellationToken);
+            CancellationToken renderToken = renderCancellation.Token;
             double cellWorld = SegmentationTileGrid.TileSize * (double)downsample;
             float centerX = (float)((cell.Col + 0.5) * cellWorld);
             float centerY = (float)((cell.Row + 0.5) * cellWorld);

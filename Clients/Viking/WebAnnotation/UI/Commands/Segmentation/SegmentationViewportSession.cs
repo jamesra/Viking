@@ -74,8 +74,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             Volatile.Write(ref lastSkip, null);
         }
-        private CancellationTokenSource renderCancellationTokenSource;
-        private CancellationTokenSource linkedRenderCancellationTokenSource;
+        /// <summary>
+        /// Cancelled by <see cref="CancelPendingWork"/>, then replaced. Every tile render links its own token to it, so
+        /// renders running at once for overlapping requests never cancel each other.
+        /// </summary>
+        private CancellationTokenSource renderCancellationTokenSource = new();
+        private readonly object renderCancellationGate = new();
         private CancellationTokenSource uploadCancellationTokenSource;
         private readonly TileUploadCache uploadedTileKeys = new();
 
@@ -512,8 +516,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         public void CancelPendingWork()
         {
-            linkedRenderCancellationTokenSource?.Cancel();
-            renderCancellationTokenSource?.Cancel();
+            CancellationTokenSource cancelled;
+            lock (renderCancellationGate)
+            {
+                cancelled = renderCancellationTokenSource;
+                renderCancellationTokenSource = new CancellationTokenSource();
+            }
+
+            cancelled.Cancel();
             uploadCancellationTokenSource?.Cancel();
         }
 
@@ -703,7 +713,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     tilePoints.Add(seed.Center);
                 List<TileCell> needed = SegmentationTileGrid.CellsContainingPoints(tilePoints, downsample);
                 SegmentationDiag.Log(
-                    $"SegmentAsync ds={downsample} visible={visible.Count} promptTiles={needed.Count} " +
+                    $"SegmentAsync req={requestId} ds={downsample} visible={visible.Count} promptTiles={needed.Count} " +
                     $"vol={signature.Volume} sec={signature.Section}");
                 if (needed.Count == 0)
                 {
@@ -1033,20 +1043,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return new Geometry.Rectangle(topLeft, bottomRight);
         }
 
-        private CancellationToken PrepareCancellationToken(CancellationToken externalToken)
+        /// <summary>
+        /// A token for one tile render: cancelled by <paramref name="externalToken"/> or <see cref="CancelPendingWork"/>.
+        /// The caller disposes it. A new render no longer cancels the one before it: with several requests in
+        /// flight, that made each request's capture cancel the other's.
+        /// </summary>
+        private CancellationTokenSource CreateRenderCancellation(CancellationToken externalToken)
         {
-            linkedRenderCancellationTokenSource?.Cancel();
-            linkedRenderCancellationTokenSource?.Dispose();
-            linkedRenderCancellationTokenSource = null;
-
-            renderCancellationTokenSource?.Cancel();
-            renderCancellationTokenSource?.Dispose();
-            renderCancellationTokenSource = new CancellationTokenSource();
-
-            linkedRenderCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
-                externalToken,
-                renderCancellationTokenSource.Token);
-            return linkedRenderCancellationTokenSource.Token;
+            lock (renderCancellationGate)
+                return CancellationTokenSource.CreateLinkedTokenSource(externalToken, renderCancellationTokenSource.Token);
         }
 
     }

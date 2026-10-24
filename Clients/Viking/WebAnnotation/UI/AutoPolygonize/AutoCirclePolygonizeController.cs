@@ -45,10 +45,16 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Requests a batch keeps open at once. The next circle is picked and sent as soon as a request goes out, so
-        /// the server always has the next one waiting instead of idling for each round trip and prompt build.
-        /// Kept small so the cursor still decides most of the order.
+        /// the server always has work waiting while others wait on tile round trips. Kept small so the cursor still
+        /// decides most of the order.
         /// </summary>
-        private const int MaxRequestsInFlight = 2;
+        private const int MaxRequestsInFlight = 3;
+
+        /// <summary>
+        /// The batch prefetches the tiles within this many radii of each queued circle's centre, which covers what the
+        /// server usually grows a circle's mask into. Tiles further out are still uploaded when the server asks.
+        /// </summary>
+        private const double PrefetchRadii = 4;
 
         private const int RegionPollMs = 150;
         private const int RegionWaitTimeoutMs = 10000;
@@ -370,6 +376,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         public void OnSegmentationEndpointChanged(bool newEndpointIsUsable)
         {
+            SegmentationViewportSession.ForgetPrefetchedTiles();
             CancelUploadPhase();
             CancelProcessPhase();
             viewportImageLease.AbandonPublished();
@@ -1197,6 +1204,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             long batchId = Interlocked.Increment(ref profileBatchSequence);
             Stopwatch batchTimer = Stopwatch.StartNew();
             SegmentationViewportSession? localUploadSession = null;
+            CancellationTokenSource? prefetchCts = null;
             ProcessBatch? processBatch = null;
 
             try
@@ -1319,6 +1327,24 @@ namespace WebAnnotation.UI.AutoPolygonize
                 List<LocationObj> visibleForPrompts = [.. CollectVisibleLocationObjs(viewBounds)];
                 List<LocationObj> queue = candidates;
 
+                // Tiles around every queued circle go up in the background, nearest the cursor first, so most requests
+                // find them already encoded on the server. Only the fixed tile grid takes tiles; a full-viewport image
+                // was uploaded whole. Stopped when the queue is done: what is left belongs to circles no longer sent.
+                prefetchCts = CancellationTokenSource.CreateLinkedTokenSource(processToken);
+                if (uploadContext.Value.ImageId == 0)
+                {
+                    LiveView startView = await ReadLiveViewAsync().ConfigureAwait(false);
+                    Vector2 priority = AutoPolygonizeSelection.QueuePriorityPoint(startView.Cursor, startView.Bounds);
+                    List<Rectangle> regions = [];
+                    foreach (LocationObj circle in queue.OrderBy(circle => Vector2.DistanceSquared(circle.VolumePosition, priority)))
+                    {
+                        if (TryPrefetchRegion(circle, transform, out Rectangle region))
+                            regions.Add(region);
+                    }
+
+                    processBatch.AddResponseTask(localUploadSession.PrefetchTilesAsync(regions, prefetchCts.Token));
+                }
+
                 // One circle's request. Returns once its response is handed to ProcessResponseAsync.
                 async Task SendCircleAsync(LocationObj circle, List<LocationObj> visibleForPrompts)
                 {
@@ -1427,6 +1453,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 }
 
                 await Task.WhenAll(inFlight).ConfigureAwait(false);
+                prefetchCts.Cancel();
                 Task[] responseTasks = processBatch.SnapshotResponseTasks();
                 if (responseTasks.Length > 0)
                     await Task.WhenAll(responseTasks).ConfigureAwait(false);
@@ -1442,8 +1469,67 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
             finally
             {
+                prefetchCts?.Cancel();
                 await FinishUploadOrProcessBatchAsync(localUploadSession, processBatch).ConfigureAwait(false);
+                prefetchCts?.Dispose();
             }
+        }
+
+        /// <summary>The live view bounds, camera downsample and cursor position (null when the cursor is off the view).</summary>
+        private readonly record struct LiveView(Rectangle Bounds, double Downsample, Vector2? Cursor);
+
+        /// <summary>Reads <see cref="LiveView"/> on the UI thread.</summary>
+        private async Task<LiveView> ReadLiveViewAsync()
+        {
+            LiveView Read()
+            {
+                Vector2? cursor = parent.TryGetCursorWorldPosition(out Vector2 world) ? world : null;
+                return new LiveView(GetCurrentViewportBounds(), GetCurrentDownsample(), cursor);
+            }
+
+            var dispatcher = Viking.UI.State.MainThreadDispatcher;
+            return dispatcher is null || dispatcher.CheckAccess()
+                ? Read()
+                : await dispatcher.InvokeAsync(Read).Task.ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// The world (volume) rectangle covering the mosaic square of half-width <see cref="PrefetchRadii"/> radii around
+        /// <paramref name="circle"/>'s mosaic centre: the square's corners are mapped and their bounding box taken, so the
+        /// transform's scale and rotation are followed without carrying the mosaic radius into volume space.
+        /// </summary>
+        private static bool TryPrefetchRegion(LocationObj circle, IVolumeToSectionTransform transform, out Rectangle region)
+        {
+            region = default;
+            double reach = circle.Radius * PrefetchRadii;
+            if (transform is null || reach <= 0)
+                return false;
+
+            Vector2 center = circle.Position;
+            Vector2[] corners =
+            [
+                new(center.X - reach, center.Y - reach),
+                new(center.X + reach, center.Y - reach),
+                new(center.X + reach, center.Y + reach),
+                new(center.X - reach, center.Y + reach),
+            ];
+            bool[] mapped = transform.TrySectionToVolume(corners, out Vector2[] volumeCorners);
+            List<Vector2> points = [];
+            for (int i = 0; i < corners.Length; i++)
+            {
+                if (mapped[i])
+                    points.Add(volumeCorners[i]);
+            }
+
+            if (points.Count < 2)
+                return false;
+
+            region = new Rectangle(
+                points.Min(point => point.X),
+                points.Max(point => point.X),
+                points.Min(point => point.Y),
+                points.Max(point => point.Y));
+            return true;
         }
 
         /// <summary>The circle the queue sends next, and the live view it was picked in.</summary>
@@ -1457,16 +1543,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         private async Task<QueuedCircle?> TakeNextQueuedCircleAsync(List<LocationObj> queue, int sectionNumber, double downsample)
         {
-            (Rectangle Bounds, double Downsample, Vector2? Cursor) ReadLiveView()
-            {
-                Vector2? cursor = parent.TryGetCursorWorldPosition(out Vector2 world) ? world : null;
-                return (GetCurrentViewportBounds(), GetCurrentDownsample(), cursor);
-            }
-
-            var dispatcher = Viking.UI.State.MainThreadDispatcher;
-            (Rectangle liveBounds, double liveDownsample, Vector2? cursor) = dispatcher is null || dispatcher.CheckAccess()
-                ? ReadLiveView()
-                : await dispatcher.InvokeAsync(ReadLiveView).Task.ConfigureAwait(false);
+            (Rectangle liveBounds, double liveDownsample, Vector2? cursor) = await ReadLiveViewAsync().ConfigureAwait(false);
 
             if (liveDownsample > Global.AnnotationSettings.AutoPolygonizeMaxDownsample)
                 return null;
