@@ -13,6 +13,8 @@
     <ProjectReference Include="..\Common\Common.csproj" />
     <ProjectReference Include="..\WCFTokenInjector\WCFTokenInjector.csproj" />
     <ProjectReference Include="..\VolumeModel\VolumeModel.csproj" />
+    <!-- GetServerStatus probe for the segmentation service picker (model, epoch and load per server). -->
+    <ProjectReference Include="..\..\SegmentationServiceTypes.gRPC\SegmentationServiceTypes.gRPC.csproj" />
   </ItemGroup>
 
   <ItemGroup>

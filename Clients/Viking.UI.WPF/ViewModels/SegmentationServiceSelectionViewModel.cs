@@ -7,12 +7,14 @@ using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Duende.IdentityModel.Client;
+using Viking.Common;
 using Viking.Tokens;
 using Viking.UI.WPF.Models;
-using Viking.Common;
+using Viking.UI.WPF.Services;
 
 namespace Viking.UI.WPF.ViewModels
 {
@@ -28,6 +30,13 @@ namespace Viking.UI.WPF.ViewModels
         private string _manualServiceEndpoint;
         private bool _showManualEntry;
         private readonly TaskCompletionSource<bool> _loadCompletedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private CancellationTokenSource _liveRefreshCts;
+
+        /// <summary>Pause between live status refreshes while the picker is shown. Servers cache their answer for the same second.</summary>
+        internal static TimeSpan LiveRefreshInterval { get; set; } = TimeSpan.FromSeconds(1);
+
+        /// <summary>An offline server is re-checked on every Nth refresh only, not every second.</summary>
+        public const int OfflineRecheckEveryRefreshes = 5;
 
         public SegmentationServiceSelectionViewModel(TokenResponse bearerToken, string identityServerUrl, string preselectedEndpoint = null, Dictionary<long, object> preloadedServices = null)
         {
@@ -53,6 +62,7 @@ namespace Viking.UI.WPF.ViewModels
                 {
                     PreselectService(_preselectedEndpoint);
                 }
+                _ = ProbeAndRankAsync();
                 _loadCompletedTcs.TrySetResult(true);
             }
             else if (_bearerToken != null)
@@ -302,6 +312,8 @@ namespace Viking.UI.WPF.ViewModels
                 {
                     PreselectService(_preselectedEndpoint);
                 }
+
+                await ProbeAndRankAsync();
             }
             catch (System.Net.Http.HttpRequestException httpEx) when (httpEx.Message.Contains("404"))
             {
@@ -349,6 +361,236 @@ namespace Viking.UI.WPF.ViewModels
                     Trace.WriteLine($"Error parsing segmentation service {kvp.Key}: {ex.Message}");
                 }
             }
+        }
+
+        /// <summary>
+        /// Pings GetServerStatus on each endpoint and reorders the list: reachable, lowest load first.
+        /// Unreachable servers stay in the list (grayed) so the user can still pick them.
+        /// </summary>
+        private async Task ProbeAndRankAsync()
+        {
+            var services = ServiceNodes
+                .Select(node => node.Service)
+                .Where(service => service != null && !string.IsNullOrWhiteSpace(service.Endpoint))
+                .ToList();
+
+            if (services.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var service in services)
+            {
+                service.IsProbing = true;
+            }
+
+            StatusMessage = "Checking which segmentation servers are up…";
+
+            var probes = services.Select(async service =>
+            {
+                var result = await SegmentationServerStatusProbe.ProbeAsync(service.Endpoint, CancellationToken.None);
+                return (service, result);
+            });
+
+            (SegmentationServiceInfo service, SegmentationServerProbeResult result)[] completed;
+            try
+            {
+                completed = await Task.WhenAll(probes);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[SegmentationSelection] Probe batch failed: {ex}");
+                foreach (var service in services)
+                {
+                    service.IsProbing = false;
+                    service.HasProbeCompleted = true;
+                    service.IsReachable = false;
+                }
+                return;
+            }
+
+            RunOnUi(() =>
+            {
+                foreach (var (service, result) in completed)
+                {
+                    ApplyProbeResult(service, result);
+                }
+
+                ApplyPreferenceOrder();
+
+                int reachable = ServiceNodes.Count(node => node.Service?.IsReachable == true);
+                int unreachable = ServiceNodes.Count(node => node.Service?.IsUnreachable == true);
+                StatusMessage = $"{reachable} reachable, {unreachable} unreachable. Listed by preference (lowest load first). Unreachable servers are grayed out but can still be selected.";
+            });
+        }
+
+        /// <summary>True while the picker is refreshing each server's model and load every second.</summary>
+        public bool IsLiveRefreshRunning => _liveRefreshCts != null;
+
+        /// <summary>
+        /// Starts refreshing each server's model and load columns about once a second (the picker control calls this when
+        /// it is shown). The order of the list is not changed by a refresh, so rows do not move under the mouse; only the
+        /// first probe ranks them. Offline servers are re-checked every few seconds. Calling it twice is harmless.
+        /// </summary>
+        public void StartLiveRefresh()
+        {
+            if (_liveRefreshCts != null)
+            {
+                return;
+            }
+
+            _liveRefreshCts = new CancellationTokenSource();
+            _ = LiveRefreshLoopAsync(_liveRefreshCts.Token);
+        }
+
+        /// <summary>Stops the live refresh (the picker control calls this when it is hidden or unloaded).</summary>
+        public void StopLiveRefresh()
+        {
+            var cts = _liveRefreshCts;
+            _liveRefreshCts = null;
+            cts?.Cancel();
+        }
+
+        private async Task LiveRefreshLoopAsync(CancellationToken token)
+        {
+            using var monitor = new SegmentationServerStatusMonitor();
+            int refresh = 0;
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    // Wait first, then probe: one refresh never overlaps the next, however slow a server answers.
+                    await Task.Delay(LiveRefreshInterval, token);
+                    refresh++;
+                    await RefreshOnceAsync(monitor.ProbeAsync, refresh, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"[SegmentationSelection] Live status refresh failed: {ex.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// One live refresh: probes every server whose first probe has finished (an offline one only on every
+        /// <see cref="OfflineRecheckEveryRefreshes"/>th refresh) and updates its columns in place.
+        /// </summary>
+        public async Task RefreshOnceAsync(Func<string, CancellationToken, Task<SegmentationServerProbeResult>> probe, int refresh, CancellationToken token)
+        {
+            bool recheckOffline = refresh % OfflineRecheckEveryRefreshes == 0;
+            var services = ServiceNodes
+                .Select(node => node.Service)
+                .Where(service => service != null
+                                  && !string.IsNullOrWhiteSpace(service.Endpoint)
+                                  && service.HasProbeCompleted
+                                  && !service.IsProbing
+                                  && (service.IsReachable || recheckOffline))
+                .Distinct()
+                .ToList();
+
+            if (services.Count == 0)
+            {
+                return;
+            }
+
+            var completed = await Task.WhenAll(services.Select(async service => (service, result: await probe(service.Endpoint, token))));
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            RunOnUi(() =>
+            {
+                foreach (var (service, result) in completed)
+                {
+                    ApplyProbeResult(service, result);
+                }
+            });
+        }
+
+        private static void ApplyProbeResult(SegmentationServiceInfo service, SegmentationServerProbeResult result)
+        {
+            service.IsProbing = false;
+            service.HasProbeCompleted = true;
+            service.IsReachable = result.IsReachable;
+            if (!result.IsReachable)
+            {
+                return;
+            }
+
+            service.ProbeLatencyMs = result.ProbeLatencyMs;
+            service.InFlightRequests = result.InFlightRequests;
+            service.RecentLatencyMs = result.RecentLatencyMs;
+            service.InferenceWorkers = result.InferenceWorkers;
+            service.Version = result.Version;
+            service.ServerMessage = result.ServerMessage;
+            service.ModelId = result.ModelId;
+            service.ModelVersion = result.ModelVersion;
+            service.ModelDisplayName = result.ModelDisplayName;
+            service.TrainingDataSet = result.TrainingDataSet;
+            service.ModelDescription = result.ModelDescription;
+            service.CachedImages = result.CachedImages;
+            service.CacheMemoryBytes = result.CacheMemoryBytes;
+        }
+
+        private void ApplyPreferenceOrder()
+        {
+            string selectedEndpoint = SelectedServiceEndpoint;
+            var ordered = ServiceNodes
+                .OrderBy(node => node.Service == null || !node.Service.IsReachable)
+                .ThenBy(node => node.Service?.PreferenceScore ?? double.MaxValue)
+                .ThenBy(node => node.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            ServiceNodes.Clear();
+            int rank = 1;
+            foreach (var node in ordered)
+            {
+                if (node.Service != null)
+                {
+                    if (node.Service.IsReachable)
+                    {
+                        node.Service.PreferenceRank = rank;
+                        node.Service.IsPreferred = rank == 1;
+                        rank++;
+                    }
+                    else
+                    {
+                        node.Service.PreferenceRank = 0;
+                        node.Service.IsPreferred = false;
+                    }
+                }
+
+                ServiceNodes.Add(node);
+            }
+
+            if (!string.IsNullOrWhiteSpace(_preselectedEndpoint) || !string.IsNullOrWhiteSpace(selectedEndpoint))
+            {
+                PreselectService(string.IsNullOrWhiteSpace(_preselectedEndpoint) ? selectedEndpoint : _preselectedEndpoint);
+                return;
+            }
+
+            var preferred = ServiceNodes.FirstOrDefault(node => node.Service?.IsPreferred == true);
+            if (preferred != null)
+            {
+                SelectedService = preferred;
+            }
+        }
+
+        private static void RunOnUi(Action action)
+        {
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher != null && !dispatcher.CheckAccess())
+            {
+                dispatcher.Invoke(action);
+                return;
+            }
+
+            action();
         }
 
         private SegmentationServiceInfo ParseServiceData(long id, object data)
@@ -584,6 +826,7 @@ namespace Viking.UI.WPF.ViewModels
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
     }
 
     public class SegmentationServiceSelectedEventArgs : EventArgs

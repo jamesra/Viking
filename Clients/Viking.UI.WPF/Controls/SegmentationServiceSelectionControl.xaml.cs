@@ -10,6 +10,31 @@ namespace Viking.UI.WPF.Controls
         public SegmentationServiceSelectionControl()
         {
             InitializeComponent();
+            IsVisibleChanged += (_, _) => UpdateLiveRefresh();
+            Unloaded += (_, _) => (DataContext as SegmentationServiceSelectionViewModel)?.StopLiveRefresh();
+            DataContextChanged += (_, e) =>
+            {
+                (e.OldValue as SegmentationServiceSelectionViewModel)?.StopLiveRefresh();
+                UpdateLiveRefresh();
+            };
+        }
+
+        /// <summary>The model and load columns refresh every second while the picker is on screen, and not otherwise.</summary>
+        private void UpdateLiveRefresh()
+        {
+            if (DataContext is not SegmentationServiceSelectionViewModel viewModel)
+            {
+                return;
+            }
+
+            if (IsVisible)
+            {
+                viewModel.StartLiveRefresh();
+            }
+            else
+            {
+                viewModel.StopLiveRefresh();
+            }
         }
 
         private void treeServices_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)

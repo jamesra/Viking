@@ -11,7 +11,8 @@ namespace VikingCoreTests
 {
     /// <summary>
     /// Pins the segmentation-service picker view model using only a null bearer token and preloaded services, so no
-    /// network call is made and no token or credential handling is exercised.
+    /// token or credential handling is exercised. The only network call is the GetServerStatus probe the view model
+    /// starts for preloaded services, which fails for these unresolvable endpoints.
     /// </summary>
     [TestClass]
     public class SegmentationServiceSelectionViewModelTests
@@ -92,15 +93,34 @@ namespace VikingCoreTests
 
         // ---- preloaded services ----
 
+        /// <summary>
+        /// Preloaded services are listed at once and then probed with GetServerStatus; the status reports the probe
+        /// and then the count of reachable and unreachable services. The endpoints use the reserved .invalid domain,
+        /// so both probes fail without reaching a server.
+        /// </summary>
         [TestMethod]
         public void Constructor_Preloaded_StatusReportsCountAndHidesManualEntry()
         {
-            var vm = Preloaded(new Dictionary<long, object> { [1] = Svc("A", "http://a"), [2] = Svc("B", "http://b") });
+            const string checking = "Checking which segmentation servers are up…";
+            var vm = Preloaded(new Dictionary<long, object> { [1] = Svc("A", "http://a.invalid"), [2] = Svc("B", "http://b.invalid") });
 
-            Assert.AreEqual("Loaded 2 segmentation service(s)", vm.StatusMessage);
             Assert.IsFalse(vm.ShowManualEntry);
             Assert.IsFalse(vm.IsLoading);
             Assert.IsTrue(vm.WhenServicesLoadedAsync().IsCompleted);
+            Assert.AreEqual(2, vm.ServiceNodes.Count);
+
+            DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(15);
+            while (vm.StatusMessage == checking)
+            {
+                Assert.IsTrue(DateTime.UtcNow < deadline, "The server probe never finished.");
+                System.Threading.Thread.Sleep(10);
+            }
+
+            Assert.AreEqual(
+                "0 reachable, 2 unreachable. Listed by preference (lowest load first). Unreachable servers are grayed out but can still be selected.",
+                vm.StatusMessage);
+            Assert.IsTrue(vm.ServiceNodes.All(n => n.Service.IsUnreachable));
+            Assert.IsFalse(vm.ShowManualEntry);
         }
 
         [TestMethod]

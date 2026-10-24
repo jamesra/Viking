@@ -44,24 +44,57 @@
             </Grid.RowDefinitions>
 
             <TextBlock Grid.Row="0" 
-                       Text="Available Services" 
+                       Text="Available Services: name, model, load (preferred first)" 
                        FontSize="14" 
                        FontWeight="Bold" 
                        Margin="0,0,0,10"/>
 
             <TreeView Grid.Row="1" 
                       Name="treeServices"
+                      Grid.IsSharedSizeScope="True"
                       ItemsSource="{Binding ServiceNodes}"
                       SelectedItemChanged="treeServices_SelectedItemChanged"
                       MouseDoubleClick="treeServices_MouseDoubleClick">
+                <TreeView.ItemContainerStyle>
+                    <Style TargetType="TreeViewItem">
+                        <Setter Property="Foreground" Value="#222222"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Service.IsUnreachable}" Value="True">
+                                <Setter Property="Foreground" Value="#888888"/>
+                                <Setter Property="Opacity" Value="0.55"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TreeView.ItemContainerStyle>
                 <TreeView.Resources>
+                    <!-- Name | Model | Load. Shared size groups line the columns up across rows; the model and load
+                         come from the server itself (GetServerStatus), so they stay right when an Identity name is stale. -->
                     <HierarchicalDataTemplate DataType="{x:Type local:SegmentationServiceTreeNode}" 
                                               ItemsSource="{Binding Children}">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{Binding Name}" 
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="ServiceName"/>
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="ServiceModel"/>
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="ServiceLoad"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding Name}" 
                                        FontWeight="{Binding IsCategory, Converter={StaticResource BoolToFontWeightConverter}}"
                                        Margin="0,2"/>
-                        </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Service.ModelSummary}"
+                                       ToolTip="{Binding Service.ModelToolTip}"
+                                       Margin="16,2,0,2"
+                                       FontSize="11"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding Service.LoadSummary}"
+                                       ToolTip="{Binding Service.LoadToolTip}"
+                                       Margin="16,2,0,2"
+                                       FontSize="11"
+                                       Foreground="#666666"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
                     </HierarchicalDataTemplate>
                 </TreeView.Resources>
             </TreeView>
