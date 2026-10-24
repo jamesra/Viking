@@ -17,6 +17,23 @@ namespace Viking.UI.WPF.Services
         public uint InferenceWorkers { get; set; }
         public string Version { get; set; }
         public string ServerMessage { get; set; }
+
+        /// <summary><c>ModelInfo.model_id</c>, e.g. "v5". Empty when the server reports no model metadata.</summary>
+        public string ModelId { get; set; }
+
+        /// <summary><c>ModelInfo.model_version</c>, e.g. "v5.3" (model 5 after its epoch 3).</summary>
+        public string ModelVersion { get; set; }
+
+        public string ModelDisplayName { get; set; }
+
+        /// <summary><c>ModelInfo.training_data_set</c>, e.g. "v3" (a training-set version, numbered apart from models).</summary>
+        public string TrainingDataSet { get; set; }
+
+        /// <summary><c>ModelInfo.description</c>: the operator's note on what the model is for.</summary>
+        public string ModelDescription { get; set; }
+
+        public uint CachedImages { get; set; }
+        public ulong CacheMemoryBytes { get; set; }
     }
 
     /// <summary>
@@ -35,13 +52,36 @@ namespace Viking.UI.WPF.Services
             }
 
             Channel channel = null;
+            try
+            {
+                channel = CreateChannel(endpoint, target);
+                return await CallAsync(channel, endpoint, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[SegmentationSelection] Could not open a channel to '{endpoint}': {ex.Message}");
+                return new SegmentationServerProbeResult();
+            }
+            finally
+            {
+                await ShutdownQuietlyAsync(channel, endpoint).ConfigureAwait(false);
+            }
+        }
+
+        internal static Channel CreateChannel(string endpoint, string target)
+        {
+            ChannelCredentials credentials = EndpointRequiresTls(endpoint)
+                ? new SslCredentials()
+                : ChannelCredentials.Insecure;
+            return new Channel(target, credentials);
+        }
+
+        /// <summary>One GetServerStatus call on an open channel. Never throws; a failed call is an unreachable result.</summary>
+        internal static async Task<SegmentationServerProbeResult> CallAsync(Channel channel, string endpoint, CancellationToken cancellationToken)
+        {
             var stopwatch = Stopwatch.StartNew();
             try
             {
-                ChannelCredentials credentials = EndpointRequiresTls(endpoint)
-                    ? new SslCredentials()
-                    : ChannelCredentials.Insecure;
-                channel = new Channel(target, credentials);
                 var client = new SegmentationService.SegmentationServiceClient(channel);
                 var deadline = DateTime.UtcNow.Add(ProbeTimeout);
                 var call = client.GetServerStatusAsync(
@@ -51,6 +91,7 @@ namespace Viking.UI.WPF.Services
                 var reply = await call.ResponseAsync.ConfigureAwait(false);
 
                 stopwatch.Stop();
+                ModelInfo model = reply.Model;
                 return new SegmentationServerProbeResult
                 {
                     IsReachable = true,
@@ -59,27 +100,40 @@ namespace Viking.UI.WPF.Services
                     RecentLatencyMs = reply.RecentLatencyMs,
                     InferenceWorkers = reply.InferenceWorkers,
                     Version = reply.Version,
-                    ServerMessage = reply.Message
+                    ServerMessage = reply.Message,
+                    ModelId = model?.ModelId ?? string.Empty,
+                    ModelVersion = model?.ModelVersion ?? string.Empty,
+                    ModelDisplayName = model?.DisplayName ?? string.Empty,
+                    TrainingDataSet = model?.TrainingDataSet ?? string.Empty,
+                    ModelDescription = model?.Description ?? string.Empty,
+                    CachedImages = reply.CachedImages,
+                    CacheMemoryBytes = reply.CacheMemoryBytes
                 };
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"[SegmentationSelection] GetServerStatus failed for '{endpoint}': {ex.Message}");
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    Trace.WriteLine($"[SegmentationSelection] GetServerStatus failed for '{endpoint}': {ex.Message}");
+                }
                 return new SegmentationServerProbeResult();
             }
-            finally
+        }
+
+        internal static async Task ShutdownQuietlyAsync(Channel channel, string endpoint)
+        {
+            if (channel == null)
             {
-                if (channel != null)
-                {
-                    try
-                    {
-                        await channel.ShutdownAsync().ConfigureAwait(false);
-                    }
-                    catch (Exception ex)
-                    {
-                        Trace.WriteLine($"[SegmentationSelection] Channel shutdown failed for '{endpoint}': {ex.Message}");
-                    }
-                }
+                return;
+            }
+
+            try
+            {
+                await channel.ShutdownAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[SegmentationSelection] Channel shutdown failed for '{endpoint}': {ex.Message}");
             }
         }
 
@@ -139,6 +193,102 @@ namespace Viking.UI.WPF.Services
             }
 
             return true;
+        }
+    }
+
+    /// <summary>
+    /// Repeats GetServerStatus for the open picker, keeping one channel per server so a refresh every second does not
+    /// pay a new TLS handshake each time. A channel whose call fails is closed and opened afresh on the next call, so a
+    /// server that comes back is seen at once instead of after gRPC's reconnect back-off.
+    /// </summary>
+    public sealed class SegmentationServerStatusMonitor : IDisposable
+    {
+        private readonly object _gate = new object();
+        private readonly System.Collections.Generic.Dictionary<string, Channel> _channels =
+            new System.Collections.Generic.Dictionary<string, Channel>(StringComparer.OrdinalIgnoreCase);
+        private bool _disposed;
+
+        public async Task<SegmentationServerProbeResult> ProbeAsync(string endpoint, CancellationToken cancellationToken)
+        {
+            Channel channel;
+            try
+            {
+                channel = ChannelFor(endpoint);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[SegmentationSelection] Could not open a channel to '{endpoint}': {ex.Message}");
+                return new SegmentationServerProbeResult();
+            }
+
+            if (channel == null)
+            {
+                return new SegmentationServerProbeResult();
+            }
+
+            var result = await SegmentationServerStatusProbe.CallAsync(channel, endpoint, cancellationToken).ConfigureAwait(false);
+            if (!result.IsReachable)
+            {
+                bool removed;
+                lock (_gate)
+                {
+                    removed = _channels.TryGetValue(endpoint, out var current) && ReferenceEquals(current, channel) && _channels.Remove(endpoint);
+                }
+
+                if (removed)
+                {
+                    await SegmentationServerStatusProbe.ShutdownQuietlyAsync(channel, endpoint).ConfigureAwait(false);
+                }
+            }
+
+            return result;
+        }
+
+        private Channel ChannelFor(string endpoint)
+        {
+            string target = SegmentationServerStatusProbe.FormatGrpcTarget(endpoint);
+            if (string.IsNullOrWhiteSpace(target))
+            {
+                return null;
+            }
+
+            lock (_gate)
+            {
+                if (_disposed)
+                {
+                    return null;
+                }
+
+                if (!_channels.TryGetValue(endpoint, out var channel))
+                {
+                    channel = SegmentationServerStatusProbe.CreateChannel(endpoint, target);
+                    _channels[endpoint] = channel;
+                }
+
+                return channel;
+            }
+        }
+
+        public void Dispose()
+        {
+            Channel[] channels;
+            lock (_gate)
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                _disposed = true;
+                channels = new Channel[_channels.Count];
+                _channels.Values.CopyTo(channels, 0);
+                _channels.Clear();
+            }
+
+            foreach (var channel in channels)
+            {
+                _ = SegmentationServerStatusProbe.ShutdownQuietlyAsync(channel, channel.Target);
+            }
         }
     }
 }

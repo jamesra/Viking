@@ -30,6 +30,13 @@ namespace Viking.UI.WPF.ViewModels
         private string _manualServiceEndpoint;
         private bool _showManualEntry;
         private readonly TaskCompletionSource<bool> _loadCompletedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private CancellationTokenSource _liveRefreshCts;
+
+        /// <summary>Pause between live status refreshes while the picker is shown. Servers cache their answer for the same second.</summary>
+        internal static TimeSpan LiveRefreshInterval { get; set; } = TimeSpan.FromSeconds(1);
+
+        /// <summary>An offline server is re-checked on every Nth refresh only, not every second.</summary>
+        public const int OfflineRecheckEveryRefreshes = 5;
 
         public SegmentationServiceSelectionViewModel(TokenResponse bearerToken, string identityServerUrl, string preselectedEndpoint = null, Dictionary<long, object> preloadedServices = null)
         {
@@ -417,6 +424,94 @@ namespace Viking.UI.WPF.ViewModels
             });
         }
 
+        /// <summary>True while the picker is refreshing each server's model and load every second.</summary>
+        public bool IsLiveRefreshRunning => _liveRefreshCts != null;
+
+        /// <summary>
+        /// Starts refreshing each server's model and load columns about once a second (the picker control calls this when
+        /// it is shown). The order of the list is not changed by a refresh, so rows do not move under the mouse; only the
+        /// first probe ranks them. Offline servers are re-checked every few seconds. Calling it twice is harmless.
+        /// </summary>
+        public void StartLiveRefresh()
+        {
+            if (_liveRefreshCts != null)
+            {
+                return;
+            }
+
+            _liveRefreshCts = new CancellationTokenSource();
+            _ = LiveRefreshLoopAsync(_liveRefreshCts.Token);
+        }
+
+        /// <summary>Stops the live refresh (the picker control calls this when it is hidden or unloaded).</summary>
+        public void StopLiveRefresh()
+        {
+            var cts = _liveRefreshCts;
+            _liveRefreshCts = null;
+            cts?.Cancel();
+        }
+
+        private async Task LiveRefreshLoopAsync(CancellationToken token)
+        {
+            using var monitor = new SegmentationServerStatusMonitor();
+            int refresh = 0;
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    // Wait first, then probe: one refresh never overlaps the next, however slow a server answers.
+                    await Task.Delay(LiveRefreshInterval, token);
+                    refresh++;
+                    await RefreshOnceAsync(monitor.ProbeAsync, refresh, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"[SegmentationSelection] Live status refresh failed: {ex.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// One live refresh: probes every server whose first probe has finished (an offline one only on every
+        /// <see cref="OfflineRecheckEveryRefreshes"/>th refresh) and updates its columns in place.
+        /// </summary>
+        public async Task RefreshOnceAsync(Func<string, CancellationToken, Task<SegmentationServerProbeResult>> probe, int refresh, CancellationToken token)
+        {
+            bool recheckOffline = refresh % OfflineRecheckEveryRefreshes == 0;
+            var services = ServiceNodes
+                .Select(node => node.Service)
+                .Where(service => service != null
+                                  && !string.IsNullOrWhiteSpace(service.Endpoint)
+                                  && service.HasProbeCompleted
+                                  && !service.IsProbing
+                                  && (service.IsReachable || recheckOffline))
+                .Distinct()
+                .ToList();
+
+            if (services.Count == 0)
+            {
+                return;
+            }
+
+            var completed = await Task.WhenAll(services.Select(async service => (service, result: await probe(service.Endpoint, token))));
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            RunOnUi(() =>
+            {
+                foreach (var (service, result) in completed)
+                {
+                    ApplyProbeResult(service, result);
+                }
+            });
+        }
+
         private static void ApplyProbeResult(SegmentationServiceInfo service, SegmentationServerProbeResult result)
         {
             service.IsProbing = false;
@@ -433,6 +528,13 @@ namespace Viking.UI.WPF.ViewModels
             service.InferenceWorkers = result.InferenceWorkers;
             service.Version = result.Version;
             service.ServerMessage = result.ServerMessage;
+            service.ModelId = result.ModelId;
+            service.ModelVersion = result.ModelVersion;
+            service.ModelDisplayName = result.ModelDisplayName;
+            service.TrainingDataSet = result.TrainingDataSet;
+            service.ModelDescription = result.ModelDescription;
+            service.CachedImages = result.CachedImages;
+            service.CacheMemoryBytes = result.CacheMemoryBytes;
         }
 
         private void ApplyPreferenceOrder()
