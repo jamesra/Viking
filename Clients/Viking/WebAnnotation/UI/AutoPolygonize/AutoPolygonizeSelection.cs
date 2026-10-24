@@ -647,6 +647,50 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
+        /// The average diameter of a result: that of the circle with the same area. 0 for an empty polygon.
+        /// </summary>
+        internal static double AverageDiameter(Polygon polygon) =>
+            polygon is null || polygon.Area <= 0 ? 0 : 2 * Math.Sqrt(polygon.Area / Math.PI);
+
+        /// <summary>
+        /// The circles of the same structure that may be part of the same cell as <paramref name="result"/>: on its section,
+        /// not among <paramref name="excludeLocationIds"/>, and whose disk lies within the result's
+        /// <see cref="AverageDiameter"/> of its outline (a circle that overlaps or lies inside it is at distance 0).
+        /// Anywhere in the section counts, on screen or not, because a missed merge is only found by segmenting it.
+        /// </summary>
+        /// <param name="result">The segmentation result, in volume coordinates.</param>
+        /// <param name="structureId">The structure the result belongs to; null finds nothing.</param>
+        /// <param name="sectionNumber">Only circles on this section count.</param>
+        /// <param name="circles">Every circle of the structure that is known, from <see cref="ToCircleFootprints"/>.</param>
+        /// <param name="excludeLocationIds">The locations the result stands for.</param>
+        internal static List<CircleFootprint> CollectMergeCandidates(
+            Polygon result,
+            long? structureId,
+            int sectionNumber,
+            IEnumerable<CircleFootprint>? circles,
+            IReadOnlyCollection<long> excludeLocationIds)
+        {
+            List<CircleFootprint> found = [];
+            if (result is null || structureId is null || circles is null)
+                return found;
+
+            double reach = AverageDiameter(result);
+            foreach (CircleFootprint circle in circles)
+            {
+                if (circle.ParentId != structureId || circle.Section != sectionNumber || excludeLocationIds.Contains(circle.Id))
+                    continue;
+
+                double gap = result.Contains(circle.Center)
+                    ? 0
+                    : Math.Max(0, DistanceToAnyRing(result, circle.Center) - circle.Radius);
+                if (gap <= reach)
+                    found.Add(circle);
+            }
+
+            return found;
+        }
+
+        /// <summary>
         /// A counter-clockwise polygon of <paramref name="segments"/> corners on the circle, closed.
         /// </summary>
         internal static Polygon CircleToPolygon(Vector2 center, double radius, int segments = 64)

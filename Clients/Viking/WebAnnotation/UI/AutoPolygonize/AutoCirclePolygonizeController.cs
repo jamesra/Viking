@@ -44,10 +44,16 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Requests a batch keeps open at once. The next circle is picked and sent as soon as a request goes out, so
-        /// the server always has the next one waiting instead of idling for each round trip and prompt build.
-        /// Kept small so the cursor still decides most of the order.
+        /// the server always has work waiting while others wait on tile round trips. Kept small so the cursor still
+        /// decides most of the order.
         /// </summary>
-        private const int MaxRequestsInFlight = 2;
+        private const int MaxRequestsInFlight = 3;
+
+        /// <summary>
+        /// The batch prefetches the tiles within this many radii of each queued circle's centre, which covers what the
+        /// server usually grows a circle's mask into. Tiles further out are still uploaded when the server asks.
+        /// </summary>
+        private const double PrefetchRadii = 4;
 
         private const int RegionPollMs = 150;
         private const int RegionWaitTimeoutMs = 10000;
@@ -110,6 +116,20 @@ namespace WebAnnotation.UI.AutoPolygonize
         private long lastStaleScanTimestamp;
         private readonly Dictionary<string, OverlapGroupJob> overlapResubmitsInFlight = [];
         private long requestTicketCounter;
+
+        /// <summary>
+        /// Circles of the same structure close to a finished result, on screen or not, that may be part of the same
+        /// cell. They go out before everything else (see <see cref="QueueMergeCandidates"/>). Persists across batches:
+        /// a camera move that cancels a batch must not lose them.
+        /// </summary>
+        private readonly System.Collections.Concurrent.ConcurrentQueue<long> mergeCandidateQueue = new();
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<long, byte> mergeCandidateIds = new();
+
+        /// <summary>When each structure's locations were last fetched from the server for the merge check.</summary>
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<long, DateTime> structureFetchedUtc = new();
+
+        /// <summary>How long fetched structure locations are trusted before the merge check asks the server again.</summary>
+        private static readonly TimeSpan StructureFetchLifetime = TimeSpan.FromSeconds(60);
 
         /// <summary>
         /// Bumped when edge cleanup or hole dropping is applied again, so a slower retrace
@@ -371,6 +391,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         public void OnSegmentationEndpointChanged(bool newEndpointIsUsable)
         {
+            SegmentationViewportSession.ForgetPrefetchedTiles();
             CancelUploadPhase();
             CancelProcessPhase();
             viewportImageLease.AbandonPublished();
@@ -1167,7 +1188,12 @@ namespace WebAnnotation.UI.AutoPolygonize
             long batchId = Interlocked.Increment(ref profileBatchSequence);
             Stopwatch batchTimer = Stopwatch.StartNew();
             SegmentationViewportSession? localUploadSession = null;
+            CancellationTokenSource? prefetchCts = null;
             ProcessBatch? processBatch = null;
+
+            // Merge candidates this batch took off the queue; the ones it did not finish go back when the batch is cancelled.
+            List<long> takenMergeCandidates = [];
+            CancellationToken batchProcessToken = default;
 
             try
             {
@@ -1235,10 +1261,11 @@ namespace WebAnnotation.UI.AutoPolygonize
                     processToken = processCts.Token;
                 }
 
+                batchProcessToken = processToken;
                 Rectangle inset = AutoPolygonizeSelection.InsetBounds(viewBounds);
                 List<LocationObj> candidates = CollectEligibleCircles(viewBounds, inset);
-                SegmentationDiag.Log($"RunBatch candidates={candidates.Count} bounds={viewBounds}");
-                if (candidates.Count == 0)
+                SegmentationDiag.Log($"RunBatch candidates={candidates.Count} bounds={viewBounds} mergeCandidates={mergeCandidateQueue.Count}");
+                if (candidates.Count == 0 && mergeCandidateQueue.IsEmpty)
                 {
                     ScheduleSavedSiblingOverlapScan();
                     return;
@@ -1288,6 +1315,24 @@ namespace WebAnnotation.UI.AutoPolygonize
                 Rectangle promptBounds = viewBounds;
                 List<LocationObj> visibleForPrompts = [.. CollectVisibleLocationObjs(viewBounds)];
                 List<LocationObj> queue = candidates;
+
+                // Tiles around every queued circle go up in the background, nearest the cursor first, so most requests
+                // find them already encoded on the server. Only the fixed tile grid takes tiles; a full-viewport image
+                // was uploaded whole. Stopped when the queue is done: what is left belongs to circles no longer sent.
+                prefetchCts = CancellationTokenSource.CreateLinkedTokenSource(processToken);
+                if (uploadContext.Value.ImageId == 0)
+                {
+                    LiveView startView = await ReadLiveViewAsync().ConfigureAwait(false);
+                    Vector2 priority = AutoPolygonizeSelection.QueuePriorityPoint(startView.Cursor, startView.Bounds);
+                    List<Rectangle> regions = [];
+                    foreach (LocationObj circle in queue.OrderBy(circle => Vector2.DistanceSquared(circle.VolumePosition, priority)))
+                    {
+                        if (TryPrefetchRegion(circle, transform, out Rectangle region))
+                            regions.Add(region);
+                    }
+
+                    processBatch.AddResponseTask(localUploadSession.PrefetchTilesAsync(regions, prefetchCts.Token));
+                }
 
                 // One circle's request. Returns once its response is handed to ProcessResponseAsync.
                 async Task SendCircleAsync(LocationObj circle, List<LocationObj> visibleForPrompts)
@@ -1388,7 +1433,33 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                     QueuedCircle? next = await TakeNextQueuedCircleAsync(queue, sectionNumber, downsample).ConfigureAwait(false);
                     if (next is null)
-                        break;
+                    {
+                        // A response still being processed can queue merge candidates, so the batch is not over until
+                        // every request and response has finished and the queue is still empty.
+                        if (inFlight.Count > 0)
+                        {
+                            Task done = await Task.WhenAny(inFlight).ConfigureAwait(false);
+                            inFlight.Remove(done);
+                            await done.ConfigureAwait(false);
+                            continue;
+                        }
+
+                        Task[] processing = [.. processBatch.SnapshotResponseTasks().Where(task => !task.IsCompleted)];
+                        if (processing.Length == 0)
+                            break;
+
+                        await Task.WhenAny(processing).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    if (next.Value.IsMergeCandidate)
+                    {
+                        takenMergeCandidates.Add(next.Value.Circle.ID);
+                        // Its surroundings may never have been on screen: load them, then take the avoid marks from there.
+                        Rectangle around = await LoadRegionAroundAsync(next.Value.Circle, next.Value.LiveBounds, processToken).ConfigureAwait(false);
+                        inFlight.Add(SendCircleAsync(next.Value.Circle, [.. CollectVisibleLocationObjs(around)]));
+                        continue;
+                    }
 
                     if (!SegmentationViewportSession.AreViewportBoundsSimilar(promptBounds, next.Value.LiveBounds))
                     {
@@ -1400,6 +1471,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 }
 
                 await Task.WhenAll(inFlight).ConfigureAwait(false);
+                prefetchCts.Cancel();
                 Task[] responseTasks = processBatch.SnapshotResponseTasks();
                 if (responseTasks.Length > 0)
                     await Task.WhenAll(responseTasks).ConfigureAwait(false);
@@ -1415,8 +1487,115 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
             finally
             {
+                // A camera move or section change cancelled the batch: the merge candidates it had not answered stay wanted.
+                if (batchProcessToken.IsCancellationRequested)
+                {
+                    foreach (long id in takenMergeCandidates)
+                        EnqueueMergeCandidate(id);
+                }
+
+                prefetchCts?.Cancel();
                 await FinishUploadOrProcessBatchAsync(localUploadSession, processBatch).ConfigureAwait(false);
+                prefetchCts?.Dispose();
             }
+        }
+
+        /// <summary>The live view bounds, camera downsample and cursor position (null when the cursor is off the view).</summary>
+        private readonly record struct LiveView(Rectangle Bounds, double Downsample, Vector2? Cursor);
+
+        /// <summary>Reads <see cref="LiveView"/> on the UI thread.</summary>
+        private async Task<LiveView> ReadLiveViewAsync()
+        {
+            LiveView Read()
+            {
+                Vector2? cursor = TryGetCursorWorldPosition(out Vector2 world) ? world : null;
+                return new LiveView(GetCurrentViewportBounds(), GetCurrentDownsample(), cursor);
+            }
+
+            var dispatcher = Viking.UI.State.MainThreadDispatcher;
+            return dispatcher is null || dispatcher.CheckAccess()
+                ? Read()
+                : await dispatcher.InvokeAsync(Read).Task.ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// The world (volume) rectangle covering the mosaic square of half-width <see cref="PrefetchRadii"/> radii around
+        /// <paramref name="circle"/>'s mosaic centre: the square's corners are mapped and their bounding box taken, so the
+        /// transform's scale and rotation are followed without carrying the mosaic radius into volume space.
+        /// </summary>
+        private static bool TryPrefetchRegion(LocationObj circle, IVolumeToSectionTransform transform, out Rectangle region)
+        {
+            region = default;
+            double reach = circle.Radius * PrefetchRadii;
+            if (transform is null || reach <= 0)
+                return false;
+
+            Vector2 center = circle.Position;
+            Vector2[] corners =
+            [
+                new(center.X - reach, center.Y - reach),
+                new(center.X + reach, center.Y - reach),
+                new(center.X + reach, center.Y + reach),
+                new(center.X - reach, center.Y + reach),
+            ];
+            bool[] mapped = transform.TrySectionToVolume(corners, out Vector2[] volumeCorners);
+            List<Vector2> points = [];
+            for (int i = 0; i < corners.Length; i++)
+            {
+                if (mapped[i])
+                    points.Add(volumeCorners[i]);
+            }
+
+            if (points.Count < 2)
+                return false;
+
+            region = new Rectangle(
+                points.Min(point => point.X),
+                points.Max(point => point.X),
+                points.Min(point => point.Y),
+                points.Max(point => point.Y));
+            return true;
+        }
+
+        /// <summary>
+        /// Loads the annotations around an off-screen <paramref name="circle"/> and returns the view-sized rectangle centred
+        /// on it that the prompts are built from. Without the load, the avoid marks of the neighbouring structures there
+        /// would be missing and the result cached as done.
+        /// </summary>
+        /// <param name="liveBounds">The live view, which gives the size.</param>
+        private async Task<Rectangle> LoadRegionAroundAsync(LocationObj circle, Rectangle liveBounds, CancellationToken token)
+        {
+            Vector2 center = circle.VolumePosition;
+            Rectangle around = new(
+                new Vector2(center.X - liveBounds.Width / 2, center.Y - liveBounds.Height / 2),
+                new Vector2(center.X + liveBounds.Width / 2, center.Y + liveBounds.Height / 2));
+            if (parent.Scene is null || parent.Section is null)
+                return around;
+
+            var dispatcher = Viking.UI.State.MainThreadDispatcher;
+            if (dispatcher is null)
+                return around;
+
+            VikingXNA.Scene? scene = await dispatcher.InvokeAsync(() =>
+            {
+                if (parent.Scene is null || parent.Section is null)
+                    return null;
+
+                var camera = new VikingXNA.Camera
+                {
+                    Downsample = parent.Camera.Downsample,
+                    LookAt = new Microsoft.Xna.Framework.Vector2((float)center.X, (float)center.Y)
+                };
+                var offScreen = new VikingXNA.Scene(parent.Scene.Viewport, camera);
+                AnnotationOverlay.GetOrCreateAnnotationsForSection(parent.Section.Number)
+                    .LoadAnnotationsInRegion(offScreen, token);
+                return offScreen;
+            }).Task.ConfigureAwait(false);
+
+            if (scene is not null)
+                await WaitForAnnotationsLoadedAsync(token, scene).ConfigureAwait(false);
+
+            return around;
         }
 
         /// <summary>World position under the mouse cursor, or false when the cursor is not over the viewer. UI thread.</summary>
@@ -1435,7 +1614,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>The circle the queue sends next, and the live view it was picked in.</summary>
-        private readonly record struct QueuedCircle(LocationObj Circle, Rectangle LiveBounds);
+        /// <param name="IsMergeCandidate">True for a circle queued by <see cref="QueueMergeCandidates"/>, which may be off screen.</param>
+        private readonly record struct QueuedCircle(LocationObj Circle, Rectangle LiveBounds, bool IsMergeCandidate = false);
 
         /// <summary>
         /// Removes and returns the queued circle nearest the cursor (the view centre when the cursor is off the
@@ -1445,19 +1625,26 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         private async Task<QueuedCircle?> TakeNextQueuedCircleAsync(List<LocationObj> queue, int sectionNumber, double downsample)
         {
-            (Rectangle Bounds, double Downsample, Vector2? Cursor) ReadLiveView()
-            {
-                Vector2? cursor = TryGetCursorWorldPosition(out Vector2 world) ? world : null;
-                return (GetCurrentViewportBounds(), GetCurrentDownsample(), cursor);
-            }
-
-            var dispatcher = Viking.UI.State.MainThreadDispatcher;
-            (Rectangle liveBounds, double liveDownsample, Vector2? cursor) = dispatcher is null || dispatcher.CheckAccess()
-                ? ReadLiveView()
-                : await dispatcher.InvokeAsync(ReadLiveView).Task.ConfigureAwait(false);
+            (Rectangle liveBounds, double liveDownsample, Vector2? cursor) = await ReadLiveViewAsync().ConfigureAwait(false);
 
             if (liveDownsample > Global.AnnotationSettings.AutoPolygonizeMaxDownsample)
                 return null;
+
+            // Merge candidates go before anything the view or the cursor asks for, wherever they are.
+            while (mergeCandidateQueue.TryDequeue(out long mergeId))
+            {
+                mergeCandidateIds.TryRemove(mergeId, out _);
+                LocationObj candidate = Store.Locations.GetObjectByID(mergeId, false);
+                if (candidate is null ||
+                    candidate.Section != sectionNumber ||
+                    !cache.ShouldProcess(candidate.ID, sectionNumber, candidate.LastModified, candidate.TypeCode, downsample))
+                {
+                    continue;
+                }
+
+                queue.RemoveAll(circle => circle.ID == candidate.ID);
+                return new QueuedCircle(candidate, liveBounds, IsMergeCandidate: true);
+            }
 
             Rectangle liveInset = AutoPolygonizeSelection.InsetBounds(liveBounds);
             queue.RemoveAll(circle =>
@@ -1674,6 +1861,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (!published)
                     return;
 
+                QueueMergeCandidates(proposal);
+
                 Debug.WriteLine(
                     $"[SegmentationProfile] Auto batch={batchId} location={circle.ID} ready-to-draw " +
                     $"prompts={promptMs}ms segmentRpc={segmentMs}ms polygonize={polygonMs}ms " +
@@ -1759,20 +1948,23 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <see cref="AnnotationWaitResult.TimedOut"/> when <see cref="RegionWaitTimeoutMs"/> passed first, and
         /// <see cref="AnnotationWaitResult.Cancelled"/> when cancelled or the view is gone.
         /// </returns>
-        private async Task<AnnotationWaitResult> WaitForAnnotationsLoadedAsync(CancellationToken token)
+        /// <param name="token">Cancels the wait.</param>
+        /// <param name="scene">The region to wait for; null waits for the live view. An off-screen region must have been asked for with <c>LoadAnnotationsInRegion</c>.</param>
+        private async Task<AnnotationWaitResult> WaitForAnnotationsLoadedAsync(CancellationToken token, VikingXNA.Scene? scene = null)
         {
-            if (parent.Scene is null || parent.Section is null)
+            scene ??= parent.Scene;
+            if (scene is null || parent.Section is null)
                 return AnnotationWaitResult.Cancelled;
 
             SectionAnnotationsView sectionView = AnnotationOverlay.GetOrCreateAnnotationsForSection(parent.Section.Number);
-            Rectangle? mosaicBounds = parent.Scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(sectionView.mapper);
+            Rectangle? mosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(sectionView.mapper);
             Stopwatch wait = Stopwatch.StartNew();
 
             while (!token.IsCancellationRequested && wait.ElapsedMilliseconds < RegionWaitTimeoutMs)
             {
                 if (Store.LocationsByRegion.AreRegionQueriesComplete(
                     mosaicBounds,
-                    parent.Scene.ScreenPixelSizeInVolume,
+                    scene.ScreenPixelSizeInVolume,
                     parent.Section.Number))
                 {
                     return AnnotationWaitResult.Complete;
@@ -2498,6 +2690,79 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         private IEnumerable<AutoPolygonizeProposal> DistinctProposalsUnlocked() =>
             proposals.Values.Distinct();
+
+        /// <summary>
+        /// Queues, at the front of the line, every circle of the result's structure that lies within the result's average
+        /// diameter of it, on screen or not and whether or not it was in this batch: it may be the same cell and the result a
+        /// merge of the two. Each one's own result is checked the same way, so the search follows a chain of circles until
+        /// none is left near an answer; a circle is only segmented once, so it ends. UI thread, after a publish.
+        /// </summary>
+        private void QueueMergeCandidates(AutoPolygonizeProposal proposal)
+        {
+            if (proposal.ParentID is not long structureId || !enabled)
+                return;
+
+            int sectionNumber = proposal.SectionNumber;
+            Polygon result = proposal.Polygon;
+            IReadOnlyCollection<long> own = proposal.LocationIds;
+            double downsample = GetCurrentDownsample();
+            ObserveFaults(Task.Run(() =>
+            {
+                DateTime now = DateTime.UtcNow;
+                if (!structureFetchedUtc.TryGetValue(structureId, out DateTime fetched) || now - fetched > StructureFetchLifetime)
+                {
+                    // Brings the structure's circles on every section into the store; most are off screen.
+                    Store.Locations.GetLocationsForStructure(structureId);
+                    structureFetchedUtc[structureId] = now;
+                }
+
+                List<AutoPolygonizeSelection.CircleFootprint> near = AutoPolygonizeSelection.CollectMergeCandidates(
+                    result,
+                    structureId,
+                    sectionNumber,
+                    AutoPolygonizeSelection.ToCircleFootprints(Store.Locations.GetLocalObjectsForStructure(structureId)),
+                    own);
+                int queued = 0;
+                foreach (AutoPolygonizeSelection.CircleFootprint footprint in near)
+                {
+                    LocationObj loc = Store.Locations.GetObjectByID(footprint.Id, false);
+                    if (loc is null ||
+                        !cache.ShouldProcess(loc.ID, sectionNumber, loc.LastModified, loc.TypeCode, downsample) ||
+                        !AutoPolygonizeSelection.MeetsMinRadiusNanometers(
+                            loc.Radius,
+                            Global.Scale.X,
+                            Global.AnnotationSettings.AutoPolygonizeMinRadiusNanometers))
+                    {
+                        continue;
+                    }
+
+                    lock (proposalLock)
+                    {
+                        if (proposals.ContainsKey(loc.ID))
+                            continue;
+                    }
+
+                    if (EnqueueMergeCandidate(loc.ID))
+                        queued++;
+                }
+
+                SegmentationDiag.Log(
+                    $"merge check ids=[{string.Join(",", own)}] structure={structureId} diameter={AutoPolygonizeSelection.AverageDiameter(result):F0} " +
+                    $"near={near.Count} queued={queued}");
+                if (queued > 0 && !IsBusy)
+                    RestartIdleTimer();
+            }), "merge candidate check");
+        }
+
+        /// <summary>Queues one circle for the merge check unless it is already queued. Thread-safe.</summary>
+        private bool EnqueueMergeCandidate(long locationId)
+        {
+            if (!mergeCandidateIds.TryAdd(locationId, 0))
+                return false;
+
+            mergeCandidateQueue.Enqueue(locationId);
+            return true;
+        }
 
         /// <summary>
         /// After a publish, if other same-cell overlays or already-saved sibling polygons
