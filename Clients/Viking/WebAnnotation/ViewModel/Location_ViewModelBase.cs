@@ -353,17 +353,10 @@ namespace WebAnnotation.ViewModel
                 TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON) &&
                 Global.IsSegmentationServiceAvailable)
             {
+                // Resegmenting starts by growing or shrinking the polygon's mask (dilate/erode), then paints from the result.
                 ToolStripMenuItem menuSegmentPoly = new("Resegment...");
-                menuSegmentPoly.Click += ContextMenu_SegmentPolygon;
+                menuSegmentPoly.Click += ContextMenu_ResegmentPolygon;
                 menuShape.DropDownItems.Add(menuSegmentPoly);
-            }
-
-            if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON ||
-                TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON)
-            {
-                ToolStripMenuItem menuEditMask = new("Dilate/erode mask...");
-                menuEditMask.Click += ContextMenu_EditPolygonMask;
-                menuShape.DropDownItems.Add(menuEditMask);
             }
 
             menu.Items.Add(menuShape);
@@ -661,62 +654,16 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        /// <summary>
-        /// Resegment this polygon: starts <see cref="SegmentationPaintCommand"/> with the polygon painted as foreground.
-        /// </summary>
-        protected void ContextMenu_SegmentPolygon(object sender, EventArgs e)
-        {
-            try
-            {
-                //ContextMenu menu = sender as ContextMenu;
-                if (this.modelObj.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON &&
-                   this.modelObj.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON)
-                    return;
-
-                var parent = AnnotationOverlay.CurrentOverlay?.Parent;
-                if (parent is null)
-                {
-                    MessageBox.Show("There is no open section viewer to segment in.", "Segment", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-
-                Polygon controlRing = modelObj.MosaicShape.ToPolygon();
-                Polygon? volumePolygon = parent.Section.ActiveSectionToVolumeTransform.TryMapShapeSectionToVolume(controlRing);
-                if (volumePolygon is null || volumePolygon.ExteriorRing.Length < 3)
-                {
-                    MessageBox.Show("This polygon could not be mapped onto the volume.", "Segment", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-
-                // The polygon is painted as foreground, so its result is shown before the user touches anything.
-                List<Geometry.Vector2[]> seedRings = [volumePolygon.ExteriorRing, .. volumePolygon.InteriorRings];
-
-                void callback(Polygon volume_poly)
-                {
-                    UpdateLocationShapeFromVolumePolygon(volume_poly);
-                }
-
-                var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                parent.CurrentCommand = new SegmentationPaintCommand(parent, callback, channelManager, seedRings: seedRings);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error launching segmentation: {ex.Message}");
-                MessageBox.Show($"Failed to launch segmentation: {ex.Message}",
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        /// <summary>
-        /// Rasterizes this polygon and starts <see cref="SegmentationMaskEditCommand"/> on it so the mask can be grown and
-        /// shrunk with the wheel. When the user accepts the edited mask it is sent to the segmentation server as the
-        /// starting mask by a new <see cref="SegmentationPaintCommand"/>, whose result the user accepts or declines; only an
-        /// accepted result changes this location. Cancelling the edit changes nothing.
-        /// </summary>
         /// <summary>Raster pixels left free around a polygon when it is rasterized for dilate/erode.</summary>
         private const int EditMaskMarginPixels = 128;
 
-        protected void ContextMenu_EditPolygonMask(object sender, EventArgs e)
+        /// <summary>
+        /// Resegment: rasterizes this polygon and starts <see cref="SegmentationMaskEditCommand"/> on it so the starting mask can
+        /// be grown and shrunk with the wheel. When the user accepts the edited mask (unchanged is fine) it is sent to the
+        /// segmentation server as the starting mask by a new <see cref="SegmentationPaintCommand"/>, where it can be painted
+        /// further; only an accepted result changes this location. Cancelling the edit changes nothing.
+        /// </summary>
+        protected void ContextMenu_ResegmentPolygon(object sender, EventArgs e)
         {
             try
             {

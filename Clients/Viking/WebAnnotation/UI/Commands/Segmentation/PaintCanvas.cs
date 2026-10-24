@@ -347,6 +347,28 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 layout.Scale);
         }
 
+        /// <summary>Removes all paint, foreground and background. Returns how many pixels were painted.</summary>
+        public int Clear()
+        {
+            int changed = 0;
+            for (int i = 0; i < Pixels.Length; i++)
+            {
+                if (Pixels[i] == None)
+                    continue;
+
+                Pixels[i] = None;
+                changed++;
+            }
+
+            if (changed > 0)
+            {
+                MarkDirty(0, 0);
+                MarkDirty(Width - 1, Height - 1);
+            }
+
+            return changed;
+        }
+
         /// <summary>
         /// The raster rectangle changed since the last call, as (column, row, width, height), or false when nothing changed. Resets the
         /// record, so each change is reported once; the display texture refreshes just that part.

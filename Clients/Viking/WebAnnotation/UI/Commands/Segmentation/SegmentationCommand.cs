@@ -164,6 +164,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         private bool PenButtonsIncludeSkip => placementFallback is not null;
 
+        /// <summary>True for a command that offers the resubmit and clear-mask pen buttons (the paint command).</summary>
+        protected virtual bool PenButtonsIncludePaintActions => false;
+
+        /// <summary>
+        /// When true, new prompts given while a request is running cancel it and are sent at once, instead of waiting for its
+        /// answer: the answer would be for prompts that no longer stand. The paint command sets it, since one stale request on a
+        /// large object can run for minutes while the user goes on painting.
+        /// </summary>
+        protected virtual bool NewPromptsSupersedeRequest => false;
+
+        /// <summary>The session that captures and uploads this command's tiles, so a subclass can prefetch through it.</summary>
+        protected SegmentationViewportSession ViewportSession => viewportSession;
+
         /// <summary>
         /// Set to the segmented polygon if the command completes successfully
         /// </summary>
@@ -512,7 +525,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             if (ShowPenButtons && !placementFinished && e.Button.Left() &&
-                SegmentationPenButtons.HitTest(PenButtonsIncludeSkip, Parent.ClientSize.Width, e.X, e.Y, Parent.DockedChromeInsets) is SegmentationPenButton pressed)
+                SegmentationPenButtons.HitTest(
+                    PenButtonsIncludeSkip, Parent.ClientSize.Width, e.X, e.Y, Parent.DockedChromeInsets, PenButtonsIncludePaintActions)
+                    is SegmentationPenButton pressed)
             {
                 HandlePenButton(pressed);
                 return;
@@ -557,10 +572,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Runs the action behind a pen button. Accept saves the segmented polygon, skip places the dragged polygon
-        /// without segmentation (see <see cref="AcceptPlacementFallback"/>). Cancel is the shared
+        /// without segmentation (see <see cref="AcceptPlacementFallback"/>); resubmit and clear go to
+        /// <see cref="OnResubmitButton"/> and <see cref="OnClearMaskButton"/>. Cancel is the shared
         /// <see cref="PenCancelButton"/>, handled in <see cref="OnMouseDown"/>.
         /// </summary>
-        private void HandlePenButton(SegmentationPenButton button)
+        protected void HandlePenButton(SegmentationPenButton button)
         {
             switch (button)
             {
@@ -570,7 +586,28 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 case SegmentationPenButton.Skip:
                     AcceptPlacementFallback();
                     break;
+                case SegmentationPenButton.Resubmit:
+                    OnResubmitButton();
+                    break;
+                case SegmentationPenButton.ClearMask:
+                    OnClearMaskButton();
+                    break;
             }
+        }
+
+        /// <summary>The resubmit pen button: sends the current prompts again, cancelling a request still running.</summary>
+        protected virtual void OnResubmitButton() => _ = RequestSegmentation(supersede: true);
+
+        /// <summary>The clear-mask pen button. Only commands that show it (<see cref="PenButtonsIncludePaintActions"/>) act on it.</summary>
+        protected virtual void OnClearMaskButton()
+        {
+        }
+
+        /// <summary>Cancels the request running now, if any; its answer, if one still comes, is ignored.</summary>
+        protected void CancelRequestInFlight()
+        {
+            requestCoalescer.Invalidate();
+            CancelSegmentRequest();
         }
 
         /// <summary>
@@ -1038,9 +1075,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #region gRPC Segmentation
         /// <summary>
         /// Sends one SegmentImage with the current prompt lists. Extra clicks while busy or uploading
-        /// set a follow-up so the next attempt uses every point collected so far.
+        /// set a follow-up so the next attempt uses every point collected so far. With <paramref name="supersede"/> (or
+        /// <see cref="NewPromptsSupersedeRequest"/>) a request already running is cancelled, so the follow-up starts as soon
+        /// as it stops instead of when it answers.
         /// </summary>
-        private async Task RequestSegmentation()
+        private async Task RequestSegmentation(bool supersede = false)
         {
             if (placementFinished || Deactivated)
             {
@@ -1071,7 +1110,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             if (!requestCoalescer.TryStart(out int generation))
             {
-                SegmentationDiag.Log("RequestSegmentation skip: coalescer busy");
+                // TryStart recorded the follow-up. Cancelling the running request makes it end now and start that follow-up.
+                if (supersede || NewPromptsSupersedeRequest)
+                {
+                    SegmentationDiag.Log("RequestSegmentation supersede: cancelling the request in flight for newer prompts");
+                    CancelSegmentRequest();
+                }
+                else
+                {
+                    SegmentationDiag.Log("RequestSegmentation skip: coalescer busy");
+                }
+
                 return;
             }
 
@@ -1539,7 +1588,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (ShowPenButtons && !placementFinished)
             {
                 penButtons ??= new SegmentationPenButtons(Parent);
-                penButtons.Draw(graphicsDevice, scene, PenButtonsIncludeSkip);
+                penButtons.Draw(graphicsDevice, scene, PenButtonsIncludeSkip, PenButtonsIncludePaintActions);
             }
 
             if (!placementFinished)

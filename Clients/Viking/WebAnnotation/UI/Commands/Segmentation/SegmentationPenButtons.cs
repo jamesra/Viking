@@ -21,6 +21,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>Leave segmentation and save the polygon as it was dragged (a double chevron).</summary>
         Skip,
+
+        /// <summary>Send the painted masks again, for instance after the server timed out (a circular arrow).</summary>
+        Resubmit,
+
+        /// <summary>Remove all paint, the mask the command started from included (a crossed-out square).</summary>
+        ClearMask,
     }
 
     /// <summary>
@@ -45,12 +51,22 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private readonly SectionViewerControl parent = parent ?? throw new ArgumentNullException(nameof(parent));
 
         /// <summary>
-        /// The buttons shown, top to bottom. Skip is offered only when there is a dragged polygon to fall back to.
+        /// The buttons shown, top to bottom. Skip is offered only when there is a dragged polygon to fall back to;
+        /// resubmit and clear only by the paint command (<paramref name="includePaintActions"/>).
         /// </summary>
-        internal static IReadOnlyList<SegmentationPenButton> Layout(bool includeSkip) =>
-            includeSkip
-                ? [SegmentationPenButton.Accept, SegmentationPenButton.Skip]
-                : [SegmentationPenButton.Accept];
+        internal static IReadOnlyList<SegmentationPenButton> Layout(bool includeSkip, bool includePaintActions = false)
+        {
+            List<SegmentationPenButton> buttons = [SegmentationPenButton.Accept];
+            if (includeSkip)
+                buttons.Add(SegmentationPenButton.Skip);
+            if (includePaintActions)
+            {
+                buttons.Add(SegmentationPenButton.Resubmit);
+                buttons.Add(SegmentationPenButton.ClearMask);
+            }
+
+            return buttons;
+        }
 
         /// <summary>Screen position of the centre of the button at <paramref name="index"/> in the layout.</summary>
         internal static (double X, double Y) CenterOf(int index, int clientWidth, Padding insets = default) =>
@@ -61,9 +77,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// The button under the screen point (<paramref name="x"/>, <paramref name="y"/>), or null when the point is on
         /// none of them.
         /// </summary>
-        internal static SegmentationPenButton? HitTest(bool includeSkip, int clientWidth, double x, double y, Padding insets = default)
+        internal static SegmentationPenButton? HitTest(
+            bool includeSkip, int clientWidth, double x, double y, Padding insets = default, bool includePaintActions = false)
         {
-            IReadOnlyList<SegmentationPenButton> buttons = Layout(includeSkip);
+            IReadOnlyList<SegmentationPenButton> buttons = Layout(includeSkip, includePaintActions);
             for (int i = 0; i < buttons.Count; i++)
             {
                 (double cx, double cy) = CenterOf(i, clientWidth, insets);
@@ -77,9 +94,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>Draws the buttons over the scene. Depth testing should already be off.</summary>
-        internal void Draw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, bool includeSkip)
+        internal void Draw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, bool includeSkip, bool includePaintActions = false)
         {
-            IReadOnlyList<SegmentationPenButton> buttons = Layout(includeSkip);
+            IReadOnlyList<SegmentationPenButton> buttons = Layout(includeSkip, includePaintActions);
             double downsample = parent.Downsample;
             int width = parent.ClientSize.Width;
             Padding insets = parent.DockedChromeInsets;
@@ -109,6 +126,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private static Color DiscColor(SegmentationPenButton button) => button switch
         {
             SegmentationPenButton.Accept => new Color(30, 150, 60),
+            SegmentationPenButton.Resubmit => new Color(40, 110, 200),
+            SegmentationPenButton.ClearMask => new Color(130, 70, 170),
             _ => new Color(200, 140, 20),
         };
 
@@ -119,6 +138,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 case SegmentationPenButton.Accept:
                     yield return [new(-13, 0), new(-4, 10), new(13, -11)];
+                    break;
+                case SegmentationPenButton.Resubmit:
+                    // Three quarters of a circle, open at the top right, with its arrowhead there.
+                    yield return [.. Enumerable.Range(0, 13).Select(i =>
+                    {
+                        double angle = Math.PI * (-0.25 - 1.5 * i / 12.0);
+                        return new GeometryVector2(12 * Math.Cos(angle), 12 * Math.Sin(angle));
+                    })];
+                    yield return [new(-1, -9), new(8.5, -8.5), new(8, -18)];
+                    break;
+                case SegmentationPenButton.ClearMask:
+                    yield return [new(-11, -11), new(11, -11), new(11, 11), new(-11, 11), new(-11, -11)];
+                    yield return [new(-14, 14), new(14, -14)];
                     break;
                 default:
                     yield return [new(-13, -11), new(-3, 0), new(-13, 11)];

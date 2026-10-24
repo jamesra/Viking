@@ -24,7 +24,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// Mouse: press the left button over unpainted ground to paint foreground and drag to continue. Shift+left paints background; Shift+left
     /// started over paint erases all paint, foreground and background, until the button is released. The brush grows and shrinks with the
     /// sideways wheel, or Shift plus the ordinary wheel. Pen: the same with the pen's barrel button (see <see cref="BarrelButtonBinding"/>)
-    /// in place of Shift, the on-screen check button to accept and the red X to cancel. Double-clicking the result, Enter and the check
+    /// in place of Shift, the on-screen check button to accept and the red X to cancel. The blue arrow button (or F5) sends the masks again
+    /// and the purple crossed square (or Ctrl+Delete) clears all paint, the mask the command started from included. A change to the masks
+    /// cancels a request still running for the old ones, and the image tiles under the foreground are uploaded while the user paints, so
+    /// the server has them encoded when the request comes. Double-clicking the result, Enter and the check
     /// button accept; Escape and the red X cancel. The point placing <see cref="SegmentationCommand"/> it derives from is retired; this command replaces it. Everything here runs on the UI thread; the server request and the polygonizing are the base class's.
     /// </remarks>
     internal sealed class SegmentationPaintCommand : SegmentationCommand, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
@@ -62,6 +65,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private (GVector2 Center, double Radius, PaintMode Mode, bool Painting)? ringKey;
         private System.Collections.Generic.IReadOnlyList<GVector2> lastForegroundClicks = [];
 
+        /// <summary>Stops the upload of the tiles under the last mask sent; replaced at every send.</summary>
+        private System.Threading.CancellationTokenSource? prefetchCts;
+
         /// <param name="parent">The viewer the command runs in.</param>
         /// <param name="success_callback">Receives the accepted polygon, volume space.</param>
         /// <param name="grpcChannelManager">The segmentation service channel; null uses the selected service.</param>
@@ -95,6 +101,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <inheritdoc />
         protected override bool PlacesPoints => false;
 
+        /// <inheritdoc />
+        protected override bool PenButtonsIncludePaintActions => true;
+
+        /// <inheritdoc />
+        protected override bool NewPromptsSupersedeRequest => true;
+
         /// <summary>The brush radius in screen pixels.</summary>
         public double RadiusPixels => radiusPixels;
 
@@ -107,6 +119,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             "Shift + Left-click on paint + drag: Erase paint (foreground and background)",
             "Pen: the barrel button works like Shift; the check button accepts, the red X cancels",
             "Sideways wheel or Shift + wheel: Brush size",
+            "F5 or the blue arrow: Send the masks again (after a server error or timeout)",
+            "Ctrl + Delete or the purple crossed square: Clear all paint",
             "Double-click the result or press Enter: Accept",
             "Escape or the red X: Cancel",
             "Hold Right click + Drag: Move view",
@@ -149,6 +163,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <inheritdoc />
         protected override void OnDeactivate()
         {
+            StopTilePrefetch();
             submitDebouncer?.Dispose();
             submitDebouncer = null;
             overlayView = null;
@@ -293,7 +308,61 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 $"Paint submit foreground={DescribeBounds(setBounds)} pieces={clicks.Count} background={(backgroundMask is null ? "none" : "painted")} " +
                 $"canvas={canvas.Width}x{canvas.Height}@{canvas.Scale} ds={canvas.Downsample}");
             SetPromptMasks(seed, background, clicks);
+            StartTilePrefetch(seed.Value, clicks);
             RequestSegmentationFromPrompts();
+        }
+
+        /// <summary>
+        /// Uploads the image tiles under <paramref name="foreground"/>, nearest the brush first, replacing the upload for the last mask
+        /// sent; tiles that one already sent are skipped. A request for the mask joins a tile that is still uploading.
+        /// </summary>
+        private void StartTilePrefetch(SegmentationSeed foreground, System.Collections.Generic.IReadOnlyList<GVector2> clicks)
+        {
+            StopTilePrefetch();
+            SegmentationMaskUnion mask = new();
+            mask.Add(foreground);
+            GVector2 nearest = cursorWorld ?? (clicks.Count > 0 ? clicks[0] : foreground.Center);
+            prefetchCts = new System.Threading.CancellationTokenSource();
+            _ = ViewportSession.PrefetchMaskTilesAsync(mask, nearest, prefetchCts.Token);
+        }
+
+        /// <summary>Cancels the tile upload <see cref="StartTilePrefetch"/> started, if it is still running.</summary>
+        private void StopTilePrefetch()
+        {
+            System.Threading.CancellationTokenSource? previous = prefetchCts;
+            prefetchCts = null;
+            previous?.Cancel();
+        }
+
+        /// <summary>F5 and the blue arrow: sends the masks as they are now, cancelling a request still running.</summary>
+        protected override void OnResubmitButton()
+        {
+            if (canvas is null || IsFinished || painting)
+                return;
+
+            SegmentationDiag.Log("Paint resubmit");
+            SubmitPaint();
+        }
+
+        /// <summary>
+        /// Ctrl+Delete and the purple crossed square: removes all paint, foreground and background, the mask the command started from
+        /// included, and the result shown. The request running for the old masks is cancelled.
+        /// </summary>
+        protected override void OnClearMaskButton()
+        {
+            if (canvas is null || IsFinished)
+                return;
+
+            painting = false;
+            paintedSinceSubmit = false;
+            int cleared = canvas.Clear();
+            SegmentationDiag.Log($"Paint clear pixels={cleared}");
+            StopTilePrefetch();
+            CancelRequestInFlight();
+            lastForegroundClicks = [];
+            SetPromptMasks(null, null);
+            ClearPromptResults();
+            Parent.Invalidate();
         }
 
         /// <summary>
@@ -342,7 +411,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #region Mouse
         private bool HitsButton(int x, int y) =>
             paintCancelButton.HitTest(x, y) ||
-            (ShowPenButtons && SegmentationPenButtons.HitTest(false, Parent.ClientSize.Width, x, y, Parent.DockedChromeInsets) is not null);
+            (ShowPenButtons && PenButtonAt(x, y) is not null);
+
+        private SegmentationPenButton? PenButtonAt(double x, double y) =>
+            SegmentationPenButtons.HitTest(false, Parent.ClientSize.Width, x, y, Parent.DockedChromeInsets, includePaintActions: true);
 
         /// <inheritdoc />
         protected override void OnMouseDown(object sender, MouseEventArgs e)
@@ -423,6 +495,26 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Parent.Invalidate();
         }
 
+        /// <summary>F5 resubmits; Ctrl+Delete clears all paint.</summary>
+        protected override void OnKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.F5 && !e.Control && !e.Alt)
+            {
+                OnResubmitButton();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.KeyCode == Keys.Delete && e.Control)
+            {
+                OnClearMaskButton();
+                e.Handled = true;
+                return;
+            }
+
+            base.OnKeyDown(sender, e);
+        }
+
         /// <inheritdoc />
         protected override void OnKeyPress(object sender, KeyPressEventArgs e)
         {
@@ -457,9 +549,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
-            if (SegmentationPenButtons.HitTest(false, Parent.ClientSize.Width, e.X, e.Y, Parent.DockedChromeInsets) == SegmentationPenButton.Accept)
+            if (PenButtonAt(e.X, e.Y) is SegmentationPenButton button)
             {
-                AcceptBestPolygon();
+                HandlePenButton(button);
                 return;
             }
 

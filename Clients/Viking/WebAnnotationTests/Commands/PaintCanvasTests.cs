@@ -41,6 +41,24 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void Clear_RemovesForegroundAndBackgroundAndReportsThemDirty()
+        {
+            PaintCanvas canvas = NewCanvas();
+            canvas.TakeDirtyRegion(out _, out _, out _, out _);
+            int foreground = canvas.PaintDisc(CenterOf(canvas, 20, 20), 3, PaintCanvas.Foreground);
+            int background = canvas.PaintDisc(CenterOf(canvas, 70, 70), 3, PaintCanvas.Background);
+            canvas.TakeDirtyRegion(out _, out _, out _, out _);
+
+            Assert.AreEqual(foreground + background, canvas.Clear());
+            Assert.IsFalse(canvas.HasPaint);
+            Assert.IsTrue(canvas.TakeDirtyRegion(out _, out _, out int width, out int height));
+            Assert.AreEqual(canvas.Width, width);
+            Assert.AreEqual(canvas.Height, height);
+            Assert.AreEqual(0, canvas.Clear());
+            Assert.IsFalse(canvas.TakeDirtyRegion(out _, out _, out _, out _));
+        }
+
+        [TestMethod]
         public void TryPixelAt_OutsideTheCanvas_IsFalse()
         {
             PaintCanvas canvas = NewCanvas();
