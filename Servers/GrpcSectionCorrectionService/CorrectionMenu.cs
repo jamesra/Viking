@@ -7,7 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Grpc.Net.Client;
-using Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos;
+using Google.Protobuf.WellKnownTypes;
+using Viking.SectionCorrectionServiceTypes.gRPC.V2.Protos;
 
 namespace Viking.GrpcSectionCorrectionService
 {
@@ -92,7 +93,7 @@ namespace Viking.GrpcSectionCorrectionService
             try
             {
                 RebuildStatus first = await _client.GetRebuildStatusAsync(
-                    new GetRebuildStatusRequest(), cancellationToken: cancellationToken);
+                    new Empty(), cancellationToken: cancellationToken);
                 _output.WriteLine($"Section correction service {first.ServiceVersion}");
             }
             catch (RpcException ex)
@@ -150,9 +151,9 @@ namespace Viking.GrpcSectionCorrectionService
         /// </summary>
         async Task ShowStatusAsync(CancellationToken cancellationToken)
         {
-            RebuildStatus status = await _client.GetRebuildStatusAsync(new GetRebuildStatusRequest(), cancellationToken: cancellationToken);
+            RebuildStatus status = await _client.GetRebuildStatusAsync(new Empty(), cancellationToken: cancellationToken);
             ListCorrectionSetsResponse sets = await _client.ListCorrectionSetsAsync(new ListCorrectionSetsRequest(), cancellationToken: cancellationToken);
-            ListVolumesResponse volumes = await _client.ListVolumesAsync(new ListVolumesRequest(), cancellationToken: cancellationToken);
+            ListVolumesResponse volumes = await _client.ListVolumesAsync(new Empty(), cancellationToken: cancellationToken);
 
             _output.WriteLine();
             _output.WriteLine(status.InProgress
@@ -167,19 +168,19 @@ namespace Viking.GrpcSectionCorrectionService
 
             _output.WriteLine();
             var rows = new List<string[]> { new[] { "Volume", "StosGroup", "Built (UTC)", "Age" } };
-            foreach (CorrectionSetInfo set in sets.Sets)
+            foreach (CorrectionSet set in sets.Sets)
             {
-                DateTime? built = set.Provenance?.BuiltUtc?.ToDateTime();
+                DateTime? built = set.BuiltUtc?.ToDateTime();
                 rows.Add(
                 [
-                    set.VolumeName,
-                    string.IsNullOrEmpty(set.StosGroup) ? "(default)" : set.StosGroup,
+                    set.Id.VolumeName,
+                    string.IsNullOrEmpty(set.Id.StosGroup) ? "(default)" : set.Id.StosGroup,
                     built.HasValue ? FormatTime(built.Value) : "unknown",
                     built.HasValue ? FormatAge(_utcNow() - built.Value) : ""
                 ]);
             }
 
-            HashSet<string> published = new(sets.Sets.Select(s => s.VolumeName), StringComparer.OrdinalIgnoreCase);
+            HashSet<string> published = new(sets.Sets.Select(s => s.Id.VolumeName), StringComparer.OrdinalIgnoreCase);
             foreach (VolumeInfo volume in volumes.Volumes.Where(v => !published.Contains(v.VolumeName)))
                 rows.Add([volume.VolumeName, "", "no corrections yet", ""]);
 
@@ -191,7 +192,7 @@ namespace Viking.GrpcSectionCorrectionService
         /// </summary>
         async Task RefreshVolumeAsync(CancellationToken cancellationToken)
         {
-            ListVolumesResponse response = await _client.ListVolumesAsync(new ListVolumesRequest(), cancellationToken: cancellationToken);
+            ListVolumesResponse response = await _client.ListVolumesAsync(new Empty(), cancellationToken: cancellationToken);
             List<VolumeInfo> volumes = [.. response.Volumes];
 
             _output.WriteLine();
@@ -244,7 +245,7 @@ namespace Viking.GrpcSectionCorrectionService
             RebuildStatus status;
             while (true)
             {
-                status = await _client.GetRebuildStatusAsync(new GetRebuildStatusRequest(), cancellationToken: cancellationToken);
+                status = await _client.GetRebuildStatusAsync(new Empty(), cancellationToken: cancellationToken);
                 string line = $"{RenderBar(status.GroupsDone, status.GroupsTotal)} {Describe(status)}  {FormatElapsed(_utcNow() - began)}";
                 _output.Write("\r" + line.PadRight(lastWidth));
                 lastWidth = line.Length;

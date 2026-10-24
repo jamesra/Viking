@@ -10,7 +10,7 @@ using Viking.GrpcSectionCorrectionService;
 namespace GrpcSectionCorrectionService.Tests
 {
     /// <summary>
-    /// Pins which volume-load failures <see cref="SectionCorrectionsService.IsTransientVolumeFailure"/> treats as
+    /// Pins which volume-load failures <see cref="CorrectionServiceCore.IsTransientVolumeFailure"/> treats as
     /// transient (CorrectStructures answers UNAVAILABLE). A refused stos/section HTTP load faults a task and
     /// arrives wrapped in an <see cref="AggregateException"/> from <c>Task.Result</c>, which the old type-only
     /// filter let escape as UNKNOWN.
@@ -23,42 +23,42 @@ namespace GrpcSectionCorrectionService.Tests
         [TestMethod]
         public void DirectConnectivityFailuresAreTransient()
         {
-            Assert.IsTrue(SectionCorrectionsService.IsTransientVolumeFailure(new WebException("x"), CancellationToken.None));
-            Assert.IsTrue(SectionCorrectionsService.IsTransientVolumeFailure(new HttpRequestException("x", Refused), CancellationToken.None));
-            Assert.IsTrue(SectionCorrectionsService.IsTransientVolumeFailure(Refused, CancellationToken.None));
-            Assert.IsTrue(SectionCorrectionsService.IsTransientVolumeFailure(new IOException("x"), CancellationToken.None));
+            Assert.IsTrue(CorrectionServiceCore.IsTransientVolumeFailure(new WebException("x"), CancellationToken.None));
+            Assert.IsTrue(CorrectionServiceCore.IsTransientVolumeFailure(new HttpRequestException("x", Refused), CancellationToken.None));
+            Assert.IsTrue(CorrectionServiceCore.IsTransientVolumeFailure(Refused, CancellationToken.None));
+            Assert.IsTrue(CorrectionServiceCore.IsTransientVolumeFailure(new IOException("x"), CancellationToken.None));
         }
 
         [TestMethod]
         public void AggregateWrappedConnectionRefusedIsTransient()
         {
             AggregateException wrapped = new(new HttpRequestException("refused", Refused));
-            Assert.IsTrue(SectionCorrectionsService.IsTransientVolumeFailure(wrapped, CancellationToken.None));
+            Assert.IsTrue(CorrectionServiceCore.IsTransientVolumeFailure(wrapped, CancellationToken.None));
         }
 
         [TestMethod]
         public void InnerSocketExceptionUnderOtherWrapperIsTransient()
         {
             Exception wrapped = new InvalidOperationException("load failed", Refused);
-            Assert.IsTrue(SectionCorrectionsService.IsTransientVolumeFailure(wrapped, CancellationToken.None));
+            Assert.IsTrue(CorrectionServiceCore.IsTransientVolumeFailure(wrapped, CancellationToken.None));
         }
 
         [TestMethod]
         public void HttpTimeoutIsTransientButCallerCancellationIsNot()
         {
-            Assert.IsTrue(SectionCorrectionsService.IsTransientVolumeFailure(
+            Assert.IsTrue(CorrectionServiceCore.IsTransientVolumeFailure(
                 new AggregateException(new TaskCanceledExceptionStub()), CancellationToken.None));
 
             using CancellationTokenSource cts = new();
             cts.Cancel();
-            Assert.IsFalse(SectionCorrectionsService.IsTransientVolumeFailure(new OperationCanceledException(cts.Token), cts.Token));
+            Assert.IsFalse(CorrectionServiceCore.IsTransientVolumeFailure(new OperationCanceledException(cts.Token), cts.Token));
         }
 
         [TestMethod]
         public void UnrelatedFaultsAreNotTransient()
         {
-            Assert.IsFalse(SectionCorrectionsService.IsTransientVolumeFailure(new FormatException("bad stos"), CancellationToken.None));
-            Assert.IsFalse(SectionCorrectionsService.IsTransientVolumeFailure(new AggregateException(new FormatException("bad")), CancellationToken.None));
+            Assert.IsFalse(CorrectionServiceCore.IsTransientVolumeFailure(new FormatException("bad stos"), CancellationToken.None));
+            Assert.IsFalse(CorrectionServiceCore.IsTransientVolumeFailure(new AggregateException(new FormatException("bad")), CancellationToken.None));
         }
 
         sealed class TaskCanceledExceptionStub : System.Threading.Tasks.TaskCanceledException

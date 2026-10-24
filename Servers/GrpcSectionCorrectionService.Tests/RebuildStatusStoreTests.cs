@@ -1,7 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using Viking.GrpcSectionCorrectionService;
-using Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos;
 
 namespace GrpcSectionCorrectionService.Tests
 {
@@ -14,14 +13,13 @@ namespace GrpcSectionCorrectionService.Tests
         [TestMethod]
         public void Snapshot_Fresh_HasNoTimestampsAndNotInProgress()
         {
-            RebuildStatus s = new RebuildStatusStore().Snapshot();
+            RebuildSnapshot s = new RebuildStatusStore().Snapshot();
             Assert.IsFalse(s.InProgress);
             Assert.IsNull(s.LastStartedUtc);
             Assert.IsNull(s.LastCompletedUtc);
             Assert.AreEqual("", s.LastError);
-            Assert.AreEqual(RebuildStatusStore.ServiceVersion, s.ServiceVersion);
-            Assert.IsFalse(string.IsNullOrWhiteSpace(s.ServiceVersion));
-            Assert.IsFalse(s.ServiceVersion.Contains('+'), "build metadata after '+' must be stripped");
+            Assert.IsFalse(string.IsNullOrWhiteSpace(RebuildStatusStore.ServiceVersion));
+            Assert.IsFalse(RebuildStatusStore.ServiceVersion.Contains('+'), "build metadata after '+' must be stripped");
         }
 
         [TestMethod]
@@ -33,11 +31,11 @@ namespace GrpcSectionCorrectionService.Tests
 
             DateTime before = DateTime.UtcNow;
             store.Begin();
-            RebuildStatus s = store.Snapshot();
+            RebuildSnapshot s = store.Snapshot();
 
             Assert.IsTrue(s.InProgress);
             Assert.AreEqual("", s.LastError);
-            DateTime started = s.LastStartedUtc.ToDateTime();
+            DateTime started = s.LastStartedUtc.Value;
             Assert.AreEqual(DateTimeKind.Utc, started.Kind);
             Assert.IsTrue(started >= before.AddSeconds(-1) && started <= DateTime.UtcNow.AddSeconds(1));
         }
@@ -48,12 +46,12 @@ namespace GrpcSectionCorrectionService.Tests
             var store = new RebuildStatusStore();
             store.Begin();
             store.Complete("failed: fake");
-            RebuildStatus s = store.Snapshot();
+            RebuildSnapshot s = store.Snapshot();
 
             Assert.IsFalse(s.InProgress);
             Assert.AreEqual("failed: fake", s.LastError);
             Assert.IsNotNull(s.LastCompletedUtc);
-            Assert.IsTrue(s.LastCompletedUtc.ToDateTime() >= s.LastStartedUtc.ToDateTime());
+            Assert.IsTrue(s.LastCompletedUtc.Value >= s.LastStartedUtc.Value);
         }
 
         [TestMethod]
@@ -70,7 +68,7 @@ namespace GrpcSectionCorrectionService.Tests
         {
             var store = new RebuildStatusStore();
             store.Begin();
-            RebuildStatus first = store.Snapshot();
+            RebuildSnapshot first = store.Snapshot();
             store.Complete("later");
             Assert.IsTrue(first.InProgress);
             Assert.AreEqual("", first.LastError);

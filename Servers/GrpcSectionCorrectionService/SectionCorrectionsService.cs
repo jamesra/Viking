@@ -1,44 +1,28 @@
 using Grpc.Core;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System;
 using System.Collections.Generic;
-using System.Data.Common;
-using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
-using AnnotationVizLib;
 using Viking.SectionCorrection;
-using Viking.SectionCorrectionBuilder;
 using Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos;
-using Google.Protobuf.WellKnownTypes;
-using Geometry;
 using SectionCorrectionMsg = Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos.SectionCorrection;
 using FitMode = AnnotationVizLib.CorrectionMode;
 using ProtoFitMode = Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos.CorrectionMode;
+using GeoVector2 = Geometry.Vector2;
 
 namespace Viking.GrpcSectionCorrectionService
 {
     /// <summary>
-    /// Serves published residual fields keyed by Identity volume name + StosGroup.
-    /// Does not rebuild; CorrectionRebuildHostedService writes the catalog this class reads.
+    /// Protocol V1 of AnnotateSectionCorrections (section_correction.proto): translates V1 messages to and from
+    /// <see cref="CorrectionServiceCore"/>.  Kept only for clients that have not moved to V2
+    /// (<see cref="SectionCorrectionsServiceV2"/>): installed Viking builds and SBFSEM-tools.  Delete this class and the
+    /// V1 proto once they have.
     /// </summary>
     public sealed class SectionCorrectionsService : AnnotateSectionCorrections.AnnotateSectionCorrectionsBase
     {
-        readonly VolumeCorrectionCatalog _catalog;
-        readonly IIdentityVolumeSource _volumes;
-        readonly AnnotationConnectionResolver _connections;
-        readonly IConfiguration _configuration;
-        readonly RebuildStatusStore _rebuild;
-        readonly ILogger<SectionCorrectionsService> _logger;
-        readonly CorrectionRebuildRunner _rebuildRunner;
-        readonly IHostApplicationLifetime _lifetime;
+        readonly CorrectionServiceCore _core;
 
         public SectionCorrectionsService(
             VolumeCorrectionCatalog catalog,
@@ -50,209 +34,89 @@ namespace Viking.GrpcSectionCorrectionService
             CorrectionRebuildRunner rebuildRunner = null,
             IHostApplicationLifetime lifetime = null)
         {
-            _rebuildRunner = rebuildRunner;
-            _lifetime = lifetime;
-            _catalog = catalog;
-            _volumes = volumes;
-            _connections = connections;
-            _configuration = configuration;
-            _rebuild = rebuild;
-            _logger = logger;
+            _core = new CorrectionServiceCore(catalog, volumes, connections, configuration, rebuild, logger, rebuildRunner, lifetime);
         }
 
-        public override async Task<ListVolumesResponse> ListVolumes(
-            ListVolumesRequest request,
-            ServerCallContext context)
+        public override async Task<ListVolumesResponse> ListVolumes(ListVolumesRequest request, ServerCallContext context)
         {
-            // Only contexts Identity assigns to this service that have an annotation database are volumes here.
-            // volume_name is the correction-set key: the annotation database.
-            Dictionary<string, VolumeInfo> byName = new(StringComparer.OrdinalIgnoreCase);
-            try
-            {
-                foreach (IdentityVolumeRow row in await _volumes.ListAsync(context.CancellationToken).ConfigureAwait(false))
-                {
-                    if (!row.HasAnnotationDatabase)
-                        continue;
-                    byName[row.CorrectionDatabase] = new VolumeInfo
-                    {
-                        VolumeName = row.CorrectionDatabase,
-                        VikingxmlEndpoint = row.VikingXmlEndpoint ?? "",
-                        AnnotationEndpoint = row.AnnotationEndpoint ?? ""
-                    };
-                }
-            }
-            catch (Exception ex) when (IsIdentityTransportFailure(ex, context.CancellationToken))
-            {
-                _logger.LogWarning(ex, "Identity volume list failed.");
-                throw new RpcException(new Status(
-                    StatusCode.Unavailable,
-                    $"Identity volume list unavailable: {ex.Message}"));
-            }
-
             ListVolumesResponse response = new();
-            foreach (VolumeInfo info in byName.Values.OrderBy(v => v.VolumeName, StringComparer.OrdinalIgnoreCase))
-                response.Volumes.Add(info);
+            foreach (CorrectionServiceCore.VolumeEntry v in await _core.ListVolumesAsync(context.CancellationToken).ConfigureAwait(false))
+                response.Volumes.Add(new VolumeInfo { VolumeName = v.Name, VikingxmlEndpoint = v.VikingXmlEndpoint, AnnotationEndpoint = v.AnnotationEndpoint });
             return response;
         }
 
-        public override Task<RebuildStatus> GetRebuildStatus(
-            GetRebuildStatusRequest request,
-            ServerCallContext context)
+        public override Task<RebuildStatus> GetRebuildStatus(GetRebuildStatusRequest request, ServerCallContext context)
         {
-            return Task.FromResult(_rebuild.Snapshot());
-        }
-
-        /// <summary>
-        /// Manual rebuild trigger for the container's correction-menu console. The gRPC surface is otherwise
-        /// anonymous, so this only accepts a caller on the loopback interface (a process inside the container);
-        /// traffic published through Docker arrives from the bridge address and is refused.
-        /// </summary>
-        public override Task<RebuildVolumeResponse> RebuildVolume(
-            RebuildVolumeRequest request,
-            ServerCallContext context)
-        {
-            System.Net.IPAddress caller = context.GetHttpContext()?.Connection.RemoteIpAddress;
-            if (caller is null || !System.Net.IPAddress.IsLoopback(caller))
-                throw new RpcException(new Status(StatusCode.PermissionDenied,
-                    "RebuildVolume is only available from inside the service host."));
-            if (_rebuildRunner is null)
-                throw new RpcException(new Status(StatusCode.Unimplemented, "This host has no rebuild runner."));
-
-            string volume = request.VolumeName?.Trim() ?? "";
-            bool started = _rebuildRunner.TryStartInBackground(
-                volume, request.Force, _lifetime?.ApplicationStopping ?? CancellationToken.None);
-            string target = volume.Length == 0 ? "all volumes" : $"'{volume}'";
-            _logger.LogInformation("Manual rebuild of {Target} (force={Force}) {Result}.",
-                target, request.Force, started ? "started" : "refused: one is already running");
-            return Task.FromResult(new RebuildVolumeResponse
+            RebuildSnapshot s = _core.RebuildStatus();
+            return Task.FromResult(new RebuildStatus
             {
-                Started = started,
-                Message = started ? $"Rebuild of {target} started." : "A rebuild is already running."
+                InProgress = s.InProgress,
+                LastStartedUtc = CorrectionServiceCore.ToTimestamp(s.LastStartedUtc),
+                LastCompletedUtc = CorrectionServiceCore.ToTimestamp(s.LastCompletedUtc),
+                LastError = s.LastError,
+                ServiceVersion = RebuildStatusStore.ServiceVersion,
+                CurrentVolume = s.CurrentVolume,
+                CurrentStep = s.CurrentStep,
+                GroupsDone = s.GroupsDone,
+                GroupsTotal = s.GroupsTotal
             });
         }
 
-        public override Task<ListCorrectionSetsResponse> ListCorrectionSets(
-            ListCorrectionSetsRequest request,
-            ServerCallContext context)
+        public override Task<RebuildVolumeResponse> RebuildVolume(RebuildVolumeRequest request, ServerCallContext context)
         {
-            IEnumerable<(string VolumeName, PublishedCorrectionSet Set)> sets = _catalog.Sets;
-            if (!string.IsNullOrWhiteSpace(request.VolumeName))
-                sets = sets.Where(s => string.Equals(s.VolumeName, request.VolumeName, StringComparison.OrdinalIgnoreCase));
+            (bool started, string message) = _core.StartRebuild(context, request.VolumeName, request.Force);
+            return Task.FromResult(new RebuildVolumeResponse { Started = started, Message = message });
+        }
 
+        public override Task<ListCorrectionSetsResponse> ListCorrectionSets(ListCorrectionSetsRequest request, ServerCallContext context)
+        {
             ListCorrectionSetsResponse response = new();
-            foreach ((string volumeName, PublishedCorrectionSet set) in sets
-                         .OrderBy(s => s.VolumeName, StringComparer.OrdinalIgnoreCase)
-                         .ThenBy(s => s.Set.StosGroup, StringComparer.OrdinalIgnoreCase))
-            {
-                response.Sets.Add(new CorrectionSetInfo
-                {
-                    VolumeName = volumeName,
-                    StosGroup = set.StosGroup,
-                    Provenance = ToProto(set.Provenance)
-                });
-            }
-
+            foreach ((string volumeName, PublishedCorrectionSet set) in _core.Sets(request.VolumeName))
+                response.Sets.Add(new CorrectionSetInfo { VolumeName = volumeName, StosGroup = set.StosGroup, Provenance = ToProto(set.Provenance) });
             return Task.FromResult(response);
         }
 
-        public override Task<ListCorrectedSectionsResponse> ListCorrectedSections(
-            ListCorrectedSectionsRequest request,
-            ServerCallContext context)
+        public override Task<ListCorrectedSectionsResponse> ListCorrectedSections(ListCorrectedSectionsRequest request, ServerCallContext context)
         {
-            PublishedCorrectionSet set = RequireSet(request.VolumeName, request.StosGroup);
             ListCorrectedSectionsResponse response = new();
-            response.Z.AddRange(set.Sections.Keys.OrderBy(z => z));
+            response.Z.AddRange(_core.RequireSet(request.VolumeName, request.StosGroup).Sections.Keys.OrderBy(z => z));
             return Task.FromResult(response);
         }
 
-        public override Task<CorrectionManifest> GetCorrectionManifest(
-            GetCorrectionManifestRequest request,
-            ServerCallContext context)
+        public override Task<CorrectionManifest> GetCorrectionManifest(GetCorrectionManifestRequest request, ServerCallContext context)
         {
-            PublishedCorrectionSet set = RequireSet(request.VolumeName, request.StosGroup);
-            return Task.FromResult(ToManifestProto(set));
-        }
-
-        public override Task<SectionCorrectionMsg> GetSectionCorrection(
-            GetSectionCorrectionRequest request,
-            ServerCallContext context)
-        {
-            PublishedCorrectionSet set = RequireSet(request.VolumeName, request.StosGroup);
-            if (!set.TryGetSection(request.Z, out SectionVectorField field))
-            {
-                throw new RpcException(new Status(
-                    StatusCode.NotFound,
-                    $"no correction for section {request.Z} in '{request.VolumeName}' '{request.StosGroup}'"));
-            }
-
-            SectionCorrectionMsg message = new() { PitchNm = field.PitchNm };
-            foreach (LatticeNode node in field.Nodes)
-            {
-                message.Nodes.Add(new LatticeVector
-                {
-                    Gx = node.Gx,
-                    Gy = node.Gy,
-                    Dx = node.Dx,
-                    Dy = node.Dy,
-                    VoteCount = node.VoteCount
-                });
-            }
-
+            PublishedCorrectionSet set = _core.RequireSet(request.VolumeName, request.StosGroup);
+            CorrectionManifest message = new() { Provenance = ToProto(set.Provenance) };
+            message.Z.AddRange(set.Sections.Keys.OrderBy(z => z));
             return Task.FromResult(message);
         }
 
-        public override Task<CorrectPointsResponse> CorrectPoints(
-            CorrectPointsRequest request,
-            ServerCallContext context)
+        public override Task<SectionCorrectionMsg> GetSectionCorrection(GetSectionCorrectionRequest request, ServerCallContext context)
         {
-            if (request.Sections is null || request.Sections.Count == 0)
-                throw new RpcException(new Status(StatusCode.InvalidArgument, "sections is empty"));
+            SectionVectorField field = _core.RequireSection(request.VolumeName, request.StosGroup, request.Z);
+            SectionCorrectionMsg message = new() { PitchNm = field.PitchNm };
+            foreach (LatticeNode node in field.Nodes)
+                message.Nodes.Add(new LatticeVector { Gx = node.Gx, Gy = node.Gy, Dx = node.Dx, Dy = node.Dy, VoteCount = node.VoteCount });
+            return Task.FromResult(message);
+        }
 
-            HashSet<long> seen = [];
-            foreach (SectionPoints section in request.Sections)
-            {
-                if (section.Points is null || section.Points.Count == 0)
-                    throw new RpcException(new Status(StatusCode.InvalidArgument, $"section {section.Z} has no points"));
-                if (!seen.Add(section.Z))
-                    throw new RpcException(new Status(StatusCode.InvalidArgument, $"duplicate z {section.Z}"));
-            }
+        public override Task<CorrectPointsResponse> CorrectPoints(CorrectPointsRequest request, ServerCallContext context)
+        {
+            List<(long Z, IReadOnlyList<GeoVector2> Points)> sections =
+                [.. request.Sections.Select(s => (s.Z, (IReadOnlyList<GeoVector2>)[.. s.Points.Select(p => new GeoVector2(p.X, p.Y))]))];
+            bool sampleField = ResolveMode(request.HasCorrection, request.Correction).HasFlag(FitMode.Neighbor);
+            IReadOnlyList<CorrectionServiceCore.SectionSample> samples =
+                _core.SamplePoints(request.VolumeName, request.StosGroup, sections, sampleField);
 
-            FitMode mode = ResolveMode(request.HasCorrection, request.Correction);
-            bool sampleField = mode.HasFlag(FitMode.Neighbor);
-            PublishedCorrectionSet set = sampleField ? RequireSet(request.VolumeName, request.StosGroup) : null;
-            CorrectPointsResponse response = new()
+            CorrectPointsResponse response = new() { VolumeName = request.VolumeName, StosGroup = request.StosGroup };
+            for (int i = 0; i < sections.Count; i++)
             {
-                VolumeName = request.VolumeName,
-                StosGroup = request.StosGroup
-            };
-            foreach (SectionPoints section in request.Sections)
-            {
-                CorrectedSection outSection = new() { Z = section.Z };
-                if (!sampleField)
+                CorrectedSection outSection = new() { Z = sections[i].Z, FoundSection = samples[i].Found };
+                for (int j = 0; j < sections[i].Points.Count; j++)
                 {
-                    outSection.FoundSection = true;
-                    AddUnshiftedPoints(outSection, section);
-                }
-                else if (!set.TryGetSection(section.Z, out SectionVectorField field))
-                {
-                    outSection.FoundSection = false;
-                    AddUnshiftedPoints(outSection, section);
-                }
-                else
-                {
-                    outSection.FoundSection = true;
-                    foreach (VolumeXY p in section.Points)
-                    {
-                        (Vector2 offset, bool trusted) = field.Sample(new Vector2(p.X, p.Y));
-                        outSection.Points.Add(new CorrectedXY
-                        {
-                            X = p.X + offset.X,
-                            Y = p.Y + offset.Y,
-                            Dx = offset.X,
-                            Dy = offset.Y,
-                            Trusted = trusted
-                        });
-                    }
+                    GeoVector2 p = sections[i].Points[j];
+                    (GeoVector2 offset, bool trusted) = samples[i].Points[j];
+                    outSection.Points.Add(new CorrectedXY { X = p.X + offset.X, Y = p.Y + offset.Y, Dx = offset.X, Dy = offset.Y, Trusted = trusted });
                 }
 
                 response.Sections.Add(outSection);
@@ -261,187 +125,51 @@ namespace Viking.GrpcSectionCorrectionService
             return Task.FromResult(response);
         }
 
-        /// <summary>
-        /// Fills <paramref name="outSection"/> with <paramref name="section"/>'s points unchanged: zero offset,
-        /// not trusted. Used by <see cref="CorrectPoints"/> when no field is sampled or the section has none.
-        /// </summary>
-        static void AddUnshiftedPoints(CorrectedSection outSection, SectionPoints section)
+        public override async Task<GetStructureFingerprintResponse> GetStructureFingerprint(GetStructureFingerprintRequest request, ServerCallContext context)
         {
-            foreach (VolumeXY p in section.Points)
-            {
-                outSection.Points.Add(new CorrectedXY
-                {
-                    X = p.X,
-                    Y = p.Y,
-                    Dx = 0,
-                    Dy = 0,
-                    Trusted = false
-                });
-            }
-        }
-
-        /// <summary>
-        /// The structures' current annotation fingerprint from SQL aggregates alone, so a client can check cached
-        /// <see cref="CorrectStructures"/> offsets in milliseconds.  Covers the same structures CorrectStructures does
-        /// for the same <c>include_children</c>.
-        /// </summary>
-        public override async Task<GetStructureFingerprintResponse> GetStructureFingerprint(
-            GetStructureFingerprintRequest request,
-            ServerCallContext context)
-        {
-            if (request.StructureIds is null || request.StructureIds.Count == 0)
-                throw new RpcException(new Status(StatusCode.InvalidArgument, "structure_ids is empty"));
-
-            string connection = _connections.Resolve(request.VolumeName);
-            if (string.IsNullOrWhiteSpace(connection))
-                throw new RpcException(new Status(StatusCode.FailedPrecondition, $"no annotation SQL mapping for '{request.VolumeName}'"));
-
-            StructureFingerprint fingerprint = await SqlMorphologyLoader.LoadStructureFingerprintAsync(
-                connection, request.StructureIds, request.IncludeChildren, context.CancellationToken).ConfigureAwait(false);
-
-            GetStructureFingerprintResponse response = new()
+            StructureFingerprint fingerprint = await _core.FingerprintAsync(
+                request.VolumeName, request.StructureIds, request.IncludeChildren, context.CancellationToken).ConfigureAwait(false);
+            return new GetStructureFingerprintResponse
             {
                 VolumeName = request.VolumeName ?? "",
                 AnnotationFingerprint = fingerprint.Token,
+                AnnotationWatermark = CorrectionServiceCore.ToTimestamp(fingerprint.Newest),
                 ServiceVersion = RebuildStatusStore.ServiceVersion
             };
-            if (fingerprint.Newest is DateTime watermark)
-                response.AnnotationWatermark = ToTimestamp(watermark);
-
-            return response;
         }
 
-        public override async Task<CorrectStructuresResponse> CorrectStructures(
-            CorrectStructuresRequest request,
-            ServerCallContext context)
+        public override async Task<CorrectStructuresResponse> CorrectStructures(CorrectStructuresRequest request, ServerCallContext context)
         {
-            if (request.StructureIds is null || request.StructureIds.Count == 0)
-                throw new RpcException(new Status(StatusCode.InvalidArgument, "structure_ids is empty"));
-
             FitMode mode = ResolveMode(request.HasCorrection, request.Correction);
-            string connection = _connections.Resolve(request.VolumeName);
-            if (string.IsNullOrWhiteSpace(connection))
-                throw new RpcException(new Status(StatusCode.FailedPrecondition, $"no annotation SQL mapping for '{request.VolumeName}'"));
-
-            string volumeUrl = await VolumeUrlAsync(request.VolumeName, context).ConfigureAwait(false);
-            if (string.IsNullOrWhiteSpace(volumeUrl))
-                throw new RpcException(new Status(StatusCode.NotFound, $"no VikingXML endpoint for '{request.VolumeName}'"));
-
-            SqlMorphologyLoader.StructuresLoadResult loaded;
-            try
-            {
-                loaded = await SqlMorphologyLoader.LoadStructuresAsync(
-                    connection,
-                    volumeUrl,
-                    request.StosGroup,
-                    request.StructureIds,
-                    request.IncludeChildren,
-                    _configuration["Corrections:CachePath"],
-                    context.CancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (IsTransientVolumeFailure(ex, context.CancellationToken))
-            {
-                // Volume XML / stos HTTP load shares the host with rebuild traffic; map transient load
-                // failures to UNAVAILABLE so clients can wait rather than treat UNKNOWN as a hard fault.
-                // The stos/section loads fault tasks, so the failure usually arrives wrapped in an
-                // AggregateException (Task.Result) and the volume host refusing a connection is a SocketException.
-                _logger.LogWarning(ex, "Volume load failed for '{Volume}'.", request.VolumeName);
-                throw new RpcException(new Status(
-                    StatusCode.Unavailable,
-                    $"volume mapping temporarily unavailable for '{request.VolumeName}': {ex.Message}"));
-            }
-            catch (Exception ex) when (IsSqlTimeout(ex))
-            {
-                // A slow or blocked annotation database is transient; UNAVAILABLE lets clients retry and keep
-                // cached offsets instead of holding UNKNOWN as a hard fault.
-                _logger.LogWarning(ex, "Annotation SQL timeout loading structures for '{Volume}'.", request.VolumeName);
-                throw new RpcException(new Status(
-                    StatusCode.Unavailable,
-                    $"annotation database timed out for '{request.VolumeName}'; retry shortly"));
-            }
-
-            NeighborResidualField field = null;
-            if (mode.HasFlag(FitMode.Neighbor) &&
-                _catalog.TryGet(request.VolumeName, request.StosGroup, out PublishedCorrectionSet published))
-                field = ToNeighborField(published);
+            CorrectionServiceCore.StructuresAnswer answer = await _core.CorrectStructuresAsync(
+                request.VolumeName, request.StosGroup, request.StructureIds, request.IncludeChildren, mode, context.CancellationToken).ConfigureAwait(false);
 
             CorrectStructuresResponse response = new()
             {
                 VolumeName = request.VolumeName ?? "",
                 StosGroup = request.StosGroup ?? "",
-                ServiceVersion = RebuildStatusStore.ServiceVersion
+                ServiceVersion = RebuildStatusStore.ServiceVersion,
+                AnnotationFingerprint = answer.Fingerprint.Token,
+                AnnotationWatermark = CorrectionServiceCore.ToTimestamp(answer.Fingerprint.Newest)
             };
-            response.AnnotationFingerprint = loaded.Fingerprint.Token;
-            if (loaded.Fingerprint.Newest is DateTime watermark)
-                response.AnnotationWatermark = ToTimestamp(watermark);
-
-            foreach (MorphologyGraph cell in loaded.Cells)
+            foreach (CorrectionServiceCore.CorrectedLocationData l in answer.Locations)
             {
-                Dictionary<ulong, Vector2> before = [];
-                foreach (MorphologyNode node in cell.Nodes.Values)
-                    before[node.Key] = new Vector2(node.Center.X, node.Center.Y);
-
-                if (mode.HasFlag(FitMode.Neighbor))
-                    MorphologyGraph.ApplyResidualField(cell, field);
-                if (mode.HasFlag(FitMode.CurveFit))
-                    MorphologyGraph.CurveFitProcesses(cell, new MorphologyGraph.CurveFitOptions(
-                        MorphologyGraph.DefaultCurveFitHalfWindow, null, null));
-
-                foreach (MorphologyNode node in cell.Nodes.Values)
+                response.Locations.Add(new CorrectedLocation
                 {
-                    Vector2 origin = before[node.Key];
-                    Vector3 corrected = node.Center;
-                    response.Locations.Add(new CorrectedLocation
-                    {
-                        LocationId = (long)node.Key,
-                        StructureId = (long)cell.StructureID,
-                        Z = node.Location.UnscaledZ,
-                        X = corrected.X,
-                        Y = corrected.Y,
-                        Dx = corrected.X - origin.X,
-                        Dy = corrected.Y - origin.Y
-                    });
-                }
+                    LocationId = l.LocationId,
+                    StructureId = l.StructureId,
+                    Z = l.Z,
+                    X = l.Position.X,
+                    Y = l.Position.Y,
+                    Dx = l.Offset.X,
+                    Dy = l.Offset.Y
+                });
             }
 
             return response;
         }
 
-        /// <summary>
-        /// True when a volume load failed because the volume host (or the network to it) is unreachable or slow:
-        /// <see cref="WebException"/>, <see cref="HttpRequestException"/>, <see cref="SocketException"/>,
-        /// <see cref="IOException"/>, <see cref="ObjectDisposedException"/>, or an HTTP timeout
-        /// (<see cref="OperationCanceledException"/> while <paramref name="callCancellation"/> is not cancelled),
-        /// found at the top level or anywhere in the <see cref="Exception.InnerException"/> /
-        /// <see cref="AggregateException"/> tree. Caller cancellation is excluded so it surfaces as CANCELLED.
-        /// </summary>
-        public static bool IsTransientVolumeFailure(Exception ex, CancellationToken callCancellation)
-        {
-            if (ex is null)
-                return false;
-            if (ex is WebException or HttpRequestException or SocketException or IOException or ObjectDisposedException)
-                return true;
-            if (ex is OperationCanceledException)
-                return !callCancellation.IsCancellationRequested;
-            if (ex is AggregateException aggregate)
-                return aggregate.InnerExceptions.Any(e => IsTransientVolumeFailure(e, callCancellation));
-            return IsTransientVolumeFailure(ex.InnerException, callCancellation);
-        }
-
-        /// <summary>
-        /// True when <paramref name="ex"/> (or an inner exception) is a SQL Server command timeout
-        /// (<c>SqlException.Number</c> -2, "Execution Timeout Expired").
-        /// </summary>
-        internal static bool IsSqlTimeout(Exception ex)
-        {
-            for (Exception e = ex; e is not null; e = e.InnerException)
-            {
-                if (e is Microsoft.Data.SqlClient.SqlException sql && sql.Number == -2)
-                    return true;
-            }
-            return false;
-        }
-
+        /// <summary>V1 sends the mode as an optional flag value; unset means All.</summary>
         static FitMode ResolveMode(bool hasCorrection, ProtoFitMode value)
         {
             if (!hasCorrection)
@@ -453,99 +181,13 @@ namespace Viking.GrpcSectionCorrectionService
             return mode;
         }
 
-        static NeighborResidualField ToNeighborField(PublishedCorrectionSet set)
-        {
-            double pitch = set.Provenance?.PitchNm > 0 ? set.Provenance.PitchNm : NeighborResidualField.GridSizeNm;
-            double kernel = set.Provenance?.KernelRadiusNm > 0 ? set.Provenance.KernelRadiusNm : NeighborResidualField.KernelRadiusNm;
-            return NeighborResidualField.FromLattice(set.EnumerateLattice(), pitch, kernel);
-        }
-
-        /// <summary>
-        /// Looks up the VikingXML endpoint Identity lists for <paramref name="volumeName"/>; returns "" when the
-        /// volume is not listed. Called only by <see cref="CorrectStructures"/>.
-        /// </summary>
-        /// <exception cref="RpcException">
-        /// <see cref="StatusCode.Unavailable"/> when the Identity listing fails in transport (Identity unreachable,
-        /// not configured, no access token, or an HTTP timeout), matching how the sibling volume-load failure is
-        /// mapped so callers can retry instead of seeing UNKNOWN.
-        /// </exception>
-        /// <exception cref="OperationCanceledException">Rethrown unchanged when the call itself was cancelled.</exception>
-        async Task<string> VolumeUrlAsync(string volumeName, ServerCallContext context)
-        {
-            try
+        static CorrectionProvenance ToProto(CorrectionProvenanceDto dto) => dto is null
+            ? new CorrectionProvenance()
+            : new CorrectionProvenance
             {
-                foreach (IdentityVolumeRow row in await _volumes.ListAsync(context.CancellationToken).ConfigureAwait(false))
-                {
-                    if (string.Equals(row.Name, volumeName, StringComparison.OrdinalIgnoreCase))
-                        return row.VikingXmlEndpoint;
-                }
-
-                return "";
-            }
-            catch (Exception ex) when (IsIdentityTransportFailure(ex, context.CancellationToken))
-            {
-                _logger.LogWarning(ex, "Identity volume list failed for CorrectStructures '{Volume}'.", volumeName);
-                throw new RpcException(new Status(
-                    StatusCode.Unavailable,
-                    $"Identity volume list temporarily unavailable for '{volumeName}': {ex.Message}"));
-            }
-        }
-
-        /// <summary>
-        /// True for failures of an <see cref="IIdentityVolumeSource"/> that mean Identity is unreachable rather than
-        /// a bug: HTTP and I/O errors, the missing-token <see cref="InvalidOperationException"/> from
-        /// <see cref="IdentityAssignmentClient"/>, the not-configured error from <see cref="UnconfiguredIdentityVolumeSource"/>,
-        /// and an HTTP timeout
-        /// (an <see cref="OperationCanceledException"/> while <paramref name="callCancellation"/> is not cancelled).
-        /// Caller cancellation is excluded so it surfaces as CANCELLED.
-        /// </summary>
-        static bool IsIdentityTransportFailure(Exception ex, CancellationToken callCancellation) => ex switch
-        {
-            OperationCanceledException => !callCancellation.IsCancellationRequested,
-            HttpRequestException or IOException or InvalidOperationException => true,
-            _ => false
-        };
-
-        PublishedCorrectionSet RequireSet(string volumeName, string stosGroup)
-        {
-            if (string.IsNullOrWhiteSpace(volumeName) ||
-                string.IsNullOrWhiteSpace(stosGroup) ||
-                !_catalog.TryGet(volumeName, stosGroup, out PublishedCorrectionSet set))
-            {
-                throw new RpcException(new Status(
-                    StatusCode.NotFound,
-                    $"no correction set '{volumeName}' '{stosGroup}'"));
-            }
-
-            return set;
-        }
-
-        static CorrectionManifest ToManifestProto(PublishedCorrectionSet set)
-        {
-            CorrectionManifest message = new() { Provenance = ToProto(set.Provenance) };
-            message.Z.AddRange(set.Sections.Keys.OrderBy(z => z));
-            return message;
-        }
-
-        static CorrectionProvenance ToProto(CorrectionProvenanceDto dto)
-        {
-            if (dto is null)
-                return new CorrectionProvenance();
-
-            return new CorrectionProvenance
-            {
-                BuiltUtc = ToTimestamp(dto.BuiltUtc),
+                BuiltUtc = CorrectionServiceCore.ToTimestamp(dto.BuiltUtc),
                 PitchNm = dto.PitchNm,
                 KernelRadiusNm = dto.KernelRadiusNm
             };
-        }
-
-        static Timestamp ToTimestamp(DateTime value)
-        {
-            DateTime utc = value.Kind == DateTimeKind.Unspecified
-                ? DateTime.SpecifyKind(value, DateTimeKind.Utc)
-                : value.ToUniversalTime();
-            return Timestamp.FromDateTime(utc);
-        }
     }
 }

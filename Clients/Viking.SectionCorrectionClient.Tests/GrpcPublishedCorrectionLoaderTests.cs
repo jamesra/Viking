@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos;
+using Viking.SectionCorrectionServiceTypes.gRPC.V2.Protos;
 
 namespace Viking.SectionCorrectionClient.Tests
 {
@@ -49,7 +50,7 @@ namespace Viking.SectionCorrectionClient.Tests
         {
             var message = new SectionCorrection { PitchNm = pitch };
             foreach (var n in nodes)
-                message.Nodes.Add(new LatticeVector { Gx = n.Gx, Gy = n.Gy, Dx = n.Dx, Dy = n.Dy, VoteCount = n.Votes });
+                message.Nodes.Add(new LatticeNode { Gx = n.Gx, Gy = n.Gy, Offset = new Vector2 { X = n.Dx, Y = n.Dy }, Votes = n.Votes });
             return message;
         }
 
@@ -82,7 +83,7 @@ namespace Viking.SectionCorrectionClient.Tests
         {
             var invoker = new FakeInvoker(request => request switch
             {
-                ListVolumesRequest => new ListVolumesResponse
+                Empty => new ListVolumesResponse
                 {
                     Volumes =
                     {
@@ -104,7 +105,7 @@ namespace Viking.SectionCorrectionClient.Tests
         }
 
         [TestMethod]
-        public async Task Load_ResolvesFirstStosGroupAndDownloadsEveryManifestZ()
+        public async Task Load_ResolvesFirstStosGroupAndDownloadsEverySetZ()
         {
             var invoker = new FakeInvoker(request => request switch
             {
@@ -112,15 +113,10 @@ namespace Viking.SectionCorrectionClient.Tests
                 {
                     Sets =
                     {
-                        new CorrectionSetInfo { VolumeName = "RC1", StosGroup = "zebra" },
-                        new CorrectionSetInfo { VolumeName = "RC1", StosGroup = "alpha" },
-                        new CorrectionSetInfo { VolumeName = "Other", StosGroup = "nope" }
+                        Set("RC1", "zebra", 2000, 8000, 99),
+                        Set("RC1", "alpha", 2000, 8000, 10, 11),
+                        Set("Other", "nope", 2000, 8000, 98)
                     }
-                },
-                GetCorrectionManifestRequest => new CorrectionManifest
-                {
-                    Provenance = new CorrectionProvenance { PitchNm = 2000, KernelRadiusNm = 8000 },
-                    Z = { 10, 11 }
                 },
                 GetSectionCorrectionRequest r when r.Z == 10 => Section(10, 2000, (0, 0, 1, 2, 3)),
                 GetSectionCorrectionRequest r when r.Z == 11 => Section(11, 2000, (1, 1, 4, 5, 6)),
@@ -136,7 +132,7 @@ namespace Viking.SectionCorrectionClient.Tests
             // Cell centres isolate each sparse node under the inverse-distance fallback.
             Assert.AreEqual(1, set.Sections[10].Sample(0.5 * 2000, 0.5 * 2000).Dx, 1e-9);
             Assert.AreEqual(5, set.Sections[11].Sample(1.5 * 2000, 1.5 * 2000).Dy, 1e-9);
-            Assert.IsTrue(invoker.Requests.OfType<GetCorrectionManifestRequest>().Single().StosGroup == "alpha");
+            Assert.IsTrue(invoker.Requests.OfType<GetSectionCorrectionRequest>().All(r => r.Set.StosGroup == "alpha"));
         }
 
         [TestMethod]
@@ -144,11 +140,7 @@ namespace Viking.SectionCorrectionClient.Tests
         {
             var invoker = new FakeInvoker(request => request switch
             {
-                GetCorrectionManifestRequest => new CorrectionManifest
-                {
-                    Provenance = new CorrectionProvenance { PitchNm = 1000, KernelRadiusNm = 4000 },
-                    Z = { 1, 2 }
-                },
+                ListCorrectionSetsRequest => new ListCorrectionSetsResponse { Sets = { Set("RC1", "grid", 1000, 4000, 1, 2) } },
                 GetSectionCorrectionRequest r when r.Z == 1 => Section(1, 1000, (0, 0, 9, 0, 1)),
                 GetSectionCorrectionRequest => throw new RpcException(new Status(StatusCode.NotFound, "no map")),
                 _ => throw new NotSupportedException()
@@ -163,18 +155,16 @@ namespace Viking.SectionCorrectionClient.Tests
         }
 
         [TestMethod]
-        public async Task CorrectPoints_ForwardsVolumeStosAndSectionXY()
+        public async Task CorrectPoints_ForwardsSetAndSectionXY()
         {
             CorrectPointsResponse canned = new()
             {
-                StosGroup = "grid",
                 Sections =
                 {
-                    new CorrectedSection
+                    new SectionOffsets
                     {
-                        Z = 5,
-                        FoundSection = true,
-                        Points = { new CorrectedXY { X = 11, Y = 22, Dx = 1, Dy = 2, Trusted = true } }
+                        Found = true,
+                        Points = { new PointOffset { Offset = new Vector2 { X = 1, Y = 2 }, Trusted = true } }
                     }
                 }
             };
@@ -190,16 +180,26 @@ namespace Viking.SectionCorrectionClient.Tests
                 "RC1",
                 "grid",
                 [(5L, new List<(double, double)> { (10, 20) })],
-                CorrectionMode.Neighbor,
                 CancellationToken.None);
 
             CorrectPointsRequest sent = invoker.Requests.OfType<CorrectPointsRequest>().Single();
-            Assert.AreEqual("RC1", sent.VolumeName);
-            Assert.AreEqual("grid", sent.StosGroup);
-            Assert.AreEqual(CorrectionMode.Neighbor, sent.Correction);
+            Assert.AreEqual("RC1", sent.Set.VolumeName);
+            Assert.AreEqual("grid", sent.Set.StosGroup);
             Assert.AreEqual(5, sent.Sections[0].Z);
             Assert.AreEqual(10, sent.Sections[0].Points[0].X);
-            Assert.AreEqual(1, response.Sections[0].Points[0].Dx);
+            Assert.AreEqual(1, response.Sections[0].Points[0].Offset.X);
+        }
+
+        static CorrectionSet Set(string volume, string stos, double pitch, double kernel, params long[] z)
+        {
+            var set = new CorrectionSet
+            {
+                Id = new CorrectionSetId { VolumeName = volume, StosGroup = stos },
+                PitchNm = pitch,
+                KernelRadiusNm = kernel
+            };
+            set.Z.AddRange(z);
+            return set;
         }
     }
 }

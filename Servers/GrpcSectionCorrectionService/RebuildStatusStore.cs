@@ -1,8 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Reflection;
-using Google.Protobuf.WellKnownTypes;
-using Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos;
 
 namespace Viking.GrpcSectionCorrectionService
 {
@@ -11,7 +8,7 @@ namespace Viking.GrpcSectionCorrectionService
     /// </summary>
     /// <remarks>
     /// Registered as a singleton. <see cref="CorrectionRebuildRunner"/> writes it with <see cref="Begin"/> and
-    /// <see cref="Complete"/>; <see cref="SectionCorrectionsService"/> reads it with <see cref="Snapshot"/>.
+    /// <see cref="Complete"/>; <see cref="CorrectionServiceCore"/> reads it with <see cref="Snapshot"/>.
     /// All instance members are thread safe (one internal lock); nothing is persisted, so a restart clears it.
     /// </remarks>
     public sealed class RebuildStatusStore
@@ -121,29 +118,34 @@ namespace Viking.GrpcSectionCorrectionService
         }
 
         /// <summary>
-        /// Copies the current state into a new protobuf message, so callers can return it without further locking.
+        /// Copies the current state, so callers can translate it to either protocol version without further locking.
         /// </summary>
-        /// <returns>A status whose timestamps are unset until a rebuild has started or completed.</returns>
-        public RebuildStatus Snapshot()
+        /// <returns>A snapshot whose times are null until a rebuild has started or completed.</returns>
+        public RebuildSnapshot Snapshot()
         {
             lock (_gate)
             {
-                RebuildStatus status = new()
-                {
-                    InProgress = _inProgress,
-                    LastError = _lastError ?? "",
-                    ServiceVersion = ServiceVersion,
-                    CurrentVolume = _currentVolume ?? "",
-                    CurrentStep = _currentStep ?? "",
-                    GroupsDone = _groupsDone,
-                    GroupsTotal = _groupsTotal
-                };
-                if (_lastStartedUtc.HasValue)
-                    status.LastStartedUtc = Timestamp.FromDateTime(DateTime.SpecifyKind(_lastStartedUtc.Value, DateTimeKind.Utc));
-                if (_lastCompletedUtc.HasValue)
-                    status.LastCompletedUtc = Timestamp.FromDateTime(DateTime.SpecifyKind(_lastCompletedUtc.Value, DateTimeKind.Utc));
-                return status;
+                return new RebuildSnapshot(
+                    _inProgress,
+                    _lastStartedUtc is DateTime started ? DateTime.SpecifyKind(started, DateTimeKind.Utc) : null,
+                    _lastCompletedUtc is DateTime completed ? DateTime.SpecifyKind(completed, DateTimeKind.Utc) : null,
+                    _lastError ?? "",
+                    _currentVolume ?? "",
+                    _currentStep ?? "",
+                    _groupsDone,
+                    _groupsTotal);
             }
         }
     }
+
+    /// <summary>The state of the current or last rebuild pass, independent of the protocol version that reports it.</summary>
+    public sealed record RebuildSnapshot(
+        bool InProgress,
+        DateTime? LastStartedUtc,
+        DateTime? LastCompletedUtc,
+        string LastError,
+        string CurrentVolume,
+        string CurrentStep,
+        int GroupsDone,
+        int GroupsTotal);
 }
