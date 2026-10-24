@@ -14,8 +14,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// or null for any other status so the caller keeps its generic handling.
         /// </summary>
         /// <remarks>
-        /// DeadlineExceeded means the server gave up waiting for tiles it asked for, or the call outlived the
-        /// client's own limit. ResourceExhausted means the request went over a server limit, the server is
+        /// DeadlineExceeded means the server gave up waiting for tiles it asked for, or the conversation went the
+        /// client's idle limit with no tile or answer moving either way. ResourceExhausted means the request went over a server limit, the server is
         /// working on its maximum number of calls, or its image cache is full of tiles other calls are still
         /// using. In every case the request itself was fine and trying again shortly can succeed. The server's
         /// own detail is appended because it names the limit that was hit.
@@ -27,7 +27,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return error.StatusCode switch
             {
                 StatusCode.DeadlineExceeded =>
-                    "the segmentation server timed out waiting for image tiles; try again" + suffix,
+                    "the segmentation request timed out; try again" + suffix,
                 StatusCode.ResourceExhausted =>
                     "the segmentation server is busy or the request was over a limit; try again in a moment" + suffix,
                 StatusCode.FailedPrecondition when !detail.StartsWith("NO_MATCHING_MASK", StringComparison.Ordinal) =>
