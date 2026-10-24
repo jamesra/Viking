@@ -106,7 +106,6 @@ namespace Geometry
             {
                 System.IO.Path.Combine("runtimes", "win-x64", "native", "libMathNetNumericsMKL.dll"),
                 System.IO.Path.Combine("runtimes", "win-x64", "native", "libiomp5md.dll"),
-                System.IO.Path.Combine("x64", "MathNet.Numerics.MKL.dll"),
             })
             {
                 string fullPath = System.IO.Path.Combine(baseDirectory, relativePath);

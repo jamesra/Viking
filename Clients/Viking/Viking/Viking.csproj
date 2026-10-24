@@ -195,6 +195,17 @@
     </ItemGroup>
     <Message Text="Copying $(SourcePath)\Content to $(TargetDir)\Content" Importance="high" Condition="Exists('$(SourcePath)\Content')" />
     <Copy SourceFiles="@(ModuleContentToCopy)" DestinationFolder="$(TargetDir)\Content" Condition="'@(ModuleContentToCopy)' != ''" />
+    <!-- A module file whose path relative to the module folder also exists relative to the app folder is never read
+         from the module: ExtensionManager.OnAssemblyResolve loads assemblies from the app folder first, MathNet and
+         SqlServerTypes probe natives beside the app-folder copy of their assembly, and XNA content loads from the
+         app's Content folder. RemoveDuplicateDlls only matches top-level names, so subfolder copies
+         (runtimes\win-x64\native, x64, x86, Content, satellite-language folders) are removed here. -->
+    <ItemGroup>
+      <ModuleOutputFiles Include="$(TargetPath)\**\*" />
+      <ModuleFilesSharedWithApp Include="@(ModuleOutputFiles)" Condition="Exists('$(TargetDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+    </ItemGroup>
+    <Delete Files="@(ModuleFilesSharedWithApp)" ContinueOnError="true" />
+    <Message Text="Removed @(ModuleFilesSharedWithApp-&gt;Count()) $(ModuleName) files already present at the same path in the app folder" Importance="high" />
     <Message Text="Copied $(ModuleName) module files" Importance="normal" Condition="Exists('$(SourcePath)')" />
   </Target>
   <!-- Target to remove duplicate DLLs from modules -->
@@ -229,6 +240,17 @@
     <Message Text="Removed @(DuplicatePdbs-&gt;Count()) duplicate PDBs from modules" Importance="high" />
     <Delete Files="@(DuplicateConfigs)" Condition="'@(DuplicateConfigs)' != ''" ContinueOnError="true" />
     <Message Text="Removed @(DuplicateConfigs-&gt;Count()) duplicate DLL.CONFIGs from modules" Importance="high" />
+  </Target>
+  <!-- Viking runs only on Windows. Grpc.Core ships libgrpc_csharp_ext .so/.dylib for Linux and macOS, and Geometry's
+       MathNet.Numerics.MKL.Linux-x64 2.0.0 reference ships x64\libiomp5.so and x64\MathNet.Numerics.MKL.dll, a Linux
+       ELF binary despite its name (the Windows MKL is runtimes\win-x64\native\libMathNetNumericsMKL.dll). They reach
+       the app folder and every module folder; delete them so PublishVelopack.ps1 does not pack them. -->
+  <Target Name="RemoveNonWindowsNatives" AfterTargets="CopyModules">
+    <ItemGroup>
+      <NonWindowsNatives Include="$(TargetDir)**\*.so;$(TargetDir)**\*.dylib;$(TargetDir)**\x64\MathNet.Numerics.MKL.dll" />
+    </ItemGroup>
+    <Delete Files="@(NonWindowsNatives)" ContinueOnError="true" />
+    <Message Text="Removed @(NonWindowsNatives-&gt;Count()) Linux/macOS native files from $(TargetDir)" Importance="high" />
   </Target>
   <Target Name="CleanModules" AfterTargets="Clean">
     <PropertyGroup>
