@@ -338,5 +338,60 @@ namespace WebAnnotationTests.Commands
             Assert.IsTrue(canvas.Scale > 1);
             Assert.IsTrue(canvas.Width <= 1024 && canvas.Height <= 1024);
         }
+
+        [TestMethod]
+        public void GrownToInclude_KeepsThePaintWhereItWasAndPaintsBeyondTheOldEdge()
+        {
+            PaintCanvas canvas = NewCanvas();
+            Dot(canvas, 10, 20, PaintCanvas.Foreground);
+            Dot(canvas, 90, 80, PaintCanvas.Background);
+            GVector2 foreground = CenterOf(canvas, 10, 20), background = CenterOf(canvas, 90, 80);
+            var beyond = new Geometry.Rectangle(new GVector2(250, 150), new GVector2(300, 200));
+
+            PaintCanvas grown = canvas.GrownToInclude(beyond, 4096);
+
+            Assert.AreEqual(1, grown.Scale);
+            Assert.IsTrue(grown.Covers(beyond) && grown.Covers(canvas.WorldBounds));
+            Assert.AreEqual(PaintCanvas.Foreground, grown.ValueAt(foreground));
+            Assert.AreEqual(PaintCanvas.Background, grown.ValueAt(background));
+            Assert.AreEqual(1, Count(grown, PaintCanvas.Foreground));
+            Assert.AreEqual(1, Count(grown, PaintCanvas.Background));
+
+            Assert.IsTrue(grown.PaintDisc(new GVector2(275, 175), 3, PaintCanvas.Foreground) > 0, "paint past the old canvas must land");
+            Assert.AreEqual(1, Count(canvas, PaintCanvas.Foreground), "the old canvas is left unchanged");
+        }
+
+        [TestMethod]
+        public void GrownToInclude_CoarserBlocks_KeepAOnePixelLine()
+        {
+            PaintCanvas canvas = NewCanvas();
+            for (int column = 0; column < 100; column++)
+                Dot(canvas, column, 50, PaintCanvas.Foreground);
+
+            PaintCanvas grown = canvas.GrownToInclude(new Geometry.Rectangle(new GVector2(0, 0), new GVector2(4000, 4000)), 1024);
+
+            Assert.IsTrue(grown.Scale > 1);
+            for (int column = 0; column < 100; column++)
+                Assert.AreEqual(PaintCanvas.Foreground, grown.ValueAt(CenterOf(canvas, column, 50)), $"column {column}");
+        }
+
+        [TestMethod]
+        public void GrownToInclude_ReportsTheWholeRasterDirty()
+        {
+            PaintCanvas grown = NewCanvas().GrownToInclude(new Geometry.Rectangle(new GVector2(0, 0), new GVector2(200, 100)), 4096);
+
+            Assert.IsTrue(grown.TakeDirtyRegion(out int column, out int row, out int width, out int height));
+            Assert.AreEqual((0, 0, grown.Width, grown.Height), (column, row, width, height));
+        }
+
+        [TestMethod]
+        public void PaintOutsideTheCanvas_IsDropped_SoTheCommandMustGrowItFirst()
+        {
+            PaintCanvas canvas = NewCanvas();
+
+            Assert.AreEqual(0, canvas.PaintDisc(new GVector2(150, 50), 3, PaintCanvas.Foreground));
+            Assert.IsFalse(canvas.Covers(new Geometry.Rectangle(new GVector2(147, 47), new GVector2(153, 53))));
+            Assert.IsTrue(canvas.Covers(canvas.WorldBounds));
+        }
     }
 }

@@ -46,6 +46,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private PaintCanvas? canvas;
         private Texture2D? texture;
         private TextureOverlayView? overlayView;
+
+        /// <summary>The canvas <see cref="texture"/> was made for; a different <see cref="canvas"/> means it grew and the texture is rebuilt.</summary>
+        private PaintCanvas? overlayCanvas;
         private PanZoomDebouncer? submitDebouncer;
         private double radiusPixels = DefaultRadiusPixels;
 
@@ -137,6 +140,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             submitDebouncer?.Dispose();
             submitDebouncer = null;
             overlayView = null;
+            overlayCanvas = null;
             texture?.Dispose();
             texture = null;
             base.OnDeactivate();
@@ -157,6 +161,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (canvas is null || IsFinished)
                 return;
 
+            EnsureCanvasCovers(world, world);
             mode = PaintBrush.ChooseMode(canvas, world, RadiusWorld, alternate);
             painting = true;
             lastStrokeWorld = world;
@@ -170,12 +175,48 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (canvas is null || !painting)
                 return;
 
+            EnsureCanvasCovers(lastStrokeWorld, world);
             if (PaintBrush.Apply(canvas, mode, lastStrokeWorld, world, RadiusWorld) > 0)
                 paintedSinceSubmit = true;
 
             lastStrokeWorld = world;
             cursorWorld = world;
             Parent.Invalidate();
+        }
+
+        /// <summary>
+        /// Grows the canvas when the brush on the segment from <paramref name="from"/> to <paramref name="to"/> reaches past it, to the
+        /// stroke and the visible view with half the view's size spare on every side, as <see cref="PaintCanvas.ForView"/> starts it.
+        /// The canvas only covers the view the command started in, so without this paint laid after panning beyond it was dropped
+        /// without a sign and never sent: the server could not grow the object into those tiles.
+        /// </summary>
+        private void EnsureCanvasCovers(GVector2 from, GVector2 to)
+        {
+            if (canvas is null)
+                return;
+
+            double radius = RadiusWorld;
+            Geometry.Rectangle stroke = new(
+                Math.Min(from.X, to.X) - radius,
+                Math.Max(from.X, to.X) + radius,
+                Math.Min(from.Y, to.Y) - radius,
+                Math.Max(from.Y, to.Y) + radius);
+            if (canvas.Covers(stroke))
+                return;
+
+            Geometry.Rectangle view = Parent.Scene.VisibleWorldBounds;
+            Geometry.Rectangle wanted = Geometry.Rectangle.Union(
+                stroke,
+                new Geometry.Rectangle(
+                    view.Left - view.Width * 0.5,
+                    view.Right + view.Width * 0.5,
+                    view.Bottom - view.Height * 0.5,
+                    view.Top + view.Height * 0.5));
+            int maxSide = Math.Min(Parent.MaxTextureSide, MaxCanvasSide);
+            canvas = canvas.GrownToInclude(wanted, maxSide);
+            SegmentationDiag.Log(
+                $"Paint canvas grew to {canvas.Width}x{canvas.Height}@{canvas.Scale} ds={canvas.Downsample} " +
+                $"bounds=({canvas.WorldBounds.Left:F0},{canvas.WorldBounds.Bottom:F0})-({canvas.WorldBounds.Right:F0},{canvas.WorldBounds.Top:F0})");
         }
 
         /// <summary>Ends the stroke; the masks are sent after a pause if anything was painted since the last send.</summary>
@@ -211,8 +252,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
+            // Counted at the tile pyramid level the request is sent at (as SegmentAsync picks it), not the canvas's: a canvas made while
+            // zoomed out is coarser than the tiles, and counting its larger cells let a mask past this check that BuildForeground then refused.
+            int tileDownsample = SegmentationViewportSession.ResolveTileDownsample(Parent.Camera?.Downsample ?? Parent.Downsample);
             if (foreground.TryGetSetWorldBounds(out Geometry.Rectangle setBounds) &&
-                SegmentationMaskTiles.TilesSpanned(setBounds, foreground.Downsample) > SegmentationMaskTiles.MaxForegroundTiles)
+                SegmentationMaskTiles.TilesSpanned(setBounds, tileDownsample) > SegmentationMaskTiles.MaxForegroundTiles)
             {
                 SegmentationUserFeedback.NotifySkip(
                     Parent,
@@ -232,6 +276,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             // One click inside each separate piece of paint; pieces that touch or overlap are one piece and share one click.
             System.Collections.Generic.List<GVector2> clicks = canvas.InteriorPoints(PaintCanvas.Foreground);
             lastForegroundClicks = clicks;
+            // With the result line from MergeResultPolygons this shows in the log whether an answer reached past the paint.
+            SegmentationDiag.Log(
+                $"Paint submit foreground={DescribeBounds(setBounds)} pieces={clicks.Count} background={(backgroundMask is null ? "none" : "painted")} " +
+                $"canvas={canvas.Width}x{canvas.Height}@{canvas.Scale} ds={canvas.Downsample}");
             SetPromptMasks(seed, background, clicks);
             RequestSegmentationFromPrompts();
         }
@@ -249,11 +297,27 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return polygons.FirstOrDefault(polygon => lastForegroundClicks.Any(click => polygon.Covers(click))) ?? polygons[0];
         }
 
-        /// <summary>Overlapping polygons of one answer are shown, and accepted, as one (see <see cref="SegmentationResultMerge"/>).</summary>
+        /// <summary>
+        /// Overlapping polygons of one answer are shown, and accepted, as one (see <see cref="SegmentationResultMerge"/>). Logs the merged
+        /// extent next to the last "Paint submit" line. Runs on a worker thread.
+        /// </summary>
         protected override System.Collections.Generic.IReadOnlyList<Geometry.Polygon> MergeResultPolygons(
             System.Collections.Generic.IReadOnlyList<Geometry.Polygon> polygons,
-            System.Collections.Generic.IReadOnlyList<GVector2> foreground) =>
-            SegmentationResultMerge.MergeOverlapping(polygons, foreground);
+            System.Collections.Generic.IReadOnlyList<GVector2> foreground)
+        {
+            var merged = SegmentationResultMerge.MergeOverlapping(polygons, foreground);
+            Geometry.Rectangle? bounds = null;
+            foreach (Geometry.Polygon polygon in merged)
+                bounds = bounds is Geometry.Rectangle sofar ? Geometry.Rectangle.Union(sofar, polygon.BoundingBox) : polygon.BoundingBox;
+
+            SegmentationDiag.Log(
+                $"Paint result polygons={merged.Count} area={merged.Sum(polygon => polygon.Area):F0} extent={(bounds is Geometry.Rectangle b ? DescribeBounds(b) : "none")}");
+            return merged;
+        }
+
+        /// <summary>A volume-space rectangle for the diagnostic log.</summary>
+        private static string DescribeBounds(Geometry.Rectangle bounds) =>
+            $"({bounds.Left:F0},{bounds.Bottom:F0})-({bounds.Right:F0},{bounds.Top:F0})";
 
         /// <inheritdoc />
         protected override void AcceptBestPolygon()
@@ -421,17 +485,22 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #endregion
 
         #region Rendering
-        /// <summary>Copies the pixels changed since the last frame into the display texture, creating it on first use. Render thread.</summary>
+        /// <summary>
+        /// Copies the pixels changed since the last frame into the display texture, creating it on first use and again after the canvas
+        /// grew (a grown canvas reports all of itself dirty, so the new texture is filled completely). Render thread.
+        /// </summary>
         private void UploadChangedPaint(GraphicsDevice device)
         {
+            PaintCanvas? canvas = this.canvas;
             if (canvas is null)
                 return;
 
-            if (texture is null || texture.IsDisposed)
+            if (texture is null || texture.IsDisposed || !ReferenceEquals(overlayCanvas, canvas))
             {
                 texture?.Dispose();
                 texture = new Texture2D(device, canvas.Width, canvas.Height);
                 overlayView = new TextureOverlayView(texture, canvas.WorldBounds, Microsoft.Xna.Framework.Color.White);
+                overlayCanvas = canvas;
             }
 
             if (!canvas.TakeDirtyRegion(out int column, out int row, out int width, out int height))

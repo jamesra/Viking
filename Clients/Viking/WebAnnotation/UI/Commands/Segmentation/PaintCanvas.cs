@@ -68,8 +68,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// A canvas covering the area around <paramref name="view"/>: the view plus <paramref name="marginFraction"/> of its size on
-        /// every side, so the user can pan a little while painting. Full resolution unless that would be more than
-        /// <paramref name="maxRasterSide"/> pixels on a side, in which case the pixels are coarser blocks (see <see cref="MaskScalePolicy"/>).
+        /// every side, so the user can pan a little while painting; <see cref="GrownToInclude"/> extends it when a stroke goes further.
+        /// Full resolution unless that would be more than <paramref name="maxRasterSide"/> pixels on a side, in which case the pixels are
+        /// coarser blocks (see <see cref="MaskScalePolicy"/>).
         /// </summary>
         public static PaintCanvas ForView(Rectangle view, int downsample, int maxRasterSide, double marginFraction = 0.5)
         {
@@ -79,6 +80,44 @@ namespace WebAnnotation.UI.Commands.Segmentation
             long yMin = (long)Math.Floor((view.Bottom - marginY) / downsample);
             long yMax = (long)Math.Ceiling((view.Top + marginY) / downsample);
             return new PaintCanvas(MaskScalePolicy.Plan(xMin, xMax, yMin, yMax, 0, maxRasterSide), downsample);
+        }
+
+        /// <summary>True when <paramref name="area"/> (volume space) lies wholly inside <see cref="WorldBounds"/>; touching an edge counts.</summary>
+        public bool Covers(Rectangle area)
+        {
+            Rectangle bounds = WorldBounds;
+            return area.Left >= bounds.Left && area.Right <= bounds.Right && area.Bottom >= bounds.Bottom && area.Top <= bounds.Top;
+        }
+
+        /// <summary>
+        /// A new canvas at the same <see cref="Downsample"/> that covers this one and <paramref name="area"/>, holding the same paint.
+        /// Every painted pixel is carried over by the position of its centre, so at the same scale the copy is exact, and when the
+        /// larger area needs coarser blocks to stay within <paramref name="maxRasterSide"/> a block holding any paint is painted, so nothing
+        /// painted is lost. The whole new raster is reported dirty, so a display texture made for it is filled completely. This canvas is
+        /// left unchanged.
+        /// </summary>
+        public PaintCanvas GrownToInclude(Rectangle area, int maxRasterSide)
+        {
+            Rectangle union = Rectangle.Union(WorldBounds, area);
+            long xMin = (long)Math.Floor(union.Left / Downsample);
+            long xMax = (long)Math.Ceiling(union.Right / Downsample);
+            long yMin = (long)Math.Floor(union.Bottom / Downsample);
+            long yMax = (long)Math.Ceiling(union.Top / Downsample);
+            PaintCanvas grown = new(MaskScalePolicy.Plan(xMin, xMax, yMin, yMax, 0, maxRasterSide), Downsample);
+            for (int row = 0; row < Height; row++)
+            {
+                int offset = row * Width;
+                for (int column = 0; column < Width; column++)
+                {
+                    byte value = Pixels[offset + column];
+                    if (value != None && grown.TryPixelAt(PixelCenter(column, row), out int targetColumn, out int targetRow))
+                        grown.Pixels[targetRow * grown.Width + targetColumn] = value;
+                }
+            }
+
+            grown.MarkDirty(0, 0);
+            grown.MarkDirty(grown.Width - 1, grown.Height - 1);
+            return grown;
         }
 
         /// <summary>The volume position of the centre of raster pixel (<paramref name="column"/>, <paramref name="row"/>).</summary>
