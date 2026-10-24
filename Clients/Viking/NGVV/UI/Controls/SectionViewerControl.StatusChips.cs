@@ -54,6 +54,7 @@ namespace Viking.UI.Controls
             chip.VisitedLinkColor = foreColor;
             chip.ToolTipText = toolTipText ?? string.Empty;
             chip.Visible = visible;
+            RefreshStatusBarToolTip(chip);
             // Do not rearrange the StatusStrip on every text refresh — Remove/Add thrash
             // fights DirectX Present and blanks the position/section labels.
         }

@@ -97,6 +97,7 @@ namespace Viking.UI.Controls
                 _tsCorrection.Text = "Corrections: None";
                 _tsCorrection.ForeColor = System.Drawing.SystemColors.GrayText;
                 _tsCorrection.ToolTipText = "This annotation context has no correction service.";
+                RefreshStatusBarToolTip(_tsCorrection);
                 return;
             }
 
@@ -106,6 +107,7 @@ namespace Viking.UI.Controls
                 _tsCorrection.Text = "Corrections: " + ServiceErrorTracker.ErrorText;
                 _tsCorrection.ForeColor = ServiceErrorTracker.ErrorColor;
                 _tsCorrection.ToolTipText = ServiceErrorTracker.ToolTip("The correction service", error);
+                RefreshStatusBarToolTip(_tsCorrection);
                 return;
             }
 
@@ -115,6 +117,7 @@ namespace Viking.UI.Controls
             _tsCorrection.ToolTipText = on
                 ? "Section corrections are shifting the view. Click to turn them off."
                 : "Section corrections are off. Click to turn them on.";
+            RefreshStatusBarToolTip(_tsCorrection);
         }
 
         /// <summary>
