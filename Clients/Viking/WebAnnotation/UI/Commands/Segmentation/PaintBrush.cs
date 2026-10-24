@@ -19,6 +19,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>Clears pixels marked as not the object, leaving foreground paint alone.</summary>
         EraseBackground,
+
+        /// <summary>Clears both foreground and background paint under the brush.</summary>
+        EraseAll,
     }
 
     /// <summary>
@@ -38,9 +41,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// The mode a stroke starts in. Without the alternate input (Shift, or the pen's barrel button) a stroke paints foreground. With it,
-        /// a stroke started where nothing is painted under the brush paints background; started over paint it erases the type of
-        /// paint nearest the centre, and when two types are equally near, the type with more pixels under the brush.
+        /// a stroke started where nothing is painted under the brush paints background; started over paint it erases both foreground and
+        /// background paint (<see cref="PaintMode.EraseAll"/>).
         /// </summary>
+        /// <remarks>
+        /// Choosing which type of paint to erase (the nearer type to the centre, or on a tie the type with more pixels under the brush) is
+        /// commented out for now, so an erase clears both types. Restore that block to erase one type again.
+        /// </remarks>
         /// <param name="canvas">The paint so far.</param>
         /// <param name="center">Brush centre, volume space.</param>
         /// <param name="radius">Brush radius, volume units.</param>
@@ -54,25 +61,38 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (foreground == 0 && background == 0)
                 return PaintMode.Background;
 
-            if (nearestForeground < nearestBackground)
-                return PaintMode.EraseForeground;
-
-            if (nearestBackground < nearestForeground)
-                return PaintMode.EraseBackground;
-
-            return foreground >= background ? PaintMode.EraseForeground : PaintMode.EraseBackground;
+            // Temporarily disabled: erase both types of paint instead of the type nearest the centre.
+            //if (nearestForeground < nearestBackground)
+            //    return PaintMode.EraseForeground;
+            //
+            //if (nearestBackground < nearestForeground)
+            //    return PaintMode.EraseBackground;
+            //
+            //return foreground >= background ? PaintMode.EraseForeground : PaintMode.EraseBackground;
+            _ = (nearestForeground, nearestBackground);
+            return PaintMode.EraseAll;
         }
 
-        /// <summary>True for the two modes that clear paint.</summary>
-        public static bool IsErase(PaintMode mode) => mode is PaintMode.EraseForeground or PaintMode.EraseBackground;
+        /// <summary>True for the modes that clear paint.</summary>
+        public static bool IsErase(PaintMode mode) => mode is PaintMode.EraseForeground or PaintMode.EraseBackground or PaintMode.EraseAll;
 
-        /// <summary>The canvas value <paramref name="mode"/> paints, or for an erase mode the value it clears.</summary>
-        public static byte ValueOf(PaintMode mode) =>
-            mode is PaintMode.Foreground or PaintMode.EraseForeground ? PaintCanvas.Foreground : PaintCanvas.Background;
+        /// <summary>
+        /// The canvas value <paramref name="mode"/> paints, or for a single-type erase mode the value it clears.
+        /// <see cref="PaintMode.EraseAll"/> paints <see cref="PaintCanvas.None"/>.
+        /// </summary>
+        public static byte ValueOf(PaintMode mode) => mode switch
+        {
+            PaintMode.Foreground or PaintMode.EraseForeground => PaintCanvas.Foreground,
+            PaintMode.EraseAll => PaintCanvas.None,
+            _ => PaintCanvas.Background,
+        };
 
         /// <summary>Applies one stroke segment of <paramref name="mode"/> from <paramref name="from"/> to <paramref name="to"/>; returns the pixels changed.</summary>
         public static int Apply(PaintCanvas canvas, PaintMode mode, Vector2 from, Vector2 to, double radius) =>
-            canvas.PaintStroke(from, to, radius, ValueOf(mode), IsErase(mode));
+            mode == PaintMode.EraseAll
+                // Painting None over every pixel in the disc clears both foreground and background.
+                ? canvas.PaintStroke(from, to, radius, PaintCanvas.None, erase: false)
+                : canvas.PaintStroke(from, to, radius, ValueOf(mode), IsErase(mode));
 
         /// <summary>
         /// The brush radius after <paramref name="notches"/> wheel notches (positive grows), kept within
