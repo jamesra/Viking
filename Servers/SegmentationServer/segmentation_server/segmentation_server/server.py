@@ -511,6 +511,8 @@ class SegmentationServicer(SegmentationServiceServicer):
         compile_image_encoder: bool = True,
         tile_store: Optional[TileStore] = None,
         tile_source: Optional[TileSource] = None,
+        status_cache_seconds: float = 1.0,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         """
         Args:
@@ -529,6 +531,10 @@ class SegmentationServicer(SegmentationServiceServicer):
             tile_store: Uploaded tiles kept after the image cache drops them; read from the environment if omitted.
             tile_source: Reads cells of the annotation contexts this server is local to, so their clients need not
                 upload them; read from the environment if omitted (None there when Identity is not configured).
+            status_cache_seconds: How long one GetServerStatus answer is reused (default 1 s; 0 turns it off). Clients
+                poll status every second while the service picker is open, so this keeps the cost per second fixed
+                however many clients are watching.
+            clock: Monotonic clock for the status cache (inject in tests).
         """
         if model is None:
             from segmentation_server.segmentation_service import SegmentationModel as _SegmentationModel
@@ -545,6 +551,10 @@ class SegmentationServicer(SegmentationServiceServicer):
         self._exit_process = exit_process
         self._server_start_time = server_start_time if server_start_time is not None else 0.0
         self._load = RequestLoadTracker()
+        self._status_cache_seconds = max(0.0, float(status_cache_seconds))
+        self._clock = clock
+        # (time built, compile state it was built under, answer). See GetServerStatus.
+        self._status_cache: Optional[Tuple[float, Tuple[str, str], ServerStatusResponse]] = None
         self.image_cache = image_cache if image_cache is not None else ImageCache(
             max_memory_bytes=cache_max_memory_bytes,
             ttl_seconds=cache_ttl_seconds,
@@ -1208,7 +1218,32 @@ class SegmentationServicer(SegmentationServiceServicer):
         request: ServerStatusRequest,
         context: ServicerContext,
     ) -> ServerStatusResponse:
-        """Version, uptime, device, and cache occupancy for health/selection UI."""
+        """Version, uptime, device, and cache occupancy for health/selection UI.
+
+        One answer is reused for status_cache_seconds, so clients polling every second cost one cache-lock
+        snapshot per second in total. A change in compile state (the encoder finishing warm-up) is never hidden
+        behind the cache: it is checked on every call, and a stale answer is rebuilt at once.
+        """
+        compile_status = getattr(self.model, "compile_status", "off")
+        compile_status = compile_status if isinstance(compile_status, str) else "off"
+        encoder_generation = self._current_encoder_generation() or ""
+        state = (compile_status, encoder_generation)
+        now = self._clock()
+        cached = self._status_cache
+        if (
+            cached is not None
+            and self._status_cache_seconds > 0
+            and cached[1] == state
+            and 0.0 <= now - cached[0] < self._status_cache_seconds
+        ):
+            return cached[2]
+        response = await self._build_server_status(compile_status, encoder_generation)
+        if self._status_cache_seconds > 0:
+            self._status_cache = (now, state, response)
+        return response
+
+    async def _build_server_status(self, compile_status: str, encoder_generation: str) -> ServerStatusResponse:
+        """A fresh GetServerStatus answer."""
         try:
             version = importlib.metadata.version("segmentation_server")
         except importlib.metadata.PackageNotFoundError:
@@ -1216,13 +1251,11 @@ class SegmentationServicer(SegmentationServiceServicer):
         uptime_seconds = time.monotonic() - self._server_start_time if self._server_start_time else 0.0
         cache_stats = await self.image_cache.get_stats()
         device = getattr(self.model, "device", "unknown")
-        compile_status = getattr(self.model, "compile_status", "off")
-        encoder_generation = self._current_encoder_generation() or ""
         in_flight, recent_latency_ms = self._load.snapshot()
         return ServerStatusResponse(
             version=version,
             encoder_generation=encoder_generation,
-            compile_status=compile_status if isinstance(compile_status, str) else "off",
+            compile_status=compile_status,
             uptime_seconds=uptime_seconds,
             message=(
                 f"device={device}; "
