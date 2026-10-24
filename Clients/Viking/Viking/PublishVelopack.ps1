@@ -7,7 +7,8 @@
 
     1. Installs the Velopack CLI (vpk) if it is missing.
     2. Builds Viking.csproj for net48 into bin\<Configuration>\net48.
-    3. Pre-signs every .exe/.dll in that output with the ECC HSM cert (YubiKey PIN once per batch).
+    3. Pre-signs every .exe/.dll in that output that has no valid embedded signature yet with the ECC HSM cert
+       (YubiKey PIN once per batch). Microsoft and other vendor binaries keep their publisher's signature.
     4. Looks for a previous Viking-*-full.nupkg under .\releases, or downloads one from ReleaseUrl,
        so vpk can emit a delta package.
     5. Runs vpk pack into .\releases (Viking-win-Setup.exe, .nupkg, RELEASES).
@@ -623,10 +624,19 @@ if ($filesToSign.Count -eq 0) {
     
     # One signtool invocation for all files (via cmd.exe) so PIN is entered once.
     $filePaths = @($filesToSign | ForEach-Object { $_.FullName })
-    $unsignedFiles = $filePaths
+
+    # Skip files that already verify as signed. signtool sign replaces an existing signature, so signing them put the
+    # University certificate on Microsoft and other vendor binaries, but only when the first batch succeeded (retries
+    # already skipped signed files), so releases differed. Our own files left unchanged since the last publish keep
+    # their signature too and stay byte-identical, which keeps them out of the Velopack delta.
+    Write-Host "Checking which of $($filePaths.Count) files are already signed..." -ForegroundColor Gray
+    $unsignedFiles = @(Get-UnsignedFiles -FilePaths $filePaths)
+    $alreadySignedCount = $filePaths.Count - $unsignedFiles.Count
+    Write-Host "Keeping the existing signature on $alreadySignedCount file(s); signing $($unsignedFiles.Count) file(s)" -ForegroundColor Gray
+    $signCount = $unsignedFiles.Count
     $maxAttempts = 10
     $attempt = 1
-    $allSigned = $false
+    $allSigned = ($unsignedFiles.Count -eq 0)
     
     while ($attempt -le $maxAttempts -and $unsignedFiles.Count -gt 0) {
         $checkUnsigned = ($attempt -eq 1)
@@ -650,7 +660,7 @@ if ($filesToSign.Count -eq 0) {
     }
     
     if ($allSigned) {
-        Write-Host "Successfully pre-signed $($filesToSign.Count) files!" -ForegroundColor Green
+        Write-Host "Successfully pre-signed $signCount file(s); $alreadySignedCount already signed" -ForegroundColor Green
         if ($attempt -gt 1) {
             Write-Host "(Completed after $attempt attempt(s))" -ForegroundColor Gray
         }

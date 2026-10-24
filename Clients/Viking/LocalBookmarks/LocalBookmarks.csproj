@@ -78,13 +78,10 @@
     <Warning Text="MonoGame Content Builder (MGCB.exe) not found at '$(MGCBPath)'. Content will not be recompiled. Install the MonoGame SDK or set the MGCBPath property." />
   </Target>
 
-  <!-- Include compiled MonoGame content -->
-  <ItemGroup>
-	  <Content Include="$(TargetDir)\Content\*.xnb">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		  <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-	  </Content>
-  </ItemGroup>
+  <!-- CompileContent writes the .xnb files straight into $(TargetDir)\Content, PostBuild copies that folder to the
+       module, and Viking.csproj CopySingleModule copies it into the app's Content folder. Do not also list
+       $(TargetDir)\Content\*.xnb as Content: the folder is inside this project, so MSBuild copies those items to
+       bin\<Configuration>\<TargetFramework>\Content under the output folder, and that nested copy reached the Viking package. -->
 
   <!-- Hide bin and obj folders from Visual Studio -->
   <ItemGroup>
