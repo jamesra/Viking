@@ -249,13 +249,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Fetches GetServerStatus and installs the advertised profile when it is still for the current endpoint.
         /// </summary>
+        /// <summary>
+        /// How long the status query a request waits on (for the model id) may take. A busy server answers slowly, and giving
+        /// up after a few seconds made requests start without knowing the model.
+        /// </summary>
+        private const int StatusDeadlineSeconds = 60;
+
         private static async Task RefreshModelCapabilitiesAsync(
             SegmentationServiceTypes.SegmentationService.SegmentationServiceClient client,
             string endpoint)
         {
             try
             {
-                CallOptions options = new(deadline: DateTime.UtcNow.AddSeconds(5));
+                CallOptions options = new(deadline: DateTime.UtcNow.AddSeconds(StatusDeadlineSeconds));
                 ServerStatusResponse status = await client
                     .GetServerStatusAsync(new ServerStatusRequest(), options)
                     .ResponseAsync.ConfigureAwait(false);
