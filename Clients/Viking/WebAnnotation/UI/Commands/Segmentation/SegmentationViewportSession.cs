@@ -80,6 +80,23 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         private CancellationTokenSource renderCancellationTokenSource = new();
         private readonly object renderCancellationGate = new();
+
+        /// <summary>
+        /// Cancels the tile uploads this session started, and only <see cref="CancelPendingWork"/> cancels it. A caller that stops
+        /// waiting for a tile (a superseded request, a re-planned prefetch) does not stop its upload: the server encodes a tile
+        /// it has started receiving whatever the client does, so cancelling only made the next request send it again.
+        /// </summary>
+        private CancellationTokenSource tileUploadLifetime = new();
+
+        /// <summary>The token tile uploads run under; see <see cref="tileUploadLifetime"/>.</summary>
+        private CancellationToken TileUploadLifetimeToken
+        {
+            get
+            {
+                lock (renderCancellationGate)
+                    return tileUploadLifetime.Token;
+            }
+        }
         private CancellationTokenSource uploadCancellationTokenSource;
         private readonly TileUploadCache uploadedTileKeys = new();
 
@@ -523,13 +540,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public void CancelPendingWork()
         {
             CancellationTokenSource cancelled;
+            CancellationTokenSource uploads;
             lock (renderCancellationGate)
             {
                 cancelled = renderCancellationTokenSource;
                 renderCancellationTokenSource = new CancellationTokenSource();
+                uploads = tileUploadLifetime;
+                tileUploadLifetime = new CancellationTokenSource();
             }
 
             cancelled.Cancel();
+            uploads.Cancel();
             uploadCancellationTokenSource?.Cancel();
         }
 
