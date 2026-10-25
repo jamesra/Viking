@@ -22,7 +22,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// Input is a <see cref="RasterMask"/> (a rasterized polygon comes from <see cref="RasterMask.FromRings"/>). Output is
     /// a <see cref="RasterMask"/> too, delivered once: the edited mask when the user accepts (Enter or the pen's check
     /// button), or null when they cancel (Escape, the pen's X, or any other way the command is deactivated).
-    /// Wheel up grows, wheel down shrinks; Shift takes quarter steps; Ctrl+wheel zooms the view as usual.
+    /// Wheel up grows, wheel down shrinks; Shift takes quarter steps; Ctrl+wheel zooms the view as usual. Holding the left
+    /// button and moving the mouse moves the whole mask; a double-click on the mask accepts it, like Enter.
     /// The edit is one number, the radius, applied to a signed distance field computed at activation
     /// (<see cref="SegmentationMaskEdit"/>), so a tick re-thresholds the bitmap and re-uploads one texture; there is no
     /// polygon rebuild. All members are used on the UI thread.
@@ -46,6 +47,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private double maxRadius;
         private double radiusPixels;
         private bool finished;
+
+        /// <summary>Where the user has dragged the mask, in whole mosaic pixels from where it came in (multiples of the raster scale).</summary>
+        private int offsetColumns;
+        private int offsetRows;
+        private bool dragging;
+        private Geometry.Vector2 dragStartWorld;
+        private int dragStartColumns;
+        private int dragStartRows;
 
         /// <summary>Colour and opacity of the mask overlay (straight, not premultiplied, alpha).</summary>
         public static readonly Microsoft.Xna.Framework.Color OverlayColor = new(255, 190, 0, 120);
@@ -73,13 +82,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>Current edit in mask pixels: positive grows the input, negative shrinks it, zero is the input.</summary>
         public double RadiusPixels => radiusPixels;
 
-        /// <summary>The input mask edited by <see cref="RadiusPixels"/>.</summary>
+        /// <summary>The input mask moved by the user's drag and edited by <see cref="RadiusPixels"/>.</summary>
         public RasterMask CurrentMask()
         {
             byte[] pixels = new byte[editedPixels.Length];
             Array.Copy(editedPixels, pixels, pixels.Length);
-            return input.WithPixels(pixels);
+            return Placed().WithPixels(pixels);
         }
+
+        /// <summary>The input's placement after the drag; its pixels are the input's, not the edit.</summary>
+        private RasterMask Placed() => input.Translated(offsetColumns, offsetRows);
 
         #region Help Strings
         /// <summary>Help lines shown while the command is active.</summary>
@@ -87,6 +99,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         [
             "Scroll wheel: Grow (up) or shrink (down) the mask",
             "Shift + scroll wheel: Fine steps",
+            "Hold Left click + Drag: Move the mask",
+            "Double-click the mask: Accept the mask",
             "Ctrl + scroll wheel: Zoom",
             "Enter or the green check: Accept the mask",
             "Escape or the red X: Cancel",
@@ -165,9 +179,63 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     Accept();
                     return;
                 }
+
+                dragging = true;
+                dragStartWorld = Parent.ScreenToWorld(e.X, e.Y);
+                dragStartColumns = offsetColumns;
+                dragStartRows = offsetRows;
+                return;
             }
 
             base.OnMouseDown(sender, e);
+        }
+
+        /// <inheritdoc />
+        protected override void OnMouseMove(object sender, MouseEventArgs e)
+        {
+            if (dragging)
+            {
+                Geometry.Vector2 now = Parent.ScreenToWorld(e.X, e.Y);
+                double worldPerBlock = input.WorldPerPixel;
+                int scale = input.Scale;
+                // Whole raster blocks, so the mask stays on the mosaic pixel grid the server's tiles are cut from.
+                int columns = dragStartColumns + (int)Math.Round((now.X - dragStartWorld.X) / worldPerBlock) * scale;
+                int rows = dragStartRows + (int)Math.Round((now.Y - dragStartWorld.Y) / worldPerBlock) * scale;
+                if (columns != offsetColumns || rows != offsetRows)
+                {
+                    offsetColumns = columns;
+                    offsetRows = rows;
+                    if (overlayView is not null)
+                        overlayView.BoundingRect = Placed().WorldBounds;
+                    Parent.Invalidate();
+                }
+            }
+
+            base.OnMouseMove(sender, e);
+        }
+
+        /// <inheritdoc />
+        protected override void OnMouseUp(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+                dragging = false;
+
+            base.OnMouseUp(sender, e);
+        }
+
+        /// <inheritdoc />
+        protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left &&
+                signedDistance is not null &&
+                CurrentMask().Contains(Parent.ScreenToWorld(e.X, e.Y)))
+            {
+                dragging = false;
+                Accept();
+                return;
+            }
+
+            base.OnMouseDoubleClick(sender, e);
         }
 
         /// <inheritdoc />
@@ -212,7 +280,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 texture?.Dispose();
                 texture = new Texture2D(device, input.Width, input.Height);
-                overlayView = new TextureOverlayView(texture, input.WorldBounds, Microsoft.Xna.Framework.Color.White);
+                overlayView = new TextureOverlayView(texture, Placed().WorldBounds, Microsoft.Xna.Framework.Color.White);
             }
 
             for (int i = 0; i < editedPixels.Length; i++)

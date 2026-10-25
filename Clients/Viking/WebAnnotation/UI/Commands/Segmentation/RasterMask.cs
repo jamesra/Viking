@@ -90,6 +90,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return column >= 0 && row >= 0 && column < Width && row < Height && Pixels[row * Width + column] != 0;
         }
 
+        /// <summary>
+        /// This mask moved by whole mosaic pixels: <paramref name="columns"/> to the right and <paramref name="rows"/> up in
+        /// volume space. Shares the pixels, which are not modified. Move by a multiple of <see cref="Scale"/> to keep every
+        /// block whole.
+        /// </summary>
+        public RasterMask Translated(int columns, int rows) => new(Downsample, XMin + columns, YMax + rows, Width, Height, Pixels, Scale);
+
         /// <summary>This mask's pixels replaced by <paramref name="pixels"/>, same placement.</summary>
         public RasterMask WithPixels(byte[] pixels) => new(Downsample, XMin, YMax, Width, Height, pixels, Scale);
 
