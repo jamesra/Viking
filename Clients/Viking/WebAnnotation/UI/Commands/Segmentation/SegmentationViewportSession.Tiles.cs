@@ -183,6 +183,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return false;
         }
 
+        /// <summary>
+        /// How long one UploadTile may take. A busy server (sharing its GPU, or growing a large mask) has held an upload in its
+        /// queue for about 30 s before handling it, and a timed-out upload fails the whole request that needed the tile.
+        /// </summary>
+        private const int UploadTileDeadlineSeconds = 120;
+
         /// <summary>One render, encode and UploadTile of <paramref name="cell"/>; false when the capture failed.</summary>
         private async Task<bool> CaptureAndUploadTileAsync(
             TileSignature signature,
@@ -217,7 +223,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 Width = width,
                 Height = height
             };
-            CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(30), cancellationToken: token);
+            CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(UploadTileDeadlineSeconds), cancellationToken: token);
             SegmentationDiag.Log(
                 $"UploadTile send row={cell.Row} col={cell.Col} ds={signature.Downsample} " +
                 $"declared={upload.Width}x{upload.Height} encodedBytes={png.Length}");
