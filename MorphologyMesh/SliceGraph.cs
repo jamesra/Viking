@@ -633,7 +633,13 @@ namespace MorphologyMesh
                         continue;
                     }
 
-                    Debug.Assert(output.BoundingBox.Area > 0);
+                    // An open polyline along an axis has a zero-area bounding box and is still a valid ribbon
+                    // centerline, so only closed polygons that collapsed (e.g. in Simplify) are dropped.
+                    if (output is Polygon && !(output.BoundingBox.Area > 0))
+                    {
+                        Trace.WriteLine($"Skipping degenerate polygon for location #{((MorphologyNode)task.AsyncState).ID}: zero-area bounding box");
+                        continue;
+                    }
 
                     //Rounding exposed a rare bug on 82682, 82680 RPC1 where the inner hole was exactly over the exterior ring of the opposite polygon
                     if (output is Polygon poly)
