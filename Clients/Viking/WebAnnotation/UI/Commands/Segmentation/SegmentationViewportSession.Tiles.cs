@@ -104,6 +104,53 @@ namespace WebAnnotation.UI.Commands.Segmentation
         internal static void ForgetPrefetchedTiles() => prefetchedToServer.Clear();
 
         /// <summary>
+        /// Requests, in any session, uploading tiles they are waiting for: their prompt tiles or the tiles the server asked for.
+        /// While it is above zero the prefetch starts no new tile, so the server's GPU encodes the tiles a request needs first.
+        /// </summary>
+        private static int requestTileUploads;
+
+        /// <summary>How often a paused prefetch looks again whether requests still wait on tiles.</summary>
+        private const int PrefetchYieldPollMilliseconds = 100;
+
+        /// <summary>
+        /// Returns once no request is uploading tiles it waits for; the time spent waiting, in milliseconds.
+        /// </summary>
+        private static async Task<long> WaitWhileRequestsNeedTilesAsync(CancellationToken token)
+        {
+            if (Volatile.Read(ref requestTileUploads) == 0)
+                return 0;
+
+            Stopwatch paused = Stopwatch.StartNew();
+            while (Volatile.Read(ref requestTileUploads) > 0)
+                await Task.Delay(PrefetchYieldPollMilliseconds, token).ConfigureAwait(false);
+
+            return paused.ElapsedMilliseconds;
+        }
+
+        /// <summary>
+        /// Waits for <paramref name="upload"/> until <paramref name="token"/> is cancelled, without cancelling the upload: it
+        /// runs under the session's upload lifetime, so a caller that gives up leaves it to finish for the next one.
+        /// </summary>
+        internal static async Task<bool> WaitForUploadAsync(Task<bool> upload, CancellationToken token)
+        {
+            if (!token.CanBeCanceled || upload.IsCompleted)
+                return await upload.ConfigureAwait(false);
+
+            TaskCompletionSource<bool> cancelled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            using (token.Register(() => cancelled.TrySetResult(true)))
+            {
+                if (await Task.WhenAny(upload, cancelled.Task).ConfigureAwait(false) != upload)
+                {
+                    // Nobody may await it again; observe its fault so it is not reported as unobserved.
+                    _ = upload.ContinueWith(task => _ = task.Exception, TaskContinuationOptions.OnlyOnFaulted);
+                    throw new OperationCanceledException(token);
+                }
+            }
+
+            return await upload.ConfigureAwait(false);
+        }
+
+        /// <summary>
         /// Renders and uploads cells that this session has not yet had accepted.
         /// Returns false when every needed cell failed to capture.
         /// </summary>
@@ -118,14 +165,23 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             bool anyReady = false;
             HashSet<(int Row, int Col)> seen = [];
-            foreach (TileCell cell in cells)
+            // Every caller is a request waiting for these tiles; the prefetch holds back while it does.
+            Interlocked.Increment(ref requestTileUploads);
+            try
             {
-                token.ThrowIfCancellationRequested();
-                if (!seen.Add((cell.Row, cell.Col)))
-                    continue;
+                foreach (TileCell cell in cells)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (!seen.Add((cell.Row, cell.Col)))
+                        continue;
 
-                if (await UploadTileAsync(signature, cell, grayscale, token).ConfigureAwait(false))
-                    anyReady = true;
+                    if (await UploadTileAsync(signature, cell, grayscale, token).ConfigureAwait(false))
+                        anyReady = true;
+                }
+            }
+            finally
+            {
+                Interlocked.Decrement(ref requestTileUploads);
             }
 
             return anyReady;
@@ -133,9 +189,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// True once the server holds <paramref name="cell"/>: already accepted in this session, or uploaded now.
-        /// Joins an upload of the same cell that is already running; if that one fails or is cancelled while this
-        /// caller still wants the cell, this caller tries once more itself. An <see cref="RpcException"/> from
-        /// UploadTile is not caught.
+        /// Joins an upload of the same cell that is already running; if that one fails or is aborted while this
+        /// caller still wants the cell, this caller tries once more itself. <paramref name="token"/> only stops this caller
+        /// waiting: the upload runs under <see cref="TileUploadLifetimeToken"/> and is left to finish. An
+        /// <see cref="RpcException"/> from UploadTile is not caught.
         /// </summary>
         private async Task<bool> UploadTileAsync(TileSignature signature, TileCell cell, bool grayscale, CancellationToken token)
         {
@@ -151,7 +208,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 {
                     if (!tileUploadsInFlight.TryGetValue(key, out upload))
                     {
-                        upload = CaptureAndUploadTileAsync(signature, cell, key, grayscale, token);
+                        upload = TrackTileUploadAsync(key, CaptureAndUploadTileAsync(signature, cell, key, grayscale, TileUploadLifetimeToken));
                         tileUploadsInFlight[key] = upload;
                         started = true;
                     }
@@ -159,20 +216,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
                 try
                 {
-                    if (await upload.ConfigureAwait(false))
+                    if (await WaitForUploadAsync(upload, token).ConfigureAwait(false))
                         return true;
                 }
-                catch (OperationCanceledException) when (!started && !token.IsCancellationRequested)
+                catch (OperationCanceledException) when (!token.IsCancellationRequested)
                 {
-                    // The caller that started the upload gave up on it; this one still wants the cell.
-                }
-                finally
-                {
-                    if (started)
-                    {
-                        lock (tileUploadsGate)
-                            tileUploadsInFlight.Remove(key);
-                    }
+                    // The session aborted the upload (CancelPendingWork) while this caller still wants the cell.
                 }
 
                 token.ThrowIfCancellationRequested();
@@ -188,6 +237,21 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// queue for about 30 s before handling it, and a timed-out upload fails the whole request that needed the tile.
         /// </summary>
         private const int UploadTileDeadlineSeconds = 120;
+
+        /// <summary>Removes <paramref name="key"/> from <see cref="tileUploadsInFlight"/> when <paramref name="upload"/> ends.</summary>
+        private async Task<bool> TrackTileUploadAsync(string key, Task<bool> upload)
+        {
+            try
+            {
+                return await upload.ConfigureAwait(false);
+            }
+            finally
+            {
+                // The entry was added under this lock right after this task was made, so taking it here cannot run first.
+                lock (tileUploadsGate)
+                    tileUploadsInFlight.Remove(key);
+            }
+        }
 
         /// <summary>One render, encode and UploadTile of <paramref name="cell"/>; false when the capture failed.</summary>
         private async Task<bool> CaptureAndUploadTileAsync(
@@ -265,6 +329,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Stopwatch timer = Stopwatch.StartNew();
             int uploaded = 0;
             int skipped = 0;
+            long pausedMs = 0;
             try
             {
                 (int downsample, TileSignature signature, bool grayscale) = await ReadPrefetchSignatureAsync().ConfigureAwait(false);
@@ -287,7 +352,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
 
                 SegmentationDiag.Log($"Prefetch start regions={regions.Count} tiles={cells.Count} ds={downsample}");
-                (uploaded, skipped) = await UploadPrefetchCellsAsync(signature, cells, grayscale, token).ConfigureAwait(false);
+                (uploaded, skipped, pausedMs) = await UploadPrefetchCellsAsync(signature, cells, grayscale, token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -297,7 +362,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 SegmentationDiag.Log($"Prefetch stopped: UploadTile RPC {rpcEx.StatusCode}");
             }
 
-            SegmentationDiag.Log($"Prefetch done uploaded={uploaded} alreadySent={skipped} ms={timer.ElapsedMilliseconds}");
+            SegmentationDiag.Log($"Prefetch done uploaded={uploaded} alreadySent={skipped} pausedForRequests={pausedMs}ms ms={timer.ElapsedMilliseconds}");
         }
 
         /// <summary>
@@ -313,6 +378,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Stopwatch timer = Stopwatch.StartNew();
             int uploaded = 0;
             int skipped = 0;
+            long pausedMs = 0;
             try
             {
                 (int downsample, TileSignature signature, bool grayscale) = await ReadPrefetchSignatureAsync().ConfigureAwait(false);
@@ -320,7 +386,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 List<TileCell> cells = [.. mask.TilesTouched(downsample).OrderBy(cell => Geometry.Vector2.DistanceSquared(
                     new Geometry.Vector2((cell.Col + 0.5) * cellWorld, (cell.Row + 0.5) * cellWorld), nearest))];
                 SegmentationDiag.Log($"Prefetch mask tiles={cells.Count} ds={downsample}");
-                (uploaded, skipped) = await UploadPrefetchCellsAsync(signature, cells, grayscale, token).ConfigureAwait(false);
+                (uploaded, skipped, pausedMs) = await UploadPrefetchCellsAsync(signature, cells, grayscale, token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -330,7 +396,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 SegmentationDiag.Log($"Prefetch mask stopped: UploadTile RPC {rpcEx.StatusCode}");
             }
 
-            SegmentationDiag.Log($"Prefetch mask done uploaded={uploaded} alreadySent={skipped} ms={timer.ElapsedMilliseconds}");
+            SegmentationDiag.Log($"Prefetch mask done uploaded={uploaded} alreadySent={skipped} pausedForRequests={pausedMs}ms ms={timer.ElapsedMilliseconds}");
         }
 
         /// <summary>The tile level, signature and colour mode a request sent now would use, read on the UI thread.</summary>
@@ -341,12 +407,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return (level, CurrentTileSignature(level), parent.CurrentChannelset.Length == 1);
             }).Task;
 
-        /// <summary>Uploads <paramref name="cells"/> one at a time, skipping those already sent; returns (uploaded, skipped).</summary>
-        private async Task<(int Uploaded, int Skipped)> UploadPrefetchCellsAsync(
+        /// <summary>
+        /// Uploads <paramref name="cells"/> one at a time, skipping those already sent and holding back while a request uploads
+        /// tiles it waits for. <paramref name="token"/> stops the loop; an upload already started is left to finish.
+        /// Returns (uploaded, skipped, milliseconds paused for requests).
+        /// </summary>
+        private async Task<(int Uploaded, int Skipped, long PausedMs)> UploadPrefetchCellsAsync(
             TileSignature signature, IReadOnlyList<TileCell> cells, bool grayscale, CancellationToken token)
         {
             int uploaded = 0;
             int skipped = 0;
+            long pausedMs = 0;
             foreach (TileCell cell in cells)
             {
                 token.ThrowIfCancellationRequested();
@@ -357,11 +428,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     continue;
                 }
 
+                pausedMs += await WaitWhileRequestsNeedTilesAsync(token).ConfigureAwait(false);
                 if (await UploadTileAsync(signature, cell, grayscale, token).ConfigureAwait(false))
                     uploaded++;
             }
 
-            return (uploaded, skipped);
+            return (uploaded, skipped, pausedMs);
         }
 
         /// <summary>

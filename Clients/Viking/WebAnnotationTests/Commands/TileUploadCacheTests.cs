@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using WebAnnotation.UI.Commands.Segmentation;
@@ -9,6 +10,33 @@ namespace WebAnnotationTests.Commands
     [TestClass]
     public class TileUploadCacheTests
     {
+        [TestMethod]
+        public async Task GivingUpOnAnUploadLeavesItRunning()
+        {
+            TaskCompletionSource<bool> upload = new();
+            using CancellationTokenSource waiter = new();
+            Task<bool> wait = SegmentationViewportSession.WaitForUploadAsync(upload.Task, waiter.Token);
+
+            waiter.Cancel();
+            await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => wait);
+            Assert.IsFalse(upload.Task.IsCompleted);
+
+            // The next caller that wants the tile still gets the upload's answer.
+            upload.SetResult(true);
+            Assert.IsTrue(await SegmentationViewportSession.WaitForUploadAsync(upload.Task, CancellationToken.None));
+        }
+
+        [TestMethod]
+        public async Task WaitingForAnUploadReturnsItsResultAndFault()
+        {
+            Assert.IsFalse(await SegmentationViewportSession.WaitForUploadAsync(Task.FromResult(false), new CancellationTokenSource().Token));
+
+            TaskCompletionSource<bool> failing = new();
+            Task<bool> wait = SegmentationViewportSession.WaitForUploadAsync(failing.Task, new CancellationTokenSource().Token);
+            failing.SetException(new InvalidOperationException("upload failed"));
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => wait);
+        }
+
         [TestMethod]
         public void AddRemoveClearAndCountBehaveLikeASet()
         {
