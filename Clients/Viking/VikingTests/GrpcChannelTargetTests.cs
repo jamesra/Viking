@@ -77,14 +77,15 @@ namespace VikingTests
         }
 
         [TestMethod]
-        public void ChannelOptions_KeepTheConnectionAliveAndReconnectQuietly()
+        public void ChannelOptions_PingOnlyDuringCallsAndReconnectQuietly()
         {
             var options = GrpcChannelManager.CreateChannelOptions().ToDictionary(o => o.Name, o => o.IntValue);
 
             // Faster than the server's 5 minute minimum ping interval and it drops the connection (GOAWAY too_many_pings).
             Assert.IsTrue(options["grpc.keepalive_time_ms"] > 5 * 60 * 1000);
             Assert.AreEqual(GrpcChannelManager.KeepaliveTimeMs, options["grpc.keepalive_time_ms"]);
-            Assert.AreEqual(1, options["grpc.keepalive_permit_without_calls"]);
+            // Pinging with no call open would break the server's 2 hour idle ping limit and get the connection closed.
+            Assert.AreEqual(0, options["grpc.keepalive_permit_without_calls"]);
             Assert.AreEqual(15_000, options["grpc.max_reconnect_backoff_ms"]);
             Assert.AreEqual(1, options["grpc.use_local_subchannel_pool"]);
             Assert.AreEqual(GrpcChannelManager.MaxMessageBytes, options[ChannelOptions.MaxReceiveMessageLength]);

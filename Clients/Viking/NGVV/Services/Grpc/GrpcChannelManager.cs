@@ -24,9 +24,11 @@ namespace Viking.Services.Grpc
         internal const int KeepaliveTimeMs = 6 * 60 * 1000;
 
         /// <summary>
-        /// Native channel arguments for a long-lived, high-throughput channel. Keepalive pings keep an idle connection from being
-        /// dropped by a proxy or NAT and notice a dead one within about six and a half minutes (<see cref="KeepaliveTimeMs"/> plus
-        /// the 20 s ping timeout), without pinging faster than the server allows; the reconnect backoff bounds how long a dropped
+        /// Native channel arguments for a long-lived, high-throughput channel. Keepalive pings run only while a call is open: they
+        /// notice a dead connection under a long call within about six and a half minutes (<see cref="KeepaliveTimeMs"/> plus the
+        /// 20 s ping timeout), without pinging faster than the server allows. An idle connection is not pinged, because the server
+        /// allows pings with no call open only every 2 hours (gRPC's default) and closes the connection after two faster ones; an
+        /// idle connection that a proxy or the server drops is simply reconnected by the next call. The reconnect backoff bounds how long a dropped
         /// connection waits before the native layer retries, so recovery is quiet. A local subchannel pool gives this channel its
         /// own connection instead of sharing one process-wide, which is the Grpc.Core analogue of Grpc.Net.Client's
         /// EnableMultipleHttp2Connections (concurrent calls are not all capped by one HTTP/2 connection's stream limit).
@@ -35,7 +37,7 @@ namespace Viking.Services.Grpc
         [
             new ChannelOption("grpc.keepalive_time_ms", KeepaliveTimeMs),
             new ChannelOption("grpc.keepalive_timeout_ms", 20_000),
-            new ChannelOption("grpc.keepalive_permit_without_calls", 1),
+            new ChannelOption("grpc.keepalive_permit_without_calls", 0),
             new ChannelOption("grpc.http2.max_pings_without_data", 0),
             new ChannelOption("grpc.initial_reconnect_backoff_ms", 1_000),
             new ChannelOption("grpc.min_reconnect_backoff_ms", 1_000),
