@@ -301,6 +301,34 @@ namespace WebAnnotationTests
         }
 
         [TestMethod]
+        public void ParseLocations_CircleWithoutShapes_PairsTheMosaicRadiusWithTheMosaicCentre()
+        {
+            // Radius is the mosaic radius, so the box is built around X, Y in mosaic space; the volume centre is not used with it.
+            const string json = """
+                {
+                  "value": [
+                    {
+                      "ID": 8, "ParentID": 10, "Z": 3, "TypeCode": 1,
+                      "X": 1000, "Y": 2000, "VolumeX": 100, "VolumeY": 200, "Radius": 4,
+                      "LastModified": "2026-10-09T18:32:00Z", "Username": "bob",
+                      "Parent": { "ID": 10, "Label": "c1", "Type": { "Name": "GAC", "Code": "G" } }
+                    }
+                  ]
+                }
+                """;
+
+            var entries = ReviewChangeODataQuery.ParseLocations(json);
+            Assert.AreEqual(1, entries.Count);
+            ReviewChangeEntry entry = entries[0];
+
+            Assert.AreEqual(ReviewChangeCoordinateSpace.Mosaic, entry.CoordinateSpace);
+            Assert.AreEqual(996, entry.MinX, 0.001);
+            Assert.AreEqual(1004, entry.MaxX, 0.001);
+            Assert.AreEqual(1996, entry.MinY, 0.001);
+            Assert.AreEqual(2004, entry.MaxY, 0.001);
+        }
+
+        [TestMethod]
         public void CardCrop_WorldToImage_MatchesMaskAndEmMapping()
         {
             ReviewChangeCardCrop.GetPaddedBounds(90, 190, 110, 210, out double left, out double bottom, out double spanX, out double spanY);

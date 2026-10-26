@@ -2220,8 +2220,9 @@ break;
                     new ResizeCircleCommand.OnCommandSuccess((double radius) => {
 
                                     newLocation.TypeCode = LocationType.CIRCLE;
-                                    LocationActions.UpdateCircleLocationCallback(newLocation, worldPos, sectionPos,
-                                        radius);
+                                    // The user sized the circle in volume space; the mosaic circle is mapped from it.
+                                    LocationActions.UpdateCircleLocationCallback(newLocation,
+                                        Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number), worldPos, radius);
                                     newLocation.Width = null;
 
                                     if(SaveToStore) { SaveLocationsWithMessageBoxOnError(); } })});

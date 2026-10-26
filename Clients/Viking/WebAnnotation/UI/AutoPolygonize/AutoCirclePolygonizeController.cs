@@ -1277,10 +1277,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                     Stopwatch proposalTimer = Stopwatch.StartNew();
                     if (!CircleSegmentationPrompts.TryCreateStartingPrompt(
-                            CircleSegmentationPrompts.ToVolumePoints(
-                                CircleSegmentationPrompts.CreateMosaicRadiusPoints(new Circle(circle.Position, circle.Radius)),
-                                transform),
-                            out CircleSegmentationPrompts.StartingPrompt startingPrompt))
+                        new Circle(circle.Position, circle.Radius), transform, out CircleSegmentationPrompts.StartingPrompt startingPrompt))
                     {
                         return;
                     }
@@ -2232,10 +2229,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 IVolumeToSectionTransform transform = parent.Section.ActiveSectionToVolumeTransform;
                 if (!CircleSegmentationPrompts.TryCreateStartingPrompt(
-                        CircleSegmentationPrompts.ToVolumePoints(
-                            CircleSegmentationPrompts.CreateMosaicRadiusPoints(new Circle(circle.Position, circle.Radius)),
-                            transform),
-                        out CircleSegmentationPrompts.StartingPrompt startingPrompt))
+                        new Circle(circle.Position, circle.Radius), transform, out CircleSegmentationPrompts.StartingPrompt startingPrompt))
                 {
                     return;
                 }
@@ -2489,7 +2483,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     result,
                     structureId,
                     sectionNumber,
-                    AutoPolygonizeSelection.ToCircleFootprints(Store.Locations.GetLocalObjectsForStructure(structureId)),
+                    AutoPolygonizeSelection.ToCircleFootprints(Store.Locations.GetLocalObjectsForStructure(structureId), parent.Section.ActiveSectionToVolumeTransform),
                     own);
                 int queued = 0;
                 foreach (AutoPolygonizeSelection.CircleFootprint footprint in near)
@@ -2733,7 +2727,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 excludeParentId);
             // Circle annotations of other structures count as well, so a cell that is still only a circle is not painted over.
             List<Polygon> circleDisks = AutoPolygonizeSelection.CollectOverlappingCircleDisks(
-                AutoPolygonizeSelection.ToCircleFootprints(nearby),
+                AutoPolygonizeSelection.ToCircleFootprints(nearby, parent.Section.ActiveSectionToVolumeTransform),
                 proposed,
                 excludeLocationIds,
                 parent.Section.Number,

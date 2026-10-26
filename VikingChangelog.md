@@ -7,6 +7,10 @@ Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Docum
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
+## 1.2.127 — not yet released
+
+* Circles: when you draw, resize, move or link a circle, the circle on the other side of the section-to-volume warp now gets the radius the warp's local scale implies, instead of a copy of the radius. Auto-segment of a circle also tolerates a rim point that does not map.
+
 ## 1.2.122 — not yet released
 
 * Segment to Polygon on a circle now opens the paintbrush segmentation with the circle painted as the starting mask (it started empty in 1.2.121).

@@ -47,8 +47,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// The circle's center followed by the east, north, west and south ends of its radius, in mosaic
-        /// space. Map all five with <see cref="ToVolumePoints"/> and give the result to
-        /// <see cref="TryCreateStartingPrompt"/>, which builds the box and the clicks in volume space.
+        /// space. <see cref="TryCreateStartingPrompt(Circle, IVolumeToSectionTransform, out StartingPrompt)"/>
+        /// maps these with the transform itself.
         /// </summary>
         public static IReadOnlyList<Vector2> CreateMosaicRadiusPoints(Circle mosaicCircle)
         {
@@ -65,14 +65,29 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Builds the starting prompt in volume space from the five points of <see cref="CreateMosaicRadiusPoints"/>
-        /// after the section-to-volume transform. The transformed center and the mean distance from it to the four
-        /// radius ends give the circle in volume space. The box and the four clicks are then built from that circle
-        /// there: the box is the axis-aligned square inscribed in it, and the clicks lie exactly east, north, west and
-        /// south of its center at <see cref="StartingPointRadiusFraction"/> of its radius. The prompt is therefore
-        /// aligned to the axes of the image SAM2 sees whatever the transform does to the section. A transform
-        /// that stretches the axes unequally makes the circle an ellipse, which the mean radius only approximates.
-        /// False when a point failed to map or the radius is not positive.
+        /// Builds the starting prompt in volume space for a mosaic circle. The circle is mapped with the five-point
+        /// mean-scale rule (<c>.cursor/rules/circle-mapping-scale.mdc</c>): the center must map, and the radius is the
+        /// mean scale of the rim points that map. Rim points that fail to map are left out of the average; one is enough.
+        /// The box and the four clicks are then built from the volume circle: the box is the axis-aligned square
+        /// inscribed in it, and the clicks lie exactly east, north, west and south of its center at
+        /// <see cref="StartingPointRadiusFraction"/> of its radius, so the prompt is aligned to the axes of the image
+        /// SAM2 sees whatever the transform does to the section. False when the center or every rim point fails to
+        /// map, or the radius is not positive.
+        /// </summary>
+        public static bool TryCreateStartingPrompt(Circle mosaicCircle, IVolumeToSectionTransform transform, out StartingPrompt prompt)
+        {
+            prompt = default;
+            if (transform is null)
+                return false;
+
+            Circle? volumeCircle = transform.TryMapShapeSectionToVolume(mosaicCircle);
+            return volumeCircle.HasValue && TryCreateStartingPrompt(volumeCircle.Value, out prompt);
+        }
+
+        /// <summary>
+        /// Builds the starting prompt from the center and the four radius ends already mapped to volume space (see
+        /// <see cref="CreateMosaicRadiusPoints"/>), averaging their distances from the center. Needs all five points;
+        /// use <see cref="TryCreateStartingPrompt(Circle, IVolumeToSectionTransform, out StartingPrompt)"/> to tolerate unmapped rim points.
         /// </summary>
         public static bool TryCreateStartingPrompt(IReadOnlyList<Vector2> volumeCenterAndRadiusPoints, out StartingPrompt prompt)
         {
@@ -82,6 +97,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             Vector2 center = volumeCenterAndRadiusPoints[0];
             double radius = volumeCenterAndRadiusPoints.Skip(1).Average(point => Vector2.Distance(center, point));
+            return TryCreateStartingPrompt(new Circle(center, radius), out prompt);
+        }
+
+        private static bool TryCreateStartingPrompt(Circle volumeCircle, out StartingPrompt prompt)
+        {
+            prompt = default;
+            Vector2 center = volumeCircle.Center;
+            double radius = volumeCircle.Radius;
             if (!(radius > 0))
                 return false;
 
@@ -238,8 +261,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 {
                     case LocationType.CIRCLE:
                         if (TryCreateStartingPrompt(
-                                ToVolumePoints(CreateMosaicRadiusPoints(new Circle(other.Position, other.Radius)), transform),
-                                out StartingPrompt mapped))
+                                new Circle(other.Position, other.Radius), transform, out StartingPrompt mapped))
                         {
                             shapes.AddCircle(mapped.Circle);
                         }
@@ -287,8 +309,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 double volumeWidth = 0;
                 if (mosaicWidth > 0 &&
                     TryCreateStartingPrompt(
-                        ToVolumePoints(CreateMosaicRadiusPoints(new Circle(Rectangle.GetBoundingBox(mosaicPoints).Center, mosaicWidth / 2)), transform),
-                        out StartingPrompt widthCircle))
+                        new Circle(Rectangle.GetBoundingBox(mosaicPoints).Center, mosaicWidth / 2), transform, out StartingPrompt widthCircle))
                 {
                     volumeWidth = widthCircle.Circle.Radius * 2;
                 }

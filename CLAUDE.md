@@ -10,6 +10,7 @@ Rules and skills are authored for Cursor in `.cursor/` and imported here by refe
 
 ## Conditional rules (read the file when the situation matches)
 - `.cursor/rules/async-returns-tasks.mdc` — before writing or editing C# async methods.
+- `.cursor/rules/circle-mapping-scale.mdc` — before touching circle annotations: centre from `X,Y`/`VolumeX,VolumeY`; radius across mosaic/volume by five-point mean scale (`Clients/VolumeModel`, mapping/annotation geometry, `WebAnnotation`).
 - `.cursor/rules/coordinate-precision.mdc` — before touching `Geometry/Transforms`, `Geometry/Primitives`, `Geometry.Core/Primitives`, `Geometry/CurveFitting`, `Geometry/Meshing`, `Clients/VolumeModel`.
 - `.cursor/rules/docker-config-and-builds-location.mdc` — before touching docker-compose files, Dockerfiles, or `config-template/`.
 - `.cursor/rules/graphics-library-choice.mdc` — before working on XNA/MonoGame projects.

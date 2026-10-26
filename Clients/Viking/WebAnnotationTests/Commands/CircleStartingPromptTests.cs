@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Viking.VolumeModel;
 using WebAnnotation.UI.Commands.Segmentation;
 
 namespace WebAnnotationTests.Commands
@@ -157,6 +158,48 @@ namespace WebAnnotationTests.Commands
             IReadOnlyList<Vector2> points = CircleSegmentationPrompts.CreateMosaicRadiusPoints(new Circle(new Vector2(5, 5), 0));
 
             Assert.IsFalse(CircleSegmentationPrompts.TryCreateStartingPrompt(points, out _));
+        }
+
+        /// <summary>volume = 2 * mosaic; points for which <c>canMap</c> is false fail to map.</summary>
+        private sealed class DoublingTransform(Func<Vector2, bool> canMap) : IVolumeToSectionTransform
+        {
+            public long ID => 0;
+            public Rectangle? SectionBounds => null;
+            public Rectangle? VolumeBounds => null;
+
+            private static Vector2 Forward(Vector2 p) => new(p.X * 2, p.Y * 2);
+            private static Vector2 Inverse(Vector2 p) => new(p.X / 2, p.Y / 2);
+
+            public bool TrySectionToVolume(Vector2 P, out Vector2 transformedP) { transformedP = Forward(P); return canMap(P); }
+            public bool TryVolumeToSection(Vector2 P, out Vector2 transformedP) { transformedP = Inverse(P); return canMap(P); }
+            public bool[] TrySectionToVolume(in Vector2[] Points, out Vector2[] transformedP) { transformedP = [.. Points.Select(Forward)]; return [.. Points.Select(canMap)]; }
+            public bool[] TryVolumeToSection(in Vector2[] Points, out Vector2[] transformedP) { transformedP = [.. Points.Select(Inverse)]; return [.. Points.Select(canMap)]; }
+            public Vector2 SectionToVolume(Vector2 P) => Forward(P);
+            public Vector2 VolumeToSection(Vector2 P) => Inverse(P);
+            public Vector2[] SectionToVolume(Vector2[] Points) => [.. Points.Select(Forward)];
+            public Vector2[] VolumeToSection(Vector2[] Points) => [.. Points.Select(Inverse)];
+        }
+
+        [TestMethod]
+        public void UnmappableRimPointsAreLeftOutOfTheRadiusAverage()
+        {
+            // East and north rim points are outside the mapped area; the center, west and south map.
+            Circle circle = new(new Vector2(100, 100), 10);
+            DoublingTransform transform = new(p => p.X < 109 && p.Y < 109);
+
+            Assert.IsTrue(CircleSegmentationPrompts.TryCreateStartingPrompt(circle, transform, out CircleSegmentationPrompts.StartingPrompt prompt));
+
+            Assert.AreEqual(20.0, prompt.Circle.Radius, 1e-9);
+            Assert.AreEqual(200.0, prompt.Circle.Center.X, 1e-9);
+        }
+
+        [TestMethod]
+        public void ACenterOrEveryRimPointThatCannotBeMappedMeansNoPrompt()
+        {
+            Circle circle = new(new Vector2(100, 100), 10);
+
+            Assert.IsFalse(CircleSegmentationPrompts.TryCreateStartingPrompt(circle, new DoublingTransform(p => p.X != 100 || p.Y != 100), out _));
+            Assert.IsFalse(CircleSegmentationPrompts.TryCreateStartingPrompt(circle, new DoublingTransform(p => p.X == 100 && p.Y == 100), out _));
         }
     }
 }

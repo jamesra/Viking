@@ -85,12 +85,18 @@ namespace WebAnnotation.UI.Commands
                                                 Parent.Section.Number,
                                                 Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE);
 
-                WebAnnotation.LocationActions.UpdateCircleLocationNoSaveCallback(newLocation, WorldPos, SectionPos, 16);
+                // 16 and the radius the user drags out are volume-space radii (the user draws on screen); the mosaic circle is mapped from them.
+                if (!WebAnnotation.LocationActions.UpdateCircleLocationNoSaveCallback(newLocation, mapping, WorldPos, 16))
+                {
+                    Deactivated = true;
+                    base.OnMouseClick(sender, e);
+                    return;
+                }
 
                 Parent.CommandQueue.EnqueueCommand(typeof(ResizeCircleCommand), [ Parent, Type.Color, WorldPos,
                         new ResizeCircleCommand.OnCommandSuccess(radius => {
                             radius = radius < Global.MinRadius ? Global.MinRadius : radius;
-                            WebAnnotation.LocationActions.UpdateCircleLocationNoSaveCallback(newLocation, WorldPos, SectionPos, radius);
+                            WebAnnotation.LocationActions.UpdateCircleLocationNoSaveCallback(newLocation, mapping, WorldPos, radius);
                         }) ]);
                 if (Type.Parent != null)
                 {
