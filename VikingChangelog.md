@@ -1,13 +1,13 @@
 # Viking changelog
 
-Committed application version: **1.2.121.0**  
+Committed application version: **1.2.127.0**  
 (1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109; their changes are listed under 1.2.109.)
 
 Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Documentation/source/Client/versionhistory.rst).
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
-## 1.2.127 — not yet released
+## 1.2.127 — 2026-10-26 (Viking Test, unsigned)
 
 * Circles: when you draw, resize, move or link a circle, the circle on the other side of the section-to-volume warp now gets the radius the warp's local scale implies, instead of a copy of the radius. Auto-segment of a circle also tolerates a rim point that does not map.
 * Segmentation uses the segmentation server's own tile caches before asking Viking to render tiles, so repeat segmentations over the same area start faster. Views with a blended or colored channel set, or with colorize or mesh overlays on, no longer share tiles with a plain grayscale view.
