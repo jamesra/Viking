@@ -1,9 +1,12 @@
 ﻿using VikingXNAGraphics;
+using WebAnnotation.ViewModel;
 
 namespace WebAnnotation.Actions
 {
     /// <summary>
-    /// Fades an IColorView object 
+    /// Marks the object under the mouse: an IColorView is faded to half its alpha, so what is under it shows through, and
+    /// a location link is drawn fully visible instead (<see cref="LocationLinkView.IsMouseOver"/>), since a link that is
+    /// not hovered is faint and invisible in the middle.
     /// </summary>
     internal class MouseOverLocationCanvasViewEffect
     {
@@ -19,9 +22,10 @@ namespace WebAnnotation.Actions
                     RemoveEffect(_viewObj);
                 }
 
-                if (value != null)
+                // Forget the old object even when the mouse left everything, or the next object would remove its effect again.
+                _viewObj = value;
+                if (_viewObj != null)
                 {
-                    _viewObj = value;
                     ApplyEffect(_viewObj);
                 }
             }
@@ -35,6 +39,12 @@ namespace WebAnnotation.Actions
 
         protected void ApplyEffect(object view_obj)
         {
+            if (view_obj is LocationLinkView link)
+            {
+                link.IsMouseOver = true;
+                return;
+            }
+
             if (view_obj is IColorView cView)
             {
                 OriginalAlpha = cView.Alpha;
@@ -44,6 +54,12 @@ namespace WebAnnotation.Actions
 
         protected void RemoveEffect(object view_obj)
         {
+            if (view_obj is LocationLinkView link)
+            {
+                link.IsMouseOver = false;
+                return;
+            }
+
             if (view_obj is IColorView cView)
             {
                 cView.Alpha = OriginalAlpha;

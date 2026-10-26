@@ -461,6 +461,49 @@ namespace WebAnnotation
                 }
             }
 
+            /// <summary>Faintest accepted <see cref="LocationLinkVisibilityPercent"/>.</summary>
+            public const int MIN_LOCATION_LINK_VISIBILITY_PERCENT = 10;
+
+            /// <summary>Strongest accepted <see cref="LocationLinkVisibilityPercent"/>.</summary>
+            public const int MAX_LOCATION_LINK_VISIBILITY_PERCENT = 100;
+
+            /// <summary>Starting <see cref="LocationLinkVisibilityPercent"/>. Must match the DefaultSettingValue in Settings.LocationLinks.cs.</summary>
+            public const int DEFAULT_LOCATION_LINK_VISIBILITY_PERCENT = 60;
+
+            /// <summary>
+            /// How strongly location links are drawn, as a percent: the link's opacity next to its markers and the strength of
+            /// its contrasting shadow. Clamped to the MIN/MAX_LOCATION_LINK_VISIBILITY_PERCENT range.
+            /// </summary>
+            public static int LocationLinkVisibilityPercent
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.LocationLinkVisibilityPercent,
+                    MIN_LOCATION_LINK_VISIBILITY_PERCENT,
+                    MAX_LOCATION_LINK_VISIBILITY_PERCENT);
+                set
+                {
+                    Properties.Settings.Default.LocationLinkVisibilityPercent = MathUtils.Clamp(
+                        value,
+                        MIN_LOCATION_LINK_VISIBILITY_PERCENT,
+                        MAX_LOCATION_LINK_VISIBILITY_PERCENT);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary><see cref="LocationLinkVisibilityPercent"/> as a fraction, 0.1 to 1.</summary>
+            public static float LocationLinkVisibility => LocationLinkVisibilityPercent / 100f;
+
+            /// <summary>Whether each end of a location link is labelled with the ID of the location at its other end.</summary>
+            public static bool LocationLinkLabels
+            {
+                get => Properties.Settings.Default.LocationLinkLabels;
+                set
+                {
+                    Properties.Settings.Default.LocationLinkLabels = value;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
             public static uint NumClosedCurveInterpolationPointsForDisplay
             {
                 get => (uint)MathUtils.Clamp((int)Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay, MIN_CURVE_POINTS, MAX_CURVE_POINTS);
@@ -1163,6 +1206,8 @@ namespace WebAnnotation
                 Properties.Settings.Default.AdjacentLocationRadiusScalar = DEFAULT_ADJACENT_LOCATION_RADIUS_SCALAR;
                 Properties.Settings.Default.LocationLinkWaistPixels = DEFAULT_LOCATION_LINK_WAIST_PIXELS;
                 Properties.Settings.Default.LocationLinkDrawUnderMarkers = false;
+                Properties.Settings.Default.LocationLinkVisibilityPercent = DEFAULT_LOCATION_LINK_VISIBILITY_PERCENT;
+                Properties.Settings.Default.LocationLinkLabels = true;
                 Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = (uint)DEFAULT_NUM_CLOSED_CURVE_INTERPOLATION_POINTS;
                 Properties.Settings.Default.PenSimplifyThreshold = DEFAULT_PEN_SIMPLIFY_THRESHOLD;
                 Properties.Settings.Default.MinRadius = DEFAULT_MIN_RADIUS;

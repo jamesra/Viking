@@ -213,7 +213,9 @@ namespace WebAnnotation
                 autoPolygonizeShimmerDurationMs: Global.AnnotationSettings.AutoPolygonizeShimmerDurationMs,
                 segmentLinkedAnnotations: Global.AnnotationSettings.SegmentLinkedAnnotations,
                 locationLinkWaistPixels: Global.AnnotationSettings.LocationLinkWaistPixels,
-                locationLinkDrawUnderMarkers: Global.AnnotationSettings.LocationLinkDrawUnderMarkers
+                locationLinkDrawUnderMarkers: Global.AnnotationSettings.LocationLinkDrawUnderMarkers,
+                locationLinkVisibilityPercent: Global.AnnotationSettings.LocationLinkVisibilityPercent,
+                locationLinkLabels: Global.AnnotationSettings.LocationLinkLabels
             );
 
             VikingXNA.Scene scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
@@ -460,6 +462,10 @@ namespace WebAnnotation
                 () => Global.AnnotationSettings.LocationLinkWaistPixels = viewModel.LocationLinkWaistPixels);
             Drawn(nameof(viewModel.LocationLinkDrawUnderMarkers),
                 () => Global.AnnotationSettings.LocationLinkDrawUnderMarkers = viewModel.LocationLinkDrawUnderMarkers);
+            Drawn(nameof(viewModel.LocationLinkVisibilityPercent),
+                () => Global.AnnotationSettings.LocationLinkVisibilityPercent = viewModel.LocationLinkVisibilityPercent);
+            Drawn(nameof(viewModel.LocationLinkLabels),
+                () => Global.AnnotationSettings.LocationLinkLabels = viewModel.LocationLinkLabels);
             Drawn(nameof(viewModel.PolygonPointDiameter),
                 () => Global.AnnotationSettings.PolygonPointDiameter = viewModel.PolygonPointDiameter);
             Drawn(nameof(viewModel.PolygonPointOpacity),
@@ -527,6 +533,8 @@ namespace WebAnnotation
             Global.AnnotationSettings.AdjacentLocationRadiusScalar = viewModel.AdjacentLocationRadiusScalar;
             Global.AnnotationSettings.LocationLinkWaistPixels = viewModel.LocationLinkWaistPixels;
             Global.AnnotationSettings.LocationLinkDrawUnderMarkers = viewModel.LocationLinkDrawUnderMarkers;
+            Global.AnnotationSettings.LocationLinkVisibilityPercent = viewModel.LocationLinkVisibilityPercent;
+            Global.AnnotationSettings.LocationLinkLabels = viewModel.LocationLinkLabels;
             Global.AnnotationSettings.NumClosedCurveInterpolationPointsForDisplay = viewModel.NumClosedCurveInterpolationPointsForDisplay;
             Global.AnnotationSettings.PenSimplifyThreshold = viewModel.PenSimplifyThreshold;
             Global.AnnotationSettings.MinRadius = viewModel.MinRadius;

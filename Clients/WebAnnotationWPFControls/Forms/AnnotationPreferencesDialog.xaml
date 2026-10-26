@@ -314,6 +314,52 @@
                                    TextWrapping="Wrap"
                                    Text="Also draws each link under its two location markers as a round end the size of each marker. Off draws nothing under the markers."/>
 
+                        <!-- Location Link Visibility -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Link visibility (%):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding LocationLinkVisibilityPercent, Mode=TwoWay}"
+                                    Minimum="10"
+                                    Maximum="100"
+                                    TickFrequency="5"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding LocationLinkVisibilityPercent, StringFormat='F0'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="How strongly links between locations on different sections are drawn when the mouse is not over them: their opacity next to the linked locations and the strength of the contrasting shadow around them. The middle of a link fades to nothing; move the mouse over a link to see all of it."/>
+                        </Grid>
+
+                        <!-- Location Link Labels -->
+                        <CheckBox IsChecked="{Binding LocationLinkLabels, Mode=TwoWay}"
+                                  Content="Label link ends with the linked location ID"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="10,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="While the mouse is over a link, shows next to each end the ID of the location at the other end. At the end on the viewed section, an up or down arrow shows whether that location is on a higher or lower section. Sized from the location, so they zoom with the image; left out when too small to read or when the link is too short for both."/>
+
                         <!-- Polygon Annotations -->
                         <TextBlock Text="Polygon Annotations" FontWeight="Bold" Margin="5,15,5,2"/>
                         <!-- Num Curve Interpolation Points -->

@@ -123,12 +123,65 @@ namespace WebAnnotation.ViewModel
         {
             get => _Color.GetAlpha();
 
-            // SetAlpha returns a new colour, so assign it back; the mouse-over effect halves the link's alpha here.
+            // SetAlpha returns a new colour, so assign it back; the Del fade-in scales the link's alpha here.
             set => Color = _Color.SetAlpha(value);
+        }
+
+        /// <summary>How long a link takes to fade between its hovered and resting looks.</summary>
+        internal static readonly TimeSpan HoverFadeDuration = TimeSpan.FromMilliseconds(350);
+
+        private bool _IsMouseOver;
+        private float _HoverFrom;
+        private DateTime _HoverChangedUtc = DateTime.MinValue;
+
+        /// <summary>
+        /// True while the mouse is over the link; set by <see cref="WebAnnotation.Actions.MouseOverLocationCanvasViewEffect"/>.
+        /// A hovered link is drawn fully opaque along its whole length with its end labels, and all of it can be picked, so
+        /// the mouse can follow it through the waist that is invisible and unpickable otherwise. Picking switches at once;
+        /// the look fades over <see cref="HoverFadeDuration"/> (<see cref="HoverAmount"/>).
+        /// </summary>
+        public bool IsMouseOver
+        {
+            get => _IsMouseOver;
+            set
+            {
+                if (_IsMouseOver == value)
+                    return;
+
+                _HoverFrom = HoverAmount;
+                _IsMouseOver = value;
+                _HoverChangedUtc = DateTime.UtcNow;
+            }
+        }
+
+        /// <summary>
+        /// How far the link's look is toward hovered, 0 (resting) to 1 (hovered), moving at a steady rate since the mouse
+        /// last came on or went off it. Read when drawing; the overlay keeps redrawing while <see cref="IsHoverFading"/>.
+        /// </summary>
+        public float HoverAmount => HoverAmountAt(_HoverFrom, _IsMouseOver, DateTime.UtcNow - _HoverChangedUtc);
+
+        /// <summary>True while <see cref="HoverAmount"/> is still moving toward the hovered or resting look.</summary>
+        public bool IsHoverFading => _IsMouseOver ? HoverAmount < 1f : HoverAmount > 0f;
+
+        /// <summary>
+        /// <see cref="HoverAmount"/> <paramref name="elapsed"/> after the mouse came on (<paramref name="hovered"/>) or went
+        /// off the link while the look stood at <paramref name="from"/>: it moves the whole way in
+        /// <see cref="HoverFadeDuration"/>, so a fade reversed halfway takes half as long to undo.
+        /// </summary>
+        internal static float HoverAmountAt(float from, bool hovered, TimeSpan elapsed)
+        {
+            float step = (float)(elapsed.TotalMilliseconds / HoverFadeDuration.TotalMilliseconds);
+            return hovered ? Math.Min(1f, from + step) : Math.Max(0f, from - step);
         }
 
         public int MinSection { get; private set; }
         public int MaxSection { get; private set; }
+
+        /// <summary>Section of the location at end A (<see cref="LocationLinkKey.A"/>).</summary>
+        public int SectionA { get; private set; }
+
+        /// <summary>Section of the location at end B (<see cref="LocationLinkKey.B"/>).</summary>
+        public int SectionB { get; private set; }
 
         protected int LinkDirection => MinSection == MaxSection ? 0 : MinSection < Z ? -1 : 1;
 
@@ -138,10 +191,134 @@ namespace WebAnnotation.ViewModel
         public double MaxRadius => Math.Max(A.Radius, B.Radius);
 
         /// <summary>
-        /// Opacity at the link's waist as a fraction of its opacity at full width. The shader fades alpha linearly
-        /// with how far the local width has narrowed from full width toward the waist.
+        /// Opacity at the waist of a link the mouse is not over, as a fraction of its opacity next to the markers. The
+        /// shader fades alpha linearly in <see cref="FadeDepthAt"/>, so a link is strongest next to the locations it joins
+        /// and its middle is invisible. A hovered link does not fade.
         /// </summary>
-        internal const float WaistOpacity = 0.5f;
+        internal const float WaistOpacity = 0f;
+
+        /// <summary>
+        /// Deepest <see cref="FadeDepthAt"/> at which a link the mouse is not over can be picked: where it is drawn at
+        /// least a quarter as opaque as next to its markers. What cannot be seen cannot be picked.
+        /// </summary>
+        internal const double MaxPickableFadeDepth = 0.75;
+
+        /// <summary>Width in screen pixels of the contrasting border drawn just inside a link's outline.</summary>
+        internal const float BorderPixels = 1.5f;
+
+        /// <summary>
+        /// Width in screen pixels of the contrasting shadow drawn outside a link's outline. It is as opaque as the link at
+        /// the outline and fades to nothing this far out.
+        /// </summary>
+        internal const float ShadowPixels = 5f;
+
+        /// <summary>
+        /// Height of an end label's text as a fraction of the radius of the marker it sits beside. Labels are sized in
+        /// volume space, as location labels are, so they zoom with the image, and at this size a label of up to seven
+        /// digits fits in the strong part of the link before it fades.
+        /// </summary>
+        internal const double LabelHeightPerRadius = 0.16;
+
+        /// <summary>Gap between a marker's edge and its label, and between the two labels, as a fraction of that marker's radius.</summary>
+        internal const double LabelGapPerRadius = 0.05;
+
+        /// <summary>An end label shorter than this many screen pixels is not drawn; it could not be read.</summary>
+        internal const double MinLabelPixels = 6;
+
+        /// <summary>
+        /// The opacity a link of stored alpha <paramref name="linkAlpha"/> is drawn with. <paramref name="visibility"/> is the
+        /// Link visibility preference (0.1 to 1), or 1 for a hovered link. Links are stored fully opaque.
+        /// </summary>
+        internal static float DrawnAlpha(float linkAlpha, float visibility) => MathHelper.Clamp(linkAlpha * visibility, 0f, 1f);
+
+        /// <summary>
+        /// Opacity of the end labels for a link of stored alpha <paramref name="linkAlpha"/>. Labels stay readable at low
+        /// visibility: fully opaque from 50% up, and never below half.
+        /// </summary>
+        internal static float LabelAlpha(float linkAlpha, float visibility) => MathHelper.Clamp(linkAlpha * Math.Min(1f, 0.5f + visibility), 0f, 1f);
+
+        /// <summary>
+        /// How far <paramref name="x"/> world units from A's centre is into the fade from the nearer marker: 0 at the
+        /// marker's edge and inside it, 1 one marker radius further on, where a long link reaches its waist. Each end is
+        /// measured by its own radius, so the end at a small marker starts at full opacity as the large one's does.
+        /// Matches PinchedFadeDepth in PinchedLineShaders.fx.
+        /// </summary>
+        internal static double FadeDepthAt(double x, double length, double radiusA, double radiusB)
+        {
+            double fromA = (x - radiusA) / Math.Max(radiusA, 1e-6);
+            double fromB = (length - x - radiusB) / Math.Max(radiusB, 1e-6);
+            return Math.Max(0, Math.Min(1, Math.Min(fromA, fromB)));
+        }
+
+        /// <summary>
+        /// True when the end at <paramref name="aCentre"/> is at least as far from <paramref name="position"/> as the end at
+        /// <paramref name="bCentre"/>, so Go to partner from there goes to A.
+        /// </summary>
+        internal static bool AIsPartnerOf(Geometry.Vector2 position, Geometry.Vector2 aCentre, Geometry.Vector2 bCentre) =>
+            Geometry.Vector2.Distance(position, aCentre) >= Geometry.Vector2.Distance(position, bCentre);
+
+        /// <summary>
+        /// Which section arrow goes with the label at an end on <paramref name="endSection"/> whose partner is on
+        /// <paramref name="otherSection"/>, seen from <paramref name="viewedSection"/>: 1 for an up arrow (the partner is on
+        /// a higher section, as Viking draws adjacent locations above with its up arrow), -1 for a down arrow, and 0 for
+        /// none. Only the end on the viewed section gets an arrow; the adjacent section's end shows the number alone.
+        /// </summary>
+        internal static int SectionArrowAt(int endSection, int otherSection, int viewedSection) =>
+            endSection != viewedSection ? 0 : Math.Sign(otherSection - endSection);
+
+        /// <summary>
+        /// True when the end labels fit in the <paramref name="room"/> of link between the two markers' edges: each label
+        /// its own gap from its marker, and the larger gap between them. All lengths in the same units.
+        /// </summary>
+        internal static bool EndLabelsFit(double room, double widthA, double gapA, double widthB, double gapB) =>
+            room >= gapA + widthA + Math.Max(gapA, gapB) + widthB + gapB;
+
+        /// <summary>Opacity of a link whose markers touch, as a fraction of its usual opacity (see <see cref="ClosenessOpacity"/>).</summary>
+        internal const float NearestLinkOpacity = 0.5f;
+
+        /// <summary>
+        /// Opacity factor for a link of <paramref name="length"/> (centre to centre) between markers of radii
+        /// <paramref name="radiusA"/> and <paramref name="radiusB"/>. The deepest the link fades (<see cref="FadeDepthAt"/>,
+        /// at the point both ends measure the same) is gap / (rA + rB), with gap the distance between the markers' edges.
+        /// A link that reaches its fully faded waist (gap at least rA + rB) is unchanged, factor 1. A shorter one never
+        /// fades fully and is drawn as a wide, solid block, so its factor falls with that peak fade depth to
+        /// <see cref="NearestLinkOpacity"/> as the markers touch, letting the image show through.
+        /// </summary>
+        internal static float ClosenessOpacity(double length, double radiusA, double radiusB)
+        {
+            double reach = radiusA + radiusB;
+            double peakFadeDepth = reach > 0 ? Math.Max(0, Math.Min(1, (length - reach) / reach)) : 1;
+            return MathHelper.Lerp(NearestLinkOpacity, 1f, (float)peakFadeDepth);
+        }
+
+        /// <summary>
+        /// How much of a link's colour saturation its fill keeps. The direction colours (red toward a lower section, blue
+        /// toward a higher one) are fully saturated and looked harsh at the opacity links are now drawn with; toning only
+        /// the saturation keeps the fill's brightness, opacity, border and shadow, so the link is as easy to see.
+        /// </summary>
+        internal const float FillSaturation = 0.55f;
+
+        /// <summary>
+        /// <paramref name="color"/> with its saturation scaled by <paramref name="saturation"/>: each channel moved toward the
+        /// colour's perceived brightness (the weights <see cref="BorderColorFor"/> uses), so the brightness is unchanged.
+        /// Alpha is kept.
+        /// </summary>
+        internal static Color Desaturate(Color color, float saturation)
+        {
+            float grey = (0.3f * color.R) + (0.59f * color.G) + (0.11f * color.B);
+            byte Toward(byte channel) => (byte)MathHelper.Clamp((float)Math.Round(grey + ((channel - grey) * saturation)), 0f, 255f);
+            return new Color(Toward(color.R), Toward(color.G), Toward(color.B), color.A);
+        }
+
+        /// <summary>
+        /// The border and shadow color for a link of color <paramref name="linkColor"/>: black for a light link and white for
+        /// a dark one, judged by perceived brightness, so the link stands out from the image under it.
+        /// </summary>
+        internal static Color BorderColorFor(Color linkColor)
+        {
+            float brightness = ((0.3f * linkColor.R) + (0.59f * linkColor.G) + (0.11f * linkColor.B)) / 255f;
+            return brightness > 0.5f ? Color.Black : Color.White;
+        }
 
         /// <summary>
         /// Waist half width in world units at the zoom links were last drawn at. Hit tests have no scene, and every
@@ -238,6 +415,12 @@ namespace WebAnnotation.ViewModel
             }
 
             double clamped = Math.Max(0, Math.Min(length, along));
+            if (!IsMouseOver && FadeDepthAt(clamped, length, A.Radius, B.Radius) > MaxPickableFadeDepth)
+            {
+                normalized = double.MaxValue;
+                return double.MaxValue;
+            }
+
             double halfWidth = HalfWidthAt(clamped, length, A.Radius, B.Radius, waist);
             double beyondEnd = along - clamped;
             double beyondSide = Math.Max(0, across - halfWidth);
@@ -271,12 +454,12 @@ namespace WebAnnotation.ViewModel
 
             if (!TryMapEndpointPositions(locA, locB, Z, mapProvider,
                     out Circle circleA, out Circle circleB,
-                    out int minSection, out int maxSection, out Color color))
+                    out int sectionA, out int sectionB, out Color color))
             {
                 return false;
             }
 
-            view = new LocationLinkView(key, Z, mapProvider, circleA, circleB, minSection, maxSection, color);
+            view = new LocationLinkView(key, Z, mapProvider, circleA, circleB, sectionA, sectionB, color);
             return true;
         }
 
@@ -302,15 +485,14 @@ namespace WebAnnotation.ViewModel
         }
 
         private LocationLinkView(LocationLinkKey key, int Z, IVolumeTransformProvider mapProvider,
-            Circle circleA, Circle circleB, int minSection, int maxSection, Color color)
+            Circle circleA, Circle circleB, int sectionA, int sectionB, Color color)
         {
             Key = key;
             this.Z = Z;
             this.mapProvider = mapProvider;
             A = circleA;
             B = circleB;
-            MinSection = minSection;
-            MaxSection = maxSection;
+            SetSections(sectionA, sectionB);
             Color = color;
             lineView = CreateView();
         }
@@ -328,43 +510,75 @@ namespace WebAnnotation.ViewModel
 
             if (!TryMapEndpointPositions(locA, locB, Z, mapProvider,
                     out Circle circleA, out Circle circleB,
-                    out int minSection, out int maxSection, out Color color))
+                    out int sectionA, out int sectionB, out Color color))
             {
                 return false;
             }
 
             A = circleA;
             B = circleB;
-            MinSection = minSection;
-            MaxSection = maxSection;
+            SetSections(sectionA, sectionB);
             Color = color;
             return true;
+        }
+
+        private void SetSections(int sectionA, int sectionB)
+        {
+            SectionA = sectionA;
+            SectionB = sectionB;
+            MinSection = Math.Min(sectionA, sectionB);
+            MaxSection = Math.Max(sectionA, sectionB);
         }
 
         private static bool TryMapEndpointPositions(
             LocationObj locA, LocationObj locB, int displayZ, IVolumeTransformProvider mapProvider,
             out Circle circleA, out Circle circleB,
-            out int minSection, out int maxSection, out Color color)
+            out int sectionA, out int sectionB, out Color color)
         {
             circleA = default;
             circleB = default;
-            minSection = 0;
-            maxSection = 0;
+            sectionA = 0;
+            sectionB = 0;
             color = default;
 
-            IVolumeToSectionTransform sourceMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(locA.Z));
-            IVolumeToSectionTransform targetMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(locB.Z));
+            // An adjacent end hidden under a location it links to on the viewed section is drawn at that location, so the
+            // link does not end in empty space. The sections, colour and labels still describe the real ends.
+            LocationObj drawnA = CoveringLocation(locA, locB, displayZ, mapProvider) ?? locA;
+            LocationObj drawnB = CoveringLocation(locB, locA, displayZ, mapProvider) ?? locB;
 
-            if (!sourceMapper.TrySectionToVolume(locA.Position, out Geometry.Vector2 aVolumePosition))
+            IVolumeToSectionTransform sourceMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(drawnA.Z));
+            IVolumeToSectionTransform targetMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(drawnB.Z));
+
+            if (!sourceMapper.TrySectionToVolume(drawnA.Position, out Geometry.Vector2 aVolumePosition))
                 return false;
-            if (!targetMapper.TrySectionToVolume(locB.Position, out Geometry.Vector2 bVolumePosition))
+            if (!targetMapper.TrySectionToVolume(drawnB.Position, out Geometry.Vector2 bVolumePosition))
                 return false;
 
-            circleA = new Circle(aVolumePosition, locA.Radius * (displayZ == locA.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
-            circleB = new Circle(bVolumePosition, locB.Radius * (displayZ == locB.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
+            circleA = new Circle(aVolumePosition, drawnA.Radius * (displayZ == drawnA.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
+            circleB = new Circle(bVolumePosition, drawnB.Radius * (displayZ == drawnB.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
 
-            minSection = (int)Math.Round(locA.Z < locB.Z ? locA.Z : locB.Z);
-            maxSection = (int)Math.Round(locA.Z < locB.Z ? locB.Z : locA.Z);
+            // A polygon is not the circle made from its centroid and area, so each polygon end is moved to what is drawn:
+            // the marker circle on an adjacent section, then, toward that, the outline on the viewed section.
+            circleA = AdjacentMarkerEnd(drawnA, displayZ, sourceMapper) ?? circleA;
+            circleB = AdjacentMarkerEnd(drawnB, displayZ, targetMapper) ?? circleB;
+            Circle anchoredA = OutlineEnd(drawnA, displayZ, sourceMapper, circleB.Center) ?? circleA;
+            Circle anchoredB = OutlineEnd(drawnB, displayZ, targetMapper, circleA.Center) ?? circleB;
+            circleA = anchoredA;
+            circleB = anchoredB;
+
+            // A drawn line is only its width thick, so its end takes its width from the partner's end (or from the
+            // partner's line width when both are lines), and is placed last, toward the partner's settled end.
+            bool lineA = IsDrawnAsLine(drawnA, displayZ);
+            bool lineB = IsDrawnAsLine(drawnB, displayZ);
+            Circle onLineA = (lineA ? LineEnd(drawnA, displayZ, sourceMapper, circleB.Center, lineB ? LineHalfWidth(drawnB, displayZ) : circleB.Radius) : null) ?? circleA;
+            Circle onLineB = (lineB ? LineEnd(drawnB, displayZ, targetMapper, circleA.Center, lineA ? LineHalfWidth(drawnA, displayZ) : circleA.Radius) : null) ?? circleB;
+            circleA = onLineA;
+            circleB = onLineB;
+
+            sectionA = (int)Math.Round(locA.Z);
+            sectionB = (int)Math.Round(locB.Z);
+            int minSection = Math.Min(sectionA, sectionB);
+            int maxSection = Math.Max(sectionA, sectionB);
 
             // Cells use their own color, other structures their type's (LocationCanvasView.ColorForStructure).
             // Gray when neither endpoint's parent structure is loaded yet.
@@ -372,6 +586,245 @@ namespace WebAnnotation.ViewModel
             Color structureColor = parent is null ? Color.Gray : LocationCanvasView.ColorForStructure(parent, 1f);
             color = GetLocationLinkColor(structureColor, maxSection - minSection, minSection < displayZ ? -1 : 1, false);
             return true;
+        }
+
+        /// <summary>
+        /// The location on the viewed section that hides <paramref name="end"/>, or null. An end on an adjacent section that
+        /// overlaps a location it links to on <paramref name="displayZ"/> is not drawn: Viking shows it only as the up/down
+        /// symbol inside that location (the overlapped links in SectionLocationLinksAnnotationsViewModel), so a link to it
+        /// would end in empty space. The test is the one that hides it (<see cref="OverlapShape"/> intersection). The
+        /// link's own <paramref name="partner"/> is skipped: a link whose ends overlap is drawn as that symbol, not a line.
+        /// The first covering location found wins.
+        /// </summary>
+        private static LocationObj? CoveringLocation(LocationObj end, LocationObj partner, int displayZ, IVolumeTransformProvider mapProvider)
+        {
+            if (end.Z == displayZ)
+                return null;
+
+            SqlGeometry? endShape = null;
+            foreach (long linkedID in end.LinksCopy)
+            {
+                if (linkedID == partner.ID || !Store.Locations.TryGetObjectByID(linkedID, out LocationObj linked) || linked.Z != displayZ)
+                    continue;
+
+                endShape ??= OverlapShape(end, displayZ, mapProvider);
+                if (endShape is null)
+                    return null;
+
+                SqlGeometry? linkedShape = OverlapShape(linked, displayZ, mapProvider);
+                if (linkedShape is not null && endShape.STIntersects(linkedShape).IsTrue)
+                    return linked;
+            }
+
+            return null;
+        }
+
+        private static bool IsPolygonLike(LocationType type) =>
+            type is LocationType.POLYGON or LocationType.CURVEPOLYGON or LocationType.CLOSEDCURVE;
+
+        /// <summary>
+        /// True when <paramref name="loc"/> is drawn as a line seen from <paramref name="displayZ"/>: an open curve or polyline
+        /// on the viewed section, or a polyline on an adjacent one (an adjacent open curve is drawn as a circle).
+        /// </summary>
+        private static bool IsDrawnAsLine(LocationObj loc, int displayZ) =>
+            loc.TypeCode == LocationType.POLYLINE || (loc.TypeCode == LocationType.OPENCURVE && displayZ == loc.Z);
+
+        /// <summary>Half the width <paramref name="loc"/>'s line is drawn with, as its views draw it.</summary>
+        private static double LineHalfWidth(LocationObj loc, int displayZ) =>
+            loc.TypeCode == LocationType.POLYLINE && displayZ == loc.Z
+                ? DefaultPolylineWidth / 2.0
+                : (loc.Width ?? DefaultPolylineWidth) / 2.0;
+
+        /// <summary>The width <see cref="LocationLineView"/> draws a polyline on the viewed section with (PolyLineView's default).</summary>
+        private const double DefaultPolylineWidth = 16.0;
+
+        /// <summary>
+        /// For a location drawn as a line (<see cref="IsDrawnAsLine"/>), the link end anchored on that line toward
+        /// <paramref name="partnerCentre"/> with radius <paramref name="partnerRadius"/> (see <see cref="AnchorOnLine"/>).
+        /// The points are the ones its view draws: the polyline's vertices, or the open curve smoothed the same way. Null
+        /// when the line cannot be mapped or has no length.
+        /// </summary>
+        private static Circle? LineEnd(LocationObj loc, int displayZ, IVolumeToSectionTransform mapper, Geometry.Vector2 partnerCentre, double partnerRadius)
+        {
+            try
+            {
+                bool[] mapped = mapper.TrySectionToVolume(loc.MosaicShape.ToPoints(), out Geometry.Vector2[] points);
+                if (mapped.Any(ok => !ok))
+                    return null;
+
+                if (loc.TypeCode == LocationType.OPENCURVE)
+                    points = points.CalculateCurvePoints(Global.NumOpenCurveInterpolationPoints, false);
+
+                return AnchorOnLine(points, LineHalfWidth(loc, displayZ), partnerCentre, partnerRadius);
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// The circle a link end is drawn from so that the link leaves a drawn line (<paramref name="points"/>, drawn
+        /// <paramref name="halfWidth"/> either side) at the point Q nearest <paramref name="partnerCentre"/>, from the line's
+        /// edge, as wide as the partner's end: radius r = max(<paramref name="halfWidth"/>, <paramref name="partnerRadius"/>),
+        /// centre Q + dir·(halfWidth - r) with dir the unit direction from Q to the partner, so the circle's front is the
+        /// line's edge. A bridge only as thick as the line would fade out within a line width and be too small to label.
+        /// Null with fewer than two distinct points, or when the partner is on the line.
+        /// </summary>
+        internal static Circle? AnchorOnLine(IReadOnlyList<Geometry.Vector2> points, double halfWidth, Geometry.Vector2 partnerCentre, double partnerRadius)
+        {
+            Geometry.Vector2? nearest = null;
+            double nearestDistance = double.MaxValue;
+            for (int i = 1; i < points.Count; i++)
+            {
+                if (points[i - 1] == points[i])
+                    continue;
+
+                double distance = new LineSegment(points[i - 1], points[i]).DistanceToPoint(partnerCentre, out Geometry.Vector2 onLine);
+                if (distance < nearestDistance)
+                {
+                    nearestDistance = distance;
+                    nearest = onLine;
+                }
+            }
+
+            if (nearest is null || nearestDistance <= halfWidth)
+                return null;
+
+            Geometry.Vector2 q = nearest.Value;
+            Geometry.Vector2 dir = (partnerCentre - q) / nearestDistance;
+            double radius = Math.Max(halfWidth, partnerRadius);
+            return new Circle(q + (dir * (halfWidth - radius)), radius);
+        }
+
+        /// <summary>
+        /// For a polygon-like location or an open curve on an adjacent section, the volume circle its marker is drawn as
+        /// (<see cref="AnnotationViewFactory.AdjacentPolygonMarkerCircle"/> or
+        /// <see cref="AnnotationViewFactory.AdjacentOpenCurveMarkerCircle"/>, mapped as the marker maps it). Null for any
+        /// other end, or when the circle cannot be found or mapped.
+        /// </summary>
+        private static Circle? AdjacentMarkerEnd(LocationObj loc, int displayZ, IVolumeToSectionTransform mapper)
+        {
+            if (displayZ == loc.Z || !(IsPolygonLike(loc.TypeCode) || loc.TypeCode == LocationType.OPENCURVE))
+                return null;
+
+            try
+            {
+                Circle marker = loc.TypeCode == LocationType.OPENCURVE
+                    ? AnnotationViewFactory.AdjacentOpenCurveMarkerCircle(loc)
+                    : AnnotationViewFactory.AdjacentPolygonMarkerCircle(loc);
+                return mapper.TrySectionToVolume(marker.Center, out Geometry.Vector2 centre) && marker.Radius > 0
+                    ? new Circle(centre, marker.Radius)
+                    : null;
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// For a polygon-like location on the viewed section, the link end anchored on its outline toward
+        /// <paramref name="partnerCentre"/> (see <see cref="AnchorOnOutline"/>). Null for any other end, or when the shape
+        /// cannot be mapped or anchored.
+        /// </summary>
+        private static Circle? OutlineEnd(LocationObj loc, int displayZ, IVolumeToSectionTransform mapper, Geometry.Vector2 partnerCentre)
+        {
+            if (displayZ != loc.Z || !IsPolygonLike(loc.TypeCode))
+                return null;
+
+            try
+            {
+                SqlGeometry? mapped = mapper.TryMapShapeSectionToVolume(loc.MosaicShape.ToSqlGeometry());
+                return mapped is null ? null : AnchorOnOutline(mapped.ToPolygon(), partnerCentre);
+            }
+            catch (ArgumentException)
+            {
+                // Not a polygon SQL can give us (a closed curve stored as a line, a bad ring): keep the circle.
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// The circle a link end is drawn from so that the link leaves <paramref name="outline"/> where the line from its
+        /// centroid to <paramref name="partnerCentre"/> last crosses the outline (exterior or a hole), heading for the
+        /// partner. The circle sits just inside that exit point E: centre E - dir·r, radius r, with dir the unit direction
+        /// from E to the partner. r is how thick the cell is there: the distance to the nearest edge from the middle of the
+        /// chord the link's line cuts through the cell ending at E, capped at the equal-area radius. So the bridge is never
+        /// wider than the cell. The hourglass then starts at the outline, its fade starts there, and its label sits just
+        /// outside the cell. Null when the line never crosses the outline or the cell has no thickness there, so the caller
+        /// keeps its circle.
+        /// </summary>
+        internal static Circle? AnchorOnOutline(Polygon outline, Geometry.Vector2 partnerCentre)
+        {
+            LineSegment[] edges = [.. outline.ExteriorSegments.Concat(outline.InteriorPolygons.SelectMany(p => p.ExteriorSegments))];
+            Geometry.Vector2 origin = outline.Centroid;
+            if (Geometry.Vector2.Distance(origin, partnerCentre) <= 0)
+                return null;
+
+            Geometry.Vector2? exit = FarthestCrossing(edges, new LineSegment(origin, partnerCentre), origin);
+            if (exit is null)
+                return null;
+
+            Geometry.Vector2 exitPoint = exit.Value;
+            double towardPartner = Geometry.Vector2.Distance(exitPoint, partnerCentre);
+            if (towardPartner <= 0)
+                return null;
+
+            Geometry.Vector2 dir = (partnerCentre - exitPoint) / towardPartner;
+
+            // Walk back from E across the cell to where the line entered it, to measure the cell where the link leaves.
+            double span = outline.BoundingBox.Width + outline.BoundingBox.Height;
+            Geometry.Vector2 entry = NearestCrossing(edges, new LineSegment(exitPoint, exitPoint - (dir * span)), exitPoint, span * 1e-9) ?? origin;
+            Geometry.Vector2 chordMiddle = (entry + exitPoint) / 2.0;
+            double thickness = edges.Min(e => e.DistanceToPoint(chordMiddle));
+
+            double radius = Math.Min(thickness, Math.Sqrt(outline.Area / Math.PI));
+            if (!(radius > 0))
+                return null;
+
+            return new Circle(exitPoint - (dir * radius), radius);
+        }
+
+        /// <summary>The crossing of <paramref name="line"/> with any of <paramref name="edges"/> farthest from <paramref name="from"/>, or null.</summary>
+        private static Geometry.Vector2? FarthestCrossing(IEnumerable<LineSegment> edges, LineSegment line, Geometry.Vector2 from)
+        {
+            Geometry.Vector2? best = null;
+            double bestDistance = -1;
+            foreach (LineSegment edge in edges)
+            {
+                if (edge.Intersects(in line, out Geometry.Vector2 crossing) && Geometry.Vector2.Distance(from, crossing) > bestDistance)
+                {
+                    bestDistance = Geometry.Vector2.Distance(from, crossing);
+                    best = crossing;
+                }
+            }
+
+            return best;
+        }
+
+        /// <summary>
+        /// The crossing of <paramref name="line"/> with any of <paramref name="edges"/> nearest <paramref name="from"/> but more
+        /// than <paramref name="minDistance"/> from it (so the crossing <paramref name="from"/> lies on is skipped), or null.
+        /// </summary>
+        private static Geometry.Vector2? NearestCrossing(IEnumerable<LineSegment> edges, LineSegment line, Geometry.Vector2 from, double minDistance)
+        {
+            Geometry.Vector2? best = null;
+            double bestDistance = double.MaxValue;
+            foreach (LineSegment edge in edges)
+            {
+                if (!edge.Intersects(in line, out Geometry.Vector2 crossing))
+                    continue;
+
+                double distance = Geometry.Vector2.Distance(from, crossing);
+                if (distance > minDistance && distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = crossing;
+                }
+            }
+
+            return best;
         }
 
         public void GetCanvasViews(LocationLinkKey key, IVolumeTransformProvider mapProvider, out LocationCanvasView AView, out LocationCanvasView BView)
@@ -403,24 +856,6 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// How much of a link's colour saturation the toned link colour keeps. The direction colours (red toward a lower
-        /// section, blue toward a higher one) are fully saturated; a down link's colour toned this way is the burnt orange
-        /// overlapped-link marker numbers are drawn in. Legacy also draws link bodies in it.
-        /// </summary>
-        internal const float FillSaturation = 0.55f;
-
-        /// <summary>
-        /// <paramref name="color"/> with its saturation scaled by <paramref name="saturation"/>: each channel moved toward the
-        /// colour's perceived brightness (0.3R + 0.59G + 0.11B), so the brightness is unchanged. Alpha is kept.
-        /// </summary>
-        internal static Color Desaturate(Color color, float saturation)
-        {
-            float grey = (0.3f * color.R) + (0.59f * color.G) + (0.11f * color.B);
-            byte Toward(byte channel) => (byte)MathHelper.Clamp((float)Math.Round(grey + ((channel - grey) * saturation)), 0f, 255f);
-            return new Color(Toward(color.R), Toward(color.G), Toward(color.B), color.A);
-        }
-
-        /// <summary>
         /// 
         /// </summary>
         /// <param name="StructureTypeColor"></param>
@@ -449,7 +884,8 @@ namespace WebAnnotation.ViewModel
             green = 255 - (green / section_span_distance);
             green = green < 0 ? 0 : green;
 
-            int alpha = 64;
+            // Fully opaque: the Link visibility preference sets the opacity a link is drawn with.
+            int alpha = 255;
 
             //If you don't cast to byte the wrong constructor is used and the alpha value is wrong
             return new Microsoft.Xna.Framework.Color((byte)(red),
@@ -492,20 +928,20 @@ namespace WebAnnotation.ViewModel
                 return false;
             }
 
-            SqlGeometry? shapeA = OverlapShape(locationA);
-            SqlGeometry? shapeB = OverlapShape(locationB);
+            SqlGeometry? shapeA = OverlapShape(locationA, Z, mapProvider);
+            SqlGeometry? shapeB = OverlapShape(locationB, Z, mapProvider);
             overlaps = shapeA is not null && shapeB is not null && shapeA.STIntersects(shapeB).IsTrue;
             return true;
         }
 
         /// <summary>
-        /// The shape one endpoint is tested with in <see cref="LinksOverlap"/>, in volume space, or null when the
-        /// location cannot be mapped into the volume.
+        /// The shape one endpoint is tested with in <see cref="TryLinksOverlap"/> (and <see cref="CoveringLocation"/>), in
+        /// volume space as seen from <paramref name="displayZ"/>, or null when the location cannot be mapped into the volume.
         /// </summary>
-        private SqlGeometry? OverlapShape(LocationObj location)
+        private static SqlGeometry? OverlapShape(LocationObj location, int displayZ, IVolumeTransformProvider mapProvider)
         {
             IVolumeToSectionTransform mapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(location.Z));
-            bool onViewedSection = location.Z == Z;
+            bool onViewedSection = location.Z == displayZ;
             // On the viewed section a polygon view reports its mapped polygon as VolumeShapeAsRendered, so map the
             // shape directly and skip a view that smooths and triangulates the ring in the background. A closed
             // curve view builds its rendered shape from its own control points, so it still goes through the view.
@@ -555,8 +991,29 @@ namespace WebAnnotation.ViewModel
                     return ContextMenuGenerator(this);
                 }
 
-                return null;
+                return LinkContextMenu();
             }
+        }
+
+        /// <summary>
+        /// The menu a right-click on the link opens. Go to partner pans the view to whichever end is farther from where the
+        /// mouse was when the menu opened, the other side of the link from the end the user is looking at. It stays on the
+        /// viewed section and keeps the zoom: the partner's end is drawn here, so there is no need to change section.
+        /// </summary>
+        private System.Windows.Forms.ContextMenuStrip LinkContextMenu()
+        {
+            Geometry.Vector2 mouse = AnnotationOverlay.CurrentOverlay?.MouseWorldPosition ?? LineSegment.PointAlongLine(0.5);
+            bool aIsPartner = AIsPartnerOf(mouse, A.Center, B.Center);
+            long partnerID = aIsPartner ? Key.A : Key.B;
+            Geometry.Vector2 partnerEnd = aIsPartner ? A.Center : B.Center;
+            int viewedSection = Z;
+
+            System.Windows.Forms.ContextMenuStrip menu = new();
+            System.Windows.Forms.ToolStripMenuItem goToPartner = new($"Go to partner {partnerID}");
+            goToPartner.Click += (sender, e) =>
+                Viking.UI.State.ViewerControl?.GoToLocation(new Vector2((float)partnerEnd.X, (float)partnerEnd.Y), viewedSection);
+            menu.Items.Add(goToPartner);
+            return menu;
         }
 
         public override string ToolTip => Key.A.ToString() + " -> " + Key.B.ToString();
@@ -632,9 +1089,15 @@ namespace WebAnnotation.ViewModel
             if (links.Length == 0)
                 return;
 
+            float visibility = Global.AnnotationSettings.LocationLinkVisibility;
+            Color DrawnColor(LocationLinkView l) => Desaturate(l.Color, FillSaturation).SetAlpha(
+                DrawnAlpha(l.Alpha, MathHelper.Lerp(visibility, 1f, l.HoverAmount)) * ClosenessOpacity(l.LineSegment.Length, l.A.Radius, l.B.Radius));
+            float DrawnWaistOpacity(LocationLinkView l) => MathHelper.Lerp(WaistOpacity, 1f, l.HoverAmount);
+
             if (!lineManager.SupportsPinched)
             {
-                LineView.Draw(device, scene, lineManager, [.. links.Select(l => l.lineView)]);
+                LineView[] lineViews = [.. links.Select(l => new LineView(l.A.Center, l.B.Center, l.LineWidth, DrawnColor(l), LineStyle.Standard))];
+                LineView.Draw(device, scene, lineManager, lineViews);
                 return;
             }
 
@@ -644,7 +1107,8 @@ namespace WebAnnotation.ViewModel
             bool drawCaps = Global.AnnotationSettings.LocationLinkDrawUnderMarkers;
             float time = (float)(DateTime.UtcNow.Millisecond / 1000.0);
 
-            foreach (IGrouping<Color, LocationLinkView> group in links.GroupBy(l => lineManager.UseHSLColor ? l.Color.ConvertToHCL() : l.Color))
+            foreach (IGrouping<(Color Color, float WaistOpacity), LocationLinkView> group in links.GroupBy(l =>
+                (lineManager.UseHSLColor ? DrawnColor(l).ConvertToHCL() : DrawnColor(l), DrawnWaistOpacity(l))))
             {
                 RoundLineCode.RoundLine[] lines = [.. group.Select(l => new RoundLineCode.RoundLine(
                     new Vector2((float)l.A.Center.X, (float)l.A.Center.Y),
@@ -655,8 +1119,124 @@ namespace WebAnnotation.ViewModel
                     (float)Math.Min(waistRadius, Math.Min(l.A.Radius, l.B.Radius)),
                     0f))];
 
-                lineManager.DrawPinched(lines, shapes, group.Key, scene.ViewProj, time, drawCaps, WaistOpacity);
+                // The border and shadow are plain RGB even for the HSL manager; see DrawPinched.
+                Color contrast = BorderColorFor(group.First().Color);
+
+                lineManager.DrawPinched(lines, shapes, group.Key.Color, scene.ViewProj, time, drawCaps,
+                    group.Key.WaistOpacity, contrast, BorderPixels,
+                    contrast, ShadowPixels, (float)scene.Camera.Downsample);
             }
+        }
+
+        /// <summary>
+        /// Labels both ends of each link the mouse is over (fading in and out with <see cref="HoverAmount"/>), just beyond its
+        /// markers where the link is strongest, with the ID of the location at the other end. The text runs along the link
+        /// and is turned to stay upright. Each
+        /// label is sized in volume space from its marker's radius (<see cref="LabelHeightPerRadius"/>), so it zooms with
+        /// the image; one too small to read is skipped, and a link too short for both labels gets none. The caller has
+        /// begun <paramref name="spriteBatch"/> with premultiplied alpha blending.
+        /// </summary>
+        public static void DrawLabels(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
+                                      Microsoft.Xna.Framework.Graphics.SpriteFont font,
+                                      VikingXNA.Scene scene,
+                                      IEnumerable<LocationLinkView> listToDraw)
+        {
+            float visibility = Global.AnnotationSettings.LocationLinkVisibility;
+
+            // Labels sit on the image, so they are always outlined: black text on a white outline.
+            Color textColor = Color.Black;
+            Color outlineColor = Color.White;
+
+            foreach (LocationLinkView link in listToDraw.Where(l => l is not null))
+            {
+                Geometry.Vector2 screenA = scene.WorldToScreen(link.A.Center);
+                Geometry.Vector2 screenB = scene.WorldToScreen(link.B.Center);
+                Vector2 delta = new((float)(screenB.X - screenA.X), (float)(screenB.Y - screenA.Y));
+                double screenLength = delta.Length();
+                double worldLength = link.LineSegment.Length;
+                if (screenLength <= 0 || worldLength <= 0)
+                    continue;
+
+                double pixelsPerUnit = screenLength / worldLength;
+                double radiusA = link.A.Radius * pixelsPerUnit;
+                double radiusB = link.B.Radius * pixelsPerUnit;
+                Vector2 towardB = delta / (float)screenLength;
+
+                // Near A the label names B; near B it names A. Text runs along the link and is turned over to stay upright.
+                bool uprightAtA = towardB.X >= 0;
+                bool uprightAtB = towardB.X <= 0;
+                string textA = link.Key.B.ToString();
+                string textB = link.Key.A.ToString();
+                Vector2 sizeA = font.MeasureString(textA);
+                Vector2 sizeB = font.MeasureString(textB);
+                float scaleA = (float)(LabelHeightPerRadius * radiusA / font.LineSpacing);
+                float scaleB = (float)(LabelHeightPerRadius * radiusB / font.LineSpacing);
+                double gapA = LabelGapPerRadius * radiusA;
+                double gapB = LabelGapPerRadius * radiusB;
+
+                if (!EndLabelsFit(screenLength - radiusA - radiusB, sizeA.X * scaleA, gapA, sizeB.X * scaleB, gapB))
+                    continue;
+
+                // The number is shown only while the mouse is over the link, fading with its hovered look.
+                float alpha = LabelAlpha(link.Alpha, visibility) * link.HoverAmount;
+                if (alpha <= 0f)
+                    continue;
+
+                Color text = textColor * alpha;
+                Color outline = outlineColor * alpha;
+
+                if (LabelHeightPerRadius * radiusA >= MinLabelPixels)
+                {
+                    DrawEndLabel(spriteBatch, font, screenA, towardB, radiusA, gapA, textA, sizeA, uprightAtA, scaleA, text, outline,
+                        SectionArrowAt(link.SectionA, link.SectionB, link.Z));
+                }
+
+                if (LabelHeightPerRadius * radiusB >= MinLabelPixels)
+                {
+                    DrawEndLabel(spriteBatch, font, screenB, -towardB, radiusB, gapB, textB, sizeB, uprightAtB, scaleB, text, outline,
+                        SectionArrowAt(link.SectionB, link.SectionA, link.Z));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Draws <paramref name="text"/> along the link, starting <paramref name="gap"/> screen pixels beyond the edge of the
+        /// marker centred at <paramref name="markerCentre"/> and running <paramref name="towardOther"/>. A
+        /// <paramref name="sectionArrow"/> of 1 adds an up arrow (<see cref="ArrowGlyph"/>) on the line above the text, -1 a
+        /// down arrow on the line below, each at the end of the line nearest the marker and outlined like the text; 0 adds
+        /// none.
+        /// </summary>
+        private static void DrawEndLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
+                                         Microsoft.Xna.Framework.Graphics.SpriteFont font,
+                                         Geometry.Vector2 markerCentre, Vector2 towardOther, double markerRadius, double gap,
+                                         string text, Vector2 textSize, bool upright, float fontScale,
+                                         Color textColor, Color outlineColor, int sectionArrow)
+        {
+            float along = (float)(markerRadius + gap) + (textSize.X * fontScale / 2f);
+            Vector2 position = new Vector2((float)markerCentre.X, (float)markerCentre.Y) + (towardOther * along);
+            float rotation = (float)Math.Atan2(towardOther.Y, towardOther.X) + (upright ? 0f : MathHelper.Pi);
+            LabelView.DrawOutlinedString(spriteBatch, font, text, position, textColor, outlineColor, rotation, textSize / 2f, fontScale);
+
+            if (sectionArrow == 0)
+                return;
+
+            Microsoft.Xna.Framework.Graphics.Texture2D arrow = ArrowGlyph.Get(spriteBatch.GraphicsDevice);
+
+            // The text's own axes: along its line, and down to the next line.
+            Vector2 alongText = new((float)Math.Cos(rotation), (float)Math.Sin(rotation));
+            Vector2 downText = new(-alongText.Y, alongText.X);
+            float lineHeight = font.LineSpacing * fontScale;
+            float iconSize = lineHeight * 0.9f;
+
+            // Upright text starts at the marker; turned-over text ends there.
+            float halfWidth = textSize.X * fontScale / 2f;
+            float acrossLine = upright ? -halfWidth + (iconSize / 2f) : halfWidth - (iconSize / 2f);
+            Vector2 iconCentre = position + (alongText * acrossLine) + (downText * (sectionArrow > 0 ? -lineHeight : lineHeight));
+
+            // The arrow names a section direction, not a screen direction, so it is not turned with the text.
+            LabelView.DrawOutlinedTexture(spriteBatch, arrow, iconCentre, textColor, outlineColor,
+                new Vector2(arrow.Width / 2f, arrow.Height / 2f), iconSize / arrow.Width,
+                sectionArrow > 0 ? Microsoft.Xna.Framework.Graphics.SpriteEffects.None : Microsoft.Xna.Framework.Graphics.SpriteEffects.FlipVertically);
         }
 
         public bool Equals(LocationLinkView other)

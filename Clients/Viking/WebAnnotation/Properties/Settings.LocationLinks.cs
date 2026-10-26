@@ -32,5 +32,29 @@ namespace WebAnnotation.Properties
             get => (bool)this[nameof(LocationLinkDrawUnderMarkers)];
             set => this[nameof(LocationLinkDrawUnderMarkers)] = value;
         }
+
+        /// <summary>
+        /// How strongly location links are drawn, as a percent, 10 to 100: the link's opacity next to its markers and the
+        /// strength of the contrasting shadow around it. Keep the default in step with
+        /// <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_LOCATION_LINK_VISIBILITY_PERCENT"/>.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("60")]
+        public int LocationLinkVisibilityPercent
+        {
+            get => (int)this[nameof(LocationLinkVisibilityPercent)];
+            set => this[nameof(LocationLinkVisibilityPercent)] = value;
+        }
+
+        /// <summary>True labels each end of a location link with the ID of the location at its other end.</summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool LocationLinkLabels
+        {
+            get => (bool)this[nameof(LocationLinkLabels)];
+            set => this[nameof(LocationLinkLabels)] = value;
+        }
     }
 }

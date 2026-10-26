@@ -83,6 +83,42 @@ namespace VikingXNAGraphics
 
         static readonly byte DefaultAlpha = 192;
 
+        /// <summary>Screen-pixel offsets at which the outline copies of the text are drawn, one pixel in each direction.</summary>
+        private static readonly Vector2[] OutlineOffsets =
+        [
+            new(-1, -1), new(0, -1), new(1, -1),
+            new(-1, 0), new(1, 0),
+            new(-1, 1), new(0, 1), new(1, 1),
+        ];
+
+        /// <summary>
+        /// Draws <paramref name="text"/> in <paramref name="textColor"/> over copies of it in <paramref name="outlineColor"/>
+        /// shifted one screen pixel in each direction. The caller has begun <paramref name="spriteBatch"/>. Used by location
+        /// link end labels.
+        /// </summary>
+        public static void DrawOutlinedString(SpriteBatch spriteBatch, SpriteFont font, string text, Vector2 position,
+            Color textColor, Color outlineColor, float rotation, Vector2 origin, float scale)
+        {
+            foreach (Vector2 offset in OutlineOffsets)
+                spriteBatch.DrawString(font, text, position + offset, outlineColor, rotation, origin, scale, SpriteEffects.None, 0);
+
+            spriteBatch.DrawString(font, text, position, textColor, rotation, origin, scale, SpriteEffects.None, 0);
+        }
+
+        /// <summary>
+        /// Draws a white-on-clear <paramref name="texture"/> (such as <see cref="ArrowGlyph"/>) tinted like outlined text: in
+        /// <paramref name="color"/> over copies in <paramref name="outlineColor"/> shifted one screen pixel each way. The
+        /// caller has begun <paramref name="spriteBatch"/>.
+        /// </summary>
+        public static void DrawOutlinedTexture(SpriteBatch spriteBatch, Texture2D texture, Vector2 position,
+            Color color, Color outlineColor, Vector2 origin, float scale, SpriteEffects effects)
+        {
+            foreach (Vector2 offset in OutlineOffsets)
+                spriteBatch.Draw(texture, position + offset, null, outlineColor, 0f, origin, scale, effects, 0);
+
+            spriteBatch.Draw(texture, position, null, color, 0f, origin, scale, effects, 0);
+        }
+
         /// <summary>Draws one row of text turned <paramref name="screenRotation"/> radians clockwise on screen.</summary>
         private void DrawRow(SpriteBatch spriteBatch, SpriteFont font, string row, Vector2 position, Vector2 origin, float fontScale, float screenRotation = 0f)
             => spriteBatch.DrawString(font, row, position, this._Color, screenRotation, origin, fontScale, SpriteEffects.None, 0);

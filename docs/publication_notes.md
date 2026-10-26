@@ -55,13 +55,86 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   $d_T$ the signed distance outside the text box and $c_j, r_j$ the markers placed so far; radius
   $\min(F/2, 0.95 f)$, at least $0.1F$.
 
+- **Location link fade depth** (`Clients/Viking/WebAnnotation/View/LocationLinkView.cs` `FadeDepthAt`, shader
+  `PinchedFadeDepth` in `Clients/MonogameXNAGraphicsShared/Content/PinchedLineShaders.fx`): for a point $x$ along a link of
+  length $L$ between end circles of radii $r_A, r_B$,
+  $t(x) = \operatorname{clamp}\left(\min\left(\frac{x - r_A}{r_A}, \frac{L - x - r_B}{r_B}\right), 0, 1\right)$; drawn
+  opacity $\alpha(x) = \alpha_0 \cdot \operatorname{lerp}(1, w, t(x))$ with waist opacity $w = 0$ at rest and $1$ when hovered.
+- **Polygon link anchor** (`LocationLinkView.AnchorOnOutline`): with centroid $c$, partner centre $p$, exit point $E$ =
+  the crossing of segment $cp$ with the outline farthest from $c$, $d = (p - E)/\lVert p - E \rVert$, entry $N$ = the
+  nearest crossing behind $E$ along $-d$, the end circle has radius
+  $r = \min(\operatorname{dist}(\tfrac{N + E}{2}, \partial P), \sqrt{A/\pi})$ and centre $E - r\,d$.
+
 ## Algorithmic decisions
+
+- **2026-10-26 Location link rendering mirrored from Legacy** (VikingLegacy `a892564c`, `5291eb09`, `31b45d9c`,
+  `4101c96a`, `d455fb72`, `4cffd674`, `1ef4e036`; their entries follow, from VikingLegacy's notes). Left out because
+  the gRPC client lacks the features they hook into: Del/Insert hiding of links (no `TemporarilyHiddenAnnotations`)
+  and the label outline preference, so link end labels are always black text with a white outline, Legacy's
+  default. Where: `Clients/Viking/WebAnnotation/View/LocationLinkView.cs`.
+- **2026-10-26 Links re-point when an adjacent location becomes hidden or visible.** Why: link ends are decided when
+  a link view is built, so a link kept ending in empty space (or on the covering location) until the section's links
+  were rebuilt. The only places a location becomes hidden or visible are where an overlapped link is added to or
+  removed from the section's tracker, so there the section's other links touching that adjacent location are removed
+  and re-added. This runs after the tracker's write lock is released, and rebuilt links do not re-point their own
+  neighbours, so it cannot cascade. Where: `SectionLocationLinkAnnotationsViewModel.RepointLinksOfAdjacentEnds`.
+
+- **2026-10-26 Close links are more transparent.** Why: markers close together give a short link that barely narrows
+  and never fades, drawn as a large dark block over the image (user, RC1 screenshot). The deepest a link fades is
+  $t^* = \operatorname{clamp}(g / (r_A + r_B), 0, 1)$ with $g = L - r_A - r_B$ the gap between the markers' edges (where
+  both ends' fade depths meet). Opacity is scaled by $\operatorname{lerp}(0.5, 1, t^*)$: a link that fades fully
+  ($g \ge r_A + r_B$) is unchanged, one whose markers touch is drawn at half opacity, hovered or not. Where:
+  `LocationLinkView.ClosenessOpacity`.
+
+- **2026-10-26 A link to a hidden adjacent location ends on the location covering it.** Why: an adjacent location
+  that overlaps a location it links to on the viewed section is not drawn (only the up/down symbol inside that
+  location), so a link to it from elsewhere ended in empty space (user, RC1 screenshot). The end is now drawn at that
+  covering location, found with the same shape intersection that hides it (`OverlapShape`); the colour, sections and
+  labels still describe the real ends. Where: `LocationLinkView.CoveringLocation`.
+- **2026-10-26 Link fill colours keep 55% of their saturation.** Why: the direction colours (pure red toward a lower
+  section, blue toward a higher one) looked harsh at the new opacity. Each channel moves toward the perceived
+  brightness $0.3R + 0.59G + 0.11B$ by 45%, so brightness, opacity, border and shadow, and with them visibility, are
+  unchanged. Rejected: lowering opacity, which makes links harder to see. Where: `LocationLinkView.Desaturate`.
+
+- **2026-10-26 Links to drawn lines anchor on the line, as wide as the partner's end.** Why: a line or open curve end
+  was a circle at its centroid half the line's length across, unrelated to what is drawn. The end now leaves the drawn
+  line (polyline vertices, or the open curve smoothed as its view smooths it) at the point $Q$ nearest the partner, from
+  the line's edge: radius $r = \max(w/2, r_\text{partner})$, centre $Q + d\,(w/2 - r)$. Rejected (user's choice): a
+  bridge only the line's width $w$ thick, which fades out within a line width (the fade runs one end radius) and is too
+  small to label. Open curves on an adjacent section are drawn as that half-length circle, so the link uses it there.
+  Where: `LocationLinkView.AnchorOnLine`, `AnnotationViewFactory.AdjacentOpenCurveMarkerCircle`.
+
+- **2026-10-26 Links to polygons anchor on the outline.** Why: a link end was the circle at the polygon's centroid with
+  the equal-area radius $\sqrt{A/\pi}$, so on a long cell the link's wide end lay under the fill and on a thin cell the
+  link began in empty space; adjacent-section polygons are drawn as `CalculateInscribedCircle` (centroid to nearest
+  vertex), which the link did not use either. Now the viewed-section end is a circle just inside the point where the
+  link's line last leaves the outline, sized by the cell's thickness there (formula above), and the adjacent end is the
+  drawn marker circle (since 2026-10-26 the maximum inscribed circle, entry above). Rejected: the centroid-to-nearest-vertex "inscribed" radius for the viewed end (about half the
+  diagonal of a rectangle, wider than the cell); the first crossing in list order (`IntersectionPoint`), which is not the
+  exit on concave shapes. Where: `LocationLinkView.AnchorOnOutline`, `AnnotationViewFactory.AdjacentPolygonMarkerCircle`.
+- **2026-10-26 Link middles are invisible and unpickable until hovered; hover fades over 350 ms.** Why: user feedback on
+  RC1 that links cluttered the view between cells. Opacity falls linearly from each marker's edge to 0 one radius on; a
+  link at rest cannot be picked where it is below a quarter of its end opacity ($t > 0.75$). Hovering draws it fully and
+  makes all of it pickable so the mouse can follow it; the look and the end labels fade at a constant rate over 350 ms,
+  so a reversed fade takes the time already spent. Where: `LocationLinkView` (`IsMouseOver`, `HoverAmountAt`).
+- **2026-10-26 Fade measured from each marker's edge by its own radius.** Why: the earlier fade by how far the width had
+  narrowed from the larger radius started the small end of a link between unequal markers already faded. Where:
+  `FadeDepthAt` / `PinchedFadeDepth`.
+- **2026-10-26 Link end labels sized in volume space, 0.16 of the marker radius.** Why: fixed screen-pixel labels did not
+  zoom with the image as location labels do (user, RC1 location 986804); 0.16 keeps a seven-digit ID inside the strong
+  part of the link. Labels under 6 screen pixels are skipped.
+- **2026-10-22/26 Link border and shadow colours bypass the HCL blend.** Why: `BlendHCLColorOverBackground` returns the
+  background for a colour of zero luma and keeps the background's luma when its luma alpha is 0, so the "contrasting"
+  black or white border came out as the image itself or a grey at the image's brightness and barely showed. Border and
+  the new outside shadow (5 px, black around light links, white around dark) are composited as plain RGB; the fill keeps
+  the luma blend it had at alpha 64 ($\alpha_\text{luma} = 0.75$) so raising opacity does not change its colour. Where:
+  `PinchedLineShaders.fx` `MyPSPinchedHSV`.
 
 - **2026-10-26 Overlapped-link marker numbers use the toned link colour.** Why: the section number on a down marker
   was the saturated direction colour, which came out yellow; the user wants the burnt orange of a down link body (as
   Legacy draws it). The label is now `Desaturate(GetLocationLinkColor(ColorForStructure(parent), span, direction),
-  FillSaturation)` at full opacity, so up markers take the toned up-link colour too. Dev's link bodies are not toned yet
-  (Legacy 4cffd674 not backported). Where: `OverlappedLocationLinkView` constructor, `LocationLinkView.Desaturate`.
+  FillSaturation)` at full opacity, so up markers take the toned up-link colour too. Link bodies are drawn in it too since
+  Legacy 4cffd674 was mirrored (entry below). Where: `OverlappedLocationLinkView` constructor, `LocationLinkView.Desaturate`.
 - **2026-10-26 Polygon labels use the maximum inscribed circle or a rotated run, never the centroid circle.** Why: the
   old "inscribed circle" (centroid, radius to the nearest vertex) lies outside C-shaped cells and cells with holes, is
   tiny on long processes, and pokes past edges between vertices (user report). The same circle placed adjacent-section

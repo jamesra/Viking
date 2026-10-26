@@ -76,16 +76,30 @@ namespace WebAnnotation.ViewModel
         {
             foreach (LocationLinkKey key in PendingLinks.Keys)
             {
-                if (TryAddLocationLinkNow(key, subscribe: true))
+                if (TryAddLocationLinkNow(key, subscribe: true, out bool becameOverlapped))
+                {
                     PendingLinks.TryRemove(key, out _);
+                    if (becameOverlapped)
+                        RepointLinksOfAdjacentEnds(key);
+                }
             }
         }
 
-        protected void AddLocationLink(LocationLinkKey key, bool subscribe)
+        /// <summary>
+        /// Adds the link <paramref name="key"/> if one end is on this section, or parks it until it can be. When the link's
+        /// ends overlap, its adjacent end becomes hidden (drawn only as the up/down symbol), so with
+        /// <paramref name="repointNeighbours"/> the other links to that location are rebuilt to end on the covering location
+        /// (see <see cref="RepointLinksOfAdjacentEnds"/>).
+        /// </summary>
+        protected void AddLocationLink(LocationLinkKey key, bool subscribe, bool repointNeighbours = true)
         {
-            if (TryAddLocationLinkNow(key, subscribe))
+            if (TryAddLocationLinkNow(key, subscribe, out bool becameOverlapped))
             {
                 PendingLinks.TryRemove(key, out _);
+
+                // Outside the tracker's lock: rebuilding adds and removes links through the same trackers.
+                if (repointNeighbours && becameOverlapped)
+                    RepointLinksOfAdjacentEnds(key);
                 return;
             }
 
@@ -94,10 +108,12 @@ namespace WebAnnotation.ViewModel
 
         /// <summary>
         /// Creates the canvas link when both endpoints are in the store, at least one
-        /// is on this section, and the on-section location already has a view.
+        /// is on this section, and the on-section location already has a view. <paramref name="becameOverlapped"/> is true
+        /// when this call added it as an overlapped link.
         /// </summary>
-        private bool TryAddLocationLinkNow(LocationLinkKey key, bool subscribe)
+        private bool TryAddLocationLinkNow(LocationLinkKey key, bool subscribe, out bool becameOverlapped)
         {
+            becameOverlapped = false;
             if (KnownLinks.Contains(key))
                 return true;
 
@@ -125,6 +141,7 @@ namespace WebAnnotation.ViewModel
             // the callback returns true (not when it returns false or throws), but LocationLinks is ours to
             // clean up. A leftover entry would otherwise make every later add of the same link fail.
             bool endpointGone = false;
+            bool overlappedNow = false;
             KnownLinks.TryAdd(key, () =>
             {
                 // An endpoint can leave the store after the checks above (deleted, or evicted when another
@@ -144,6 +161,7 @@ namespace WebAnnotation.ViewModel
                         {
                             OverlappedAdjacentLocationIDs.AddRef(key.A);
                             OverlappedAdjacentLocationIDs.AddRef(key.B);
+                            overlappedNow = true;
                         });
                     }
                     else
@@ -161,6 +179,8 @@ namespace WebAnnotation.ViewModel
                 return true;
             });
 
+            becameOverlapped = overlappedNow;
+
             // A link whose endpoint is gone is handled, so it is not parked in PendingLinks waiting for a location
             // that no longer exists.
             if (endpointGone)
@@ -169,8 +189,13 @@ namespace WebAnnotation.ViewModel
             return KnownLinks.Contains(key);
         }
 
-        protected void RemoveLocationLink(LocationLinkKey key, bool unsubscribe)
+        /// <summary>
+        /// Removes the link <paramref name="key"/>. When it was an overlapped link, its adjacent end is drawn again, so with
+        /// <paramref name="repointNeighbours"/> the other links to that location are rebuilt to end on it once more.
+        /// </summary>
+        protected void RemoveLocationLink(LocationLinkKey key, bool unsubscribe, bool repointNeighbours = true)
         {
+            bool wasOverlapped = false;
             KnownLinks.TryRemove(key, () =>
             {
                 // No Debug.Assert here: this runs under the tracker's write lock, and a stale or already-cleaned
@@ -183,6 +208,7 @@ namespace WebAnnotation.ViewModel
                     {
                         OverlappedAdjacentLocationIDs.ReleaseRef(key.A);
                         OverlappedAdjacentLocationIDs.ReleaseRef(key.B);
+                        wasOverlapped = true;
                     });
                 }
 
@@ -191,6 +217,54 @@ namespace WebAnnotation.ViewModel
                     NonOverlappedLinksSearch.Delete(key, out LocationLinkKey removedKey);
                 }
             });
+
+            if (repointNeighbours && wasOverlapped)
+                RepointLinksOfAdjacentEnds(key);
+        }
+
+        /// <summary>
+        /// Rebuilds the links, other than <paramref name="changed"/>, that touch an end of <paramref name="changed"/> on an
+        /// adjacent section, because that location just became hidden under, or visible from under, a location on this
+        /// section. Each link view decides its ends when it is built (LocationLinkView.CoveringLocation), so rebuilding
+        /// re-points it without changing section. Rebuilt links do not re-point their own neighbours, so this cannot loop.
+        /// Call outside the trackers' locks.
+        /// </summary>
+        private void RepointLinksOfAdjacentEnds(LocationLinkKey changed)
+        {
+            IEnumerable<LocationLinkKey> neighbours = LinksToRepoint(changed, SectionNumber,
+                id => Store.Locations.TryGetObjectByID(id, out LocationObj end) ? (end.Z, end.LinksCopy) : null,
+                KnownLinks.Contains);
+
+            foreach (LocationLinkKey neighbour in neighbours.ToList())
+            {
+                RemoveLocationLink(neighbour, false, repointNeighbours: false);
+                AddLocationLink(neighbour, false, repointNeighbours: false);
+            }
+        }
+
+        /// <summary>
+        /// The known links, other than <paramref name="changed"/>, that touch an end of <paramref name="changed"/> lying off
+        /// <paramref name="sectionNumber"/>. <paramref name="location"/> gives a location's section and linked IDs, or null
+        /// when it is not loaded; <paramref name="isKnown"/> says whether this section tracks a link.
+        /// </summary>
+        internal static IEnumerable<LocationLinkKey> LinksToRepoint(LocationLinkKey changed, int sectionNumber,
+            System.Func<long, (double Z, long[] Links)?> location, System.Func<LocationLinkKey, bool> isKnown)
+        {
+            foreach (long endID in new[] { changed.A, changed.B })
+            {
+                if (location(endID) is not { } end || end.Z == sectionNumber)
+                    continue;
+
+                foreach (long linkedID in end.Links)
+                {
+                    if (linkedID == endID)
+                        continue;
+
+                    LocationLinkKey neighbour = new(endID, linkedID);
+                    if (!neighbour.Equals(changed) && isKnown(neighbour))
+                        yield return neighbour;
+                }
+            }
         }
 
         public List<HitTestResult> GetAnnotationsAtPosition(Vector2 WorldPosition)

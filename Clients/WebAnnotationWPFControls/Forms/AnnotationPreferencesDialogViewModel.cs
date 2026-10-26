@@ -22,6 +22,8 @@ namespace WebAnnotation.WPF.Forms
         private double _originalAdjacentLocationRadiusScalar;
         private int _originalLocationLinkWaistPixels;
         private bool _originalLocationLinkDrawUnderMarkers;
+        private int _originalLocationLinkVisibilityPercent = DefaultLocationLinkVisibilityPercent;
+        private bool _originalLocationLinkLabels = true;
         private uint _originalNumClosedCurveInterpolationPointsForDisplay;
         private int _originalPenSimplifyThreshold;
         private double _originalMinRadius;
@@ -198,6 +200,51 @@ namespace WebAnnotation.WPF.Forms
                 if (_locationLinkDrawUnderMarkers != value)
                 {
                     _locationLinkDrawUnderMarkers = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>Starting <see cref="LocationLinkVisibilityPercent"/>; matches WebAnnotation's stored default.</summary>
+        public const int DefaultLocationLinkVisibilityPercent = 60;
+
+        /// <summary>Faintest allowed <see cref="LocationLinkVisibilityPercent"/>.</summary>
+        public const int MinLocationLinkVisibilityPercent = 10;
+
+        /// <summary>Strongest allowed <see cref="LocationLinkVisibilityPercent"/>.</summary>
+        public const int MaxLocationLinkVisibilityPercent = 100;
+
+        private int _locationLinkVisibilityPercent = DefaultLocationLinkVisibilityPercent;
+
+        /// <summary>
+        /// How strongly location links are drawn, as a percent: the link's opacity next to its markers and the strength of
+        /// its contrasting shadow. The middle of a link is always fainter than its ends.
+        /// </summary>
+        public int LocationLinkVisibilityPercent
+        {
+            get => _locationLinkVisibilityPercent;
+            set
+            {
+                int clampedValue = MathUtils.Clamp(value, MinLocationLinkVisibilityPercent, MaxLocationLinkVisibilityPercent);
+                if (_locationLinkVisibilityPercent != clampedValue)
+                {
+                    _locationLinkVisibilityPercent = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _locationLinkLabels = true;
+
+        /// <summary>Labels each end of a location link with the ID of the location at its other end.</summary>
+        public bool LocationLinkLabels
+        {
+            get => _locationLinkLabels;
+            set
+            {
+                if (_locationLinkLabels != value)
+                {
+                    _locationLinkLabels = value;
                     OnPropertyChanged();
                 }
             }
@@ -990,7 +1037,9 @@ namespace WebAnnotation.WPF.Forms
             int autoPolygonizeShimmerDurationMs = DefaultAutoPolygonizeShimmerDurationMs,
             bool segmentLinkedAnnotations = true,
             int locationLinkWaistPixels = DefaultLocationLinkWaistPixels,
-            bool locationLinkDrawUnderMarkers = false)
+            bool locationLinkDrawUnderMarkers = false,
+            int locationLinkVisibilityPercent = DefaultLocationLinkVisibilityPercent,
+            bool locationLinkLabels = true)
         {
             _polygonPointOpacity = _originalPolygonPointOpacity = polygonPointOpacity;
             _hidePolygonPointsInPenMode = _originalHidePolygonPointsInPenMode = hidePolygonPointsInPenMode;
@@ -1041,6 +1090,8 @@ namespace WebAnnotation.WPF.Forms
             _originalAdjacentLocationRadiusScalar = adjacentLocationRadiusScalar;
             _originalLocationLinkWaistPixels = locationLinkWaistPixels;
             _originalLocationLinkDrawUnderMarkers = locationLinkDrawUnderMarkers;
+            _originalLocationLinkVisibilityPercent = locationLinkVisibilityPercent;
+            _originalLocationLinkLabels = locationLinkLabels;
             _originalNumClosedCurveInterpolationPointsForDisplay = numClosedCurveInterpolationPointsForDisplay;
             _originalPenSimplifyThreshold = penSimplifyThreshold;
             _originalMinRadius = minRadius;
@@ -1109,6 +1160,8 @@ namespace WebAnnotation.WPF.Forms
             AutoPolygonizeShimmerDurationMs = autoPolygonizeShimmerDurationMs;
             LocationLinkWaistPixels = locationLinkWaistPixels;
             LocationLinkDrawUnderMarkers = locationLinkDrawUnderMarkers;
+            LocationLinkVisibilityPercent = locationLinkVisibilityPercent;
+            LocationLinkLabels = locationLinkLabels;
             CorrectionShimEnabled = correctionShimEnabled;
             CorrectionShimShowOffset = correctionShimShowOffset;
             CorrectionShimFadeStartDownsample = correctionShimFadeStartDownsample;
@@ -1134,6 +1187,8 @@ namespace WebAnnotation.WPF.Forms
             _originalAdjacentLocationRadiusScalar = _adjacentLocationRadiusScalar;
             _originalLocationLinkWaistPixels = _locationLinkWaistPixels;
             _originalLocationLinkDrawUnderMarkers = _locationLinkDrawUnderMarkers;
+            _originalLocationLinkVisibilityPercent = _locationLinkVisibilityPercent;
+            _originalLocationLinkLabels = _locationLinkLabels;
             _originalNumClosedCurveInterpolationPointsForDisplay = _numClosedCurveInterpolationPointsForDisplay;
             _originalPenSimplifyThreshold = _penSimplifyThreshold;
             _originalMinRadius = _minRadius;
@@ -1182,6 +1237,8 @@ namespace WebAnnotation.WPF.Forms
             _adjacentLocationRadiusScalar = _originalAdjacentLocationRadiusScalar;
             _locationLinkWaistPixels = _originalLocationLinkWaistPixels;
             _locationLinkDrawUnderMarkers = _originalLocationLinkDrawUnderMarkers;
+            _locationLinkVisibilityPercent = _originalLocationLinkVisibilityPercent;
+            _locationLinkLabels = _originalLocationLinkLabels;
             _numClosedCurveInterpolationPointsForDisplay = _originalNumClosedCurveInterpolationPointsForDisplay;
             _penSimplifyThreshold = _originalPenSimplifyThreshold;
             _minRadius = _originalMinRadius;
@@ -1231,6 +1288,8 @@ namespace WebAnnotation.WPF.Forms
             _defaultLocationJumpDownsample = 4.0;
             _adjacentLocationRadiusScalar = 0.5;
             _locationLinkWaistPixels = DefaultLocationLinkWaistPixels;
+            _locationLinkVisibilityPercent = DefaultLocationLinkVisibilityPercent;
+            _locationLinkLabels = true;
             _locationLinkDrawUnderMarkers = false;
             _numClosedCurveInterpolationPointsForDisplay = 3;
             _penSimplifyThreshold = 3;
