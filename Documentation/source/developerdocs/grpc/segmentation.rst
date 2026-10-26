@@ -30,6 +30,8 @@ Upload and cache
      - Stores one image (``image_data``, ``width``, ``height``) and returns ``image_id``. Later calls pass that id and skip re-encoding.
    * - ``UploadTile``
      - Stores one 1024×1024 cell. A ``TileCoord`` that is already cached keeps its entry, whatever bytes come with the upload, and is not re-encoded. ``already_cached`` is true in that case. There is no image id. ``SegmentTiles`` addresses the cell by ``TileCoord``. The server also keeps each new tile's bytes in host memory and, with the embedding disk cache on, on disk, so it can rebuild the tile after the GPU cache drops it without asking a client.
+   * - ``GetHeldTiles``
+     - Takes a ``TileGrid`` (a ``TileCoord`` without ``row`` and ``col``; ``space`` must be ``MOSAIC`` or ``VOLUME``), up to 256 ``GridCell`` rows and columns, and ``annotation_context_id``. Returns one ``held`` flag per cell, in request order. A cell is held when ``SegmentTilesStream`` would not ask for it: it is in the GPU cache or the stored tiles, or the server reads it from the context's tileset. The answer pins and refreshes nothing; a cell dropped since is asked for during the request as usual. Clients call it before uploading tiles ahead of a request (Viking's auto-segment prefetch) and skip the held cells. Requests need not call it: the stream already makes the same check.
    * - ``DeleteImage``
      - Drops a cached ``image_id``.
    * - ``GetServerStatus``

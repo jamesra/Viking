@@ -88,6 +88,8 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         public string VolumeName => _viewport.VolumeName;
 
+        public bool InVolumeSpace => _viewport.InVolumeSpace;
+
         public string VolumeTransform => _viewport.VolumeTransform;
 
         public string SectionTransform => _viewport.SectionTransform;

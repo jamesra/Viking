@@ -375,6 +375,12 @@ class ImageCache:
             self._coord_index[tile_key] = image_id
         return image_id, False
 
+    async def has_tile(self, tile_key: TileCacheKey) -> bool:
+        """True when the cell for tile_key is cached. Neither pins it nor refreshes its LRU place."""
+        async with self._lock:
+            image_id = self._coord_index.get(tile_key)
+            return image_id is not None and image_id in self._cache
+
     async def get_image_by_tile(
         self, tile_key: TileCacheKey
     ) -> Optional[Tuple[int, bytes, int, int, Optional[Any], threading.Lock]]:

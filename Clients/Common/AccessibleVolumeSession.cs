@@ -27,6 +27,13 @@ namespace Viking.Common
         public static Uri? ODataEndpoint { get; set; }
 
         /// <summary>
+        /// Identity id of the annotation context (the accessible volume row) opened at login, 0 when the volume was
+        /// opened without Identity. Sent to services that act for a context, such as the segmentation server, which
+        /// reads the tileset of a context local to it instead of asking for every tile.
+        /// </summary>
+        public static long AnnotationContextId { get; set; }
+
+        /// <summary>
         /// Clears session overrides (e.g. before a new login attempt).
         /// </summary>
         public static void Clear()
@@ -35,6 +42,7 @@ namespace Viking.Common
             AnnotationServerName = null;
             ExportEndpoint = null;
             ODataEndpoint = null;
+            AnnotationContextId = 0;
         }
 
         /// <summary>

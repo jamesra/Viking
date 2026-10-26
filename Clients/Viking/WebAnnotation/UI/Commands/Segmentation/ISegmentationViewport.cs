@@ -26,6 +26,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         string VolumeName { get; }
 
+        /// <summary>
+        /// True when world coordinates are the volume, the section placed by its volume transform; false when they are the
+        /// section's own mosaic. Tiles, prompts and results of a request are all in this space.
+        /// </summary>
+        bool InVolumeSpace { get; }
+
+        /// <summary>The StosGroup placing the section in the volume; empty in mosaic space (<see cref="InVolumeSpace"/> false).</summary>
         string VolumeTransform { get; }
 
         string SectionTransform { get; }
@@ -64,7 +71,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         public string VolumeName => viewer.Section?.VolumeViewModel?.Name ?? string.Empty;
 
-        public string VolumeTransform => viewer.Section?.VolumeViewModel?.ActiveVolumeTransform ?? string.Empty;
+        /// <summary>
+        /// A section the active volume transform has no entry for is drawn with an identity transform, so it is in mosaic
+        /// space even while a volume transform is chosen.
+        /// </summary>
+        public bool InVolumeSpace => viewer.Section?.VolumeViewModel?.HasVolumeTransformFor(SectionNumber) ?? false;
+
+        public string VolumeTransform => InVolumeSpace ? viewer.Section.VolumeViewModel.ActiveVolumeTransform : string.Empty;
 
         public string SectionTransform => viewer.CurrentTransform ?? string.Empty;
 

@@ -54,6 +54,24 @@ def test_a_tile_on_disk_survives_a_new_store(tmp_path) -> None:
     assert list(tmp_path.rglob("*.png")) == []
 
 
+def test_contains_sees_memory_and_disk_without_reading_or_reordering(tmp_path) -> None:
+    disk = EmbeddingStore(str(tmp_path), "ab" * 16, max_bytes=None, suffix=".png")
+    store = TileStore(ram_bytes=8, disk=disk)
+    store.persist(_key(9), b"on-disk")
+    store.remember(_key(0), b"aaaa")
+    store.remember(_key(1), b"bbbb")
+
+    assert store.contains(_key(0)) and store.contains(_key(1))
+    assert store.contains(_key(9))
+    assert store.recall(_key(9)) is None  # contains did not load it
+    assert not store.contains(_key(5))
+
+    # Asking about (0) did not make it the most recently used: (0) is still the first to go.
+    store.remember(_key(2), b"cccc")
+    assert store.recall(_key(0)) is None
+    assert store.recall(_key(1)) == b"bbbb"
+
+
 def test_tile_files_do_not_count_as_embeddings_under_one_root(tmp_path) -> None:
     tiles = EmbeddingStore(str(tmp_path / "tiles"), "ab" * 16, max_bytes=None, suffix=".png")
     TileStore(ram_bytes=0, disk=tiles).persist(_key(), b"x" * 100)

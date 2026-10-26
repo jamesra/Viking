@@ -256,5 +256,18 @@ namespace Viking.ViewModels
         }
 
         public bool UsingVolumeTransform => ActiveVolumeTransform != null;
+
+        /// <summary>
+        /// True when the active volume transform places <paramref name="sectionNumber"/> in the volume. False with no active
+        /// transform, or when the transform has no entry for the section: <see cref="GetSectionToVolumeTransform"/> then
+        /// falls back to identity, so the section is shown in its own mosaic space.
+        /// </summary>
+        public bool HasVolumeTransformFor(int sectionNumber)
+        {
+            string activeTransform = this.ActiveVolumeTransform;
+            return activeTransform is not null &&
+                   _Volume.Transforms.TryGetValue(activeTransform, out SortedList<int, ITransform> sectionTransforms) &&
+                   sectionTransforms.ContainsKey(sectionNumber);
+        }
     }
 }

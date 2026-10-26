@@ -180,6 +180,17 @@ async def test_cells_the_source_cannot_draw_are_left_to_the_client(context_id: i
     source = VikingTilesetSource(_Assignments({5: XML_URL}), http_get=get)
 
     assert await source.fetch(context_id, coord) is None
+    assert not await source.can_read(context_id, coord)
+    source.close()
+
+
+@pytest.mark.asyncio
+async def test_can_read_answers_without_reading_a_tile() -> None:
+    requested, get = _storage({})
+    source = VikingTilesetSource(_Assignments({5: XML_URL}), http_get=get)
+
+    assert await source.can_read(5, _coord())
+    assert requested == [XML_URL]
     source.close()
 
 

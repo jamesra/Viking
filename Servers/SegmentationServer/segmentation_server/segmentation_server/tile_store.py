@@ -68,6 +68,14 @@ class TileStore:
                 self._entries.move_to_end(key)
             return data
 
+    def contains(self, key: TileCacheKey) -> bool:
+        """True when the tile is held in memory or listed on disk. Cheap enough for the event loop: it reads no
+        file and leaves the memory order as it is, so asking does not keep a tile."""
+        with self._lock:
+            if key in self._entries:
+                return True
+        return self._disk is not None and self._disk.contains(_key_digest(key), _MODE)
+
     def load(self, key: TileCacheKey) -> Optional[bytes]:
         """The tile's bytes from memory, else from disk (and then kept in memory), or None."""
         data = self.recall(key)

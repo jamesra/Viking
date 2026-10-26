@@ -10,6 +10,7 @@ using Rectangle = Geometry.Rectangle;
 using MaskKind = Viking.gRPC.SegmentationServiceTypes.V1.MaskKind;
 using MaskTile = Viking.gRPC.SegmentationServiceTypes.V1.MaskTile;
 using TileCoord = Viking.gRPC.SegmentationServiceTypes.V1.TileCoord;
+using CoordinateSpace = Viking.gRPC.SegmentationServiceTypes.V1.CoordinateSpace;
 
 namespace WebAnnotationTests.Commands
 {
@@ -504,7 +505,7 @@ namespace WebAnnotationTests.Commands
             public System.Threading.Tasks.Task CompleteAsync() => System.Threading.Tasks.Task.CompletedTask;
         }
 
-        private static SegmentationViewportSession.TileSignature Signature(int downsample) => new("vol", 7, "c", "t", downsample);
+        private static SegmentationViewportSession.TileSignature Signature(int downsample) => new("vol", 7, "c", "t", downsample, CoordinateSpace.Volume);
 
         [TestMethod]
         public void ClicksAreThePointsOfTheTwoFeaturesInMosaicPixels()

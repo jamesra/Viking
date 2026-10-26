@@ -24,6 +24,8 @@ from segmentation_grpc import (
     CoordinateSpace,
     DeleteImageRequest,
     DeleteImageResponse,
+    HeldTilesRequest,
+    HeldTilesResponse,
     MaskRole,
     MultiSegmentationRequest,
     SegmentationRequest,
@@ -212,6 +214,9 @@ def tile_share_timeout_seconds() -> float:
 
 
 DEFAULT_MAX_CONCURRENT_RPCS = 256
+
+# Most cells one GetHeldTiles call may name: a prefetch batch, not a section.
+MAX_HELD_TILES_CELLS = 256
 
 
 def max_concurrent_rpcs_from_env() -> int:
@@ -1363,6 +1368,73 @@ class SegmentationServicer(SegmentationServiceServicer):
             time.perf_counter() - start_time,
         )
         return UploadTileResponse(already_cached=already_cached)
+
+    async def GetHeldTiles(
+        self,
+        request: HeldTilesRequest,
+        context: ServicerContext,
+    ) -> HeldTilesResponse:
+        """Which cells a SegmentTilesStream would not ask the client for, so a prefetch skips them.
+
+        A cell is held when the image cache has it, the tile store has it in memory or on disk, or the tile source
+        reads it for the request's annotation context. Nothing is pinned or refreshed: the answer is a hint, and a cell
+        dropped since is asked for during the request as usual.
+        """
+        grid = request.grid
+        if grid.space not in (CoordinateSpace.COORDINATE_SPACE_MOSAIC, CoordinateSpace.COORDINATE_SPACE_VOLUME):
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "GetHeldTiles requires a MOSAIC or VOLUME space.")
+            return HeldTilesResponse()
+        if grid.downsample <= 0:
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "GetHeldTiles requires a positive downsample.")
+            return HeldTilesResponse()
+        if len(request.cells) > MAX_HELD_TILES_CELLS:
+            await context.abort(
+                grpc.StatusCode.INVALID_ARGUMENT,
+                f"GetHeldTiles takes at most {MAX_HELD_TILES_CELLS} cells, got {len(request.cells)}.",
+            )
+            return HeldTilesResponse()
+
+        context_id = int(request.annotation_context_id)
+        hot = warm = readable = 0
+        held: List[bool] = []
+        for cell in request.cells:
+            coord = TileCoord(
+                volume=grid.volume,
+                section=grid.section,
+                channel=grid.channel,
+                transform=grid.transform,
+                downsample=grid.downsample,
+                row=cell.row,
+                col=cell.col,
+                space=grid.space,
+            )
+            key = _tile_cache_key(coord)
+            if await self.image_cache.has_tile(key):
+                hot += 1
+            elif self._tile_store.contains(key):
+                warm += 1
+            elif self._tile_source is not None and await self._tile_source.can_read(context_id, coord):
+                readable += 1
+            else:
+                held.append(False)
+                continue
+            held.append(True)
+        logger.info(
+            "GetHeldTiles vol=%s sec=%s ch=%s xf=%s space=%s ds=%s context=%s cells=%d cached=%d stored=%d readable=%d missing=%d",
+            grid.volume,
+            grid.section,
+            grid.channel,
+            grid.transform,
+            "mosaic" if grid.space == CoordinateSpace.COORDINATE_SPACE_MOSAIC else "volume",
+            grid.downsample,
+            context_id,
+            len(request.cells),
+            hot,
+            warm,
+            readable,
+            len(request.cells) - hot - warm - readable,
+        )
+        return HeldTilesResponse(held=held)
 
     async def SegmentTilesStream(self, request_iterator, context: ServicerContext):
         """Segment from uploaded cells; the server owns the growth and asks for tiles as it needs them.

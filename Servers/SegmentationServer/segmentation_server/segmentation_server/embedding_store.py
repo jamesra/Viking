@@ -224,6 +224,15 @@ class EmbeddingStore:
             if record is not None:
                 record.mtime = now
 
+    def contains(self, digest: str, mode: str) -> bool:
+        """True when the index lists a blob for this key. Reads no file and refreshes nothing, so a file deleted
+        behind the store's back still answers True until a load finds it gone."""
+        path = self._path(digest, mode)
+        if path is None:
+            return False
+        with self._lock:
+            return str(path) in self._files
+
     def try_load(self, digest: str, mode: str) -> Optional[bytes]:
         """Return the blob for this image hash, or None on miss, a bad file, or an absurd size.
 

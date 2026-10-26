@@ -53,6 +53,11 @@ appear in server logs for predictor bookkeeping; clients must not treat it as th
    below), the start cells included. The stream ends with `result` (the finished mask) or an error.
 3. No `DeleteImage` for tiles — idle TTL / LRU / entry cap reclaim GPU slots.
 
+A client uploading tiles ahead of a request (Viking's auto-segment prefetch) first asks `GetHeldTiles`
+which of them the server holds (GPU cache, stored tiles) or reads itself from the annotation context's
+tileset, and skips those. The answer is a hint: it pins nothing, and the stream still asks for a cell
+dropped since.
+
 The server pins every tile it uses for the whole call, so cache eviction cannot remove a tile
 mid-request. A client that cancels or ends its half of the stream while tiles are awaited
 abandons the request; no result is sent.

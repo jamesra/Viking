@@ -137,6 +137,9 @@ namespace Viking.VolumeView
 
         string ISegmentationViewport.VolumeName => Volume?.Name ?? string.Empty;
 
+        /// <summary>Jotunn places sections with the volume's transform whenever it has one, so a named transform is volume space.</summary>
+        bool ISegmentationViewport.InVolumeSpace => !string.IsNullOrEmpty(((ISegmentationViewport)this).VolumeTransform);
+
         string ISegmentationViewport.VolumeTransform =>
             ActiveVolumeVm()?.ActiveVolumeTransform ?? Volume?.DefaultVolumeTransform ?? string.Empty;
 

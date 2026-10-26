@@ -1,7 +1,10 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Xna.Framework.Graphics;
+using Viking.gRPC.SegmentationServiceTypes.V1;
 using WebAnnotation.UI.Commands.Segmentation;
 
 namespace WebAnnotationTests.Commands
@@ -13,7 +16,7 @@ namespace WebAnnotationTests.Commands
     [TestClass]
     public class SegmentationViewportInterfaceTests
     {
-        sealed class FakeViewport : ISegmentationViewport
+        sealed class FakeViewport(bool inVolumeSpace = true) : ISegmentationViewport
         {
             public double CameraDownsample => 2;
             public int ViewportWidth => 100;
@@ -21,7 +24,8 @@ namespace WebAnnotationTests.Commands
             public Geometry.Vector2 ScreenToWorld(double x, double y) => new(x * 2, y * 2);
             public int SectionNumber => 7;
             public string VolumeName => "Test";
-            public string VolumeTransform => "Grid";
+            public bool InVolumeSpace => inVolumeSpace;
+            public string VolumeTransform => inVolumeSpace ? "Grid" : string.Empty;
             public string SectionTransform => "Grid";
             public string Channel => "TEM";
             public bool IsGrayscale => true;
@@ -38,6 +42,81 @@ namespace WebAnnotationTests.Commands
             Geometry.Rectangle bounds = session.GetCurrentViewportBounds();
 
             Assert.AreEqual(new Geometry.Rectangle(new Geometry.Vector2(0, 0), new Geometry.Vector2(200, 100)), bounds);
+        }
+
+        [DataTestMethod]
+        [DataRow(true, "Grid|Grid", CoordinateSpace.Volume)]
+        [DataRow(false, "|Grid", CoordinateSpace.Mosaic)]
+        public void TilesNameTheViewportsSpace(bool inVolumeSpace, string transform, CoordinateSpace space)
+        {
+            var signature = SegmentationViewportSession.TileSignature.Of(new FakeViewport(inVolumeSpace), 4);
+
+            TileCoord coord = SegmentationViewportSession.ToCoord(signature, new TileCell(2, -3));
+
+            Assert.AreEqual(space, coord.Space);
+            Assert.AreEqual(transform, coord.Transform);
+            Assert.AreEqual("Test", coord.Volume);
+            Assert.AreEqual(7, coord.Section);
+            Assert.AreEqual("TEM", coord.Channel);
+            Assert.AreEqual(4, coord.Downsample);
+            Assert.AreEqual(2, coord.Row);
+            Assert.AreEqual(-3, coord.Col);
+        }
+
+        [TestMethod]
+        public void AMosaicTileAndAVolumeTileHaveDifferentKeys()
+        {
+            var volume = SegmentationViewportSession.TileSignature.Of(new FakeViewport(true), 1);
+            var mosaic = SegmentationViewportSession.TileSignature.Of(new FakeViewport(false), 1);
+
+            Assert.AreNotEqual(SegmentationViewportSession.TileKey(volume, 0, 0), SegmentationViewportSession.TileKey(mosaic, 0, 0));
+        }
+
+        [TestMethod]
+        public async Task HeldCellsAreTheOnesTheServerSaysItHoldsAskedInBatches()
+        {
+            var signature = SegmentationViewportSession.TileSignature.Of(new FakeViewport(false), 2);
+            List<TileCell> cells = [.. Enumerable.Range(0, 300).Select(i => new TileCell(i, -i))];
+            List<HeldTilesRequest> asked = [];
+
+            HashSet<TileCell> held = await SegmentationViewportSession.HeldCellsAsync(
+                request =>
+                {
+                    asked.Add(request);
+                    HeldTilesResponse response = new();
+                    response.Held.AddRange(request.Cells.Select(cell => cell.Row % 3 == 0));
+                    return Task.FromResult(response);
+                },
+                signature, cells, 42, CancellationToken.None);
+
+            CollectionAssert.AreEqual(new[] { 256, 44 }, asked.Select(r => r.Cells.Count).ToArray());
+            Assert.IsTrue(asked.All(r => r.AnnotationContextId == 42 && r.Grid.Space == CoordinateSpace.Mosaic &&
+                                         r.Grid.Transform == "|Grid" && r.Grid.Downsample == 2 && r.Grid.Section == 7));
+            CollectionAssert.AreEquivalent(cells.Where(c => c.Row % 3 == 0).ToList(), held.ToList());
+        }
+
+        [TestMethod]
+        public async Task AServerWithoutGetHeldTilesHoldsNothingSoEveryTileIsUploaded()
+        {
+            var signature = SegmentationViewportSession.TileSignature.Of(new FakeViewport(), 1);
+
+            HashSet<TileCell> held = await SegmentationViewportSession.HeldCellsAsync(
+                _ => throw new Grpc.Core.RpcException(new Grpc.Core.Status(Grpc.Core.StatusCode.Unimplemented, "no such method")),
+                signature, [new TileCell(0, 0)], 0, CancellationToken.None);
+
+            Assert.AreEqual(0, held.Count);
+        }
+
+        [TestMethod]
+        public async Task AnAnswerOfTheWrongLengthHoldsNothing()
+        {
+            var signature = SegmentationViewportSession.TileSignature.Of(new FakeViewport(), 1);
+
+            HashSet<TileCell> held = await SegmentationViewportSession.HeldCellsAsync(
+                _ => Task.FromResult(new HeldTilesResponse { Held = { true } }),
+                signature, [new TileCell(0, 0), new TileCell(0, 1)], 0, CancellationToken.None);
+
+            Assert.AreEqual(0, held.Count);
         }
 
         [TestMethod]

@@ -28,7 +28,7 @@ from numpy.typing import NDArray
 from segmentation_grpc import CoordinateSpace, TileCoord
 from segmentation_server.capture_encoder import encode_capture
 from segmentation_server.identity_client import IdentityAssignments, IdentityOptions
-from segmentation_server.viking_volume import VikingVolume, parse_viking_xml
+from segmentation_server.viking_volume import Tileset, TilesetLevel, VikingVolume, VolumeSection, parse_viking_xml
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +44,10 @@ HttpGet = Callable[[str], Optional[bytes]]
 class TileSource(Protocol):
     async def fetch(self, annotation_context_id: int, coord: TileCoord) -> Optional[bytes]:
         """The cell's encoded image, or None when this source cannot draw it."""
+        ...
+
+    async def can_read(self, annotation_context_id: int, coord: TileCoord) -> bool:
+        """True when :meth:`fetch` would try to draw the cell, without reading any tile."""
         ...
 
 
@@ -122,7 +126,10 @@ class VikingTilesetSource:
             logger.info("VikingXML %s: volume %s, %d sections", url, volume.name, len(volume.sections))
             return volume
 
-    async def fetch(self, annotation_context_id: int, coord: TileCoord) -> Optional[bytes]:
+    async def _locate(
+        self, annotation_context_id: int, coord: TileCoord
+    ) -> Optional[Tuple[VikingVolume, VolumeSection, Tileset, TilesetLevel]]:
+        """``(volume, section, tileset, level)`` the cell is read from, or None when this source cannot draw it."""
         if annotation_context_id <= 0 or not is_plain_mosaic_cell(coord):
             return None
         local = await self._assignments.get(annotation_context_id)
@@ -136,6 +143,16 @@ class VikingTilesetSource:
         level = tileset.levels.get(coord.downsample) if tileset is not None else None
         if level is None:
             return None
+        return volume, section, tileset, level
+
+    async def can_read(self, annotation_context_id: int, coord: TileCoord) -> bool:
+        return await self._locate(annotation_context_id, coord) is not None
+
+    async def fetch(self, annotation_context_id: int, coord: TileCoord) -> Optional[bytes]:
+        located = await self._locate(annotation_context_id, coord)
+        if located is None:
+            return None
+        volume, section, tileset, level = located
 
         # The cell in level pixels; row increases with mosaic Y, as tile rows do.
         x0, y0 = coord.col * CELL, coord.row * CELL
