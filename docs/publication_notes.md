@@ -35,6 +35,19 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
 
 ## Algorithmic decisions
 
+- **2026-10-22 Section corrections: detect change per section, rebuild the whole group.** The joint registration fit
+  (one sparse least-squares solve over every section's shift, process second differences driven to zero) couples all
+  sections, so one edited section can move every other section's field; an incremental update of only the changed
+  sections and the sections their chains reach is not valid for it. Each publish stores a per-section fingerprint
+  (location rows, newest edit, ID and parent sums, link rows and sums, stos file time); a check that finds any section
+  changed rebuilds the group in full once the newest edit is `QuietMinutes` old, and an unchanged group is left alone.
+  A weekly cron forces a rebuild for changes a fingerprint cannot see. Rejected: the per-section incremental builder,
+  because it rebuilt with the leave-one-out residual field, which measured each section against uncorrected
+  neighbours and made held-out structures less smooth in every volume (median held-out second difference, raw to joint
+  fit: RPC1 70.5 to 62.2 nm, RPC2 55.9 to 55.0, RC1 92.9 to 75.0, RC2 255.5 to 79.2; commit 8c37e7cf). A single
+  annotation watermark was also rejected as the change test: it cannot see a deleted location. Where:
+  `Servers/SectionCorrectionBuilder/CorrectionPublisher.cs`, `Servers/SectionCorrection/SectionFingerprint.cs`.
+
 - **2026-10-25 The segmentation server encodes prompts; shapes travel as geometry.** The fine-tuned model is not a
   generic SAM2: it learned one prompt language, the exact `mask_input` values of its training (v6: seed `+10 * c(d)`
   with the edge-confidence curve, neighbours `-10`; v7 adds the depth-relative taper). A client that rasterized circles
