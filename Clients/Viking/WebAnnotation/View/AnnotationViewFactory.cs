@@ -74,6 +74,12 @@ namespace WebAnnotation.View
         /// </summary>
         internal static Geometry.Circle AdjacentPolygonMarkerCircle(LocationObj obj) => obj.MosaicShape.CalculateInscribedCircle();
 
+        /// <summary>
+        /// The section-space circle an open curve on an adjacent section is drawn as: at its centre, half its length across.
+        /// Location links use it too, so a link ends on the marker that is drawn.
+        /// </summary>
+        internal static Geometry.Circle AdjacentOpenCurveMarkerCircle(LocationObj obj) => new(obj.Position, obj.Radius);
+
         public static LocationCanvasView CreateAdjacent(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapping)
         {
 
@@ -85,7 +91,7 @@ namespace WebAnnotation.View
                     return new AdjacentLocationCircleView(obj, mapping);
                 case LocationType.OPENCURVE:
                     {
-                        return new AdjacentLocationCircleView(obj, mapping, obj.Radius);
+                        return new AdjacentLocationCircleView(obj, AdjacentOpenCurveMarkerCircle(obj), mapping);
                         /*
                         LocationOpenCurveView view = new LocationOpenCurveView(obj, mapping, obj.Radius);
                         view.Color = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.2f);

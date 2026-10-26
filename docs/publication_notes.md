@@ -21,6 +21,14 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
 
 ## Algorithmic decisions
 
+- **2026-10-26 Links to drawn lines anchor on the line, as wide as the partner's end.** Why: a line or open curve end
+  was a circle at its centroid half the line's length across, unrelated to what is drawn. The end now leaves the drawn
+  line (polyline vertices, or the open curve smoothed as its view smooths it) at the point $Q$ nearest the partner, from
+  the line's edge: radius $r = \max(w/2, r_\text{partner})$, centre $Q + d\,(w/2 - r)$. Rejected (user's choice): a
+  bridge only the line's width $w$ thick, which fades out within a line width (the fade runs one end radius) and is too
+  small to label. Open curves on an adjacent section are drawn as that half-length circle, so the link uses it there.
+  Where: `LocationLinkView.AnchorOnLine`, `AnnotationViewFactory.AdjacentOpenCurveMarkerCircle`.
+
 - **2026-10-26 Links to polygons anchor on the outline.** Why: a link end was the circle at the polygon's centroid with
   the equal-area radius $\sqrt{A/\pi}$, so on a long cell the link's wide end lay under the fill and on a thin cell the
   link began in empty space; adjacent-section polygons are drawn as `CalculateInscribedCircle` (centroid to nearest

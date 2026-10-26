@@ -9,8 +9,9 @@ namespace WebAnnotationTests
 {
     /// <summary>
     /// A link to a polygon on the viewed section leaves the polygon's outline, not the circle made from its centroid and
-    /// area, and is no wider than the cell is thick there. Also pins the 350 ms hover fade and the arrow glyph drawn beside
-    /// the end labels.
+    /// area, and is no wider than the cell is thick there. A link to a drawn line leaves the line's edge nearest its
+    /// partner, as wide as the partner's end. Also pins the 350 ms hover fade and the arrow glyph drawn beside the end
+    /// labels.
     /// </summary>
     [TestClass]
     public class LocationLinkPolygonEndTests
@@ -87,6 +88,46 @@ namespace WebAnnotationTests
         {
             Assert.IsNull(LocationLinkView.AnchorOnOutline(Rectangle(0, 0, 100, 100), new Vector2(60, 50)));
             Assert.IsNull(LocationLinkView.AnchorOnOutline(Rectangle(0, 0, 100, 100), new Vector2(50, 50)), "on the centroid");
+        }
+
+        [TestMethod]
+        public void ALineIsLeftFromItsEdgeNearestThePartnerAsWideAsThePartner()
+        {
+            Vector2 partner = new(50, 100);
+            Circle? end = LocationLinkView.AnchorOnLine(new[] { new Vector2(0, 0), new Vector2(100, 0) }, 2, partner, 20);
+
+            Assert.IsNotNull(end);
+            Assert.AreEqual(20, end.Value.Radius, Tolerance, "as wide as the partner's end");
+            Assert.AreEqual(50, StartOf(end.Value, partner).X, Tolerance);
+            Assert.AreEqual(2, StartOf(end.Value, partner).Y, Tolerance, "starts at the line's edge");
+        }
+
+        [TestMethod]
+        public void APartnerBeyondTheLinesEndIsReachedFromThatEnd()
+        {
+            Vector2 partner = new(200, 0);
+            Circle? end = LocationLinkView.AnchorOnLine(new[] { new Vector2(0, 0), new Vector2(50, 0), new Vector2(100, 0) }, 2, partner, 20);
+
+            Assert.IsNotNull(end);
+            Assert.AreEqual(102, StartOf(end.Value, partner).X, Tolerance);
+        }
+
+        [TestMethod]
+        public void ANarrowerPartnerLeavesTheLineAsThickAsTheLine()
+        {
+            Circle? end = LocationLinkView.AnchorOnLine(new[] { new Vector2(0, 0), new Vector2(100, 0) }, 8, new Vector2(50, 100), 3);
+
+            Assert.IsNotNull(end);
+            Assert.AreEqual(8, end.Value.Radius, Tolerance);
+            Assert.AreEqual(0, end.Value.Center.Y, Tolerance, "centred on the line");
+        }
+
+        [TestMethod]
+        public void ALineWithoutLengthOrUnderThePartnerGivesNoAnchor()
+        {
+            Assert.IsNull(LocationLinkView.AnchorOnLine(new[] { new Vector2(5, 5) }, 2, new Vector2(50, 50), 10), "one point");
+            Assert.IsNull(LocationLinkView.AnchorOnLine(new[] { new Vector2(5, 5), new Vector2(5, 5) }, 2, new Vector2(50, 50), 10), "repeated point");
+            Assert.IsNull(LocationLinkView.AnchorOnLine(new[] { new Vector2(0, 0), new Vector2(100, 0) }, 2, new Vector2(50, 1), 10), "partner on the line");
         }
 
         [TestMethod]

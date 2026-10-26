@@ -521,6 +521,15 @@ namespace WebAnnotation.ViewModel
             circleA = anchoredA;
             circleB = anchoredB;
 
+            // A drawn line is only its width thick, so its end takes its width from the partner's end (or from the
+            // partner's line width when both are lines), and is placed last, toward the partner's settled end.
+            bool lineA = IsDrawnAsLine(locA, displayZ);
+            bool lineB = IsDrawnAsLine(locB, displayZ);
+            Circle onLineA = (lineA ? LineEnd(locA, displayZ, sourceMapper, circleB.Center, lineB ? LineHalfWidth(locB, displayZ) : circleB.Radius) : null) ?? circleA;
+            Circle onLineB = (lineB ? LineEnd(locB, displayZ, targetMapper, circleA.Center, lineA ? LineHalfWidth(locA, displayZ) : circleA.Radius) : null) ?? circleB;
+            circleA = onLineA;
+            circleB = onLineB;
+
             sectionA = (int)Math.Round(locA.Z);
             sectionB = (int)Math.Round(locB.Z);
             int minSection = Math.Min(sectionA, sectionB);
@@ -534,18 +543,96 @@ namespace WebAnnotation.ViewModel
             type is LocationType.POLYGON or LocationType.CURVEPOLYGON or LocationType.CLOSEDCURVE;
 
         /// <summary>
-        /// For a polygon-like location on an adjacent section, the volume circle its marker is drawn as
-        /// (<see cref="AnnotationViewFactory.AdjacentPolygonMarkerCircle"/>, mapped as the marker maps it). Null for any other
-        /// end, or when the circle cannot be found or mapped.
+        /// True when <paramref name="loc"/> is drawn as a line seen from <paramref name="displayZ"/>: an open curve or polyline
+        /// on the viewed section, or a polyline on an adjacent one (an adjacent open curve is drawn as a circle).
+        /// </summary>
+        private static bool IsDrawnAsLine(LocationObj loc, int displayZ) =>
+            loc.TypeCode == LocationType.POLYLINE || (loc.TypeCode == LocationType.OPENCURVE && displayZ == loc.Z);
+
+        /// <summary>Half the width <paramref name="loc"/>'s line is drawn with, as its views draw it.</summary>
+        private static double LineHalfWidth(LocationObj loc, int displayZ) =>
+            loc.TypeCode == LocationType.POLYLINE && displayZ == loc.Z
+                ? DefaultPolylineWidth / 2.0
+                : (loc.Width ?? DefaultPolylineWidth) / 2.0;
+
+        /// <summary>The width <see cref="LocationLineView"/> draws a polyline on the viewed section with (PolyLineView's default).</summary>
+        private const double DefaultPolylineWidth = 16.0;
+
+        /// <summary>
+        /// For a location drawn as a line (<see cref="IsDrawnAsLine"/>), the link end anchored on that line toward
+        /// <paramref name="partnerCentre"/> with radius <paramref name="partnerRadius"/> (see <see cref="AnchorOnLine"/>).
+        /// The points are the ones its view draws: the polyline's vertices, or the open curve smoothed the same way. Null
+        /// when the line cannot be mapped or has no length.
+        /// </summary>
+        private static Circle? LineEnd(LocationObj loc, int displayZ, IVolumeToSectionTransform mapper, Geometry.Vector2 partnerCentre, double partnerRadius)
+        {
+            try
+            {
+                bool[] mapped = mapper.TrySectionToVolume(loc.MosaicShape.ToPoints(), out Geometry.Vector2[] points);
+                if (mapped.Any(ok => !ok))
+                    return null;
+
+                if (loc.TypeCode == LocationType.OPENCURVE)
+                    points = points.CalculateCurvePoints(Global.NumOpenCurveInterpolationPoints, false);
+
+                return AnchorOnLine(points, LineHalfWidth(loc, displayZ), partnerCentre, partnerRadius);
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// The circle a link end is drawn from so that the link leaves a drawn line (<paramref name="points"/>, drawn
+        /// <paramref name="halfWidth"/> either side) at the point Q nearest <paramref name="partnerCentre"/>, from the line's
+        /// edge, as wide as the partner's end: radius r = max(<paramref name="halfWidth"/>, <paramref name="partnerRadius"/>),
+        /// centre Q + dir·(halfWidth - r) with dir the unit direction from Q to the partner, so the circle's front is the
+        /// line's edge. A bridge only as thick as the line would fade out within a line width and be too small to label.
+        /// Null with fewer than two distinct points, or when the partner is on the line.
+        /// </summary>
+        internal static Circle? AnchorOnLine(IReadOnlyList<Geometry.Vector2> points, double halfWidth, Geometry.Vector2 partnerCentre, double partnerRadius)
+        {
+            Geometry.Vector2? nearest = null;
+            double nearestDistance = double.MaxValue;
+            for (int i = 1; i < points.Count; i++)
+            {
+                if (points[i - 1] == points[i])
+                    continue;
+
+                double distance = new LineSegment(points[i - 1], points[i]).DistanceToPoint(partnerCentre, out Geometry.Vector2 onLine);
+                if (distance < nearestDistance)
+                {
+                    nearestDistance = distance;
+                    nearest = onLine;
+                }
+            }
+
+            if (nearest is null || nearestDistance <= halfWidth)
+                return null;
+
+            Geometry.Vector2 q = nearest.Value;
+            Geometry.Vector2 dir = (partnerCentre - q) / nearestDistance;
+            double radius = Math.Max(halfWidth, partnerRadius);
+            return new Circle(q + (dir * (halfWidth - radius)), radius);
+        }
+
+        /// <summary>
+        /// For a polygon-like location or an open curve on an adjacent section, the volume circle its marker is drawn as
+        /// (<see cref="AnnotationViewFactory.AdjacentPolygonMarkerCircle"/> or
+        /// <see cref="AnnotationViewFactory.AdjacentOpenCurveMarkerCircle"/>, mapped as the marker maps it). Null for any
+        /// other end, or when the circle cannot be found or mapped.
         /// </summary>
         private static Circle? AdjacentMarkerEnd(LocationObj loc, int displayZ, IVolumeToSectionTransform mapper)
         {
-            if (displayZ == loc.Z || !IsPolygonLike(loc.TypeCode))
+            if (displayZ == loc.Z || !(IsPolygonLike(loc.TypeCode) || loc.TypeCode == LocationType.OPENCURVE))
                 return null;
 
             try
             {
-                Circle marker = AnnotationViewFactory.AdjacentPolygonMarkerCircle(loc);
+                Circle marker = loc.TypeCode == LocationType.OPENCURVE
+                    ? AnnotationViewFactory.AdjacentOpenCurveMarkerCircle(loc)
+                    : AnnotationViewFactory.AdjacentPolygonMarkerCircle(loc);
                 return mapper.TrySectionToVolume(marker.Center, out Geometry.Vector2 centre) && marker.Radius > 0
                     ? new Circle(centre, marker.Radius)
                     : null;
