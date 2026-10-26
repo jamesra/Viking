@@ -76,6 +76,28 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
 
 ## Discussion points
 
+- **2026-10-24 A painted seed mask grows past itself.** Probe of the deployed v5 server (model id `v5`, image built
+  2026-10-20; its prompt encoding was not recorded (verify)) on RC2 section 643, ds 1, `TEM.Leveled`, the client's own
+  captured tiles, one interior click at mosaic (43143, 55203). It replayed the client's `SegmentTilesStream` (start,
+  FOREGROUND disc tiles with role SEED, empty BACKGROUND tiles, tiles uploaded when asked) at mask threshold 0.5 and
+  measured the returned mask in mosaic pixels:
+
+  | Prompt | Seed area | Result area | Result extent |
+  |---|---|---|---|
+  | Click only | 0 | 350,903 | 1079 x 835 |
+  | Click + seed disc r = 80 | 20,106 | 333,560 | 1095 x 656 |
+  | Click + seed disc r = 300 (4 tiles) | 282,743 | 432,568 | 1083 x 1089 |
+
+  A seed is a start, not a ceiling: the small disc grew about 17-fold, and the large one, crossing four tiles, grew past
+  its 600 px diameter on both axes while the server fetched two more tiles. The seed also reshapes the answer (the
+  small disc's result is 5% smaller and shorter than the click's). Seed pixels are always object
+  (`Servers/SegmentationServer/segmentation_server/segmentation_server/tile_growth.py`, `GrowthWalk`), so the large disc's
+  result exceeds the click-only object by 81,665 px: paint past a cell's edge stays in the answer, and the model cannot
+  correct over-painting. So a user's "segmentation stops at my paint" was not the encoding. The causes were on the
+  client, where paint beyond the canvas (the starting view plus half of it on each side) was dropped without being sent
+  (fixed in VikingLegacy `f8b7f6c1`), and in latency: the deployed image made the client re-upload 3-5 tiles the server
+  already held on every request (1.3 of 3.4 s), which `fc19a525` removes. Limits: one object on one section, no ground truth, and the probe script was not
+  kept in the repo.
 - **GPU sharing between training and serving.** With a training run on the same GPU, a tile embedding took 20-30 s
   instead of 0.3-0.5 s, uploads waited up to 90 s, and a 93-tile mask could not finish within 5 quiet minutes. Serving
   latency depends on GPU isolation more than on client tuning.
