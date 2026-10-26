@@ -270,6 +270,43 @@ namespace WebAnnotation.ViewModel
         internal static bool EndLabelsFit(double room, double widthA, double gapA, double widthB, double gapB) =>
             room >= gapA + widthA + Math.Max(gapA, gapB) + widthB + gapB;
 
+        /// <summary>Opacity of a link whose markers touch, as a fraction of its usual opacity (see <see cref="ClosenessOpacity"/>).</summary>
+        internal const float NearestLinkOpacity = 0.5f;
+
+        /// <summary>
+        /// Opacity factor for a link of <paramref name="length"/> (centre to centre) between markers of radii
+        /// <paramref name="radiusA"/> and <paramref name="radiusB"/>. The deepest the link fades (<see cref="FadeDepthAt"/>,
+        /// at the point both ends measure the same) is gap / (rA + rB), with gap the distance between the markers' edges.
+        /// A link that reaches its fully faded waist (gap at least rA + rB) is unchanged, factor 1. A shorter one never
+        /// fades fully and is drawn as a wide, solid block, so its factor falls with that peak fade depth to
+        /// <see cref="NearestLinkOpacity"/> as the markers touch, letting the image show through.
+        /// </summary>
+        internal static float ClosenessOpacity(double length, double radiusA, double radiusB)
+        {
+            double reach = radiusA + radiusB;
+            double peakFadeDepth = reach > 0 ? Math.Max(0, Math.Min(1, (length - reach) / reach)) : 1;
+            return MathHelper.Lerp(NearestLinkOpacity, 1f, (float)peakFadeDepth);
+        }
+
+        /// <summary>
+        /// How much of a link's colour saturation its fill keeps. The direction colours (red toward a lower section, blue
+        /// toward a higher one) are fully saturated and looked harsh at the opacity links are now drawn with; toning only
+        /// the saturation keeps the fill's brightness, opacity, border and shadow, so the link is as easy to see.
+        /// </summary>
+        internal const float FillSaturation = 0.55f;
+
+        /// <summary>
+        /// <paramref name="color"/> with its saturation scaled by <paramref name="saturation"/>: each channel moved toward the
+        /// colour's perceived brightness (the weights <see cref="BorderColorFor"/> uses), so the brightness is unchanged.
+        /// Alpha is kept.
+        /// </summary>
+        internal static Color Desaturate(Color color, float saturation)
+        {
+            float grey = (0.3f * color.R) + (0.59f * color.G) + (0.11f * color.B);
+            byte Toward(byte channel) => (byte)MathHelper.Clamp((float)Math.Round(grey + ((channel - grey) * saturation)), 0f, 255f);
+            return new Color(Toward(color.R), Toward(color.G), Toward(color.B), color.A);
+        }
+
         /// <summary>
         /// The border and shadow color for a link of color <paramref name="linkColor"/>: black for a light link and white for
         /// a dark one, judged by perceived brightness, so the link stands out from the image under it.
@@ -501,32 +538,37 @@ namespace WebAnnotation.ViewModel
             sectionB = 0;
             color = default;
 
-            IVolumeToSectionTransform sourceMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(locA.Z));
-            IVolumeToSectionTransform targetMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(locB.Z));
+            // An adjacent end hidden under a location it links to on the viewed section is drawn at that location, so the
+            // link does not end in empty space. The sections, colour and labels still describe the real ends.
+            LocationObj drawnA = CoveringLocation(locA, locB, displayZ, mapProvider) ?? locA;
+            LocationObj drawnB = CoveringLocation(locB, locA, displayZ, mapProvider) ?? locB;
 
-            if (!sourceMapper.TrySectionToVolume(locA.Position, out Geometry.Vector2 aVolumePosition))
+            IVolumeToSectionTransform sourceMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(drawnA.Z));
+            IVolumeToSectionTransform targetMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(drawnB.Z));
+
+            if (!sourceMapper.TrySectionToVolume(drawnA.Position, out Geometry.Vector2 aVolumePosition))
                 return false;
-            if (!targetMapper.TrySectionToVolume(locB.Position, out Geometry.Vector2 bVolumePosition))
+            if (!targetMapper.TrySectionToVolume(drawnB.Position, out Geometry.Vector2 bVolumePosition))
                 return false;
 
-            circleA = new Circle(aVolumePosition, locA.Radius * (displayZ == locA.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
-            circleB = new Circle(bVolumePosition, locB.Radius * (displayZ == locB.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
+            circleA = new Circle(aVolumePosition, drawnA.Radius * (displayZ == drawnA.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
+            circleB = new Circle(bVolumePosition, drawnB.Radius * (displayZ == drawnB.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
 
             // A polygon is not the circle made from its centroid and area, so each polygon end is moved to what is drawn:
             // the marker circle on an adjacent section, then, toward that, the outline on the viewed section.
-            circleA = AdjacentMarkerEnd(locA, displayZ, sourceMapper) ?? circleA;
-            circleB = AdjacentMarkerEnd(locB, displayZ, targetMapper) ?? circleB;
-            Circle anchoredA = OutlineEnd(locA, displayZ, sourceMapper, circleB.Center) ?? circleA;
-            Circle anchoredB = OutlineEnd(locB, displayZ, targetMapper, circleA.Center) ?? circleB;
+            circleA = AdjacentMarkerEnd(drawnA, displayZ, sourceMapper) ?? circleA;
+            circleB = AdjacentMarkerEnd(drawnB, displayZ, targetMapper) ?? circleB;
+            Circle anchoredA = OutlineEnd(drawnA, displayZ, sourceMapper, circleB.Center) ?? circleA;
+            Circle anchoredB = OutlineEnd(drawnB, displayZ, targetMapper, circleA.Center) ?? circleB;
             circleA = anchoredA;
             circleB = anchoredB;
 
             // A drawn line is only its width thick, so its end takes its width from the partner's end (or from the
             // partner's line width when both are lines), and is placed last, toward the partner's settled end.
-            bool lineA = IsDrawnAsLine(locA, displayZ);
-            bool lineB = IsDrawnAsLine(locB, displayZ);
-            Circle onLineA = (lineA ? LineEnd(locA, displayZ, sourceMapper, circleB.Center, lineB ? LineHalfWidth(locB, displayZ) : circleB.Radius) : null) ?? circleA;
-            Circle onLineB = (lineB ? LineEnd(locB, displayZ, targetMapper, circleA.Center, lineA ? LineHalfWidth(locA, displayZ) : circleA.Radius) : null) ?? circleB;
+            bool lineA = IsDrawnAsLine(drawnA, displayZ);
+            bool lineB = IsDrawnAsLine(drawnB, displayZ);
+            Circle onLineA = (lineA ? LineEnd(drawnA, displayZ, sourceMapper, circleB.Center, lineB ? LineHalfWidth(drawnB, displayZ) : circleB.Radius) : null) ?? circleA;
+            Circle onLineB = (lineB ? LineEnd(drawnB, displayZ, targetMapper, circleA.Center, lineA ? LineHalfWidth(drawnA, displayZ) : circleA.Radius) : null) ?? circleB;
             circleA = onLineA;
             circleB = onLineB;
 
@@ -537,6 +579,37 @@ namespace WebAnnotation.ViewModel
 
             color = GetLocationLinkColor(LocationCanvasView.ColorForStructure(locA.Parent, 1f), maxSection - minSection, minSection < displayZ ? -1 : 1, false);
             return true;
+        }
+
+        /// <summary>
+        /// The location on the viewed section that hides <paramref name="end"/>, or null. An end on an adjacent section that
+        /// overlaps a location it links to on <paramref name="displayZ"/> is not drawn: Viking shows it only as the up/down
+        /// symbol inside that location (the overlapped links in SectionLocationLinksAnnotationsViewModel), so a link to it
+        /// would end in empty space. The test is the one that hides it (<see cref="OverlapShape"/> intersection). The
+        /// link's own <paramref name="partner"/> is skipped: a link whose ends overlap is drawn as that symbol, not a line.
+        /// The first covering location found wins.
+        /// </summary>
+        private static LocationObj? CoveringLocation(LocationObj end, LocationObj partner, int displayZ, IVolumeTransformProvider mapProvider)
+        {
+            if (end.Z == displayZ)
+                return null;
+
+            SqlGeometry? endShape = null;
+            foreach (long linkedID in end.LinksCopy)
+            {
+                if (linkedID == partner.ID || !Store.Locations.TryGetValue(linkedID, out LocationObj linked) || linked.Z != displayZ)
+                    continue;
+
+                endShape ??= OverlapShape(end, displayZ, mapProvider);
+                if (endShape is null)
+                    return null;
+
+                SqlGeometry? linkedShape = OverlapShape(linked, displayZ, mapProvider);
+                if (linkedShape is not null && endShape.STIntersects(linkedShape).IsTrue)
+                    return linked;
+            }
+
+            return null;
         }
 
         private static bool IsPolygonLike(LocationType type) =>
@@ -848,20 +921,20 @@ namespace WebAnnotation.ViewModel
                 return false;
             }
 
-            SqlGeometry? shapeA = OverlapShape(locationA);
-            SqlGeometry? shapeB = OverlapShape(locationB);
+            SqlGeometry? shapeA = OverlapShape(locationA, Z, mapProvider);
+            SqlGeometry? shapeB = OverlapShape(locationB, Z, mapProvider);
             overlaps = shapeA is not null && shapeB is not null && shapeA.STIntersects(shapeB).IsTrue;
             return true;
         }
 
         /// <summary>
-        /// The shape one endpoint is tested with in <see cref="LinksOverlap"/>, in volume space, or null when the
-        /// location cannot be mapped into the volume.
+        /// The shape one endpoint is tested with in <see cref="TryLinksOverlap"/> (and <see cref="CoveringLocation"/>), in
+        /// volume space as seen from <paramref name="displayZ"/>, or null when the location cannot be mapped into the volume.
         /// </summary>
-        private SqlGeometry? OverlapShape(LocationObj location)
+        private static SqlGeometry? OverlapShape(LocationObj location, int displayZ, IVolumeTransformProvider mapProvider)
         {
             IVolumeToSectionTransform mapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(location.Z));
-            bool onViewedSection = location.Z == Z;
+            bool onViewedSection = location.Z == displayZ;
             // On the viewed section a polygon view reports its mapped polygon as VolumeShapeAsRendered, so map the
             // shape directly and skip a view that smooths and triangulates the ring in the background. A closed
             // curve view builds its rendered shape from its own control points, so it still goes through the view.
@@ -914,17 +987,22 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// The menu a right-click on the link opens. Go to partner jumps to whichever end is farther from where the mouse
-        /// was when the menu opened, the other side of the link from the end the user is looking at.
+        /// The menu a right-click on the link opens. Go to partner pans the view to whichever end is farther from where the
+        /// mouse was when the menu opened, the other side of the link from the end the user is looking at. It stays on the
+        /// viewed section and keeps the zoom: the partner's end is drawn here, so there is no need to change section.
         /// </summary>
         private System.Windows.Forms.ContextMenuStrip LinkContextMenu()
         {
             Geometry.Vector2 mouse = AnnotationOverlay.CurrentOverlay?.MouseWorldPosition ?? LineSegment.PointAlongLine(0.5);
-            long partnerID = AIsPartnerOf(mouse, A.Center, B.Center) ? Key.A : Key.B;
+            bool aIsPartner = AIsPartnerOf(mouse, A.Center, B.Center);
+            long partnerID = aIsPartner ? Key.A : Key.B;
+            Geometry.Vector2 partnerEnd = aIsPartner ? A.Center : B.Center;
+            int viewedSection = Z;
 
             System.Windows.Forms.ContextMenuStrip menu = new();
             System.Windows.Forms.ToolStripMenuItem goToPartner = new($"Go to partner {partnerID}");
-            goToPartner.Click += (sender, e) => AnnotationOverlay.GoToLocation(partnerID);
+            goToPartner.Click += (sender, e) =>
+                Viking.UI.State.ViewerControl?.GoToLocation(new Vector2((float)partnerEnd.X, (float)partnerEnd.Y), viewedSection);
             menu.Items.Add(goToPartner);
             return menu;
         }
@@ -1000,7 +1078,8 @@ namespace WebAnnotation.ViewModel
                 return;
 
             float visibility = Global.AnnotationSettings.LocationLinkVisibility;
-            Color DrawnColor(LocationLinkView l) => l.Color.SetAlpha(DrawnAlpha(l.Alpha, MathHelper.Lerp(visibility, 1f, l.HoverAmount)));
+            Color DrawnColor(LocationLinkView l) => Desaturate(l.Color, FillSaturation).SetAlpha(
+                DrawnAlpha(l.Alpha, MathHelper.Lerp(visibility, 1f, l.HoverAmount)) * ClosenessOpacity(l.LineSegment.Length, l.A.Radius, l.B.Radius));
             float DrawnWaistOpacity(LocationLinkView l) => MathHelper.Lerp(WaistOpacity, 1f, l.HoverAmount);
 
             if (!lineManager.SupportsPinched)

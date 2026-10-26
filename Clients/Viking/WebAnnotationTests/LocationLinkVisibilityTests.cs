@@ -54,6 +54,50 @@ namespace WebAnnotationTests
             Assert.AreEqual(255, color.A);
         }
 
+        /// <summary>The fill is toned down by saturation only, so it stays as bright and as opaque as before.</summary>
+        [TestMethod]
+        public void TheFillIsLessSaturatedButJustAsBright()
+        {
+            Microsoft.Xna.Framework.Color red = new((byte)255, (byte)0, (byte)0, (byte)200);
+            Microsoft.Xna.Framework.Color fill = LocationLinkView.Desaturate(red, LocationLinkView.FillSaturation);
+
+            static float Brightness(Microsoft.Xna.Framework.Color c) => (0.3f * c.R) + (0.59f * c.G) + (0.11f * c.B);
+            Assert.AreEqual(Brightness(red), Brightness(fill), 1.5, "brightness kept");
+            Assert.AreEqual(200, fill.A, "alpha kept");
+            Assert.IsTrue(fill.R < 255 && fill.G > 0 && fill.B > 0, "less saturated");
+            Assert.IsTrue(fill.R > fill.G, "still red");
+        }
+
+        /// <summary>Links long enough to fade fully keep their look; shorter ones are see-through, half as opaque when touching.</summary>
+        [TestMethod]
+        public void CloseMarkersMakeTheLinkMoreTransparent()
+        {
+            Assert.AreEqual(1f, LocationLinkView.ClosenessOpacity(length: 40, radiusA: 10, radiusB: 10), 1e-6, "gap 20 = rA + rB: fades fully, unchanged");
+            Assert.AreEqual(1f, LocationLinkView.ClosenessOpacity(length: 400, radiusA: 10, radiusB: 10), 1e-6, "far apart");
+            Assert.AreEqual(0.75f, LocationLinkView.ClosenessOpacity(length: 30, radiusA: 10, radiusB: 10), 1e-6, "gap halfway");
+            Assert.AreEqual(0.5f, LocationLinkView.ClosenessOpacity(length: 20, radiusA: 10, radiusB: 10), 1e-6, "markers touch");
+        }
+
+        /// <summary>The closeness factor uses the same peak fade depth the shader reaches between the markers.</summary>
+        [TestMethod]
+        public void ClosenessFollowsThePeakFadeDepth()
+        {
+            // Gap 20 against radii 30 + 10: the link only fades halfway, unequal ends.
+            double length = 60, rA = 30, rB = 10;
+            double peak = 0;
+            for (double x = 0; x <= length; x += 0.01)
+                peak = System.Math.Max(peak, LocationLinkView.FadeDepthAt(x, length, rA, rB));
+
+            Assert.AreEqual(0.5f + (0.5f * (float)peak), LocationLinkView.ClosenessOpacity(length, rA, rB), 1e-3);
+        }
+
+        [TestMethod]
+        public void AGreyLinkIsUnchangedByDesaturation()
+        {
+            Microsoft.Xna.Framework.Color grey = new((byte)120, (byte)120, (byte)120, (byte)255);
+            Assert.AreEqual(grey, LocationLinkView.Desaturate(grey, LocationLinkView.FillSaturation));
+        }
+
         [TestMethod]
         public void LabelsStayReadableAtLowVisibility()
         {

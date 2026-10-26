@@ -21,6 +21,23 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
 
 ## Algorithmic decisions
 
+- **2026-10-26 Close links are more transparent.** Why: markers close together give a short link that barely narrows
+  and never fades, drawn as a large dark block over the image (user, RC1 screenshot). The deepest a link fades is
+  $t^* = \operatorname{clamp}(g / (r_A + r_B), 0, 1)$ with $g = L - r_A - r_B$ the gap between the markers' edges (where
+  both ends' fade depths meet). Opacity is scaled by $\operatorname{lerp}(0.5, 1, t^*)$: a link that fades fully
+  ($g \ge r_A + r_B$) is unchanged, one whose markers touch is drawn at half opacity, hovered or not. Where:
+  `LocationLinkView.ClosenessOpacity`.
+
+- **2026-10-26 A link to a hidden adjacent location ends on the location covering it.** Why: an adjacent location
+  that overlaps a location it links to on the viewed section is not drawn (only the up/down symbol inside that
+  location), so a link to it from elsewhere ended in empty space (user, RC1 screenshot). The end is now drawn at that
+  covering location, found with the same shape intersection that hides it (`OverlapShape`); the colour, sections and
+  labels still describe the real ends. Where: `LocationLinkView.CoveringLocation`.
+- **2026-10-26 Link fill colours keep 55% of their saturation.** Why: the direction colours (pure red toward a lower
+  section, blue toward a higher one) looked harsh at the new opacity. Each channel moves toward the perceived
+  brightness $0.3R + 0.59G + 0.11B$ by 45%, so brightness, opacity, border and shadow, and with them visibility, are
+  unchanged. Rejected: lowering opacity, which makes links harder to see. Where: `LocationLinkView.Desaturate`.
+
 - **2026-10-26 Links to drawn lines anchor on the line, as wide as the partner's end.** Why: a line or open curve end
   was a circle at its centroid half the line's length across, unrelated to what is drawn. The end now leaves the drawn
   line (polyline vertices, or the open curve smoothed as its view smooths it) at the point $Q$ nearest the partner, from
