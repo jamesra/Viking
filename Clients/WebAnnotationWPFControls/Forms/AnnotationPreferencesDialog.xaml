@@ -356,7 +356,7 @@
                                    FontSize="10"
                                    Foreground="Gray"
                                    TextWrapping="Wrap"
-                                   Text="Next to each end of a link, shows the ID of the location at the other end. At the end on the viewed section, an up or down arrow shows whether that location is on a higher or lower section. Sized from the location, so they zoom with the image; left out when too small to read or when the link is too short for both."/>
+                                   Text="While the mouse is over a link, shows next to each end the ID of the location at the other end. At the end on the viewed section, an up or down arrow shows whether that location is on a higher or lower section. Sized from the location, so they zoom with the image; left out when too small to read or when the link is too short for both."/>
 
                         <!-- Label Outline -->
                         <CheckBox IsChecked="{Binding LabelOutlineEnabled, Mode=TwoWay}"

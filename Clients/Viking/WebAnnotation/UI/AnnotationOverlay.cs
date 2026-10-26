@@ -3214,6 +3214,10 @@ break;
                 }
             }
 
+            // A link fading between its hovered and resting looks needs the following frames too.
+            if (linksToDraw.Any(l => l.IsHoverFading))
+                _Parent.Invalidate();
+
             DrawLocationLabels(listLocationsToDraw, scene);
 
             DrawLocationLabels(listVisibleNonOverlappingLocationsOnAdjacentSections, scene);

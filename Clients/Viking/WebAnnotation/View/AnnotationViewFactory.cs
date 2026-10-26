@@ -68,6 +68,12 @@ namespace WebAnnotation.View
         /// <param name="obj"></param>
         /// <param name="OnAdjacentSection">Indicates the location is not on the section being displayed.</param>
         /// <returns></returns>
+        /// <summary>
+        /// The section-space circle a polygon, curve polygon or closed curve on an adjacent section is drawn as. Location
+        /// links use it too, so a link ends on the marker that is drawn.
+        /// </summary>
+        internal static Geometry.Circle AdjacentPolygonMarkerCircle(LocationObj obj) => obj.MosaicShape.CalculateInscribedCircle();
+
         public static LocationCanvasView CreateAdjacent(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapping)
         {
 
@@ -92,7 +98,7 @@ namespace WebAnnotation.View
                 case LocationType.CURVEPOLYGON:
                 case LocationType.CLOSEDCURVE:
                     {
-                        AdjacentLocationCircleView view = new(obj, obj.MosaicShape.CalculateInscribedCircle(), mapping);
+                        AdjacentLocationCircleView view = new(obj, AdjacentPolygonMarkerCircle(obj), mapping);
                         return view;
                     }
                 case LocationType.POLYLINE:

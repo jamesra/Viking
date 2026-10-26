@@ -123,12 +123,52 @@ namespace WebAnnotation.ViewModel
             set => Color = _Color.SetAlpha(value);
         }
 
+        /// <summary>How long a link takes to fade between its hovered and resting looks.</summary>
+        internal static readonly TimeSpan HoverFadeDuration = TimeSpan.FromMilliseconds(350);
+
+        private bool _IsMouseOver;
+        private float _HoverFrom;
+        private DateTime _HoverChangedUtc = DateTime.MinValue;
+
         /// <summary>
         /// True while the mouse is over the link; set by <see cref="WebAnnotation.Actions.MouseOverLocationCanvasViewEffect"/>.
-        /// A hovered link is drawn fully opaque along its whole length, and all of it can be picked, so the mouse can follow
-        /// it through the waist that is invisible and unpickable otherwise.
+        /// A hovered link is drawn fully opaque along its whole length with its end labels, and all of it can be picked, so
+        /// the mouse can follow it through the waist that is invisible and unpickable otherwise. Picking switches at once;
+        /// the look fades over <see cref="HoverFadeDuration"/> (<see cref="HoverAmount"/>).
         /// </summary>
-        public bool IsMouseOver { get; set; }
+        public bool IsMouseOver
+        {
+            get => _IsMouseOver;
+            set
+            {
+                if (_IsMouseOver == value)
+                    return;
+
+                _HoverFrom = HoverAmount;
+                _IsMouseOver = value;
+                _HoverChangedUtc = DateTime.UtcNow;
+            }
+        }
+
+        /// <summary>
+        /// How far the link's look is toward hovered, 0 (resting) to 1 (hovered), moving at a steady rate since the mouse
+        /// last came on or went off it. Read when drawing; the overlay keeps redrawing while <see cref="IsHoverFading"/>.
+        /// </summary>
+        public float HoverAmount => HoverAmountAt(_HoverFrom, _IsMouseOver, DateTime.UtcNow - _HoverChangedUtc);
+
+        /// <summary>True while <see cref="HoverAmount"/> is still moving toward the hovered or resting look.</summary>
+        public bool IsHoverFading => _IsMouseOver ? HoverAmount < 1f : HoverAmount > 0f;
+
+        /// <summary>
+        /// <see cref="HoverAmount"/> <paramref name="elapsed"/> after the mouse came on (<paramref name="hovered"/>) or went
+        /// off the link while the look stood at <paramref name="from"/>: it moves the whole way in
+        /// <see cref="HoverFadeDuration"/>, so a fade reversed halfway takes half as long to undo.
+        /// </summary>
+        internal static float HoverAmountAt(float from, bool hovered, TimeSpan elapsed)
+        {
+            float step = (float)(elapsed.TotalMilliseconds / HoverFadeDuration.TotalMilliseconds);
+            return hovered ? Math.Min(1f, from + step) : Math.Max(0f, from - step);
+        }
 
         public int MinSection { get; private set; }
         public int MaxSection { get; private set; }
@@ -472,6 +512,15 @@ namespace WebAnnotation.ViewModel
             circleA = new Circle(aVolumePosition, locA.Radius * (displayZ == locA.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
             circleB = new Circle(bVolumePosition, locB.Radius * (displayZ == locB.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
 
+            // A polygon is not the circle made from its centroid and area, so each polygon end is moved to what is drawn:
+            // the marker circle on an adjacent section, then, toward that, the outline on the viewed section.
+            circleA = AdjacentMarkerEnd(locA, displayZ, sourceMapper) ?? circleA;
+            circleB = AdjacentMarkerEnd(locB, displayZ, targetMapper) ?? circleB;
+            Circle anchoredA = OutlineEnd(locA, displayZ, sourceMapper, circleB.Center) ?? circleA;
+            Circle anchoredB = OutlineEnd(locB, displayZ, targetMapper, circleA.Center) ?? circleB;
+            circleA = anchoredA;
+            circleB = anchoredB;
+
             sectionA = (int)Math.Round(locA.Z);
             sectionB = (int)Math.Round(locB.Z);
             int minSection = Math.Min(sectionA, sectionB);
@@ -479,6 +528,136 @@ namespace WebAnnotation.ViewModel
 
             color = GetLocationLinkColor(LocationCanvasView.ColorForStructure(locA.Parent, 1f), maxSection - minSection, minSection < displayZ ? -1 : 1, false);
             return true;
+        }
+
+        private static bool IsPolygonLike(LocationType type) =>
+            type is LocationType.POLYGON or LocationType.CURVEPOLYGON or LocationType.CLOSEDCURVE;
+
+        /// <summary>
+        /// For a polygon-like location on an adjacent section, the volume circle its marker is drawn as
+        /// (<see cref="AnnotationViewFactory.AdjacentPolygonMarkerCircle"/>, mapped as the marker maps it). Null for any other
+        /// end, or when the circle cannot be found or mapped.
+        /// </summary>
+        private static Circle? AdjacentMarkerEnd(LocationObj loc, int displayZ, IVolumeToSectionTransform mapper)
+        {
+            if (displayZ == loc.Z || !IsPolygonLike(loc.TypeCode))
+                return null;
+
+            try
+            {
+                Circle marker = AnnotationViewFactory.AdjacentPolygonMarkerCircle(loc);
+                return mapper.TrySectionToVolume(marker.Center, out Geometry.Vector2 centre) && marker.Radius > 0
+                    ? new Circle(centre, marker.Radius)
+                    : null;
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// For a polygon-like location on the viewed section, the link end anchored on its outline toward
+        /// <paramref name="partnerCentre"/> (see <see cref="AnchorOnOutline"/>). Null for any other end, or when the shape
+        /// cannot be mapped or anchored.
+        /// </summary>
+        private static Circle? OutlineEnd(LocationObj loc, int displayZ, IVolumeToSectionTransform mapper, Geometry.Vector2 partnerCentre)
+        {
+            if (displayZ != loc.Z || !IsPolygonLike(loc.TypeCode))
+                return null;
+
+            try
+            {
+                SqlGeometry? mapped = mapper.TryMapShapeSectionToVolume(loc.MosaicShape);
+                return mapped is null ? null : AnchorOnOutline(mapped.ToPolygon(), partnerCentre);
+            }
+            catch (ArgumentException)
+            {
+                // Not a polygon SQL can give us (a closed curve stored as a line, a bad ring): keep the circle.
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// The circle a link end is drawn from so that the link leaves <paramref name="outline"/> where the line from its
+        /// centroid to <paramref name="partnerCentre"/> last crosses the outline (exterior or a hole), heading for the
+        /// partner. The circle sits just inside that exit point E: centre E - dir·r, radius r, with dir the unit direction
+        /// from E to the partner. r is how thick the cell is there: the distance to the nearest edge from the middle of the
+        /// chord the link's line cuts through the cell ending at E, capped at the equal-area radius. So the bridge is never
+        /// wider than the cell. The hourglass then starts at the outline, its fade starts there, and its label sits just
+        /// outside the cell. Null when the line never crosses the outline or the cell has no thickness there, so the caller
+        /// keeps its circle.
+        /// </summary>
+        internal static Circle? AnchorOnOutline(Polygon outline, Geometry.Vector2 partnerCentre)
+        {
+            LineSegment[] edges = [.. outline.ExteriorSegments.Concat(outline.InteriorPolygons.SelectMany(p => p.ExteriorSegments))];
+            Geometry.Vector2 origin = outline.Centroid;
+            if (Geometry.Vector2.Distance(origin, partnerCentre) <= 0)
+                return null;
+
+            Geometry.Vector2? exit = FarthestCrossing(edges, new LineSegment(origin, partnerCentre), origin);
+            if (exit is null)
+                return null;
+
+            Geometry.Vector2 exitPoint = exit.Value;
+            double towardPartner = Geometry.Vector2.Distance(exitPoint, partnerCentre);
+            if (towardPartner <= 0)
+                return null;
+
+            Geometry.Vector2 dir = (partnerCentre - exitPoint) / towardPartner;
+
+            // Walk back from E across the cell to where the line entered it, to measure the cell where the link leaves.
+            double span = outline.BoundingBox.Width + outline.BoundingBox.Height;
+            Geometry.Vector2 entry = NearestCrossing(edges, new LineSegment(exitPoint, exitPoint - (dir * span)), exitPoint, span * 1e-9) ?? origin;
+            Geometry.Vector2 chordMiddle = (entry + exitPoint) / 2.0;
+            double thickness = edges.Min(e => e.DistanceToPoint(chordMiddle));
+
+            double radius = Math.Min(thickness, Math.Sqrt(outline.Area / Math.PI));
+            if (!(radius > 0))
+                return null;
+
+            return new Circle(exitPoint - (dir * radius), radius);
+        }
+
+        /// <summary>The crossing of <paramref name="line"/> with any of <paramref name="edges"/> farthest from <paramref name="from"/>, or null.</summary>
+        private static Geometry.Vector2? FarthestCrossing(IEnumerable<LineSegment> edges, LineSegment line, Geometry.Vector2 from)
+        {
+            Geometry.Vector2? best = null;
+            double bestDistance = -1;
+            foreach (LineSegment edge in edges)
+            {
+                if (edge.Intersects(in line, out Geometry.Vector2 crossing) && Geometry.Vector2.Distance(from, crossing) > bestDistance)
+                {
+                    bestDistance = Geometry.Vector2.Distance(from, crossing);
+                    best = crossing;
+                }
+            }
+
+            return best;
+        }
+
+        /// <summary>
+        /// The crossing of <paramref name="line"/> with any of <paramref name="edges"/> nearest <paramref name="from"/> but more
+        /// than <paramref name="minDistance"/> from it (so the crossing <paramref name="from"/> lies on is skipped), or null.
+        /// </summary>
+        private static Geometry.Vector2? NearestCrossing(IEnumerable<LineSegment> edges, LineSegment line, Geometry.Vector2 from, double minDistance)
+        {
+            Geometry.Vector2? best = null;
+            double bestDistance = double.MaxValue;
+            foreach (LineSegment edge in edges)
+            {
+                if (!edge.Intersects(in line, out Geometry.Vector2 crossing))
+                    continue;
+
+                double distance = Geometry.Vector2.Distance(from, crossing);
+                if (distance > minDistance && distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = crossing;
+                }
+            }
+
+            return best;
         }
 
         public void GetCanvasViews(LocationLinkKey key, IVolumeTransformProvider mapProvider, out LocationCanvasView AView, out LocationCanvasView BView)
@@ -734,7 +913,8 @@ namespace WebAnnotation.ViewModel
                 return;
 
             float visibility = Global.AnnotationSettings.LocationLinkVisibility;
-            Color DrawnColor(LocationLinkView l) => l.Color.SetAlpha(DrawnAlpha(l.Alpha, l.IsMouseOver ? 1f : visibility));
+            Color DrawnColor(LocationLinkView l) => l.Color.SetAlpha(DrawnAlpha(l.Alpha, MathHelper.Lerp(visibility, 1f, l.HoverAmount)));
+            float DrawnWaistOpacity(LocationLinkView l) => MathHelper.Lerp(WaistOpacity, 1f, l.HoverAmount);
 
             if (!lineManager.SupportsPinched)
             {
@@ -749,8 +929,8 @@ namespace WebAnnotation.ViewModel
             bool drawCaps = Global.AnnotationSettings.LocationLinkDrawUnderMarkers;
             float time = (float)(DateTime.UtcNow.Millisecond / 1000.0);
 
-            foreach (IGrouping<(Color Color, bool Hovered), LocationLinkView> group in links.GroupBy(l =>
-                (lineManager.UseHSLColor ? DrawnColor(l).ConvertToHCL() : DrawnColor(l), l.IsMouseOver)))
+            foreach (IGrouping<(Color Color, float WaistOpacity), LocationLinkView> group in links.GroupBy(l =>
+                (lineManager.UseHSLColor ? DrawnColor(l).ConvertToHCL() : DrawnColor(l), DrawnWaistOpacity(l))))
             {
                 RoundLineCode.RoundLine[] lines = [.. group.Select(l => new RoundLineCode.RoundLine(
                     new Vector2((float)l.A.Center.X, (float)l.A.Center.Y),
@@ -765,14 +945,15 @@ namespace WebAnnotation.ViewModel
                 Color contrast = BorderColorFor(group.First().Color);
 
                 lineManager.DrawPinched(lines, shapes, group.Key.Color, scene.ViewProj, time, drawCaps,
-                    group.Key.Hovered ? 1f : WaistOpacity, contrast, BorderPixels,
+                    group.Key.WaistOpacity, contrast, BorderPixels,
                     contrast, ShadowPixels, (float)scene.Camera.Downsample);
             }
         }
 
         /// <summary>
-        /// Labels both ends of each link, just beyond its markers where the link is strongest, with the ID of the location
-        /// at the other end and an arrow pointing to it. The text runs along the link and is turned to stay upright. Each
+        /// Labels both ends of each link the mouse is over (fading in and out with <see cref="HoverAmount"/>), just beyond its
+        /// markers where the link is strongest, with the ID of the location at the other end. The text runs along the link
+        /// and is turned to stay upright. Each
         /// label is sized in volume space from its marker's radius (<see cref="LabelHeightPerRadius"/>), so it zooms with
         /// the image; one too small to read is skipped, and a link too short for both labels gets none. The caller has
         /// begun <paramref name="spriteBatch"/> with premultiplied alpha blending.
@@ -819,22 +1000,24 @@ namespace WebAnnotation.ViewModel
                 if (!EndLabelsFit(screenLength - radiusA - radiusB, sizeA.X * scaleA, gapA, sizeB.X * scaleB, gapB))
                     continue;
 
-                float alpha = LabelAlpha(link.Alpha, visibility);
+                // The number is shown only while the mouse is over the link, fading with its hovered look.
+                float alpha = LabelAlpha(link.Alpha, visibility) * link.HoverAmount;
+                if (alpha <= 0f)
+                    continue;
+
                 Color text = textColor * alpha;
                 Color outline = outlineColor * alpha;
-
-                Color icon = Color.White * alpha;
 
                 if (LabelHeightPerRadius * radiusA >= MinLabelPixels)
                 {
                     DrawEndLabel(spriteBatch, font, screenA, towardB, radiusA, gapA, textA, sizeA, uprightAtA, scaleA, text, outline,
-                        SectionArrowAt(link.SectionA, link.SectionB, link.Z), icon);
+                        SectionArrowAt(link.SectionA, link.SectionB, link.Z));
                 }
 
                 if (LabelHeightPerRadius * radiusB >= MinLabelPixels)
                 {
                     DrawEndLabel(spriteBatch, font, screenB, -towardB, radiusB, gapB, textB, sizeB, uprightAtB, scaleB, text, outline,
-                        SectionArrowAt(link.SectionB, link.SectionA, link.Z), icon);
+                        SectionArrowAt(link.SectionB, link.SectionA, link.Z));
                 }
             }
         }
@@ -842,25 +1025,25 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// Draws <paramref name="text"/> along the link, starting <paramref name="gap"/> screen pixels beyond the edge of the
         /// marker centred at <paramref name="markerCentre"/> and running <paramref name="towardOther"/>. A
-        /// <paramref name="sectionArrow"/> of 1 adds Viking's up-arrow icon on the line above the text, -1 its down-arrow
-        /// icon on the line below, each at the end of the line nearest the marker; 0 adds none.
+        /// <paramref name="sectionArrow"/> of 1 adds an up arrow (<see cref="ArrowGlyph"/>) on the line above the text, -1 a
+        /// down arrow on the line below, each at the end of the line nearest the marker and outlined like the text; 0 adds
+        /// none.
         /// </summary>
         private static void DrawEndLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                                          Microsoft.Xna.Framework.Graphics.SpriteFont font,
                                          Geometry.Vector2 markerCentre, Vector2 towardOther, double markerRadius, double gap,
                                          string text, Vector2 textSize, bool upright, float fontScale,
-                                         Color textColor, Color outlineColor, int sectionArrow, Color iconColor)
+                                         Color textColor, Color outlineColor, int sectionArrow)
         {
             float along = (float)(markerRadius + gap) + (textSize.X * fontScale / 2f);
             Vector2 position = new Vector2((float)markerCentre.X, (float)markerCentre.Y) + (towardOther * along);
             float rotation = (float)Math.Atan2(towardOther.Y, towardOther.X) + (upright ? 0f : MathHelper.Pi);
             LabelView.DrawOutlinedString(spriteBatch, font, text, position, textColor, outlineColor, rotation, textSize / 2f, fontScale);
 
-            Microsoft.Xna.Framework.Graphics.Texture2D? arrow = sectionArrow > 0 ? GlobalPrimitives.UpArrowTexture
-                : sectionArrow < 0 ? GlobalPrimitives.DownArrowTexture
-                : null;
-            if (arrow is null)
+            if (sectionArrow == 0)
                 return;
+
+            Microsoft.Xna.Framework.Graphics.Texture2D arrow = ArrowGlyph.Get(spriteBatch.GraphicsDevice);
 
             // The text's own axes: along its line, and down to the next line.
             Vector2 alongText = new((float)Math.Cos(rotation), (float)Math.Sin(rotation));
@@ -873,9 +1056,10 @@ namespace WebAnnotation.ViewModel
             float acrossLine = upright ? -halfWidth + (iconSize / 2f) : halfWidth - (iconSize / 2f);
             Vector2 iconCentre = position + (alongText * acrossLine) + (downText * (sectionArrow > 0 ? -lineHeight : lineHeight));
 
-            // The icon names a section direction, not a screen direction, so it is not turned with the text.
-            spriteBatch.Draw(arrow, iconCentre, null, iconColor, 0f, new Vector2(arrow.Width / 2f, arrow.Height / 2f),
-                iconSize / arrow.Width, Microsoft.Xna.Framework.Graphics.SpriteEffects.None, 0f);
+            // The arrow names a section direction, not a screen direction, so it is not turned with the text.
+            LabelView.DrawOutlinedTexture(spriteBatch, arrow, iconCentre, textColor, outlineColor,
+                new Vector2(arrow.Width / 2f, arrow.Height / 2f), iconSize / arrow.Width,
+                sectionArrow > 0 ? Microsoft.Xna.Framework.Graphics.SpriteEffects.None : Microsoft.Xna.Framework.Graphics.SpriteEffects.FlipVertically);
         }
 
         public bool Equals(LocationLinkView other)

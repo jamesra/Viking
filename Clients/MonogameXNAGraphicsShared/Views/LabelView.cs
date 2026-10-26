@@ -154,6 +154,20 @@ namespace VikingXNAGraphics
             spriteBatch.DrawString(font, text, position, textColor, rotation, origin, scale, SpriteEffects.None, 0);
         }
 
+        /// <summary>
+        /// Draws a white-on-clear <paramref name="texture"/> (such as <see cref="ArrowGlyph"/>) tinted like outlined text: in
+        /// <paramref name="color"/> over copies in <paramref name="outlineColor"/> shifted one screen pixel each way. The
+        /// caller has begun <paramref name="spriteBatch"/>.
+        /// </summary>
+        public static void DrawOutlinedTexture(SpriteBatch spriteBatch, Texture2D texture, Vector2 position,
+            Color color, Color outlineColor, Vector2 origin, float scale, SpriteEffects effects)
+        {
+            foreach (Vector2 offset in OutlineOffsets)
+                spriteBatch.Draw(texture, position + offset, null, outlineColor, 0f, origin, scale, effects, 0);
+
+            spriteBatch.Draw(texture, position, null, color, 0f, origin, scale, effects, 0);
+        }
+
         public Microsoft.Xna.Framework.Color _Color = new((byte)(0),
                                                                                     (byte)(0),
                                                                                     (byte)(0),
