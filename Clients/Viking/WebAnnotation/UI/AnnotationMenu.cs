@@ -221,22 +221,7 @@ namespace WebAnnotation
             {
                 bool refreshAll = string.IsNullOrEmpty(e.PropertyName);
 
-                // Apply max downsample as the slider moves so a view that is now allowed can
-                // start auto-segment without waiting for Apply/OK (Global setter restarts idle).
-                if (refreshAll || e.PropertyName == nameof(viewModel.AutoPolygonizeMaxDownsample))
-                    Global.AnnotationSettings.AutoPolygonizeMaxDownsample = viewModel.AutoPolygonizeMaxDownsample;
-
-                // Live-apply the SAM2 request settings. The Global setters debounce and re-segment the
-                // active command and the auto-polygonize view, so a slider drag sends one request.
-                if (refreshAll || e.PropertyName == nameof(viewModel.SegmentationMaskThreshold))
-                    Global.AnnotationSettings.SegmentationMaskThreshold = viewModel.SegmentationMaskThreshold;
-                if (refreshAll || e.PropertyName == nameof(viewModel.SegmentationUseMaskInput))
-                    Global.AnnotationSettings.SegmentationUseMaskInput = viewModel.SegmentationUseMaskInput;
-                // Client-side: the setter retraces what is on screen from the stored masks, so no request is sent.
-                if (refreshAll || e.PropertyName == nameof(viewModel.SegmentationEdgeSnapEnabled))
-                    Global.AnnotationSettings.SegmentationEdgeSnapEnabled = viewModel.SegmentationEdgeSnapEnabled;
-                if (refreshAll || e.PropertyName == nameof(viewModel.SegmentationMinFeatureNanometers))
-                    Global.AnnotationSettings.SegmentationMinFeatureNanometers = viewModel.SegmentationMinFeatureNanometers;
+                ApplyLiveSettings(viewModel, e.PropertyName);
 
                 if (AnnotationOverlay.CurrentOverlay?.Parent?.CurrentCommand is not SegmentationCommand command)
                     return;
@@ -337,14 +322,10 @@ namespace WebAnnotation
             // Wire up event handlers to save settings
             _preferencesDialog.ApplyClicked += (s, args) => SaveSettingsFromViewModel(viewModel);
             _preferencesDialog.OkClicked += (s, args) => SaveSettingsFromViewModel(viewModel);
-            // Live max-downsample writes Global before Cancel; restore the dialog's original value.
+            // Live settings wrote Global before Cancel; the reverted view model holds the values to restore.
             _preferencesDialog.CancelClicked += (s, args) =>
             {
-                Global.AnnotationSettings.AutoPolygonizeMaxDownsample = viewModel.AutoPolygonizeMaxDownsample;
-                Global.AnnotationSettings.SegmentationMaskThreshold = viewModel.SegmentationMaskThreshold;
-                Global.AnnotationSettings.SegmentationUseMaskInput = viewModel.SegmentationUseMaskInput;
-                Global.AnnotationSettings.SegmentationEdgeSnapEnabled = viewModel.SegmentationEdgeSnapEnabled;
-                Global.AnnotationSettings.SegmentationMinFeatureNanometers = viewModel.SegmentationMinFeatureNanometers;
+                ApplyLiveSettings(viewModel, null);
 
                 // Opacity sliders preview by rewriting in-memory views; Global keeps the last applied values.
                 if (opacityPreviewed)
@@ -352,6 +333,112 @@ namespace WebAnnotation
             };
 
             _preferencesDialog.Show(); // Modeless dialog
+        }
+
+        /// <summary>
+        /// Writes the settings that preview live into <see cref="Global.AnnotationSettings"/>, so the view shows them
+        /// while the dialog is open. Called with the changed property's name as the user edits, and with null (every
+        /// live setting) when the view model is reverted or reset and on Cancel, which restores the values from
+        /// opening or the last Apply. Settings not listed here take effect on Apply/OK.
+        /// </summary>
+        internal static void ApplyLiveSettings(AnnotationPreferencesDialogViewModel viewModel, string? propertyName)
+        {
+            bool all = string.IsNullOrEmpty(propertyName);
+            bool Changed(string name) => all || propertyName == name;
+
+            // Apply max downsample as the slider moves so a view that is now allowed can
+            // start auto-segment without waiting for Apply/OK (Global setter restarts idle).
+            if (Changed(nameof(viewModel.AutoPolygonizeMaxDownsample)))
+                Global.AnnotationSettings.AutoPolygonizeMaxDownsample = viewModel.AutoPolygonizeMaxDownsample;
+
+            // Live-apply the SAM2 request settings. The Global setters debounce and re-segment the
+            // active command and the auto-polygonize view, so a slider drag sends one request.
+            if (Changed(nameof(viewModel.SegmentationMaskThreshold)))
+                Global.AnnotationSettings.SegmentationMaskThreshold = viewModel.SegmentationMaskThreshold;
+            if (Changed(nameof(viewModel.SegmentationUseMaskInput)))
+                Global.AnnotationSettings.SegmentationUseMaskInput = viewModel.SegmentationUseMaskInput;
+            // Client-side: the setter retraces what is on screen from the stored masks, so no request is sent.
+            if (Changed(nameof(viewModel.SegmentationEdgeSnapEnabled)))
+                Global.AnnotationSettings.SegmentationEdgeSnapEnabled = viewModel.SegmentationEdgeSnapEnabled;
+            if (Changed(nameof(viewModel.SegmentationMinFeatureNanometers)))
+                Global.AnnotationSettings.SegmentationMinFeatureNanometers = viewModel.SegmentationMinFeatureNanometers;
+
+            // The overlay setters refresh the auto-polygonize view themselves.
+            if (Changed(nameof(viewModel.AutoPolygonizeOverlayMasks)))
+                Global.AnnotationSettings.AutoPolygonizeOverlayMasks = viewModel.AutoPolygonizeOverlayMasks;
+            if (Changed(nameof(viewModel.AutoPolygonizeOverlayPrompts)))
+                Global.AnnotationSettings.AutoPolygonizeOverlayPrompts = viewModel.AutoPolygonizeOverlayPrompts;
+            if (Changed(nameof(viewModel.AutoPolygonizeHideSegmentationRings)))
+                Global.AnnotationSettings.AutoPolygonizeHideSegmentationRings = viewModel.AutoPolygonizeHideSegmentationRings;
+
+            // Read when a shimmer starts, so the next one uses them.
+            if (Changed(nameof(viewModel.AutoPolygonizeShimmerEnabled)))
+                Global.AnnotationSettings.AutoPolygonizeShimmerEnabled = viewModel.AutoPolygonizeShimmerEnabled;
+            if (Changed(nameof(viewModel.AutoPolygonizeShimmerBrightness)))
+                Global.AnnotationSettings.AutoPolygonizeShimmerBrightness = viewModel.AutoPolygonizeShimmerBrightness;
+            if (Changed(nameof(viewModel.AutoPolygonizeShimmerDurationMs)))
+                Global.AnnotationSettings.AutoPolygonizeShimmerDurationMs = viewModel.AutoPolygonizeShimmerDurationMs;
+            if (Changed(nameof(viewModel.AutoPolygonizeShimmerStyle)))
+                Global.AnnotationSettings.AutoPolygonizeShimmerStyle = viewModel.AutoPolygonizeShimmerStyle;
+
+            // The setters copy these into the shim settings the viewer reads; refresh it as Apply does.
+            bool shimChanged = false;
+            if (Changed(nameof(viewModel.CorrectionShimEnabled)))
+            {
+                Global.AnnotationSettings.CorrectionShimEnabled = viewModel.CorrectionShimEnabled;
+                shimChanged = true;
+            }
+            if (Changed(nameof(viewModel.CorrectionShimFadeStartDownsample)))
+            {
+                Global.AnnotationSettings.CorrectionShimFadeStartDownsample = viewModel.CorrectionShimFadeStartDownsample;
+                shimChanged = true;
+            }
+            if (Changed(nameof(viewModel.CorrectionShimFadeEndDownsample)))
+            {
+                Global.AnnotationSettings.CorrectionShimFadeEndDownsample = viewModel.CorrectionShimFadeEndDownsample;
+                shimChanged = true;
+            }
+            if (Changed(nameof(viewModel.CorrectionShimShowOffset)))
+            {
+                Global.AnnotationSettings.CorrectionShimShowOffset = viewModel.CorrectionShimShowOffset;
+                shimChanged = true;
+            }
+            if (shimChanged)
+                Viking.UI.State.ViewerControl?.RefreshCorrectionShim();
+
+            // Read each time they are drawn, so writing Global and redrawing is the whole preview.
+            bool redraw = false;
+            void Drawn(string name, Action apply)
+            {
+                if (!Changed(name))
+                    return;
+                apply();
+                redraw = true;
+            }
+
+            Drawn(nameof(viewModel.LocationLinkVisibilityPercent),
+                () => Global.AnnotationSettings.LocationLinkVisibilityPercent = viewModel.LocationLinkVisibilityPercent);
+            Drawn(nameof(viewModel.LocationLinkLabels),
+                () => Global.AnnotationSettings.LocationLinkLabels = viewModel.LocationLinkLabels);
+            Drawn(nameof(viewModel.LocationLinkWaistPixels),
+                () => Global.AnnotationSettings.LocationLinkWaistPixels = viewModel.LocationLinkWaistPixels);
+            Drawn(nameof(viewModel.LocationLinkDrawUnderMarkers),
+                () => Global.AnnotationSettings.LocationLinkDrawUnderMarkers = viewModel.LocationLinkDrawUnderMarkers);
+            Drawn(nameof(viewModel.LabelOutlineEnabled),
+                () => Global.AnnotationSettings.LabelOutlineEnabled = viewModel.LabelOutlineEnabled);
+            Drawn(nameof(viewModel.LabelOutlineWhiteText),
+                () => Global.AnnotationSettings.LabelOutlineWhiteText = viewModel.LabelOutlineWhiteText);
+            Drawn(nameof(viewModel.PolygonPointRadius),
+                () => Global.AnnotationSettings.PolygonPointRadius = viewModel.PolygonPointRadius);
+            Drawn(nameof(viewModel.PolygonPointOpacity),
+                () => Global.AnnotationSettings.PolygonPointOpacity = viewModel.PolygonPointOpacity);
+            Drawn(nameof(viewModel.HidePolygonPointsInPenMode),
+                () => Global.AnnotationSettings.HidePolygonPointsInPenMode = viewModel.HidePolygonPointsInPenMode);
+            Drawn(nameof(viewModel.SmallestRenderedSize),
+                () => Global.AnnotationSettings.SmallestRenderedSize = viewModel.SmallestRenderedSize);
+
+            if (redraw)
+                AnnotationOverlay.CurrentOverlay?.InvalidateParent();
         }
 
         /// <summary>
