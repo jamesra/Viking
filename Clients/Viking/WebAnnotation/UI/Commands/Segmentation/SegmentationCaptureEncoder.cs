@@ -126,15 +126,20 @@ namespace WebAnnotation.UI.Commands.Segmentation
 #if !DEBUG
                 return;
 #else
-                Directory.CreateDirectory(CaptureDirectory);
-                DeleteCapturesOlderThan(TimeSpan.FromHours(24));
-                File.WriteAllBytes(LatestCapturePath, pngData);
-                Debug.WriteLine($"[SegmentationProfile] Saved capture for review: {LatestCapturePath}");
+                // Tiles are captured concurrently (several requests and the prefetch at once): one writer at a time,
+                // or two captures write latest.png together and delete each other's old files.
+                lock (CaptureSaveGate)
+                {
+                    Directory.CreateDirectory(CaptureDirectory);
+                    DeleteCapturesOlderThan(TimeSpan.FromHours(24));
+                    File.WriteAllBytes(LatestCapturePath, pngData);
+                    Debug.WriteLine($"[SegmentationProfile] Saved capture for review: {LatestCapturePath}");
 
-                string stamped = Path.Combine(
-                    CaptureDirectory,
-                    $"segmentation_capture_{DateTime.Now:yyyyMMdd_HHmmss}{(string.IsNullOrEmpty(label) ? string.Empty : "_" + label)}_{width}x{height}.png");
-                File.WriteAllBytes(stamped, pngData);
+                    string stamped = Path.Combine(
+                        CaptureDirectory,
+                        $"segmentation_capture_{DateTime.Now:yyyyMMdd_HHmmss}{(string.IsNullOrEmpty(label) ? string.Empty : "_" + label)}_{width}x{height}.png");
+                    File.WriteAllBytes(stamped, pngData);
+                }
 #endif
             }
             catch (Exception ex)
@@ -142,6 +147,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 Debug.WriteLine($"Failed to save captured image to disk: {ex.Message}");
             }
         }
+
+        /// <summary>Serialises <see cref="SaveCaptureForReview"/>; debug builds only write captures.</summary>
+        private static readonly object CaptureSaveGate = new();
 
         /// <summary>
         /// Deletes timestamped review PNGs older than <paramref name="age"/>. latest.png is included if it matches the pattern.
