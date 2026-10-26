@@ -1,14 +1,16 @@
 # Segmentation client example
 
-Command-line sample for the segmentation server. It opens an image, sends foreground and background points, and plots the mask with matplotlib.
+Command-line sample for the segmentation server. It opens an image, sends foreground and background points, and plots the masks with matplotlib.
 
-From this directory, with `segmentation_grpc` and the dependencies in `pyproject.toml` installed:
+The server segments over a fixed 1024 x 1024 tile grid, so the picture is laid on a grid of its own (volume `picture-<digest>`) and the client answers the server's `TilesNeeded` by uploading those tiles with `UploadTile`. `segmentation_server.picture_segmentation` does that bookkeeping; the example is the gRPC side of it, and needs the `segmentation_server` package importable (it does not load the model).
+
+From this directory, with `segmentation_grpc`, `segmentation_server` and the dependencies in `pyproject.toml` installed:
 
 ```bash
 python client_example.py --server segmentation.codepharm.net:40443 --image path/to/image.png --coordinates 100,200 300,400 --labels 1,0
 ```
 
-The default call is `UploadImage`, then `SegmentImage` with the returned `image_id`, then `DeleteImage`. `--labels` uses `1` for foreground and `0` for background. Omit `--labels` to treat every point as foreground. `--inline` sends the image bytes on the segment request instead of caching them.
+The calls are `GetServerStatus` (for the served `model_id`), then one `SegmentTilesStream`, uploading the tiles it asks for. The result has one mask per island of the prompt. `--labels` uses `1` for foreground and `0` for background. Omit `--labels` to treat every point as foreground.
 
 The server only speaks TLS, so the client always opens a TLS channel. Against a server with a Let's Encrypt certificate nothing more is needed. For a local server with a self-signed certificate, make one and trust it:
 

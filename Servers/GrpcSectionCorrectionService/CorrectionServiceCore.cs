@@ -157,15 +157,13 @@ namespace Viking.GrpcSectionCorrectionService
         }
 
         /// <summary>
-        /// Samples the published field at caller-held points, one result per section in request order.  With
-        /// <paramref name="sampleField"/> false (V1's mode without Neighbor) every section reports found with zero,
-        /// untrusted offsets and the set is not required.
+        /// Samples the published field at caller-held points, one result per section in request order.  A section the set
+        /// has no map for reports not found with zero, untrusted offsets.
         /// </summary>
         public IReadOnlyList<SectionSample> SamplePoints(
             string volumeName,
             string stosGroup,
-            IReadOnlyList<(long Z, IReadOnlyList<Vector2> Points)> sections,
-            bool sampleField = true)
+            IReadOnlyList<(long Z, IReadOnlyList<Vector2> Points)> sections)
         {
             if (sections is null || sections.Count == 0)
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "sections is empty"));
@@ -179,13 +177,13 @@ namespace Viking.GrpcSectionCorrectionService
                     throw new RpcException(new Status(StatusCode.InvalidArgument, $"duplicate z {z}"));
             }
 
-            PublishedCorrectionSet set = sampleField ? RequireSet(volumeName, stosGroup) : null;
+            PublishedCorrectionSet set = RequireSet(volumeName, stosGroup);
             List<SectionSample> result = new(sections.Count);
             foreach ((long z, IReadOnlyList<Vector2> points) in sections)
             {
-                if (!sampleField || !set.TryGetSection(z, out SectionVectorField field))
+                if (!set.TryGetSection(z, out SectionVectorField field))
                 {
-                    result.Add(new SectionSample(!sampleField, [.. points.Select(_ => (Vector2.Zero, false))]));
+                    result.Add(new SectionSample(false, [.. points.Select(_ => (Vector2.Zero, false))]));
                     continue;
                 }
 

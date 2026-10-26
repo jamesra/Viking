@@ -383,48 +383,22 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void MosaicPixelToWorld_MapsTopLeftPixelToTheHighWorldEdge()
+        public void WorldToMosaicPixel_DividesByTheDownsample()
         {
-            Vector2 topLeft = SegmentationTileGrid.MosaicPixelToWorld(0, 0, 0, 0, 1024, 2);
-            Assert.AreEqual(0, topLeft.X, 1e-6);
-            Assert.AreEqual(2048, topLeft.Y, 1e-6);
-
-            Vector2 bottomLeft = SegmentationTileGrid.MosaicPixelToWorld(0, 0, 0, 1024, 1024, 2);
-            Assert.AreEqual(0, bottomLeft.X, 1e-6);
-            Assert.AreEqual(0, bottomLeft.Y, 1e-6);
-
             (int x, int y) = SegmentationTileGrid.WorldToMosaicPixel(2048, 1024, 2);
             Assert.AreEqual(1024, x);
             Assert.AreEqual(512, y);
         }
 
         [TestMethod]
-        public void PolygonPointToWorld_PutsPixelCentresOnPixelEdges()
-        {
-            // Pixel (0,0) of a 1024-high mask is the top-left pixel: its centre is half a pixel in from the corner.
-            Vector2 topLeft = SegmentationTileGrid.PolygonPointToWorld(0, 0, 0, 0, 1024, 2);
-            Assert.AreEqual(1, topLeft.X, 1e-6);
-            Assert.AreEqual(2047, topLeft.Y, 1e-6);
-
-            Vector2 bottomRight = SegmentationTileGrid.PolygonPointToWorld(10, 20, 1023, 1023, 1024, 1);
-            Assert.AreEqual(10 + 1023.5, bottomRight.X, 1e-6);
-            Assert.AreEqual(20.5, bottomRight.Y, 1e-6);
-        }
-
-        [TestMethod]
-        public void ServerContract_ReadsModelIdRequirementAndModes()
+        public void ServerContract_ReadsModelIdRequirement()
         {
             Viking.gRPC.SegmentationServiceTypes.V1.ServerStatusResponse status = new()
             {
                 Model = new Viking.gRPC.SegmentationServiceTypes.V1.ModelInfo
                 {
                     ModelId = "v4",
-                    ContractJson = "{\"contract_version\":1,\"circle_diameter_scale\":0.95,\"mask_roles\":[\"seed\",\"correction\"],\"requires_model_id\":true}"
-                },
-                Capabilities = new Viking.gRPC.SegmentationServiceTypes.V1.ModelCapabilities
-                {
-                    SubmissionMode = Viking.gRPC.SegmentationServiceTypes.V1.SubmissionMode.FullViewport,
-                    ResolutionMode = Viking.gRPC.SegmentationServiceTypes.V1.ResolutionMode.Single
+                    ContractJson = "{\"contract_version\":1,\"circle_diameter_scale\":0.95,\"requires_model_id\":true}"
                 }
             };
 
@@ -432,19 +406,16 @@ namespace WebAnnotationTests.Commands
 
             Assert.AreEqual("v4", contract.ModelId);
             Assert.IsTrue(contract.RequiresModelId);
-            Assert.IsFalse(contract.AcceptsTiles);
-            CollectionAssert.AreEqual(new[] { "seed", "correction" }, contract.MaskRoles);
         }
 
         [TestMethod]
-        public void ServerContract_WithoutManifestIsTiledAndNeedsNoModelId()
+        public void ServerContract_WithoutManifestNeedsNoModelId()
         {
             SegmentationServerContract contract = SegmentationServerContract.FromStatus(
                 new Viking.gRPC.SegmentationServiceTypes.V1.ServerStatusResponse());
 
             Assert.AreEqual(string.Empty, contract.ModelId);
             Assert.IsFalse(contract.RequiresModelId);
-            Assert.IsTrue(contract.AcceptsTiles);
         }
 
         #endregion

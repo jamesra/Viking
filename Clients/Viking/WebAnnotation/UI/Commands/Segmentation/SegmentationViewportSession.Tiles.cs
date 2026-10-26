@@ -10,7 +10,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Viking.gRPC.SegmentationServiceTypes.V1;
 using VikingXNA;
+using CoordinateSpace = Viking.gRPC.Geometry.V1.CoordinateSpace;
+using GridCell = Viking.gRPC.Geometry.V1.GridCell;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
+using TileGrid = Viking.gRPC.Geometry.V1.TileGrid;
 
 namespace WebAnnotation.UI.Commands.Segmentation
 {
@@ -83,16 +86,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
         internal static string TileKey(TileSignature signature, int row, int col) =>
             $"{signature.Volume}\n{signature.Section}\n{signature.Channel}\n{signature.Transform}\n{signature.Space}\n{signature.Downsample}\n{row}\n{col}";
 
-        internal static TileCoord ToCoord(TileSignature signature, TileCell cell) => new()
+        /// <summary>The grid every tile of <paramref name="signature"/> is a cell of.</summary>
+        internal static TileGrid ToGrid(TileSignature signature) => new()
         {
             Volume = signature.Volume,
             Section = signature.Section,
             Channel = signature.Channel,
             Transform = signature.Transform,
             Downsample = signature.Downsample,
-            Space = signature.Space,
-            Row = cell.Row,
-            Col = cell.Col
+            Space = signature.Space
         };
 
         /// <summary>
@@ -291,19 +293,18 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             UploadTileRequest upload = new()
             {
-                Coord = ToCoord(signature, cell),
-                ImageData = Google.Protobuf.ByteString.CopyFrom(png),
-                Width = width,
-                Height = height
+                Grid = ToGrid(signature),
+                Cell = new GridCell { Row = cell.Row, Col = cell.Col },
+                ImageData = Google.Protobuf.ByteString.CopyFrom(png)
             };
             CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(UploadTileDeadlineSeconds), cancellationToken: token);
             SegmentationDiag.Log(
                 $"UploadTile send row={cell.Row} col={cell.Col} ds={signature.Downsample} " +
-                $"declared={upload.Width}x{upload.Height} encodedBytes={png.Length}");
+                $"size={width}x{height} encodedBytes={png.Length}");
             Debug.WriteLine(
                 $"UploadTile key=vol={signature.Volume}|sec={signature.Section}|ch={signature.Channel}|" +
                 $"xf={signature.Transform}|ds={signature.Downsample}|row={cell.Row}|col={cell.Col} " +
-                $"dimensions={upload.Width}x{upload.Height} bytes={png.Length}");
+                $"dimensions={width}x{height} bytes={png.Length}");
             try
             {
                 UploadTileResponse response = await grpcClient.UploadTileAsync(upload, callOptions).ResponseAsync.ConfigureAwait(false);
@@ -454,15 +455,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 List<TileCell> batch = [.. cells.Skip(start).Take(MaxHeldTilesCells)];
                 HeldTilesRequest request = new()
                 {
-                    Grid = new TileGrid
-                    {
-                        Volume = signature.Volume,
-                        Section = signature.Section,
-                        Channel = signature.Channel,
-                        Transform = signature.Transform,
-                        Downsample = signature.Downsample,
-                        Space = signature.Space
-                    },
+                    Grid = ToGrid(signature),
                     AnnotationContextId = annotationContextId
                 };
                 foreach (TileCell cell in batch)
@@ -509,8 +502,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// One SegmentTilesStream call naming <paramref name="cells"/>, which need not be uploaded: the
         /// server takes the ones it holds from its own caches. The server owns the growth: it sends
-        /// <c>needed</c> for the cells it lacks (a prompt cell included), this method renders and uploads
-        /// them and answers, and the server continues the same walk. The finished mask arrives as <c>result</c>.
+        /// <c>needed</c> for the cells it lacks (a prompt cell included) and for the cells whose neighbouring annotations it
+        /// has not been sent; this method uploads the tiles, answers with the tiles it could not supply and the background
+        /// shapes reaching those cells, and the server continues the same walk. The finished segmentation arrives as
+        /// <c>result</c>.
         /// </summary>
         private async Task<SegmentationResponse> SegmentTilesStreamAsync(
             TileSignature signature,
@@ -519,64 +514,46 @@ namespace WebAnnotation.UI.Commands.Segmentation
             IReadOnlyList<Geometry.Vector2> backgroundPoints,
             bool grayscale,
             CancellationToken token,
-            IReadOnlyList<SegmentationSeed>? foregroundBoxes = null,
-            SegmentationMaskUnion? backgroundMask = null,
-            ulong requestId = 0)
+            IReadOnlyList<SegmentationSeed>? seeds = null,
+            SegmentationBackgroundShapes? backgroundShapes = null,
+            ulong requestId = 0,
+            SegmentationMaskUnion? backgroundBitmap = null)
         {
             if (grpcClient is null)
                 throw new InvalidOperationException("Segmentation client is not connected.");
 
-            SegmentTilesRequest request = new()
-            {
-                RequestId = requestId,
-                MultimaskOutput = false,
-                OmitLabeledImage = true,
-                MaskThreshold = (float)WebAnnotation.Global.AnnotationSettings.SegmentationMaskThreshold,
-                UseMaskInput = WebAnnotation.Global.AnnotationSettings.SegmentationUseMaskInput,
-                ResponseContent = (uint)RequestedContent,
-                // A server the context is local to reads plain greyscale mosaic cells from its tileset instead of asking.
-                AnnotationContextId = Viking.Common.AccessibleVolumeSession.AnnotationContextId
-            };
-            foreach (TileCell cell in cells)
-                request.Tiles.Add(ToCoord(signature, cell));
-
-            if (request.Tiles.Count == 0)
+            if (cells.Count == 0)
                 throw new InvalidOperationException("No tile cells cover the segmentation prompts.");
 
             // The model id comes from the status query a connection starts. The first request after the app starts, or the first after
             // a model change reset what was known, may get here before it has answered, so (re)start it if nothing is known and wait.
             // Unset when the server reported none: it accepts that unless the model's manifest requires an id.
-            BeginModelCapabilitiesRefresh(grpcClient);
-            await WhenCapabilitiesKnownAsync().ConfigureAwait(false);
-            if (ServerModelId is { } modelId)
-                request.ModelId = modelId;
+            BeginServerStatusRefresh(grpcClient);
+            await WhenServerStatusKnownAsync().ConfigureAwait(false);
 
-            // The clicks are the points of the two Features; whatever is object beyond them is a FOREGROUND mask tile, and the
-            // neighbouring annotations are BACKGROUND mask tiles the server asks for as its walk grows.
-            (SegmentationServiceTypes.Feature foregroundFeature, SegmentationServiceTypes.Feature? backgroundFeature) =
-                ClickFeatures(foregroundPoints, backgroundPoints, signature.Downsample);
-
-            // The seeds (a circle's disc, a polygon, an edited mask) are the foreground mask: "everything inside is object, grow
-            // beyond it". They go out as the grid tiles they touch, however large they are.
+            // The prompt: clicks and seed shapes in the two Features, painted bitmaps as mask tiles, and the
+            // neighbouring annotations that reach the prompt cells as background shapes. The rest of the background goes out as
+            // the server asks for the cells it reaches.
+            HashSet<int> backgroundSent = [];
             int maskTileScale = SegmentationMaskTiles.ConfiguredScale;
             double pointRadius = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius;
-            SegmentationMaskUnion? seedUnion = null;
-            if (foregroundBoxes is { Count: > 0 })
-            {
-                seedUnion = new SegmentationMaskUnion();
-                foreach (SegmentationSeed seed in foregroundBoxes)
-                    seedUnion.Add(seed);
-            }
-
-            // PrepareStart sets the count of FOREGROUND tiles, 0 for a click-only request.
-            SegmentationMaskTiles.StartTiles startTiles = await Task.Run(
-                () => SegmentationMaskTiles.PrepareStart(
-                    request, seedUnion, ToCoord(signature, new TileCell(0, 0)), backgroundPoints, pointRadius, backgroundMask, maskTileScale,
-                    SegmentationMaskTiles.ScaleFor(seedUnion, signature.Downsample)),
+            StartMessage start = await Task.Run(
+                () => BuildStart(
+                    signature,
+                    cells,
+                    foregroundPoints,
+                    backgroundPoints,
+                    seeds,
+                    backgroundShapes,
+                    backgroundSent,
+                    pointRadius,
+                    maskTileScale,
+                    requestId,
+                    ServerModelId,
+                    Viking.Common.AccessibleVolumeSession.AnnotationContextId,
+                    backgroundBitmap),
                 token).ConfigureAwait(false);
-            request.ForegroundFeature = foregroundFeature;
-            if (backgroundFeature is not null)
-                request.BackgroundFeature = backgroundFeature;
+            SegmentTilesRequest request = start.Request;
 
             // The idle timer is restarted by every sign of progress (StreamAlive); when it runs out the stream is cancelled and the
             // request fails as a timeout.
@@ -605,18 +582,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 using (AsyncDuplexStreamingCall<SegmentTilesStreamRequest, SegmentTilesStreamResponse> call =
                     grpcClient.SegmentTilesStream(callOptions))
                 {
-                    await call.RequestStream.WriteAsync(new SegmentTilesStreamRequest { Start = request }).ConfigureAwait(false);
-                    // The seed's tiles first (the server starts growing only when all the announced ones have arrived), then the
-                    // background of the start windows' tiles, which the server needs before it predicts them: asking would only cost
-                    // a round trip.
-                    HashSet<TileCell> backgroundSent = [];
-                    foreach (SegmentationServiceTypes.MaskTile tile in startTiles.Background)
-                        backgroundSent.Add(new TileCell(tile.Coord.Row, tile.Coord.Col));
-
-                    foreach (SegmentTilesStreamRequest message in startTiles.Messages())
+                    // The announced mask tiles right after start: the server starts growing only when all of them have arrived.
+                    foreach (SegmentTilesStreamRequest message in start.Messages())
                         await call.RequestStream.WriteAsync(message).ConfigureAwait(false);
 
-                    SegmentationDiag.Log($"SegmentTilesStream mask tiles foreground={startTiles.Foreground.Count} startBackground={startTiles.Background.Count} scale={maskTileScale}");
+                    SegmentationDiag.Log(
+                        $"SegmentTilesStream start fgShapes={request.ForegroundFeature.Shapes.Count} bgShapes={request.BackgroundFeature?.Shapes.Count ?? 0} " +
+                        $"maskTiles={start.MaskTiles.Count} scale={maskTileScale}");
 
                     while (response is null && await call.ResponseStream.MoveNext(streamToken).ConfigureAwait(false))
                     {
@@ -630,9 +602,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                         {
                             requestedTileList.AddRange(update.Needed.Tiles.Select(tile => $"{tile.Row},{tile.Col}"));
                             TilesAnswer answer = await UploadNeededTilesAsync(signature, update.Needed, grayscale, streamToken, StreamAlive).ConfigureAwait(false);
-                            if (update.Needed.Masks.Count > 0)
-                                await AnswerNeededMasksAsync(call.RequestStream, update.Needed, answer, signature, backgroundMask, backgroundSent, maskTileScale, streamToken).ConfigureAwait(false);
-
+                            AddBackgroundAnswer(answer, update.Needed, backgroundShapes, signature.Downsample, backgroundSent);
                             await call.RequestStream.WriteAsync(new SegmentTilesStreamRequest { Answer = answer }).ConfigureAwait(false);
                             StreamAlive();
                         }
@@ -655,90 +625,151 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 ";",
                 request.Tiles.Select(tile => $"{tile.Row},{tile.Col}"));
             string requestedTiles = string.Join(";", requestedTileList);
-            string segmentSizes = string.Join(
+            string islands = string.Join(
                 ",",
                 response.Segments.Select(segment => SegmentationLogitField.HasLogits(segment)
-                    ? $"{segment.LogitsX},{segment.LogitsY}:logits {segment.LogitsWidth}x{segment.LogitsHeight}@{segment.LogitsScale}"
-                    : $"{segment.X},{segment.Y}:{CapturedPng.DescribeDimensions(segment.Mask.ToByteArray())}"));
+                    ? $"{segment.Island}:{segment.LogitsOrigin.X},{segment.LogitsOrigin.Y}:logits {segment.LogitsSize.Width}x{segment.LogitsSize.Height}@{segment.LogitsScale} score={segment.Score:0.00}"
+                    : $"{segment.Island}:no logits"));
             SegmentationDiag.Log(
-                $"SegmentTiles response req={requestId}{(response.RequestId == requestId ? string.Empty : $" MISMATCH echoed={response.RequestId}")} mosaic={response.Width}x{response.Height} " +
-                $"origin=({response.OriginX},{response.OriginY}) submittedTiles=[{submittedTiles}] " +
-                $"requestedTiles=[{requestedTiles}] " +
-                $"segments=[{segmentSizes}]");
+                $"SegmentTiles response req={requestId}{(response.RequestId == requestId ? string.Empty : $" MISMATCH echoed={response.RequestId}")} " +
+                $"submittedTiles=[{submittedTiles}] requestedTiles=[{requestedTiles}] backgroundShapesSent={backgroundSent.Count} " +
+                $"islands=[{islands}]");
             return response;
         }
 
-        /// <summary>
-        /// The clicks as the points of the request's two Features, in mosaic pixels at <paramref name="downsample"/> (X right, Y up). The
-        /// foreground Feature always exists and carries the role of the FOREGROUND mask tiles; the background one is null without clicks.
-        /// </summary>
-        internal static (SegmentationServiceTypes.Feature Foreground, SegmentationServiceTypes.Feature? Background) ClickFeatures(
-            IReadOnlyList<Geometry.Vector2>? foregroundPoints, IReadOnlyList<Geometry.Vector2>? backgroundPoints, int downsample)
+        /// <summary>The first message of a stream and the mask tiles it announces.</summary>
+        internal sealed class StartMessage(SegmentTilesRequest request, List<SegmentationServiceTypes.MaskTile> maskTiles)
         {
-            SegmentationServiceTypes.Feature foreground = new() { MaskRole = SegmentationServiceTypes.MaskRole.Seed };
-            foreach (Geometry.Vector2 point in foregroundPoints ?? [])
+            public SegmentTilesRequest Request { get; } = request;
+
+            /// <summary>The tiles of the painted bitmaps, FOREGROUND then BACKGROUND, as many as <c>mask_tile_count</c> announces. Empty without one.</summary>
+            public List<SegmentationServiceTypes.MaskTile> MaskTiles { get; } = maskTiles;
+
+            /// <summary>The stream messages to write: <c>start</c>, then the announced mask tiles.</summary>
+            public IEnumerable<SegmentTilesStreamRequest> Messages() =>
+                new[] { new SegmentTilesStreamRequest { Start = Request } }
+                    .Concat(SegmentationMaskTiles.Chunk(MaskTiles).Select(tiles => new SegmentTilesStreamRequest { MaskTiles = tiles }));
+        }
+
+        /// <summary>
+        /// The <c>start</c> of a request on <paramref name="signature"/>'s grid, every coordinate in the grid frame (the tiles'
+        /// space divided by the downsample, Y up):
+        /// <list type="bullet">
+        /// <item>the foreground Feature: the clicks, and each geometry seed as a shape (a circle as <c>Shape.circle</c> with its
+        /// true radius, a polygon with its holes), which the server softens;</item>
+        /// <item>a painted bitmap seed as FOREGROUND mask tiles, used as drawn, counted in <c>mask_tile_count</c>; background
+        /// clicks clear a disc of <paramref name="pointRadiusPixels"/> from it;</item>
+        /// <item>the background Feature: the background clicks, and the neighbouring shapes that reach <paramref name="cells"/>,
+        /// recorded in <paramref name="backgroundSent"/> so they are not sent again;</item>
+        /// <item>a painted <paramref name="backgroundBitmap"/> as BACKGROUND mask tiles, counted with the foreground ones.</item>
+        /// </list>
+        /// </summary>
+        internal static StartMessage BuildStart(
+            TileSignature signature,
+            IReadOnlyList<TileCell> cells,
+            IReadOnlyList<Geometry.Vector2>? foregroundPoints,
+            IReadOnlyList<Geometry.Vector2>? backgroundPoints,
+            IReadOnlyList<SegmentationSeed>? seeds,
+            SegmentationBackgroundShapes? backgroundShapes,
+            ISet<int> backgroundSent,
+            double pointRadiusPixels,
+            int maskTileScale,
+            ulong requestId = 0,
+            string? modelId = null,
+            long annotationContextId = 0,
+            SegmentationMaskUnion? backgroundBitmap = null)
+        {
+            int downsample = signature.Downsample;
+            SegmentTilesRequest request = new()
             {
-                (int x, int y) = SegmentationTileGrid.WorldToMosaicPixel(point.X, point.Y, downsample);
-                foreground.Points.Add(new SegmentationServiceTypes.Point { X = x, Y = y });
+                Grid = ToGrid(signature),
+                RequestId = requestId,
+                MaskThreshold = (float)WebAnnotation.Global.AnnotationSettings.SegmentationMaskThreshold,
+                UseMaskInput = WebAnnotation.Global.AnnotationSettings.SegmentationUseMaskInput,
+                // A server the context is local to reads plain greyscale mosaic cells from its tileset instead of asking.
+                AnnotationContextId = annotationContextId
+            };
+            if (modelId is not null)
+                request.ModelId = modelId;
+
+            foreach (TileCell cell in cells)
+                request.Tiles.Add(new GridCell { Row = cell.Row, Col = cell.Col });
+
+            (SegmentationServiceTypes.Feature foreground, SegmentationServiceTypes.Feature background) =
+                ClickFeatures(foregroundPoints, backgroundPoints, downsample);
+
+            SegmentationMaskUnion? bitmap = null;
+            foreach (SegmentationSeed seed in seeds ?? [])
+            {
+                if (seed.Mask is not null)
+                {
+                    bitmap ??= new SegmentationMaskUnion();
+                    bitmap.Add(seed);
+                }
+                else if (SegmentationPromptShapes.FromSeed(seed, downsample) is { } shape)
+                {
+                    foreground.Shapes.Add(shape);
+                }
             }
 
-            SegmentationServiceTypes.Feature? background = null;
-            foreach (Geometry.Vector2 point in backgroundPoints ?? [])
+            if (backgroundShapes is not null)
             {
-                (int x, int y) = SegmentationTileGrid.WorldToMosaicPixel(point.X, point.Y, downsample);
-                background ??= new SegmentationServiceTypes.Feature();
-                background.Points.Add(new SegmentationServiceTypes.Point { X = x, Y = y });
+                background.Shapes.Add(backgroundShapes.ToShapes(
+                    backgroundShapes.TakeReaching(cells, downsample, backgroundSent), downsample));
             }
+
+            request.ForegroundFeature = foreground;
+            if (background.Points.Count > 0 || background.Shapes.Count > 0)
+                request.BackgroundFeature = background;
+
+            List<SegmentationServiceTypes.MaskTile> maskTiles = SegmentationMaskTiles.PrepareStart(
+                request, bitmap, backgroundBitmap, downsample, backgroundPoints, pointRadiusPixels, maskTileScale);
+            return new StartMessage(request, maskTiles);
+        }
+
+        /// <summary>
+        /// The clicks as the points of the request's two Features, in the grid frame at <paramref name="downsample"/> (X right,
+        /// Y up). Both Features are returned, empty when there are no clicks of that side.
+        /// </summary>
+        internal static (SegmentationServiceTypes.Feature Foreground, SegmentationServiceTypes.Feature Background) ClickFeatures(
+            IReadOnlyList<Geometry.Vector2>? foregroundPoints, IReadOnlyList<Geometry.Vector2>? backgroundPoints, int downsample)
+        {
+            SegmentationServiceTypes.Feature foreground = new();
+            foreach (Geometry.Vector2 point in foregroundPoints ?? [])
+                foreground.Points.Add(SegmentationPromptShapes.ToGrid(point, downsample));
+
+            SegmentationServiceTypes.Feature background = new();
+            foreach (Geometry.Vector2 point in backgroundPoints ?? [])
+                background.Points.Add(SegmentationPromptShapes.ToGrid(point, downsample));
 
             return (foreground, background);
         }
 
-        /// <summary>Sends <paramref name="tiles"/> as <c>MaskTiles</c> messages. Nothing is sent for an empty list.</summary>
-        private static async Task WriteMaskTilesAsync(
-            IClientStreamWriter<SegmentTilesStreamRequest> stream,
-            IReadOnlyList<SegmentationServiceTypes.MaskTile> tiles)
-        {
-            foreach (SegmentationServiceTypes.MaskTiles message in SegmentationMaskTiles.Chunk(tiles))
-                await stream.WriteAsync(new SegmentTilesStreamRequest { MaskTiles = message }).ConfigureAwait(false);
-        }
-
         /// <summary>
-        /// Sends the BACKGROUND tiles the server asked for (<paramref name="needed"/>.Masks) before its answer, empty tiles
-        /// included, rasterizing only the neighbour shapes that reach each tile. A tile at another downsample is listed in
-        /// <c>masks_unavailable</c>; one already sent (the start windows') is not sent twice, which the server refuses.
+        /// Adds to <paramref name="answer"/> the background shapes reaching <paramref name="needed"/>.background_cells that were
+        /// not sent before (with the start or an earlier answer). Nothing is added without background cells or shapes.
         /// </summary>
-        internal static async Task AnswerNeededMasksAsync(
-            IClientStreamWriter<SegmentTilesStreamRequest> stream,
-            TilesNeeded needed,
+        internal static void AddBackgroundAnswer(
             TilesAnswer answer,
-            TileSignature signature,
-            SegmentationMaskUnion? backgroundMask,
-            HashSet<TileCell> backgroundSent,
-            int scale,
-            CancellationToken token)
+            TilesNeeded needed,
+            SegmentationBackgroundShapes? backgroundShapes,
+            int downsample,
+            ISet<int> backgroundSent)
         {
-            List<TileCoord> wanted = [];
-            foreach (TileCoord coord in needed.Masks)
-            {
-                if (coord.Downsample != signature.Downsample)
-                    answer.MasksUnavailable.Add(coord);
-                else if (backgroundSent.Add(new TileCell(coord.Row, coord.Col)))
-                    wanted.Add(coord);
-            }
+            if (backgroundShapes is null || needed.BackgroundCells.Count == 0)
+                return;
 
-            List<SegmentationServiceTypes.MaskTile> tiles = await Task.Run(
-                () => SegmentationMaskTiles.BuildBackground(backgroundMask, wanted, scale),
-                token).ConfigureAwait(false);
-            await WriteMaskTilesAsync(stream, tiles).ConfigureAwait(false);
+            List<int> reaching = backgroundShapes.TakeReaching(
+                needed.BackgroundCells.Select(cell => new TileCell(cell.Row, cell.Col)), downsample, backgroundSent);
+            answer.BackgroundShapes.Add(backgroundShapes.ToShapes(reaching, downsample));
             SegmentationDiag.Log(
-                $"SegmentTilesStream background tiles sent={tiles.Count} unavailable={answer.MasksUnavailable.Count} " +
-                $"nonEmpty={tiles.Count(tile => tile.Full || !tile.Png.IsEmpty)}");
+                $"SegmentTilesStream background cells={needed.BackgroundCells.Count} shapes={answer.BackgroundShapes.Count}");
         }
 
         /// <summary>
-        /// Uploads the cells the server asked for and reports each as ready or unavailable.
-        /// A cell that cannot be captured is unavailable, which tells the server not to grow into it.
-        /// An <see cref="RpcException"/> from UploadTile is not caught: it ends the whole request.
+        /// Uploads the cells the server asked for and lists, in the answer, the ones it could not supply: a cell that cannot be
+        /// captured is unavailable, which tells the server not to grow into it. An uploaded cell is not listed: the server sees
+        /// its upload arrive. An <see cref="RpcException"/> from UploadTile is not caught: it ends the whole request.
         /// </summary>
         /// <param name="onTileReady">Called after each tile is uploaded, so the stream's idle timer restarts.</param>
         private async Task<TilesAnswer> UploadNeededTilesAsync(
@@ -748,32 +779,42 @@ namespace WebAnnotation.UI.Commands.Segmentation
             CancellationToken token,
             Action? onTileReady = null)
         {
-            TilesAnswer answer = new();
-            foreach (TileCoord tile in needed.Tiles)
-            {
-                if (tile.Downsample != signature.Downsample)
+            TilesAnswer answer = await AnswerNeededTilesAsync(
+                needed,
+                tile =>
                 {
-                    answer.Unavailable.Add(tile);
-                    continue;
-                }
+                    // The server asks only for cells it does not hold. A key left from an earlier
+                    // upload would skip the re-upload and the server would wait on a tile it never gets.
+                    string key = TileKey(signature, tile.Row, tile.Col);
+                    uploadedTileKeys.Remove(key);
+                    prefetchedToServer.Remove(key);
+                    return UploadMissingTilesAsync(signature, [new TileCell(tile.Row, tile.Col)], grayscale, token);
+                },
+                onTileReady).ConfigureAwait(false);
 
-                // The server asks only for cells it does not hold. A key left from an earlier
-                // upload would skip the re-upload and the server would wait on a tile it never gets.
-                string key = TileKey(signature, tile.Row, tile.Col);
-                uploadedTileKeys.Remove(key);
-                prefetchedToServer.Remove(key);
-                bool uploaded = await UploadMissingTilesAsync(
-                    signature,
-                    [new TileCell(tile.Row, tile.Col)],
-                    grayscale,
-                    token).ConfigureAwait(false);
-                (uploaded ? answer.Ready : answer.Unavailable).Add(tile);
+            SegmentationDiag.Log(
+                $"SegmentTilesStream needed=[{string.Join(";", needed.Tiles.Select(t => $"{t.Row},{t.Col}"))}] " +
+                $"unavailable=[{string.Join(";", answer.Unavailable.Select(t => $"{t.Row},{t.Col}"))}]");
+            return answer;
+        }
+
+        /// <summary>
+        /// Uploads each tile of <paramref name="needed"/> in order with <paramref name="upload"/> and returns the answer: only the
+        /// tiles whose upload failed, as <c>unavailable</c>. A tile that was uploaded is settled by its upload arriving.
+        /// </summary>
+        internal static async Task<TilesAnswer> AnswerNeededTilesAsync(
+            TilesNeeded needed,
+            Func<GridCell, Task<bool>> upload,
+            Action? onTileReady = null)
+        {
+            TilesAnswer answer = new();
+            foreach (GridCell tile in needed.Tiles)
+            {
+                if (!await upload(tile).ConfigureAwait(false))
+                    answer.Unavailable.Add(tile);
                 onTileReady?.Invoke();
             }
 
-            SegmentationDiag.Log(
-                $"SegmentTilesStream answer ready=[{string.Join(";", answer.Ready.Select(t => $"{t.Row},{t.Col}"))}] " +
-                $"unavailable=[{string.Join(";", answer.Unavailable.Select(t => $"{t.Row},{t.Col}"))}]");
             return answer;
         }
 
@@ -856,10 +897,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             bool grayscale,
             CancellationToken token)
         {
-            if (!WebAnnotation.Global.AnnotationSettings.SegmentationEdgeSnapEnabled || response.Segments.Count == 0)
+            if (!WebAnnotation.Global.AnnotationSettings.SegmentationEdgeSnapEnabled ||
+                ResponseWorldBounds(response, downsample) is not Geometry.Rectangle bounds)
                 return;
 
-            Geometry.Rectangle bounds = MosaicWorldBounds(response, downsample);
             List<TileCell> cells = SegmentationTileGrid.CellsCovering(
                 bounds.LowerLeft.X,
                 bounds.LowerLeft.Y,
@@ -960,41 +1001,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() => renderTarget.Dispose()));
             }
-        }
-
-        /// <summary>
-        /// What a tile request asks the server to send back: the fused SAM2 logits at their native resolution.
-        /// </summary>
-        /// <remarks>
-        /// <c>NoUpscale</c> means the server does not upscale (see <c>RESPONSE_CONTENT_NO_UPSCALE</c> in the proto), so
-        /// the logit grid comes back at one sample per four image pixels. This client polygonizes it at that
-        /// resolution and the world transform scales the ring up afterwards. The mask overlay the user can turn
-        /// on in preferences is drawn from the same logits (<see cref="SegmentationLogitField"/>) and only upscaled by the
-        /// GPU when it is drawn, so no mask PNG is requested. A server that predates the flag ignores it and sends
-        /// masks, which the client still reads.
-        /// </remarks>
-        private const SegmentationServiceTypes.ResponseContent RequestedContent =
-            SegmentationServiceTypes.ResponseContent.Logits | SegmentationServiceTypes.ResponseContent.NoUpscale;
-
-        /// <summary>
-        /// World rectangle of the mosaic for a response sent at <paramref name="requestedDownsample"/>.
-        /// <c>Width</c> and <c>Height</c> of a no-upscale response count samples, so they are scaled to image pixels.
-        /// </summary>
-        internal static Geometry.Rectangle MosaicWorldBounds(SegmentationResponse response, int requestedDownsample)
-        {
-            int downsample = Math.Max(1, requestedDownsample);
-            int pixelScale = response.PixelScale();
-            int width = Math.Max(1, response.Width) * pixelScale;
-            int height = Math.Max(1, response.Height) * pixelScale;
-            int originX = response.OriginX;
-            int originY = response.OriginY;
-            Geometry.Vector2 lowerLeft = new(
-                originX * (double)downsample,
-                originY * (double)downsample);
-            Geometry.Vector2 upperRight = new(
-                (originX + width) * (double)downsample,
-                (originY + height) * (double)downsample);
-            return new Geometry.Rectangle(lowerLeft, upperRight);
         }
     }
 }

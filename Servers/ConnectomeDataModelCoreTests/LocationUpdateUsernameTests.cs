@@ -5,7 +5,7 @@ using Viking.AnnotationServiceTypes.gRPC.V1;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using Xunit;
 using EfLocation = Viking.DataModel.Annotation.Location;
-using ProtoGeometry = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry;
+using Viking.AnnotationServiceTypes.Interfaces;
 using ProtoLocation = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location;
 
 namespace ConnectomeDataModelCoreTests
@@ -24,9 +24,8 @@ namespace ConnectomeDataModelCoreTests
             Id = 7,
             ParentId = 3,
             Section = 12,
-            TypeCode = AnnotationType.Polygon,
-            MosaicShape = new ProtoGeometry { Text = "POLYGON ((0 0, 10 0, 10 10, 0 10, 0 0))" },
-            VolumeShape = new ProtoGeometry { Text = "POLYGON ((100 100, 110 100, 110 110, 100 110, 100 100))" },
+            MosaicGeometry = TestShapes.Mosaic("POLYGON ((0 0, 10 0, 10 10, 0 10, 0 0))"),
+            VolumeGeometry = TestShapes.Volume("POLYGON ((100 100, 110 100, 110 110, 100 110, 100 100))"),
         };
 
         /// <summary>A stored row identical to <see cref="Proto"/>, authored by "original".</summary>
@@ -43,7 +42,7 @@ namespace ConnectomeDataModelCoreTests
         {
             var stored = Stored();
             var incoming = Proto();
-            incoming.VolumeShape = new ProtoGeometry { Text = "POLYGON ((101 100, 111 100, 111 110, 101 110, 101 100))" };
+            incoming.VolumeGeometry = TestShapes.Volume("POLYGON ((101 100, 111 100, 111 110, 101 110, 101 100))");
 
             LocationService.ApplyUpdate(incoming, stored, "reviewer");
 
@@ -67,7 +66,7 @@ namespace ConnectomeDataModelCoreTests
         {
             var stored = Stored();
             var incoming = Proto();
-            incoming.MosaicShape = new ProtoGeometry { Text = "POLYGON ((0 0, 12 0, 12 10, 0 10, 0 0))" };
+            incoming.MosaicGeometry = TestShapes.Mosaic("POLYGON ((0 0, 12 0, 12 10, 0 10, 0 0))");
 
             LocationService.ApplyUpdate(incoming, stored, "reviewer");
 
@@ -79,7 +78,8 @@ namespace ConnectomeDataModelCoreTests
         {
             var stored = Stored();
             var incoming = Proto();
-            incoming.TypeCode = AnnotationType.Closedcurve;
+            // Same points, now a curve polygon: only the type changes.
+            incoming.MosaicGeometry = TestShapes.Mosaic("POLYGON ((0 0, 10 0, 10 10, 0 10, 0 0))", LocationType.CURVEPOLYGON);
 
             LocationService.ApplyUpdate(incoming, stored, "reviewer");
 

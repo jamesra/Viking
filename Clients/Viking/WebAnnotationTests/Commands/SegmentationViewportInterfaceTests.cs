@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Xna.Framework.Graphics;
 using Viking.gRPC.SegmentationServiceTypes.V1;
+using CoordinateSpace = Viking.gRPC.Geometry.V1.CoordinateSpace;
+using TileGrid = Viking.gRPC.Geometry.V1.TileGrid;
 using WebAnnotation.UI.Commands.Segmentation;
 
 namespace WebAnnotationTests.Commands
@@ -51,16 +53,14 @@ namespace WebAnnotationTests.Commands
         {
             var signature = SegmentationViewportSession.TileSignature.Of(new FakeViewport(inVolumeSpace), 4);
 
-            TileCoord coord = SegmentationViewportSession.ToCoord(signature, new TileCell(2, -3));
+            TileGrid grid = SegmentationViewportSession.ToGrid(signature);
 
-            Assert.AreEqual(space, coord.Space);
-            Assert.AreEqual(transform, coord.Transform);
-            Assert.AreEqual("Test", coord.Volume);
-            Assert.AreEqual(7, coord.Section);
-            Assert.AreEqual("TEM", coord.Channel);
-            Assert.AreEqual(4, coord.Downsample);
-            Assert.AreEqual(2, coord.Row);
-            Assert.AreEqual(-3, coord.Col);
+            Assert.AreEqual(space, grid.Space);
+            Assert.AreEqual(transform, grid.Transform);
+            Assert.AreEqual("Test", grid.Volume);
+            Assert.AreEqual(7, grid.Section);
+            Assert.AreEqual("TEM", grid.Channel);
+            Assert.AreEqual(4, grid.Downsample);
         }
 
         [TestMethod]

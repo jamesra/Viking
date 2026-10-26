@@ -114,46 +114,5 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 throw new ArgumentOutOfRangeException(nameof(downsample));
             return ((int)Math.Floor(worldX / downsample), (int)Math.Floor(worldY / downsample));
         }
-
-        /// <summary>
-        /// Map a response polygon vertex back to world. The server reports vertices at pixel centres
-        /// (Y down from the top of the image); this places them on pixel edges, so it adds half a pixel
-        /// in X and takes half a pixel off the row before flipping Y.
-        /// originX/originY are the mosaic's bottom-left in downsample pixels.
-        /// </summary>
-        public static Vector2 PolygonPointToWorld(
-            int originX,
-            int originY,
-            int pixelX,
-            int pixelYFromTop,
-            int mosaicHeight,
-            int downsample)
-        {
-            if (downsample <= 0)
-                throw new ArgumentOutOfRangeException(nameof(downsample));
-            return new Vector2(
-                (originX + pixelX + 0.5) * downsample,
-                (originY + mosaicHeight - (pixelYFromTop + 0.5)) * downsample);
-        }
-
-        /// <summary>
-        /// Map a fused-mosaic pixel (Y down from the top of the image) back to world.
-        /// originX/originY are the mosaic's bottom-left in downsample pixels.
-        /// </summary>
-        public static Vector2 MosaicPixelToWorld(
-            int originX,
-            int originY,
-            int pixelX,
-            int pixelYFromTop,
-            int mosaicHeight,
-            int downsample)
-        {
-            if (downsample <= 0)
-                throw new ArgumentOutOfRangeException(nameof(downsample));
-            int flippedY = mosaicHeight - pixelYFromTop;
-            return new Vector2(
-                (originX + pixelX) * (double)downsample,
-                (originY + flippedY) * (double)downsample);
-        }
     }
 }

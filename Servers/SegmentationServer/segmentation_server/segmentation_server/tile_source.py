@@ -2,8 +2,8 @@
 
 Only what the server can draw exactly as the client would is read:
 
-* a plain greyscale channel (a ``TileCoord.channel`` with no ``[...]`` suffix of blend, colour or view options),
-* in the section's mosaic space (``TileCoord.space`` is ``COORDINATE_SPACE_MOSAIC``),
+* a plain greyscale channel (a ``TileGrid.channel`` with no ``[...]`` suffix of blend, colour or view options),
+* in the section's mosaic space (``TileGrid.space`` is ``COORDINATE_SPACE_MOSAIC``),
 * whose channel names a VikingXML tileset of the section at the cell's downsample.
 
 A cell is stitched from the tileset tiles it overlaps, flipped so its first row is its high mosaic Y (the capture's
@@ -25,8 +25,9 @@ import cv2
 import numpy as np
 from numpy.typing import NDArray
 
-from segmentation_grpc import CoordinateSpace, TileCoord
+from segmentation_grpc import CoordinateSpace
 from segmentation_server.capture_encoder import encode_capture
+from segmentation_server.tile_ref import TileRef
 from segmentation_server.identity_client import IdentityAssignments, IdentityOptions
 from segmentation_server.viking_volume import Tileset, TilesetLevel, VikingVolume, VolumeSection, parse_viking_xml
 
@@ -42,11 +43,11 @@ HttpGet = Callable[[str], Optional[bytes]]
 
 
 class TileSource(Protocol):
-    async def fetch(self, annotation_context_id: int, coord: TileCoord) -> Optional[bytes]:
+    async def fetch(self, annotation_context_id: int, coord: TileRef) -> Optional[bytes]:
         """The cell's encoded image, or None when this source cannot draw it."""
         ...
 
-    async def can_read(self, annotation_context_id: int, coord: TileCoord) -> bool:
+    async def can_read(self, annotation_context_id: int, coord: TileRef) -> bool:
         """True when :meth:`fetch` would try to draw the cell, without reading any tile."""
         ...
 
@@ -61,7 +62,7 @@ def _http_get(url: str) -> Optional[bytes]:
         raise
 
 
-def is_plain_mosaic_cell(coord: TileCoord) -> bool:
+def is_plain_mosaic_cell(coord: TileRef) -> bool:
     """True for a plain greyscale channel in mosaic space: the only cells a server draws as the client would."""
     return (
         coord.space == CoordinateSpace.COORDINATE_SPACE_MOSAIC
@@ -127,7 +128,7 @@ class VikingTilesetSource:
             return volume
 
     async def _locate(
-        self, annotation_context_id: int, coord: TileCoord
+        self, annotation_context_id: int, coord: TileRef
     ) -> Optional[Tuple[VikingVolume, VolumeSection, Tileset, TilesetLevel]]:
         """``(volume, section, tileset, level)`` the cell is read from, or None when this source cannot draw it."""
         if annotation_context_id <= 0 or not is_plain_mosaic_cell(coord):
@@ -145,10 +146,10 @@ class VikingTilesetSource:
             return None
         return volume, section, tileset, level
 
-    async def can_read(self, annotation_context_id: int, coord: TileCoord) -> bool:
+    async def can_read(self, annotation_context_id: int, coord: TileRef) -> bool:
         return await self._locate(annotation_context_id, coord) is not None
 
-    async def fetch(self, annotation_context_id: int, coord: TileCoord) -> Optional[bytes]:
+    async def fetch(self, annotation_context_id: int, coord: TileRef) -> Optional[bytes]:
         located = await self._locate(annotation_context_id, coord)
         if located is None:
             return None

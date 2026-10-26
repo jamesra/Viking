@@ -80,35 +80,16 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void ACircleSeedIsMaskedAsTheCircleNotItsInscribedSquare()
+        public void ACircleSeedIsNeverRasterized()
         {
+            // A circle goes to the server as Shape.circle, which the server softens for its model; the client draws no disc.
             Assert.IsTrue(CircleSegmentationPrompts.TryCreateStartingPrompt(
                 [new Vector2(500, 500), new Vector2(600, 500), new Vector2(500, 600), new Vector2(400, 500), new Vector2(500, 400)],
                 out CircleSegmentationPrompts.StartingPrompt prompt));
-            Assert.AreEqual(100.0, prompt.Seed.Circle!.Value.Radius, 1e-9);
             SegmentationMaskUnion union = new();
-            union.Add(prompt.Seed);
 
-            byte[] tile = DrawTile(union)!;
-
-            Assert.IsTrue(On(tile, 500, 500));
-            Assert.IsTrue(On(tile, 425, 500), "inside the circle, outside the inscribed square (half side 70.7)");
-            Assert.IsTrue(On(tile, 500, 590));
-            Assert.IsFalse(On(tile, 580, 580), "the corner of the circle's bounding box, 113 from the centre");
-            Assert.IsFalse(On(tile, 500, 610));
-        }
-
-        [TestMethod]
-        public void ACircleOfAnyRadiusStaysWithinAQuarterPixelOfTheTrueCircle()
-        {
-            foreach (double radius in new[] { 10.0, 100.0, 1000.0, 10000.0, 100000.0 })
-            {
-                int segments = SegmentationMaskUnion.CircleSegmentsFor(radius);
-                double sagitta = radius * (1 - Math.Cos(Math.PI / segments));
-
-                Assert.IsTrue(segments >= 180, $"radius {radius}");
-                Assert.IsTrue(sagitta <= 0.25 + 1e-9 || segments == 4096, $"radius {radius}: {segments} segments leave {sagitta} between the edge and the circle");
-            }
+            Assert.ThrowsException<ArgumentException>(() => union.Add(prompt.Seed));
+            Assert.IsTrue(union.IsEmpty);
         }
 
         [TestMethod]

@@ -221,32 +221,6 @@ def test_no_prompt_at_all_is_an_empty_mask_without_calling_the_model():
     assert predictor.calls == []
 
 
-def test_the_viewport_path_uses_the_same_rule_and_returns_a_single_segment():
-    wide = _block(0, 0, SIDE - 1, SIDE - 1)
-    narrow = _block(2, 2, 8, 8)
-    predictor = CandidatePredictor([narrow, wide], [0.99, 0.60])
-    labeled, segments = _model().segment_image_with_predictor(
-        predictor, [(4, 4), (20, 20)], [1, 1], True, (SIDE, SIDE)
-    )
-    assert len(segments) == 1
-    assert segments[0]["score"] == pytest.approx(0.60)
-    assert int(labeled[20, 20]) == 1
-
-
-def test_the_viewport_path_with_no_covered_click_raises_instead_of_returning_an_empty_answer():
-    predictor = CandidatePredictor([_block(0, 0, 3, 3)], [0.9])
-    with pytest.raises(NoMatchingMask):
-        _model().segment_image_with_predictor(predictor, [(20, 20)], [1], True, (SIDE, SIDE))
-
-
-def test_the_viewport_path_with_only_background_clicks_returns_every_candidate():
-    predictor = CandidatePredictor([_block(0, 0, 5, 5), _block(10, 10, 15, 15)], [0.9, 0.8])
-    _labeled, segments = _model().segment_image_with_predictor(
-        predictor, [(30, 30)], [0], True, (SIDE, SIDE)
-    )
-    assert len(segments) == 2
-
-
 class PromptAwarePredictor:
     """Answers a logit field chosen by whether the call carried a box and negative clicks.
 

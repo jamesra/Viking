@@ -178,11 +178,13 @@ namespace Viking.DataModel.Annotation
             var y = reader.GetDouble(reader.GetOrdinal("Y"));
             var volumeX = reader.GetDouble(reader.GetOrdinal("VolumeX"));
             var volumeY = reader.GetDouble(reader.GetOrdinal("VolumeY"));
+            // NTS cannot read a circle's CurvePolygon: hold its east rim point instead, as the EF reads do
+            // (SqlServerCircleShapeCommandInterceptor), so each space keeps its own radius.
             var mosaicShape = typeCode == SqlServerCircleShapeCommandInterceptor.CircleTypeCode
-                ? (NtsGeometry)new Point(x, y)
+                ? CircleEastRimPoint(reader, "MosaicShape", x, y)
                 : ReadGeometry(reader, "MosaicShape") ?? new Point(x, y);
             var volumeShape = typeCode == SqlServerCircleShapeCommandInterceptor.CircleTypeCode
-                ? (NtsGeometry)new Point(volumeX, volumeY)
+                ? CircleEastRimPoint(reader, "VolumeShape", volumeX, volumeY)
                 : ReadGeometry(reader, "VolumeShape") ?? new Point(volumeX, volumeY);
 
             return new Location
@@ -245,6 +247,36 @@ namespace Viking.DataModel.Annotation
             {
                 return null;
             }
+        }
+
+        /// <summary>
+        /// The east rim point (centre + (r, 0)) of a stored circle, r being the distance from the centre to the first
+        /// point of its CIRCULARSTRING (every control point of the arc lies on the circle). The centre itself when the
+        /// column is null or not readable.
+        /// </summary>
+        static Point CircleEastRimPoint(DbDataReader reader, string column, double centerX, double centerY)
+        {
+            var bytes = ReadGeometryBytes(reader, column);
+            if (bytes == null || !SqlGeometryBytes.TryReadFirstPoint(bytes, out double rimX, out double rimY))
+                return new Point(centerX, centerY);
+
+            double dx = rimX - centerX;
+            double dy = rimY - centerY;
+            return new Point(centerX + Math.Sqrt((dx * dx) + (dy * dy)), centerY);
+        }
+
+        static byte[] ReadGeometryBytes(DbDataReader reader, string column)
+        {
+            var ordinal = reader.GetOrdinal(column);
+            if (reader.IsDBNull(ordinal))
+                return null;
+
+            return reader.GetValue(ordinal) switch
+            {
+                byte[] b => b,
+                SqlBytes sqlBytes => sqlBytes.Value,
+                _ => null
+            };
         }
 
         static string GetStringOrNull(DbDataReader reader, string column)

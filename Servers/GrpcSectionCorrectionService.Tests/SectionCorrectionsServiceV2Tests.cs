@@ -14,6 +14,8 @@ using Viking.SectionCorrection;
 using Viking.SectionCorrectionServiceTypes.gRPC.V2.Protos;
 using FitMode = AnnotationVizLib.CorrectionMode;
 using GeoVector2 = Geometry.Vector2;
+using GridCell = Viking.gRPC.Geometry.V1.GridCell;
+using Vector2 = Viking.gRPC.Geometry.V1.Vector2;
 using Path = System.IO.Path;
 
 namespace GrpcSectionCorrectionService.Tests
@@ -92,7 +94,7 @@ namespace GrpcSectionCorrectionService.Tests
 
             Assert.AreEqual(2000, section.PitchNm);
             Assert.AreEqual(_nodes.Count, section.Nodes.Count);
-            Viking.SectionCorrectionServiceTypes.gRPC.V2.Protos.LatticeNode corner = section.Nodes.Single(n => n.Gx == 1 && n.Gy == 1);
+            Viking.SectionCorrectionServiceTypes.gRPC.V2.Protos.LatticeNode corner = section.Nodes.Single(n => n.Node.Equals(new GridCell { Row = 1, Col = 1 }));
             Assert.AreEqual(20, corner.Offset.X);
             Assert.AreEqual(-4, corner.Offset.Y);
             Assert.AreEqual(2, corner.Votes);

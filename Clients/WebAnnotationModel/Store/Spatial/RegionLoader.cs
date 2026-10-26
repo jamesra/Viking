@@ -363,7 +363,7 @@ namespace WebAnnotationModel
                 {
                     serverResult = await client.GetAsync(
                         sectionNumber,
-                        ToWktPolygon(cell.Bounds),
+                        cell.Bounds,
                         level.MinRadius,
                         cell.LastQuery,
                         aToken,
@@ -414,14 +414,6 @@ namespace WebAnnotationModel
 
             if (update.DeletedIDs != null && update.DeletedIDs.Length > 0)
                 await ServerDeletesProcessor.ProcessServerDelete(update.DeletedIDs).ConfigureAwait(false);
-        }
-
-        static string ToWktPolygon(Geometry.Rectangle bounds)
-        {
-            var ci = System.Globalization.CultureInfo.InvariantCulture;
-            return string.Format(ci,
-                "POLYGON(({0} {1}, {2} {1}, {2} {3}, {0} {3}, {0} {1}))",
-                bounds.Left, bounds.Bottom, bounds.Right, bounds.Top);
         }
 
         static async Task AbortQueryAsync(RegionRequestData<OBJECT> cell)

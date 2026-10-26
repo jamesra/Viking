@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RTree", "..\RTree\RTree.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Utils", "..\Utils\Utils.csproj", "{9E28A7D5-31E0-45AF-B9C2-219899CD5651}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeometryTypes.gRPC", "..\gRPCGeometryTypes\GeometryTypes.gRPC.csproj", "{7FCF380B-E2E2-40B2-9965-823497898F28}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -165,6 +167,18 @@ Global
 		{9E28A7D5-31E0-45AF-B9C2-219899CD5651}.Release|x64.Build.0 = Release|Any CPU
 		{9E28A7D5-31E0-45AF-B9C2-219899CD5651}.Release|x86.ActiveCfg = Release|Any CPU
 		{9E28A7D5-31E0-45AF-B9C2-219899CD5651}.Release|x86.Build.0 = Release|Any CPU
+		{7FCF380B-E2E2-40B2-9965-823497898F28}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7FCF380B-E2E2-40B2-9965-823497898F28}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7FCF380B-E2E2-40B2-9965-823497898F28}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7FCF380B-E2E2-40B2-9965-823497898F28}.Debug|x64.Build.0 = Debug|Any CPU
+		{7FCF380B-E2E2-40B2-9965-823497898F28}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7FCF380B-E2E2-40B2-9965-823497898F28}.Debug|x86.Build.0 = Debug|Any CPU
+		{7FCF380B-E2E2-40B2-9965-823497898F28}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7FCF380B-E2E2-40B2-9965-823497898F28}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7FCF380B-E2E2-40B2-9965-823497898F28}.Release|x64.ActiveCfg = Release|Any CPU
+		{7FCF380B-E2E2-40B2-9965-823497898F28}.Release|x64.Build.0 = Release|Any CPU
+		{7FCF380B-E2E2-40B2-9965-823497898F28}.Release|x86.ActiveCfg = Release|Any CPU
+		{7FCF380B-E2E2-40B2-9965-823497898F28}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

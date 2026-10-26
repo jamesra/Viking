@@ -126,7 +126,7 @@ namespace WebAnnotationTests.Commands
                 24,
                 24,
                 new Rectangle(new Vector2(0, 0), new Vector2(24, 24)));
-            AutoPolygonizeMaskSource source = new(overlay, null, null);
+            AutoPolygonizeMaskSource source = new(overlay, null);
             Vector2 keep = new(12, 12);
 
             Assert.IsTrue(AutoPolygonizeMaskRetrace.TryCreate(

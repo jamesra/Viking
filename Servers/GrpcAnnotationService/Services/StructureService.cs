@@ -353,7 +353,8 @@ namespace gRPCAnnotationService
                 response.Results.AddRange(rows.Select(r => new LocationPositionOnly
                 {
                     Id = r.ID,
-                    Position = new AnnotationPoint { X = r.X, Y = r.Y, Z = r.Z },
+                    Position = new Viking.gRPC.Geometry.V1.Vector2 { X = r.X, Y = r.Y },
+                    Section = r.Z,
                     Radius = r.Radius ?? 0
                 }));
                 return response;
@@ -408,7 +409,7 @@ namespace gRPCAnnotationService
                     addedLocation.LastModified = addedLocation.Created;
                     await _context.Locations.AddAsync(addedLocation, ct);
                     await _context.SaveChangesAsync(ct);
-                    if (request.NewAnnotation.TypeCode == AnnotationType.Circle)
+                    if (request.NewAnnotation.IsCircle())
                     {
                         var (mosaicWkt, volumeWkt) = request.NewAnnotation.CircleShapeWkt();
                         await _context.PersistCircleShapesAsync(addedLocation, mosaicWkt, volumeWkt, ct);
@@ -766,7 +767,7 @@ namespace gRPCAnnotationService
             return query;
         }
 
-        private async Task<List<EfStructure>> StructuresInRegion(long z, Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry region,
+        private async Task<List<EfStructure>> StructuresInRegion(long z, Viking.gRPC.Geometry.V1.Rectangle region,
             double minRadius, DateTime? modifiedAfter, bool useVolumeCoordinates, CancellationToken ct)
         {
             var bounds = BoundsOf(region);
@@ -786,14 +787,13 @@ namespace gRPCAnnotationService
             return await query.ToListAsync(ct);
         }
 
-        private static (double MinX, double MinY, double MaxX, double MaxY) BoundsOf(Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry region)
+        /// <summary>The region's bounds; a missing region is an invalid argument.</summary>
+        private static (double MinX, double MinY, double MaxX, double MaxY) BoundsOf(Viking.gRPC.Geometry.V1.Rectangle region)
         {
-            var geometry = region?.ToNetTopologyGeometry();
-            if (geometry == null)
+            if (region == null)
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "A region is required"));
 
-            var envelope = geometry.EnvelopeInternal;
-            return (envelope.MinX, envelope.MinY, envelope.MaxX, envelope.MaxY);
+            return (region.XMin, region.YMin, region.XMax, region.YMax);
         }
 
         private static void ApplyUpdate(ProtoStructure src, EfStructure dst, string username)

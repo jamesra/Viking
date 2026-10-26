@@ -15,7 +15,7 @@ using EfLocationLink = Viking.DataModel.Annotation.LocationLink;
 using EfStructureLink = Viking.DataModel.Annotation.StructureLink;
 using ProtoLocation = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location;
 using ProtoLocationLink = Viking.AnnotationServiceTypes.gRPC.V1.Protos.LocationLink;
-using ProtoGeometry = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry;
+using ProtoRectangle = Viking.gRPC.Geometry.V1.Rectangle;
 using ProtoStructure = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Structure;
 using ProtoStructureLink = Viking.AnnotationServiceTypes.gRPC.V1.Protos.StructureLink;
 
@@ -406,13 +406,14 @@ namespace gRPCAnnotationService
             try
             {
                 var ct = context.CancellationToken;
-                var bbox = request.Bbox;
+                var bbox = request.Bbox
+                    ?? throw new RpcException(new Status(StatusCode.InvalidArgument, "A bounding box is required"));
                 // Filter locations on scalar columns only. Joining LocationLink → Location
                 // pulled MosaicShape/VolumeShape and broke under the circle interceptor.
                 var locationIds = await _context.Locations.AsNoTracking()
                     .Where(l => l.Z == request.Section
-                                && l.X >= bbox.Xmin && l.X <= bbox.Xmax
-                                && l.Y >= bbox.Ymin && l.Y <= bbox.Ymax
+                                && l.X >= bbox.XMin && l.X <= bbox.XMax
+                                && l.Y >= bbox.YMin && l.Y <= bbox.YMax
                                 && l.Radius >= request.MinRadius)
                     .Select(l => l.Id)
                     .ToListAsync(ct);
@@ -631,8 +632,11 @@ namespace gRPCAnnotationService
 
         private const int RegionStreamBatchSize = 128;
 
+        /// <summary>Mosaic pixels within which two stored points are the same point.</summary>
+        private const double PointTolerance = 1e-6;
+
         async Task<SectionAnnotationsInMosaicBoundsResult> LoadMosaicAnnotationsAsync(
-            long z, ProtoGeometry region, double minRadius, DateTime? queryDate, CancellationToken ct)
+            long z, ProtoRectangle region, double minRadius, DateTime? queryDate, CancellationToken ct)
         {
             var bbox = region?.ToNetTopologyGeometry()
                 ?? throw new RpcException(new Status(StatusCode.InvalidArgument, "A region is required"));
@@ -800,7 +804,7 @@ namespace gRPCAnnotationService
             return links.Select(l => l.A == id ? l.B : l.A).ToList();
         }
 
-        private IQueryable<EfLocation> MosaicRegionQuery(long z, ProtoGeometry region, double minRadius, DateTime? modifiedAfter)
+        private IQueryable<EfLocation> MosaicRegionQuery(long z, ProtoRectangle region, double minRadius, DateTime? modifiedAfter)
         {
             var bounds = BoundsOf(region);
 
@@ -819,18 +823,13 @@ namespace gRPCAnnotationService
             return query;
         }
 
-        /// <summary>
-        /// The region is sent as a general geometry (typically a polygon), so the caller's
-        /// bounding box is recovered here rather than requiring a dedicated bbox message.
-        /// </summary>
-        private static (double MinX, double MinY, double MaxX, double MaxY) BoundsOf(ProtoGeometry region)
+        /// <summary>The region's bounds; a missing region is an invalid argument.</summary>
+        private static (double MinX, double MinY, double MaxX, double MaxY) BoundsOf(ProtoRectangle region)
         {
-            var geometry = region?.ToNetTopologyGeometry();
-            if (geometry == null)
+            if (region == null)
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "A region is required"));
 
-            var envelope = geometry.EnvelopeInternal;
-            return (envelope.MinX, envelope.MinY, envelope.MaxX, envelope.MaxY);
+            return (region.XMin, region.YMin, region.XMax, region.YMax);
         }
 
         /// <summary>
@@ -896,7 +895,7 @@ namespace gRPCAnnotationService
 
         private async Task PersistCircleShapesIfNeededAsync(ProtoLocation proto, EfLocation entity, CancellationToken ct)
         {
-            if (proto.TypeCode != AnnotationType.Circle)
+            if (!proto.IsCircle())
                 return;
 
             var (mosaicWkt, volumeWkt) = proto.CircleShapeWkt();
@@ -927,7 +926,7 @@ namespace gRPCAnnotationService
 
             authorChanged |= dst.Z != updated.Z;
             dst.Z = updated.Z;
-            authorChanged |= dst.Closed != updated.Closed;
+            // Closed follows from the mosaic shape (a closed line), compared below.
             dst.Closed = updated.Closed;
             authorChanged |= TagsDiffer(dst.Tags, updated.Tags);
             dst.Tags = updated.Tags;
@@ -952,11 +951,18 @@ namespace gRPCAnnotationService
         private static bool TagsDiffer(string stored, string incoming)
             => !string.Equals(string.IsNullOrEmpty(stored) ? null : stored, string.IsNullOrEmpty(incoming) ? null : incoming, StringComparison.Ordinal);
 
-        /// <summary>Topological equality like SQL STEquals; falls back to exact comparison when NTS rejects an invalid geometry.</summary>
+        /// <summary>
+        /// Topological equality like SQL STEquals; falls back to exact comparison when NTS rejects an invalid geometry.
+        /// Points (and a circle's rim point, whose stored copy SQL derives from the curve's area) match within
+        /// <see cref="PointTolerance"/>.
+        /// </summary>
         private static bool ShapesDiffer(NetTopologySuite.Geometries.Geometry stored, NetTopologySuite.Geometries.Geometry incoming)
         {
             if (stored is null || incoming is null)
                 return !(stored is null && incoming is null);
+
+            if (stored is NetTopologySuite.Geometries.Point a && incoming is NetTopologySuite.Geometries.Point b)
+                return a.Distance(b) > PointTolerance;
 
             try
             {

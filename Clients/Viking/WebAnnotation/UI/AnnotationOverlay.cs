@@ -112,12 +112,6 @@ namespace WebAnnotation
         private readonly MouseOverLocationCanvasViewEffect mouseOverEffect = new();
         private AutoCirclePolygonizeController autoPolygonizeController;
 
-        /// <summary>SAM2 image holds shared by auto-polygonize and segmentation commands.</summary>
-        internal AutoPolygonizeCache? PolygonizeImageCache => autoPolygonizeController?.ImageCache;
-
-        /// <summary>Latest viewport upload, reused when bounds and downsample still match.</summary>
-        internal SharedViewportImageLease? SharedViewportImages => autoPolygonizeController?.ViewportImages;
-
         /// <summary>
         /// True when auto-polygonize is hovering a proposal ring for this location.
         /// Used by circle draw to cut the annotation's alpha in half as a linked highlight.
@@ -2678,7 +2672,7 @@ break;
         }
 
         /// <summary>
-        /// Forwards section-view eviction to auto-polygonize so that Z's proposals and SAM2 image leases are released.
+        /// Forwards section-view eviction to auto-polygonize so that Z's proposals and cache entries are dropped.
         /// </summary>
         private void OnSectionAnnotationsViewEvicted(int sectionNumber)
         {

@@ -10,8 +10,8 @@ using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
-    /// The union of several volume-space shapes (squares, polygon rings and edited bitmaps) that make one mask prompt: the foreground
-    /// seeds, or the background (the inscribed squares of other structures' circles and the polygons of other structures).
+    /// The union of several volume-space shapes (rectangles, polygon rings and edited bitmaps) drawn as one raster: the edited
+    /// bitmap a request sends as FOREGROUND mask tiles, and the polygon an edit starts from (<see cref="RasterMask.FromRings"/>).
     /// </summary>
     /// <remarks>
     /// A shape is a list of rings filled with the even-odd rule, so a polygon's holes stay open. The union is drawn a grid tile at a
@@ -42,13 +42,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>True when nothing has been added.</summary>
         public bool IsEmpty => Count == 0;
 
-        /// <summary>Adds a seed: a circle's disc (a polygon with <see cref="CircleSegmentsFor"/> vertices), a polygon with its holes, an edited bitmap, or a rectangle.</summary>
+        /// <summary>
+        /// Adds a seed: a polygon with its holes, an edited bitmap, or a rectangle. A circle is refused: it goes to the server as
+        /// <c>Shape.circle</c> (<see cref="SegmentationPromptShapes.FromSeed"/>), which softens it for its model, and is never
+        /// rasterized here.
+        /// </summary>
+        /// <exception cref="ArgumentException"><paramref name="seed"/> is a circle.</exception>
         public void Add(SegmentationSeed seed)
         {
             if (seed.Mask is not null)
             {
                 bitmaps.Add(seed.Mask);
-                lock (indexGate)
                 lock (indexGate)
                     tileIndexes.Clear();
 
@@ -61,36 +65,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
-            if (seed.Circle is not Circle circle)
-            {
-                Add(seed.Bounds);
-                return;
-            }
+            if (seed.Circle is not null)
+                throw new ArgumentException("A circle seed is sent as a shape, not rasterized.", nameof(seed));
 
-            Vector2[] ring = new Vector2[CircleSegmentsFor(circle.Radius)];
-            for (int i = 0; i < ring.Length; i++)
-            {
-                double angle = 2 * Math.PI * i / ring.Length;
-                ring[i] = new Vector2(circle.Center.X + circle.Radius * Math.Cos(angle), circle.Center.Y + circle.Radius * Math.Sin(angle));
-            }
-
-            Add([ring]);
-        }
-
-        private const int MinCircleSegments = 180;
-        private const int MaxCircleSegments = 4096;
-
-        /// <summary>
-        /// Vertices of the polygon that stands in for a circle of <paramref name="radius"/> volume units: enough that the polygon's edge
-        /// is within a quarter of a unit of the true circle (so within a quarter of a pixel at any downsample), however large the circle.
-        /// </summary>
-        internal static int CircleSegmentsFor(double radius)
-        {
-            if (!(radius > 0.25))
-                return MinCircleSegments;
-
-            int segments = (int)Math.Ceiling(Math.PI / Math.Acos(1 - 0.25 / radius));
-            return Math.Max(MinCircleSegments, Math.Min(MaxCircleSegments, segments));
+            Add(seed.Bounds);
         }
 
         /// <summary>Adds an axis-aligned rectangle, volume space.</summary>

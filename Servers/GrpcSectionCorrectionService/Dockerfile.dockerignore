@@ -3,6 +3,10 @@
 **
 
 !Directory.Build.props
+!gRPC_Protos/Common/
+!gRPC_Protos/Common/**
+!gRPCGeometryTypes/
+!gRPCGeometryTypes/**
 !gRPC_Protos/SectionCorrection/
 !gRPC_Protos/SectionCorrection/**
 !SectionCorrectionServiceTypes.gRPC/

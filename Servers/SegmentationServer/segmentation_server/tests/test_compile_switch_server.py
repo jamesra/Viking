@@ -9,7 +9,6 @@ from unittest.mock import AsyncMock
 import pytest
 
 from segmentation_grpc import ServerStatusRequest
-from segmentation_server.model_capabilities import SAM2_CAPABILITIES
 from segmentation_server.server import SegmentationServicer
 
 
@@ -17,7 +16,6 @@ class _Model:
     """Reports an encoder generation the way SegmentationModel does."""
 
     device = "cuda"
-    capabilities = SAM2_CAPABILITIES
     compile_status = "warming"
 
     def __init__(self) -> None:
@@ -92,7 +90,6 @@ async def test_a_model_without_generations_leaves_the_fields_empty_and_flushes_n
     from unittest.mock import MagicMock
 
     model = MagicMock()
-    model.capabilities = SAM2_CAPABILITIES
     servicer = SegmentationServicer(model=model, server_start_time=0.0)
 
     status = await servicer.GetServerStatus(ServerStatusRequest(), AsyncMock())

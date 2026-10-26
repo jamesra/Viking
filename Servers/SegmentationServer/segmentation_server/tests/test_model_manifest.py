@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 
 import pytest
-from segmentation_grpc import ModelInfo, ResolutionMode, SubmissionMode
+from segmentation_grpc import ModelInfo
 
 from segmentation_server import trainer_prompt_encoding as enc
 from segmentation_server.model_manifest import (
@@ -63,8 +63,6 @@ def test_a_trainer_manifest_is_read_into_the_fields_a_client_needs() -> None:
     assert manifest.training_data_set == "v3"
     assert manifest.training_data_fingerprint == "0123456789ab"
     assert manifest.requires_model_id is True
-    assert manifest.capabilities().submission_mode == SubmissionMode.SUBMISSION_MODE_FIXED_TILE_GRID
-    assert manifest.capabilities().resolution_mode == ResolutionMode.RESOLUTION_MODE_SINGLE
 
 
 def test_the_model_info_carries_both_versions_and_the_client_contract_verbatim() -> None:
@@ -79,14 +77,19 @@ def test_the_model_info_carries_both_versions_and_the_client_contract_verbatim()
     assert ModelInfo.FromString(info.SerializeToString()) == info
 
 
-def test_a_whole_screen_model_advertises_full_viewport() -> None:
+def test_a_whole_screen_model_is_refused_since_only_tile_grids_are_served() -> None:
     raw = v4_manifest()
     raw["capabilities"] = {"submission_mode": "full_viewport", "resolution_mode": "multi"}
 
-    capabilities = parse_manifest(raw, source="x").capabilities()
+    with pytest.raises(ManifestError, match="tile_grid"):
+        parse_manifest(raw, source="x")
 
-    assert capabilities.submission_mode == SubmissionMode.SUBMISSION_MODE_FULL_VIEWPORT
-    assert capabilities.resolution_mode == ResolutionMode.RESOLUTION_MODE_MULTI
+
+def test_a_manifest_without_capabilities_is_a_tile_grid_model() -> None:
+    raw = v4_manifest()
+    raw.pop("capabilities")
+
+    assert parse_manifest(raw, source="x").model_id == "v4"
 
 
 @pytest.mark.parametrize(
@@ -97,7 +100,6 @@ def test_a_whole_screen_model_advertises_full_viewport() -> None:
         (lambda m: m["capabilities"].update(resolution_mode="auto"), "resolution_mode"),
         (lambda m: m["server_contract"].pop("encoding"), "encoding"),
         (lambda m: m["model"].pop("model_id"), "model_id"),
-        (lambda m: m.pop("capabilities"), "capabilities"),
         (lambda m: m["client_contract"].update(requires_model_id="yes"), "requires_model_id"),
     ],
 )
@@ -151,7 +153,6 @@ def test_with_no_files_at_all_the_model_is_the_legacy_tiled_default(
     assert "best_TEM_model.pt" in manifest.description
     assert manifest.to_model_info().display_name == "best_TEM_model"
     assert manifest.prompt_encoding == LEGACY_ENCODING
-    assert manifest.capabilities().submission_mode == SubmissionMode.SUBMISSION_MODE_FIXED_TILE_GRID
     assert "legacy flat mask prompt" in caplog.text
     assert load_model_manifest(None) == default_manifest()
 
@@ -198,19 +199,19 @@ def _trainer_repo() -> Path | None:
     return None
 
 
-def test_the_hand_written_v2_and_v3_examples_from_the_trainer_repo_load() -> None:
+def test_the_hand_written_v3_example_from_the_trainer_repo_loads_and_the_whole_screen_v2_is_refused() -> None:
     repo = _trainer_repo()
     if repo is None:
         pytest.skip("the trainer repository is not next to this one (set SAM2_TRAINER_REPO)")
     examples = repo / "docs" / "model_manifest_examples"
 
-    v2 = parse_manifest(json.loads((examples / "sam2_em_v2.model.json").read_text(encoding="utf-8")), source="v2")
+    # v2 was a whole-screen model; this server serves tile grids only, so it refuses it.
+    with pytest.raises(ManifestError, match="tile_grid"):
+        parse_manifest(json.loads((examples / "sam2_em_v2.model.json").read_text(encoding="utf-8")), source="v2")
     v3 = parse_manifest(json.loads((examples / "sam2_em_v3.model.json").read_text(encoding="utf-8")), source="v3")
 
-    assert v2.capabilities().submission_mode == SubmissionMode.SUBMISSION_MODE_FULL_VIEWPORT
-    assert v3.capabilities().submission_mode == SubmissionMode.SUBMISSION_MODE_FIXED_TILE_GRID
-    assert v2.prompt_encoding == v3.prompt_encoding == LEGACY_ENCODING
-    assert encoder_for(v2) is None and encoder_for(v3) is None  # legacy: the existing prompt path
+    assert v3.prompt_encoding == LEGACY_ENCODING
+    assert encoder_for(v3) is None  # legacy: the existing prompt path
 
 
 def test_the_vendored_encoding_is_the_trainers_file() -> None:

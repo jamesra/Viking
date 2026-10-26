@@ -200,7 +200,6 @@ namespace gRPCAnnotationService
                 endpoints.MapGrpcService<StructureTypeService>().RequireAuthorization(ProtectedScopePolicy);
                 endpoints.MapGrpcService<PermittedStructureLinksService>().RequireAuthorization(ProtectedScopePolicy);
                 endpoints.MapGrpcService<MetaDataService>().RequireAuthorization(ProtectedScopePolicy);
-                endpoints.MapGrpcService<CorrectionsService>().RequireAuthorization(ProtectedScopePolicy);
                 CorrectionsFileEndpoints.Map(endpoints, ProtectedScopePolicy);
 
                 endpoints.MapGet("/", async context =>

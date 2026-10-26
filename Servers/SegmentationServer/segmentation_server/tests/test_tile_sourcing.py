@@ -8,11 +8,21 @@ from typing import Dict, List, Optional, Set, Tuple
 import numpy as np
 import pytest
 
-from segmentation_grpc import Feature, Point, SegmentTilesRequest, TileCoord
+from protocol import (
+    VOLUME_KEY as _VOLUME_KEY,
+    all_unavailable as _all_unavailable,
+    context as _context,
+    converse as _converse,
+    needed_tiles as _needed_tiles,
+    png as _png,
+    result as _result,
+    start,
+)
+from segmentation_grpc import SegmentTilesRequest
 from segmentation_server.image_cache import ImageCache
 from segmentation_server.server import SegmentationServicer
+from segmentation_server.tile_ref import TileRef
 from segmentation_server.tile_store import TileStore
-from test_segment_tiles import _all_unavailable, _context, _converse, _needed_tiles, _png, _result, _tile, _VOLUME_KEY
 
 CONTEXT_ID = 42
 
@@ -29,7 +39,7 @@ class _FakeSource:
         self.delay = delay
         self.fetched: List[Tuple[int, int, int]] = []
 
-    async def fetch(self, annotation_context_id: int, coord: TileCoord) -> Optional[bytes]:
+    async def fetch(self, annotation_context_id: int, coord: TileRef) -> Optional[bytes]:
         self.fetched.append((annotation_context_id, coord.row, coord.col))
         if self.delay:
             await asyncio.sleep(self.delay)
@@ -59,9 +69,7 @@ def _servicer(cache: ImageCache, source, store: Optional[TileStore] = None) -> S
 
 
 def _request(context_id: int = CONTEXT_ID) -> SegmentTilesRequest:
-    return SegmentTilesRequest(
-        tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=10, y=10)]), annotation_context_id=context_id
-    )
+    return start([(10, 10)], annotation_context_id=context_id)
 
 
 def _asked(updates) -> Set[Tuple[int, int]]:
@@ -148,7 +156,7 @@ async def test_without_a_local_context_nothing_is_read(context_id: int) -> None:
 @pytest.mark.asyncio
 async def test_a_failing_source_falls_back_to_the_client() -> None:
     class _Broken:
-        async def fetch(self, annotation_context_id: int, coord: TileCoord) -> Optional[bytes]:
+        async def fetch(self, annotation_context_id: int, coord: TileRef) -> Optional[bytes]:
             raise OSError("storage unreachable")
 
     updates = await _converse(_servicer(_cache(), _Broken()), _request(), answer_for=_all_unavailable)

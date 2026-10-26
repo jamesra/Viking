@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import threading
 import urllib.error
@@ -15,7 +16,16 @@ import grpc
 import numpy as np
 from PIL import Image
 
-from segmentation_grpc import DeleteImageResponse, SegmentationResponse, SegmentResult, UploadImageResponse
+from segmentation_grpc import (
+    GridCell,
+    IntPoint,
+    IntSize,
+    SegmentationResponse,
+    SegmentResult,
+    SegmentTilesStreamResponse,
+    TilesNeeded,
+    UploadTileResponse,
+)
 from segmentation_server.demo_site import (
     DemoHttpsServer,
     demo_bind_address,
@@ -28,41 +38,45 @@ from segmentation_server.demo_site import (
 
 
 class FakeServicer:
-    """Records in-process upload, segment, and delete calls."""
+    """Records the tile uploads and the stream the demo drives, and answers like the real servicer.
 
-    last_upload: object
-    last_segment: object
-    deleted: list[int]
+    The stream asks for the start tiles and one tile off the picture, then returns one island: a 2 x 2-sample object
+    whose top-left pixel is the first foreground click.
+    """
 
     def __init__(self) -> None:
-        self.last_upload = None
-        self.last_segment = None
-        self.deleted = []
+        self.uploads: list = []
+        self.starts: list = []
+        self.answers: list = []
 
-    async def UploadImage(self, request: object, context: object) -> UploadImageResponse:
-        self.last_upload = request
-        return UploadImageResponse(image_id=42)
+    async def UploadTile(self, request: object, context: object) -> UploadTileResponse:
+        self.uploads.append(request)
+        return UploadTileResponse()
 
-    async def SegmentImage(self, request: object, context: object) -> SegmentationResponse:
-        self.last_segment = request
-        return SegmentationResponse(
-            segments=[SegmentResult(index=1, score=0.75, mask=b"mask-png", x=3, y=4)]
+    async def SegmentTilesStream(self, requests, context):
+        first = await requests.__anext__()
+        start = first.start
+        self.starts.append(start)
+        yield SegmentTilesStreamResponse(needed=TilesNeeded(tiles=[*start.tiles, GridCell(row=9, col=9)]))
+        answer = await requests.__anext__()
+        self.answers.append(answer.answer)
+        click = start.foreground_feature.points[0]
+        logits = np.full((4, 4), -5.0, dtype="<f2")
+        logits[1:3, 1:3] = 5.0
+        segment = SegmentResult(
+            island=1,
+            score=0.75,
+            logits=logits.tobytes(),
+            logits_size=IntSize(width=4, height=4),
+            # Sample (1, 1)'s top-left pixel is the clicked pixel.
+            logits_origin=IntPoint(x=int(click.x) - 4, y=int(click.y) + 4),
+            logits_scale=4.0,
         )
-
-    async def DeleteImage(self, request: object, context: object) -> DeleteImageResponse:
-        self.deleted.append(request.image_id)
-        return DeleteImageResponse(success=True)
+        yield SegmentTilesStreamResponse(result=SegmentationResponse(segments=[segment], request_id=0))
 
 
-class AbortServicer:
-    """Aborts upload the way SegmentationServicer does for a bad image."""
-
-    async def UploadImage(self, request: object, context: object) -> None:
-        await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "width/height do not match")
-
-
-def _png() -> bytes:
-    image = Image.new("RGB", (2, 2), (10, 20, 30))
+def _png(size: int = 2) -> bytes:
+    image = Image.new("RGB", (size, size), (10, 20, 30))
     buffer = BytesIO()
     image.save(buffer, format="PNG")
     return buffer.getvalue()
@@ -212,29 +226,36 @@ def test_get_page_and_post_image_segment_delete() -> None:
         assert status == 200
         assert b"foreground" in page
 
-        status, headers, png = _request(port, "/api/images", "POST", _png(), "image/png")
+        status, headers, png = _request(port, "/api/images", "POST", _png(32), "image/png")
         assert status == 201
-        assert headers["X-Image-Id"] == "42"
-        assert headers["X-Image-Width"] == "2"
+        image_id = headers["X-Image-Id"]
+        assert image_id.isdigit()
+        assert headers["X-Image-Width"] == "32"
         assert png.startswith(b"\x89PNG")
-        assert servicer.last_upload.width == 2
-        assert servicer.last_upload.height == 2
+        assert servicer.uploads == [], "nothing reaches the server until a segment asks for tiles"
 
-        body = json.dumps({"points": [{"x": 1, "y": 1, "label": 1}, {"x": 0, "y": 0, "label": 0}]}).encode()
-        status, _headers, payload = _request(port, "/api/images/42/segment", "POST", body, "application/json")
+        body = json.dumps({"points": [{"x": 10, "y": 12, "label": 1}, {"x": 0, "y": 0, "label": 0}]}).encode()
+        status, _headers, payload = _request(port, f"/api/images/{image_id}/segment", "POST", body, "application/json")
         assert status == 200
         parsed = json.loads(payload)
-        assert parsed["segments"][0]["x"] == 3
-        assert parsed["segments"][0]["score"] == 0.75
-        assert parsed["segments"][0]["mask_png_base64"] == "bWFzay1wbmc="
-        assert servicer.last_segment.image_id == 42
-        assert servicer.last_segment.omit_labeled_image is True
-        assert list(servicer.last_segment.labels) == [1, 0]
+        (segment,) = parsed["segments"]
+        assert segment["island"] == 1 and segment["score"] == 0.75
+        assert 8 <= segment["x"] <= 12 and 10 <= segment["y"] <= 14
+        assert Image.open(BytesIO(base64.b64decode(segment["mask_png_base64"]))).size[0] >= 4
+        (start,) = servicer.starts
+        # Image pixel (10, 12) on a one-tile grid is grid pixel (10, 1024 - 1 - 12), Y up; the click is its centre.
+        assert (start.foreground_feature.points[0].x, start.foreground_feature.points[0].y) == (10.5, 1011.5)
+        assert len(start.background_feature.points) == 1
+        assert [(cell.row, cell.col) for cell in start.tiles] == [(0, 0)]
+        assert [(upload.cell.row, upload.cell.col) for upload in servicer.uploads] == [(0, 0)]
+        assert np.array(Image.open(BytesIO(servicer.uploads[0].image_data))).shape[:2] == (1024, 1024)
+        assert [(cell.row, cell.col) for cell in servicer.answers[0].unavailable] == [(9, 9)]
 
-        status, _headers, payload = _request(port, "/api/images/42", "DELETE")
+        status, _headers, payload = _request(port, f"/api/images/{image_id}", "DELETE")
         assert status == 200
         assert json.loads(payload)["success"] is True
-        assert servicer.deleted == [42]
+        status, _headers, payload = _request(port, f"/api/images/{image_id}/segment", "POST", body, "application/json")
+        assert status == 404
 
 
 def test_sixteen_bit_upload_is_autocontrasted_to_8bit() -> None:
@@ -251,7 +272,6 @@ def test_sixteen_bit_upload_is_autocontrasted_to_8bit() -> None:
     with _running(servicer) as (port, _servicer):
         status, _headers, png = _request(port, "/api/images", "POST", source.getvalue(), "image/tiff")
     assert status == 201
-    assert png == servicer.last_upload.image_data
     shown = np.array(Image.open(BytesIO(png)))
     assert shown.dtype == np.uint8
     assert shown.shape == (32, 32, 3)
@@ -262,11 +282,11 @@ def test_sixteen_bit_upload_is_autocontrasted_to_8bit() -> None:
     assert background < 80
 
 
-def test_upload_abort_is_http_400() -> None:
-    with _running(AbortServicer()) as (port, _servicer):
-        status, _headers, payload = _request(port, "/api/images", "POST", _png(), "image/png")
+def test_an_unreadable_upload_is_http_400() -> None:
+    with _running(FakeServicer()) as (port, _servicer):
+        status, _headers, payload = _request(port, "/api/images", "POST", b"not an image", "image/png")
         assert status == 400
-        assert "width/height" in json.loads(payload)["error"]
+        assert "Could not read image" in json.loads(payload)["error"]
 
 
 def test_segment_requires_points() -> None:
@@ -275,7 +295,7 @@ def test_segment_requires_points() -> None:
         _segment_status(servicer)
     )
     assert status == 400
-    assert servicer.last_segment is None
+    assert servicer.starts == []
     assert "point" in json.loads(payload)["error"]
 
 
@@ -286,6 +306,7 @@ async def _segment_status(servicer: FakeServicer) -> tuple[int, dict[str, str], 
         b'{"points": []}',
         servicer,
     )
+
 
 def test_demo_binds_loopback_unless_told_otherwise(monkeypatch) -> None:
     monkeypatch.delenv("SEGMENTATION_DEMO_BIND", raising=False)
@@ -303,7 +324,7 @@ def test_a_changing_request_without_the_client_header_is_refused() -> None:
         assert "X-Demo-Client" in json.loads(payload)["error"]
         status, _h, _p = _request(port, "/api/images/42", "DELETE", client_header=False)
         assert status == 403
-        assert servicer.last_upload is None and servicer.deleted == []
+        assert servicer.uploads == [] and servicer.starts == []
         status, _h, _p = _request(port, "/", client_header=False)
         assert status == 200
 
@@ -314,7 +335,6 @@ def test_a_token_is_required_on_changing_requests_when_one_is_set() -> None:
         assert _request(port, "/api/images", "POST", _png(), "image/png")[0] == 401
         wrong = _request(port, "/api/images", "POST", _png(), "image/png", extra_headers={"X-Demo-Token": "nope"})
         assert wrong[0] == 401
-        assert servicer.last_upload is None
         right = _request(port, "/api/images", "POST", _png(), "image/png", extra_headers={"X-Demo-Token": "s3cret"})
         assert right[0] == 201
         assert _request(port, "/")[0] == 200
@@ -353,23 +373,37 @@ def test_an_invalid_or_oversized_content_length_is_refused_before_reading() -> N
         assert _raw(port, head + b"Content-Length: 99999999\r\n\r\n").startswith(b"HTTP/1.1 413")
 
 
+def _upload_picture(port: int) -> str:
+    status, headers, _png_bytes = _request(port, "/api/images", "POST", _png(32), "image/png")
+    assert status == 201
+    return headers["X-Image-Id"]
+
+
+_SEGMENT_BODY = json.dumps({"points": [{"x": 3, "y": 3, "label": 1}]}).encode()
+
+
 def test_a_full_pool_answers_503_at_once_instead_of_queueing(monkeypatch) -> None:
     release = threading.Event()
     started = threading.Event()
 
     class SlowServicer(FakeServicer):
-        async def DeleteImage(self, request: object, context: object) -> DeleteImageResponse:
+        async def SegmentTilesStream(self, requests, context):
             started.set()
             while not release.is_set():
                 await asyncio.sleep(0.01)
-            return DeleteImageResponse(success=True)
+            async for update in FakeServicer.SegmentTilesStream(self, requests, context):
+                yield update
 
     results: list[int] = []
     with _running(SlowServicer(), max_workers=1, max_pending=0) as (port, _servicer):
-        first = threading.Thread(target=lambda: results.append(_request(port, "/api/images/1", "DELETE")[0]))
+        image_id = _upload_picture(port)
+        path = f"/api/images/{image_id}/segment"
+        first = threading.Thread(
+            target=lambda: results.append(_request(port, path, "POST", _SEGMENT_BODY, "application/json")[0])
+        )
         first.start()
         assert started.wait(5)
-        status, _h, _p = _request(port, "/api/images/2", "DELETE")
+        status, _h, _p = _request(port, path, "POST", _SEGMENT_BODY, "application/json")
         release.set()
         first.join(10)
     assert status == 503
@@ -377,23 +411,21 @@ def test_a_full_pool_answers_503_at_once_instead_of_queueing(monkeypatch) -> Non
 
 
 def test_internal_failures_are_not_echoed_to_the_browser() -> None:
-    class Failing:
-        async def DeleteImage(self, request: object, context: object) -> None:
+    class Failing(FakeServicer):
+        async def SegmentTilesStream(self, requests, context):
             await context.abort(grpc.StatusCode.INTERNAL, "CUDA error at /home/user/secret/path.py:12")
+            yield SegmentTilesStreamResponse()
 
     with _running(Failing()) as (port, _servicer):
-        status, _h, payload = _request(port, "/api/images/9", "DELETE")
+        image_id = _upload_picture(port)
+        status, _h, payload = _request(port, f"/api/images/{image_id}/segment", "POST", _SEGMENT_BODY, "application/json")
     assert status == 500
     assert "secret" not in json.loads(payload)["error"]
 
 
 def test_a_not_found_image_gets_a_fixed_message() -> None:
-    class Missing:
-        async def DeleteImage(self, request: object, context: object) -> None:
-            await context.abort(grpc.StatusCode.NOT_FOUND, "Image ID=9 not found")
-
-    with _running(Missing()) as (port, _servicer):
-        status, _h, payload = _request(port, "/api/images/9", "DELETE")
+    with _running(FakeServicer()) as (port, _servicer):
+        status, _h, payload = _request(port, "/api/images/999999/segment", "POST", _SEGMENT_BODY, "application/json")
     assert status == 404
     assert "upload it again" in json.loads(payload)["error"]
 
@@ -408,4 +440,4 @@ def test_an_image_declaring_too_many_pixels_is_refused_before_it_is_decoded(monk
         status, _h, payload = _request(port, "/api/images", "POST", buffer.getvalue(), "image/png")
     assert status == 400
     assert "limit" in json.loads(payload)["error"]
-    assert servicer.last_upload is None
+    assert servicer.uploads == []

@@ -83,8 +83,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Builds overlay data from the highest-scoring segment: the soft field of its SAM2 logits at their native
-        /// resolution (128 is the decision boundary), or its mask PNG from a server that sent no logits.
+        /// Builds overlay data from island 1 of the response, the island the proposal's polygon is traced from: the soft
+        /// field of its SAM2 logits at their native resolution (128 is the decision boundary).
         /// Returns null when decode fails. Called off the UI thread; does not create a <see cref="Texture2D"/>.
         /// </summary>
         public static AutoPolygonizeMaskOverlay? TryCreate(
@@ -94,7 +94,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (session is null || response is null || response.Segments.Count == 0)
                 return null;
 
-            var bestSegment = response.GetHighestScoringSegment()!;
+            var bestSegment = response.GetPrimaryIsland()!;
             SegmentField field = session.DecodeSegmentField(bestSegment);
             byte[]? decodedMaskData = field.Data;
             int decodedWidth = field.Width;
@@ -111,14 +111,9 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             System.Diagnostics.Debug.WriteLine(
                 $"[SegmentationProfile] Mask overlay {decodedWidth}x{decodedHeight}@{field.Scale} " +
-                $"pngBytes={bestSegment.Mask.Length} logitBytes={bestSegment.Logits.Length} inside={inside}");
+                $"island={bestSegment.Island} of {response.Segments.Count} logitBytes={bestSegment.Logits.Length} inside={inside}");
 
-            Geometry.Rectangle worldBounds = session.GetSegmentWorldBounds(
-                response,
-                field.X,
-                field.Y,
-                field.PixelWidth,
-                field.PixelHeight);
+            Geometry.Rectangle worldBounds = session.GetSegmentWorldBounds(response, field);
             return new AutoPolygonizeMaskOverlay(
                 decodedMaskData,
                 decodedWidth,
@@ -242,12 +237,10 @@ namespace WebAnnotation.UI.AutoPolygonize
     {
         public AutoPolygonizeMaskSource(
             AutoPolygonizeMaskOverlay mask,
-            IReadOnlyList<Geometry.Vector2>? keepPoints,
-            IReadOnlyList<Geometry.Vector2>? preserveHoles)
+            IReadOnlyList<Geometry.Vector2>? keepPoints)
         {
             Mask = mask ?? throw new ArgumentNullException(nameof(mask));
             KeepPoints = keepPoints is { Count: > 0 } ? [.. keepPoints] : [];
-            PreserveHoles = preserveHoles is { Count: > 0 } ? [.. preserveHoles] : [];
         }
 
         /// <summary>Decoded soft field (SAM2 logits, or a mask PNG from a server that sent none). Not replaced when the cleanup radius changes.</summary>
@@ -255,9 +248,6 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>World points that choose which connected piece of <see cref="Mask"/> to trace.</summary>
         public IReadOnlyList<Geometry.Vector2> KeepPoints { get; }
-
-        /// <summary>World points whose holes are kept even when they are under the drop threshold.</summary>
-        public IReadOnlyList<Geometry.Vector2> PreserveHoles { get; }
 
         /// <summary>
         /// Traces this field at <paramref name="edgeCleanupRadius"/>. The mask rectangle is the
@@ -276,7 +266,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 Mask.Height,
                 Mask.TraceBounds,
                 holeDropFraction,
-                PreserveHoles,
+                [],
                 SegmentationMaskPolygonizer.ScaleCleanupRadius(edgeCleanupRadius, Mask.PixelScale),
                 out _,
                 KeepPoints,
@@ -425,7 +415,6 @@ namespace WebAnnotation.UI.AutoPolygonize
         private Texture2D maskTexture;
         private TextureOverlayView maskOverlayView;
         private PointSetView? foregroundPointsView;
-        private PointSetView? backgroundPointsView;
         private bool isHighlighted;
 
         private int refiningCount;
@@ -456,7 +445,6 @@ namespace WebAnnotation.UI.AutoPolygonize
             long? parentId = null,
             int overlapResubmitRound = 0,
             IReadOnlyList<Geometry.Vector2>? foregroundPrompts = null,
-            IReadOnlyList<Geometry.Vector2>? backgroundPrompts = null,
             IReadOnlyList<WebAnnotation.UI.Commands.Segmentation.SegmentationSeed>? startingBoxes = null,
             IReadOnlyList<AutoPolygonizeMaskSource>? maskSources = null,
             IReadOnlyList<Polygon>? fixedPolygons = null,
@@ -477,7 +465,6 @@ namespace WebAnnotation.UI.AutoPolygonize
             RingViews = ringViews;
             maskOverlayData = maskOverlay;
             ForegroundPrompts = foregroundPrompts is { Count: > 0 } ? [.. foregroundPrompts] : [];
-            BackgroundPrompts = backgroundPrompts is { Count: > 0 } ? [.. backgroundPrompts] : [];
             StartingBoxes = startingBoxes is { Count: > 0 } ? [.. startingBoxes] : [];
             // A caller that already chose sources (a group union) passes them in.
             // A single SegmentImage passes null and we keep that one raw field.
@@ -485,7 +472,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 ? [.. maskSources.Where(source => source is not null)]
                 : maskOverlay is null
                     ? []
-                    : [new AutoPolygonizeMaskSource(maskOverlay, ForegroundPrompts, BackgroundPrompts)];
+                    : [new AutoPolygonizeMaskSource(maskOverlay, ForegroundPrompts)];
             FixedPolygons = fixedPolygons is { Count: > 0 }
                 ? [.. fixedPolygons.Where(shape => shape is not null)]
                 : [];
@@ -564,9 +551,6 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>Volume-space SAM2 label-1 clicks from the SegmentImage that produced this overlay.</summary>
         public IReadOnlyList<Geometry.Vector2> ForegroundPrompts { get; }
-
-        /// <summary>Volume-space SAM2 label-0 clicks from the same request. Drawn red in mask-debug mode.</summary>
-        public IReadOnlyList<Geometry.Vector2> BackgroundPrompts { get; }
 
         /// <summary>
         /// Volume-space seed rectangles, sent as <c>foreground_feature.mask</c>, from the same SegmentImage (inscribed circle square or
@@ -1087,19 +1071,18 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Green foreground / red background circles matching interactive Segment. Depth is
+        /// Green foreground circles matching interactive Segment. The request had no background clicks: the other
+        /// structures were sent as background shapes, which are not drawn here. Depth is
         /// disabled so the dots sit above annotations. Radius tracks live downsample.
         /// Drawn only when <see cref="Global.AnnotationSettings.AutoPolygonizeOverlayPrompts"/> is on.
         /// </summary>
         private void DrawPromptOverlays(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
         {
             double radius = Global.AnnotationSettings.SegmentationPointRadius * scene.Camera.Downsample;
-            EnsurePromptView(ref backgroundPointsView, BackgroundPrompts, Color.Red, radius);
             EnsurePromptView(ref foregroundPointsView, ForegroundPrompts, Color.Green, radius);
 
             DepthStencilState previous = graphicsDevice.DepthStencilState;
             graphicsDevice.DepthStencilState = DepthStencilState.None;
-            backgroundPointsView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
             foregroundPointsView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
             graphicsDevice.DepthStencilState = previous;
         }

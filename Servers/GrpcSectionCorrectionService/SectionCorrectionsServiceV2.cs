@@ -10,16 +10,16 @@ using Viking.SectionCorrection;
 using Viking.SectionCorrectionServiceTypes.gRPC.V2.Protos;
 using FitMode = AnnotationVizLib.CorrectionMode;
 using GeoVector2 = Geometry.Vector2;
-using ProtoVector2 = Viking.SectionCorrectionServiceTypes.gRPC.V2.Protos.Vector2;
+using GridCell = Viking.gRPC.Geometry.V1.GridCell;
+using ProtoVector2 = Viking.gRPC.Geometry.V1.Vector2;
 using SectionCorrectionMsg = Viking.SectionCorrectionServiceTypes.gRPC.V2.Protos.SectionCorrection;
 using V2LatticeNode = Viking.SectionCorrectionServiceTypes.gRPC.V2.Protos.LatticeNode;
 
 namespace Viking.GrpcSectionCorrectionService
 {
     /// <summary>
-    /// Protocol V2 of AnnotateSectionCorrections (section_correction_v2.proto): translates V2 messages to and from
-    /// <see cref="CorrectionServiceCore"/>.  Served alongside V1 (<see cref="SectionCorrectionsService"/>) on the same
-    /// address; the package name makes them distinct gRPC services.
+    /// AnnotateSectionCorrections (section_correction_v2.proto; version 1 is retired): translates its messages to and
+    /// from <see cref="CorrectionServiceCore"/>.  Positions and offsets are volume nm in the shared geometry Vector2.
     /// </summary>
     public sealed class SectionCorrectionsServiceV2 : AnnotateSectionCorrections.AnnotateSectionCorrectionsBase
     {
@@ -93,7 +93,7 @@ namespace Viking.GrpcSectionCorrectionService
             SectionVectorField field = _core.RequireSection(request.Set?.VolumeName, request.Set?.StosGroup, request.Z);
             SectionCorrectionMsg message = new() { PitchNm = field.PitchNm };
             foreach (Viking.SectionCorrection.LatticeNode node in field.Nodes)
-                message.Nodes.Add(new V2LatticeNode { Gx = node.Gx, Gy = node.Gy, Offset = new ProtoVector2 { X = node.Dx, Y = node.Dy }, Votes = node.VoteCount });
+                message.Nodes.Add(new V2LatticeNode { Node = new GridCell { Row = node.Gy, Col = node.Gx }, Offset = new ProtoVector2 { X = node.Dx, Y = node.Dy }, Votes = node.VoteCount });
             return Task.FromResult(message);
         }
 

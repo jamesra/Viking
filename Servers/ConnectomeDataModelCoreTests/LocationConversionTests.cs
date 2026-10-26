@@ -7,14 +7,17 @@ using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using Xunit;
 using EfLocation = Viking.DataModel.Annotation.Location;
 using EfLocationLink = Viking.DataModel.Annotation.LocationLink;
-using ProtoGeometry = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry;
+using Viking.AnnotationServiceTypes.Interfaces;
+using ProtoShape = Viking.gRPC.Geometry.V1.Shape;
+using ProtoVector2 = Viking.gRPC.Geometry.V1.Vector2;
 using ProtoLocation = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location;
 
 namespace ConnectomeDataModelCoreTests
 {
     /// <summary>
     /// Pins the non-circle Location proto-to-EF conversions used on every location save and fetch: shape
-    /// fallbacks to the position fields, blank attributes, nullable width, timestamps and link direction.
+    /// fallbacks to the position fields, blank attributes, width and closed from the shape, timestamps and link
+    /// direction.
     /// Circle behavior is covered by <see cref="LocationCircleConversionTests"/>.
     /// </summary>
     public class LocationConversionTests
@@ -24,9 +27,8 @@ namespace ConnectomeDataModelCoreTests
             Id = 7,
             ParentId = 3,
             Section = 12,
-            TypeCode = AnnotationType.Polygon,
-            MosaicPosition = new AnnotationPoint { X = 1.5, Y = 2.5 },
-            VolumePosition = new AnnotationPoint { X = 100.25, Y = 200.75 },
+            MosaicPosition = new ProtoVector2 { X = 1.5, Y = 2.5 },
+            VolumePosition = new ProtoVector2 { X = 100.25, Y = 200.75 },
             Username = "u",
         };
 
@@ -54,10 +56,10 @@ namespace ConnectomeDataModelCoreTests
         }
 
         [Fact]
-        public void ToLocation_WktShapeWinsOverPosition()
+        public void ToLocation_ShapeWinsOverPosition()
         {
             var proto = PolygonProto();
-            proto.MosaicShape = new ProtoGeometry { Text = "POINT (9 8)" };
+            proto.MosaicGeometry = AnnotationShapes.PointShape(9, 8);
 
             var entity = proto.ToLocation();
 
@@ -81,23 +83,37 @@ namespace ConnectomeDataModelCoreTests
         {
             var proto = PolygonProto();
             proto.Attributes = "<Attributes />";
-            proto.Closed = true;
             proto.Terminal = true;
             proto.OffEdge = true;
-            proto.Width = 4.5;
+            proto.MosaicGeometry = new global::Geometry.Vector2[] { new(0, 0), new(10, 0), new(5, 5) }.ToClosedCurve(4.5);
+            proto.VolumeGeometry = proto.MosaicGeometry.Clone();
 
             var entity = proto.ToLocation();
 
             Assert.Equal(7L, entity.Id);
             Assert.Equal(3L, entity.ParentId);
             Assert.Equal(12L, entity.Z);
-            Assert.Equal((short)AnnotationType.Polygon, entity.TypeCode);
+            Assert.Equal((short)LocationType.CLOSEDCURVE, entity.TypeCode);
             Assert.Equal("<Attributes />", entity.Tags);
             Assert.True(entity.Closed);
             Assert.True(entity.Terminal);
             Assert.True(entity.OffEdge);
             Assert.Equal(4.5, entity.Width);
             Assert.Equal("u", entity.Username);
+        }
+
+        [Fact]
+        public void ToLocation_WidthAndClosedComeFromTheShape()
+        {
+            var proto = PolygonProto();
+            proto.MosaicGeometry = AnnotationShapes.PolygonShape(LocationType.POLYGON, Viking.gRPC.Geometry.V1.CoordinateSpace.Mosaic,
+                new global::Geometry.Vector2[] { new(0, 0), new(10, 0), new(5, 5), new(0, 0) }, System.Array.Empty<global::Geometry.Vector2[]>(), 4.5);
+
+            var entity = proto.ToLocation();
+
+            Assert.Equal((short)LocationType.POLYGON, entity.TypeCode);
+            Assert.Null(entity.Width);
+            Assert.False(entity.Closed);
         }
 
         [Fact]
@@ -123,7 +139,7 @@ namespace ConnectomeDataModelCoreTests
             Id = 7,
             ParentId = 3,
             Z = 12,
-            TypeCode = (short)AnnotationType.Polygon,
+            TypeCode = (short)LocationType.POLYGON,
             X = 1.5,
             Y = 2.5,
             VolumeX = 100.25,
@@ -155,28 +171,29 @@ namespace ConnectomeDataModelCoreTests
         public void ToProtobufMessage_CarriesPositionsAndScalars()
         {
             var entity = PolygonEntity();
+            entity.TypeCode = (short)LocationType.POLYLINE;
+            entity.MosaicShape = new LineString(new[] { new Coordinate(0, 0), new Coordinate(5, 5), new Coordinate(10, 0) });
+            entity.VolumeShape = entity.MosaicShape.Copy();
             entity.Width = 4.5;
-            entity.Closed = true;
 
             var proto = entity.ToProtobufMessage();
 
             Assert.Equal(7L, proto.Id);
             Assert.Equal(3L, proto.ParentId);
             Assert.Equal(12L, proto.Section);
-            Assert.Equal(AnnotationType.Polygon, proto.TypeCode);
+            Assert.Equal(LocationType.POLYLINE, proto.MosaicGeometry.LocationTypeOf());
             Assert.Equal(1.5, proto.MosaicPosition.X);
             Assert.Equal(200.75, proto.VolumePosition.Y);
-            Assert.Equal(4.5, proto.Width);
-            Assert.True(proto.Closed);
+            Assert.Equal(4.5, proto.MosaicGeometry.WidthOf());
         }
 
         [Fact]
-        public void ToProtobufMessage_ShapesAreWkbThatReadBackAsTheSameGeometry()
+        public void ToProtobufMessage_ShapesReadBackAsTheSameGeometry()
         {
             var proto = PolygonEntity().ToProtobufMessage();
 
-            Assert.Equal(ProtoGeometry.EncodingOneofCase.Binary, proto.MosaicShape.EncodingCase);
-            var back = proto.VolumeShape.ToNetTopologyGeometry();
+            Assert.Equal(ProtoShape.KindOneofCase.Point, proto.MosaicGeometry.KindCase);
+            var back = proto.VolumeGeometry.ToNetTopologyGeometry();
             Assert.Equal(100.25, back.Coordinate.X);
             Assert.Equal(200.75, back.Coordinate.Y);
         }
@@ -192,5 +209,12 @@ namespace ConnectomeDataModelCoreTests
 
             Assert.Equal(new long[] { 20, 30 }, proto.Links);
         }
+    }
+
+    static class LocationConversionTestShapes
+    {
+        /// <summary>A closed curve of <paramref name="controlPoints"/> with <paramref name="width"/>.</summary>
+        public static ProtoShape ToClosedCurve(this global::Geometry.Vector2[] controlPoints, double width) =>
+            AnnotationShapes.LineShape(LocationType.CLOSEDCURVE, Viking.gRPC.Geometry.V1.CoordinateSpace.Mosaic, controlPoints, width);
     }
 }

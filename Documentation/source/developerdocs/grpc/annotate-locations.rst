@@ -3,13 +3,13 @@
 AnnotateLocations
 #################
 
-Source: ``gRPCAnnotationServiceTypes/Protos/Location.proto``
+Source: ``gRPC_Protos/Annotation/Location.proto``
 
 Package: ``Viking.AnnotationServiceTypes.gRPC.V1``
 
 Host: GrpcAnnotationService
 
-A location is one shape on one section. This is the call the viewer uses while panning: load the annotations in the visible rectangle, then poll for changes. The record shapes are ``Location`` and ``LocationLink`` on :doc:`shared-types`.
+A location is one shape on one section. This is the call the viewer uses while panning: load the annotations in the visible rectangle, then poll for changes. The record shapes are ``Location`` and ``LocationLink`` on :doc:`shared-types`. A location carries its position as a ``Vector2`` and its geometry as a ``Shape`` in both mosaic and volume space (:doc:`geometry`).
 
 Create, read, update
 ====================
@@ -38,7 +38,7 @@ Create, read, update
 Region queries
 ==============
 
-These take section ``z``, a mosaic ``Geometry`` ``region``, ``min_radius``, and an optional UTC watermark ``modified_after_this_utc_time``.
+These take section ``z``, a mosaic-space ``Rectangle`` ``region`` (:doc:`geometry`), ``min_radius``, and an optional UTC watermark ``modified_after_this_utc_time``.
 
 .. list-table::
    :header-rows: 1
@@ -79,7 +79,7 @@ Links
    * - ``GetLocationLinksForSection``
      - Links for ``section``. The response has ``results``, ``deleted``, and a UTC ``query_executed_time``. The request timestamps ``modified_after_this_time`` and ``query_executed_time`` are ``int64``, and the request also carries ``deleted_links``.
    * - ``GetLocationLinksForSectionInMosaicRegion``
-     - Links for ``section`` inside ``bbox``, ignoring shapes smaller than ``min_radius``. The response is ``results`` only. The request still carries ``modified_after_this_utc_time``, ``query_executed_time``, and ``deleted_links`` as ``int64`` timestamps plus link rows.
+     - Links for ``section`` inside ``bbox`` (a mosaic-space ``Rectangle``), ignoring shapes smaller than ``min_radius``. The response is ``results`` only. The request still carries ``modified_after_this_utc_time``, ``query_executed_time``, and ``deleted_links`` as ``int64`` timestamps plus link rows.
 
 Change log
 ==========

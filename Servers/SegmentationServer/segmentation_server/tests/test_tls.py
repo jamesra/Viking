@@ -14,7 +14,6 @@ pytest.importorskip("cryptography")
 from segmentation_grpc import ServerStatusRequest, SegmentationServiceStub  # noqa: E402
 from segmentation_server import server as server_module  # noqa: E402
 from segmentation_server.dev_cert import generate_self_signed  # noqa: E402
-from segmentation_server.model_capabilities import SAM2_CAPABILITIES  # noqa: E402
 from segmentation_server.server import (  # noqa: E402
     SegmentationServicer,
     TlsConfigurationError,
@@ -114,7 +113,6 @@ def test_missing_files_fail_with_an_actionable_message_after_the_wait(tmp_path) 
 
 def _servicer_factory(**_ignored):
     model = MagicMock()
-    model.capabilities = SAM2_CAPABILITIES
     return SegmentationServicer(model=model, server_start_time=0.0)
 
 
@@ -218,61 +216,54 @@ async def test_the_healthcheck_passes_against_a_running_server_and_fails_when_it
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_a_segmentation_travels_the_whole_wire_with_polygon_holes(dev_cert, monkeypatch) -> None:
-    """UploadImage then SegmentImage over TLS, through the real servicer, cache and response encoder."""
-    import cv2
+async def test_a_segmentation_travels_the_whole_wire(dev_cert, monkeypatch) -> None:
+    """SegmentTilesStream over TLS, the tile it asks for uploaded with UploadTile, through the real servicer and cache."""
     import numpy as np
 
-    from segmentation_grpc import DeleteImageRequest, Point, SegmentationRequest, UploadImageRequest
-    from segmentation_server.mask_utils import combined_mask_to_segments
+    from segmentation_server.picture_segmentation import PictureClick, PictureGrid, segment_picture
 
     cert, key = dev_cert
     port = _free_port()
     monkeypatch.setenv("SSL_CERT_PATH", str(cert))
     monkeypatch.setenv("SSL_KEY_PATH", str(key))
 
-    donut = np.zeros((64, 64), dtype=bool)
-    donut[8:56, 8:56] = True
-    donut[24:40, 24:40] = False
+    mask = np.zeros((1024, 1024), dtype=bool)
+    mask[400:624, 400:624] = True
+    logits = np.full((256, 256), -5.0, dtype=np.float32)
+    logits[100:156, 100:156] = 5.0
 
     def factory(**_ignored):
         model = MagicMock()
-        model.capabilities = SAM2_CAPABILITIES
-        model.segment_image_with_predictor.side_effect = (
-            lambda **_kw: combined_mask_to_segments(donut, 0.9, empty_shape=(64, 64))
-        )
+        model.predict_tile.return_value = (mask, logits, 0.9)
         return SegmentationServicer(model=model, server_start_time=0.0)
 
     monkeypatch.setattr(server_module, "SegmentationServicer", factory)
-    ok, encoded = cv2.imencode(".png", np.zeros((64, 64, 3), dtype=np.uint8))
+    picture = PictureGrid(np.zeros((1024, 1024, 3), dtype=np.uint8))
     task = asyncio.create_task(server_module.serve(port=port))
     try:
         credentials = grpc.ssl_channel_credentials(root_certificates=cert.read_bytes())
         async with grpc.aio.secure_channel(f"localhost:{port}", credentials) as channel:
             await asyncio.wait_for(channel.channel_ready(), timeout=30)
             stub = SegmentationServiceStub(channel)
-            upload = await stub.UploadImage(
-                UploadImageRequest(image_data=encoded.tobytes(), width=64, height=64), timeout=20
-            )
-            assert upload.image_id > 0
-
-            response = await stub.SegmentImage(
-                SegmentationRequest(
-                    image_id=upload.image_id, coordinates=[Point(x=10, y=10)], labels=[1], omit_labeled_image=True
+            response, found = await asyncio.wait_for(
+                segment_picture(
+                    picture, [PictureClick(x=512, y=512, label=1)], stub.UploadTile, stub.SegmentTilesStream
                 ),
-                timeout=20,
+                timeout=30,
             )
-            await stub.DeleteImage(DeleteImageRequest(image_id=upload.image_id), timeout=20)
 
-        assert len(response.segments) == 1
-        polygon = response.segments[0].polygons[0]
-        assert len(polygon.points) >= 4
-        assert len(polygon.holes) == 1 and len(polygon.holes[0].points) >= 4
-        assert response.width == 64 and response.height == 64
+        (segment,) = response.segments
+        assert segment.island == 1 and segment.logits_scale == 4.0
+        assert segment.logits_size.width * segment.logits_size.height * 2 == len(segment.logits)
+        (on_picture,) = found
+        # The window's rows 400..623 are image rows 400..623 (the grid is one tile, its top row at the picture's top).
+        assert abs(on_picture.x - 400) <= 2 and abs(on_picture.y - 400) <= 2
+        assert abs(on_picture.mask.shape[0] - 224) <= 4 and abs(on_picture.mask.shape[1] - 224) <= 4
     finally:
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
+
 
 @pytest.mark.asyncio
 async def test_the_old_port_flag_is_an_error_not_a_silent_wrong_listener(monkeypatch, capsys) -> None:

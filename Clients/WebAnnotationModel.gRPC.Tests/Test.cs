@@ -68,8 +68,8 @@ namespace WebAnnotationModel.gRPC.Tests
             Assert.That(_userIdentity.UserName, Is.EqualTo("testuser"));
         }
 
-        private static Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry CircleShape(double x, double y, double radius = 8) =>
-            new() { Text = GeometryExtensions.ToCircleWKT(x, y, radius) };
+        private static Viking.gRPC.Geometry.V1.Shape CircleShape(double x, double y, double radius = 8) =>
+            AnnotationShapes.CircleShape(x, y, radius);
 
         [Test]
         public void StructureClientToServerConverter_PreservesTypeId()
@@ -207,11 +207,10 @@ namespace WebAnnotationModel.gRPC.Tests
                     NewAnnotation = new Location
                     {
                         Section = 17,
-                        MosaicPosition = new AnnotationPoint { X = 33, Y = 34 },
-                        VolumePosition = new AnnotationPoint { X = 33, Y = 34 },
-                        MosaicShape = CircleShape(33, 34),
-                        VolumeShape = CircleShape(33, 34, 10),
-                        TypeCode = AnnotationType.Circle,
+                        MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 33, Y = 34 },
+                        VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 33, Y = 34 },
+                        MosaicGeometry = CircleShape(33, 34),
+                        VolumeGeometry = CircleShape(33, 34, 10),
                         Created = now,
                         LastModified = now,
                         Username = _userIdentity.UserName,
@@ -226,9 +225,8 @@ namespace WebAnnotationModel.gRPC.Tests
                     ParentId = structureId.Value,
                     Section = 17,
                     Terminal = true,
-                    MosaicShape = CircleShape(35, 36),
-                    VolumeShape = CircleShape(35, 36, 10),
-                    TypeCode = AnnotationType.Circle,
+                    MosaicGeometry = CircleShape(35, 36),
+                    VolumeGeometry = CircleShape(35, 36, 10),
                     Username = _userIdentity.UserName,
                 };
                 ((IChangeAction)proto).DBAction = DBACTION.UPDATE;
@@ -370,7 +368,7 @@ namespace WebAnnotationModel.gRPC.Tests
             Assert.That(reply, Is.Not.Null);
             Assert.That(reply.Result, Is.Not.Null);
             Assert.That(reply.Result.Id, Is.GreaterThan(0));
-            Assert.That(reply.Result.MosaicShape, Is.Not.Null);
+            Assert.That(reply.Result.MosaicGeometry, Is.Not.Null);
         }
 
         [Test]
@@ -426,10 +424,7 @@ namespace WebAnnotationModel.gRPC.Tests
             {
                 Z = 1,
                 MinRadius = 0,
-                Region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
-                {
-                    Text = "POLYGON((90 190, 110 190, 110 210, 90 210, 90 190))"
-                }
+                Region = new Viking.gRPC.Geometry.V1.Rectangle { XMin = 90, YMin = 190, XMax = 110, YMax = 210 }
             };
 
             using var call = client.StreamLocationChangesInMosaicRegion(request);
@@ -528,11 +523,10 @@ namespace WebAnnotationModel.gRPC.Tests
                     {
                         ParentId = structureId.Value,
                         Section = 2,
-                        MosaicPosition = new AnnotationPoint { X = 10.5, Y = 20.5 },
-                        VolumePosition = new AnnotationPoint { X = 10.5, Y = 20.5 },
-                        MosaicShape = CircleShape(10.5, 20.5),
-                        VolumeShape = CircleShape(10.5, 20.5, 10),
-                        TypeCode = AnnotationType.Circle,
+                        MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 10.5, Y = 20.5 },
+                        VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 10.5, Y = 20.5 },
+                        MosaicGeometry = CircleShape(10.5, 20.5),
+                        VolumeGeometry = CircleShape(10.5, 20.5, 10),
                         Created = now,
                         LastModified = now,
                         Username = _userIdentity.UserName,
@@ -540,9 +534,9 @@ namespace WebAnnotationModel.gRPC.Tests
                 });
                 locationId = createLoc.Result.Id;
                 Assert.That(locationId, Is.GreaterThan(0));
-                Assert.That(createLoc.Result.Radius, Is.EqualTo(8).Within(0.01));
-                Assert.That(createLoc.Result.MosaicShape.Text, Does.Contain("CURVEPOLYGON"));
-                Assert.That(createLoc.Result.VolumeShape.Text, Does.Contain("CURVEPOLYGON"));
+                Assert.That(createLoc.Result.MosaicGeometry.Circle.Radius, Is.EqualTo(8).Within(0.01));
+                Assert.That(createLoc.Result.MosaicGeometry.KindCase, Is.EqualTo(Viking.gRPC.Geometry.V1.Shape.KindOneofCase.Circle));
+                Assert.That(createLoc.Result.VolumeGeometry.Circle.Radius, Is.EqualTo(10).Within(0.01), "the volume circle keeps its own radius");
 
                 var fetched = await locationsClient.GetLocationByIDAsync(new GetLocationByIDRequest
                 {
@@ -551,9 +545,9 @@ namespace WebAnnotationModel.gRPC.Tests
                 Assert.That(fetched.Result.Id, Is.EqualTo(locationId.Value));
                 Assert.That(fetched.Result.ParentId, Is.EqualTo(structureId.Value));
                 Assert.That(fetched.Result.Section, Is.EqualTo(2));
-                Assert.That(fetched.Result.Radius, Is.EqualTo(8).Within(0.01));
-                Assert.That(fetched.Result.MosaicShape.Text, Does.Contain("CURVEPOLYGON"));
-                Assert.That(fetched.Result.VolumeShape.Text, Does.Contain("CURVEPOLYGON"));
+                Assert.That(fetched.Result.MosaicGeometry.Circle.Radius, Is.EqualTo(8).Within(0.01));
+                Assert.That(fetched.Result.MosaicGeometry.KindCase, Is.EqualTo(Viking.gRPC.Geometry.V1.Shape.KindOneofCase.Circle));
+                Assert.That(fetched.Result.VolumeGeometry.Circle.Radius, Is.EqualTo(10).Within(0.01), "the volume circle keeps its own radius");
 
                 var deleteResponse = await locationsClient.UpdateAsync(new UpdateLocationsRequest
                 {
@@ -851,10 +845,7 @@ namespace WebAnnotationModel.gRPC.Tests
             {
                 Z = 1,
                 MinRadius = 0,
-                Region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
-                {
-                    Text = "POLYGON((0 0, 200 0, 200 300, 0 300, 0 0))"
-                }
+                Region = new Viking.gRPC.Geometry.V1.Rectangle { XMin = 0, YMin = 0, XMax = 200, YMax = 300 }
             };
 
             using var call = client.StreamAnnotationsInMosaicRegion(request);
@@ -1017,11 +1008,10 @@ namespace WebAnnotationModel.gRPC.Tests
                         {
                             ParentId = structureId.Value,
                             Section = 6,
-                            MosaicPosition = new AnnotationPoint { X = x, Y = y },
-                            VolumePosition = new AnnotationPoint { X = x, Y = y },
-                            MosaicShape = CircleShape(x, y),
-                            VolumeShape = CircleShape(x, y, 10),
-                            TypeCode = AnnotationType.Circle,
+                            MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            MosaicGeometry = CircleShape(x, y),
+                            VolumeGeometry = CircleShape(x, y, 10),
                             Created = now,
                             LastModified = now,
                             Username = _userIdentity.UserName,
@@ -1046,7 +1036,7 @@ namespace WebAnnotationModel.gRPC.Tests
                     t.Position != null &&
                     Math.Abs(t.Position.X - 70.5) < 0.01 &&
                     Math.Abs(t.Position.Y - 80.5) < 0.01 &&
-                    t.Position.Z == 6));
+                    t.Section == 6));
                 Assert.That(unfinished.Results, Has.Some.Matches<Viking.AnnotationServiceTypes.gRPC.V1.Protos.LocationPositionOnly>(t =>
                     t.Id == locB.Value &&
                     t.Position != null &&
@@ -1152,11 +1142,10 @@ namespace WebAnnotationModel.gRPC.Tests
                     {
                         ParentId = structureId.Value,
                         Section = section,
-                        MosaicPosition = new AnnotationPoint { X = 30, Y = 31 },
-                        VolumePosition = new AnnotationPoint { X = 30, Y = 31 },
-                        MosaicShape = CircleShape(30, 31),
-                        VolumeShape = CircleShape(30, 31, 10),
-                        TypeCode = AnnotationType.Circle,
+                        MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 30, Y = 31 },
+                        VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 30, Y = 31 },
+                        MosaicGeometry = CircleShape(30, 31),
+                        VolumeGeometry = CircleShape(30, 31, 10),
                         Created = now,
                         LastModified = now,
                         Username = _userIdentity.UserName,
@@ -1185,11 +1174,10 @@ namespace WebAnnotationModel.gRPC.Tests
                                 Id = locationId.Value,
                                 ParentId = structureId.Value,
                                 Section = section,
-                                MosaicPosition = new AnnotationPoint { X = 40, Y = 41 },
-                                VolumePosition = new AnnotationPoint { X = 40, Y = 41 },
-                                MosaicShape = CircleShape(40, 41),
-                                VolumeShape = CircleShape(40, 41, 10),
-                                TypeCode = AnnotationType.Circle,
+                                MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 40, Y = 41 },
+                                VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 40, Y = 41 },
+                                MosaicGeometry = CircleShape(40, 41),
+                                VolumeGeometry = CircleShape(40, 41, 10),
                                 Terminal = true,
                                 Created = now,
                                 LastModified = Timestamp.FromDateTime(DateTime.UtcNow),
@@ -1301,11 +1289,10 @@ namespace WebAnnotationModel.gRPC.Tests
                     {
                         ParentId = structureId.Value,
                         Section = 19,
-                        MosaicPosition = new AnnotationPoint { X = 50, Y = 51 },
-                        VolumePosition = new AnnotationPoint { X = 50, Y = 51 },
-                        MosaicShape = CircleShape(50, 51),
-                        VolumeShape = CircleShape(50, 51, 10),
-                        TypeCode = AnnotationType.Circle,
+                        MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 50, Y = 51 },
+                        VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 50, Y = 51 },
+                        MosaicGeometry = CircleShape(50, 51),
+                        VolumeGeometry = CircleShape(50, 51, 10),
                         Created = now,
                         LastModified = now,
                         Username = _userIdentity.UserName,
@@ -1323,11 +1310,10 @@ namespace WebAnnotationModel.gRPC.Tests
                             {
                                 Id = locationId.Value,
                                 Section = 19,
-                                MosaicPosition = new AnnotationPoint { X = 60, Y = 61 },
-                                VolumePosition = new AnnotationPoint { X = 60, Y = 61 },
-                                MosaicShape = CircleShape(60, 61),
-                                VolumeShape = CircleShape(60, 61, 10),
-                                TypeCode = AnnotationType.Circle,
+                                MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 60, Y = 61 },
+                                VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 60, Y = 61 },
+                                MosaicGeometry = CircleShape(60, 61),
+                                VolumeGeometry = CircleShape(60, 61, 10),
                                 Created = now,
                                 LastModified = Timestamp.FromDateTime(DateTime.UtcNow),
                                 Username = _userIdentity.UserName,
@@ -1429,11 +1415,10 @@ namespace WebAnnotationModel.gRPC.Tests
                     {
                         ParentId = structureId.Value,
                         Section = 7,
-                        MosaicPosition = new AnnotationPoint { X = 11, Y = 12 },
-                        VolumePosition = new AnnotationPoint { X = 11, Y = 12 },
-                        MosaicShape = CircleShape(11, 12),
-                        VolumeShape = CircleShape(11, 12, 10),
-                        TypeCode = AnnotationType.Circle,
+                        MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 11, Y = 12 },
+                        VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 11, Y = 12 },
+                        MosaicGeometry = CircleShape(11, 12),
+                        VolumeGeometry = CircleShape(11, 12, 10),
                         Created = now,
                         LastModified = now,
                         Username = _userIdentity.UserName,
@@ -1458,11 +1443,10 @@ namespace WebAnnotationModel.gRPC.Tests
                                 Id = locationId.Value,
                                 ParentId = structureId.Value,
                                 Section = 7,
-                                MosaicPosition = new AnnotationPoint { X = 21, Y = 22 },
-                                VolumePosition = new AnnotationPoint { X = 21, Y = 22 },
-                                MosaicShape = CircleShape(21, 22),
-                                VolumeShape = CircleShape(21, 22, 10),
-                                TypeCode = AnnotationType.Circle,
+                                MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 21, Y = 22 },
+                                VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 21, Y = 22 },
+                                MosaicGeometry = CircleShape(21, 22),
+                                VolumeGeometry = CircleShape(21, 22, 10),
                                 Terminal = true,
                                 Created = now,
                                 LastModified = Timestamp.FromDateTime(DateTime.UtcNow),
@@ -1571,11 +1555,10 @@ namespace WebAnnotationModel.gRPC.Tests
                         {
                             ParentId = structureId.Value,
                             Section = 4,
-                            MosaicPosition = new AnnotationPoint { X = x, Y = y },
-                            VolumePosition = new AnnotationPoint { X = x, Y = y },
-                            MosaicShape = CircleShape(x, y),
-                            VolumeShape = CircleShape(x, y, 10),
-                            TypeCode = AnnotationType.Circle,
+                            MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            MosaicGeometry = CircleShape(x, y),
+                            VolumeGeometry = CircleShape(x, y, 10),
                             Created = now,
                             LastModified = now,
                             Username = _userIdentity.UserName,
@@ -1699,11 +1682,10 @@ namespace WebAnnotationModel.gRPC.Tests
                         {
                             ParentId = created.NewStructure.Id,
                             Section = 5,
-                            MosaicPosition = new AnnotationPoint { X = x, Y = y },
-                            VolumePosition = new AnnotationPoint { X = x, Y = y },
-                            MosaicShape = CircleShape(x, y),
-                            VolumeShape = CircleShape(x, y, 10),
-                            TypeCode = AnnotationType.Circle,
+                            MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            MosaicGeometry = CircleShape(x, y),
+                            VolumeGeometry = CircleShape(x, y, 10),
                             Created = now,
                             LastModified = now,
                             Username = _userIdentity.UserName,
@@ -1852,11 +1834,10 @@ namespace WebAnnotationModel.gRPC.Tests
                         {
                             ParentId = structureId.Value,
                             Section = 16,
-                            MosaicPosition = new AnnotationPoint { X = x, Y = y },
-                            VolumePosition = new AnnotationPoint { X = x, Y = y },
-                            MosaicShape = CircleShape(x, y),
-                            VolumeShape = CircleShape(x, y, 10),
-                            TypeCode = AnnotationType.Circle,
+                            MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            MosaicGeometry = CircleShape(x, y),
+                            VolumeGeometry = CircleShape(x, y, 10),
                             Created = now,
                             LastModified = now,
                             Username = _userIdentity.UserName,
@@ -1998,11 +1979,10 @@ namespace WebAnnotationModel.gRPC.Tests
                         {
                             ParentId = structureId.Value,
                             Section = 3,
-                            MosaicPosition = new AnnotationPoint { X = x, Y = y },
-                            VolumePosition = new AnnotationPoint { X = x, Y = y },
-                            MosaicShape = CircleShape(x, y),
-                            VolumeShape = CircleShape(x, y, 10),
-                            TypeCode = AnnotationType.Circle,
+                            MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            MosaicGeometry = CircleShape(x, y),
+                            VolumeGeometry = CircleShape(x, y, 10),
                             Created = now,
                             LastModified = now,
                             Username = _userIdentity.UserName,
@@ -2150,11 +2130,10 @@ namespace WebAnnotationModel.gRPC.Tests
                     {
                         ParentId = structureId.Value,
                         Section = 13,
-                        MosaicPosition = new AnnotationPoint { X = 8, Y = 9 },
-                        VolumePosition = new AnnotationPoint { X = 8, Y = 9 },
-                        MosaicShape = CircleShape(8, 9),
-                        VolumeShape = CircleShape(8, 9, 10),
-                        TypeCode = AnnotationType.Circle,
+                        MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 8, Y = 9 },
+                        VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 8, Y = 9 },
+                        MosaicGeometry = CircleShape(8, 9),
+                        VolumeGeometry = CircleShape(8, 9, 10),
                         Created = now,
                         LastModified = now,
                         Username = _userIdentity.UserName,
@@ -2254,11 +2233,10 @@ namespace WebAnnotationModel.gRPC.Tests
                     NewAnnotation = new Location
                     {
                         Section = 15,
-                        MosaicPosition = new AnnotationPoint { X = 22, Y = 23 },
-                        VolumePosition = new AnnotationPoint { X = 22, Y = 23 },
-                        MosaicShape = CircleShape(22, 23),
-                        VolumeShape = CircleShape(22, 23, 10),
-                        TypeCode = AnnotationType.Circle,
+                        MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 22, Y = 23 },
+                        VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 22, Y = 23 },
+                        MosaicGeometry = CircleShape(22, 23),
+                        VolumeGeometry = CircleShape(22, 23, 10),
                         Created = now,
                         LastModified = now,
                         Username = _userIdentity.UserName,
@@ -2348,11 +2326,10 @@ namespace WebAnnotationModel.gRPC.Tests
                     NewAnnotation = new Location
                     {
                         Section = 14,
-                        MosaicPosition = new AnnotationPoint { X = 12, Y = 13 },
-                        VolumePosition = new AnnotationPoint { X = 12, Y = 13 },
-                        MosaicShape = CircleShape(12, 13),
-                        VolumeShape = CircleShape(12, 13, 10),
-                        TypeCode = AnnotationType.Circle,
+                        MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 12, Y = 13 },
+                        VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 12, Y = 13 },
+                        MosaicGeometry = CircleShape(12, 13),
+                        VolumeGeometry = CircleShape(12, 13, 10),
                         Created = now,
                         LastModified = now,
                         Username = _userIdentity.UserName,
@@ -2426,10 +2403,7 @@ namespace WebAnnotationModel.gRPC.Tests
             {
                 Z = 1,
                 MinRadius = 0,
-                Region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
-                {
-                    Text = "POLYGON((90 190, 110 190, 110 210, 90 210, 90 190))"
-                }
+                Region = new Viking.gRPC.Geometry.V1.Rectangle { XMin = 90, YMin = 190, XMax = 110, YMax = 210 }
             });
 
             Assert.That(reply.Results, Has.Some.Matches<Location>(l => l.Id == 1));
@@ -2447,10 +2421,7 @@ namespace WebAnnotationModel.gRPC.Tests
             {
                 Z = 1,
                 MinRadius = 0,
-                Region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
-                {
-                    Text = "POLYGON((0 0, 200 0, 200 300, 0 300, 0 0))"
-                }
+                Region = new Viking.gRPC.Geometry.V1.Rectangle { XMin = 0, YMin = 0, XMax = 200, YMax = 300 }
             });
 
             Assert.That(reply.Result, Is.Not.Null);
@@ -2464,10 +2435,7 @@ namespace WebAnnotationModel.gRPC.Tests
             var accessToken = await RequestAccessTokenAsync();
             using var channel = CreateAuthenticatedChannel(accessToken);
             var client = new AnnotateLocations.AnnotateLocationsClient(channel);
-            var region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
-            {
-                Text = "POLYGON((0 0, 200 0, 200 300, 0 300, 0 0))"
-            };
+            var region = new Viking.gRPC.Geometry.V1.Rectangle { XMin = 0, YMin = 0, XMax = 200, YMax = 300 };
 
             var first = await client.GetAnnotationsInMosaicRegionAsync(new GetAnnotationsInMosaicRegionRequest
             {
@@ -2576,10 +2544,7 @@ namespace WebAnnotationModel.gRPC.Tests
             {
                 Z = 1,
                 MinRadius = 0,
-                Region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
-                {
-                    Text = "POLYGON((90 190, 110 190, 110 210, 90 210, 90 190))"
-                }
+                Region = new Viking.gRPC.Geometry.V1.Rectangle { XMin = 90, YMin = 190, XMax = 110, YMax = 210 }
             });
             Assert.That(byVolume.Results, Has.Some.Matches<Structure>(s => s.Id == 1));
         }
@@ -2715,11 +2680,10 @@ namespace WebAnnotationModel.gRPC.Tests
                         {
                             ParentId = keepStructureId.Value,
                             Section = 12,
-                            MosaicPosition = new AnnotationPoint { X = x, Y = y },
-                            VolumePosition = new AnnotationPoint { X = x, Y = y },
-                            MosaicShape = CircleShape(x, y),
-                            VolumeShape = CircleShape(x, y, 10),
-                            TypeCode = AnnotationType.Circle,
+                            MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            MosaicGeometry = CircleShape(x, y),
+                            VolumeGeometry = CircleShape(x, y, 10),
                             Created = now,
                             LastModified = now,
                             Username = _userIdentity.UserName,
@@ -3032,11 +2996,10 @@ namespace WebAnnotationModel.gRPC.Tests
                         {
                             ParentId = structureId.Value,
                             Section = section,
-                            MosaicPosition = new AnnotationPoint { X = x, Y = y },
-                            VolumePosition = new AnnotationPoint { X = x, Y = y },
-                            MosaicShape = CircleShape(x, y),
-                            VolumeShape = CircleShape(x, y, 10),
-                            TypeCode = AnnotationType.Circle,
+                            MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            MosaicGeometry = CircleShape(x, y),
+                            VolumeGeometry = CircleShape(x, y, 10),
                             Created = now,
                             LastModified = now,
                             Username = _userIdentity.UserName,
@@ -3079,7 +3042,7 @@ namespace WebAnnotationModel.gRPC.Tests
                     {
                         Section = section,
                         MinRadius = 0,
-                        Bbox = new BoundingRectangle { Xmin = 0, Ymin = 0, Xmax = 10, Ymax = 10 }
+                        Bbox = new Viking.gRPC.Geometry.V1.Rectangle { XMin = 0, YMin = 0, XMax = 10, YMax = 10 }
                     });
                 Assert.That(regionLinks.Results, Has.Some.Matches<LocationLink>(l =>
                     (l.SourceId == locA.Value && l.TargetId == locB.Value) ||
@@ -3273,10 +3236,7 @@ namespace WebAnnotationModel.gRPC.Tests
             {
                 Z = 1,
                 MinRadius = 0,
-                Region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
-                {
-                    Text = "POLYGON((90 190, 110 190, 110 210, 90 210, 90 190))"
-                }
+                Region = new Viking.gRPC.Geometry.V1.Rectangle { XMin = 90, YMin = 190, XMax = 110, YMax = 210 }
             });
             Assert.That(byRegion.Results, Has.Some.Matches<Structure>(s => s.Id == 1));
         }
@@ -3437,11 +3397,10 @@ namespace WebAnnotationModel.gRPC.Tests
                     NewAnnotation = new Location
                     {
                         Section = 8,
-                        MosaicPosition = new AnnotationPoint { X = 15, Y = 16 },
-                        VolumePosition = new AnnotationPoint { X = 15, Y = 16 },
-                        MosaicShape = CircleShape(15, 16),
-                        VolumeShape = CircleShape(15, 16, 10),
-                        TypeCode = AnnotationType.Circle,
+                        MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 15, Y = 16 },
+                        VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 15, Y = 16 },
+                        MosaicGeometry = CircleShape(15, 16),
+                        VolumeGeometry = CircleShape(15, 16, 10),
                         Created = now,
                         LastModified = now,
                         Username = _userIdentity.UserName,
@@ -3453,9 +3412,9 @@ namespace WebAnnotationModel.gRPC.Tests
                 locationId = created.NewAnnotation.Id;
                 Assert.That(locationId, Is.GreaterThan(0));
                 Assert.That(created.NewAnnotation.ParentId, Is.EqualTo(structureId.Value));
-                Assert.That(created.NewAnnotation.Radius, Is.EqualTo(8).Within(0.01));
-                Assert.That(created.NewAnnotation.MosaicShape.Text, Does.Contain("CURVEPOLYGON"));
-                Assert.That(created.NewAnnotation.VolumeShape.Text, Does.Contain("CURVEPOLYGON"));
+                Assert.That(created.NewAnnotation.MosaicGeometry.Circle.Radius, Is.EqualTo(8).Within(0.01));
+                Assert.That(created.NewAnnotation.MosaicGeometry.KindCase, Is.EqualTo(Viking.gRPC.Geometry.V1.Shape.KindOneofCase.Circle));
+                Assert.That(created.NewAnnotation.VolumeGeometry.Circle.Radius, Is.EqualTo(10).Within(0.01), "the volume circle keeps its own radius");
             }
             finally
             {
@@ -3545,11 +3504,10 @@ namespace WebAnnotationModel.gRPC.Tests
                         {
                             ParentId = keepStructureId.Value,
                             Section = 9,
-                            MosaicPosition = new AnnotationPoint { X = x, Y = y },
-                            VolumePosition = new AnnotationPoint { X = x, Y = y },
-                            MosaicShape = CircleShape(x, y),
-                            VolumeShape = CircleShape(x, y, 10),
-                            TypeCode = AnnotationType.Circle,
+                            MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            MosaicGeometry = CircleShape(x, y),
+                            VolumeGeometry = CircleShape(x, y, 10),
                             Created = now,
                             LastModified = now,
                             Username = _userIdentity.UserName,
@@ -3783,11 +3741,10 @@ namespace WebAnnotationModel.gRPC.Tests
                         {
                             ParentId = created.NewStructure.Id,
                             Section = section,
-                            MosaicPosition = new AnnotationPoint { X = x, Y = y },
-                            VolumePosition = new AnnotationPoint { X = x, Y = y },
-                            MosaicShape = CircleShape(x, y),
-                            VolumeShape = CircleShape(x, y, 10),
-                            TypeCode = AnnotationType.Circle,
+                            MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = x, Y = y },
+                            MosaicGeometry = CircleShape(x, y),
+                            VolumeGeometry = CircleShape(x, y, 10),
                             Created = now,
                             LastModified = now,
                             Username = _userIdentity.UserName,
@@ -3823,10 +3780,7 @@ namespace WebAnnotationModel.gRPC.Tests
                 {
                     Z = section,
                     MinRadius = 0,
-                    Region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
-                    {
-                        Text = "POLYGON((0 0, 40 0, 40 40, 0 40, 0 0))"
-                    }
+                    Region = new Viking.gRPC.Geometry.V1.Rectangle { XMin = 0, YMin = 0, XMax = 40, YMax = 40 }
                 });
                 Assert.That(regionSync.Results.First(s => s.Id == aId.Value).Links, Has.Some.Matches<StructureLink>(l =>
                     l.SourceId == aId.Value && l.TargetId == bId.Value));

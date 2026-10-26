@@ -5,7 +5,7 @@ using Viking.AnnotationServiceTypes.gRPC.V1;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using Xunit;
 using EfLocation = Viking.DataModel.Annotation.Location;
-using ProtoGeometry = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry;
+using Viking.AnnotationServiceTypes.Interfaces;
 using ProtoLocation = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location;
 
 namespace ConnectomeDataModelCoreTests
@@ -28,9 +28,8 @@ namespace ConnectomeDataModelCoreTests
             Id = 7,
             ParentId = 3,
             Section = 12,
-            TypeCode = AnnotationType.Polygon,
-            MosaicShape = new ProtoGeometry { Text = mosaic },
-            VolumeShape = new ProtoGeometry { Text = "POLYGON ((100 100, 110 100, 110 110, 100 110, 100 100))" },
+            MosaicGeometry = TestShapes.Mosaic(mosaic),
+            VolumeGeometry = TestShapes.Volume("POLYGON ((100 100, 110 100, 110 110, 100 110, 100 100))"),
         };
 
         private static EfLocation Stored(string mosaic = Square)
@@ -68,10 +67,8 @@ namespace ConnectomeDataModelCoreTests
 
         [Theory]
         [InlineData("Section")]
-        [InlineData("Closed")]
         [InlineData("Terminal")]
         [InlineData("OffEdge")]
-        [InlineData("Width")]
         public void ApplyUpdate_EachAuthoredFieldChanged_StampsCaller(string field)
         {
             var stored = Stored();
@@ -79,10 +76,8 @@ namespace ConnectomeDataModelCoreTests
             switch (field)
             {
                 case "Section": incoming.Section = 13; break;
-                case "Closed": incoming.Closed = !stored.Closed; break;
                 case "Terminal": incoming.Terminal = !stored.Terminal; break;
                 case "OffEdge": incoming.OffEdge = !stored.OffEdge; break;
-                case "Width": incoming.Width = stored.Width.GetValueOrDefault() + 2.5; break;
             }
 
             LocationService.ApplyUpdate(incoming, stored, "reviewer");
@@ -104,10 +99,8 @@ namespace ConnectomeDataModelCoreTests
 
         [Theory]
         [InlineData("Section")]
-        [InlineData("Closed")]
         [InlineData("Terminal")]
         [InlineData("OffEdge")]
-        [InlineData("Width")]
         [InlineData("Type")]
         [InlineData("Tags")]
         [InlineData("Shape")]
@@ -120,18 +113,52 @@ namespace ConnectomeDataModelCoreTests
             switch (field)
             {
                 case "Section": incoming.Section = 13; break;
-                case "Closed": incoming.Closed = !stored.Closed; break;
                 case "Terminal": incoming.Terminal = !stored.Terminal; break;
                 case "OffEdge": incoming.OffEdge = !stored.OffEdge; break;
-                case "Width": incoming.Width = stored.Width.GetValueOrDefault() + 2.5; break;
-                case "Type": incoming.TypeCode = AnnotationType.Closedcurve; break;
+                case "Type":
+                    // Same points, now a curve polygon: only the type changes.
+                    incoming.MosaicGeometry = TestShapes.Mosaic("POLYGON ((0 0, 10 0, 10 10, 0 10, 0 0))", LocationType.CURVEPOLYGON);
+                    break;
                 case "Tags": incoming.Attributes = "<Attributes/>"; break;
-                case "Shape": incoming.MosaicShape = new ProtoGeometry { Text = "POLYGON ((0 0, 12 0, 12 10, 0 10, 0 0))" }; break;
+                case "Shape": incoming.MosaicGeometry = TestShapes.Mosaic("POLYGON ((0 0, 12 0, 12 10, 0 10, 0 0))"); break;
             }
 
             LocationService.ApplyUpdate(incoming, stored, "reviewer");
 
             Assert.Equal("reviewer", stored.Username);
+        }
+
+        [Fact]
+        public void ApplyUpdate_LineWidthChanged_StampsCaller()
+        {
+            const string line = "LINESTRING (0 0, 5 5, 10 0)";
+            var incoming = Proto();
+            incoming.MosaicGeometry = TestShapes.Mosaic(line, LocationType.POLYLINE, width: 4);
+            incoming.VolumeGeometry = TestShapes.Volume(line, LocationType.POLYLINE);
+            var stored = incoming.ToLocation();
+            stored.Username = "original";
+
+            incoming.MosaicGeometry.Line.Width = 6.5;
+            LocationService.ApplyUpdate(incoming, stored, "reviewer");
+
+            Assert.Equal(6.5, stored.Width);
+            Assert.Equal("reviewer", stored.Username);
+        }
+
+        [Fact]
+        public void ApplyUpdate_UnchangedCircle_KeepsAuthor()
+        {
+            var incoming = Proto();
+            incoming.MosaicGeometry = AnnotationShapes.CircleShape(10, 20, 8);
+            incoming.VolumeGeometry = AnnotationShapes.CircleShape(11, 22, 10);
+            var stored = incoming.ToLocation();
+            stored.Username = "original";
+            // As SQL derives the stored rim point from the curve's area: equal within rounding.
+            stored.MosaicShape = new NetTopologySuite.Geometries.Point(18 + 1e-9, 20);
+
+            LocationService.ApplyUpdate(incoming, stored, "reviewer");
+
+            Assert.Equal("original", stored.Username);
         }
 
         [Fact]
@@ -179,15 +206,13 @@ namespace ConnectomeDataModelCoreTests
         }
 
         [Fact]
-        public void ApplyUpdate_BothShapesMissing_KeepsAuthor()
+        public void ApplyUpdate_IncomingWithoutShapeOrPosition_IsRejected()
         {
             var stored = Stored();
-            stored.MosaicShape = null;
             var incoming = Proto();
-            incoming.MosaicShape = null;
+            incoming.MosaicGeometry = null;
 
-            LocationService.ApplyUpdate(incoming, stored, "reviewer");
-
+            Assert.Throws<ArgumentException>(() => LocationService.ApplyUpdate(incoming, stored, "reviewer"));
             Assert.Equal("original", stored.Username);
         }
     }

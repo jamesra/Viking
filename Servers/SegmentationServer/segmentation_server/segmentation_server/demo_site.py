@@ -2,7 +2,10 @@
 
 gRPC already owns container port 443, so this listener uses its own port and the same
 Let's Encrypt PEMs. Browsers cannot call the gRPC service, so the page talks to HTTP
-handlers that invoke SegmentationServicer on the server loop.
+handlers that invoke SegmentationServicer on the server loop. An uploaded picture is kept
+here (the last few, by id) and segmented through the tile-grid protocol like any client:
+it is laid on a tile grid of its own, and its tiles are uploaded as the stream asks for
+them (:mod:`picture_segmentation`).
 
 The site stays down unless enabled, and it stays down when the certificate files are not
 on disk yet. It is not an authenticated service, so it is cautious by default:
@@ -39,14 +42,10 @@ import grpc
 import numpy as np
 from PIL import Image, ImageOps
 
-from segmentation_grpc import (
-    DeleteImageRequest,
-    Point,
-    SegmentationRequest,
-    UploadImageRequest,
-)
 from segmentation_server.compile_config import env_flag_enabled
-from segmentation_server.mask_utils import ensure_image_within_limit, prepare_image_for_sam2
+from segmentation_server.mask_utils import encode_png, ensure_image_within_limit, prepare_image_for_sam2
+from segmentation_server.model_manifest import UNKNOWN as _UNKNOWN_MODEL
+from segmentation_server.picture_segmentation import PictureClick, PictureGrid, segment_picture
 from segmentation_server.server import resolve_tls_pem_paths
 
 logger = logging.getLogger(__name__)
@@ -74,6 +73,8 @@ _REQUEST_TIMEOUT_SECONDS = 120
 _MAX_IMAGE_BYTES = 64 * 1024 * 1024
 _MAX_JSON_BYTES = 1024 * 1024
 _MAX_POINTS = 256
+# Pictures kept for segmenting; the oldest is forgotten past this.
+_MAX_PICTURES = 16
 # Modes wider than 8 bits. convert("RGB") maps the full 0–65535 range, so a
 # narrow electron-microscopy window becomes nearly black.
 _HIGH_DEPTH_MODES = frozenset({"I", "I;16", "I;16B", "I;16L", "I;16N", "F"})
@@ -121,10 +122,39 @@ class DemoAbort(Exception):
 
 
 class DemoContext:
-    """Stand-in for grpc.aio.ServicerContext.abort used by the demo handlers."""
+    """Stand-in for the parts of grpc.aio.ServicerContext the demo's servicer calls use."""
 
     async def abort(self, code: grpc.StatusCode, details: str = "") -> None:
         raise DemoAbort(code, details)
+
+    def cancelled(self) -> bool:
+        return False
+
+
+class _PictureStore:
+    """The pictures the page uploaded, by id, the oldest forgotten past ``_MAX_PICTURES``. Used on the event loop only."""
+
+    def __init__(self, limit: int = _MAX_PICTURES) -> None:
+        self._limit = limit
+        self._next_id = 1
+        self._pictures: dict[int, PictureGrid] = {}
+
+    def add(self, picture: PictureGrid) -> int:
+        picture_id = self._next_id
+        self._next_id += 1
+        self._pictures[picture_id] = picture
+        while len(self._pictures) > self._limit:
+            del self._pictures[next(iter(self._pictures))]
+        return picture_id
+
+    def get(self, picture_id: int) -> Optional[PictureGrid]:
+        return self._pictures.get(picture_id)
+
+    def remove(self, picture_id: int) -> bool:
+        return self._pictures.pop(picture_id, None) is not None
+
+
+_pictures = _PictureStore()
 
 
 class DemoHttpsServer(HTTPServer):
@@ -439,20 +469,15 @@ async def _upload(body: bytes, servicer: Any) -> DemoResult:
         return _error(400, "image body is empty")
     try:
         png, width, height = _canonical_png(body)
+        pixels = prepare_image_for_sam2(png)
     except (OSError, ValueError) as exc:
         return _error(400, f"Could not read image: {exc}")
-    try:
-        response = await servicer.UploadImage(
-            UploadImageRequest(image_data=png, width=width, height=height),
-            DemoContext(),
-        )
-    except DemoAbort as exc:
-        return _abort_result(exc)
+    picture_id = _pictures.add(PictureGrid(pixels))
     return (
         201,
         {
             "Content-Type": "image/png",
-            "X-Image-Id": str(response.image_id),
+            "X-Image-Id": str(picture_id),
             "X-Image-Width": str(width),
             "X-Image-Height": str(height),
         },
@@ -470,11 +495,7 @@ async def _segment(image_id: int, body: bytes, servicer: Any) -> DemoResult:
         return _error(400, "at least one point is required")
     if len(points) > _MAX_POINTS:
         return _error(400, f"at most {_MAX_POINTS} points")
-    request = SegmentationRequest(
-        image_id=image_id,
-        multimask_output=False,
-        omit_labeled_image=True,
-    )
+    clicks = []
     for point in points:
         if not isinstance(point, dict):
             return _error(400, "each point needs x, y, and label")
@@ -486,35 +507,46 @@ async def _segment(image_id: int, body: bytes, servicer: Any) -> DemoResult:
             return _error(400, "each point needs integer x, y, and label")
         if label not in (0, 1) or x < 0 or y < 0:
             return _error(400, "label must be 1 (foreground) or 0 (background), and coordinates must be non-negative")
-        request.coordinates.append(Point(x=x, y=y))
-        request.labels.append(label)
+        clicks.append(PictureClick(x=x, y=y, label=label))
+    if not any(click.label == 1 for click in clicks):
+        return _error(400, "at least one foreground point (label 1) is required")
+    picture = _pictures.get(image_id)
+    if picture is None:
+        return _error(404, _PUBLIC_MESSAGES[grpc.StatusCode.NOT_FOUND])
+    if any(click.x >= picture.width or click.y >= picture.height for click in clicks):
+        return _error(400, "every point must be on the picture")
+    manifest = getattr(servicer, "_manifest", None)
+    model_id = getattr(manifest, "model_id", None)
     try:
-        response = await servicer.SegmentImage(request, DemoContext())
+        _response, found = await segment_picture(
+            picture,
+            clicks,
+            upload=lambda request: servicer.UploadTile(request, DemoContext()),
+            converse=lambda requests: servicer.SegmentTilesStream(requests, DemoContext()),
+            model_id=model_id if isinstance(model_id, str) and model_id != _UNKNOWN_MODEL else None,
+        )
     except DemoAbort as exc:
         return _abort_result(exc)
     segments = [
         {
-            "index": segment.index,
+            "index": index,
+            "island": segment.island,
             "score": segment.score,
             "x": segment.x,
             "y": segment.y,
-            "mask_png_base64": base64.b64encode(segment.mask).decode("ascii"),
+            "mask_png_base64": base64.b64encode(encode_png(segment.mask.astype(np.uint8) * 255)).decode("ascii"),
         }
-        for segment in response.segments
+        for index, segment in enumerate(found)
     ]
     return _json(200, {"segments": segments})
 
 
 async def _delete(image_id: int, servicer: Any) -> DemoResult:
-    try:
-        response = await servicer.DeleteImage(DeleteImageRequest(image_id=image_id), DemoContext())
-    except DemoAbort as exc:
-        return _abort_result(exc)
-    return _json(200, {"success": bool(response.success)})
+    return _json(200, {"success": _pictures.remove(image_id)})
 
 
 def _canonical_png(image_data: bytes) -> tuple[bytes, int, int]:
-    """Return an 8-bit RGB PNG and the size UploadImage will check.
+    """Return an 8-bit RGB PNG and its size.
 
     A 16-bit image is leveled with ImageJ Auto and then CLAHE. The same PNG is
     stored and sent back to the browser, so clicks land on the picture the user sees.

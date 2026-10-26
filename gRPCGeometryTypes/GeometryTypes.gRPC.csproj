@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The shared Viking geometry messages (gRPC_Protos/Common/geometry.proto) compiled once. Every service types project
+    that imports Common/geometry.proto references this assembly and compiles only its own protos with
+    ProtoRoot="..\gRPC_Protos", so the geometry types exist in one assembly only.
+    Package versions are the lowest any consumer uses, so no consumer sees a package downgrade.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Viking.gRPC.Geometry.V1</RootNamespace>
+    <AssemblyName>GeometryTypes.gRPC</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.17.2" />
+    <PackageReference Include="Grpc.Tools" Version="2.38.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="..\gRPC_Protos\Common\geometry.proto" ProtoRoot="..\gRPC_Protos" GrpcServices="None" />
+  </ItemGroup>
+
+</Project>

@@ -14,7 +14,7 @@ namespace ConnectomeDataModelCoreTests
             var rewritten = SqlServerCircleShapeCommandInterceptor.NullCircleShapeColumns(sql);
 
             Assert.Equal(
-                "SELECT [l].[ID], (CASE WHEN [l].[TypeCode] = 1 THEN geometry::Point([l].[X], [l].[Y], 0) ELSE [l].[MosaicShape] END), (CASE WHEN [l].[TypeCode] = 1 THEN geometry::Point([l].[VolumeX], [l].[VolumeY], 0) ELSE [l].[VolumeShape] END) FROM [Location] AS [l]",
+                "SELECT [l].[ID], (CASE WHEN [l].[TypeCode] = 1 THEN geometry::Point([l].[X] + SQRT([l].[MosaicShape].STArea() / PI()), [l].[Y], 0) ELSE [l].[MosaicShape] END), (CASE WHEN [l].[TypeCode] = 1 THEN geometry::Point([l].[VolumeX] + SQRT([l].[VolumeShape].STArea() / PI()), [l].[VolumeY], 0) ELSE [l].[VolumeShape] END) FROM [Location] AS [l]",
                 rewritten);
         }
 
@@ -26,7 +26,7 @@ namespace ConnectomeDataModelCoreTests
             var rewritten = SqlServerCircleShapeCommandInterceptor.NullCircleShapeColumns(sql);
 
             Assert.Equal(
-                "OUTPUT (CASE WHEN [INSERTED].[TypeCode] = 1 THEN geometry::Point([INSERTED].[X], [INSERTED].[Y], 0) ELSE [INSERTED].[MosaicShape] END), (CASE WHEN [INSERTED].[TypeCode] = 1 THEN geometry::Point([INSERTED].[VolumeX], [INSERTED].[VolumeY], 0) ELSE [INSERTED].[VolumeShape] END)",
+                "OUTPUT (CASE WHEN [INSERTED].[TypeCode] = 1 THEN geometry::Point([INSERTED].[X] + SQRT([INSERTED].[MosaicShape].STArea() / PI()), [INSERTED].[Y], 0) ELSE [INSERTED].[MosaicShape] END), (CASE WHEN [INSERTED].[TypeCode] = 1 THEN geometry::Point([INSERTED].[VolumeX] + SQRT([INSERTED].[VolumeShape].STArea() / PI()), [INSERTED].[VolumeY], 0) ELSE [INSERTED].[VolumeShape] END)",
                 rewritten);
         }
 

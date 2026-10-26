@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from segmentation_server.image_cache import ImageCache
-from segmentation_server.model_manifest import default_manifest
 from segmentation_server.server import SegmentationServicer
 
 
@@ -20,7 +19,6 @@ class _Clock:
 
 def _servicer(clock: _Clock, seconds: float = 1.0) -> tuple[SegmentationServicer, MagicMock]:
     model = MagicMock()
-    model.capabilities = default_manifest().capabilities()
     model.compile_status = "ready"
     servicer = SegmentationServicer(
         model=model,

@@ -63,16 +63,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private readonly List<Geometry.Vector2> backgroundPoints = [];
 
         /// <summary>
-        /// Subset of <see cref="backgroundPoints"/> generated from other visible structures. Everything else
-        /// in <see cref="backgroundPoints"/> was placed by the user and must not be cleared by a view refresh.
+        /// The other structures' circles, polygons and lines derived for the current view, sent as background
+        /// shapes with every request. Replaced whenever the view changes. Neighbours reach the server only this way:
+        /// every entry in <see cref="backgroundPoints"/> is a click the user placed.
         /// </summary>
-        private readonly List<Geometry.Vector2> derivedBackgroundPoints = [];
+        private SegmentationBackgroundShapes? derivedBackgroundShapes;
 
         /// <summary>
-        /// The other structures' circles and polygons derived for the current view, sent as the background
-        /// mask with every request. Replaced with the points whenever the view changes.
+        /// Which annotations (id and last change) <see cref="derivedBackgroundShapes"/> was built from, folded into the
+        /// prompt signature so a settled pan that brings a neighbour into or out of view resubmits.
         /// </summary>
-        private SegmentationMaskUnion? derivedBackgroundMask;
+        private string derivedBackgroundShapesKey = string.Empty;
 
         // Monographics views for rendering
         private PointSetView foregroundPointsView;
@@ -299,10 +300,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Avoid marks for every visible annotation that is not this location or this structure.
-        /// Called from OnActivate and after the view settles. Same filter as auto-polygonize.
+        /// Background shapes for every visible annotation that is not this location or this structure (nor a child
+        /// structure of it). Called from OnActivate and after the view settles. Same filter as auto-polygonize. No
+        /// background clicks are derived from them.
         /// </summary>
-        private void AddBackgroundPointsFromOtherStructures(VikingXNA.Scene scene)
+        private void AddBackgroundShapesFromOtherStructures(VikingXNA.Scene scene)
         {
             var sectionAnnotations = AnnotationOverlay.GetAnnotationsForSection(Parent.Section.Number);
             if (sectionAnnotations is null)
@@ -313,45 +315,39 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 .Select(loc => Store.Locations.TryGetObjectByID(loc.ID, out LocationObj o) ? o : null)
                 .OfType<LocationObj>()];
 
-            double minDistance = WebAnnotation.Global.AnnotationSettings.SegmentationPointRadius * Parent.Downsample;
             IReadOnlyCollection<long> excludeIds = locationIdToExcludeFromBackgroundPoints is long id
                 ? [id]
                 : [];
-            List<Geometry.Vector2> derived = [.. CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
-                visible,
-                Parent.Section.ActiveSectionToVolumeTransform,
-                foregroundPoints,
-                minDistance,
-                excludeIds,
-                structureIdToExcludeFromBackgroundPoints)];
-            SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
-                "context-menu", excludeIds, structureIdToExcludeFromBackgroundPoints, visible, foregroundPoints, derived));
-            derivedBackgroundPoints.AddRange(derived);
-            backgroundPoints.AddRange(derived);
-            derivedBackgroundMask = CircleSegmentationPrompts.CreateOtherStructureBackgroundMask(
+            derivedBackgroundShapes = CircleSegmentationPrompts.CreateOtherStructureBackgroundShapes(
                 visible,
                 Parent.Section.ActiveSectionToVolumeTransform,
                 excludeIds,
                 structureIdToExcludeFromBackgroundPoints);
+            derivedBackgroundShapesKey = string.Join(";", CircleSegmentationPrompts
+                .OtherStructureAnnotations(visible, excludeIds, structureIdToExcludeFromBackgroundPoints)
+                .OrderBy(loc => loc.ID)
+                .Select(loc => $"{loc.ID}@{loc.LastModified.Ticks}"));
+            SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
+                "context-menu", excludeIds, structureIdToExcludeFromBackgroundPoints, visible, foregroundPoints,
+                backgroundPoints, derivedBackgroundShapes));
         }
 
         /// <summary>
-        /// Removes only the avoid marks this command derived from other structures, so red points the user
-        /// placed survive a pan or zoom. Callers then re-derive for the new view.
+        /// Drops the background shapes derived for the old view. Red points the user placed are untouched. Callers then
+        /// re-derive for the new view.
         /// </summary>
-        private void RemoveDerivedBackgroundPoints()
+        private void RemoveDerivedBackgroundShapes()
         {
-            derivedBackgroundMask = null;
-            if (derivedBackgroundPoints.Count == 0)
-                return;
-
-            // One removal per derived entry (not RemoveAll by value) so a user point that happens to
-            // equal a derived coordinate keeps its own entry.
-            foreach (Geometry.Vector2 point in derivedBackgroundPoints)
-                backgroundPoints.Remove(point);
-
-            derivedBackgroundPoints.Clear();
+            derivedBackgroundShapes = null;
+            derivedBackgroundShapesKey = string.Empty;
         }
+
+        /// <summary>
+        /// <see cref="SegmentationCameraPolicy.PromptSignature"/> of the clicks plus the annotations the background
+        /// shapes came from.
+        /// </summary>
+        private string PromptSignature(IReadOnlyList<Geometry.Vector2> foreground, IReadOnlyList<Geometry.Vector2> background) =>
+            SegmentationCameraPolicy.PromptSignature(foreground, background) + "|" + derivedBackgroundShapesKey;
         #endregion
 
         #region Lifecycle Methods
@@ -361,7 +357,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             if (structureTypeIdForBackgroundPoints.HasValue && Parent.Scene != null)
             {
-                AddBackgroundPointsFromOtherStructures(Parent.Scene);
+                AddBackgroundShapesFromOtherStructures(Parent.Scene);
             }
 
             if (!viewportSession.TryInitializeClient())
@@ -419,7 +415,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             viewportSession.CancelPendingWork();
             CancelSegmentRequest();
-            ReleaseHeldImage();
+            viewportSession.ClearUploadedView();
 
             CleanupCommand();
 
@@ -707,12 +703,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         #region Pan/Zoom Handling
         /// <summary>
-        /// Restarts the settle timer when the view moves more than 1%. When the model's profile says a
-        /// move can stale its result (a full-viewport model, or fixed tiles whose level follows zoom) the
-        /// request is also cancelled and this command's image hold dropped. For fixed tiles at a single
-        /// level the result does not depend on the camera, so the request in flight is left to finish
-        /// (<see cref="SegmentationCameraPolicy.ViewMoveInvalidatesRequest"/>). The shared lease
-        /// releases its own hold so DeleteImage runs only when auto-polygonize is not still using the id.
+        /// Restarts the settle timer when the view moves more than 1%. A result on the single-resolution tile grid
+        /// does not depend on the camera, so the request in flight is left to finish (<see cref="SegmentationCameraPolicy"/>).
         /// </summary>
         private void CheckForViewportChange()
         {
@@ -722,15 +714,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 lastViewBounds = currentBounds;
                 viewportSession.ViewportBounds = currentBounds;
-                if (SegmentationCameraPolicy.ViewMoveInvalidatesRequest(SegmentationViewportSession.ModelProfile))
-                {
-                    requestCoalescer.Invalidate();
-                    CancelProcessSegmentationResponse();
-                    CancelSegmentRequest();
-                    viewportSession.CancelPendingWork();
-                    AnnotationOverlay.CurrentOverlay?.SharedViewportImages?.ForgetIfViewMoved(currentBounds, Parent.Downsample);
-                    ReleaseHeldImage();
-                }
 
                 // Restart debounce timer
                 panZoomDebouncer?.Restart();
@@ -751,12 +734,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 foregroundPointsView is null || backgroundPointsView is null)
                 return;
 
-            // Recompute structure-type background points when the visible set changes (replaces any previously derived points)
+            // Recompute the other structures' background shapes when the visible set changes (replaces the previous ones)
             if (structureTypeIdForBackgroundPoints.HasValue && Parent.Scene != null)
             {
-                RemoveDerivedBackgroundPoints();
-                AddBackgroundPointsFromOtherStructures(Parent.Scene);
-                UpdatePointViews();
+                RemoveDerivedBackgroundShapes();
+                AddBackgroundShapesFromOtherStructures(Parent.Scene);
             }
 
             if (foregroundPoints.Count == 0 && backgroundPoints.Count == 0)
@@ -769,9 +751,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             backgroundPointsView.PointRadius = pointRadius;
             foregroundPointsView.PointRadius = pointRadius;
 
-            string current = SegmentationCameraPolicy.PromptSignature(foregroundPoints, backgroundPoints);
-            if (SegmentationCameraPolicy.SettleNeedsResubmit(
-                    SegmentationViewportSession.ModelProfile, lastSentPrompts, current))
+            string current = PromptSignature(foregroundPoints, backgroundPoints);
+            if (SegmentationCameraPolicy.SettleNeedsResubmit(lastSentPrompts, current))
             {
                 Debug.WriteLine("Viewport settled with existing points, re-requesting segmentation");
                 _ = RequestSegmentation();
@@ -893,25 +874,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         #endregion
 
-        #region Server Image Upload/Delete
-        /// <summary>
-        /// Drops the server image this command's session still owns. Deletes it only when the auto-polygonize cache holds no reference and nobody leased it.
-        /// </summary>
-        private void ReleaseHeldImage()
-        {
-            AutoPolygonizeCache? cache = AnnotationOverlay.CurrentOverlay?.PolygonizeImageCache;
-            if (viewportSession.CurrentImageId is not ulong currentId)
-                return;
-
-            if (cache is not null && cache.IsImageHeld(currentId))
-            {
-                viewportSession.ClearImageId();
-                return;
-            }
-
-            _ = viewportSession.DeleteCurrentImageAsync();
-        }
-
+        #region Segment request lifetime
         private void CancelSegmentRequest()
         {
             CancellationTokenSource previous = segmentRequestCts;
@@ -941,7 +904,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             CancelSegmentRequest();
             viewportSession.CancelPendingWork();
             CancelProcessSegmentationResponse();
-            ReleaseHeldImage();
+            viewportSession.ClearUploadedView();
             try
             {
                 success_callback?.Invoke(placementFallback);
@@ -998,14 +961,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
             // step runs on a worker; both must see the lists as they were when this attempt started.
             Geometry.Vector2[] foregroundSnapshot = [.. foregroundPoints];
             Geometry.Vector2[] backgroundSnapshot = [.. backgroundPoints];
-            string sentPrompts = SegmentationCameraPolicy.PromptSignature(foregroundSnapshot, backgroundSnapshot);
+            string sentPrompts = PromptSignature(foregroundSnapshot, backgroundSnapshot);
             lastSentPrompts = sentPrompts;
             bool delivered = false;
             try
             {
                 SegmentationDiag.Log(
                     $"RequestSegmentation start gen={generation} fg={foregroundPoints.Count} bg={backgroundPoints.Count} " +
-                    $"(derived={derivedBackgroundPoints.Count} user={backgroundPoints.Count - derivedBackgroundPoints.Count}) " +
+                    $"bgShapes={derivedBackgroundShapes?.Count ?? 0} " +
                     $"fg0={(foregroundPoints.Count > 0 ? $"({foregroundPoints[0].X:F0},{foregroundPoints[0].Y:F0})" : "none")} " +
                     $"loc={locationIdToExcludeFromBackgroundPoints?.ToString() ?? "-"} " +
                     $"structure={structureIdToExcludeFromBackgroundPoints?.ToString() ?? "-"} " +
@@ -1017,9 +980,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 CancellationToken segmentToken = segmentRequestCts.Token;
                 var response = await viewportSession.SegmentAsync(
                     foregroundSnapshot, backgroundSnapshot, segmentToken, startingBoxes,
-                    backgroundMask: derivedBackgroundMask).ConfigureAwait(false);
+                    backgroundShapes: derivedBackgroundShapes).ConfigureAwait(false);
                 SegmentationDiag.Log(
-                    $"RequestSegmentation done responseNull={response is null} segments={response?.Segments.Count ?? -1}");
+                    $"RequestSegmentation done responseNull={response is null} islands={response?.Segments.Count ?? -1}");
                 delivered = response is not null;
                 if (!placementFinished && response is not null && requestCoalescer.ShouldApply(generation))
                 {
@@ -1190,7 +1153,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 lastSegmentationResponse = response;
                 lastSegmentationForeground = foreground;
                 lastSegmentationBackground = background;
-                ApplyPolygonViews(polygons, response.Segments.Count);
+                ApplyPolygonViews(polygons, polygons.Count);
 #if DEBUG
                 CreateDebugMaskOverlay(response);
 #endif
@@ -1244,7 +1207,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 lastSegmentationBackground,
                 edgeCleanupRadius,
                 keepComponentsContainingWorldPoints: lastSegmentationForeground));
-            ApplyPolygonViews(polygons, response.Segments.Count);
+            ApplyPolygonViews(polygons, polygons.Count);
 #if DEBUG
             CreateDebugMaskOverlay(response, edgeCleanupRadius);
 #endif
@@ -1312,7 +1275,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             SegmentationServiceTypes.SegmentationResponse response,
             int? edgeCleanupRadius = null)
         {
-            var bestSegment = response.GetHighestScoringSegment();
+            // The overlay shows island 1, the main object; every island is outlined by the polygon views.
+            var bestSegment = response.GetPrimaryIsland();
             if (bestSegment is null)
             {
                 maskOverlayView = null;
@@ -1351,12 +1315,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
-            Geometry.Rectangle segmentBounds = viewportSession.GetSegmentWorldBounds(
-                response,
-                field.X,
-                field.Y,
-                field.PixelWidth,
-                field.PixelHeight);
+            Geometry.Rectangle segmentBounds = viewportSession.GetSegmentWorldBounds(response, field);
             maskOverlayView = new TextureOverlayView(maskTexture, segmentBounds, maskColor);
         }
 #endif
@@ -1635,8 +1594,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             CancelProcessSegmentationResponse();
             foregroundPoints.Clear();
             backgroundPoints.Clear();
-            derivedBackgroundPoints.Clear();
-            derivedBackgroundMask = null;
+            derivedBackgroundShapes = null;
+            derivedBackgroundShapesKey = string.Empty;
             // Clear point views but keep them initialized (never null)
             foregroundPointsView.Points = [];
             backgroundPointsView.Points = [];
@@ -1653,7 +1612,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             lastSegmentationBackground = [];
 
             viewportSession.CancelPendingWork();
-            viewportSession.ClearImageId();
+            viewportSession.ClearUploadedView();
         }
         #endregion
     }

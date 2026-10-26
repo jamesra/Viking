@@ -15,7 +15,8 @@ using Viking.Common;
 using Viking.GrpcSectionCorrectionService;
 using Viking.SectionCorrection;
 using Viking.SectionCorrectionBuilder;
-using Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos;
+using Viking.SectionCorrectionServiceTypes.gRPC.V2.Protos;
+using ProtoVector2 = Viking.gRPC.Geometry.V1.Vector2;
 using Path = System.IO.Path;
 
 namespace GrpcSectionCorrectionService.Tests
@@ -73,7 +74,7 @@ namespace GrpcSectionCorrectionService.Tests
                 published.WriteDirectory(dest);
                 using VolumeCorrectionCatalog catalog = new(root);
                 catalog.Load();
-                SectionCorrectionsService service = CreateService(catalog);
+                SectionCorrectionsServiceV2 service = CreateService(catalog);
 
                 List<(int Z, Vector2 Xy)> queries = TargetCentroids(graph);
                 Assert.IsTrue(queries.Count > 0, "structure 180 had no location centroids");
@@ -85,16 +86,17 @@ namespace GrpcSectionCorrectionService.Tests
                 for (int s = 0; s < grouped.Count; s++)
                 {
                     List<(int Z, Vector2 Xy)> group = [.. grouped[s]];
-                    CorrectedSection section = response.Sections[s];
+                    SectionOffsets section = response.Sections[s];
                     Assert.AreEqual(group.Count, section.Points.Count);
                     for (int p = 0; p < group.Count; p++)
                     {
                         (int z, Vector2 xy) = group[p];
-                        CorrectedXY actual = section.Points[p];
+                        PointOffset actual = section.Points[p];
                         (Vector2 expected, bool trusted) = field.SampleAlways(xy, z);
                         Assert.AreEqual(trusted, actual.Trusted, $"trusted mismatch z={z} {xy}");
-                        Assert.AreEqual(expected.X, actual.Dx, 1e-6, $"dx mismatch z={z} {xy}");
-                        Assert.AreEqual(expected.Y, actual.Dy, 1e-6, $"dy mismatch z={z} {xy}");
+                        // The published set stores offsets as float32 (about 7 significant digits), so compare to 1e-4.
+                        Assert.AreEqual(expected.X, actual.Offset.X, 1e-4, $"dx mismatch z={z} {xy}");
+                        Assert.AreEqual(expected.Y, actual.Offset.Y, 1e-4, $"dy mismatch z={z} {xy}");
                     }
                 }
             }
@@ -202,18 +204,18 @@ namespace GrpcSectionCorrectionService.Tests
                 ? StosGroup
                 : catalog.Sets.First(s => s.VolumeName == volumeName).Set.StosGroup;
 
-            SectionCorrectionsService service = CreateService(catalog);
+            SectionCorrectionsServiceV2 service = CreateService(catalog);
             List<(int Z, Vector2 Xy)> queries = TargetCentroids(graph);
             CorrectPointsResponse response = await service.CorrectPoints(ToRequest(queries, volumeName, stos), null);
 
             List<double> sq = [];
-            foreach (CorrectedSection section in response.Sections)
+            foreach (SectionOffsets section in response.Sections)
             {
-                foreach (CorrectedXY actual in section.Points)
+                foreach (PointOffset actual in section.Points)
                 {
                     if (!actual.Trusted)
                         continue;
-                    sq.Add(actual.Dx * actual.Dx + actual.Dy * actual.Dy);
+                    sq.Add(actual.Offset.X * actual.Offset.X + actual.Offset.Y * actual.Offset.Y);
                 }
             }
 
@@ -281,15 +283,14 @@ namespace GrpcSectionCorrectionService.Tests
             CollectCenters(graph, bajaj);
             Assert.IsTrue(bajaj.Count > 0, "structure 180 had no locations after Bajaj registration");
 
-            SectionCorrectionsService service = CreateService(
+            SectionCorrectionsServiceV2 service = CreateService(
                 catalog,
                 new StaticIdentityVolumeSource([new IdentityVolumeRow(VolumeName, vikingXmlUrl, "")]),
                 new AnnotationConnectionResolver(new Dictionary<string, string> { [VolumeName] = annotationConnection }, null));
             CorrectStructuresResponse response = await service.CorrectStructures(
                 new CorrectStructuresRequest
                 {
-                    VolumeName = VolumeName,
-                    StosGroup = stosGroup,
+                    Set = new CorrectionSetId { VolumeName = VolumeName, StosGroup = stosGroup },
                     StructureIds = { StructureId },
                     IncludeChildren = true
                 },
@@ -305,7 +306,7 @@ namespace GrpcSectionCorrectionService.Tests
             {
                 if (!serviceById.TryGetValue(id, out CorrectedLocation corrected))
                     continue;
-                Vector2 serviceXy = new(corrected.X, corrected.Y);
+                Vector2 serviceXy = new(corrected.Position.X, corrected.Position.Y);
                 deltas.Add((id, z, (xy - serviceXy).Magnitude, xy, serviceXy));
             }
 
@@ -346,7 +347,7 @@ namespace GrpcSectionCorrectionService.Tests
                 $"location {d.Id} z={d.Z} |d|={d.Magnitude:F1} nm bajaj=({d.Bajaj.X:F1},{d.Bajaj.Y:F1}) service=({d.Service.X:F1},{d.Service.Y:F1})"));
         }
 
-        static SectionCorrectionsService CreateService(
+        static SectionCorrectionsServiceV2 CreateService(
             VolumeCorrectionCatalog catalog,
             IIdentityVolumeSource volumes = null,
             AnnotationConnectionResolver connections = null) =>
@@ -355,7 +356,7 @@ namespace GrpcSectionCorrectionService.Tests
                 connections ?? new AnnotationConnectionResolver(new Dictionary<string, string>(), null),
                 new ConfigurationBuilder().Build(),
                 new RebuildStatusStore(),
-                NullLogger<SectionCorrectionsService>.Instance);
+                NullLogger<SectionCorrectionsServiceV2>.Instance);
 
         static List<MorphologyGraph> ResidualCells(MorphologyGraph root, MorphologyGraph neighbors)
         {
@@ -395,12 +396,12 @@ namespace GrpcSectionCorrectionService.Tests
             string volume = VolumeName,
             string stos = StosGroup)
         {
-            CorrectPointsRequest request = new() { VolumeName = volume, StosGroup = stos };
+            CorrectPointsRequest request = new() { Set = new CorrectionSetId { VolumeName = volume, StosGroup = stos } };
             foreach (IGrouping<int, (int Z, Vector2 Xy)> group in queries.GroupBy(q => q.Z).OrderBy(g => g.Key))
             {
                 SectionPoints section = new() { Z = group.Key };
                 foreach ((int _, Vector2 xy) in group)
-                    section.Points.Add(new VolumeXY { X = xy.X, Y = xy.Y });
+                    section.Points.Add(new ProtoVector2 { X = xy.X, Y = xy.Y });
                 request.Sections.Add(section);
             }
 

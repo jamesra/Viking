@@ -3,7 +3,7 @@
 AnnotateStructures
 ##################
 
-Source: ``gRPCAnnotationServiceTypes/Protos/Structure.proto``
+Source: ``gRPC_Protos/Annotation/Structure.proto``
 
 Package: ``Viking.AnnotationServiceTypes.gRPC.V1``
 
@@ -33,9 +33,9 @@ Create and fetch
    * - ``GetStructuresForSection``
      - Structures that own a location on section ``z``. Optional ``modified_after_this_utc_time`` limits the set to rows changed after that UTC time. The response includes ``deleted_ids`` and ``query_executed_time``. Pass that timestamp back as the next watermark.
    * - ``GetStructuresInMosaicRegion``
-     - Same as the section call, plus a mosaic ``region`` and ``min_radius``. Locations smaller than ``min_radius`` are ignored.
+     - Same as the section call, plus a mosaic-space ``Rectangle`` ``region`` (:doc:`geometry`) and ``min_radius``. Locations smaller than ``min_radius`` are ignored.
    * - ``GetStructuresInVolumeRegion``
-     - Same filter in volume space instead of mosaic space.
+     - Same filter with ``region`` in volume space instead of mosaic space.
    * - ``GetChildStructures``
      - Direct children of ``structure_id`` (``Structure.parent_id``).
    * - ``NumberOfLocations``
@@ -74,7 +74,7 @@ Unfinished branches
 
 ``GetUnfinishedLocations`` returns location ids that are open ends of ``structure_id`` (not marked terminal, still expected to continue on another section).
 
-``GetUnfinishedLocationsWithPosition`` returns the same tips as ``LocationPositionOnly``: ``id``, ``position``, and ``radius``. Use this when the client only needs to draw the jump target.
+``GetUnfinishedLocationsWithPosition`` returns the same tips as ``LocationPositionOnly``: ``id``, ``position`` (a mosaic ``Vector2``), ``radius``, and ``section``. Use this when the client only needs to draw the jump target.
 
 Edits
 =====

@@ -110,6 +110,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 COPY --chmod=755 Servers/SegmentationServer/start.sh /home/user/start.sh
 
 COPY --chown=user:user gRPC_Protos/Segmentation /home/user/gRPC_Protos/Segmentation
+# segmentation.proto imports Common/geometry.proto; --generate-grpc needs both under the same root.
+COPY --chown=user:user gRPC_Protos/Common /home/user/gRPC_Protos/Common
 COPY --chown=user:user Servers/SegmentationServer/segmentation_grpc /home/user/segmentation_grpc
 COPY --chown=user:user Servers/SegmentationServer/segmentation_server/segmentation_server /home/user/segmentation_server/segmentation_server/
 

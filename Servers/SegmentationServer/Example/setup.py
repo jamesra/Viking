@@ -15,6 +15,7 @@ setup(
         "matplotlib",
         "opencv-python",
         "segmentation_grpc",
+        "segmentation_server",
     ],
     python_requires=">=3.7",
     description="Example client for the segmentation service",

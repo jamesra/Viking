@@ -1,9 +1,9 @@
-"""Mask prompts sent as tiles: a mask of any size, cut into 1024 tiles on the image-tile grid."""
+"""Painted bitmaps sent as tiles: a mask of any size, cut into 1024 tiles on the image-tile grid."""
 
 from __future__ import annotations
 
 import asyncio
-from typing import Callable, Dict, List, Optional, Sequence, Set, Tuple
+from typing import List, Optional, Sequence, Set, Tuple
 from unittest.mock import AsyncMock
 
 import cv2
@@ -13,13 +13,22 @@ import pytest
 
 import cell_world
 from cell_world import World, ellipse
+from protocol import (
+    all_unavailable,
+    cache as _cache,
+    cell as _cell,
+    context as _context,
+    put_tile as _upload,
+    result as _result,
+    servicer as _servicer,
+    start,
+)
 from segmentation_grpc import segmentation_pb2 as pb
 from segmentation_server.cell_grid import CELL_SIZE, LOGIT_SCALE, TILE_SIZE, Canvas, Cell, MaskShape, core_origin
-from segmentation_server.mask_tiles import MaskTileCollector, TiledMaskShape
+from segmentation_server.mask_tiles import MaskTileCollector, TiledMaskShape, decode_mask_tile
+from segmentation_server.prompt import BackgroundPrompt
 from segmentation_server.prompt_encodings import EdgeConfidenceEncoder
-from segmentation_server.server import _prompts_from, _same_tile_identity
 from segmentation_server.tile_growth import GrowthWalk
-from test_segment_tiles import _cache, _context, _servicer, _tile, _upload
 
 FOREGROUND = pb.MASK_KIND_FOREGROUND
 BACKGROUND = pb.MASK_KIND_BACKGROUND
@@ -56,37 +65,34 @@ def _one_tile(truth_up: np.ndarray, x0: int, y0: int, row: int, col: int, kind: 
         tile_up[ya - row * TILE_SIZE:yb - row * TILE_SIZE, xa - col * TILE_SIZE:xb - col * TILE_SIZE] = (
             truth_up[ya - y0:yb - y0, xa - x0:xb - x0]
         )
-    coord = _tile(row, col)
+    cell = _cell(row, col)
     if not tile_up.any():
-        return pb.MaskTile(coord=coord, kind=kind)
+        return pb.MaskTile(cell=cell, kind=kind)
     if tile_up.all():
-        return pb.MaskTile(coord=coord, kind=kind, full=True)
+        return pb.MaskTile(cell=cell, kind=kind, full=True)
     tile_down = np.flipud(tile_up)
     if scale == LOGIT_SCALE:
         tile_down = tile_down.reshape(TILE_SIZE // 4, 4, TILE_SIZE // 4, 4).any(axis=(1, 3))
-    return pb.MaskTile(coord=coord, kind=kind, png=_png(tile_down), scale=scale)
+    return pb.MaskTile(cell=cell, kind=kind, png=_png(tile_down), scale=scale)
 
 
 def collector_for(tiles: Sequence[pb.MaskTile], announced: Optional[int] = None) -> MaskTileCollector:
-    foreground = [t for t in tiles if t.kind == FOREGROUND]
-    collector = MaskTileCollector(len(foreground) if announced is None else announced)
-    collector.add(pb.MaskTiles(tiles=list(tiles)), _tile(0, 0), _same_tile_identity)
+    collector = MaskTileCollector(len(tiles) if announced is None else announced)
+    collector.add(pb.MaskTiles(tiles=list(tiles)))
     return collector
 
 
-def shape_from(tiles: Sequence[pb.MaskTile], role: str = "seed") -> TiledMaskShape:
+def shape_from(tiles: Sequence[pb.MaskTile]) -> TiledMaskShape:
     shape = collector_for(tiles).foreground_shape()
     assert shape is not None
-    return shape.with_role(role)
+    return shape
 
 
 def background_from(tiles: Sequence[pb.MaskTile]) -> TiledMaskShape:
-    """A background mask holding exactly ``tiles`` (as if the client had answered for them), and complete."""
+    """A complete background bitmap holding exactly ``tiles``."""
     shape = TiledMaskShape()
-    from segmentation_server.mask_tiles import decode_mask_tile
-
     for tile in tiles:
-        shape.settle((tile.coord.row, tile.coord.col), decode_mask_tile(tile))
+        shape.settle((tile.cell.row, tile.cell.col), decode_mask_tile(tile))
     shape.mark_complete()
     return shape
 
@@ -116,7 +122,7 @@ def window_value(prompt: np.ndarray, cell: Cell, x: int, y: int) -> float:
 def test_a_seed_covering_3x3_tiles_gives_every_start_window_the_prompt_a_single_array_gives() -> None:
     truth, x0, y0 = disc_truth(2560, 2560, 1400)  # 1160..3960: tiles 1..3 in both axes
     tiles = mask_tiles_for(truth, x0, y0)
-    assert {(t.coord.row, t.coord.col) for t in tiles} == {(r, c) for r in (1, 2, 3) for c in (1, 2, 3)}
+    assert {(t.cell.row, t.cell.col) for t in tiles} == {(r, c) for r in (1, 2, 3) for c in (1, 2, 3)}
     assert any(t.full for t in tiles) and any(t.png for t in tiles)
     tiled, single = shape_from(tiles), single_array_shape(truth, x0, y0)
     assert tiled.box == single.box
@@ -170,7 +176,7 @@ def test_a_wholly_covered_core_is_taken_whole_and_a_mask_with_no_pixel_is_none()
     cell = Cell(row=3, col=3)  # core 1792..2303 in both axes: wholly inside tiles 1 and 2
     assert core_origin(cell) == (1792, 1792) and full.covers_core(cell)
     assert not full.covers_core(Cell(row=1, col=1))
-    empty = collector_for([pb.MaskTile(coord=_tile(0, 0), kind=FOREGROUND)]).foreground_shape()
+    empty = collector_for([pb.MaskTile(cell=_cell(0, 0), kind=FOREGROUND)]).foreground_shape()
     assert empty is None
 
 
@@ -180,7 +186,7 @@ def test_full_tiles_and_png_tiles_give_the_same_result() -> None:
     assert all(t.full for t in full_tiles)
     as_full = shape_from(full_tiles)
     as_png = shape_from([
-        pb.MaskTile(coord=t.coord, kind=FOREGROUND, png=_png(np.ones((TILE_SIZE, TILE_SIZE), dtype=bool)))
+        pb.MaskTile(cell=t.cell, kind=FOREGROUND, png=_png(np.ones((TILE_SIZE, TILE_SIZE), dtype=bool)))
         for t in full_tiles
     ])
     encoder = EdgeConfidenceEncoder({})
@@ -229,12 +235,12 @@ def test_foreground_and_background_tiles_overlapping_give_zero_on_the_overlap() 
     assert np.array_equal(prompt, single)
 
 
-def test_a_background_mask_only_knows_the_tiles_it_was_told_about() -> None:
+def test_a_mask_that_is_not_complete_only_knows_the_tiles_it_was_told_about() -> None:
     background = TiledMaskShape()
     cell = Cell(row=1, col=1)  # window 512..1535: tiles (0,0) (0,1) (1,0) (1,1)
     assert {(t.row, t.col) for t in background.unknown_tiles(cell)} == {(0, 0), (0, 1), (1, 0), (1, 1)}
 
-    background.settle((0, 0), None)  # "no neighbors here" is knowledge too
+    background.settle((0, 0), None)  # "no mask here" is knowledge too
     background.settle((1, 1), True)
 
     assert {(t.row, t.col) for t in background.unknown_tiles(cell)} == {(0, 1), (1, 0)}
@@ -246,105 +252,62 @@ def test_a_background_mask_only_knows_the_tiles_it_was_told_about() -> None:
 # ---- the wire: decoding and validation ---------------------------------------------------------------------------
 
 def _add(collector: MaskTileCollector, *tiles: pb.MaskTile) -> None:
-    collector.add(pb.MaskTiles(tiles=list(tiles)), _tile(0, 0), _same_tile_identity)
+    collector.add(pb.MaskTiles(tiles=list(tiles)))
 
 
-def test_a_duplicate_coord_and_kind_is_refused_but_the_same_coord_in_each_kind_is_not() -> None:
-    fg = pb.MaskTile(coord=_tile(1, 1), kind=FOREGROUND, full=True)
-    bg = pb.MaskTile(coord=_tile(1, 1), kind=BACKGROUND, full=True)
+def test_a_duplicate_cell_and_kind_is_refused_but_the_same_cell_in_each_kind_is_not() -> None:
+    fg = pb.MaskTile(cell=_cell(1, 1), kind=FOREGROUND, full=True)
+    bg = pb.MaskTile(cell=_cell(1, 1), kind=BACKGROUND, full=True)
     _add(MaskTileCollector(2), fg, bg)
     with pytest.raises(ValueError, match="twice"):
         _add(MaskTileCollector(2), fg, fg)
-    collector = MaskTileCollector(1)
+    collector = MaskTileCollector(2)
     _add(collector, bg)
     with pytest.raises(ValueError, match="twice"):
         _add(collector, bg)
 
 
 @pytest.mark.parametrize("bad", [
-    pb.MaskTile(coord=_tile(0, 0), kind=FOREGROUND, png=_png(np.ones((512, 512), bool))),
-    pb.MaskTile(coord=_tile(0, 0), kind=FOREGROUND, png=_png(np.ones((256, 256), bool))),
-    pb.MaskTile(coord=_tile(0, 0), kind=FOREGROUND, png=_png(np.ones((1024, 1024), bool)), scale=4),
-    pb.MaskTile(coord=_tile(0, 0), kind=FOREGROUND, png=_png(np.ones((1024, 1024), bool)), scale=2),
-    pb.MaskTile(coord=_tile(0, 0), kind=FOREGROUND, png=b"not a png"),
-    pb.MaskTile(coord=_tile(0, 0), kind=FOREGROUND, full=True, png=_png(np.ones((1024, 1024), bool))),
+    pb.MaskTile(cell=_cell(0, 0), kind=FOREGROUND, png=_png(np.ones((512, 512), bool))),
+    pb.MaskTile(cell=_cell(0, 0), kind=FOREGROUND, png=_png(np.ones((256, 256), bool))),
+    pb.MaskTile(cell=_cell(0, 0), kind=FOREGROUND, png=_png(np.ones((1024, 1024), bool)), scale=4),
+    pb.MaskTile(cell=_cell(0, 0), kind=FOREGROUND, png=_png(np.ones((1024, 1024), bool)), scale=2),
+    pb.MaskTile(cell=_cell(0, 0), kind=FOREGROUND, png=b"not a png"),
+    pb.MaskTile(cell=_cell(0, 0), kind=FOREGROUND, full=True, png=_png(np.ones((1024, 1024), bool))),
 ])
 def test_a_tile_with_the_wrong_png_size_scale_or_both_full_and_png_is_refused(bad) -> None:
     with pytest.raises(ValueError):
         _add(MaskTileCollector(1), bad)
 
 
-def test_a_tile_at_another_downsample_an_unset_kind_or_too_many_foreground_tiles_is_refused() -> None:
-    other = _tile(0, 0)
-    other.downsample = 2
-    with pytest.raises(ValueError, match="same volume"):
-        _add(MaskTileCollector(1), pb.MaskTile(coord=other, kind=FOREGROUND, full=True))
+def test_an_unset_kind_or_more_tiles_than_announced_is_refused() -> None:
     with pytest.raises(ValueError, match="no kind"):
-        _add(MaskTileCollector(1), pb.MaskTile(coord=_tile(0, 0), full=True))
+        _add(MaskTileCollector(1), pb.MaskTile(cell=_cell(0, 0), full=True))
     with pytest.raises(ValueError, match="announced"):
-        _add(MaskTileCollector(1), pb.MaskTile(coord=_tile(0, 0), kind=FOREGROUND, full=True),
-             pb.MaskTile(coord=_tile(0, 1), kind=FOREGROUND, full=True))
+        _add(MaskTileCollector(1), pb.MaskTile(cell=_cell(0, 0), kind=FOREGROUND, full=True),
+             pb.MaskTile(cell=_cell(0, 1), kind=BACKGROUND, full=True))
 
 
-def test_an_explicitly_empty_tile_is_known_but_has_no_pixels() -> None:
-    collector = MaskTileCollector(1)
-    _add(collector, pb.MaskTile(coord=_tile(0, 0), kind=BACKGROUND), pb.MaskTile(coord=_tile(0, 0), kind=FOREGROUND, full=True))
-    assert collector.background.is_known((0, 0)) and collector.background.empty
-    assert collector.background.unknown_tiles(Cell(0, 0)) == [], "cell (0, 0)'s window is tile (0, 0) alone"
-    assert not collector.background.is_known((0, 1))
-    assert [(t.row, t.col) for t in collector.background.unknown_tiles(Cell(0, 1))] == [(0, 1)]  # tiles (0,0) and (0,1)
+def test_the_count_covers_both_kinds_and_both_bitmaps_are_complete_once_it_is_reached() -> None:
+    collector = MaskTileCollector(2)
+    assert not collector.done
+    _add(collector, pb.MaskTile(cell=_cell(0, 0), kind=BACKGROUND), pb.MaskTile(cell=_cell(0, 0), kind=FOREGROUND, full=True))
+
+    assert collector.done
+    assert collector.background_shape() is None, "an explicitly empty tile holds no pixel"
+    foreground = collector.foreground_shape()
+    assert foreground is not None and foreground.unknown_tiles(Cell(0, 1)) == [], "a tile not sent is empty"
 
 
-def test_the_foreground_role_stays_in_the_feature_and_the_click_comes_from_the_tiles() -> None:
-    collector = collector_for([pb.MaskTile(coord=_tile(1, 2), kind=FOREGROUND, full=True)])
-    request = pb.SegmentTilesRequest(foreground_feature=pb.Feature(mask_role=pb.MASK_ROLE_CORRECTION))
-
-    prompts = _prompts_from(request, collector)
-
-    assert prompts.masks[0].role == "correction"
-    assert prompts.foreground == [(2 * 1024 + 512, 1024 + 512)]
+def test_the_collector_is_done_at_once_for_a_zero_count() -> None:
+    assert MaskTileCollector(0).done and not MaskTileCollector(3).done
 
 
 # ---- on the stream -----------------------------------------------------------------------------------------------
 
-class Client:
-    """A scripted client: what it sends after ``start``, and how it answers ``needed``."""
-
-    def __init__(self, background_truth: Optional[Tuple[np.ndarray, int, int]] = None, answer_masks: bool = True,
-                 unavailable_masks: bool = False, answer_images: bool = True) -> None:
-        self.background_truth = background_truth
-        self.answer_masks = answer_masks
-        self.unavailable_masks = unavailable_masks
-        self.answer_images = answer_images
-        self.asked_masks: List[Tuple[int, int]] = []
-        self.asked_images: List[Tuple[int, int]] = []
-
-    def replies(self, needed: pb.TilesNeeded) -> List[pb.SegmentTilesStreamRequest]:
-        self.asked_masks += [(c.row, c.col) for c in needed.masks]
-        self.asked_images += [(c.row, c.col) for c in needed.tiles]
-        out: List[pb.SegmentTilesStreamRequest] = []
-        answer = pb.TilesAnswer(unavailable=list(needed.tiles) if self.answer_images else [])
-        if self.answer_masks and needed.masks:
-            if self.unavailable_masks:
-                answer.masks_unavailable.extend(needed.masks)
-            else:
-                tiles = []
-                for coord in needed.masks:
-                    if self.background_truth is None:
-                        tiles.append(pb.MaskTile(coord=coord, kind=BACKGROUND))
-                    else:
-                        truth, x0, y0 = self.background_truth
-                        tiles.append(_one_tile(truth, x0, y0, coord.row, coord.col, BACKGROUND))
-                out.append(pb.SegmentTilesStreamRequest(mask_tiles=pb.MaskTiles(tiles=tiles)))
-        if self.answer_images or needed.masks:
-            out.append(pb.SegmentTilesStreamRequest(answer=answer))
-        return out
-
-
 async def _stream(servicer, request: pb.SegmentTilesRequest, after_start: Sequence[pb.MaskTiles] = (), context=None,
-                  client: Optional[Client] = None, close: bool = False) -> List[pb.SegmentTilesStreamResponse]:
-    """Send ``start`` then ``after_start``; answer each ``needed`` as ``client`` does. The call stays open unless ``close``."""
-    client = client or Client()
+                  close: bool = False) -> List[pb.SegmentTilesStreamResponse]:
+    """Send ``start`` then ``after_start``; answer each ``needed`` with every tile unavailable. Open unless ``close``."""
     inbox: asyncio.Queue = asyncio.Queue()
     await inbox.put(pb.SegmentTilesStreamRequest(start=request))
     for message in after_start:
@@ -363,8 +326,7 @@ async def _stream(servicer, request: pb.SegmentTilesRequest, after_start: Sequen
     async for update in servicer.SegmentTilesStream(incoming(), context or _context()):
         updates.append(update)
         if update.WhichOneof("update") == "needed":
-            for reply in client.replies(update.needed):
-                await inbox.put(reply)
+            await inbox.put(pb.SegmentTilesStreamRequest(answer=all_unavailable(update.needed)))
     return updates
 
 
@@ -373,15 +335,15 @@ def _aborted_with(context: AsyncMock) -> Optional[grpc.StatusCode]:
 
 
 def _announce(count: int, **fields) -> pb.SegmentTilesRequest:
-    return pb.SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_mask_tile_count=count, **fields)
+    return start(mask_tile_count=count, **fields)
 
 
 def _fg(row: int, col: int) -> pb.MaskTiles:
-    return pb.MaskTiles(tiles=[pb.MaskTile(coord=_tile(row, col), kind=FOREGROUND, full=True)])
+    return pb.MaskTiles(tiles=[pb.MaskTile(cell=_cell(row, col), kind=FOREGROUND, full=True)])
 
 
 @pytest.mark.asyncio
-async def test_an_announced_foreground_count_that_is_never_completed_times_out() -> None:
+async def test_an_announced_count_that_is_never_completed_times_out() -> None:
     cache = _cache()
     await _upload(cache, 0, 0)
     servicer = _servicer(cache)
@@ -396,12 +358,12 @@ async def test_an_announced_foreground_count_that_is_never_completed_times_out()
 
 @pytest.mark.asyncio
 async def test_a_duplicate_tile_more_tiles_than_announced_and_a_stream_that_ends_early_are_refused() -> None:
-    tile = pb.MaskTile(coord=_tile(0, 0), kind=FOREGROUND, full=True)
+    tile = pb.MaskTile(cell=_cell(0, 0), kind=FOREGROUND, full=True)
     cases = [
         (_announce(2), [pb.MaskTiles(tiles=[tile, tile])], False),
-        (_announce(1), [pb.MaskTiles(tiles=[tile, pb.MaskTile(coord=_tile(0, 1), kind=FOREGROUND, full=True)])], False),
+        (_announce(1), [pb.MaskTiles(tiles=[tile, pb.MaskTile(cell=_cell(0, 1), kind=FOREGROUND, full=True)])], False),
         (_announce(2), [pb.MaskTiles(tiles=[tile])], True),
-        (_announce(1), [pb.MaskTiles(tiles=[pb.MaskTile(coord=_tile(0, 0), kind=FOREGROUND, png=b"junk")])], False),
+        (_announce(1), [pb.MaskTiles(tiles=[pb.MaskTile(cell=_cell(0, 0), kind=FOREGROUND, png=b"junk")])], False),
     ]
     for request, messages, close in cases:
         cache = _cache()
@@ -412,7 +374,7 @@ async def test_a_duplicate_tile_more_tiles_than_announced_and_a_stream_that_ends
 
 
 @pytest.mark.asyncio
-async def test_more_foreground_tiles_than_the_limit_are_refused_before_any_is_read() -> None:
+async def test_more_mask_tiles_than_the_limit_are_refused_before_any_is_read() -> None:
     cache = _cache()
     await _upload(cache, 0, 0)
     servicer = _servicer(cache)
@@ -425,167 +387,53 @@ async def test_more_foreground_tiles_than_the_limit_are_refused_before_any_is_re
 
 
 @pytest.mark.asyncio
-async def test_the_server_asks_for_the_background_of_a_window_even_when_its_image_is_cached() -> None:
-    """The start window's image is uploaded and cached, yet its background mask tile is still asked for, once."""
+async def test_a_mask_tile_after_the_announced_count_is_a_protocol_error() -> None:
     cache = _cache()
     await _upload(cache, 0, 0)
-    servicer = _servicer(cache)
-    context = _context()
-    client = Client()
-
-    updates = await asyncio.wait_for(_stream(servicer, _announce(1), [_fg(0, 0)], context, client), timeout=30)
-
-    context.abort.assert_not_awaited()
-    assert updates[-1].WhichOneof("update") == "result"
-    first = next(u.needed for u in updates if u.WhichOneof("update") == "needed")
-    assert (0, 0) in {(c.row, c.col) for c in first.masks}, "the cached tile's background mask is asked for"
-    assert (0, 0) not in {(c.row, c.col) for c in first.tiles}, "and its cached image is not"
-    assert {(c.row, c.col) for c in first.tiles} <= {(c.row, c.col) for c in first.masks}, "other windows' images come in the same round"
-    assert len(client.asked_masks) == len(set(client.asked_masks)), "a tile is asked for once"
-
-
-@pytest.mark.asyncio
-async def test_a_neighbour_spanning_20_tiles_is_asked_for_only_where_the_walk_enters() -> None:
-    cache = _cache()
-    await _upload(cache, 0, 0)
-    servicer = _servicer(cache)
-    servicer.model.predict_tile.return_value = (np.ones((4, 4), dtype=np.bool_), None, 0.8)
-    neighbour = np.ones((4 * TILE_SIZE, 5 * TILE_SIZE), dtype=bool)  # tiles rows 0..3, cols 0..4: 20 tiles
-    client = Client(background_truth=(neighbour, 0, 0))
-
-    updates = await asyncio.wait_for(
-        _stream(servicer, _announce(1), [_fg(0, 0)], _context(), client), timeout=30
-    )
-
-    assert updates[-1].WhichOneof("update") == "result"
-    region = {(r, c) for r in range(4) for c in range(5)}
-    assert (0, 0) in client.asked_masks
-    assert len(set(client.asked_masks) & region) < 20, "the walk did not enter every tile the neighbour spans"
-    assert len(client.asked_masks) == len(set(client.asked_masks))
-
-
-@pytest.mark.asyncio
-async def test_background_tiles_sent_early_are_not_asked_for_again() -> None:
-    cache = _cache()
-    await _upload(cache, 0, 0)
-    servicer = _servicer(cache)
-    client = Client()
-    early = pb.MaskTiles(tiles=[pb.MaskTile(coord=_tile(0, 0), kind=BACKGROUND)])
-
-    updates = await asyncio.wait_for(_stream(servicer, _announce(1), [_fg(0, 0), early], _context(), client), timeout=30)
-
-    assert updates[-1].WhichOneof("update") == "result"
-    assert (0, 0) not in client.asked_masks
-
-
-@pytest.mark.asyncio
-async def test_a_mask_request_nobody_answers_times_out() -> None:
-    cache = _cache()
-    await _upload(cache, 0, 0)
-    servicer = _servicer(cache)
-    servicer._tile_answer_timeout = 0.3
+    servicer = _servicer(cache, mask=np.ones((4, 4), dtype=np.bool_))
     context = _context()
 
-    updates = await asyncio.wait_for(
-        _stream(servicer, _announce(1), [_fg(0, 0)], context, Client(answer_masks=False, answer_images=False)), timeout=10
-    )
-
-    assert _aborted_with(context) == grpc.StatusCode.DEADLINE_EXCEEDED
-    assert updates and updates[-1].WhichOneof("update") == "needed"
-
-
-@pytest.mark.asyncio
-async def test_background_tiles_the_client_cannot_supply_are_treated_as_having_no_neighbours() -> None:
-    cache = _cache()
-    await _upload(cache, 0, 0)
-    servicer = _servicer(cache)
-    context = _context()
-
-    updates = await asyncio.wait_for(
-        _stream(servicer, _announce(1), [_fg(0, 0)], context, Client(unavailable_masks=True)), timeout=30
-    )
-
-    context.abort.assert_not_awaited()
-    assert updates[-1].WhichOneof("update") == "result"
-
-
-@pytest.mark.asyncio
-async def test_a_foreground_tile_after_the_announced_count_is_a_protocol_error() -> None:
-    cache = _cache()
-    await _upload(cache, 0, 0)
-    servicer = _servicer(cache)
-    context = _context()
-    late = Client()
-    original = late.replies
-
-    def with_extra(needed):
-        return [pb.SegmentTilesStreamRequest(mask_tiles=_fg(5, 5))] + original(needed)
-
-    late.replies = with_extra  # type: ignore[method-assign]
-
-    await asyncio.wait_for(_stream(servicer, _announce(1), [_fg(0, 0)], context, late), timeout=30)
+    # The count is reached with the first message; the second arrives while the server waits for an answer.
+    await asyncio.wait_for(_stream(servicer, _announce(1, points=[(10, 10)]), [_fg(0, 0), _fg(5, 5)], context), timeout=30)
 
     assert _aborted_with(context) == grpc.StatusCode.INVALID_ARGUMENT
 
 
-# ---- a soma-sized mask, end to end through the walk with a fake predictor ----------------------------------------
+@pytest.mark.asyncio
+async def test_a_bitmap_only_request_starts_from_a_pixel_of_the_bitmap() -> None:
+    cache = _cache()
+    await _upload(cache, 0, 0)
+    servicer = _servicer(cache)
+    context = _context()
+    seed, x0, y0 = disc_truth(512, 512, 100)
 
-def test_a_soma_sized_correction_mask_about_4000_px_across_completes_with_every_mask_pixel_returned(monkeypatch) -> None:
-    monkeypatch.setattr(cell_world, "DOMAIN", 6144)
-    radius = 1950
-    cx = cy = 3072
-    yy, xx = np.mgrid[-radius:radius + 1, -radius:radius + 1]
-    corrected = xx**2 + yy**2 <= (radius - 40) ** 2  # the user's correction is a little smaller than the truth
-    tiles = mask_tiles_for(corrected, cx - radius, cy - radius, scale=LOGIT_SCALE)
-    assert len(tiles) >= 12  # spans the 4x4 grid apart from perhaps its corners
-    collector = collector_for(tiles)
-    prompts = _prompts_from(
-        pb.SegmentTilesRequest(foreground_feature=pb.Feature(mask_role=pb.MASK_ROLE_CORRECTION)), collector
+    updates = await asyncio.wait_for(
+        _stream(servicer, _announce(1), [pb.MaskTiles(tiles=mask_tiles_for(seed, x0, y0))], context), timeout=30
     )
-    shape = prompts.masks[0]
-    assert shape.role == "correction" and shape.box[2] - shape.box[0] > 3800
-    background = prompts.background_masks[0]
 
-    world = World(ellipse(cx, cy, radius, radius, 0.0))
-    walk = GrowthWalk(prompts.foreground, [], world.predict, masks=[shape], background_masks=[background])
-    asked: Set[Tuple[int, int]] = set()
-    while True:
-        walk.advance()
-        wanted = walk.take_requested_masks()
-        if not wanted:
-            break
-        for tile in wanted:
-            assert (tile.row, tile.col) not in asked, "a background tile is asked for once"
-            asked.add((tile.row, tile.col))
-            background.settle((tile.row, tile.col), None)  # no neighbours anywhere
-        walk.resume()
-    answer = world.to_truth_frame(walk.result())
+    context.abort.assert_not_awaited()
+    assert updates[-1].WhichOneof("update") == "result"
+    points = servicer.model.predict_tile.call_args.args[1]
+    assert len(points) == 1 and abs(points[0][0] - 512) <= 1 and abs(points[0][1] - (1023 - 512)) <= 1
 
-    covered = shape.region(*shape.box)
-    x0, y0, x1, y1 = shape.box
-    assert answer[y0:y1 + 1, x0:x1 + 1][covered].all(), "every pixel of the mask is object"
-    assert answer[cy, cx] and asked, "and the walk asked for background tiles as it entered windows"
-
-
-# ---- click-only requests ---------------------------------------------------------------------------------------------
 
 def _clicked(**fields) -> pb.SegmentTilesRequest:
-    """A click-only request inside tile (0, 0), as the new client sends it: no foreground mask."""
-    return pb.SegmentTilesRequest(
-        tiles=[_tile(0, 0)], foreground_feature=pb.Feature(points=[pb.Point(x=300, y=600)]), **fields
-    )
+    """A click-only request inside tile (0, 0): its model answers a 256 x 256 block of window (0, 0)."""
+    return start([(300, 600)], **fields)
 
 
 def _result_pixels(updates: List[pb.SegmentTilesStreamResponse]) -> int:
-    assert updates and updates[-1].WhichOneof("update") == "result"
-    return sum(
-        int(np.count_nonzero(cv2.imdecode(np.frombuffer(segment.mask, np.uint8), cv2.IMREAD_GRAYSCALE)))
-        for segment in updates[-1].result.segments
-    )
+    """Pixels above the default threshold in every segment, at the logit grid's resolution."""
+    response = _result(updates)
+    total = 0
+    for segment in response.segments:
+        logits = np.frombuffer(segment.logits, dtype="<f2").reshape(segment.logits_size.height, segment.logits_size.width)
+        total += int(np.count_nonzero(logits > 1.0)) * int(segment.logits_scale) ** 2
+    return total
 
 
 @pytest.mark.asyncio
-async def test_a_click_only_request_with_a_zero_count_and_early_background_tiles_completes_and_clears_the_neighbours() -> None:
+async def test_a_background_bitmap_sent_with_start_clears_the_neighbours_pixels() -> None:
     cache = _cache()
     await _upload(cache, 0, 0)
     servicer = _servicer(cache)  # its model answers a 256 x 256 block in the window: x 256..511, y 512..767
@@ -596,74 +444,53 @@ async def test_a_click_only_request_with_a_zero_count_and_early_background_tiles
     await _upload(cache, 0, 0)
     servicer = _servicer(cache)
     neighbour = np.ones((TILE_SIZE, 128), dtype=bool)  # x 256..383 over the whole tile: the left half of the answer
-    early = pb.MaskTiles(tiles=[_one_tile(neighbour, 256, 0, 0, 0, BACKGROUND)])
+    bitmap = pb.MaskTiles(tiles=[_one_tile(neighbour, 256, 0, 0, 0, BACKGROUND)])
     context = _context()
-    client = Client()
 
-    updates = await asyncio.wait_for(
-        _stream(servicer, _clicked(foreground_mask_tile_count=0), [early], context, client), timeout=30
-    )
+    updates = await asyncio.wait_for(_stream(servicer, _clicked(mask_tile_count=1), [bitmap], context), timeout=30)
 
     context.abort.assert_not_awaited()
-    assert (0, 0) not in client.asked_masks, "sent early, so not asked for"
+    asked = {(c.row, c.col) for u in updates if u.WhichOneof("update") == "needed" for c in u.needed.background_cells}
+    assert (0, 0) not in asked, "the request's own tile is never asked about"
     assert _result_pixels(updates) == 256 * 128, "the neighbour's pixels are cleared from the result"
 
 
-@pytest.mark.asyncio
-async def test_a_zero_count_still_gets_the_background_asked_for_on_demand() -> None:
-    cache = _cache()
-    await _upload(cache, 0, 0)
-    servicer = _servicer(cache)
-    client = Client()
+# ---- a soma-sized mask, end to end through the walk with a fake predictor ----------------------------------------
 
-    updates = await asyncio.wait_for(_stream(servicer, _clicked(foreground_mask_tile_count=0), [], _context(), client), timeout=30)
+def test_a_soma_sized_bitmap_about_4000_px_across_completes_with_every_mask_pixel_returned(monkeypatch) -> None:
+    monkeypatch.setattr(cell_world, "DOMAIN", 6144)
+    radius = 1950
+    cx = cy = 3072
+    yy, xx = np.mgrid[-radius:radius + 1, -radius:radius + 1]
+    painted = xx**2 + yy**2 <= (radius - 40) ** 2  # the user's bitmap is a little smaller than the truth
+    tiles = mask_tiles_for(painted, cx - radius, cy - radius, scale=LOGIT_SCALE)
+    assert len(tiles) >= 12  # spans the 4x4 grid apart from perhaps its corners
+    shape = shape_from(tiles)
+    assert shape.box[2] - shape.box[0] > 3800
+    background = BackgroundPrompt(covered=[(2, 2)])
 
-    assert updates[-1].WhichOneof("update") == "result" and (0, 0) in client.asked_masks
-
-
-def test_the_collector_is_done_at_once_for_a_zero_count() -> None:
-    assert MaskTileCollector(0).foreground_done and not MaskTileCollector(3).foreground_done
-
-
-def test_a_click_only_request_uses_the_tiled_background_and_the_clicks() -> None:
-    collector = MaskTileCollector(0)
-    request = pb.SegmentTilesRequest(foreground_feature=pb.Feature(points=[pb.Point(x=5, y=6)]))
-    prompts = _prompts_from(request, collector)
-    assert prompts.masks == [] and prompts.background_masks == [collector.background] and prompts.foreground == [(5, 6)]
-
-
-@pytest.mark.asyncio
-async def test_a_request_with_no_foreground_at_all_is_invalid_argument() -> None:
-    cache = _cache()
-    await _upload(cache, 0, 0)
-    servicer = _servicer(cache)
-    context = _context()
-    request = pb.SegmentTilesRequest(
-        tiles=[_tile(0, 0)], background_feature=pb.Feature(points=[pb.Point(x=300, y=600)])
+    world = World(ellipse(cx, cy, radius, radius, 0.0))
+    walk = GrowthWalk(
+        [shape.interior_point()], [], world.predict, masks=[shape],
+        background_masks=background.regions, background_coverage=background.unknown_tiles,
     )
+    asked: Set[Tuple[int, int]] = set()
+    while True:
+        walk.advance()
+        wanted = walk.take_requested_background()
+        if not wanted:
+            break
+        for tile in wanted:
+            assert (tile.row, tile.col) not in asked, "a cell's background is asked for once"
+            asked.add((tile.row, tile.col))
+        background.cover(asked)  # no neighbours anywhere
+        walk.resume()
+    answer = world.to_truth_frame(walk.result())
 
-    updates = await asyncio.wait_for(_stream(servicer, request, [], context), timeout=30)
-
-    assert updates == [] and _aborted_with(context) == grpc.StatusCode.INVALID_ARGUMENT
-    servicer.model.predict_tile.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_a_rectangle_only_foreground_starts_the_walk_from_its_centre() -> None:
-    cache = _cache()
-    await _upload(cache, 0, 0)
-    servicer = _servicer(cache)
-    context = _context()
-    request = pb.SegmentTilesRequest(
-        tiles=[_tile(0, 0)],
-        foreground_feature=pb.Feature(rectangles=[pb.BoundingBox(x_min=260, y_min=520, x_max=500, y_max=760)]),
-    )
-
-    updates = await asyncio.wait_for(_stream(servicer, request, [], context, Client()), timeout=30)
-
-    context.abort.assert_not_awaited()
-    assert updates[-1].WhichOneof("update") == "result"
-    assert servicer.model.predict_tile.call_args.args[5] is not None, "the rectangle is the box prompt"
+    covered = shape.region(*shape.box)
+    x0, y0, x1, y1 = shape.box
+    assert answer[y0:y1 + 1, x0:x1 + 1][covered].all(), "every pixel of the mask is object"
+    assert answer[cy, cx] and asked, "and the walk asked for background as it entered windows"
 
 
 # ---- a budget that stops the walk ----------------------------------------------------------------------------------
@@ -672,8 +499,8 @@ def test_a_walk_stopped_by_max_cells_logs_the_mask_boundary_cores_it_never_predi
     import logging
 
     radius = 700
-    corrected, x0, y0 = disc_truth(2048, 2048, radius)
-    shape = shape_from(mask_tiles_for(corrected, x0, y0))
+    painted, x0, y0 = disc_truth(2048, 2048, radius)
+    shape = shape_from(mask_tiles_for(painted, x0, y0))
     background = background_from([])
     world = World(ellipse(2048, 2048, radius + 150, radius + 150, 0.0))
     walk = GrowthWalk([shape.interior_point()], [], world.predict, masks=[shape], background_masks=[background], max_cells=2)

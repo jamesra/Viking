@@ -4,6 +4,8 @@ using System.Collections.ObjectModel;
 using System.Text;
 using Geometry;
 using Viking.AnnotationServiceTypes.Interfaces;
+using CoordinateSpace = Viking.gRPC.Geometry.V1.CoordinateSpace;
+using Shape = Viking.gRPC.Geometry.V1.Shape;
 
 namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
 {
@@ -22,11 +24,61 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
 
         long ILocation.SectionNumber { get => this.Section; set => Section = value; }
         string ILocation.TagsXml { get => this.Attributes; set => this.Attributes = value;}
-        LocationType ILocation.TypeCode { get => (LocationType)(int)this.TypeCode; set => TypeCode = (Viking.AnnotationServiceTypes.gRPC.V1.Protos.AnnotationType)(int)value;}
+        /// <summary>The type the mosaic shape encodes (the volume shape when there is no mosaic shape). Setting it
+        /// re-encodes both shapes as the new type.</summary>
+        LocationType ILocation.TypeCode
+        {
+            get => (MosaicGeometry ?? VolumeGeometry)?.LocationTypeOf() ?? LocationType.POINT;
+            set
+            {
+                double? width = MosaicGeometry.WidthOf();
+                MosaicGeometry = MosaicGeometry.ToShape2D().ToShape(value, CoordinateSpace.Mosaic, width);
+                VolumeGeometry = VolumeGeometry.ToShape2D().ToShape(value, CoordinateSpace.Volume, width);
+            }
+        }
 
-        Vector3 ILocation.VolumePosition { get => this.VolumePosition; }
+        Vector3 ILocation.VolumePosition { get => ToVector3(this.VolumePosition); }
 
-        Vector3 ILocation.MosaicPosition { get => this.MosaicPosition; }
+        Vector3 ILocation.MosaicPosition { get => ToVector3(this.MosaicPosition); }
+
+        /// <summary>True for a closed line (a closed curve).</summary>
+        bool ILocation.Closed => MosaicGeometry?.KindCase == Shape.KindOneofCase.Line && MosaicGeometry.Line.Closed;
+
+        /// <summary>
+        /// The mosaic radius as the database computes it: a circle's radius, 0 for a point, half the length of a line,
+        /// and the radius of the circle of equal area for a polygon.
+        /// </summary>
+        double ILocation.Radius
+        {
+            get
+            {
+                switch (MosaicGeometry?.ToShape2D())
+                {
+                    case ICircle2D circle:
+                        return circle.Radius;
+                    case IPolyLine2D line:
+                        return line.Length / 2.0;
+                    case ILineSegment2D segment:
+                        return segment.Length / 2.0;
+                    case IPolygon2D polygon:
+                        return Math.Sqrt(polygon.Area / Math.PI);
+                    default:
+                        return 0;
+                }
+            }
+        }
+
+        /// <summary>The mosaic line width; null for shapes other than lines. Setting it on a line sets both shapes'
+        /// width in mosaic (the volume width is not stored).</summary>
+        double? ILocation.Width
+        {
+            get => MosaicGeometry.WidthOf();
+            set
+            {
+                if (MosaicGeometry?.KindCase == Shape.KindOneofCase.Line)
+                    MosaicGeometry.Line.Width = value ?? 0;
+            }
+        }
 
         DateTime ILocation.Created { get => Created.ToDateTime(); }
 
@@ -41,35 +93,37 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
 
         string ILocation.MosaicGeometryWKT
         {
-            get => ToWKT(MosaicShape) ?? this.ToMosaicCircleWKT();
-            set => this.MosaicShape.Text = value;
+            get => ToWKT(MosaicGeometry);
+            set => MosaicGeometry = FromWKT(value, ((ILocation)this).TypeCode, CoordinateSpace.Mosaic, MosaicGeometry.WidthOf());
         }
 
-        string ILocation.VolumeGeometryWKT { get => ToWKT(VolumeShape) ?? this.ToVolumeCircleWKT(); set => this.VolumeShape.Text = value; }
-
-        private string ToWKT(Geometry g)
+        string ILocation.VolumeGeometryWKT
         {
-            switch (g.EncodingCase)
-            {
-                case Geometry.EncodingOneofCase.None:
-                    return null;
-                case Geometry.EncodingOneofCase.Text:
-                    return g.Text;
-                case Geometry.EncodingOneofCase.Binary:
-                {
-                    var r = new NetTopologySuite.IO.WKBReader();
-                    var rdr = new NetTopologySuite.IO.WKBReader
-                    {
-                        HandleOrdinates = NetTopologySuite.Geometries.Ordinates.AllOrdinates,
-                        HandleSRID = false
-                    };
+            get => ToWKT(VolumeGeometry);
+            set => VolumeGeometry = FromWKT(value, ((ILocation)this).TypeCode, CoordinateSpace.Volume, MosaicGeometry.WidthOf());
+        }
 
-                    var ptAUR = rdr.Read(g.Binary.ToByteArray());
-                    return ptAUR.ToText();
-                }
-            }
+        private static Vector3 ToVector3(Viking.gRPC.Geometry.V1.Vector2 p) => p == null ? default : new Vector3(p.X, p.Y, 0);
 
-            throw new NotImplementedException("Unexpected geometry encoding");
+        /// <summary>SQL Server WKT of a shape; circles as the CURVEPOLYGON (CIRCULARSTRING ...) Viking stores.</summary>
+        private static string ToWKT(Shape shape)
+        {
+            if (shape == null || shape.KindCase == Shape.KindOneofCase.None)
+                return null;
+
+            if (shape.KindCase == Shape.KindOneofCase.Circle)
+                return GeometryExtensions.ToCircleWKT(shape.Circle.Center?.X ?? 0, shape.Circle.Center?.Y ?? 0, shape.Circle.Radius);
+
+            return shape.ToShape2D().ToWKT();
+        }
+
+        private static Shape FromWKT(string wkt, LocationType type, CoordinateSpace space, double? width)
+        {
+            if (string.IsNullOrWhiteSpace(wkt))
+                return null;
+
+            // ParseWKT reads a circle's CURVEPOLYGON only without the CIRCULARSTRING keyword.
+            return wkt.Replace("CIRCULARSTRING", string.Empty).ParseWKT().ToShape(type, space, width);
         }
 
         bool IEquatable<ILocation>.Equals(ILocation other)

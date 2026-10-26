@@ -15,35 +15,21 @@ namespace WebAnnotation.UI.AutoPolygonize
     /// </summary>
     internal readonly struct AutoPolygonizeUploadContext
     {
-        public AutoPolygonizeUploadContext(ulong imageId, double downsample, Rectangle worldBounds, int width, int height)
+        public AutoPolygonizeUploadContext(double downsample, Rectangle worldBounds, int width, int height)
         {
-            ImageId = imageId;
             Downsample = downsample;
             WorldBounds = worldBounds;
             Width = width;
             Height = height;
         }
 
-        public ulong ImageId { get; }
         public double Downsample { get; }
         public Rectangle WorldBounds { get; }
         public int Width { get; }
         public int Height { get; }
 
-        /// <summary>False when width/height were never recorded. ImageId may be 0 in tiled mode.</summary>
+        /// <summary>False when width/height were never recorded.</summary>
         public bool IsUsable => Width > 0 && Height > 0;
-
-        /// <summary>
-        /// True when this upload was recorded at the tile pyramid level that
-        /// <paramref name="liveCameraDownsample"/> resolves to for segment/upload.
-        /// </summary>
-        public bool MatchesSubmittedTileDownsample(double liveCameraDownsample)
-        {
-            if (!IsUsable)
-                return false;
-
-            return SegmentationViewportSession.StoredTileLevelMatchesLiveCamera(Downsample, liveCameraDownsample);
-        }
 
         /// <summary>
         /// True when this upload matches the live view: same resolved tile level and world bounds within 1%.
@@ -62,26 +48,21 @@ namespace WebAnnotation.UI.AutoPolygonize
     }
 
     /// <summary>
-    /// Section-keyed skip/dismiss state plus the SAM2 image lease used to produce each proposal.
+    /// Section-keyed skip/dismiss state plus the SAM2 viewport each proposal was produced from.
     /// Subscribes to <see cref="LocationObj"/> while the ID is cached so a geometry commit can
-    /// drop the LastModified skip without losing the upload context. DeleteImage runs only when
-    /// the last hold on an image id is released.
+    /// drop the LastModified skip without losing the upload context.
     /// </summary>
     internal sealed class AutoPolygonizeCache
     {
         private readonly object gate = new();
         private readonly Dictionary<long, Entry> entries = [];
         private readonly Dictionary<int, HashSet<long>> idsBySection = [];
-        private readonly Dictionary<ulong, int> imageHolds = [];
 
         /// <summary>Skip and overlay should drop; upload context is still on the entry. UI thread typical.</summary>
         public event Action<long, int, int>? GeometryInvalidated;
 
         /// <summary>Entry was fully removed (TypeCode, delete, ClearSection). Drop overlay if any.</summary>
         public event Action<long>? LocationForgotten;
-
-        /// <summary>Last hold released. Controller should DeleteImage this id.</summary>
-        public event Action<ulong>? ImageLeaseReleased;
 
         private sealed class Entry
         {
@@ -143,7 +124,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Records a published proposal so the same LastModified is not segmented again.
-        /// Subscribes when <paramref name="location"/> is provided. Replaces the image lease when upload changes.
+        /// Subscribes when <paramref name="location"/> is provided. Replaces the upload context when one is given.
         /// <paramref name="completedDownsample"/> is stored so a later camera change that
         /// resolves to a different tile pyramid level can re-queue. The current ceiling is 1.
         /// </summary>
@@ -156,7 +137,6 @@ namespace WebAnnotation.UI.AutoPolygonize
             AutoPolygonizeUploadContext? upload = null,
             double completedDownsample = 0)
         {
-            List<ulong> released = [];
             lock (gate)
             {
                 Entry entry = GetOrAddEntryUnlocked(locationId, sectionNumber);
@@ -165,10 +145,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                 entry.ProposalTypeCode = typeCode;
                 entry.ProposalDownsample = CompletedDownsample(completedDownsample, upload);
                 AttachLocationUnlocked(entry, location);
-                SetUploadUnlocked(entry, upload, released);
+                SetUploadUnlocked(entry, upload);
             }
-
-            RaiseReleased(released);
         }
 
         /// <summary>
@@ -251,18 +229,13 @@ namespace WebAnnotation.UI.AutoPolygonize
             LocationObj? location,
             AutoPolygonizeUploadContext? upload)
         {
-            List<ulong> released = [];
-            int generation;
             lock (gate)
             {
                 Entry entry = GetOrAddEntryUnlocked(locationId, sectionNumber);
                 AttachLocationUnlocked(entry, location);
-                SetUploadUnlocked(entry, upload, released);
-                generation = entry.Generation;
+                SetUploadUnlocked(entry, upload);
+                return entry.Generation;
             }
-
-            RaiseReleased(released);
-            return generation;
         }
 
         public bool IsGenerationCurrent(long locationId, int generation)
@@ -288,58 +261,24 @@ namespace WebAnnotation.UI.AutoPolygonize
             return false;
         }
 
-        /// <summary>Batch hold so FinishProcessBatch does not delete while entries still reference the id.</summary>
-        public void AcquireBatchHold(ulong imageId)
-        {
-            if (imageId == 0)
-                return;
-
-            lock (gate)
-            {
-                AddHoldUnlocked(imageId);
-            }
-        }
-
-        public void ReleaseBatchHold(ulong imageId)
-        {
-            List<ulong> released = [];
-            lock (gate)
-            {
-                ReleaseHoldUnlocked(imageId, released);
-            }
-
-            RaiseReleased(released);
-        }
-
-        public bool IsImageHeld(ulong imageId)
-        {
-            lock (gate)
-            {
-                return imageHolds.TryGetValue(imageId, out int holds) && holds > 0;
-            }
-        }
-
         /// <summary>
-        /// Drops skip, dismiss, subscription, and this entry's image hold. Used for delete, accept, and TypeCode.
+        /// Drops skip, dismiss, subscription, and upload context. Used for delete, accept, and TypeCode.
         /// </summary>
         public void Remove(long locationId)
         {
-            List<ulong> released = [];
-            bool forgotten = false;
+            bool forgotten;
             lock (gate)
             {
-                forgotten = RemoveEntryUnlocked(locationId, released);
+                forgotten = RemoveEntryUnlocked(locationId);
             }
 
-            RaiseReleased(released);
             if (forgotten)
                 LocationForgotten?.Invoke(locationId);
         }
 
-        /// <summary>Unsubscribes and releases every entry on that Z. Called when SectionAnnotationsView is evicted.</summary>
+        /// <summary>Unsubscribes and drops every entry on that Z. Called when SectionAnnotationsView is evicted.</summary>
         public void ClearSection(int sectionNumber)
         {
-            List<ulong> released = [];
             List<long> forgotten = [];
             lock (gate)
             {
@@ -348,30 +287,27 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 foreach (long locationId in ids.ToArray())
                 {
-                    if (RemoveEntryUnlocked(locationId, released))
+                    if (RemoveEntryUnlocked(locationId))
                         forgotten.Add(locationId);
                 }
             }
 
-            RaiseReleased(released);
             foreach (long locationId in forgotten)
                 LocationForgotten?.Invoke(locationId);
         }
 
         public void Clear()
         {
-            List<ulong> released = [];
             List<long> forgotten = [];
             lock (gate)
             {
                 foreach (long locationId in entries.Keys.ToArray())
                 {
-                    if (RemoveEntryUnlocked(locationId, released))
+                    if (RemoveEntryUnlocked(locationId))
                         forgotten.Add(locationId);
                 }
             }
 
-            RaiseReleased(released);
             foreach (long locationId in forgotten)
                 LocationForgotten?.Invoke(locationId);
         }
@@ -495,15 +431,12 @@ namespace WebAnnotation.UI.AutoPolygonize
             return false;
         }
 
-        private bool RemoveEntryUnlocked(long locationId, List<ulong> released)
+        private bool RemoveEntryUnlocked(long locationId)
         {
             if (!entries.TryGetValue(locationId, out Entry entry))
                 return false;
 
             DetachLocationUnlocked(entry, entry.Location);
-            if (entry.Upload.HasValue)
-                ReleaseHoldUnlocked(entry.Upload.Value.ImageId, released);
-
             entries.Remove(locationId);
             RemoveFromSectionUnlocked(entry.SectionNumber, locationId);
             return true;
@@ -532,48 +465,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                 entry.Location = null;
         }
 
-        private void SetUploadUnlocked(Entry entry, AutoPolygonizeUploadContext? upload, List<ulong> released)
+        private static void SetUploadUnlocked(Entry entry, AutoPolygonizeUploadContext? upload)
         {
-            if (!upload.HasValue || !upload.Value.IsUsable)
-                return;
-
-            AutoPolygonizeUploadContext next = upload.Value;
-            if (entry.Upload.HasValue && entry.Upload.Value.ImageId == next.ImageId)
-            {
+            if (upload is { IsUsable: true } next)
                 entry.Upload = next;
-                return;
-            }
-
-            if (entry.Upload.HasValue)
-                ReleaseHoldUnlocked(entry.Upload.Value.ImageId, released);
-
-            entry.Upload = next;
-            AddHoldUnlocked(next.ImageId);
-        }
-
-        private void AddHoldUnlocked(ulong imageId)
-        {
-            if (imageId == 0)
-                return;
-
-            imageHolds.TryGetValue(imageId, out int holds);
-            imageHolds[imageId] = holds + 1;
-        }
-
-        private void ReleaseHoldUnlocked(ulong imageId, List<ulong> released)
-        {
-            if (imageId == 0 || !imageHolds.TryGetValue(imageId, out int holds))
-                return;
-
-            holds--;
-            if (holds > 0)
-            {
-                imageHolds[imageId] = holds;
-                return;
-            }
-
-            imageHolds.Remove(imageId);
-            released.Add(imageId);
         }
 
         private void AddToSectionUnlocked(int sectionNumber, long locationId)
@@ -595,12 +490,6 @@ namespace WebAnnotation.UI.AutoPolygonize
             ids.Remove(locationId);
             if (ids.Count == 0)
                 idsBySection.Remove(sectionNumber);
-        }
-
-        private void RaiseReleased(List<ulong> released)
-        {
-            foreach (ulong imageId in released)
-                ImageLeaseReleased?.Invoke(imageId);
         }
     }
 }

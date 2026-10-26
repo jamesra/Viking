@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Viking.SectionCorrectionServiceTypes.gRPC.V2.Protos;
+using Vector2 = Viking.gRPC.Geometry.V1.Vector2;
 
 namespace Viking.SectionCorrectionClient
 {
@@ -195,12 +196,12 @@ namespace Viking.SectionCorrectionClient
                     sections[z] = new SectionLatticeField(
                         sectionPitch,
                         kernel,
-                        response.Nodes.Select(n => (n.Gx, n.Gy, n.Offset?.X ?? 0, n.Offset?.Y ?? 0)));
+                        response.Nodes.Select(n => (n.Node?.Col ?? 0, n.Node?.Row ?? 0, n.Offset?.X ?? 0, n.Offset?.Y ?? 0)));
 
                     foreach (LatticeNode n in response.Nodes)
                     {
                         int votes = n.Votes > 0 ? n.Votes : 1;
-                        nodes.Add(((int)z, n.Gx, n.Gy, n.Offset?.X ?? 0, n.Offset?.Y ?? 0, votes));
+                        nodes.Add(((int)z, n.Node?.Col ?? 0, n.Node?.Row ?? 0, n.Offset?.X ?? 0, n.Offset?.Y ?? 0, votes));
                     }
                 }
                 catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)

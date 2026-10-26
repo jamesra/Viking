@@ -318,7 +318,7 @@ queries, and volume metadata, with role-based authorization (Read, Write,
 Annotate, Review, Modify). A gRPC replacement is under active development
 ([`Servers/GrpcAnnotationService/`](../../../Servers/GrpcAnnotationService/)),
 with protocol definitions for the same domain under
-[`gRPCAnnotationServiceTypes/Protos/`](../../../gRPCAnnotationServiceTypes/Protos/).
+[`gRPC_Protos/Annotation/`](../../../gRPC_Protos/Annotation/).
 The migration to gRPC is ongoing; both services target the same database.
 
 ### 7.2 OData read API

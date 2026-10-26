@@ -1,199 +1,55 @@
 """
 Segmentation Service Client Example
 
-This module provides an example of how to use the segmentation service from a client.
-It demonstrates how to create a request, call the service, and process the response.
+Segments a picture from point prompts and plots the masks. The server works on a fixed 1024 x 1024 tile grid, so the
+picture is laid on a grid of its own and its tiles are uploaded as the server asks for them
+(``segmentation_server.picture_segmentation`` does the bookkeeping; this file is the gRPC side).
 """
 
-import asyncio
 import argparse
+import asyncio
+from typing import Optional, Sequence
+
 import grpc
-import numpy as np
-from PIL import Image
-import io
 import matplotlib.pyplot as plt
-import os
-import sys
-import cv2
-
-from typing import Sequence, NamedTuple, Tuple
-
+import numpy as np
 from numpy.typing import NDArray
+from PIL import Image
 
-# Import the generated gRPC code from the segmentation_grpc package
-import segmentation_grpc
-from segmentation_grpc import (
-    SegmentationRequest,
-    SegmentationResponse,
-    Point,
-    Polygon,
-    SegmentResult,
-    SegmentationServiceStub,
-    UploadImageRequest,
-    DeleteImageRequest,
+from segmentation_grpc import SegmentationServiceStub, ServerStatusRequest
+from segmentation_server.picture_segmentation import (
+    PictureClick,
+    PictureGrid,
+    PictureSegment,
+    segment_picture,
 )
 
 np.random.seed(16)
 
-class Segment(NamedTuple):
-    """
-    A named tuple to represent a segment in the segmentation response.
 
-    Attributes:
-        index: The index of the segment
-        score: The score of the segment
-        mask: The mask of the segment as a PIL Image
-        polygons: List of polygons representing the contours of the segment
-        holes: For each polygon, the rings of the holes inside it (empty for a solid piece)
-    """
-    index: int
-    score: float
-    mask: NDArray[bool]
-    polygons: list[list[tuple[int, int]]] = []
-    holes: list[list[list[tuple[int, int]]]] = []
+def show_segments(
+    image: NDArray,
+    segments: Sequence[PictureSegment],
+    coordinates: Optional[Sequence[tuple[int, int]]] = None,
+    labels: Optional[Sequence[int]] = None,
+) -> None:
+    """Plot the picture with each island's mask in its own colour, and the clicks."""
+    overlay = np.zeros(image.shape[:2] + (4,), dtype=np.float32)
+    for segment in segments:
+        colour = np.append(np.random.rand(3), 0.5)
+        height, width = segment.mask.shape
+        region = overlay[segment.y:segment.y + height, segment.x:segment.x + width]
+        region[segment.mask] = colour
 
-
-def colorize_labels(labeled_image: NDArray) -> NDArray:
-    # Convert the labeled image to a numpy array
-    labeled_array = np.array(labeled_image)
-
-    # Create a random colormap for the labeled image
-    unique_indices = np.unique(labeled_array)
-    num_segments = len(unique_indices)
-
-    # Generate random colors for each segment (excluding background which is usually 0)
-      # For reproducibility, remove this if you want truly random colors each time
-    random_colors = np.random.randint(0, 256, size=(num_segments, 3), dtype=np.uint8)
-    random_colors[0] = [0, 0, 0]  # Set background color to black
-
-    # Create a colormap from the labeled image
-    colored_image = np.zeros((labeled_array.shape[0], labeled_array.shape[1], 3), dtype=np.uint8)
-
-    # Map each label to a color
-    for i, label in enumerate(unique_indices):
-        colored_image[labeled_array == label] = random_colors[i]
-
-    return colored_image
-
-
-def show_labeled_image(original_image, labeled_image, segments, coordinates=None, labels=None):
-    """
-    Display the labeled image with only the highest scoring segment.
-
-    Args:
-        original_image: The original image as a numpy array
-        labeled_image: The labeled image as a PIL Image
-        segments: List of segment information
-        coordinates: List of (x, y) coordinates used as prompts
-        labels: List of labels for each coordinate (1 for foreground, 0 for background)
-    """
-    # Sort segments by score in descending order
-    sorted_segments = sorted(segments, key=lambda x: x.score if hasattr(x, 'score') else x['score'], reverse=True)
-    
-    # Only keep the segment with the highest score
-    best_segment = sorted_segments[0] if sorted_segments else None
-    
-    if best_segment is None:
-        print("No segments found.")
-        return
-    
-    # Convert the labeled image to a numpy array
-    labeled_array = np.array(labeled_image)
-
-    colorized_labels = colorize_labels(labeled_array)
-
-    # If original_image is grayscale, convert to BGR for overlay
-    original_image_3ch = original_image
-    if len(original_image.shape) == 2:
-        original_image_3ch = cv2.cvtColor(original_image, cv2.COLOR_GRAY2BGR)
-
-    # Create the blended overlay image
-    overlay = cv2.addWeighted(
-        original_image_3ch,
-        1.0,
-        colorized_labels,
-        .5,
-        0
-    )
-
-    # Create a figure with just 2 subplots (overlay and best segment)
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-
-    # Show the labeled image
-    axes[0].imshow(overlay)
-    axes[0].set_title("Labeled Image (Best Segment)")
-
-    # Generate random colors for polygons
-
-    # Draw polygons for the best segment on the original image
-    if hasattr(best_segment, 'polygons'):
-        for polygon in best_segment.polygons:
-            # Convert polygon points to numpy arrays for plotting
-            polygon_array = np.array(polygon)
-            if len(polygon_array) > 0:
-                # Generate a random color for this polygon
-                random_color = np.random.rand(3,)  # RGB values between 0 and 1
-                # Draw the polygon with the random color
-                axes[0].plot(polygon_array[:, 0], polygon_array[:, 1], color=random_color, linewidth=2)
-        # Interior rings, dashed, so a mask with a hole in it is visibly not solid.
-        for polygon_holes in getattr(best_segment, 'holes', []):
-            for hole in polygon_holes:
-                hole_array = np.array(hole)
-                if len(hole_array) > 0:
-                    axes[0].plot(hole_array[:, 0], hole_array[:, 1], color='white', linewidth=1.5, linestyle='--')
-
-    # Draw the input points on the overlay image
-    if coordinates is not None and labels is not None:
-        for (x, y), label in zip(coordinates, labels):
-            if label == 1:  # Foreground point - green circle
-                axes[0].plot(x, y, 'go', markersize=10, markerfacecolor='none')  # Green hollow circle
-            else:  # Background point - red cross
-                axes[0].plot(x, y, 'rx', markersize=10)  # 'rx' means red cross
-
-    axes[0].axis('off')
-
-    # Show the best segment
-    # Get the mask depending on the structure of the segment object
-    mask_array = None
-    segment_score = 0
-    segment_index = 0
-    
-    if hasattr(best_segment, 'mask'):
-        mask_array = best_segment.mask
-        segment_score = best_segment.score
-        segment_index = best_segment.index
-    else:  # Dictionary format
-        mask_array = np.array(best_segment['mask'])
-        segment_score = best_segment['score']
-        segment_index = best_segment['index']
-
-    if mask_array is not None:
-        # Show the mask
-        axes[1].imshow(mask_array, cmap='gray')
-        axes[1].set_title(f"Best Segment (Score: {segment_score:.3f})")
-
-        # Draw polygons on the mask if they exist
-        if hasattr(best_segment, 'polygons'):
-            np.random.seed(42)  # Same seed for consistency
-            for polygon in best_segment.polygons:
-                # Convert polygon points to numpy arrays for plotting
-                polygon_array = np.array(polygon)
-                if len(polygon_array) > 0:
-                    # Generate a random color for this polygon
-                    random_color = np.random.rand(3,)  # RGB values between 0 and 1
-                    # Draw the polygon with the random color
-                    axes[1].plot(polygon_array[:, 0], polygon_array[:, 1], color=random_color, linewidth=2)
-
-        # Draw the input points on the segment image if provided
-        if coordinates is not None and labels is not None:
-            for (x, y), label in zip(coordinates, labels):
-                if label == 1:  # Foreground point - green circle
-                    axes[1].plot(x, y, 'go', markersize=8, markerfacecolor='none')  # Green hollow circle
-                else:  # Background point - red cross
-                    axes[1].plot(x, y, 'rx', markersize=8)  # 'rx' means red cross
-
-        axes[1].axis('off')
-
+    _figure, axes = plt.subplots(1, 1, figsize=(10, 10))
+    axes.imshow(image)
+    axes.imshow(overlay)
+    if coordinates:
+        for (x, y), label in zip(coordinates, labels or [1] * len(coordinates)):
+            axes.plot(x, y, 'g*' if label == 1 else 'r*', markersize=15)
+    title = ", ".join(f"island {segment.island}: {segment.score:.3f}" for segment in segments) or "no mask"
+    axes.set_title(title)
+    axes.axis('off')
     plt.tight_layout()
     plt.show()
 
@@ -201,103 +57,45 @@ def show_labeled_image(original_image, labeled_image, segments, coordinates=None
 async def segment_image(
     server_address: str,
     image_path: str,
-    coordinates: tuple[int, int],
-    labels: Sequence[bool],
-    multimask_output: bool = True,
-    use_cache: bool = True,
+    coordinates: Sequence[tuple[int, int]],
+    labels: Sequence[int],
     ca_cert: str | None = None,
-) -> tuple[NDArray, Sequence[Segment]]:
+) -> tuple[Optional[NDArray], Optional[Sequence[PictureSegment]]]:
     """
     Segment an image using the segmentation service.
 
     Args:
         server_address: The address of the segmentation service (host:port)
         image_path: Path to the image file
-        coordinates: List of (x, y) coordinates to use as prompts
+        coordinates: List of (x, y) image pixels to use as prompts (Y down, from the top-left corner)
         labels: List of labels for each coordinate (1 for foreground, 0 for background)
-        multimask_output: Whether to output multiple masks per point
-        use_cache: If True (default), UploadImage then SegmentImage by image_id.
-            If False, send image bytes on the segment request (re-encodes).
         ca_cert: PEM file to trust as the server's root. Needed only for a self-signed
             development certificate; leave None to use the system roots.
 
     Returns:
-        A tuple containing:
-        - labeled_image: The labeled image as a PIL Image
-        - segments: List of segment information
+        The picture as an RGB array and one mask per island of the prompt, or (None, None) on an RPC error.
     """
-    image = Image.open(image_path)
+    image = np.array(Image.open(image_path).convert('RGB'))
+    picture = PictureGrid(image)
+    clicks = [PictureClick(x=int(x), y=int(y), label=int(label)) for (x, y), label in zip(coordinates, labels)]
 
-    if image.mode != 'L':
-        grayscale_image = image.convert('L')
-    else:
-        grayscale_image = image
-
-    buffer = io.BytesIO()
-    grayscale_image.save(buffer, format='PNG')
-    image_data = buffer.getvalue()
-
-    request = SegmentationRequest(multimask_output=multimask_output)
-
-    for x, y in coordinates:
-        point = Point(x=x, y=y)
-        request.coordinates.append(point)
-
-    for label in labels:
-        request.labels.append(label)
-
-    channel_factory = _channel_for(server_address, ca_cert=ca_cert)
-    async with channel_factory as channel:
+    async with _channel_for(server_address, ca_cert=ca_cert) as channel:
         stub = SegmentationServiceStub(channel)
-        image_id = 0
         try:
-            if use_cache:
-                upload = await stub.UploadImage(
-                    UploadImageRequest(
-                        image_data=image_data,
-                        width=grayscale_image.width,
-                        height=grayscale_image.height,
-                    )
-                )
-                image_id = upload.image_id
-                request.image_id = image_id
-            else:
-                request.image_data = image_data
-                request.width = grayscale_image.width
-                request.height = grayscale_image.height
-
-            response = await stub.SegmentImage(request)
-
-            labeled_image = Image.open(io.BytesIO(response.labeled_image))
-
-            segments = []
-            for segment in response.segments:
-                polygons = []
-                holes = []
-                for polygon in segment.polygons:
-                    points = [(point.x, point.y) for point in polygon.points]
-                    polygons.append(points)
-                    holes.append([[(point.x, point.y) for point in hole.points] for hole in polygon.holes])
-
-                segments.append(Segment(
-                    segment.index,
-                    segment.score,
-                    np.array(Image.open(io.BytesIO(segment.mask)), dtype=np.uint8) if segment.mask else None,
-                    polygons,
-                    holes,
-                ))
-
-            return labeled_image, segments
-
+            status = await stub.GetServerStatus(ServerStatusRequest())
+            model_id = status.model.model_id if status.model.model_id != "unknown" else None
+            _response, segments = await segment_picture(
+                picture,
+                clicks,
+                upload=stub.UploadTile,
+                converse=stub.SegmentTilesStream,
+                model_id=model_id,
+            )
+            return image, segments
         except grpc.RpcError as e:
             print(f"RPC error: {e.details()}")
             return None, None
-        finally:
-            if image_id:
-                try:
-                    await stub.DeleteImage(DeleteImageRequest(image_id=image_id))
-                except grpc.RpcError:
-                    pass
+
 
 def _channel_for(server_address: str, ca_cert: str | None = None):
     """Open a TLS channel. The server has no cleartext listener.
@@ -321,10 +119,8 @@ def pair_of_numbers(value: str):
         raise argparse.ArgumentTypeError('Value must be in format "x,y" where x and y are integers')
 
 
-
 async def main():
     """Main entry point for the client example."""
-    # Parse command-line arguments
     parser = argparse.ArgumentParser(description='Segment an image using the segmentation service.')
     parser.add_argument('--server', type=str, default='localhost:40443',
                         help='The address of the segmentation service (default: localhost:40443). '
@@ -335,53 +131,27 @@ async def main():
                         help='Coordinates as x1,y1; x2,y2;... (e.g., 100,200 300,400)')
     parser.add_argument('--labels', type=str, required=False,
                         help='Labels as l1,l2,... (e.g., 1,0). 1 indicates the point is in the foreground, 0 in the background.  Defaults to assuming all points are foreground.')
-    parser.add_argument('--multimask', action='store_true',
-                        help='Output multiple masks per point')
-    parser.add_argument('--inline', action='store_true',
-                        help='Send image bytes on the segment request instead of UploadImage (slow path)')
     parser.add_argument('--ca-cert', type=str, default=None,
                         help='PEM file to trust as the server root, for a self-signed development '
                              'certificate (python -m segmentation_server.dev_cert)')
     args = parser.parse_args()
 
-    # Parse coordinates
     coordinates = args.coordinates
-    print(f'coordinates: {args.coordinates}')  
+    print(f'coordinates: {args.coordinates}')
 
-    # Parse labels
     if args.labels is None:
         labels = [1] * len(coordinates)
     else:
         labels = list(map(int, args.labels.split(',')))
 
-    # Check that the number of coordinates matches the number of labels
     if len(coordinates) != len(labels):
         print(f"Error: Number of coordinates ({len(coordinates)}) does not match number of labels ({len(labels)})")
-        print("Coordinates:")
-        for coord in coordinates:
-            print(f'\t{coord}')
-        print (f"Labels: {(',').join(str(labels))}")
         return
 
-    # Segment the image
-    labeled_image, segments = await segment_image(
-        args.server,
-        args.image,
-        coordinates,
-        labels,
-        args.multimask,
-        use_cache=not args.inline,
-        ca_cert=args.ca_cert,
-    )
-
-    if labeled_image is not None and segments is not None:
-        # Show the results
-        image = Image.open(args.image)
-        image = image.convert('RGB')
-        image_array = np.array(image)
-        show_labeled_image(image_array, labeled_image, segments, coordinates, labels)
+    image, segments = await segment_image(args.server, args.image, coordinates, labels, ca_cert=args.ca_cert)
+    if image is not None and segments is not None:
+        show_segments(image, segments, coordinates, labels)
 
 
 if __name__ == '__main__':
-    # Run the main function
     asyncio.run(main())

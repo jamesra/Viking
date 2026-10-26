@@ -9,9 +9,10 @@ import cv2
 import numpy as np
 import pytest
 
-from segmentation_grpc import CoordinateSpace, TileCoord
+from segmentation_grpc import CoordinateSpace
 from segmentation_server.capture_encoder import encode_capture, stretch_range
 from segmentation_server.identity_client import IdentityAssignments, IdentityOptions
+from segmentation_server.tile_ref import TileRef
 from segmentation_server.tile_source import VikingTilesetSource, is_plain_mosaic_cell
 from segmentation_server.viking_volume import parse_viking_xml
 
@@ -111,8 +112,8 @@ def _png(image: np.ndarray) -> bytes:
     return encoded.tobytes()
 
 
-def _coord(row: int = 0, col: int = 0, channel: str = "mosaic", space: int = MOSAIC, ds: int = 1) -> TileCoord:
-    return TileCoord(
+def _coord(row: int = 0, col: int = 0, channel: str = "mosaic", space: int = MOSAIC, ds: int = 1) -> TileRef:
+    return TileRef(
         volume="Rabbit", section=30, channel=channel, transform="|grid.mosaic", space=space, downsample=ds, row=row, col=col
     )
 
@@ -170,12 +171,12 @@ async def test_tiles_outside_the_grid_are_not_requested() -> None:
         (6, _coord()),  # not a local context
         (5, _coord(channel="8-bit")),  # a pyramid, not a tileset
         (5, _coord(ds=2)),  # no tileset level at that downsample
-        (5, TileCoord(volume="Other", section=30, channel="mosaic", transform="|", space=MOSAIC, downsample=1)),
+        (5, TileRef(volume="Other", section=30, channel="mosaic", transform="|", space=MOSAIC, downsample=1, row=0, col=0)),
         (5, _coord(space=VOLUME)),
-        (5, _coord(space=UNSPECIFIED)),  # what clients sent before TileCoord.space: volume space
+        (5, _coord(space=UNSPECIFIED)),
     ],
 )
-async def test_cells_the_source_cannot_draw_are_left_to_the_client(context_id: int, coord: TileCoord) -> None:
+async def test_cells_the_source_cannot_draw_are_left_to_the_client(context_id: int, coord: TileRef) -> None:
     _requested, get = _storage({})
     source = VikingTilesetSource(_Assignments({5: XML_URL}), http_get=get)
 
@@ -279,10 +280,8 @@ def test_identity_options_need_endpoint_secret_and_name(monkeypatch) -> None:
     assert options is not None and options.api_endpoint == "https://identity.example/" and options.client_id == "segmentation"
 
 
-def test_the_cache_key_separates_mosaic_from_volume_and_takes_unspecified_as_volume() -> None:
-    from segmentation_server.server import _tile_cache_key
-
-    mosaic, volume, unspecified = (_tile_cache_key(_coord(space=space)) for space in (MOSAIC, VOLUME, UNSPECIFIED))
+def test_the_cache_key_separates_mosaic_from_volume() -> None:
+    mosaic, volume = (_coord(space=space).key for space in (MOSAIC, VOLUME))
 
     assert mosaic != volume
-    assert unspecified == volume
+    assert mosaic[4] == "mosaic" and volume[4] == "volume"

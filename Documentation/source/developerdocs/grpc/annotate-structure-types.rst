@@ -3,7 +3,7 @@
 AnnotateStructureTypes
 ######################
 
-Source: ``gRPCAnnotationServiceTypes/Protos/StructureType.proto``
+Source: ``gRPC_Protos/Annotation/StructureType.proto``
 
 Package: ``Viking.AnnotationServiceTypes.gRPC.V1``
 

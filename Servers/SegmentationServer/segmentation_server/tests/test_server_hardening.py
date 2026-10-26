@@ -1,4 +1,4 @@
-"""Round-2 hardening: stream cap, quiet errors, omit_labeled_image, single-flight uploads, lifecycle."""
+"""Round-2 hardening: stream cap, quiet errors, single-flight uploads, lifecycle."""
 
 from __future__ import annotations
 
@@ -8,37 +8,19 @@ import time
 from concurrent import futures
 from unittest.mock import AsyncMock, MagicMock
 
-import cv2
 import grpc
-import numpy as np
 import pytest
 
-from segmentation_grpc import (
-    DeleteImageRequest,
-    MultiSegmentationRequest,
-    Point,
-    SegmentationRequest,
-    UploadImageRequest,
-    UploadTileRequest,
-)
+from protocol import cell, grid, png as _tile_png
+from segmentation_grpc import UploadTileRequest
 from segmentation_server import server as server_module
 from segmentation_server.image_cache import ImageCache
-from segmentation_server.model_capabilities import SAM2_CAPABILITIES
 from segmentation_server.server import PortBindError, RequestLimits, SegmentationServicer
-from test_segment_tiles import _context, _png as _tile_png, _tile
 from test_tile_sharing import NEIGHBOURS, _Client, _request, _servicer_with_tile_zero
-
-
-def _small_png(width: int = 3, height: int = 2) -> bytes:
-    ok, encoded = cv2.imencode(".png", np.zeros((height, width, 3), dtype=np.uint8))
-    assert ok
-    return encoded.tobytes()
 
 
 def _servicer(**cache_args) -> SegmentationServicer:
     model = MagicMock()
-    model.capabilities = SAM2_CAPABILITIES
-    model.segment_image_with_predictor.return_value = (np.zeros((2, 2), dtype=np.uint16), [])
     cache = ImageCache(
         max_memory_bytes=100_000_000,
         ttl_seconds=60,
@@ -85,38 +67,13 @@ SECRET = "secret-internal-detail"
 
 
 @pytest.mark.asyncio
-async def test_upload_image_failure_does_not_echo_the_exception() -> None:
-    servicer = _servicer()
-    servicer.image_cache.upload_image = AsyncMock(side_effect=RuntimeError(SECRET))
-    context = AsyncMock()
-
-    with pytest.raises(RuntimeError):
-        await servicer.UploadImage(UploadImageRequest(image_data=_small_png(), width=3, height=2), context)
-
-    assert context.abort.await_args.args[0] == grpc.StatusCode.INTERNAL
-    assert SECRET not in context.abort.await_args.args[1]
-
-
-@pytest.mark.asyncio
 async def test_upload_tile_failure_does_not_echo_the_exception() -> None:
     servicer = _servicer()
     servicer.image_cache.upload_tile = AsyncMock(side_effect=RuntimeError(SECRET))
     context = AsyncMock()
-    request = UploadTileRequest(coord=_tile(0, 0), image_data=_tile_png(), width=1024, height=1024)
+    request = UploadTileRequest(grid=grid(), cell=cell(0, 0), image_data=_tile_png())
 
     await servicer.UploadTile(request, context)
-
-    assert context.abort.await_args.args[0] == grpc.StatusCode.INTERNAL
-    assert SECRET not in context.abort.await_args.args[1]
-
-
-@pytest.mark.asyncio
-async def test_delete_image_failure_does_not_echo_the_exception() -> None:
-    servicer = _servicer()
-    servicer.image_cache.delete_image = AsyncMock(side_effect=RuntimeError(SECRET))
-    context = AsyncMock()
-
-    await servicer.DeleteImage(DeleteImageRequest(image_id=1), context)
 
     assert context.abort.await_args.args[0] == grpc.StatusCode.INTERNAL
     assert SECRET not in context.abort.await_args.args[1]
@@ -130,7 +87,7 @@ async def test_a_decode_failure_names_the_problem_without_the_decoders_own_text(
     )
     context = AsyncMock()
 
-    await servicer.UploadImage(UploadImageRequest(image_data=b"x", width=3, height=2), context)
+    await servicer.UploadTile(UploadTileRequest(grid=grid(), cell=cell(0, 0), image_data=b"x"), context)
 
     assert context.abort.await_args.args[0] == grpc.StatusCode.INVALID_ARGUMENT
     assert SECRET not in context.abort.await_args.args[1]
@@ -152,41 +109,6 @@ async def test_a_tile_stream_failure_does_not_echo_the_exception(monkeypatch) ->
 
     assert client.context.abort.await_args.args[0] == grpc.StatusCode.INTERNAL
     assert SECRET not in client.context.abort.await_args.args[1]
-
-
-# --- omit_labeled_image on the unary calls -----------------------------------------------------
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("omit", [False, True])
-async def test_segment_image_honours_omit_labeled_image(omit: bool) -> None:
-    servicer = _servicer()
-    image_id = await servicer.image_cache.upload_image(b"png", 2, 2)
-
-    response = await servicer.SegmentImage(
-        SegmentationRequest(
-            image_id=image_id, coordinates=[Point(x=1, y=1)], labels=[1], omit_labeled_image=omit
-        ),
-        AsyncMock(),
-    )
-
-    assert bool(response.labeled_image) is (not omit)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("omit", [False, True])
-async def test_multi_segment_image_honours_omit_labeled_image(omit: bool) -> None:
-    servicer = _servicer()
-    image_id = await servicer.image_cache.upload_image(b"png", 2, 2)
-
-    response = await servicer.MultiSegmentImage(
-        MultiSegmentationRequest(
-            image_id=image_id, foreground_points={1: Point(x=1, y=1)}, omit_labeled_image=omit
-        ),
-        AsyncMock(),
-    )
-
-    assert bool(response.labeled_image) is (not omit)
 
 
 # --- single-flight tile uploads ----------------------------------------------------------------

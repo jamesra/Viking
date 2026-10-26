@@ -31,19 +31,13 @@ from segmentation_server.compile_config import (
 from segmentation_server.embedding_store import EmbeddingRamCache, EmbeddingStore, open_embedding_ram_cache, open_embedding_store
 from segmentation_server.cuda_errors import raise_if_cuda_lost
 from segmentation_server.encoder_parity import EncoderParityError, compare_feature_maps
-from segmentation_server.model_capabilities import SAM2_CAPABILITIES
 from segmentation_server.model_manifest import ModelManifest, default_manifest, load_model_manifest
 from segmentation_server.prompt_encodings import encoder_for
 from segmentation_server.mask_utils import (
     DEFAULT_MASK_THRESHOLD,
-    LabeledImage,
     Point,
-    SegmentInfo,
-    combined_mask_to_segments,
-    count_covered_points,
     mask_touches_box,
     prepare_image_for_sam2,
-    process_masks,
     select_mask,
 )
 
@@ -87,7 +81,6 @@ class SegmentationModel:
     Predictors are not thread-safe; callers must serialize access with a lock.
     """
 
-    capabilities = SAM2_CAPABILITIES
     # What the model's manifest says (set per instance in ``__init__``); the legacy default until then.
     manifest: ModelManifest = default_manifest()
     # Host-memory embeddings for offset windows; None until ``__init__`` opens it (or when turned off).
@@ -136,7 +129,6 @@ class SegmentationModel:
         # slow load, and refuse a model whose encoding this server does not implement.
         self.manifest = load_model_manifest(sam2_checkpoint)
         encoder_for(self.manifest)
-        self.capabilities = self.manifest.capabilities()
         logger.info("Serving %s", self.manifest.describe())
         self._model_cfg = model_cfg
         self._sam2_checkpoint = sam2_checkpoint
@@ -840,98 +832,6 @@ class SegmentationModel:
                 f"touches_box={mask_touches_box(mask, box)}"
             )
         logger.info("Box prompt %s candidates: %s", tuple(int(v) for v in box), "; ".join(parts))
-
-    def _segment_viewport(
-        self,
-        predictor: SAM2ImagePredictor,
-        coordinates: Sequence[Point],
-        labels: Sequence[int],
-        multimask_output: bool,
-        empty_shape: Tuple[int, int],
-    ) -> Tuple[LabeledImage, List[SegmentInfo]]:
-        """One predict, then the one mask :func:`select_mask` picks: the most foreground points covered.
-
-        A prompt with no foreground point has nothing to select against, so every non-empty
-        candidate is returned as its own segment.
-
-        Raises:
-            NoMatchingMask: No candidate covers any foreground point.
-        """
-        masks, scores = self._predict_raw(predictor, coordinates, labels, multimask_output)
-        height, width = empty_shape
-        positives = [coord for coord, label in zip(coordinates, labels) if int(label) == 1]
-
-        if not positives:
-            labeled, segments = process_masks(masks, scores, empty_shape=empty_shape)
-            logger.info(
-                "segment %sx%s fg=0 bg=%s candidates=%s segments=%s area=%s",
-                width,
-                height,
-                len(coordinates),
-                int(masks.shape[0]) if masks.ndim >= 1 else 0,
-                len(segments),
-                int(np.count_nonzero(labeled)),
-            )
-            return labeled, segments
-
-        index = select_mask(masks, scores, positives=positives)
-        chosen = masks[index]
-        logger.info(
-            "segment %sx%s fg=%s bg=%s candidates=%s chose=%s covered=%s/%s area=%s score=%.3f",
-            width,
-            height,
-            len(positives),
-            len(coordinates) - len(positives),
-            int(masks.shape[0]),
-            index,
-            count_covered_points(chosen, positives),
-            len(positives),
-            int(np.count_nonzero(chosen)),
-            float(scores[index]),
-        )
-        return combined_mask_to_segments(chosen, float(scores[index]), empty_shape=empty_shape)
-
-    def segment_image_with_predictor(
-        self,
-        predictor: SAM2ImagePredictor,
-        coordinates: Sequence[Point],
-        labels: Sequence[int],
-        multimask_output: bool = True,
-        empty_shape: Tuple[int, int] = (0, 0),
-    ) -> Tuple[LabeledImage, List[SegmentInfo]]:
-        """Run predict() on a predictor that already has set_image() applied.
-
-        Raises:
-            NoMatchingMask: No candidate covers any foreground point.
-        """
-        return self._segment_viewport(predictor, coordinates, labels, multimask_output, empty_shape)
-
-    def segment_image(
-        self,
-        image_np: NDArray[np.uint8],
-        coordinates: Sequence[Point],
-        labels: Sequence[int],
-        multimask_output: bool = True,
-    ) -> Tuple[LabeledImage, List[SegmentInfo]]:
-        """Inline-image path: set_image() + predict() on the shared predictor.
-
-        ``image_np`` is the already decoded RGB image, so the caller has checked its size against
-        what the client declared. Concurrent callers are serialized on `_shared_predictor_lock`
-        because the shared predictor's embedding state is not thread-safe.
-
-        Raises:
-            NoMatchingMask: No candidate covers any foreground point.
-        """
-        height, width = int(image_np.shape[0]), int(image_np.shape[1])
-        with self._shared_predictor_lock:
-            self._encode_image(self.predictor, image_np)
-            return self._segment_viewport(
-                self.predictor,
-                coordinates,
-                labels,
-                multimask_output,
-                (height, width),
-            )
 
 
 def _as_sam2_mask_input(mask_logits: NDArray) -> NDArray[np.float32]:

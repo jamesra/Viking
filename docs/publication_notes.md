@@ -35,6 +35,19 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
 
 ## Algorithmic decisions
 
+- **2026-10-25 The segmentation server encodes prompts; shapes travel as geometry.** The fine-tuned model is not a
+  generic SAM2: it learned one prompt language, the exact `mask_input` values of its training (v6: seed `+10 * c(d)`
+  with the edge-confidence curve, neighbours `-10`; v7 adds the depth-relative taper). A client that rasterized circles
+  could not apply the served model's `circle_diameter_scale` or a radius- or depth-relative trust, so circles, lines and
+  polygons now reach the server as shared `viking.geometry.v1.Shape`s and the server encodes them for the model it
+  serves (its manifest's `prompt_encoding`). Roles are inferred, not sent: object or neighbour is which `Feature` a
+  shape is in; an object geometry shape is softened, a painted bitmap used as drawn. Every request returns one result
+  per island of its object prompt (v6: connected components of the prompt; v7: trusted cores), with no switch to get
+  it wrong. Removed as unused (by grep of every client): full-viewport images and their RPCs, multimask output,
+  labeled images, rectangles, response-content flags, capability negotiation, and client-side background mask rounds
+  (the server rasterizes neighbour shapes and asks for them as growth reaches new cells). The same shared geometry
+  replaces WKT in the annotation API (one `Shape` per annotation, its type following from the shape) and the
+  section-correction API.
 - **2026-10-25 Circle seeds get a radius-relative taper (planned, v7).** Annotators often oversize circles; the trained
   seed encoding (v6) is a full-strength disc, so an oversized circle's rim is fed as object. Evidence: the client ignores
   the model contract's `circle_diameter_scale` and sends the full disc; the eval-only comparison on v5.4 is in

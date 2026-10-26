@@ -3,7 +3,7 @@
 PermittedStructureLinks
 #######################
 
-Source: ``gRPCAnnotationServiceTypes/Protos/PermittedStructureLinks.proto``
+Source: ``gRPC_Protos/Annotation/PermittedStructureLinks.proto``
 
 Package: ``Viking.AnnotationServiceTypes.gRPC.V1``
 

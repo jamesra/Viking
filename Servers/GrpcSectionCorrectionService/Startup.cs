@@ -73,7 +73,6 @@ namespace Viking.GrpcSectionCorrectionService
             app.UseRouting();
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapGrpcService<SectionCorrectionsService>();
                 endpoints.MapGrpcService<SectionCorrectionsServiceV2>();
                 endpoints.MapGet("/", async context =>
                 {

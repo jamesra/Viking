@@ -19,6 +19,7 @@ dependencies = [
     "matplotlib",
     "opencv-python",
     "segmentation_grpc",
+    "segmentation_server",
 ]
 
 [tool.setuptools]

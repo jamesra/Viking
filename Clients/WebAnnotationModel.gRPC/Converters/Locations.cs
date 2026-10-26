@@ -11,7 +11,8 @@ using System.ComponentModel;
 using System.Data.Common;
 using Geometry;
 using Google.Protobuf.WellKnownTypes;
-using Geometry = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry;
+using Viking.AnnotationServiceTypes.gRPC.V1;
+using CoordinateSpace = Viking.gRPC.Geometry.V1.CoordinateSpace;
 using Microsoft.Extensions.DependencyInjection;
 using WebAnnotationModel;
 
@@ -28,12 +29,12 @@ namespace WebAnnotationModel.gRPC.Converters
             var obj = new LocationObj(src.Id, src.ParentId)
             {
                 Section = src.Section,
-                MosaicShape = LocationShapeConversion.ShapeFromCircleOrWkt(src, mosaic: true),
-                VolumeShape = LocationShapeConversion.ShapeFromCircleOrWkt(src, mosaic: false),
-                TypeCode = (LocationType)src.TypeCode,
+                MosaicShape = src.MosaicGeometry.ToShape2D(),
+                VolumeShape = src.VolumeGeometry.ToShape2D(),
+                TypeCode = LocationShapeConversion.TypeOf(src),
                 Terminal = src.Terminal,
                 OffEdge = src.OffEdge,
-                Width = src.Width,
+                Width = src.MosaicGeometry.WidthOf(),
                 Username = src.Username,
                 LastModified = src.LastModified?.ToDateTime() ?? default,
                 DBAction = DBACTION.NONE,
@@ -52,8 +53,8 @@ namespace WebAnnotationModel.gRPC.Converters
             var obj = new LocationObj(src.ID, src.ParentID ?? 0)
             {
                 Section = src.SectionNumber,
-                MosaicShape = LocationShapeConversion.ShapeFromCircleOrWkt(src, mosaic: true),
-                VolumeShape = LocationShapeConversion.ShapeFromCircleOrWkt(src, mosaic: false),
+                MosaicShape = LocationShapeConversion.ParseShape(src.MosaicGeometryWKT),
+                VolumeShape = LocationShapeConversion.ParseShape(src.VolumeGeometryWKT),
                 TypeCode = src.TypeCode,
                 Terminal = src.Terminal,
                 OffEdge = src.OffEdge,
@@ -82,16 +83,12 @@ namespace WebAnnotationModel.gRPC.Converters
                     Attributes = src.Attributes,
                     Id = src.ID,
                     Section = src.SectionNumber,
-                    MosaicShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = src.MosaicGeometryWKT },
-                    VolumeShape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry { Text = src.VolumeGeometryWKT },
-                    Closed = false,
-                    TypeCode = (AnnotationType)src.TypeCode,
-                    VolumePosition = src.VolumePosition,
-                    MosaicPosition = src.MosaicPosition,
+                    MosaicGeometry = LocationShapeConversion.ParseShape(src.MosaicGeometryWKT).ToShape(src.TypeCode, CoordinateSpace.Mosaic, src.Width),
+                    VolumeGeometry = LocationShapeConversion.ParseShape(src.VolumeGeometryWKT).ToShape(src.TypeCode, CoordinateSpace.Volume, src.Width),
+                    VolumePosition = src.VolumePosition.XY().ToProtoVector2(),
+                    MosaicPosition = src.MosaicPosition.XY().ToProtoVector2(),
                     Terminal = src.Terminal,
                     OffEdge = src.OffEdge,
-                    Radius = src.Radius,
-                    Width = src.Width,
                     Created = src.Created.ToTimestamp(),
                     Username = src.Username,
                     LastModified = src.LastModified.ToTimestamp(),
@@ -110,22 +107,16 @@ namespace WebAnnotationModel.gRPC.Converters
     {
         public Location Convert(LocationObj src)
         {
-            var mosaicshape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry();
-            mosaicshape.Text = src.MosaicShape.ToWKT();
-
-            var volumeshape = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry();
-            volumeshape.Text = src.VolumeShape.ToWKT();
-
+            // The type travels as the mosaic shape's case and fit; a line's width travels in the shape. Circles carry
+            // their own radius in each space (the volume circle is the drawn one, the mosaic circle mapped from it).
             Location obj =
                 new Location
                 {
                     Id = src.ID,
-                    MosaicShape = mosaicshape,
-                    VolumeShape = volumeshape,
-                    TypeCode = (AnnotationType)src.TypeCode,
+                    MosaicGeometry = src.MosaicShape.ToShape(src.TypeCode, CoordinateSpace.Mosaic, src.Width),
+                    VolumeGeometry = src.VolumeShape.ToShape(src.TypeCode, CoordinateSpace.Volume, src.Width),
                     Terminal = src.Terminal,
                     OffEdge = src.OffEdge,
-                    Width = src.Width,
                     Section = src.Section,
                     Username = src.Username ?? string.Empty,
                     Attributes = LocationAttributesXml(src),
@@ -193,12 +184,12 @@ namespace WebAnnotationModel.gRPC.Converters
                 obj.ApplyServerValues(() =>
                 {
                     obj.Section = update.Section;
-                    obj.MosaicShape = LocationShapeConversion.ShapeFromCircleOrWkt(update, mosaic: true);
-                    obj.VolumeShape = LocationShapeConversion.ShapeFromCircleOrWkt(update, mosaic: false);
-                    obj.TypeCode = (LocationType)update.TypeCode;
+                    obj.MosaicShape = update.MosaicGeometry.ToShape2D();
+                    obj.VolumeShape = update.VolumeGeometry.ToShape2D();
+                    obj.TypeCode = LocationShapeConversion.TypeOf(update);
                     obj.Terminal = update.Terminal;
                     obj.OffEdge = update.OffEdge;
-                    obj.Width = update.Width;
+                    obj.Width = update.MosaicGeometry.WidthOf();
                     obj.Username = update.Username;
                     obj.LastModified = update.LastModified.ToDateTime();
                 });
@@ -233,8 +224,8 @@ namespace WebAnnotationModel.gRPC.Converters
                 obj.ApplyServerValues(() =>
                 {
                     obj.Section = update.SectionNumber;
-                    obj.MosaicShape = LocationShapeConversion.ShapeFromCircleOrWkt(update, mosaic: true);
-                    obj.VolumeShape = LocationShapeConversion.ShapeFromCircleOrWkt(update, mosaic: false);
+                    obj.MosaicShape = LocationShapeConversion.ParseShape(update.MosaicGeometryWKT);
+                    obj.VolumeShape = LocationShapeConversion.ParseShape(update.VolumeGeometryWKT);
                     obj.TypeCode = update.TypeCode;
                     obj.Terminal = update.Terminal;
                     obj.OffEdge = update.OffEdge;
@@ -255,44 +246,20 @@ namespace WebAnnotationModel.gRPC.Converters
     }
 
     /// <summary>
-    /// Server circle WKT is CURVEPOLYGON (CIRCULARSTRING (...)), which client ParseWKT
-    /// does not understand. Reconstruct circles from proto scalars; volume radius on
-    /// read is the mosaic Radius placeholder.
+    /// Shape helpers for the gRPC location converters. Proto locations carry <c>viking.geometry.v1.Shape</c> (converted by
+    /// <see cref="AnnotationShapes"/>); other <see cref="ILocation"/> sources carry WKT.
     /// </summary>
     internal static class LocationShapeConversion
     {
-        /// <summary>
-        /// Called by gRPC location converters. Circles use MosaicPosition/VolumePosition
-        /// and Radius; other types fall back to WKT.
-        /// </summary>
-        public static IShape2D ShapeFromCircleOrWkt(Location src, bool mosaic)
-        {
-            if (src.TypeCode == AnnotationType.Circle && src.Radius > 0)
-            {
-                var pos = mosaic ? src.MosaicPosition : src.VolumePosition;
-                if (pos != null)
-                    return new Circle(pos.X, pos.Y, src.Radius);
-            }
-
-            ILocation asIface = src;
-            return ParseShape(mosaic ? asIface.MosaicGeometryWKT : asIface.VolumeGeometryWKT);
-        }
+        /// <summary>The location's type, from its mosaic shape (its volume shape when it has none).</summary>
+        public static LocationType TypeOf(Location src) =>
+            (src.MosaicGeometry ?? src.VolumeGeometry)?.LocationTypeOf() ?? LocationType.POINT;
 
         /// <summary>
-        /// Same as the proto overload for ILocation callers that are not a proto Location.
+        /// Parses Viking WKT. A circle's CURVEPOLYGON (CIRCULARSTRING (...)) is read without the CIRCULARSTRING keyword,
+        /// which the client parser does not know.
         /// </summary>
-        public static IShape2D ShapeFromCircleOrWkt(ILocation src, bool mosaic)
-        {
-            if (src.TypeCode == LocationType.CIRCLE && src.Radius > 0)
-            {
-                var pos = mosaic ? src.MosaicPosition : src.VolumePosition;
-                return new Circle(pos.X, pos.Y, src.Radius);
-            }
-
-            return ParseShape(mosaic ? src.MosaicGeometryWKT : src.VolumeGeometryWKT);
-        }
-
-        private static IShape2D ParseShape(string wkt)
+        public static IShape2D ParseShape(string wkt)
         {
             if (string.IsNullOrWhiteSpace(wkt))
                 return null;
@@ -301,6 +268,9 @@ namespace WebAnnotationModel.gRPC.Converters
             var normalized = wkt.Replace("CIRCULARSTRING", string.Empty);
             return normalized.ParseWKT();
         }
+
+        /// <summary>The XY of a position.</summary>
+        public static Vector2 XY(this Vector3 p) => new Vector2(p.X, p.Y);
     }
 
     public class LocationServerToMosaicShapeConverter : IBoundingBoxConverter<LocationObj>

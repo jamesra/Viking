@@ -1,4 +1,5 @@
 ﻿using WebAnnotationModel.ServerInterface;
+using Viking.AnnotationServiceTypes.gRPC.V1;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using WebAnnotationModel.Objects;
 using Grpc.Net.Client;
@@ -137,12 +138,9 @@ namespace WebAnnotationModel.gRPC
             return first_response.DeletedId;
         }
 
-        public async Task<ServerUpdate<long, IStructure[]>> GetAsync(long Z, string geometryWellKnownText, double screenPixelSizeInVolume,  DateTime? modifiedAfter, CancellationToken token, Func<ServerUpdate<long, IStructure[]>, Task> onChunk)
+        public async Task<ServerUpdate<long, IStructure[]>> GetAsync(long Z, global::Geometry.Rectangle bounds, double screenPixelSizeInVolume,  DateTime? modifiedAfter, CancellationToken token, Func<ServerUpdate<long, IStructure[]>, Task> onChunk)
         {
-            var region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
-            {
-                Text = geometryWellKnownText
-            };
+            var region = bounds.ToProtoRectangle();
 
             var request = new GetStructuresInMosaicRegionRequest() { Region = region, Z = Z };
             if (modifiedAfter.HasValue)

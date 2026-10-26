@@ -13,8 +13,8 @@ namespace ConnectomeDataModelCoreTests
             var proto = new ProtoLocation
             {
                 Id = 0,
-                MosaicPosition = new AnnotationPoint { X = 1, Y = 2 },
-                VolumePosition = new AnnotationPoint { X = 1, Y = 2 },
+                MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 1, Y = 2 },
+                VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 1, Y = 2 },
             };
             proto.Links.Add(42);
 

@@ -14,7 +14,18 @@ def test_find_proto_file_locates_canonical_segmentation_proto() -> None:
     assert "rpc GetServerStatus" in text
     assert "in_flight_requests" in text
     assert "recent_latency_ms" in text
-    assert "rpc UploadImage" in text
+    assert "rpc SegmentTilesStream" in text
+    assert 'import "Common/geometry.proto"' in text
+
+
+def test_the_generated_modules_load_as_one_package() -> None:
+    """segmentation_pb2 imports the geometry module from this package, not from a top-level ``Common``."""
+    from segmentation_grpc import Shape, TileGrid, geometry_pb2, segmentation_pb2
+
+    request = segmentation_pb2.SegmentTilesRequest(grid=TileGrid(volume="v"))
+    assert request.grid.volume == "v"
+    assert segmentation_pb2.DESCRIPTOR.dependencies[0].name == "Common/geometry.proto"
+    assert Shape.DESCRIPTOR.file is geometry_pb2.DESCRIPTOR
 
 
 def test_server_status_response_exposes_load_fields() -> None:

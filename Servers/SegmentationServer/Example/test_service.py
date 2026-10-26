@@ -21,10 +21,8 @@ import time
 from pathlib import Path
 
 import grpc
-import numpy as np
-from PIL import Image
 
-from client_example import _channel_for, segment_image, show_labeled_image
+from client_example import _channel_for, segment_image, show_segments
 from segmentation_grpc import ServerStatusRequest, SegmentationServiceStub
 from segmentation_server.dev_cert import generate_self_signed
 
@@ -97,20 +95,18 @@ async def test_service():
 
             sample_image = _find_sample_image()
             print(f"Running the client example with image: {sample_image}")
-            labeled_image, segments = await segment_image(
+            image, segments = await segment_image(
                 address,
                 sample_image,
                 [(500, 375)],
                 [1],
-                multimask_output=True,
                 ca_cert=str(cert),
             )
 
-            if labeled_image is not None and segments is not None:
+            if image is not None and segments is not None:
                 print("Segmentation successful!")
                 print(f"Found {len(segments)} segments.")
-                image_array = np.array(Image.open(sample_image).convert('RGB'))
-                show_labeled_image(image_array, labeled_image, segments)
+                show_segments(image, segments, [(500, 375)], [1])
             else:
                 print("Segmentation failed.")
         finally:

@@ -3,7 +3,7 @@
 AnnotateMetaData
 ################
 
-Source: ``gRPCAnnotationServiceTypes/Protos/AnnotationMetaData.proto``
+Source: ``gRPC_Protos/Annotation/AnnotationMetaData.proto``
 
 Package: ``Viking.AnnotationServiceTypes.gRPC.V1``
 

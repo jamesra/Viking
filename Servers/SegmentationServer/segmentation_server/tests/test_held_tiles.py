@@ -7,11 +7,12 @@ from typing import List, Optional, Set, Tuple
 import grpc
 import pytest
 
-from segmentation_grpc import CoordinateSpace, GridCell, HeldTilesRequest, TileCoord, TileGrid
+from segmentation_grpc import CoordinateSpace, GridCell, HeldTilesRequest, TileGrid
 from segmentation_server.embedding_store import EmbeddingStore
 from segmentation_server.server import MAX_HELD_TILES_CELLS
 from segmentation_server.tile_store import TileStore
-from test_segment_tiles import _context, _png, _VOLUME_KEY
+from segmentation_server.tile_ref import TileRef
+from protocol import VOLUME_KEY as _VOLUME_KEY, context as _context, png as _png
 from test_tile_sourcing import _cache, _servicer
 
 MOSAIC = CoordinateSpace.COORDINATE_SPACE_MOSAIC
@@ -26,11 +27,11 @@ class _ReadableSource:
         self.cells = cells
         self.fetched: List[Tuple[int, int]] = []
 
-    async def fetch(self, annotation_context_id: int, coord: TileCoord) -> Optional[bytes]:
+    async def fetch(self, annotation_context_id: int, coord: TileRef) -> Optional[bytes]:
         self.fetched.append((coord.row, coord.col))
         return None
 
-    async def can_read(self, annotation_context_id: int, coord: TileCoord) -> bool:
+    async def can_read(self, annotation_context_id: int, coord: TileRef) -> bool:
         return (
             annotation_context_id == CONTEXT_ID
             and coord.space == MOSAIC

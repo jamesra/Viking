@@ -113,7 +113,7 @@ flowchart TD
 - WCF `AnnotationService` (`AnnotateService`, role-based: Read/Write/Annotate/
   Review/Modify).
 - gRPC replacement in progress (`GrpcAnnotationService`, protos under
-  [`gRPCAnnotationServiceTypes/Protos/`](../../../gRPCAnnotationServiceTypes/Protos/)).
+  [`gRPC_Protos/Annotation/`](../../../gRPC_Protos/Annotation/)).
 - OData v4 read API (`Servers/ConnectomeODataV4/`): entity sets and network
   functions (`Network`, `NetworkLinks`, `Scale`).
 - Export service (`Servers/DataExport/`): DOT, TLP, GML, JSON for graphs.

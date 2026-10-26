@@ -257,18 +257,10 @@ def test_a_mask_prompt_starts_the_cell_with_mask_input_and_no_box_and_is_taken_a
     assert world.to_truth_frame(result)[hole].all(), "everything inside a mask is object"
 
 
-def _request(**fields):
-    from segmentation_grpc import segmentation_pb2
-
-    return segmentation_pb2.SegmentTilesRequest(**fields)
-
-
-_IDENTITY = dict(volume="V", section=1, channel="TEM", transform="T", downsample=1)
-
-
 def _mask_tiles(bitmap_up: np.ndarray, x0: int, y0: int, kind: int):
     """A Y-up boolean mask placed at mosaic (x0, y0), cut into the MaskTile messages of the 1024 grid it touches."""
     import cv2
+    from segmentation_grpc import GridCell
     from segmentation_grpc import segmentation_pb2 as pb
 
     height, width = bitmap_up.shape
@@ -283,74 +275,43 @@ def _mask_tiles(bitmap_up: np.ndarray, x0: int, y0: int, kind: int):
                 continue
             ok, png = cv2.imencode(".png", np.flipud(tile).astype(np.uint8) * 255)
             assert ok
-            coord = pb.TileCoord(row=row, col=col, **_IDENTITY)
-            tiles.append(pb.MaskTile(coord=coord, kind=kind, png=png.tobytes()))
+            tiles.append(pb.MaskTile(cell=GridCell(row=row, col=col), kind=kind, png=png.tobytes()))
     return tiles
 
 
-def _collector(tiles=()):
-    """The MaskTileCollector of a request whose FOREGROUND tiles are ``tiles`` (in one message)."""
+def _islands(tiles=(), shapes=()):
+    """The islands of a request whose FOREGROUND bitmap is ``tiles`` and whose foreground shapes are ``shapes``."""
     from segmentation_grpc import segmentation_pb2 as pb
 
     from segmentation_server.mask_tiles import MaskTileCollector
-    from segmentation_server.server import _same_tile_identity
+    from segmentation_server.prompt import build_islands, foreground_parts
 
-    foreground = [tile for tile in tiles if tile.kind == pb.MASK_KIND_FOREGROUND]
-    collector = MaskTileCollector(len(foreground))
+    collector = MaskTileCollector(len(tiles))
     if tiles:
-        collector.add(pb.MaskTiles(tiles=list(tiles)), pb.TileCoord(**_IDENTITY), _same_tile_identity)
-    return collector
+        collector.add(pb.MaskTiles(tiles=list(tiles)))
+    return build_islands(foreground_parts(list(shapes), collector.foreground_shape(), 1.0), max_tiles=256)
 
 
-def test_the_prompt_is_the_two_features_and_the_mask_tiles() -> None:
+def test_a_foreground_bitmap_is_one_island_with_the_bitmaps_own_box() -> None:
     from segmentation_grpc import segmentation_pb2 as pb
 
-    from segmentation_server.server import _prompts_from
-
     square = np.ones((41, 21), dtype=bool)  # x 20..40, y 20..60
-    collector = _collector(_mask_tiles(square, 20, 20, pb.MASK_KIND_FOREGROUND))
-    request = _request(
-        foreground_feature=pb.Feature(
-            points=[pb.Point(x=3, y=4)],
-            rectangles=[pb.BoundingBox(x_min=0, y_min=0, x_max=10, y_max=10)],
-        ),
-        background_feature=pb.Feature(
-            points=[pb.Point(x=9, y=9)],
-            rectangles=[pb.BoundingBox(x_min=100, y_min=100, x_max=110, y_max=110)],
-        ),
-        foreground_mask_tile_count=1,
-    )
-    prompts = _prompts_from(request, collector)
+    (island,) = _islands(_mask_tiles(square, 20, 20, pb.MASK_KIND_FOREGROUND))
 
-    assert prompts.foreground == [(3, 4)] and prompts.background == [(9, 9)]
-    assert prompts.hint_boxes == [], "a foreground mask replaces the rectangle hints"
-    assert [shape.box for shape in prompts.masks] == [(20, 20, 40, 60)]
-    assert prompts.background_rects == [(100, 100, 110, 110)]
-    assert prompts.background_masks == [collector.background], "the neighbours are always the on-demand tiled mask"
+    assert island.number == 1 and island.box == (20, 20, 40, 60) and island.area == 41 * 21
 
 
 def test_a_foreground_with_only_mask_tiles_starts_the_walk_from_a_point_inside_the_mask() -> None:
     from segmentation_grpc import segmentation_pb2 as pb
 
-    from segmentation_server.server import _prompts_from
-
     square = np.ones((41, 21), dtype=bool)
-    collector = _collector(_mask_tiles(square, 20, 20, pb.MASK_KIND_FOREGROUND))
-    prompts = _prompts_from(_request(foreground_mask_tile_count=1), collector)
+    (island,) = _islands(_mask_tiles(square, 20, 20, pb.MASK_KIND_FOREGROUND))
 
-    assert prompts.foreground == [(30, 40)]
+    assert island.interior_point() == (30, 40)
 
 
-def test_clicks_alone_have_no_foreground_mask_but_still_the_tiled_background() -> None:
-    from segmentation_grpc import segmentation_pb2 as pb
-
-    from segmentation_server.server import _prompts_from
-
-    collector = _collector()
-    prompts = _prompts_from(_request(foreground_feature=pb.Feature(points=[pb.Point(x=5, y=6)])), collector)
-
-    assert prompts.foreground == [(5, 6)] and prompts.masks == []
-    assert prompts.background_masks == [collector.background]
+def test_clicks_alone_have_no_islands() -> None:
+    assert _islands() == []
 
 
 def test_a_hint_box_is_prompted_as_a_box_but_not_taken_as_object() -> None:
@@ -390,21 +351,6 @@ def test_a_background_rectangle_is_only_a_weak_negative_and_never_clears_the_ans
     assert world.to_truth_frame(result)[2304, 2304]
 
 
-def test_a_foreground_rectangle_without_a_mask_stays_a_hint_box() -> None:
-    from segmentation_grpc import segmentation_pb2 as pb
-
-    from segmentation_server.server import _prompts_from
-
-    request = _request(
-        foreground_feature=pb.Feature(
-            points=[pb.Point(x=3, y=3)], rectangles=[pb.BoundingBox(x_min=0, y_min=0, x_max=10, y_max=10)]
-        ),
-    )
-    prompts = _prompts_from(request, _collector())
-
-    assert prompts.hint_boxes == [(0, 0, 10, 10)] and prompts.masks == []
-
-
 def test_every_pixel_of_a_foreground_bitmap_mask_is_returned_as_object_even_where_sam2_left_a_hole() -> None:
     from segmentation_server.cell_grid import MaskShape
 
@@ -438,8 +384,6 @@ def test_a_mask_that_wholly_covers_a_core_takes_it_as_object_without_predicting_
 def test_a_tiled_mask_wider_than_a_window_spans_cells_and_is_returned_as_object() -> None:
     from segmentation_grpc import segmentation_pb2 as pb
 
-    from segmentation_server.server import _prompts_from
-
     # A 1400 x 1400 disc, more than one 1024 window, sent as the four mask tiles it touches.
     cx, cy, radius = 2048, 2048, 700
     side = 2 * radius
@@ -447,12 +391,11 @@ def test_a_tiled_mask_wider_than_a_window_spans_cells_and_is_returned_as_object(
     disc = (xx - (side - 1) / 2) ** 2 + (yy - (side - 1) / 2) ** 2 <= radius ** 2
     tiles = _mask_tiles(disc, cx - radius, cy - radius, pb.MASK_KIND_FOREGROUND)
     assert len(tiles) == 4
-    prompts = _prompts_from(_request(foreground_mask_tile_count=len(tiles)), _collector(tiles))
-    shape = prompts.masks[0]
+    (shape,) = _islands(tiles)
     assert shape.box == (cx - radius, cy - radius, cx + radius - 1, cy + radius - 1)
 
     world = _RecordingWorld(ellipse(cx, cy, radius + 100, radius + 100, 0.0))
-    answer = world.to_truth_frame(grow_segmentation(prompts.foreground, [], world.predict, masks=[shape]))
+    answer = world.to_truth_frame(grow_segmentation([shape.interior_point()], [], world.predict, masks=[shape]))
 
     assert answer[cy - radius:cy + radius, cx - radius:cx + radius][disc].all(), "every pixel of the large mask is object"
     assert len({call[0] for call in world.given}) > 1, "more than one cell took part"

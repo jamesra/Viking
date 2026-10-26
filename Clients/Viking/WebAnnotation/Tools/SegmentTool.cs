@@ -191,7 +191,6 @@ namespace WebAnnotation.Tools
             _finished = true;
             _request?.Cancel();
             _session.CancelPendingWork();
-            _ = DeleteServerImageAsync();
             _polygons = Array.Empty<Polygon>();
             _context.SetStatus(null);
             _context.Invalidate();
@@ -230,42 +229,37 @@ namespace WebAnnotation.Tools
             int generation = ++_generation;
             Vector2[] foreground = _foreground.ToArray();
             double downsample = _context.Host.Downsample;
-            OtherStructuresAsBackground(foreground, downsample, out IReadOnlyList<Vector2> derived, out SegmentationMaskUnion derivedMask);
-            Vector2[] background = _background.Concat(derived).ToArray();
+            SegmentationBackgroundShapes otherShapes = OtherStructuresAsBackgroundShapes();
+            Vector2[] background = _background.ToArray();
             _context.SetStatus("Segmenting…");
-            _ = SegmentAsync(generation, foreground, background, derivedMask, downsample, request.Token);
+            _ = SegmentAsync(generation, foreground, background, otherShapes, downsample, request.Token);
         }
 
         /// <summary>
-        /// As Viking's segmentation command does, the other structures' annotations in view are background: a point in
-        /// each (away from the user's object points) and their shapes as a background mask. The location being
-        /// resegmented and its own structure are left out.
+        /// As Viking's segmentation command does, the other structures' annotations in view are background, sent only as
+        /// background shapes (never as derived clicks; the background clicks are the user's own). The location being
+        /// resegmented and its own structure are left out. Null when nothing could be read.
         /// </summary>
-        void OtherStructuresAsBackground(IReadOnlyList<Vector2> foreground, double downsample,
-            out IReadOnlyList<Vector2> points, out SegmentationMaskUnion mask)
+        SegmentationBackgroundShapes OtherStructuresAsBackgroundShapes()
         {
-            points = Array.Empty<Vector2>();
-            mask = null;
             try
             {
                 ViewModel.SectionAnnotationsView view = _context.Scene.HeldView(_context.SectionNumber);
                 Viking.VolumeModel.IVolumeToSectionTransform mapper = _context.Mapper;
                 if (view == null || mapper == null)
-                    return;
+                    return null;
 
                 List<LocationObj> visible = view.GetLocations(SegmentedWorldBounds())
                     .Select(v => Store.Locations.TryGetObjectByID(v.ID, out LocationObj loc) ? loc : null)
                     .OfType<LocationObj>()
                     .ToList();
                 long[] excludeLocations = _excludeLocationId is long id ? new[] { id } : Array.Empty<long>();
-                double minDistance = Global.AnnotationSettings.SegmentationPointRadius * downsample;
-                points = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
-                    visible, mapper, foreground, minDistance, excludeLocations, _excludeStructureId);
-                mask = CircleSegmentationPrompts.CreateOtherStructureBackgroundMask(visible, mapper, excludeLocations, _excludeStructureId);
+                return CircleSegmentationPrompts.CreateOtherStructureBackgroundShapes(visible, mapper, excludeLocations, _excludeStructureId);
             }
             catch (Exception ex)
             {
                 Trace.WriteLine($"Segmentation background from other structures failed: {ex.Message}");
+                return null;
             }
         }
 
@@ -286,13 +280,13 @@ namespace WebAnnotation.Tools
             });
         }
 
-        async Task SegmentAsync(int generation, Vector2[] foreground, Vector2[] background, SegmentationMaskUnion backgroundMask,
+        async Task SegmentAsync(int generation, Vector2[] foreground, Vector2[] background, SegmentationBackgroundShapes backgroundShapes,
             double downsample, CancellationToken token)
         {
             try
             {
                 SegmentationResponse response = await _session.SegmentAsync(foreground, background, token,
-                    _seeds.Length > 0 ? _seeds : null, backgroundMask: backgroundMask);
+                    _seeds.Length > 0 ? _seeds : null, backgroundShapes: backgroundShapes);
                 if (token.IsCancellationRequested || generation != _generation)
                     return;
 
@@ -303,6 +297,8 @@ namespace WebAnnotation.Tools
                     return;
                 }
 
+                // One outline per island of the result (and per piece of it the clicks keep): the user double-clicks the one
+                // wanted, or Enter takes the largest.
                 IReadOnlyList<Polygon> polygons = await Task.Run(() =>
                     _session.CreatePolygonsFromResponse(response,
                             preserveHolesContainingWorldPoints: background,
@@ -349,7 +345,6 @@ namespace WebAnnotation.Tools
                 _ = ReplaceShapeAsync(_target, chosen, _context.Host.Downsample);
             else
                 _ = CreateStructureAsync(chosen, _context.Host.Downsample);
-            _ = DeleteServerImageAsync();
             _polygons = Array.Empty<Polygon>();
             _context.Invalidate();
             return AnnotationToolResult.Done;
@@ -395,18 +390,6 @@ namespace WebAnnotation.Tools
             }
 
             await AnnotationToolActions.SaveShapeEditAsync(_context, location, "Segment", mapper, undoShape, undoType);
-        }
-
-        async Task DeleteServerImageAsync()
-        {
-            try
-            {
-                await _session.DeleteCurrentImageAsync();
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine($"Segmentation image cleanup failed: {ex.Message}");
-            }
         }
 
         public void DrawPreview(GraphicsDevice device, VikingXNA.Scene scene, RoundLineCode.RoundLineManager lineManager, OverlayShaderEffect overlayEffect)

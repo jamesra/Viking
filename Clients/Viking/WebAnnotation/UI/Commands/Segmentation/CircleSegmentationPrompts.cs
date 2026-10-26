@@ -11,9 +11,9 @@ using WebAnnotationModel.Objects;
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
-    /// SAM2 prompts for a circle: the circle itself as the mask (<see cref=\"StartingPrompt.Seed\"/>) and four axis clicks
-    /// (<see cref="TryCreateStartingPrompt"/>), shared by auto-polygonize and the circle context menu,
-    /// plus the other-structure avoid marks.
+    /// SAM2 prompts for a circle: the circle itself as a foreground shape (<see cref="StartingPrompt.Seed"/>) and four axis
+    /// clicks (<see cref="TryCreateStartingPrompt"/>), shared by auto-polygonize and the circle context menu, plus the
+    /// other structures' background shapes.
     /// </summary>
     internal static class CircleSegmentationPrompts
     {
@@ -36,7 +36,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
             /// <summary>The circle in volume space, averaged over the transformed radius points.</summary>
             public Circle Circle { get; } = circle;
 
-            /// <summary>The circle as the seed sent to the server: its disc, not <see cref="Box"/>.</summary>
+            /// <summary>
+            /// The circle as the seed sent to the server: <c>Shape.circle</c> with its true volume radius, which the server
+            /// softens for its model (<see cref="SegmentationPromptShapes.FromSeed"/>), not <see cref="Box"/>.
+            /// </summary>
             public SegmentationSeed Seed => SegmentationSeed.FromCircle(Circle);
 
             /// <summary>Center of <see cref="Box"/>, which is the circle's center.</summary>
@@ -224,66 +227,103 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Representative points of other annotations, mapped to volume as SAM2 background prompts.
-        /// Polygon avoid marks are the centroid of the largest MosaicShape Delaunay
-        /// triangle, not VolumeShape (Catmull-Rom smoothed for CURVEPOLYGON).
-        /// </summary>
-        public static IReadOnlyList<Vector2> CreateBackgroundVolumePoints(
-            IEnumerable<LocationObj> otherAnnotations,
-            IVolumeToSectionTransform transform)
-        {
-            IReadOnlyList<Vector2> mosaicPoints = AnnotationPointExtensions.GetAnnotationRepresentativePoints(otherAnnotations);
-            return ToVolumePoints(mosaicPoints, transform);
-        }
-
-        /// <summary>
-        /// The other structures' annotations as one background mask, in volume space: the disc of
-        /// each circle (the same square <see cref="TryCreateStartingPrompt"/> seeds a circle with) and the
-        /// polygon, with its holes, of each polygon annotation. Same annotation filter as
-        /// <see cref="CreateOtherStructureBackgroundVolumePoints"/>.
+        /// The other structures' annotations as background shapes, in volume space: each circle as a circle (its volume radius
+        /// carried by the five-point mean scale), each polygon with its holes, and each line drawn its width wide. The
+        /// annotations are those <see cref="OtherStructureAnnotations"/> keeps: not the target location, not its structure,
+        /// and not a descendant structure of it (those sit inside or on the target, so marking them would carve them out).
         /// </summary>
         /// <remarks>
-        /// "Everything inside is background, and the engine should grow it": a circle that is some other structure
-        /// is background throughout its disc, and so is every polygon. Annotations whose points fail
-        /// to map to volume space are skipped. The server takes one mask per request, so these are summed here.
+        /// This is the only way neighbours reach the server: no background clicks are derived from them, so a request's
+        /// background points are only the ones the user placed. The server trusts each by its geometry (a circle by its
+        /// radius, any other shape by its edge) and rasterizes them itself. Curve polygons and curves are sent as their
+        /// unsmoothed mosaic control points mapped to volume, with the
+        /// Catmull-Rom fit the viewer draws them with. Annotations whose points fail to map to volume space are skipped.
         /// </remarks>
-        public static SegmentationMaskUnion CreateOtherStructureBackgroundMask(
+        /// <param name="curveInterpolations">
+        /// Points between control points of a curve, by whether it is closed; null uses the viewer's settings
+        /// (<see cref="WebAnnotation.Global.NumCurveInterpolationPoints"/>).
+        /// </param>
+        public static SegmentationBackgroundShapes CreateOtherStructureBackgroundShapes(
             IEnumerable<LocationObj> visible,
             IVolumeToSectionTransform transform,
             IReadOnlyCollection<long>? excludeLocationIds,
             long? excludeStructureId,
-            Func<long, long?>? structureParentLookup = null)
+            Func<long, long?>? structureParentLookup = null,
+            Func<bool, uint>? curveInterpolations = null)
         {
-            SegmentationMaskUnion union = new();
+            Func<bool, uint> interpolations = curveInterpolations ?? WebAnnotation.Global.NumCurveInterpolationPoints;
+            SegmentationBackgroundShapes shapes = new();
             if (visible is null || transform is null)
-                return union;
+                return shapes;
 
             foreach (LocationObj other in OtherStructureAnnotations(visible, excludeLocationIds, excludeStructureId, structureParentLookup))
             {
                 switch (other.TypeCode)
                 {
                     case LocationType.CIRCLE:
-                        if (TryCreateStartingPrompt(
-                                new Circle(other.Position, other.Radius), transform, out StartingPrompt square))
-                        {
-                            union.Add(square.Seed);
-                        }
-
+                        if (transform.TryMapShapeSectionToVolume(new Circle(other.Position, other.Radius)) is Circle volumeCircle)
+                            shapes.AddCircle(volumeCircle);
                         break;
                     case LocationType.POLYGON:
                     case LocationType.CURVEPOLYGON:
                         if (TryToVolumeRings(other, transform, out List<Vector2[]> rings))
-                            union.Add(rings);
+                        {
+                            shapes.AddPolygon(
+                                rings,
+                                other.TypeCode == LocationType.CURVEPOLYGON ? interpolations(true) : null);
+                        }
+
+                        break;
+                    case LocationType.POLYLINE:
+                    case LocationType.OPENCURVE:
+                    case LocationType.CLOSEDCURVE:
+                        AddVolumeLine(shapes, other, transform, interpolations);
                         break;
                 }
             }
 
-            return union;
+            return shapes;
+        }
+
+        /// <summary>
+        /// A line annotation's unsmoothed mosaic points mapped to volume space, its width carried by the five-point mean scale
+        /// at the line's centre. Skipped when a point fails to map (a partial line would misdraw the background).
+        /// </summary>
+        private static void AddVolumeLine(
+            SegmentationBackgroundShapes shapes, LocationObj location, IVolumeToSectionTransform transform, Func<bool, uint> curveInterpolations)
+        {
+            try
+            {
+                Vector2[]? mosaicPoints = location.MosaicShape?.ToPoints();
+                if (mosaicPoints is null || mosaicPoints.Length < 2)
+                    return;
+
+                IReadOnlyList<Vector2> volumePoints = ToVolumePoints(mosaicPoints, transform);
+                if (volumePoints.Count != mosaicPoints.Length)
+                    return;
+
+                double mosaicWidth = location.Width ?? 0;
+                double volumeWidth = 0;
+                if (mosaicWidth > 0 &&
+                    transform.TryMapShapeSectionToVolume(new Circle(Rectangle.GetBoundingBox(mosaicPoints).Center, mosaicWidth / 2)) is Circle widthCircle)
+                {
+                    volumeWidth = widthCircle.Radius * 2;
+                }
+
+                bool closed = location.TypeCode == LocationType.CLOSEDCURVE;
+                uint? interpolations = location.TypeCode == LocationType.POLYLINE
+                    ? null
+                    : curveInterpolations(closed);
+                shapes.AddLine(volumePoints, closed, volumeWidth, interpolations);
+            }
+            catch (ArgumentException)
+            {
+            }
         }
 
         /// <summary>
         /// A polygon annotation's unsmoothed mosaic exterior ring and holes mapped to volume space. False when the
-        /// shape is not a polygon, a ring is too short, or any vertex fails to map (a partial ring would misdraw the mask).
+        /// shape is not a polygon, a ring is too short, or any vertex fails to map (a partial ring would misdraw the background).
         /// </summary>
         private static bool TryToVolumeRings(LocationObj location, IVolumeToSectionTransform transform, out List<Vector2[]> rings)
         {
@@ -315,49 +355,29 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Avoid marks for every visible annotation that is not the target location, the
-        /// same structure, or a child structure of it. Child structures sit inside or on the
-        /// target, so a red mark there would carve them out of the mask. Drops points that sit on
-        /// a foreground click.
-        /// </summary>
-        public static IReadOnlyList<Vector2> CreateOtherStructureBackgroundVolumePoints(
-            IEnumerable<LocationObj> visible,
-            IVolumeToSectionTransform transform,
-            IReadOnlyList<Vector2> foreground,
-            double minDistance,
-            IReadOnlyCollection<long>? excludeLocationIds,
-            long? excludeStructureId,
-            Func<long, long?>? structureParentLookup = null)
-        {
-            return ExceptNearForeground(
-                CreateBackgroundVolumePoints(
-                    OtherStructureAnnotations(visible, excludeLocationIds, excludeStructureId, structureParentLookup),
-                    transform),
-                foreground,
-                minDistance);
-        }
-
-        /// <summary>
-        /// One diagnostic line for a segmentation request: which location and structure it is for, the
-        /// foreground and background counts, the foreground center in volume space, and which visible
-        /// annotations supplied or were withheld from the background.
+        /// One diagnostic line for a segmentation request: which location and structure it is for, the foreground count,
+        /// the background clicks the user placed, the background shapes sent for other structures, the foreground center in
+        /// volume space, and which visible annotations supplied or were withheld from the background shapes.
         /// </summary>
         /// <remarks>
         /// Exists so a report that one spot segmented badly can be matched to a server session by the
-        /// <c>fg0</c> volume coordinate and to the location by id. <c>bgFrom</c> lists id/structure of
+        /// <c>fg0</c> volume coordinate and to the location by id. <c>shapesFrom</c> lists id/structure of
         /// annotations that were eligible; <c>sameStructure</c> and <c>childStructure</c> list the ones
-        /// the structure rules removed. An eligible annotation that yields no background point was
-        /// dropped for sitting on a foreground click or failing to map to volume space, so
-        /// <c>otherAnnotations</c> can exceed <c>bg</c>. Each id list is capped so the line stays one line.
+        /// the structure rules removed. An eligible annotation that yields no shape failed to map to volume space
+        /// (or is a type with no shape, such as a point), so <c>otherAnnotations</c> can exceed <c>bgShapes</c>.
+        /// Each id list is capped so the line stays one line.
         /// </remarks>
         /// <param name="source">Short name of the caller, such as auto-circle or context-menu.</param>
+        /// <param name="userBackground">Background clicks the user placed; null or empty when there are none.</param>
+        /// <param name="backgroundShapes">The other structures' shapes sent with the request; null when none were built.</param>
         public static string DescribePrompts(
             string source,
             IReadOnlyCollection<long>? locationIds,
             long? structureId,
             IEnumerable<LocationObj> visible,
             IReadOnlyList<Vector2> foreground,
-            IReadOnlyList<Vector2> background,
+            IReadOnlyList<Vector2>? userBackground,
+            SegmentationBackgroundShapes? backgroundShapes,
             Func<long, long?>? structureParentLookup = null,
             int maxIds = 10)
         {
@@ -391,8 +411,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             string ids = locationIds is { Count: > 0 } ? string.Join(",", locationIds) : "-";
 
             return $"Prompts source={source} loc=[{ids}] structure={structureId?.ToString() ?? "-"} " +
-                   $"fg={foreground?.Count ?? 0} fg0={fg0} bg={background?.Count ?? 0} visible={visibleCount} " +
-                   $"otherAnnotations={eligible.Count} bgFrom=[{CapIds(eligible, maxIds)}] " +
+                   $"fg={foreground?.Count ?? 0} fg0={fg0} bgClicks={userBackground?.Count ?? 0} " +
+                   $"bgShapes={backgroundShapes?.Count ?? 0} visible={visibleCount} " +
+                   $"otherAnnotations={eligible.Count} shapesFrom=[{CapIds(eligible, maxIds)}] " +
                    $"sameStructure=[{CapIds(sameStructure, maxIds)}] childStructure=[{CapIds(childStructure, maxIds)}]";
         }
 
@@ -403,8 +424,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Prompt for several overlapping polygons of one structure. <paramref name="Seeds"/> are the polygons
-        /// themselves (exterior rings and holes), sent summed into the foreground mask: everything inside them is
-        /// object and the segmentation grows beyond. <paramref name="Foreground"/> holds one interior click per
+        /// themselves (exterior rings and holes), sent as foreground shapes that the server combines into one object
+        /// and softens; the segmentation grows beyond them. <paramref name="Foreground"/> holds one interior click per
         /// polygon, in the same order as <paramref name="Seeds"/>.
         /// </summary>
         public readonly record struct GroupPrompt(IReadOnlyList<Vector2> Foreground, IReadOnlyList<SegmentationSeed> Seeds);
@@ -476,26 +497,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             return null;
-        }
-
-        /// <summary>
-        /// Drops avoid prompts that sit on a foreground point. Adjacent-section siblings of the
-        /// same structure share XY with the selected circle; a red mark there cancels the center click.
-        /// </summary>
-        public static IReadOnlyList<Vector2> ExceptNearForeground(
-            IReadOnlyList<Vector2> background,
-            IReadOnlyList<Vector2> foreground,
-            double minDistance)
-        {
-            if (background is null || background.Count == 0)
-                return [];
-
-            if (foreground is null || foreground.Count == 0 || minDistance <= 0)
-                return background;
-
-            double minDistanceSquared = minDistance * minDistance;
-            return [.. background.Where(bg => foreground.All(fg =>
-                Vector2.DistanceSquared(bg, fg) >= minDistanceSquared))];
         }
 
         /// <summary>

@@ -1,4 +1,4 @@
-"""A server says which model it serves, refuses requests built for another, and keeps whole-screen and tiled models apart."""
+"""A server says which model it serves, refuses requests built for another, and encodes prompts the way it was trained."""
 
 from __future__ import annotations
 
@@ -7,22 +7,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 import grpc
 import pytest
-from segmentation_grpc import (
-    BoundingBox,
-    MaskRole,
-    SegmentationRequest,
-    SegmentTilesRequest,
-    SubmissionMode,
-    TileCoord,
-    UploadTileRequest,
-)
-from segmentation_grpc.segmentation_pb2 import Feature, MaskKind, MaskTile, MaskTiles
-from segmentation_server.mask_tiles import MaskTileCollector
+from segmentation_grpc import SegmentTilesRequest
 
+from protocol import start
 from segmentation_server.image_cache import ImageCache
 from segmentation_server.model_manifest import ManifestError, ModelManifest, default_manifest, parse_manifest
-from segmentation_server.prompt_encodings import EdgeConfidenceEncoder
-from segmentation_server.server import SegmentationServicer, _prompts_from, _same_tile_identity
+from segmentation_server.prompt_encodings import DepthTrustEncoder, EdgeConfidenceEncoder
+from segmentation_server.server import SegmentationServicer
 from test_model_manifest import v4_manifest
 
 FAILED = grpc.StatusCode.FAILED_PRECONDITION
@@ -30,8 +21,10 @@ FAILED = grpc.StatusCode.FAILED_PRECONDITION
 
 def manifest(**changes) -> ModelManifest:
     raw = v4_manifest()
-    if "submission_mode" in changes:
-        raw["capabilities"]["submission_mode"] = changes.pop("submission_mode")
+    if "encoding" in changes:
+        raw["server_contract"]["encoding"] = changes.pop("encoding")
+    if "circle_diameter_scale" in changes:
+        raw["client_contract"]["circle_diameter_scale"] = changes.pop("circle_diameter_scale")
     if "requires_model_id" in changes:
         raw["client_contract"]["requires_model_id"] = changes.pop("requires_model_id")
     assert not changes
@@ -40,7 +33,6 @@ def manifest(**changes) -> ModelManifest:
 
 def servicer(model_manifest: ModelManifest | None) -> SegmentationServicer:
     model = MagicMock()
-    model.capabilities = (model_manifest or default_manifest()).capabilities()
     if model_manifest is not None:
         model.manifest = model_manifest
     return SegmentationServicer(
@@ -55,7 +47,6 @@ def aborted_with(context: AsyncMock) -> grpc.StatusCode:
 @pytest.fixture(autouse=True)
 def _clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SEGMENTATION_REQUIRE_MODEL_ID", raising=False)
-    monkeypatch.delenv("SEGMENTATION_STRICT_SUBMISSION_MODE", raising=False)
 
 
 @pytest.mark.asyncio
@@ -82,7 +73,7 @@ async def test_a_model_without_a_manifest_reports_unknown_and_the_legacy_encodin
 async def test_a_request_built_for_another_model_is_refused_naming_both() -> None:
     context = AsyncMock()
 
-    ok = await servicer(manifest())._model_id_ok(SegmentationRequest(model_id="v3"), context)
+    ok = await servicer(manifest())._model_id_ok(SegmentTilesRequest(model_id="v3"), context)
 
     assert ok is False
     assert aborted_with(context) == FAILED
@@ -94,7 +85,7 @@ async def test_a_request_built_for_another_model_is_refused_naming_both() -> Non
 async def test_a_request_for_this_model_is_accepted() -> None:
     context = AsyncMock()
 
-    assert await servicer(manifest())._model_id_ok(SegmentationRequest(model_id="v4"), context) is True
+    assert await servicer(manifest())._model_id_ok(SegmentTilesRequest(model_id="v4"), context) is True
     context.abort.assert_not_awaited()
 
 
@@ -102,7 +93,7 @@ async def test_a_request_for_this_model_is_accepted() -> None:
 async def test_a_request_with_no_model_id_is_refused_when_the_manifest_requires_one() -> None:
     context = AsyncMock()
 
-    assert await servicer(manifest())._model_id_ok(SegmentationRequest(), context) is False
+    assert await servicer(manifest())._model_id_ok(SegmentTilesRequest(), context) is False
     assert aborted_with(context) == FAILED
 
 
@@ -110,114 +101,50 @@ async def test_a_request_with_no_model_id_is_refused_when_the_manifest_requires_
 async def test_a_request_with_no_model_id_is_accepted_when_the_manifest_does_not_require_one() -> None:
     context = AsyncMock()
 
-    assert await servicer(manifest(requires_model_id=False))._model_id_ok(SegmentationRequest(), context) is True
+    assert await servicer(manifest(requires_model_id=False))._model_id_ok(SegmentTilesRequest(), context) is True
     context.abort.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_the_environment_overrides_the_manifest_about_requiring_a_model_id(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SEGMENTATION_REQUIRE_MODEL_ID", "0")
-    assert await servicer(manifest())._model_id_ok(SegmentationRequest(), AsyncMock()) is True
+    assert await servicer(manifest())._model_id_ok(SegmentTilesRequest(), AsyncMock()) is True
 
     monkeypatch.setenv("SEGMENTATION_REQUIRE_MODEL_ID", "1")
-    assert await servicer(manifest(requires_model_id=False))._model_id_ok(SegmentationRequest(), AsyncMock()) is False
+    assert await servicer(manifest(requires_model_id=False))._model_id_ok(SegmentTilesRequest(), AsyncMock()) is False
 
 
 @pytest.mark.asyncio
 async def test_a_server_that_does_not_know_its_own_id_has_nothing_to_compare_and_accepts_any() -> None:
     context = AsyncMock()
 
-    assert await servicer(None)._model_id_ok(SegmentationRequest(model_id="anything"), context) is True
+    assert await servicer(None)._model_id_ok(SegmentTilesRequest(model_id="anything"), context) is True
     context.abort.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-async def test_segment_image_refuses_a_wrong_model_before_doing_any_work() -> None:
-    target = servicer(manifest())
-    target._dispatch_segmentation = AsyncMock()
-    context = AsyncMock()
-
-    await target.SegmentImage(SegmentationRequest(model_id="v3"), context)
-
-    assert aborted_with(context) == FAILED
-    target._dispatch_segmentation.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_a_tile_stream_start_for_another_model_is_refused() -> None:
     context = AsyncMock()
-    request = SegmentTilesRequest(tiles=[TileCoord(volume="V", downsample=1)], model_id="v3")
 
-    assert await servicer(manifest())._validate_stream_start(request, context) is None
+    assert await servicer(manifest())._validate_stream_start(start([(1, 1)], model_id="v3"), context) is None
     assert aborted_with(context) == FAILED
 
 
-@pytest.mark.asyncio
-async def test_a_whole_screen_model_refuses_the_tile_rpcs() -> None:
-    target = servicer(manifest(submission_mode="full_viewport"))
-    context = AsyncMock()
-
-    response = await target.UploadTile(UploadTileRequest(), context)
-    assert aborted_with(context) == FAILED and response is not None
-    assert "whole-screen" in context.abort.await_args.args[1]
-
-    stream_context = AsyncMock()
-    request = SegmentTilesRequest(tiles=[TileCoord(volume="V", downsample=1)], model_id="v4")
-    assert await target._validate_stream_start(request, stream_context) is None
-    assert aborted_with(stream_context) == FAILED
-
-
-@pytest.mark.asyncio
-async def test_a_whole_screen_model_accepts_the_whole_screen_rpcs() -> None:
-    context = AsyncMock()
-
-    assert await servicer(manifest(submission_mode="full_viewport"))._submission_ok("SegmentImage", False, context)
-    context.abort.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-async def test_a_tiled_model_keeps_accepting_the_whole_screen_rpcs_unless_strict(monkeypatch: pytest.MonkeyPatch) -> None:
-    target = servicer(manifest())
-    relaxed = AsyncMock()
-    assert await target._submission_ok("SegmentImage", False, relaxed) is True
-    relaxed.abort.assert_not_awaited()
-
-    monkeypatch.setenv("SEGMENTATION_STRICT_SUBMISSION_MODE", "1")
-    strict = AsyncMock()
-    assert await target._submission_ok("SegmentImage", False, strict) is False
-    assert aborted_with(strict) == FAILED
-    assert target.model.capabilities.submission_mode == SubmissionMode.SUBMISSION_MODE_FIXED_TILE_GRID
-
-
-def mask_request(role: int | None) -> SegmentTilesRequest:
-    feature = Feature()
-    if role is not None:
-        feature.mask_role = role
-    return SegmentTilesRequest(
-        tiles=[TileCoord(volume="V", downsample=1)], foreground_feature=feature, foreground_mask_tile_count=1
-    )
-
-
-def one_full_tile() -> MaskTileCollector:
-    """The collector of a request whose FOREGROUND mask is one full tile."""
-    collector = MaskTileCollector(1)
-    tile = MaskTile(coord=TileCoord(volume="V", downsample=1), kind=MaskKind.MASK_KIND_FOREGROUND, full=True)
-    collector.add(MaskTiles(tiles=[tile]), TileCoord(volume="V", downsample=1), _same_tile_identity)
-    return collector
-
-
-def test_the_mask_role_the_client_sent_reaches_the_mask_shape() -> None:
-    assert _prompts_from(mask_request(MaskRole.MASK_ROLE_CORRECTION), one_full_tile()).masks[0].role == "correction"
-    assert _prompts_from(mask_request(MaskRole.MASK_ROLE_SEED), one_full_tile()).masks[0].role == "seed"
-
-
-def test_an_unspecified_mask_role_is_a_seed() -> None:
-    assert _prompts_from(mask_request(None), one_full_tile()).masks[0].role == "seed"
-
-
 def test_the_servicer_builds_the_encoder_the_manifest_names() -> None:
-    assert isinstance(servicer(manifest())._prompt_encoder, EdgeConfidenceEncoder)
+    assert type(servicer(manifest())._prompt_encoder) is EdgeConfidenceEncoder
+    assert isinstance(servicer(manifest(encoding="edge-confidence-v7"))._prompt_encoder, DepthTrustEncoder)
     assert servicer(None)._prompt_encoder is None  # legacy: the existing prompt path
+
+
+def test_the_circle_scale_comes_from_the_manifests_client_contract() -> None:
+    assert servicer(manifest())._circle_scale == 0.95
+    assert servicer(manifest(circle_diameter_scale=0.8))._circle_scale == 0.8
+    assert servicer(None)._circle_scale == 1.0  # a model that says nothing was trained on circles as drawn
+
+
+def test_under_v7_a_circle_claims_its_support_disc() -> None:
+    """v7 trusts a circle out to zero_frac of its radius; that disc is the region the walk pins and splits."""
+    assert servicer(manifest(encoding="edge-confidence-v7"))._circle_scale == pytest.approx(0.95)
 
 
 def test_a_manifest_naming_an_unknown_encoding_stops_the_server() -> None:

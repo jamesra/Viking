@@ -11,45 +11,26 @@ namespace WebAnnotation.UI.Commands.Segmentation
     public static class SegmentationExtensions
     {
         /// <summary>
-        /// Segments from highest to lowest score, or empty when the response has none.
-        /// Tie-breaking matches <see cref="Enumerable.OrderByDescending{TSource, TKey}(IEnumerable{TSource}, Func{TSource, TKey})"/>.
+        /// The islands of <paramref name="response"/> in island order (1, the largest trusted area, first), or empty when it has
+        /// none. A server numbers its islands 1.. in the order it sends them; sorting keeps that order however they arrive, and
+        /// the sort is stable so islands with the same number keep the order they were sent in.
         /// </summary>
-        internal static IEnumerable<SegmentationServiceTypes.SegmentResult> GetSegmentsByDescendingScore(
+        internal static IEnumerable<SegmentationServiceTypes.SegmentResult> GetSegmentsByIsland(
             this SegmentationServiceTypes.SegmentationResponse? response)
         {
             if (response?.Segments is null || response.Segments.Count == 0)
-                yield break;
+                return [];
 
-            foreach (SegmentationServiceTypes.SegmentResult segment in response.Segments.OrderByDescending(s => s.Score))
-                yield return segment;
+            return response.Segments.OrderBy(segment => segment.Island);
         }
 
         /// <summary>
-        /// Returns the segment with the highest <see cref="SegmentationServiceTypes.SegmentResult.Score"/>,
-        /// or null when the response has no segments. Matches the previous
-        /// <c>OrderByDescending(s =&gt; s.Score).First()</c> choice (stable tie-break on list order).
+        /// Island 1 of <paramref name="response"/>: the island with the largest trusted area, the object a caller that keeps one
+        /// shape keeps. The lowest island number when no island is numbered 1; null when the response has no segments.
         /// </summary>
-        internal static SegmentationServiceTypes.SegmentResult? GetHighestScoringSegment(
+        internal static SegmentationServiceTypes.SegmentResult? GetPrimaryIsland(
             this SegmentationServiceTypes.SegmentationResponse? response)
-            => response.GetSegmentsByDescendingScore().FirstOrDefault();
-
-        /// <summary>
-        /// Image pixels per sample of the frame <paramref name="response"/> describes: 4 when the server sent SAM2's
-        /// native logits (<c>Width</c>, <c>Height</c>, mask and logit sizes are then in samples), 1 otherwise.
-        /// </summary>
-        internal static int PixelScale(this SegmentationServiceTypes.SegmentationResponse? response)
-        {
-            if (response?.Segments is null)
-                return 1;
-
-            foreach (SegmentationServiceTypes.SegmentResult segment in response.Segments)
-            {
-                if (SegmentationLogitField.HasLogits(segment))
-                    return SegmentationLogitField.PixelScale(segment);
-            }
-
-            return 1;
-        }
+            => response.GetSegmentsByIsland().FirstOrDefault();
 
         /// <summary>
         /// Maps world coordinates to capture-pixel space without a Y flip. SAM2 mask Y is flipped elsewhere.
@@ -89,38 +70,5 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 boundsMin.X + normalizedX * (boundsMax.X - boundsMin.X),
                 boundsMin.Y + normalizedY * (boundsMax.Y - boundsMin.Y));
         }
-
-        /// <summary>
-        /// Converts a protobuf Polygon to a Polygon by transforming viewport pixel coordinates to world coordinates
-        /// </summary>
-        /// <param name="protoPolygon">The protobuf polygon to convert</param>
-        /// <param name="viewportBounds">The world-space bounds of the viewport</param>
-        /// <param name="viewportWidth">Width of the viewport in pixels</param>
-        /// <param name="viewportHeight">Height of the viewport in pixels</param>
-        /// <returns>A Polygon in world coordinates</returns>
-        public static Polygon ToPolygon(
-            this SegmentationServiceTypes.Polygon protoPolygon,
-            Rectangle viewportBounds,
-            int viewportWidth,
-            int viewportHeight)
-        {
-            if (protoPolygon is null || protoPolygon.Points.Count < 3)
-                return null;
-
-            List<Vector2> worldPoints = new(protoPolygon.Points.Count);
-
-            foreach (var point in protoPolygon.Points)
-            {
-                worldPoints.Add(MapViewportPixelToWorld(
-                    point.X,
-                    point.Y,
-                    viewportBounds,
-                    viewportWidth,
-                    viewportHeight));
-            }
-
-            return new Polygon(worldPoints.EnsureClosedRing().RemoveAdjacentDuplicates());
-        }
     }
 }
-

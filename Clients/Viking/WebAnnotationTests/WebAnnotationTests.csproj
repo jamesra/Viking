@@ -79,6 +79,7 @@
     <Compile Include="Commands\SegmentationMaskUnionTests.cs" />
     <Compile Include="Commands\SegmentationMaskScaleTests.cs" />
     <Compile Include="Commands\SegmentationMaskTilesTests.cs" />
+    <Compile Include="Commands\SegmentationProtocolTests.cs" />
     <Compile Include="Commands\PolygonCutMeshBuilderTests.cs" />
     <Compile Include="Commands\PolygonCutFillCacheTests.cs" />
     <Compile Include="Commands\PenModeContactTests.cs" />

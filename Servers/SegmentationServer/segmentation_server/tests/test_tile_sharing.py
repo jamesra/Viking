@@ -4,40 +4,37 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import List, Optional
+from typing import List
 
 import grpc
 import numpy as np
 import pytest
 
+from protocol import cell as _cell, context as _context, grid, png as _png, put_tile as _upload, servicer as _servicer, start
 from segmentation_grpc import (
-    Feature,
-    MaskKind,
-    MaskTile,
-    MaskTiles,
-    Point,
     SegmentTilesRequest,
     SegmentTilesStreamRequest,
     SegmentTilesStreamResponse,
-    TileCoord,
     TilesAnswer,
     UploadTileRequest,
 )
-from segmentation_server.cell_grid import TILE_SIZE
 from segmentation_server.image_cache import ImageCache
 from segmentation_server.server import SegmentationServicer
-from test_segment_tiles import _context, _png, _servicer, _tile, _upload
 
 NEIGHBOURS = {(-1, -1), (-1, 0), (0, -1)}
 
 
 def _request() -> SegmentTilesRequest:
     """A click at (10, 10), owned by an offset cell that needs the three neighbours of tile (0, 0)."""
-    return SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=10, y=10)]))
+    return start([(10, 10)])
 
 
 class _Client:
-    """One SegmentTilesStream conversation driven by hand, so a test can interleave two of them."""
+    """One SegmentTilesStream conversation driven by hand, so a test can interleave two of them.
+
+    A TilesNeeded that asks only for background cells is answered at once with no shapes (no neighbouring
+    annotations); one that asks for tiles is queued for the test, which answers it.
+    """
 
     def __init__(self, servicer: SegmentationServicer, request: SegmentTilesRequest) -> None:
         self.context = _context()
@@ -58,20 +55,18 @@ class _Client:
         async for update in servicer.SegmentTilesStream(self._incoming(), self.context):
             self.updates.append(update)
             if update.WhichOneof("update") == "needed":
-                if update.needed.masks:
-                    # No neighbouring annotations: every BACKGROUND tile asked for is empty, sent at once.
-                    empty = [MaskTile(coord=coord, kind=MaskKind.MASK_KIND_BACKGROUND) for coord in update.needed.masks]
-                    self._inbox.put_nowait(SegmentTilesStreamRequest(mask_tiles=MaskTiles(tiles=empty)))
                 if update.needed.tiles:
                     self.needed.put_nowait({(tile.row, tile.col) for tile in update.needed.tiles})
+                else:
+                    self._inbox.put_nowait(SegmentTilesStreamRequest(answer=TilesAnswer()))
 
     async def next_needed(self, timeout: float = 5.0) -> set:
         return await asyncio.wait_for(self.needed.get(), timeout)
 
-    async def answer(self, *, ready=(), unavailable=()) -> None:
-        coords = lambda tiles: [_tile(row, col) for row, col in tiles]
+    async def answer(self, *, unavailable=()) -> None:
+        """Answer the oldest TilesNeeded: uploads need no listing, so only the tiles the client cannot supply."""
         await self._inbox.put(
-            SegmentTilesStreamRequest(answer=TilesAnswer(ready=coords(ready), unavailable=coords(unavailable)))
+            SegmentTilesStreamRequest(answer=TilesAnswer(unavailable=[_cell(row, col) for row, col in unavailable]))
         )
 
     async def hang_up(self) -> None:
@@ -88,10 +83,7 @@ class _Client:
 async def _client_uploads(servicer: SegmentationServicer, tiles) -> None:
     """What a client does for a ``needed``: send each tile through UploadTile."""
     for row, col in tiles:
-        await servicer.UploadTile(
-            UploadTileRequest(coord=_tile(row, col), image_data=_png(), width=TILE_SIZE, height=TILE_SIZE),
-            _context(),
-        )
+        await servicer.UploadTile(UploadTileRequest(grid=grid(), cell=_cell(row, col), image_data=_png()), _context())
 
 
 async def _wait_until(condition, timeout: float = 5.0) -> None:
@@ -115,16 +107,14 @@ async def _two_streams_wanting_the_neighbours(servicer: SegmentationServicer):
 
 
 def _servicer_with_tile_zero() -> SegmentationServicer:
-    """UploadTile passes the decoded pixels to the predictor factory, which test_segment_tiles' cache does not accept."""
+    """A servicer whose predictions fill the window, so a walk grows into the neighbours."""
     cache = ImageCache(
         max_memory_bytes=100_000_000,
         ttl_seconds=60,
         max_entries=8,
         create_predictor_func=lambda *_args, **_kwargs: object(),
     )
-    servicer = _servicer(cache)
-    servicer.model.predict_ephemeral.return_value = (np.ones((4, 4), dtype=np.bool_), None, 0.8)
-    return servicer
+    return _servicer(cache, mask=np.ones((4, 4), dtype=np.bool_))
 
 
 @pytest.mark.asyncio
@@ -136,7 +126,7 @@ async def test_a_second_stream_waits_for_the_first_streams_upload_and_asks_its_c
     asked_of_b: list = []
 
     async def serve(client: _Client, record: list) -> None:
-        """Upload and report ready for every later ``needed`` the client is sent."""
+        """Upload and answer every later ``needed`` the client is sent."""
         while not client.task.done():
             try:
                 tiles = await asyncio.wait_for(client.needed.get(), 0.2)
@@ -144,10 +134,10 @@ async def test_a_second_stream_waits_for_the_first_streams_upload_and_asks_its_c
                 continue
             record.append(tiles)
             await _client_uploads(servicer, tiles)
-            await client.answer(ready=tiles)
+            await client.answer()
 
     await _client_uploads(servicer, NEIGHBOURS)
-    await a.answer(ready=NEIGHBOURS)
+    await a.answer()
     servers = [asyncio.create_task(serve(a, [])), asyncio.create_task(serve(b, asked_of_b))]
     try:
         a_updates = await a.finish()
@@ -257,23 +247,16 @@ async def test_with_sharing_off_every_stream_asks_for_every_tile() -> None:
 
 
 @pytest.mark.asyncio
-async def test_a_client_that_keeps_sending_answers_that_settle_nothing_still_times_out() -> None:
+async def test_a_client_that_answers_but_never_uploads_still_times_out() -> None:
+    """An answer that lists nothing leaves its tiles awaited: only an upload or ``unavailable`` settles a tile."""
     servicer = _servicer_with_tile_zero()
     await _upload(servicer.image_cache, 0, 0, _png())
     servicer._tile_answer_timeout = 0.3
     client = _Client(servicer, _request())
     await client.next_needed()
 
-    async def chatter() -> None:
-        while not client.task.done():
-            await client.answer()
-            await asyncio.sleep(0.05)
-
-    chatting = asyncio.create_task(chatter())
-    try:
-        await client.finish(timeout=5)
-    finally:
-        chatting.cancel()
+    await client.answer()
+    await client.finish(timeout=5)
 
     assert client.context.abort.await_args.args[0] == grpc.StatusCode.DEADLINE_EXCEEDED
     assert all(entry.in_use == 0 for entry in servicer.image_cache._cache.values())

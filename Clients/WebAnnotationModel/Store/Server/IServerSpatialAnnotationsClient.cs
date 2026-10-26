@@ -13,12 +13,14 @@ namespace WebAnnotationModel.ServerInterface
         /// <summary>
         /// Fetches objects from the server in the specified region
         /// </summary>
-        /// <param name="bounds"></param>
-        /// <param name="ScreenPixelSizeInVolume"></param>
-        /// <param name="Z"></param>
-        /// <returns></returns>
+        /// <param name="Z">Section number.</param>
+        /// <param name="bounds">The region in mosaic space.</param>
+        /// <param name="ScreenPixelSizeInVolume">Minimum location radius to return.</param>
+        /// <param name="modifiedAfter">Only objects changed after this time; null for all.</param>
+        /// <param name="token">Cancels the request.</param>
+        /// <param name="onChunk">Optional, awaited for each streamed batch.</param>
         Task<ServerUpdate<KEY, SERVER_OBJECT[]>> GetAsync(long Z, 
-                                     string geometryWellKnownText,
+                                     Rectangle bounds,
                                      double ScreenPixelSizeInVolume,
                                      DateTime? modifiedAfter,
                                      CancellationToken token,

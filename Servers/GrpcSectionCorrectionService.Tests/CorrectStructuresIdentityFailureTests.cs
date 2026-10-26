@@ -12,12 +12,13 @@ using System.Threading.Tasks;
 using Viking.GrpcSectionCorrectionService;
 using Viking.SectionCorrection;
 using Viking.SectionCorrectionBuilder;
-using Viking.SectionCorrectionServiceTypes.gRPC.V1.Protos;
+using Google.Protobuf.WellKnownTypes;
+using Viking.SectionCorrectionServiceTypes.gRPC.V2.Protos;
 
 namespace GrpcSectionCorrectionService.Tests
 {
     /// <summary>
-    /// Pins the status code <see cref="SectionCorrectionsService.CorrectStructures"/> returns when the Identity
+    /// Pins the status code <see cref="SectionCorrectionsServiceV2.CorrectStructures"/> returns when the Identity
     /// volume listing fails: transport failures map to UNAVAILABLE (like the volume-load failure beside it),
     /// caller cancellation stays an <see cref="OperationCanceledException"/>, other faults are not remapped, and an
     /// unlisted volume is still NOT_FOUND.
@@ -69,7 +70,7 @@ namespace GrpcSectionCorrectionService.Tests
             ]);
 
             ListVolumesResponse response = await CreateService(volumes)
-                .ListVolumes(new ListVolumesRequest(), new CallContext(CancellationToken.None));
+                .ListVolumes(new Empty(), new CallContext(CancellationToken.None));
 
             CollectionAssert.AreEqual(new[] { "RC1", "RC2" }, response.Volumes.Select(v => v.VolumeName).ToArray());
         }
@@ -80,7 +81,7 @@ namespace GrpcSectionCorrectionService.Tests
         {
             RpcException ex = await Assert.ThrowsExactlyAsync<RpcException>(
                 () => CreateService(new UnconfiguredIdentityVolumeSource())
-                    .ListVolumes(new ListVolumesRequest(), new CallContext(CancellationToken.None)));
+                    .ListVolumes(new Empty(), new CallContext(CancellationToken.None)));
 
             Assert.AreEqual(StatusCode.Unavailable, ex.StatusCode);
             StringAssert.Contains(ex.Status.Detail, "IdentityServer__ClientSecret");
@@ -119,21 +120,20 @@ namespace GrpcSectionCorrectionService.Tests
 
         static CorrectStructuresRequest Request() => new()
         {
-            VolumeName = Volume,
-            StosGroup = "Grid",
+            Set = new CorrectionSetId { VolumeName = Volume, StosGroup = "Grid" },
             StructureIds = { 1L }
         };
 
-        static SectionCorrectionsService CreateService(Exception identityFailure) =>
+        static SectionCorrectionsServiceV2 CreateService(Exception identityFailure) =>
             CreateService(new FailingIdentitySource(identityFailure));
 
-        static SectionCorrectionsService CreateService(IIdentityVolumeSource volumes) =>
+        static SectionCorrectionsServiceV2 CreateService(IIdentityVolumeSource volumes) =>
             new(new VolumeCorrectionCatalog(Path.Combine(Path.GetTempPath(), "viking-correct-structures-unused")),
                 volumes,
                 new AnnotationConnectionResolver(new Dictionary<string, string> { [Volume] = "Server=unused" }, null),
                 new ConfigurationBuilder().Build(),
                 new RebuildStatusStore(),
-                NullLogger<SectionCorrectionsService>.Instance);
+                NullLogger<SectionCorrectionsServiceV2>.Instance);
 
         /// <summary>Identity source whose listing always fails with the given exception.</summary>
         sealed class FailingIdentitySource(Exception toThrow) : IIdentityVolumeSource

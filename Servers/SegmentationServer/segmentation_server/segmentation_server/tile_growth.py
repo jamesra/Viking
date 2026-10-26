@@ -40,7 +40,9 @@ The walk:
 Aligned tiles the server does not hold are collected by ``GrowthWalk.take_requested`` and the
 walk continues without that cell. The walk object stays alive while the caller fetches the
 tiles; ``GrowthWalk.resume`` then re-queues only the cells that were waiting, so nothing that
-was already predicted is predicted again and ``G`` only ever gains pixels.
+was already predicted is predicted again and ``G`` only ever gains pixels. A window whose
+background (the neighbouring annotations) the caller has not been told about is set aside the
+same way, and its tiles are listed by ``GrowthWalk.take_requested_background``.
 """
 
 from __future__ import annotations
@@ -347,6 +349,10 @@ class GrowthWalk:
     ``prompt_encoder`` (see ``prompt_encodings``) builds the mask prompt of a start window that has a client mask,
     background included, as the model was trained on it. None keeps the legacy flat prompt below. Windows the walk
     grows into are prompted with their neighbours' fused logits whichever encoder this is.
+    ``background_masks`` may be a list the caller keeps adding to (background shapes arrive as the walk asks for
+    them); it is read, not copied. ``background_coverage`` names, for a cell, the tiles of its window whose background
+    the caller has not been told about yet; the walk waits for those (:meth:`take_requested_background`) before it
+    predicts the window.
     """
 
     def __init__(
@@ -366,8 +372,10 @@ class GrowthWalk:
         background_rects: Optional[Sequence[Tuple[int, int, int, int]]] = None,
         prompt_encoder: Optional[Any] = None,
         holds_image: Optional[Callable[[TileIndex], bool]] = None,
+        background_coverage: Optional[Callable[[Cell], Sequence[TileIndex]]] = None,
     ) -> None:
         self._prompt_encoder = prompt_encoder
+        self._background_coverage = background_coverage
         # Whether the caller already holds a tile's image. A cell that waits for background mask tiles also asks for the
         # image tiles it lacks in the same round, so the client is not asked twice for one window.
         self._holds_image = holds_image
@@ -402,10 +410,14 @@ class GrowthWalk:
         self._hints: Set[Box] = {(int(a), int(b), int(c), int(d)) for a, b, c, d in hint_boxes or ()}
         self._boxes += sorted(self._hints.difference(self._boxes))
         self._boxes += sorted(self._masks.difference(self._boxes))
-        self._background_masks: List[MaskShape] = [
-            item if isinstance(item, MaskShape) else MaskShape(tuple(int(v) for v in item))  # type: ignore[arg-type]
-            for item in background_masks or ()
-        ]
+        if isinstance(background_masks, list) and all(isinstance(item, MaskShape) for item in background_masks):
+            # The caller's own list: background shapes it adds later are seen.
+            self._background_masks: List[MaskShape] = background_masks
+        else:
+            self._background_masks = [
+                item if isinstance(item, MaskShape) else MaskShape(tuple(int(v) for v in item))  # type: ignore[arg-type]
+                for item in background_masks or ()
+            ]
         self._background_rects = [(int(a), int(b), int(c), int(d)) for a, b, c, d in background_rects or ()]
         self._background_patches: Dict[Cell, Optional[Tuple[Optional[NDArray], Optional[NDArray]]]] = {}
         self._encoded_backgrounds: Dict[Cell, Optional[NDArray]] = {}
@@ -476,11 +488,11 @@ class GrowthWalk:
         self._pending = []
         return taken
 
-    def take_requested_masks(self) -> List[TileIndex]:
-        """Tiles whose background mask the walk needs and does not hold, since the last call, in the order needed.
+    def take_requested_background(self) -> List[TileIndex]:
+        """Tiles whose background the walk needs and has not been told about, since the last call, in the order needed.
 
-        The caller settles each in the background mask (:meth:`TiledMaskShape.settle`), with no mask where the client
-        has none, then calls :meth:`resume`.
+        The caller finds out what background reaches them (adding any shapes to the background list), records them as
+        known so ``background_coverage`` stops naming them, then calls :meth:`resume`.
         """
         taken = self._pending_masks
         self._pending_masks = []
@@ -1075,8 +1087,10 @@ class GrowthWalk:
             raise GrowthCancelled()
 
     def _missing_background(self, cell: Cell) -> List[TileIndex]:
-        """The tiles of ``cell``'s window that some background mask has not been told about."""
+        """The tiles of ``cell``'s window whose background the walk has not been told about."""
         missing: List[TileIndex] = []
+        if self._background_coverage is not None:
+            missing.extend(self._background_coverage(cell))
         for shape in self._background_masks:
             for tile in shape.unknown_tiles(cell):
                 if tile not in missing:
@@ -1084,7 +1098,7 @@ class GrowthWalk:
         return missing
 
     def _wait_for_background(self, cell: Cell, missing: Sequence[TileIndex]) -> None:
-        """Defer ``cell`` until the caller has settled the background mask tiles ``missing`` (see :meth:`take_requested_masks`).
+        """Defer ``cell`` until the caller has settled the background of the tiles ``missing`` (see :meth:`take_requested_background`).
 
         The window's image tiles the caller lacks are asked for in the same round.
         """

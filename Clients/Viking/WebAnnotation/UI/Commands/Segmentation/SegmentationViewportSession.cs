@@ -2,10 +2,8 @@ using Geometry;
 using Grpc.Core;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -35,7 +33,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private readonly ISegmentationViewport parent;
         private SegmentationServiceTypes.SegmentationService.SegmentationServiceClient grpcClient;
 
-        private ulong? currentImageId;
         private Geometry.Rectangle? uploadedImageBounds;
         private int uploadedImageWidth;
         private int uploadedImageHeight;
@@ -120,18 +117,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private int mosaicOriginY;
 
         /// <summary>
-        /// Ceiling for submitted tile downsample from appSettings
-        /// <c>SegmentationTileDownsample</c> (default 1). Camera zoom may submit a finer
-        /// level down to 1; never coarser than this. A coarser camera still uploads at this
-        /// level until <see cref="WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>,
-        /// which cannot exceed 4 (default 2). A camera coarser than that preference does not upload.
+        /// The tile level every request is sent at. Every served model is a single-resolution tile grid, so the level does not
+        /// follow zoom: a camera coarser than 1 still uploads at this level until
+        /// <see cref="WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>, which cannot exceed 4
+        /// (default 2). A camera coarser than that preference does not upload.
         /// </summary>
-        public static int MaxTileDownsample { get; } =
-            int.TryParse(ConfigurationManager.AppSettings["SegmentationTileDownsample"], out int ds) && ds >= 1
-                ? ds
-                : 1;
-
-        private static SegmentationModelProfile modelProfile = SegmentationModelProfile.Default;
+        private const int TileLevel = 1;
 
         private static string? serverModelId;
 
@@ -143,55 +134,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public static string? ServerModelId => Volatile.Read(ref serverModelId);
 
         /// <summary>The GetServerStatus query in flight or finished for the current endpoint; null until a session has connected.</summary>
-        private static Task? capabilitiesRefresh;
-
-        /// <summary>
-        /// How the model in use wants its input: fixed grid tiles or the whole screen, and whether the
-        /// tile level follows zoom. Starts as <see cref="SegmentationModelProfile.Default"/> (fixed tiles,
-        /// single resolution) and is replaced by <see cref="AdoptModelCapabilities"/>.
-        /// Drives <see cref="SegmentationCameraPolicy"/>.
-        /// </summary>
-        public static SegmentationModelProfile ModelProfile => Volatile.Read(ref modelProfile);
-
-        /// <summary>
-        /// Adopts the capabilities the server advertised in GetServerStatus. The local ceiling can only
-        /// narrow the result. Throws if the server left a flag unspecified; the current profile is kept.
-        /// </summary>
-        public static void AdoptModelCapabilities(Viking.gRPC.SegmentationServiceTypes.V1.ModelCapabilities advertised)
-            => Volatile.Write(ref modelProfile, SegmentationModelProfile.FromAdvertised(advertised, MaxTileDownsample));
-
-        /// <summary>
-        /// Profile worth adopting from <paramref name="advertised"/>, or null to keep the current one. Null when the
-        /// server left a mode unspecified (a server bug that must not change how input is submitted) or asks for
-        /// full-viewport submission: this client only implements the fixed tile path, so adopting that profile
-        /// would stop every request from being submittable.
-        /// </summary>
-        internal static SegmentationModelProfile? ProfileToAdopt(
-            Viking.gRPC.SegmentationServiceTypes.V1.ModelCapabilities? advertised,
-            int maxTileDownsample)
-        {
-            if (advertised is null)
-                return null;
-
-            SegmentationModelProfile profile;
-            try
-            {
-                profile = SegmentationModelProfile.FromAdvertised(advertised, maxTileDownsample);
-            }
-            catch (ArgumentException ex)
-            {
-                SegmentationDiag.Log($"GetServerStatus: ignoring capabilities: {ex.Message}");
-                return null;
-            }
-
-            if (!profile.UsesFixedTiles)
-            {
-                SegmentationDiag.Log("GetServerStatus: server wants full-viewport submission, which this client cannot send; keeping fixed tiles");
-                return null;
-            }
-
-            return profile;
-        }
+        private static Task? serverStatusRefresh;
 
         /// <summary>
         /// The model id worth sending back on requests, or null when the server reported none. A server whose model has no
@@ -203,32 +146,31 @@ namespace WebAnnotation.UI.Commands.Segmentation
             return string.IsNullOrEmpty(id) || string.Equals(id, "unknown", StringComparison.OrdinalIgnoreCase) ? null : id;
         }
 
-        private static readonly object capabilitiesGate = new();
-        private static string? capabilitiesEndpoint;
+        private static readonly object serverStatusGate = new();
+        private static string? serverStatusEndpoint;
 
         /// <summary>
-        /// Forgets the capabilities of the previous server: the profile returns to
-        /// <see cref="SegmentationModelProfile.Default"/> and the next client connection asks the new server again.
-        /// Called when the segmentation endpoint changes.
+        /// Forgets the model of the previous server: <see cref="ServerModelId"/> is cleared and the next client connection asks
+        /// the new server again. Called when the segmentation endpoint changes, or when the server refused a request built for
+        /// another model.
         /// </summary>
-        public static void ResetModelProfile()
+        public static void ResetServerModel()
         {
-            lock (capabilitiesGate)
-                capabilitiesEndpoint = null;
+            lock (serverStatusGate)
+                serverStatusEndpoint = null;
 
-            Volatile.Write(ref modelProfile, SegmentationModelProfile.Default);
             Volatile.Write(ref serverModelId, null);
-            Volatile.Write(ref capabilitiesRefresh, null);
+            Volatile.Write(ref serverStatusRefresh, null);
         }
 
         /// <summary>
         /// Waits (at most <paramref name="timeoutSeconds"/>) for the GetServerStatus query a connection started, so
-        /// <see cref="ServerModelId"/> and the model profile are known before a request is built from them. Returns at once when the
-        /// query has finished or none was started, and never throws: a server that does not answer leaves the defaults.
+        /// <see cref="ServerModelId"/> is known before a request is built. Returns at once when the query has finished or none
+        /// was started, and never throws: a server that does not answer leaves the model id unset.
         /// </summary>
-        public static async Task WhenCapabilitiesKnownAsync(int timeoutSeconds = 6)
+        public static async Task WhenServerStatusKnownAsync(int timeoutSeconds = 6)
         {
-            Task? refresh = Volatile.Read(ref capabilitiesRefresh);
+            Task? refresh = Volatile.Read(ref serverStatusRefresh);
             if (refresh is null || refresh.IsCompleted)
                 return;
 
@@ -236,10 +178,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Starts one GetServerStatus per endpoint to learn the model's capabilities. Later connections to the same
-        /// endpoint do nothing; a failed query is retried by the next connection. Never blocks the caller.
+        /// Starts one GetServerStatus per endpoint to learn the served model. Later connections to the same endpoint do
+        /// nothing; a failed query is retried by the next connection. Never blocks the caller.
         /// </summary>
-        private void BeginModelCapabilitiesRefresh(SegmentationServiceTypes.SegmentationService.SegmentationServiceClient client)
+        private void BeginServerStatusRefresh(SegmentationServiceTypes.SegmentationService.SegmentationServiceClient client)
         {
             string endpoint;
             try
@@ -252,27 +194,25 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
-            lock (capabilitiesGate)
+            lock (serverStatusGate)
             {
-                if (string.Equals(capabilitiesEndpoint, endpoint, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(serverStatusEndpoint, endpoint, StringComparison.OrdinalIgnoreCase))
                     return;
 
-                capabilitiesEndpoint = endpoint;
+                serverStatusEndpoint = endpoint;
             }
 
-            Volatile.Write(ref capabilitiesRefresh, RefreshModelCapabilitiesAsync(client, endpoint));
+            Volatile.Write(ref serverStatusRefresh, RefreshServerStatusAsync(client, endpoint));
         }
 
-        /// <summary>
-        /// Fetches GetServerStatus and installs the advertised profile when it is still for the current endpoint.
-        /// </summary>
         /// <summary>
         /// How long the status query a request waits on (for the model id) may take. A busy server answers slowly, and giving
         /// up after a few seconds made requests start without knowing the model.
         /// </summary>
         private const int StatusDeadlineSeconds = 60;
 
-        private static async Task RefreshModelCapabilitiesAsync(
+        /// <summary>Fetches GetServerStatus and installs the served model's id when it is still for the current endpoint.</summary>
+        private static async Task RefreshServerStatusAsync(
             SegmentationServiceTypes.SegmentationService.SegmentationServiceClient client,
             string endpoint)
         {
@@ -284,28 +224,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     .ResponseAsync.ConfigureAwait(false);
 
                 SegmentationServiceHealth.ReportSuccess();
-                SegmentationModelProfile? profile = ProfileToAdopt(status?.Capabilities, MaxTileDownsample);
                 string? modelId = ModelIdToAdopt(status?.Model);
 
-                lock (capabilitiesGate)
+                lock (serverStatusGate)
                 {
-                    if (!string.Equals(capabilitiesEndpoint, endpoint, StringComparison.OrdinalIgnoreCase))
+                    if (!string.Equals(serverStatusEndpoint, endpoint, StringComparison.OrdinalIgnoreCase))
                         return;
 
-                    // The model identity is independent of the capabilities: a server whose capabilities we ignore still
-                    // refuses prompts built for a different model.
                     Volatile.Write(ref serverModelId, modelId);
-                    if (profile is not null)
-                        Volatile.Write(ref modelProfile, profile);
                 }
 
                 if (status?.Model is { } model)
                     SegmentationDiag.Log($"GetServerStatus: model={model.ModelId} version={model.ModelVersion} encoding={model.PromptEncoding} data={model.TrainingDataSet} contract={model.ContractJson}");
 
-                if (profile is null)
-                    return;
-
-                SegmentationDiag.Log($"GetServerStatus: adopted submission={profile.Submission} resolution={profile.Resolution}");
                 WebAnnotation.UI.AnnotationStatusChips.Refresh();
             }
             catch (Exception ex)
@@ -313,19 +244,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 SegmentationDiag.Log($"GetServerStatus failed: {ex.GetType().Name}: {ex.Message}");
                 if (ex is RpcException statusError)
                     SegmentationServiceHealth.ReportRpcError(statusError);
-                lock (capabilitiesGate)
+                lock (serverStatusGate)
                 {
-                    if (string.Equals(capabilitiesEndpoint, endpoint, StringComparison.OrdinalIgnoreCase))
-                        capabilitiesEndpoint = null;
+                    if (string.Equals(serverStatusEndpoint, endpoint, StringComparison.OrdinalIgnoreCase))
+                        serverStatusEndpoint = null;
                 }
             }
         }
-
-        /// <summary>
-        /// Highest level the current model may be sent: <see cref="MaxTileDownsample"/> when its profile
-        /// lets the level change, otherwise 1.
-        /// </summary>
-        private static int EffectiveTileCeiling => ModelProfile.TileLevelCanChange ? MaxTileDownsample : 1;
 
         /// <summary>
         /// False when this session enforces the auto-polygonize cutoff (<see cref="EnforceAutoDownsampleLimit"/>)
@@ -368,7 +293,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Maps camera downsample to the integer pyramid level sent to UploadTile/SegmentTiles.
         /// Values at or below 1 submit 1; larger values round up (ceil) and clamp to
-        /// <see cref="MaxTileDownsample"/>. Example: 1.21 and 4 both submit 1 when max is 1.
+        /// <see cref="TileLevel"/>, so 1.21 and 4 both submit 1.
         /// </summary>
         /// <param name="cameraDownsample">Live camera downsample (may be fractional).</param>
         public static int ResolveTileDownsample(double cameraDownsample)
@@ -380,7 +305,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (roundedUp < 1)
                 roundedUp = 1;
 
-            return Math.Min(EffectiveTileCeiling, roundedUp);
+            return Math.Min(TileLevel, roundedUp);
         }
 
         /// <summary>
@@ -461,8 +386,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         public Geometry.Rectangle ViewportBounds { get; set; }
 
-        public ulong? CurrentImageId => currentImageId;
-
         public Geometry.Rectangle? UploadedImageBounds => uploadedImageBounds;
 
         public int UploadedImageWidth => uploadedImageWidth;
@@ -470,7 +393,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public int UploadedImageHeight => uploadedImageHeight;
 
         /// <summary>Pyramid level used for the last tile upload/segment (resolved from camera, capped).</summary>
-        public int MosaicDownsample => mosaicDownsample > 0 ? mosaicDownsample : EffectiveTileCeiling;
+        public int MosaicDownsample => mosaicDownsample > 0 ? mosaicDownsample : TileLevel;
 
         /// <summary>
         /// Tile level <paramref name="response"/> was requested at, fixed when the response arrived. Use this, not
@@ -501,7 +424,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
 
                 grpcClient = new SegmentationServiceTypes.SegmentationService.SegmentationServiceClient(channel);
-                BeginModelCapabilitiesRefresh(grpcClient);
+                BeginServerStatusRefresh(grpcClient);
                 SegmentationDiag.Log("TryInitializeClient: ok");
                 return true;
             }
@@ -535,7 +458,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Cancels in-flight render, linked render, and upload tokens. Does not delete a server image.
+        /// Cancels in-flight render, linked render, and upload tokens.
         /// </summary>
         public void CancelPendingWork()
         {
@@ -554,9 +477,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             uploadCancellationTokenSource?.Cancel();
         }
 
-        public void ClearImageId()
+        /// <summary>
+        /// Forgets the recorded view and the tiles the server accepted for it, so the next request starts a new capture.
+        /// The server's shared tile cache drops tiles itself: nothing is deleted there.
+        /// </summary>
+        public void ClearUploadedView()
         {
-            currentImageId = null;
             uploadedImageBounds = null;
             uploadedImageWidth = 0;
             uploadedImageHeight = 0;
@@ -569,48 +495,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Installs a previously uploaded SAM2 image so SegmentImage can reuse it.
-        /// Prompt mapping uses <paramref name="worldBounds"/>, not the live camera.
-        /// NotFound still re-uploads via <see cref="SegmentAsync"/>.
-        /// </summary>
-        public void AdoptUploadedImage(ulong imageId, Geometry.Rectangle worldBounds, int width, int height)
-        {
-            currentImageId = imageId;
-            uploadedImageBounds = worldBounds;
-            uploadedImageWidth = width;
-            uploadedImageHeight = height;
-            ViewportBounds = worldBounds;
-        }
-
-        /// <summary>
-        /// Best-effort DeleteImage for a leased id that is no longer referenced by the auto-polygonize cache.
-        /// Does not change <see cref="CurrentImageId"/> on this session.
-        /// </summary>
-        public async Task DeleteImageByIdAsync(ulong imageId)
-        {
-            if (imageId == 0 || grpcClient is null)
-                return;
-
-            try
-            {
-                DeleteImageRequest deleteRequest = new()
-                {
-                    ImageId = imageId
-                };
-
-                CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(5));
-                await grpcClient.DeleteImageAsync(deleteRequest, callOptions).ResponseAsync.ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error deleting leased image from cache (ID={imageId}): {ex.Message}");
-            }
-        }
-
-        /// <summary>
         /// Records the live viewport as the tile-mode capture. Does not upload any cell: SegmentAsync names
         /// the cells that contain foreground points and uploads only the cells the server asks for.
-        /// Tile mode does not use UploadImage; CurrentImageId stays unset.
         /// </summary>
         /// <returns>True when the camera is inside the tile-submission range and the viewport was recorded.</returns>
         public async Task<bool> UploadCurrentImageAsync(CancellationToken cancellationToken)
@@ -645,7 +531,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 uploadedImageBounds = ViewportBounds;
                 uploadedImageWidth = SegmentationTileGrid.TileSize;
                 uploadedImageHeight = SegmentationTileGrid.TileSize;
-                currentImageId = null;
                 ClearSkip();
                 return true;
             }
@@ -671,48 +556,27 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Best-effort DeleteImage RPC, then clears CurrentImageId. Failures are logged only.
-        /// </summary>
-        public async Task DeleteCurrentImageAsync()
-        {
-            if (!currentImageId.HasValue || grpcClient is null)
-                return;
-
-            ulong imageIdToDelete = currentImageId.Value;
-            ClearImageId();
-
-            try
-            {
-                DeleteImageRequest deleteRequest = new()
-                {
-                    ImageId = imageIdToDelete
-                };
-
-                CallOptions callOptions = new(deadline: DateTime.UtcNow.AddSeconds(5));
-                await grpcClient.DeleteImageAsync(deleteRequest, callOptions).ResponseAsync.ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error deleting image from cache (ID={imageIdToDelete}): {ex.Message}");
-            }
-        }
-
-        /// <summary>
         /// Runs one SegmentTilesStream call naming the cells that contain foreground points. The server
         /// takes every cell it can from its own caches, which other users and earlier sessions fill too,
         /// grows the mask, and asks for the cells it lacks; the client renders and uploads only those, and
-        /// the call returns the finished mask. Does not name every viewport cell.
-        /// Returns null when no mask could be produced.
+        /// the call returns the finished segmentation, one <see cref="SegmentResult"/> per island of the prompt.
+        /// Does not name every viewport cell. Returns null when no mask could be produced.
         /// <paramref name="requestId"/> is sent with the request and echoed by the server; it only
         /// correlates log lines. Deciding whether a result is still wanted stays with the caller.
         /// </summary>
+        /// <param name="foregroundBoxes">
+        /// The seeds: circles and polygons go as foreground shapes, an edited bitmap as FOREGROUND mask tiles.
+        /// </param>
+        /// <param name="backgroundShapes">The neighbouring annotations, sent as background shapes as the object reaches them.</param>
+        /// <param name="backgroundBitmap">A painted bitmap of what the object is not, sent as BACKGROUND mask tiles.</param>
         public async Task<SegmentationResponse?> SegmentAsync(
             IReadOnlyList<Geometry.Vector2> foregroundPoints,
             IReadOnlyList<Geometry.Vector2> backgroundPoints,
             CancellationToken cancellationToken,
             IReadOnlyList<SegmentationSeed>? foregroundBoxes = null,
             ulong requestId = 0,
-            SegmentationMaskUnion? backgroundMask = null)
+            SegmentationBackgroundShapes? backgroundShapes = null,
+            SegmentationMaskUnion? backgroundBitmap = null)
         {
             if (grpcClient is null)
             {
@@ -733,7 +597,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 (int downsample, TileSignature signature, List<TileCell> visible, bool grayscale) =
                     await ReadViewTilesAsync().ConfigureAwait(false);
                 mosaicDownsample = downsample;
-                // The cells under the clicks, and under each box's center: the box says where the object is,
+                // The cells under the clicks, and under each seed's center: the seed says where the object is,
                 // so its center cell is the best first tile to have ready.
                 List<Geometry.Vector2> tilePoints = [.. foregroundPoints ?? []];
                 foreach (SegmentationSeed seed in foregroundBoxes ?? [])
@@ -759,18 +623,20 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     grayscale,
                     cancellationToken,
                     foregroundBoxes,
-                    backgroundMask,
-                    requestId).ConfigureAwait(false);
+                    backgroundShapes,
+                    requestId,
+                    backgroundBitmap).ConfigureAwait(false);
 
                 resultContexts.Record(response, downsample);
                 await CaptureMissingTileImagesAsync(response, signature, downsample, grayscale, cancellationToken).ConfigureAwait(false);
                 AttachTileImages(response, signature, downsample);
-                mosaicOriginX = response.OriginX;
-                mosaicOriginY = response.OriginY;
-                uploadedImageBounds = MosaicWorldBounds(response, DownsampleFor(response));
-                int responseScale = response.PixelScale();
-                uploadedImageWidth = Math.Max(1, response.Width) * responseScale;
-                uploadedImageHeight = Math.Max(1, response.Height) * responseScale;
+                if (ResponseWorldBounds(response, downsample) is Geometry.Rectangle bounds)
+                {
+                    uploadedImageBounds = bounds;
+                    uploadedImageWidth = Math.Max(1, (int)Math.Round(bounds.Width / downsample));
+                    uploadedImageHeight = Math.Max(1, (int)Math.Round(bounds.Height / downsample));
+                }
+
                 ClearSkip();
                 SegmentationServiceHealth.ReportSuccess();
                 return response;
@@ -802,7 +668,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 {
                     // The server now serves a different model than the one the next prompts were built for. Forget it so
                     // the next connection asks GetServerStatus again.
-                    ResetModelProfile();
+                    ResetServerModel();
                 }
 
                 SegmentationServiceHealth.ReportRpcError(rpcEx);
@@ -821,13 +687,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Decodes each segment and polygonizes in score order. Near-full-frame masks are skipped.
-        /// Cleanup and marching squares run at the field's own resolution: a segment that carries SAM2's logits is
-        /// traced on that native grid (one sample per four pixels) and the world transform scales the ring up; a
-        /// segment that only has a mask PNG is traced at pixel resolution. Callers apply pen-threshold simplification.
-        /// <paramref name="cancellationToken"/> is checked between segments so a newer click can abort.
-        /// <paramref name="keepComponentsContainingWorldPoints"/>, when given, hit-tests the mask at those
-        /// world points and polygonizes only the connected pieces they land on.
+        /// Decodes each island's logits and polygonizes them, island 1 (the largest) first. Cleanup and marching squares run
+        /// on the logits' native grid (one sample per four pixels) and the world transform scales the ring up. Callers
+        /// apply pen-threshold simplification. <paramref name="cancellationToken"/> is checked between islands so a newer
+        /// click can abort. <paramref name="keepComponentsContainingWorldPoints"/>, when given, hit-tests each island's mask at
+        /// those world points and polygonizes only the connected pieces they land on (an island no point lands on is kept
+        /// whole). <paramref name="primaryIslandOnly"/> traces island 1 alone, for a caller where only one shape fits.
         /// </summary>
         public IReadOnlyList<Polygon> CreatePolygonsFromResponse(
             SegmentationResponse response,
@@ -835,7 +700,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             IReadOnlyList<Geometry.Vector2> preserveHolesContainingWorldPoints = null,
             int? edgeCleanupRadius = null,
             CancellationToken cancellationToken = default,
-            IReadOnlyList<Geometry.Vector2> keepComponentsContainingWorldPoints = null)
+            IReadOnlyList<Geometry.Vector2> keepComponentsContainingWorldPoints = null,
+            bool primaryIslandOnly = false)
         {
             if (response is null || response.Segments.Count == 0)
                 return [];
@@ -844,30 +710,32 @@ namespace WebAnnotation.UI.Commands.Segmentation
             long decodeMs = 0;
             long cleanupMs = 0;
             long polygonizeMs = 0;
-            int maskBytes = 0;
+            int logitBytes = 0;
             int foregroundBefore = 0;
             int foregroundAfter = 0;
             double dropFraction = holeDropFraction ?? WebAnnotation.Global.AnnotationSettings.SegmentationHoleDropFraction;
             int cleanupRadius = edgeCleanupRadius ?? WebAnnotation.Global.AnnotationSettings.SegmentationEdgeCleanupRadius;
+            int downsample = Math.Max(1, DownsampleFor(response));
             List<Polygon> polygons = [];
-            foreach (var segment in response.GetSegmentsByDescendingScore())
+            IEnumerable<SegmentationServiceTypes.SegmentResult> islands = primaryIslandOnly
+                ? [response.GetPrimaryIsland()!]
+                : response.GetSegmentsByIsland();
+            foreach (var segment in islands)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                maskBytes += segment.Mask.Length + segment.Logits.Length;
+                logitBytes += segment.Logits.Length;
                 Stopwatch decodeTimer = Stopwatch.StartNew();
                 SegmentField field = DecodeSegmentField(segment);
                 decodeMs += decodeTimer.ElapsedMilliseconds;
                 if (field.Data is null)
                     continue;
 
-                // The frame is counted in samples, like the field: response.Width is already reduced when the
-                // server did not upscale, and the field's offset is a whole number of samples.
-                int captureWidth = Math.Max(1, response.Width > 0 ? response.Width : uploadedImageWidth / field.Scale);
-                int captureHeight = Math.Max(1, response.Height > 0 ? response.Height : uploadedImageHeight / field.Scale);
-                Geometry.Rectangle mosaicBounds = SegmentationMaskPolygonizer.CenterSampleBounds(
-                    MosaicWorldBounds(response, DownsampleFor(response)),
-                    captureWidth,
-                    captureHeight,
+                // The frame is the island's own logit grid: offsets are 0, the field fills it, and the world rectangle
+                // is where logits_origin and logits_scale put it, moved half a sample so each sample sits at its centre.
+                Geometry.Rectangle traceBounds = SegmentationMaskPolygonizer.CenterSampleBounds(
+                    FieldWorldBounds(field, downsample),
+                    field.Width,
+                    field.Height,
                     field.Scale);
 
                 Stopwatch polygonizeTimer = Stopwatch.StartNew();
@@ -875,11 +743,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     field.Data,
                     field.Width,
                     field.Height,
-                    field.X / field.Scale,
-                    field.Y / field.Scale,
-                    captureWidth,
-                    captureHeight,
-                    mosaicBounds,
+                    0,
+                    0,
+                    field.Width,
+                    field.Height,
+                    traceBounds,
                     dropFraction,
                     preserveHolesContainingWorldPoints,
                     SegmentationMaskPolygonizer.ScaleCleanupRadius(cleanupRadius, field.Scale),
@@ -896,8 +764,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             int vertexCount = polygons.Sum(polygon =>
                 polygon.ExteriorRing.Length + polygon.InteriorRings.Sum(ring => ring.Length));
             Debug.WriteLine(
-                $"[SegmentationProfile] Client polygons image={currentImageId} segments={response.Segments.Count} " +
-                $"maskBytes={maskBytes} decode={decodeMs}ms cleanup={cleanupMs}ms " +
+                $"[SegmentationProfile] Client polygons islands={response.Segments.Count} primaryOnly={primaryIslandOnly} " +
+                $"logitBytes={logitBytes} decode={decodeMs}ms cleanup={cleanupMs}ms " +
                 $"pixels={foregroundBefore}->{foregroundAfter} polygonize={polygonizeMs}ms " +
                 $"polygons={polygons.Count} vertices={vertexCount} total={totalTimer.ElapsedMilliseconds}ms");
             return polygons;
@@ -908,11 +776,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         private void AttachTileImages(SegmentationResponse response, TileSignature signature, int downsample)
         {
+            responseTileImages.Remove(response);
+            if (ResponseWorldBounds(response, downsample) is not Geometry.Rectangle bounds)
+                return;
+
             TileImageSet? images = tileImages.Snapshot(
                 downsample,
                 (row, column) => TileKey(signature, row, column),
-                MosaicWorldBounds(response, downsample));
-            responseTileImages.Remove(response);
+                bounds);
             if (images is not null)
                 responseTileImages.Add(response, images);
         }
@@ -946,67 +817,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private readonly ConditionalWeakTable<SegmentationServiceTypes.SegmentResult, SegmentField> decodedFields = new();
 
         /// <summary>
-        /// The soft field of <paramref name="segment"/>, decoded once. Polygonizing and the mask overlay both need the
-        /// same samples, and the decode is the costly part of a large mask. The returned array is shared: callers
-        /// must not write to it (the polygonizer and overlay only read).
+        /// The soft field of <paramref name="segment"/>'s logits at their native resolution, with the boundary at the mask
+        /// threshold the request used, decoded once. Polygonizing and the mask overlay both need the same samples, and the
+        /// decode is the costly part of a large mask. The returned array is shared: callers must not write to it (the
+        /// polygonizer and overlay only read).
         /// </summary>
-        /// <remarks>
-        /// A segment with logits becomes a field at the logits' native resolution, with the boundary at the mask
-        /// threshold the request used. Otherwise its mask PNG is decoded at pixel resolution (a server that does
-        /// not know the response flags, or one that had no logits to send). Field X and Y are image pixels in the
-        /// frame <see cref="SegmentationServiceTypes.SegmentResult.X"/> uses.
-        /// </remarks>
         public SegmentField DecodeSegmentField(SegmentationServiceTypes.SegmentResult segment) =>
-            decodedFields.GetValue(segment, s =>
-            {
-                if (SegmentationLogitField.HasLogits(s))
-                    return SegmentationLogitField.Decode(
-                        s,
-                        WebAnnotation.Global.AnnotationSettings.SegmentationMaskThreshold,
-                        WebAnnotation.Global.AnnotationSettings.SegmentationSmoothingSigma);
-
-                (byte[]? data, int width, int height) = DecodePngMask(s.Mask.ToByteArray());
-                return new SegmentField(data, width, height, 1, s.X, s.Y);
-            });
-
-        /// <summary>
-        /// <see cref="DecodeSegmentField"/> without the placement, for callers that only need the samples.
-        /// </summary>
-        public (byte[]? maskData, int width, int height) DecodeSegmentMask(SegmentationServiceTypes.SegmentResult segment)
-        {
-            SegmentField field = DecodeSegmentField(segment);
-            return (field.Data, field.Width, field.Height);
-        }
-
-        /// <summary>
-        /// Decodes a mask PNG into 0–255 bytes. A thresholded mask arrives as 0 and 255.
-        /// Returns null data on an invalid PNG.
-        /// </summary>
-        public (byte[]? maskData, int width, int height) DecodePngMask(byte[] pngBytes)
-        {
-            try
-            {
-                if (pngBytes is null || pngBytes.Length == 0)
-                    return (null, 0, 0);
-
-                using SixLabors.ImageSharp.Image<Rgba32> image =
-                    SixLabors.ImageSharp.Image.Load<Rgba32>(pngBytes);
-                int width = image.Width;
-                int height = image.Height;
-                Rgba32[] pixels = new Rgba32[width * height];
-                image.CopyPixelDataTo(pixels);
-                byte[] maskData = new byte[width * height];
-                for (int i = 0; i < pixels.Length; i++)
-                    maskData[i] = pixels[i].R;
-
-                return (maskData, width, height);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error decoding PNG mask: {ex.Message}");
-                return (null, 0, 0);
-            }
-        }
+            decodedFields.GetValue(segment, s => SegmentationLogitField.Decode(
+                s,
+                WebAnnotation.Global.AnnotationSettings.SegmentationMaskThreshold,
+                WebAnnotation.Global.AnnotationSettings.SegmentationSmoothingSigma));
 
         /// <summary>
         /// Reads the camera rectangle on the UI dispatcher so off-UI encode/publish can compare against the live view.
@@ -1021,54 +841,66 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Tile level the live camera would submit now, read on the UI dispatcher. Compare it with
-        /// <see cref="MosaicDownsample"/> to tell whether a finished response was computed at a level
-        /// that the camera has since left. Only needed when <see cref="SegmentationModelProfile.TileLevelCanChange"/>.
+        /// World rectangle of a decoded field: the footprint of its samples at the grid's <paramref name="downsample"/>. The
+        /// logits' origin is a pixel index, the top-left pixel of sample (0, 0) in grid space (Y up), and pixel (x, y) covers
+        /// [x, x + 1) x [y, y + 1), so the footprint's top edge is origin.y + 1.
         /// </summary>
-        public Task<int> GetLiveTileDownsampleAsync()
+        internal static Geometry.Rectangle FieldWorldBounds(SegmentField field, int downsample) =>
+            LogitWorldBounds(field.X, field.Y, field.PixelWidth, field.PixelHeight, downsample);
+
+        /// <summary>
+        /// World rectangle of <paramref name="segment"/>'s logits for a response requested at <paramref name="downsample"/>:
+        /// sample (i, j) covers grid pixel columns origin.x + i * scale .. origin.x + (i + 1) * scale - 1 and rows
+        /// origin.y - (j + 1) * scale + 1 .. origin.y - j * scale. Null when the segment carries no usable logits.
+        /// </summary>
+        internal static Geometry.Rectangle? SegmentWorldBounds(SegmentationServiceTypes.SegmentResult segment, int downsample)
         {
-            int Resolve() => ResolveTileDownsample(parent.CameraDownsample);
+            if (!SegmentationLogitField.HasLogits(segment))
+                return null;
 
-            var dispatcher = Viking.UI.State.MainThreadDispatcher;
-            if (dispatcher is null || dispatcher.CheckAccess())
-                return Task.FromResult(Resolve());
-
-            return dispatcher.InvokeAsync(Resolve).Task;
+            int scale = SegmentationLogitField.PixelScale(segment);
+            return LogitWorldBounds(
+                segment.LogitsOrigin.X,
+                segment.LogitsOrigin.Y,
+                segment.LogitsSize.Width * scale,
+                segment.LogitsSize.Height * scale,
+                downsample);
         }
 
         /// <summary>
-        /// World rectangle of a SAM2 segment on the fused mosaic. <paramref name="segmentX"/>, <paramref name="segmentY"/>,
-        /// <paramref name="maskWidth"/> and <paramref name="maskHeight"/> are image pixels, so a reduced field passes its
-        /// size times its scale (<see cref="SegmentField.PixelWidth"/>).
-        /// Mask Y is top-origin; MosaicPixelToWorld flips into Viking world-up.
-        /// The mosaic origin comes from <paramref name="response"/>, not session state: the session is shared by
-        /// concurrent requests and growth rounds, so its origin may already belong to a different response.
+        /// The world rectangle of <paramref name="pixelWidth"/> x <paramref name="pixelHeight"/> grid pixels whose top-left
+        /// pixel is (<paramref name="originX"/>, <paramref name="originY"/>), Y up, at <paramref name="downsample"/>.
         /// </summary>
-        public Geometry.Rectangle GetSegmentWorldBounds(
-            SegmentationResponse response,
-            int segmentX,
-            int segmentY,
-            int maskWidth,
-            int maskHeight)
+        private static Geometry.Rectangle LogitWorldBounds(int originX, int originY, int pixelWidth, int pixelHeight, int downsample)
         {
-            int imageHeight = Math.Max(1, response.Height > 0 ? response.Height * response.PixelScale() : uploadedImageHeight);
-            int downsample = Math.Max(1, DownsampleFor(response));
-            Geometry.Vector2 topLeft = SegmentationTileGrid.MosaicPixelToWorld(
-                response.OriginX,
-                response.OriginY,
-                segmentX,
-                segmentY,
-                imageHeight,
-                downsample);
-            Geometry.Vector2 bottomRight = SegmentationTileGrid.MosaicPixelToWorld(
-                response.OriginX,
-                response.OriginY,
-                segmentX + maskWidth,
-                segmentY + maskHeight,
-                imageHeight,
-                downsample);
-            return new Geometry.Rectangle(topLeft, bottomRight);
+            double ds = Math.Max(1, downsample);
+            double top = originY + 1.0;
+            return new Geometry.Rectangle(
+                new Geometry.Vector2(originX * ds, (top - pixelHeight) * ds),
+                new Geometry.Vector2((originX + (double)pixelWidth) * ds, top * ds));
         }
+
+        /// <summary>The world rectangle holding every island of <paramref name="response"/>; null when none carries logits.</summary>
+        internal static Geometry.Rectangle? ResponseWorldBounds(SegmentationResponse response, int downsample)
+        {
+            Geometry.Rectangle? union = null;
+            foreach (SegmentationServiceTypes.SegmentResult segment in response?.Segments ?? [])
+            {
+                if (SegmentWorldBounds(segment, downsample) is not Geometry.Rectangle bounds)
+                    continue;
+
+                union = union is Geometry.Rectangle sofar ? Geometry.Rectangle.Union(sofar, bounds) : bounds;
+            }
+
+            return union;
+        }
+
+        /// <summary>
+        /// World rectangle of <paramref name="field"/>, decoded from an island of <paramref name="response"/>; the response
+        /// says which tile level its logits' origin is at.
+        /// </summary>
+        public Geometry.Rectangle GetSegmentWorldBounds(SegmentationResponse response, SegmentField field)
+            => FieldWorldBounds(field, DownsampleFor(response));
 
         /// <summary>
         /// A token for one tile render: cancelled by <paramref name="externalToken"/> or <see cref="CancelPendingWork"/>.

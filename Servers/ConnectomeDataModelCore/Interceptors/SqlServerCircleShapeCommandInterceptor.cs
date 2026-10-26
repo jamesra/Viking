@@ -8,10 +8,12 @@ namespace Viking.DataModel.Annotation;
 
 /// <summary>
 /// Viking stores circles as SQL Server CurvePolygon. NetTopologySuite cannot deserialize
-/// that type, so SELECT/OUTPUT of MosaicShape/VolumeShape is replaced with a centroid
-/// POINT when TypeCode is Circle (1). Callers reconstruct the circle from X/Y/Radius.
-/// A POINT is used instead of NULL because MosaicShape/VolumeShape are required NTS
-/// properties. Writes are left unchanged.
+/// that type, so SELECT/OUTPUT of MosaicShape/VolumeShape is replaced with the circle's
+/// east rim POINT when TypeCode is Circle (1): (X + r, Y) for the mosaic shape and
+/// (VolumeX + r, VolumeY) for the volume shape, r being that shape's own radius
+/// (sqrt(area / pi), as the Radius column computes it for the mosaic shape). Callers rebuild
+/// each circle from its centre and the distance to the rim point, so the volume circle keeps
+/// its own radius. Writes are left unchanged.
 /// </summary>
 public sealed class SqlServerCircleShapeCommandInterceptor : DbCommandInterceptor
 {
@@ -20,7 +22,7 @@ public sealed class SqlServerCircleShapeCommandInterceptor : DbCommandIntercepto
     public static readonly SqlServerCircleShapeCommandInterceptor Instance = new();
 
     private static readonly Regex QualifiedShapeColumn = new(
-        @"(?<!ELSE )\[(?<qual>[^\]]+)\]\.\[(?<col>MosaicShape|VolumeShape)\](?!\s*=)",
+        @"(?<!ELSE )\[(?<qual>[^\]]+)\]\.\[(?<col>MosaicShape|VolumeShape)\](?!\s*=)(?!\.)",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private SqlServerCircleShapeCommandInterceptor()
@@ -47,7 +49,8 @@ public sealed class SqlServerCircleShapeCommandInterceptor : DbCommandIntercepto
     }
 
     /// <summary>
-    /// Rewrites qualified MosaicShape/VolumeShape reads to a centroid POINT when TypeCode is Circle.
+    /// Rewrites qualified MosaicShape/VolumeShape reads to the east rim POINT when TypeCode is Circle.
+    /// A column followed by a method call (<c>.STArea()</c>) is left alone, so the rewrite is idempotent.
     /// Used by tests and by the interceptor before the command runs.
     /// </summary>
     public static string NullCircleShapeColumns(string sql)
@@ -61,7 +64,7 @@ public sealed class SqlServerCircleShapeCommandInterceptor : DbCommandIntercepto
             var col = match.Groups["col"].Value;
             var x = col == "VolumeShape" ? "VolumeX" : "X";
             var y = col == "VolumeShape" ? "VolumeY" : "Y";
-            return $"(CASE WHEN [{qual}].[TypeCode] = 1 THEN geometry::Point([{qual}].[{x}], [{qual}].[{y}], 0) ELSE [{qual}].[{col}] END)";
+            return $"(CASE WHEN [{qual}].[TypeCode] = 1 THEN geometry::Point([{qual}].[{x}] + SQRT([{qual}].[{col}].STArea() / PI()), [{qual}].[{y}], 0) ELSE [{qual}].[{col}] END)";
         });
     }
 

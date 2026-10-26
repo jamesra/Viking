@@ -1,12 +1,12 @@
 # Segmentation server
 
-A gRPC service that serves Meta's [Segment Anything 2](https://github.com/facebookresearch/sam2) to the Viking annotation clients. A client uploads image tiles (or a whole viewport), sends foreground and background clicks, optional rectangles and mask tiles, and gets masks and polygons back. It runs on an NVIDIA GPU in Docker and **only speaks TLS**.
+A gRPC service that serves Meta's [Segment Anything 2](https://github.com/facebookresearch/sam2) to the Viking annotation clients. A client names the 1024 x 1024 tiles under its prompt, sends what the object is (clicks, annotation shapes, a painted bitmap) and what it is not (neighbouring annotations), uploads the tiles the server asks for, and gets SAM2's logits back, one result per island of the prompt. It runs on an NVIDIA GPU in Docker and **only speaks TLS**.
 
 The project has three parts:
 
-1. **segmentation_grpc**: the generated gRPC stubs for the shared proto in `gRPC_Protos/Segmentation/SAM2/segmentation.proto`.
+1. **segmentation_grpc**: the generated gRPC stubs for the shared protos in `gRPC_Protos`: `Segmentation/SAM2/segmentation.proto` and the geometry it imports, `Common/geometry.proto`.
 2. **segmentation_server**: the server that runs in the Docker container.
-3. **Example**: a sample Python client for `UploadImage` / `SegmentImage`. See [Example](Example/README.md).
+3. **Example**: a sample Python client that segments a picture through `UploadTile` / `SegmentTilesStream`. See [Example](Example/README.md).
 
 The SAM2 version is pinned by commit in the [Dockerfile](Dockerfile) (`SAM2_GIT_SHA`). The Python packages pin the same commit, and a test fails if the two drift.
 
@@ -24,34 +24,30 @@ For a local run without Docker or Let's Encrypt, install both packages (`pip ins
 
 `cd segmentation_server && python -m pytest`. The suite needs no GPU: SAM2 is replaced by fakes, and the growth walk runs against a synthetic world (`tests/cell_world.py`). It also checks that the committed gRPC stubs match the proto and that dependency floors match what the stubs require.
 
-## Cached vs inline
+## Tiles
 
-SAM2 `set_image()` (the Hiera encoder) is expensive. `predict()` from stored embeddings is cheap. Clients should encode once and reuse.
+SAM2 `set_image()` (the Hiera encoder) is expensive. `predict()` from stored embeddings is cheap, so the server
+encodes each tile once and every client reuses it.
 
-### Full-frame path (`UploadImage`)
-
-1. `UploadImage` — server runs `set_image()` once and returns a session `image_id`.
-2. `SegmentImage` / `MultiSegmentImage` with that `image_id` — `predict()` only.
-3. `DeleteImage` when the viewport changes or the tool deactivates.
-
-`image_id == 0` plus inline `image_data` is the slow fallback: the encoder runs on every request. Keep it for one-shot tools; do not use it for interactive tracing.
-
-### Tile path (`UploadTile` / `SegmentTilesStream`)
-
-Interactive Viking uses 1024×1024 mosaic cells. The reusable identity is **`TileCoord`**
-(`volume`, `section`, `channel`, `transform`, `downsample`, `row`, `col`) — not a sequential
-`image_id`. Any client that uploads a coord already cached gets `already_cached=true` and skips
-`set_image()`; the cached picture is kept. `SegmentTilesStream` looks up cells by those coords, so the
-coord must name everything that changes the render (Viking puts its channel set and capture-affecting
-view options into `channel`). An internal cache id may
+The service has four RPCs: `UploadTile`, `SegmentTilesStream`, `GetHeldTiles` and `GetServerStatus`. Every tile is on
+a fixed grid of 1024 x 1024 tiles. A tile is a **`TileGrid`** (`volume`, `section`, `channel`, `transform`,
+`downsample`, `space`: what every cell of one grid shares) and a **`GridCell`** (`row`, `col`), both from
+`Common/geometry.proto`; a call names its grid once and every tile in it is a cell. Row and column are
+`floor(position / (1024 * downsample))` from the origin, row increasing with Y. The pair is the reusable identity, not
+a sequential `image_id`: any client that uploads a cell already cached gets `already_cached=true` and skips
+`set_image()`; the cached picture is kept. The grid must name everything that changes the render (Viking puts its
+channel set and capture-affecting view options into `channel`). `space` is `COORDINATE_SPACE_MOSAIC` or
+`COORDINATE_SPACE_VOLUME`; `UNSPECIFIED`, or a downsample that is not positive, is `INVALID_ARGUMENT` on every RPC.
+An `UploadTile` image must decode to exactly 1024 x 1024 (`INVALID_ARGUMENT` otherwise). An internal cache id may
 appear in server logs for predictor bookkeeping; clients must not treat it as the tile identity.
 
-1. Open `SegmentTilesStream` and send one `start` (`SegmentTilesRequest`: the `TileCoord`s of the
-   cells that hold a foreground click, and mosaic-space prompts). Nothing needs uploading first.
-2. For each `TilesNeeded` the server sends, `UploadTile` those cells and reply with a
-   `TilesAnswer`. The server asks only for cells none of its caches hold (see the lookup order
-   below), the start cells included. The stream ends with `result` (the finished mask) or an error.
-3. No `DeleteImage` for tiles — idle TTL / LRU / entry cap reclaim GPU slots.
+1. Open `SegmentTilesStream` and send one `start` (`SegmentTilesRequest`: the `grid`, the cells under the prompt in
+   `tiles`, the two `Feature`s, and `mask_tile_count`), then the announced mask tiles. Nothing needs uploading first.
+2. For each `TilesNeeded` the server sends, `UploadTile` the cells in `tiles`, and reply with one `TilesAnswer`:
+   `unavailable` for the cells the client cannot supply, and `background_shapes` for the cells in
+   `background_cells`. The server asks only for cells none of its caches hold (see the lookup order below), the start
+   cells included. The stream ends with `result` or an error.
+3. Nothing is deleted by a client: idle LRU and the GPU check reclaim GPU slots.
 
 A client uploading tiles ahead of a request (Viking's auto-segment prefetch) first asks `GetHeldTiles`
 which of them the server holds (GPU cache, stored tiles) or reads itself from the annotation context's
@@ -71,50 +67,81 @@ tile corner (even row, even column) *is* an uploaded tile and reuses its pinned 
 other cell is cropped from two or four uploaded tiles and predicted on a throwaway predictor
 (its embedding is still cached on disk by image digest).
 
-1. Start the walk in **the fewest windows that between them see the whole prompt**. The prompt
-   is the two `Feature`s and the mask tiles: foreground clicks (`foreground_feature.points`), foreground
-   rectangles (`foreground_feature.rectangles`) and the FOREGROUND mask tiles. A circle seed is a FOREGROUND mask,
-   the disc itself (the start window gets it as SAM2 `mask_input` plus a click on the mask; every mask pixel is taken
-   as object and the mask grows beyond it). A rectangle is only a "most likely inside" box hint: it is never taken as
-   object, and a foreground mask replaces it. Anything that is object is sent as a mask, never as a box. The
-   background `Feature` adds background clicks and background rectangles (weakly negative in `mask_input` where
-   nothing positive is known, never cleared); the neighbours are BACKGROUND mask tiles (strongly negative in every
-   window's `mask_input`, and cleared from the answer). Every pixel of a foreground mask is returned as object, and a
-   core wholly inside it is taken as object without a prediction (a mask that leaves part of a core out is predicted,
-   then its pixels are pinned). A request with no foreground click, rectangle or mask tile is `INVALID_ARGUMENT`.
-   The candidates are the cells the prompt touches (each whose core holds part of a
-   rectangle or mask, each that owns a click). The candidate whose window holds the most of the prompt starts
-   first, with ties going to the window with the most room round it; that repeats for what is
-   still unseen. A window holds a rectangle or mask only when the whole of it reaches its core and sits clear of
-   the window border, so a prompt that fits one window is predicted once, with all of it. A mask
-   bigger than any window is read through each core it touches, at least 256 px from the window border, and every
-   one of those cores starts. Cells the prompt touches that were not needed start only if the
-   chosen windows find nothing, and a click the mask does not reach starts its own cell.
+1. **The prompt** (`prompt.py`, `shapes.py`, `prompt_encodings.py`). Every coordinate is in the grid's space at its
+   downsample, X right, Y up; pixel `(x, y)` covers `[x, x + 1) x [y, y + 1)` and a click is the pixel it falls in.
+   What the object is: foreground clicks (`foreground_feature.points`), foreground shapes
+   (`foreground_feature.shapes`) and a FOREGROUND bitmap (mask tiles). What it is not: background clicks, background
+   shapes (the neighbouring annotations) and a BACKGROUND bitmap. A request needs a foreground click, shape or mask
+   tile; a `Shape.point` in either `Feature` is `INVALID_ARGUMENT` (a click goes in `points`).
+
+   Shapes are rasterized per tile or window, a pixel being inside when its centre is (the Viking client's own rule):
+   a circle and an ellipse analytically, a line as a stroke of its `width` (round ends; under a pixel wide is drawn one
+   pixel wide), a polygon by even-odd fill of all its rings (holes included). A `CurveFit` of
+   `CURVE_METHOD_CATMULL_ROM` first replaces the points by Viking's centripetal Catmull-Rom outline (`curve_fit.py`, a
+   port of `Geometry/CurveFitting/CatmullRom.cs` `FitCurve`, checked point for point against the C# assembly);
+   `interpolations` 0 is straight segments. More than 64 interpolations, a ring under three points, a radius or
+   semi-axis that is not positive, or a coordinate that is not finite is `INVALID_ARGUMENT`.
+
+   **The server encodes the prompt for the model it serves** (the manifest's `prompt_encoding`), because the model
+   only works with the `mask_input` values it was trained on. How each part is used follows from what it is, not from
+   a client flag: a foreground geometry shape is *softened* (its edge is not trusted) and the foreground bitmap is
+   used as drawn. For `edge-confidence-v6` a softened circle is its disc at `radius * circle_diameter_scale` (the
+   manifest's `client_contract`; the client sends the TRUE radius), and every foreground part is encoded as a seed,
+   `+SEED_LOGIT * c(d)` with the trainer's edge confidence of its own pixels; several parts of one object are combined
+   by the largest value. Background shapes are each a negative by their own geometry: a circle by its radius trust
+   (`circle_negative_canvas`, full to half the radius, nothing past `zero_frac`), any other shape and the background
+   bitmap by the edge curve (`negative_canvas`). A pixel claimed by both sides is 0 (unknown). For `legacy-flat-v1`
+   the object is a flat +8 and every background region -8. `edge-confidence-v7` (not served yet) trusts softened
+   shapes relative to their own depth (`depth_trust.py`, Sam2Trainer `docs/depth_relative_trust.md`): a circle by
+   `circle_trust` of its true radius, used positively, any other shape by its local thickness.
+
+   **Islands.** An object prompt that falls apart is several objects, each segmented by its own walk and returned as
+   its own `SegmentResult`. For v6 and the legacy encoding an island is an 8-connected component of the union of the
+   foreground parts' pixels (the softened circle's disc, the shapes, the bitmap), joined across tile edges and corners;
+   for v7 it is a trusted core (`rho <= full_frac`) with the falling zone nearest to it, and cores under 16 px are
+   dropped. Islands are numbered 1, 2, ... by decreasing trusted area (prompt pixels for v6, core pixels for v7); past
+   `SEGMENTATION_MAX_ISLANDS` (default 16) the smallest are dropped with a warning. A foreground click goes with the
+   island it lies in, a click outside every island with island 1; an island with no click starts from its pixel
+   nearest its centroid. Background clicks, shapes and bitmap go with every island. Clicks alone are one walk, as
+   before. The prompt may cover at most `SEGMENTATION_MAX_MASK_TILES` tiles (`RESOURCE_EXHAUSTED`).
+
+   Each island's pixels are pinned as object in its result, and a core wholly inside them is taken as object without
+   a prediction (an island that leaves part of a core out is predicted, then its pixels are pinned). Background
+   regions are cleared from the result's mask: a polygon, line or ellipse as drawn, a circle out to `zero_frac` of its
+   radius.
+
+   Each walk starts in **the fewest windows that between them see the whole island**: the candidates are the cells the
+   island and its clicks touch, the one whose window holds the most of the prompt starts first, with ties going to the
+   window with the most room round it, and that repeats for what is still unseen. An island bigger than any window is
+   read through each core it touches, at least 256 px from the window border. Cells that were not needed start only if
+   the chosen windows find nothing. The start window's `mask_input` is the encoder's whole prompt for that window.
    Edge crossings then carry the walk outward.
 
-   **Mask tiles** carry every mask, so a mask can be any size. `foreground_mask_tile_count` is how many FOREGROUND
-   `MaskTile`s follow `start` (in `mask_tiles` stream messages), 0 for clicks or rectangles only: every 1024 tile the
-   seed or correction touches, as `full`, a 1-bit PNG (1024x1024, or 256x256 at `scale` 4), or an empty tile. The
-   server waits for all of them (the `TilesAnswer` idle limit; `DEADLINE_EXCEEDED` otherwise) before growth starts,
-   and refuses a repeated (coord, kind), a wrong-sized PNG, a tile at another downsample, or more tiles than announced
-   (`INVALID_ARGUMENT`), and a count over `SEGMENTATION_MAX_MASK_TILES` (default 256, `RESOURCE_EXHAUSTED`). The
-   BACKGROUND (neighbours) is asked for on demand, from every request: before it predicts a window the walk needs that
-   window's background tiles, so `TilesNeeded.masks` lists every tile a window it is about to predict covers whose
-   background it does not hold, whether or not the image is cached. The client answers with `mask_tiles` (an empty
-   tile where there are no neighbours), then the `TilesAnswer` (`masks_unavailable` for any it cannot supply, treated
-   as no neighbours). Background tiles sent early, such as the start windows', are not asked for again. Mask tiles are
-   per request and never enter the image cache.
+   **Mask tiles** carry painted bitmaps, so a bitmap can be any size. `mask_tile_count` is how many `MaskTile`s, of
+   both kinds, follow `start` (in `mask_tiles` stream messages), 0 for none: every 1024 tile a bitmap touches, as
+   `full`, a 1-bit PNG (1024x1024, or 256x256 at `scale` 4), or an empty tile. The server waits for all of them (the
+   idle limit; `DEADLINE_EXCEEDED` otherwise) before growth starts, and refuses a repeated (cell, kind), a wrong-sized
+   PNG, an unset kind, or more tiles than announced (`INVALID_ARGUMENT`), and a count over
+   `SEGMENTATION_MAX_MASK_TILES` (default 256, `RESOURCE_EXHAUSTED`). Mask tiles are per request and never enter the
+   image cache.
 
-   The mask that answers a prompt is chosen by one rule for every RPC, with no combining of
+   **Background shapes on demand.** The client sends, with `start`, the background shapes that reach the cells in
+   `tiles`. Before it predicts a window, the walk needs to know the neighbours of every tile the window covers: the
+   cells in `tiles` are known from the start, and so is every cell the server has asked about once that `TilesNeeded`
+   is answered. For the others the server lists them in `TilesNeeded.background_cells` (with any image tiles the
+   window lacks, in the same message) and waits; the answer's `background_shapes` are the shapes reaching them that
+   the client has not sent before, empty when none do. Each cell is asked about once per call.
+
+   The mask that answers a prompt is chosen by one rule for every prediction, with no combining of
    masks: with a box, the highest-scoring candidate that has a pixel inside it (how much of the
    rectangle it fills is not asked: SAM2 leaves holes in an object's interior and stops short of a
    box beside an image border, and a mask that touches none of the rectangle is another object);
    without a box, the candidate that
    covers the most foreground points, ties broken by score. A start cell with no matching
-   mask is logged and skipped; the call fails with `FAILED_PRECONDITION` and a `NO_MATCHING_MASK`
-   detail only when every start cell, reserve cells included, was rejected and nothing else was
-   found. There is no empty
-   or best-effort result.
+   mask is logged and skipped. An island whose every start cell, reserve cells included, was
+   rejected with nothing else found has no result; the call fails with `FAILED_PRECONDITION` and a
+   `NO_MATCHING_MASK` detail only when that is true of every island. There is no empty or
+   best-effort result.
 
    With one mask per prediction (what the Viking client asks for) the rule can only accept or
    refuse SAM2's single guess. Set `SEGMENTATION_BOX_MULTIMASK=1` to ask SAM2 for its three
@@ -173,47 +200,59 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
    outcome, and the final graph.
 5. Aligned tiles a cell needs but the server lacks are set aside and the walk carries on with
    the other cells. When the walk runs dry, the server sends `TilesNeeded` on the stream and
-   waits. The client uploads those tiles and answers with `TilesAnswer` (`ready` or
-   `unavailable` per tile); the server then resumes the **same walk**, re-queueing only the
-   cells that were waiting. Nothing is predicted twice and nothing is restored from an earlier
-   call, so the mask only gains pixels. A tile reported `unavailable` (or reported ready but no
-   longer cached) is never asked for again and the cells that need it stay out of the mask.
-   When no cell is waiting any more the server sends the finished `SegmentationResponse` and
-   ends the call.
+   waits. A tile is **settled** when its upload reaches the cache (the server sees every
+   `UploadTile` land and wakes the stream waiting for it) or when an answer lists it in
+   `unavailable`; uploads are never listed. The server resumes the **same walk** as soon as
+   anything settles, re-queueing only the cells that were waiting, so it uses each tile as it
+   lands instead of waiting for the whole batch or the answer. Nothing is predicted twice and
+   nothing is restored from an earlier call, so the mask only gains pixels. A tile reported
+   `unavailable` (or uploaded but already gone from the caches) is never asked for again in the
+   call and the cells that need it stay out of the mask. The client answers every `TilesNeeded`
+   once, in order, after its uploads; an answer with none outstanding is `INVALID_ARGUMENT`, and
+   one listing more than `SEGMENTATION_MAX_ANSWER_TILES` cells or `SEGMENTATION_MAX_SHAPES`
+   shapes is `RESOURCE_EXHAUSTED`. A tile of an answered `TilesNeeded` that was neither uploaded
+   nor listed is looked up in the cache once, then still awaited. When no walk needs anything and
+   every `TilesNeeded` has been answered, the server sends the finished `SegmentationResponse`
+   and ends the call.
    A tile that another stream has already asked its client for is not asked for again. The
    server records each tile it asks for until the upload reaches the cache; a second stream
    that needs the same tile leaves it out of its `TilesNeeded`, waits for that upload, and
    pins it when it arrives. It asks its own client after `SEGMENTATION_TILE_SHARE_TIMEOUT_SECONDS`
    (default 5; `0` turns sharing off), or at once if the stream it was waiting on ends, is
    cancelled, or reports the tile `unavailable`. A client therefore sees a `TilesNeeded` that
-   lists fewer tiles than the walk wanted, or none for a round. A client that sends no answer
-   that settles a requested tile for `SEGMENTATION_TILE_ANSWER_TIMEOUT_SECONDS` (default 60)
-   gets `DEADLINE_EXCEEDED`; empty or unrelated answers do not restart that clock.
+   lists fewer tiles than the walk wanted, or none (only `background_cells`) for a round. A
+   client that uploads and answers nothing for `SEGMENTATION_TILE_ANSWER_TIMEOUT_SECONDS`
+   (default 60) while a tile or an answer is owed gets `DEADLINE_EXCEEDED`.
 
-The response mask is the fused cores with `origin_x`/`origin_y` at the mosaic pixel of its
-lower-left corner, always a multiple of 512 wide and tall.
+### The result
 
-### Response content
+`SegmentationResponse` holds one `SegmentResult` per island that found something, in island order, and the
+`request_id` echoed back. A result is SAM2's fused logits at their native resolution (`logits_scale` 4: one sample per
+4 x 4 pixels), cropped to what is above the request's `mask_threshold` (small holes filled first) plus 2 samples of
+border, as little-endian float16, row-major, `logits_size.width` per row, rows from the top (largest Y) down. Samples
+nobody predicted hold -20. `logits_origin` is the grid-space pixel (X right, Y up, at the grid's downsample) at the
+top-left of sample (0, 0): sample (i, j) covers pixels `x` from `origin.x + 4i` to `origin.x + 4i + 3` and `y` from
+`origin.y - 4j - 3` to `origin.y - 4j`. The client contours the logits at `mask_threshold` and places the contour with
+the origin and scale. A walk whose predictions carried no logits (only test fakes) sends its mask as logits at the same
+grid. `score` is the lowest score of the island's predictions; `island` is its number.
 
-`SegmentTilesRequest.response_content` is a bit field (`ResponseContent`) saying what the client wants back.
-Zero keeps the old answer, masks and polygons. `LOGITS` adds the fused logits as float16 with their size,
-origin and scale. `NO_UPSCALE` is a modifier: the server does not upscale. Logits and any `MASKS` payload come
-back at the native resolution (`logits_scale` image pixels per sample, normally 4), `width`/`height` count
-samples, and the client scales the ring up after it has contoured the logits, which finds the real iso
-crossing instead of the midpoint of a thresholded pixel. Without `NO_UPSCALE`, requested logits are upsampled
-to image pixels. Only `SegmentTilesStream` fuses logits across cells, so only it honours the field.
+These are the numbers the earlier protocol sent with `LOGITS | NO_UPSCALE`, placed differently: it gave the walk's
+bottom-left pixel as the response's `origin_x`/`origin_y`, the frame's height in samples, and the crop's corner as
+`logits_x`/`logits_y` in Y-down pixels from the frame's top-left. `logits_origin` is
+`(origin_x + logits_x, origin_y + height * 4 - 1 - logits_y)` (`responses.logits_origin`, pinned by
+`tests/test_responses.py`). Masks, polygons, the labeled image and upscaled logits are no longer sent.
 
 Set `SEGMENTATION_DEBUG_DUMP=1` to write one `.npz` per call (fused mask, every cell core, each
 cell's raw answer, kept pieces and SAM2 logits, and the prompts) under the embedding cache mount
 for offline inspection.
 
-Request limits: a request over a limit is refused with `RESOURCE_EXHAUSTED`, naming the limit. `SEGMENTATION_MAX_TILES` (default 64) caps tiles on a `SegmentTilesStream` start, `SEGMENTATION_MAX_POINTS` (512) caps the prompt points on any segment request, `SEGMENTATION_MAX_BOXES` (16) caps the foreground and background rectangles, `SEGMENTATION_MAX_SETS` (5000) caps prompt sets on one `SegmentVolumes` stream, and `SEGMENTATION_MAX_ANSWER_TILES` (4096) caps the tiles one `TilesAnswer` may list (over it is `INVALID_ARGUMENT`). `SEGMENTATION_MAX_CONCURRENT_STREAMS` (32) caps `SegmentTilesStream` calls running at once, since each holds cache pins while it waits for tiles, and `SEGMENTATION_MAX_CONCURRENT_RPCS` (256) caps every call in flight; a call over either is `RESOURCE_EXHAUSTED` and can be retried. An image is refused when its declared size is over `SEGMENTATION_MAX_IMAGE_PIXELS` (100 million), before it is decoded. An upload that cannot fit under the cache byte cap, because every other entry is held by a running request, is `RESOURCE_EXHAUSTED`; the client can retry.
+Request limits: a request over a limit is refused with `RESOURCE_EXHAUSTED`, naming the limit. `SEGMENTATION_MAX_TILES` (default 64) caps tiles on a `SegmentTilesStream` start, `SEGMENTATION_MAX_POINTS` (512) and `SEGMENTATION_MAX_SHAPES` (512) cap the points and shapes of each `Feature` (and the shapes of one `TilesAnswer`), `SEGMENTATION_MAX_MASK_TILES` (256) caps the announced mask tiles and the tiles the foreground prompt covers, `SEGMENTATION_MAX_ISLANDS` (16) caps the islands segmented (the smallest are dropped, not refused), and `SEGMENTATION_MAX_ANSWER_TILES` (4096) caps the cells one `TilesAnswer` may list and the tiles of one `MaskTiles` message. `SEGMENTATION_MAX_CONCURRENT_STREAMS` (32) caps `SegmentTilesStream` calls running at once, since each holds cache pins while it waits for tiles, and `SEGMENTATION_MAX_CONCURRENT_RPCS` (256) caps every call in flight; a call over either is `RESOURCE_EXHAUSTED` and can be retried. An image is refused when its declared size is over `SEGMENTATION_MAX_IMAGE_PIXELS` (100 million), before it is decoded. An upload that cannot fit under the cache byte cap, because every other entry is held by a running request, is `RESOURCE_EXHAUSTED`; the client can retry.
 
-Cache defaults: 5 minute idle TTL for ad-hoc uploads (grid tiles do not expire), 16 GiB of encoded image bytes, and 4096 ad-hoc uploads. Grid tiles have no count cap. Every cached image holds about 9 MiB of GPU embedding, so the GPU is the real limit: when free CUDA memory drops below max(1 GiB, 10% of the card), the least recently used idle entry is dropped, tile or ad-hoc. Override with `--cache-ttl-seconds`, `--cache-max-memory-bytes`, and `--cache-max-images`. Missing full-frame IDs return `NOT_FOUND`. A tile `TileCoord` that is already cached keeps its entry whatever bytes a later upload brings, so two clients that render a cell slightly differently do not keep replacing each other's embedding.
+Cache defaults: 16 GiB of encoded image bytes; grid tiles do not expire and have no count cap (`--cache-ttl-seconds` and `--cache-max-images` apply only to the cache's non-tile entries, which the service no longer makes). Every cached image holds about 9 MiB of GPU embedding, so the GPU is the real limit: when free CUDA memory drops below max(1 GiB, 10% of the card), the least recently used idle entry is dropped. Override with `--cache-max-memory-bytes`. A tile that is already cached keeps its entry whatever bytes a later upload brings, so two clients that render a cell slightly differently do not keep replacing each other's embedding.
 
 Tile lookup order: for every tile a `SegmentTilesStream` needs, the cells named in `start` included, the server tries the GPU cache, then the tile store, then another stream that has already asked its client for that tile, and only then asks its own client in `TilesNeeded`. A tile under a click that the server lacks is asked for like any other, so a client names its prompt cells without uploading them first. The tile store keeps the bytes of every tile uploaded, so a tile dropped from the GPU cache is rebuilt without a client: in host memory (`SEGMENTATION_TILE_RAM_BYTES`, default 2 GiB, `0` keeps none) and, when the embedding disk cache is on, on disk under `<SEGMENTATION_EMBEDDING_CACHE>/tiles` (`SEGMENTATION_TILE_CACHE_MAX_BYTES`, default 8 GiB, `0` for no cap), so they also survive a restart. A rebuilt tile goes back into the GPU cache, and the disk embedding cache below usually skips its encoder too. A stored tile that would not fit in the GPU cache is still used from its pixels. Nothing invalidates a stored tile except its cap: a client must put everything that changes the render into the key.
 
-Tiles the server reads itself: when a stream's `annotation_context_id` is a context this server is local to (Identity lists them for the `segmentation` OAuth client: `IdentityServer__Endpoint`, `IdentityServer__ClientSecret`, `SEGMENTATION_SERVICE_NAME`, see `identity_client.py`), a tile no cache holds and no other stream is fetching is read by the server before the client is asked. It stitches the cell from the context's VikingXML tileset over HTTP (`tile_source.py`, `viking_volume.py`), encodes it as the client encodes a capture (`capture_encoder.py`), and keeps it in the tile store like an upload. Only plain greyscale cells in mosaic space are read: `space` is `COORDINATE_SPACE_MOSAIC`, and `channel` has no `[...]` suffix and names a tileset of the section at that downsample. `TileCoord.space` is part of the cache key, so mosaic and volume cells never share an entry; `COORDINATE_SPACE_UNSPECIFIED` (clients from before the field) is taken as volume space until the next release build drops it. Everything else, and any tile the read fails for, is asked of the client in `TilesNeeded`. A tileset rebuilt in place on storage is not noticed until its cells leave the tile store.
+Tiles the server reads itself: when a stream's `annotation_context_id` is a context this server is local to (Identity lists them for the `segmentation` OAuth client: `IdentityServer__Endpoint`, `IdentityServer__ClientSecret`, `SEGMENTATION_SERVICE_NAME`, see `identity_client.py`), a tile no cache holds and no other stream is fetching is read by the server before the client is asked. It stitches the cell from the context's VikingXML tileset over HTTP (`tile_source.py`, `viking_volume.py`), encodes it as the client encodes a capture (`capture_encoder.py`), and keeps it in the tile store like an upload. Only plain greyscale cells in mosaic space are read: `space` is `COORDINATE_SPACE_MOSAIC`, and `channel` has no `[...]` suffix and names a tileset of the section at that downsample. `TileGrid.space` is part of the cache key, so mosaic and volume cells never share an entry. Everything else, and any tile the read fails for, is asked of the client in `TilesNeeded`. A tileset rebuilt in place on storage is not noticed until its cells leave the tile store.
 
 The GPU cap is the hot set. Feature maps for each cell are also written under `SEGMENTATION_EMBEDDING_CACHE` (inside the container, `/var/cache/segmentation-embeddings`). Compose mounts `${SEGMENTATION_EMBEDDING_CACHE_HOST:-D:/Docker/cache/segmentation-embeddings}` there. A later upload, or a tile rebuilt from the tile store, with the same pixels reloads that file and skips `set_image()`. The directory is split by checkpoint identity and by encoder generation (`eager` while compile is warming, `compiled` after the swap), so a new checkpoint or the compiled encoder does not reuse the other generation. Default disk cap is 32 GiB (`SEGMENTATION_EMBEDDING_CACHE_MAX_BYTES`, `0` for no cap). A request that pins a cached tile refreshes its embedding file and stored tile, so a cell that stays hot on the GPU is not the first one the disk caps drop.
 
@@ -227,47 +266,55 @@ This is not RTX A4500 (Ampere sm_86). Ampere, Turing, and older GPUs are not com
 
 `TORCH_CUDA_ARCH_LIST` is `8.9 9.0 10.0 12.0+PTX`. That is nvcc SASS/PTX for SAM2’s small CUDA extension, not PyTorch `torch.compile`.
 
-The Hiera **image encoder is compiled** with `torch.compile(mode="max-autotune", fullgraph=True, dynamic=False)` on CUDA. `predict()` stays eager. The process listens immediately on an uncompiled encoder. Compile and a 1024×1024 warmup run in the background; `GetServerStatus` reports `compile=warming` until that finishes, then `compile=ready`. Before the swap the compiled encoder must pass a numeric check: the same seeded image goes through the eager and the compiled encoder and the feature maps must agree (cosine similarity at least 0.99, relative L2 error at most 0.10, all values finite). If they do not, the server stays on the eager encoder and reports `compile=failed`. After the swap only cache entries built with the eager encoder are dropped, so a client that uploaded after the swap keeps its `image_id`; clients with an older id get `NOT_FOUND` and re-upload; a dropped tile is rebuilt from the tile store. `GetServerStatus` also reports `encoder_generation` (`eager` or `compiled`) and `compile_status` as fields. First compile can take minutes; later `set_image()` calls reuse the compiled graph, and a warm Inductor cache makes the background pass much shorter. Pass `--no-compile-image-encoder` only if compile fails.
+The Hiera **image encoder is compiled** with `torch.compile(mode="max-autotune", fullgraph=True, dynamic=False)` on CUDA. `predict()` stays eager. The process listens immediately on an uncompiled encoder. Compile and a 1024×1024 warmup run in the background; `GetServerStatus` reports `compile=warming` until that finishes, then `compile=ready`. Before the swap the compiled encoder must pass a numeric check: the same seeded image goes through the eager and the compiled encoder and the feature maps must agree (cosine similarity at least 0.99, relative L2 error at most 0.10, all values finite). If they do not, the server stays on the eager encoder and reports `compile=failed`. After the swap only cache entries built with the eager encoder are dropped; a dropped tile is rebuilt from the tile store, or asked for again. `GetServerStatus` also reports `encoder_generation` (`eager` or `compiled`) and `compile_status` as fields. First compile can take minutes; later `set_image()` calls reuse the compiled graph, and a warm Inductor cache makes the background pass much shorter. Pass `--no-compile-image-encoder` only if compile fails.
 
 Inductor/Triton artifacts are stored under `TORCHINDUCTOR_CACHE_DIR` (`/home/user/.cache/torch_inductor` in the image). Compose mounts `${SEGMENTATION_INDUCTOR_CACHE:-D:/Docker/cache/segmentation-inductor}` there so a container restart is a cache hit (seconds) instead of a full retune. A torch, GPU, or SAM2 architecture change misses and retunes. Server Python edits do not.
 
-On Windows + Docker Desktop (WSL2), a host sleep or GPU driver reset poisons the CUDA context. The next `UploadImage` then fails with `CUDA_ERROR_UNKNOWN` / `cuStreamIsCapturing`. The server treats that as fatal and exits so Docker can restart it with a fresh GPU context. If GPU containers fail to start with an `ld.so` assertion, shut down WSL (`wsl --shutdown`) so it remounts the NVIDIA libraries, then start Docker Desktop again.
+On Windows + Docker Desktop (WSL2), a host sleep or GPU driver reset poisons the CUDA context. The next `UploadTile` then fails with `CUDA_ERROR_UNKNOWN` / `cuStreamIsCapturing`. The server treats that as fatal and exits so Docker can restart it with a fresh GPU context. If GPU containers fail to start with an `ld.so` assertion, shut down WSL (`wsl --shutdown`) so it remounts the NVIDIA libraries, then start Docker Desktop again.
 
 ## Project Structure and Usage
 
 ### segmentation_grpc
 
-This project contains the gRPC interface definition and code generation for the segmentation service.
+This project contains the generated gRPC code for the segmentation service: `segmentation_pb2.py`,
+`segmentation_pb2_grpc.py` and `geometry_pb2.py`, committed, and re-exported from the package (the geometry types too,
+so `from segmentation_grpc import TileGrid, Shape` works).
 
-To generate the gRPC code:
+To regenerate them after a proto changes:
 
 ```bash
 python -m segmentation_grpc
 ```
 
+The protos import each other relative to `gRPC_Protos` (`segmentation.proto` has `import "Common/geometry.proto"`), so
+`generate_grpc.py` runs `grpc_tools.protoc` with `gRPC_Protos` as the import root, writes into a scratch directory,
+copies the three modules flat into the package, and rewrites protoc's `from Common import geometry_pb2` and
+`from Segmentation.SAM2 import segmentation_pb2` to `from segmentation_grpc import ...`. It finds `gRPC_Protos` by
+walking up from the package, or at `/home/user/gRPC_Protos` in the image, which copies `Segmentation` and `Common`
+(`--generate-grpc` uses the same code). `tests/test_stub_sync.py` fails when the committed modules drift from either
+proto.
+
 ### Example
 
-[Example](Example/README.md) is a command-line sample. It uploads an image, sends foreground and background points, and plots the mask.
+[Example](Example/README.md) is a command-line sample. It lays a picture on a tile grid of its own, sends foreground and background points, uploads the tiles the server asks for, and plots one mask per island.
 
 ```bash
 python Example/client_example.py --server segmentation.codepharm.net:40443 --image path/to/image.png --coordinates 100,200 300,400 --labels 1,0
 ```
 
-Default path: `UploadImage` → `SegmentImage(image_id)` → `DeleteImage`. Pass `--inline` to send image bytes on the segment request (re-encodes every call).
+Calls: `GetServerStatus` (for the served `model_id`), then one `SegmentTilesStream` with `UploadTile` for each tile it asks for (`segmentation_server/picture_segmentation.py`).
 
 Optional arguments:
 - `--server`: The address of the segmentation service (default: localhost:40443). The channel is always TLS.
 - `--ca-cert`: PEM file to trust as the server's root, for a self-signed development certificate (`python -m segmentation_server.dev_cert`). Omit it for a Let's Encrypt server.
 - `--labels`: Labels as l1,l2,... (e.g., 1,0). 1 indicates the point is in the foreground, 0 in the background. Defaults to assuming all points are foreground.
-- `--multimask`: Output multiple masks per point
-- `--inline`: Skip the cache and send image bytes with the segment request
 ### Demo page
 
 The server can serve a browser page on HTTPS port **8443** (Compose publishes host **40444**). It is off unless `--demo-site` is passed or `SEGMENTATION_DEMO_SITE=1`. The page uses the same Let's Encrypt files as gRPC TLS (`SSL_CERT_PATH` and `SSL_KEY_PATH`). The server will not start without those files, so the page is always available when it is enabled. `segmentation-certbot-renewer` (Compose profile `letsencrypt`) obtains the certificate for `segmentation.codepharm.net` and restarts this process on renewal.
 
 Behind a reverse proxy that terminates TLS, set `SEGMENTATION_DEMO_PLAINTEXT=1` (or pass `--demo-plaintext`) to serve the page as plain HTTP instead. It then needs no certificate and listens on port **80** unless `--demo-port` says otherwise. It has no login unless `SEGMENTATION_DEMO_TOKEN` is set, so publish it only to the proxy. `rebuild-and-start.ps1` turns this on for every model container and publishes it on host port gRPC port + 100 (v4: 40546).
 
-With the site enabled, open `https://segmentation.codepharm.net:40444`. Left-click is foreground, right-click is background. The page calls `UploadImage` once, then `SegmentImage` on that id.
+With the site enabled, open `https://segmentation.codepharm.net:40444`. Left-click is foreground, right-click is background. The page keeps the uploaded picture (the last 16, by id) and segments it like any client: the picture is laid on a tile grid of its own (volume `picture-<digest>`, mosaic space, downsample 1), and each segment runs one in-process `SegmentTilesStream`, uploading the tiles it asks for (`picture_segmentation.py`).
 
 The page is cautious by default because it has no login of its own:
 
@@ -310,24 +357,23 @@ At start-up the server reads the manifest and:
 - logs the model, its version, its training-data set and its encoding;
 - reports them in `GetServerStatus.model` (`ModelInfo`: `model_id`, `model_version`, `training_data_set`,
   `training_data_fingerprint`, `prompt_encoding`, the operator's `description` of the model, and the manifest's
-  `client_contract` as `contract_json`) and fills
-  `capabilities` from it, so a client learns whether to send tiles or the whole screen and what it must do to its masks
-  before sending them (the circle diameter scale, the `mask_role` of a foreground mask, whether it must send `model_id`);
+  `client_contract` as `contract_json`), so a client learns whether it must send `model_id`;
+- applies the `client_contract`'s `circle_diameter_scale` to softened circles itself (it is informational to the
+  client, which sends true radii);
 - builds the start window's `mask_input` with the encoding the manifest names: `legacy-flat-v1` is the original flat
-  +8/-8/-2 scheme, `edge-confidence-v6` is the trainer's encoding (`trainer_prompt_encoding.py`, a byte-for-byte copy
-  of the trainer's `annotation_crops/prompt_encoding.py`, kept in step by a test). Windows the walk grows into are
-  still prompted with their neighbours' fused logits;
-- **refuses to start** if the manifest names an encoding or capability it does not implement, since serving a model
-  with a prompt it was not trained on degrades masks without any error.
+  +8/-8 scheme, `edge-confidence-v6` is the trainer's encoding (`trainer_prompt_encoding.py`, a byte-for-byte copy
+  of the trainer's `annotation_crops/prompt_encoding.py`, kept in step by a test), `edge-confidence-v7` adds the
+  depth-relative trust. Windows the walk grows into are still prompted with their neighbours' fused logits;
+- **refuses to start** if the manifest names an encoding it does not implement, or `capabilities` other than
+  `tile_grid` / `single` (every model is fed as a single-resolution tile grid; the section may be left out), since
+  serving a model with a prompt it was not trained on degrades masks without any error.
 
 Without a manifest the model is treated as a tiled model with the legacy encoding, and a warning says so; a
 `<stem>.prompt_encoding.json` alone still names the encoding.
 
-Requests carry an optional `model_id` (`SegmentTilesRequest`, `SegmentationRequest`, `MultiSegmentationRequest`,
-`SegmentImageSetRequest`). A different id is refused with `FAILED_PRECONDITION`, naming both models; an unset one is
-refused only when the manifest says `requires_model_id` (`SEGMENTATION_REQUIRE_MODEL_ID=1` or `0` overrides it). A
-whole-screen model (`FULL_VIEWPORT`) refuses `UploadTile` and `SegmentTilesStream`; a tiled model keeps accepting the
-whole-screen RPCs unless `SEGMENTATION_STRICT_SUBMISSION_MODE=1`.
+`SegmentTilesRequest` carries an optional `model_id`. A different id is refused with `FAILED_PRECONDITION`, naming
+both models; an unset one is refused only when the manifest says `requires_model_id` (`SEGMENTATION_REQUIRE_MODEL_ID=1`
+or `0` overrides it).
 
 **Several models at once** run as separate containers of the same image, each reached by its own host name that the
 reverse proxy routes by SNI. In `Servers/SegmentationServer/docker-compose.yml` the profiles `seg-v3`, `seg-v4` and
@@ -341,15 +387,13 @@ Weights with no sidecar (`<stem>.model.json`) are reported with `SEGMENTATION_MO
 its prefix) as display name and the file stem as version; their `model_id` stays `unknown` so requests naming a model
 are not refused.
 
-`SegmentVolumes` is the auto-segmentation stream. The client sends one foreground/background set at a time for a cached `image_id`, and the server writes one `SegmentationResponse` per set. Interactive clicks stay on unary `SegmentImage`.
-
 Optional arguments:
 - `--tls-port`: TLS gRPC listen port inside the container (default: `SEGMENTATION_TLS_PORT`, else 443). The old `--port` flag named the removed cleartext listener and is now an error, so a stale Compose command fails at start instead of serving the wrong port.
 - `--workers`: The number of worker threads (default: 10)
 - `--inference-workers`: SAM2 inference thread pool size (default: 1)
-- `--cache-ttl-seconds`: Unused cached-image lifetime (default: 300)
-- `--cache-max-memory-bytes`: Cap on cached encoded image bytes (default: 1 GiB)
-- `--cache-max-images`: Max ad-hoc uploaded images; grid tiles are not counted (default: 4096)
+- `--cache-ttl-seconds`: Unused lifetime of non-tile cache entries; grid tiles do not expire (default: 300)
+- `--cache-max-memory-bytes`: Cap on cached encoded image bytes (default: 16 GiB)
+- `--cache-max-images`: Max non-tile cache entries; grid tiles are not counted (default: 4096)
 - `--no-compile-image-encoder`: Skip Hiera `torch.compile` (default is on for CUDA)
 - `--demo-site` / `--no-demo-site`: HTTPS point-prompt page (default off; `SEGMENTATION_DEMO_SITE=1` turns it on)
 - `--demo-port`: Demo HTTPS port (default: 8443)

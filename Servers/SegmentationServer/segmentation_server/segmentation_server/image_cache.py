@@ -1,8 +1,9 @@
 """In-memory image cache with two retention modes.
 
-Arbitrary uploads (one client, one image id) use LRU, a short TTL, and an entry
-cap. Shared tiles are the same cell for every client, so they stay until the
-encoded-byte cap or a GPU-memory check says an embedding has to be dropped.
+Shared tiles (``upload_tile``, the only kind the gRPC service stores) are the same cell for every client, so they
+stay until the encoded-byte cap or a GPU-memory check says an embedding has to be dropped. Entries stored with
+``upload_image`` and no tile key (one caller, one image id) use LRU, a short TTL, and an entry cap; nothing in the
+service makes them since the whole-image RPCs were removed, and they remain for the cache's own tests.
 """
 
 from __future__ import annotations
@@ -111,7 +112,7 @@ class ImageCache:
                 encoder that has since been replaced.
         """
         self._cache: Dict[int, CachedImage] = {}
-        # Deleted/evicted while SegmentImage still holds a pin; predictor reset waits for check-in.
+        # Deleted/evicted while a request still holds a pin; predictor reset waits for check-in.
         self._retiring: Dict[int, CachedImage] = {}
         self._coord_index: Dict[TileCacheKey, int] = {}
         self._tile_upload_locks: Dict[TileCacheKey, _TileUploadSlot] = {}
@@ -302,7 +303,7 @@ class ImageCache:
         everything that makes up the image, so other bytes for it are the same picture rendered a little
         differently by another client. Replacing it would run the encoder again and swap the pixels under
         streams already predicting on them. The returned image_id is an internal predictor handle; callers
-        that speak gRPC use TileCoord, not this id. Logs on this call name the cell: volume, section (z),
+        that speak gRPC name the tile by its TileGrid and GridCell, not this id. Logs on this call name the cell: volume, section (z),
         column (x), row (y).
 
         Returns:

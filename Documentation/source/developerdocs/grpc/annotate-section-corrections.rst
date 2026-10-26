@@ -9,19 +9,14 @@ Package: ``Viking.SectionCorrectionServiceTypes.gRPC.V2``
 
 Host: GrpcSectionCorrectionService
 
-Same residual fields as :doc:`annotate-corrections`, for many volumes on one host. Files live under ``{root}/{volume_name}/{stos_group}/``. This service also rebuilds those files and can warp whole structures.
+A correction set is a residual vector field for one VikingXML Stos group (for example ``SliceToVolume``) of one volume. After mosaic placement and Stos, a point can still sit off the consensus of neighboring processes. The field is that leftover, stored as a sparse lattice. This host serves the sets of many volumes, rebuilds them (files live under ``{root}/{volume_name}/{stos_group}/``), and can warp whole structures. It is the only correction service: the annotation service's ``AnnotateCorrections`` was removed.
 
-All positions and offsets are volume nanometers (annotation coordinates times ``AnnotateMetaData.Scale``), carried as ``Vector2``. A correction set is named by ``CorrectionSetId`` (``volume_name`` plus ``stos_group``).
+All positions and offsets are volume nanometers (annotation coordinates times ``AnnotateMetaData.Scale``), carried as the shared ``viking.geometry.v1.Vector2`` (``gRPC_Protos/Common/geometry.proto``). A correction set is named by ``CorrectionSetId`` (``volume_name`` plus ``stos_group``).
 
-Protocol versions
-=================
+Protocol version
+================
 
-The protocol is versioned by package name, so each version is a separate gRPC service on the same address.
-
-* **V2** (``section_correction_v2.proto``, package ``...gRPC.V2``) is current. Viking, Jotunn, MonogameTestbed, DataExport and the service's ``correction-menu`` use it.
-* **V1** (``section_correction.proto``, package ``...gRPC.V1``) is still served for installed Viking builds and SBFSEM-tools. It will be removed once both use V2. Do not write new code against it.
-
-Both versions run on the same service code (``CorrectionServiceCore``) and give the same answers.
+The protocol is versioned by package name. V2 (``section_correction_v2.proto``, package ``...gRPC.V2``) is the only version served; V1 is retired. Viking, Jotunn, MonogameTestbed, DataExport and the service's ``correction-menu`` use it.
 
 ``CorrectionMode``:
 
@@ -67,7 +62,7 @@ Calls
    * - ``ListCorrectionSets``
      - Every published ``CorrectionSet`` (or one volume's): its id, ``built_utc``, ``pitch_nm``, ``kernel_radius_nm`` and the sections with a map.
    * - ``GetSectionCorrection``
-     - Sparse lattice for one Z. Node ``(gx, gy)`` sits at ``(gx * pitch_nm, gy * pitch_nm)``; add its ``offset`` to a volume point.
+     - Sparse lattice for one Z. Each ``LatticeNode`` names its cell as a ``GridCell`` ``node``; cell ``(row, col)`` sits at ``(col * pitch_nm, row * pitch_nm)``. Add its ``offset`` to a volume point.
    * - ``CorrectPoints``
      - Samples the field at points the caller holds. One ``SectionOffsets`` per request section, in request order, with one ``PointOffset`` per point. ``found`` false means that Z has no map: offsets are zero and untrusted. ``trusted`` means the point was on measured support.
    * - ``CorrectStructures``

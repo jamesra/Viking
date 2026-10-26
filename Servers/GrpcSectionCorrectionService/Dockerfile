@@ -11,6 +11,7 @@ COPY Directory.Build.props ./
 COPY Servers/GrpcSectionCorrectionService/nuget.docker.config Servers/GrpcSectionCorrectionService/
 COPY Servers/GrpcSectionCorrectionService/GrpcSectionCorrectionService.csproj Servers/GrpcSectionCorrectionService/
 COPY SectionCorrectionServiceTypes.gRPC/SectionCorrectionServiceTypes.gRPC.csproj SectionCorrectionServiceTypes.gRPC/
+COPY gRPCGeometryTypes/GeometryTypes.gRPC.csproj gRPCGeometryTypes/
 COPY Servers/SectionCorrection/SectionCorrection.csproj Servers/SectionCorrection/
 COPY Servers/SectionCorrectionBuilder/SectionCorrectionBuilder.csproj Servers/SectionCorrectionBuilder/
 COPY Servers/ConnectomeDataModelCore/ConnectomeDataModelCore.csproj Servers/ConnectomeDataModelCore/
@@ -36,6 +37,8 @@ RUN --mount=type=cache,id=viking-nuget,target=/root/.nuget/packages \
 WORKDIR /src
 COPY Servers/GrpcSectionCorrectionService/ Servers/GrpcSectionCorrectionService/
 COPY SectionCorrectionServiceTypes.gRPC/ SectionCorrectionServiceTypes.gRPC/
+COPY gRPCGeometryTypes/ gRPCGeometryTypes/
+COPY gRPC_Protos/Common/ gRPC_Protos/Common/
 COPY gRPC_Protos/SectionCorrection/ gRPC_Protos/SectionCorrection/
 COPY Servers/SectionCorrection/ Servers/SectionCorrection/
 COPY Servers/SectionCorrectionBuilder/ Servers/SectionCorrectionBuilder/

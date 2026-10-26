@@ -11,7 +11,9 @@ using WebAnnotationModel.gRPC;
 using WebAnnotationModel.gRPC.Converters;
 using WebAnnotationModel.Objects;
 using WebAnnotationModel.ServerInterface;
-using ProtoGeometry = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry;
+using Geometry;
+using Viking.AnnotationServiceTypes.gRPC.V1;
+using CoordinateSpace = Viking.gRPC.Geometry.V1.CoordinateSpace;
 
 namespace AnnotationParity
 {
@@ -88,17 +90,16 @@ namespace AnnotationParity
             double cy = (id / 100) * 400.0;
             if (id % 10 < 3)
             {
-                location.TypeCode = AnnotationType.Circle;
-                location.Radius = 120;
-                location.MosaicPosition = new AnnotationPoint { X = cx, Y = cy, Z = 250 };
-                location.VolumePosition = new AnnotationPoint { X = cx, Y = cy, Z = 250 };
+                location.MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = cx, Y = cy };
+                location.VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = cx, Y = cy };
+                location.MosaicGeometry = AnnotationShapes.CircleShape(cx, cy, 120);
+                location.VolumeGeometry = AnnotationShapes.CircleShape(cx, cy, 120);
             }
             else
             {
-                location.TypeCode = AnnotationType.Polygon;
-                string ring = Ring(cx, cy, 150, 40);
-                location.MosaicShape = new ProtoGeometry { Text = ring };
-                location.VolumeShape = new ProtoGeometry { Text = ring };
+                IShape2D ring = Ring(cx, cy, 150, 40).ParseWKT();
+                location.MosaicGeometry = ring.ToShape(LocationType.POLYGON, CoordinateSpace.Mosaic, null);
+                location.VolumeGeometry = ring.ToShape(LocationType.POLYGON, CoordinateSpace.Volume, null);
             }
 
             return location;
@@ -150,15 +151,15 @@ namespace AnnotationParity
             return n;
         }
 
-        /// <summary>WKT parsing alone: the mosaic shape of every polygon payload.</summary>
+        /// <summary>Shape conversion alone: the mosaic shape of every payload to the client's shape.</summary>
         [Benchmark]
-        public int ParseWkt_Only()
+        public int ShapeToClient_Only()
         {
             int n = 0;
             foreach (Location location in _payload)
             {
-                if (location.MosaicShape is { } shape)
-                    n += Geometry.FromWKT.ParseWKT(shape.Text) is null ? 0 : 1;
+                if (location.MosaicGeometry is { } shape)
+                    n += shape.ToShape2D() is null ? 0 : 1;
             }
 
             return n;

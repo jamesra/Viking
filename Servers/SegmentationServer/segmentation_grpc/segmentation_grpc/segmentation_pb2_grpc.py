@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from segmentation_grpc import segmentation_pb2 as segmentation__pb2
+from segmentation_grpc import segmentation_pb2 as Segmentation_dot_SAM2_dot_segmentation__pb2
 
 GRPC_GENERATED_VERSION = '1.84.0'
 GRPC_VERSION = grpc.__version__
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in segmentation_pb2_grpc.py depends on'
+        + ' but the generated code in Segmentation/SAM2/segmentation_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -26,7 +26,9 @@ if _version_not_supported:
 
 
 class SegmentationServiceStub:
-    """Service for segmenting images using SAM2
+    """SAM2 segmentation over a fixed 1024 x 1024 tile grid. A tile is a viking.geometry.v1.TileGrid (named once per call)
+    and a viking.geometry.v1.GridCell. Tiles are shared between clients: the server keeps each one it has encoded and
+    takes it from its own caches before asking a client for it.
     """
 
     def __init__(self, channel):
@@ -35,136 +37,71 @@ class SegmentationServiceStub:
         Args:
             channel: A grpc.Channel.
         """
-        self.UploadImage = channel.unary_unary(
-                '/segmentation.SegmentationService/UploadImage',
-                request_serializer=segmentation__pb2.UploadImageRequest.SerializeToString,
-                response_deserializer=segmentation__pb2.UploadImageResponse.FromString,
-                _registered_method=True)
         self.UploadTile = channel.unary_unary(
                 '/segmentation.SegmentationService/UploadTile',
-                request_serializer=segmentation__pb2.UploadTileRequest.SerializeToString,
-                response_deserializer=segmentation__pb2.UploadTileResponse.FromString,
+                request_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.UploadTileRequest.SerializeToString,
+                response_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.UploadTileResponse.FromString,
                 _registered_method=True)
         self.SegmentTilesStream = channel.stream_stream(
                 '/segmentation.SegmentationService/SegmentTilesStream',
-                request_serializer=segmentation__pb2.SegmentTilesStreamRequest.SerializeToString,
-                response_deserializer=segmentation__pb2.SegmentTilesStreamResponse.FromString,
+                request_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentTilesStreamRequest.SerializeToString,
+                response_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentTilesStreamResponse.FromString,
                 _registered_method=True)
         self.GetHeldTiles = channel.unary_unary(
                 '/segmentation.SegmentationService/GetHeldTiles',
-                request_serializer=segmentation__pb2.HeldTilesRequest.SerializeToString,
-                response_deserializer=segmentation__pb2.HeldTilesResponse.FromString,
-                _registered_method=True)
-        self.SegmentImage = channel.unary_unary(
-                '/segmentation.SegmentationService/SegmentImage',
-                request_serializer=segmentation__pb2.SegmentationRequest.SerializeToString,
-                response_deserializer=segmentation__pb2.SegmentationResponse.FromString,
-                _registered_method=True)
-        self.SegmentImageSets = channel.stream_stream(
-                '/segmentation.SegmentationService/SegmentImageSets',
-                request_serializer=segmentation__pb2.SegmentImageSetRequest.SerializeToString,
-                response_deserializer=segmentation__pb2.SegmentationResponse.FromString,
-                _registered_method=True)
-        self.MultiSegmentImage = channel.unary_unary(
-                '/segmentation.SegmentationService/MultiSegmentImage',
-                request_serializer=segmentation__pb2.MultiSegmentationRequest.SerializeToString,
-                response_deserializer=segmentation__pb2.SegmentationResponse.FromString,
-                _registered_method=True)
-        self.DeleteImage = channel.unary_unary(
-                '/segmentation.SegmentationService/DeleteImage',
-                request_serializer=segmentation__pb2.DeleteImageRequest.SerializeToString,
-                response_deserializer=segmentation__pb2.DeleteImageResponse.FromString,
+                request_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.HeldTilesRequest.SerializeToString,
+                response_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.HeldTilesResponse.FromString,
                 _registered_method=True)
         self.GetServerStatus = channel.unary_unary(
                 '/segmentation.SegmentationService/GetServerStatus',
-                request_serializer=segmentation__pb2.ServerStatusRequest.SerializeToString,
-                response_deserializer=segmentation__pb2.ServerStatusResponse.FromString,
+                request_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ServerStatusRequest.SerializeToString,
+                response_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ServerStatusResponse.FromString,
                 _registered_method=True)
 
 
 class SegmentationServiceServicer:
-    """Service for segmenting images using SAM2
+    """SAM2 segmentation over a fixed 1024 x 1024 tile grid. A tile is a viking.geometry.v1.TileGrid (named once per call)
+    and a viking.geometry.v1.GridCell. Tiles are shared between clients: the server keeps each one it has encoded and
+    takes it from its own caches before asking a client for it.
     """
 
-    def UploadImage(self, request, context):
-        """Upload an image to the server cache and receive a unique ID
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
     def UploadTile(self, request, context):
-        """Upload one 1024x1024 grid cell. A TileCoord already cached keeps its entry, whatever bytes come
-        with the upload, and is not re-encoded (already_cached is true).
+        """Upload one tile. A tile already cached keeps its entry, whatever bytes come with the upload, and is not
+        re-encoded (already_cached is true). An upload a SegmentTilesStream is waiting for wakes that stream.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def SegmentTilesStream(self, request_iterator, context):
-        """Segment using grid cells. The server owns the request: it takes each cell it needs, the ones named in
-        `start` included, from its own caches (GPU, then stored tiles), or from another stream already
-        fetching it, then streams TilesNeeded for the cells none of those hold, waits for the client's
-        TilesAnswer, and continues the same growth with them. A client need not upload before `start`.
-        When nothing more is needed it streams the finished SegmentationResponse and ends the call.
-        The client sends exactly one `start`, then its foreground_mask_tile_count FOREGROUND tiles in mask_tiles
-        messages, then one `answer` per TilesNeeded, sending BACKGROUND mask_tiles before an answer for the masks asked for.
+        """Segment from the prompt in `start`. The client sends `start`, then the mask tiles it announced
+        (SegmentTilesRequest.mask_tile_count), then one TilesAnswer per TilesNeeded. The server takes every tile it needs
+        from its own caches or another stream already fetching it, streams TilesNeeded for the rest, uses each tile as it
+        is uploaded, and streams the finished SegmentationResponse, then ends the call.
 
-        Ending: after `result` the call ends OK. A client that cancels gets no result (the call is gone).
-        A client that leaves TilesNeeded unanswered for the server's idle limit (default 60 s) gets
-        DEADLINE_EXCEEDED. Other statuses: INVALID_ARGUMENT for a malformed conversation or request,
-        RESOURCE_EXHAUSTED also when the foreground mask is over the server's tile limit (see MaskTile),
-        FAILED_PRECONDITION ("NO_MATCHING_MASK ...") when the starting cell yields no mask that fits the
-        prompt, RESOURCE_EXHAUSTED when the request is over the server's size limits, UNAVAILABLE when the
-        GPU is lost. This RPC replaced the unary SegmentTiles, which no longer exists.
+        Statuses: after `result` the call ends OK; a client that cancels gets no result. DEADLINE_EXCEEDED when the
+        announced mask tiles or an answer do not arrive within the server's idle limit (default 60 s). INVALID_ARGUMENT
+        for a malformed conversation or request. RESOURCE_EXHAUSTED over the server's limits (default 64 tiles, 512
+        points, 512 shapes per Feature, 256 mask tiles), naming the limit. FAILED_PRECONDITION for another model_id, and
+        ("NO_MATCHING_MASK ...") when the starting tile yields no mask that fits the prompt. UNAVAILABLE when the GPU is
+        lost.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def GetHeldTiles(self, request, context):
-        """Which cells SegmentTilesStream would not ask this client for: the server holds them (GPU or stored
-        tiles), or reads them from the annotation context's tileset itself. A client calls it before uploading
-        tiles ahead of a request (prefetch) and skips the held ones. A hint only: nothing is pinned, and a cell
-        dropped since is asked for during the request as usual. INVALID_ARGUMENT for an UNSPECIFIED space or
-        more cells than the server's limit (256).
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def SegmentImage(self, request, context):
-        """Segment an image based on input coordinates (uses cached image_id or inline image_data)
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def SegmentImageSets(self, request_iterator, context):
-        """Auto-segmentation: each request message is one independent point set for image_id.
-        The server writes one SegmentationResponse per set as soon as that predict() finishes.
-        The first message must carry image_id. Later messages reuse it when image_id is 0.
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def MultiSegmentImage(self, request, context):
-        """Segment an image using a dictionary mapping IDs to points (id=0 for background, id!=0 for foreground)
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def DeleteImage(self, request, context):
-        """Delete a cached image from the server
+        """Which cells SegmentTilesStream would not ask this client for: the server holds them, or reads them from the
+        annotation context's tileset itself. A client calls it before uploading tiles ahead of a request and skips the
+        held ones. A hint only: nothing is pinned, and a cell dropped since is asked for during the request as usual.
+        INVALID_ARGUMENT for an UNSPECIFIED space or more cells than the server's limit (256).
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def GetServerStatus(self, request, context):
-        """Return version, uptime, and a short status message for health/selection UI
+        """Version, load and the served model, for health and selection.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -173,50 +110,25 @@ class SegmentationServiceServicer:
 
 def add_SegmentationServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'UploadImage': grpc.unary_unary_rpc_method_handler(
-                    servicer.UploadImage,
-                    request_deserializer=segmentation__pb2.UploadImageRequest.FromString,
-                    response_serializer=segmentation__pb2.UploadImageResponse.SerializeToString,
-            ),
             'UploadTile': grpc.unary_unary_rpc_method_handler(
                     servicer.UploadTile,
-                    request_deserializer=segmentation__pb2.UploadTileRequest.FromString,
-                    response_serializer=segmentation__pb2.UploadTileResponse.SerializeToString,
+                    request_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.UploadTileRequest.FromString,
+                    response_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.UploadTileResponse.SerializeToString,
             ),
             'SegmentTilesStream': grpc.stream_stream_rpc_method_handler(
                     servicer.SegmentTilesStream,
-                    request_deserializer=segmentation__pb2.SegmentTilesStreamRequest.FromString,
-                    response_serializer=segmentation__pb2.SegmentTilesStreamResponse.SerializeToString,
+                    request_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentTilesStreamRequest.FromString,
+                    response_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentTilesStreamResponse.SerializeToString,
             ),
             'GetHeldTiles': grpc.unary_unary_rpc_method_handler(
                     servicer.GetHeldTiles,
-                    request_deserializer=segmentation__pb2.HeldTilesRequest.FromString,
-                    response_serializer=segmentation__pb2.HeldTilesResponse.SerializeToString,
-            ),
-            'SegmentImage': grpc.unary_unary_rpc_method_handler(
-                    servicer.SegmentImage,
-                    request_deserializer=segmentation__pb2.SegmentationRequest.FromString,
-                    response_serializer=segmentation__pb2.SegmentationResponse.SerializeToString,
-            ),
-            'SegmentImageSets': grpc.stream_stream_rpc_method_handler(
-                    servicer.SegmentImageSets,
-                    request_deserializer=segmentation__pb2.SegmentImageSetRequest.FromString,
-                    response_serializer=segmentation__pb2.SegmentationResponse.SerializeToString,
-            ),
-            'MultiSegmentImage': grpc.unary_unary_rpc_method_handler(
-                    servicer.MultiSegmentImage,
-                    request_deserializer=segmentation__pb2.MultiSegmentationRequest.FromString,
-                    response_serializer=segmentation__pb2.SegmentationResponse.SerializeToString,
-            ),
-            'DeleteImage': grpc.unary_unary_rpc_method_handler(
-                    servicer.DeleteImage,
-                    request_deserializer=segmentation__pb2.DeleteImageRequest.FromString,
-                    response_serializer=segmentation__pb2.DeleteImageResponse.SerializeToString,
+                    request_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.HeldTilesRequest.FromString,
+                    response_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.HeldTilesResponse.SerializeToString,
             ),
             'GetServerStatus': grpc.unary_unary_rpc_method_handler(
                     servicer.GetServerStatus,
-                    request_deserializer=segmentation__pb2.ServerStatusRequest.FromString,
-                    response_serializer=segmentation__pb2.ServerStatusResponse.SerializeToString,
+                    request_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ServerStatusRequest.FromString,
+                    response_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ServerStatusResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -227,35 +139,10 @@ def add_SegmentationServiceServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class SegmentationService:
-    """Service for segmenting images using SAM2
+    """SAM2 segmentation over a fixed 1024 x 1024 tile grid. A tile is a viking.geometry.v1.TileGrid (named once per call)
+    and a viking.geometry.v1.GridCell. Tiles are shared between clients: the server keeps each one it has encoded and
+    takes it from its own caches before asking a client for it.
     """
-
-    @staticmethod
-    def UploadImage(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/segmentation.SegmentationService/UploadImage',
-            segmentation__pb2.UploadImageRequest.SerializeToString,
-            segmentation__pb2.UploadImageResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
 
     @staticmethod
     def UploadTile(request,
@@ -272,8 +159,8 @@ class SegmentationService:
             request,
             target,
             '/segmentation.SegmentationService/UploadTile',
-            segmentation__pb2.UploadTileRequest.SerializeToString,
-            segmentation__pb2.UploadTileResponse.FromString,
+            Segmentation_dot_SAM2_dot_segmentation__pb2.UploadTileRequest.SerializeToString,
+            Segmentation_dot_SAM2_dot_segmentation__pb2.UploadTileResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -299,8 +186,8 @@ class SegmentationService:
             request_iterator,
             target,
             '/segmentation.SegmentationService/SegmentTilesStream',
-            segmentation__pb2.SegmentTilesStreamRequest.SerializeToString,
-            segmentation__pb2.SegmentTilesStreamResponse.FromString,
+            Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentTilesStreamRequest.SerializeToString,
+            Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentTilesStreamResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -326,116 +213,8 @@ class SegmentationService:
             request,
             target,
             '/segmentation.SegmentationService/GetHeldTiles',
-            segmentation__pb2.HeldTilesRequest.SerializeToString,
-            segmentation__pb2.HeldTilesResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def SegmentImage(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/segmentation.SegmentationService/SegmentImage',
-            segmentation__pb2.SegmentationRequest.SerializeToString,
-            segmentation__pb2.SegmentationResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def SegmentImageSets(request_iterator,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.stream_stream(
-            request_iterator,
-            target,
-            '/segmentation.SegmentationService/SegmentImageSets',
-            segmentation__pb2.SegmentImageSetRequest.SerializeToString,
-            segmentation__pb2.SegmentationResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def MultiSegmentImage(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/segmentation.SegmentationService/MultiSegmentImage',
-            segmentation__pb2.MultiSegmentationRequest.SerializeToString,
-            segmentation__pb2.SegmentationResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def DeleteImage(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/segmentation.SegmentationService/DeleteImage',
-            segmentation__pb2.DeleteImageRequest.SerializeToString,
-            segmentation__pb2.DeleteImageResponse.FromString,
+            Segmentation_dot_SAM2_dot_segmentation__pb2.HeldTilesRequest.SerializeToString,
+            Segmentation_dot_SAM2_dot_segmentation__pb2.HeldTilesResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -461,8 +240,8 @@ class SegmentationService:
             request,
             target,
             '/segmentation.SegmentationService/GetServerStatus',
-            segmentation__pb2.ServerStatusRequest.SerializeToString,
-            segmentation__pb2.ServerStatusResponse.FromString,
+            Segmentation_dot_SAM2_dot_segmentation__pb2.ServerStatusRequest.SerializeToString,
+            Segmentation_dot_SAM2_dot_segmentation__pb2.ServerStatusResponse.FromString,
             options,
             channel_credentials,
             insecure,

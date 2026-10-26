@@ -4,11 +4,12 @@ using System.Collections.Generic;
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
-    /// The shape that starts a segmentation, in volume space: a circle's disc, a polygon with its holes, an edited mask bitmap,
-    /// or a rectangle (a group's inscribed rectangle). Sent to the server as FOREGROUND mask tiles: everything inside is object.
+    /// The shape that starts a segmentation, in the tiles' space: a circle, a polygon with its holes, an edited mask bitmap,
+    /// or a rectangle (a group's inscribed rectangle). Geometry goes to the server as foreground shapes, which it softens
+    /// (<see cref="SegmentationPromptShapes.FromSeed"/>); a bitmap goes as FOREGROUND mask tiles and is used as drawn.
     /// </summary>
     /// <remarks>
-    /// A circle annotation is masked as the circle itself, not its inscribed square, and a polygon as its rings
+    /// A circle annotation is sent as the circle itself, not its inscribed square, and a polygon as its rings
     /// (exterior and holes). <see cref="Bounds"/> is the shape's axis-aligned box.
     /// </remarks>
     internal readonly struct SegmentationSeed
@@ -42,7 +43,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         public Vector2 Center => interiorPoint ?? Circle?.Center ?? Bounds.Center;
 
-        /// <summary>A seed that is the disc of <paramref name="circle"/>.</summary>
+        /// <summary>A seed that is <paramref name="circle"/>, with its true radius in the tiles' space.</summary>
         public static SegmentationSeed FromCircle(Circle circle) => new(circle.BoundingBox, circle);
 
         /// <summary>A seed that is <paramref name="polygon"/> with its holes; <paramref name="interior"/> must lie inside it.</summary>

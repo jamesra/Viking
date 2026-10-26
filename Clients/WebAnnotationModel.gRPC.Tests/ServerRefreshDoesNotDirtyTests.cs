@@ -8,7 +8,7 @@ using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using Viking.AnnotationServiceTypes.Interfaces;
 using WebAnnotationModel.gRPC.Converters;
 using WebAnnotationModel.Objects;
-using ProtoGeometry = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry;
+using Viking.AnnotationServiceTypes.gRPC.V1;
 
 namespace WebAnnotationModel.gRPC.Tests
 {
@@ -43,9 +43,8 @@ namespace WebAnnotationModel.gRPC.Tests
                 Id = 5,
                 ParentId = 2,
                 Section = 1,
-                TypeCode = AnnotationType.Polygon,
-                MosaicShape = new ProtoGeometry { Text = ServerSquare },
-                VolumeShape = new ProtoGeometry { Text = ServerSquare },
+                MosaicGeometry = ServerSquare.ParseWKT().ToShape(LocationType.POLYGON, Viking.gRPC.Geometry.V1.CoordinateSpace.Mosaic, null),
+                VolumeGeometry = ServerSquare.ParseWKT().ToShape(LocationType.POLYGON, Viking.gRPC.Geometry.V1.CoordinateSpace.Volume, null),
                 Terminal = true,
                 Username = "other user",
                 LastModified = Timestamp.FromDateTime(new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc)),

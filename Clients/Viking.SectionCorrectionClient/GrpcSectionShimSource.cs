@@ -57,7 +57,7 @@ namespace Viking.SectionCorrectionClient
                 return new SectionLatticeField(
                     response.PitchNm,
                     kernel,
-                    response.Nodes.Select(n => (n.Gx, n.Gy, n.Offset?.X ?? 0, n.Offset?.Y ?? 0)));
+                    response.Nodes.Select(n => (n.Node?.Col ?? 0, n.Node?.Row ?? 0, n.Offset?.X ?? 0, n.Offset?.Y ?? 0)));
             }
             catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
             {

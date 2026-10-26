@@ -19,10 +19,14 @@ from segmentation_server.image_cache import TileCacheKey
 
 @dataclass
 class _Flight:
-    """One tile with at least one stream asking its client for it, and the streams waiting on that."""
+    """One tile with at least one stream asking its client for it, and the streams waiting on that.
+
+    ``waiters`` are other streams borrowing the tile; ``watchers`` are the requesting streams' own arrival futures.
+    """
 
     requesters: Set[Hashable] = field(default_factory=set)
     waiters: List[Tuple[Hashable, "asyncio.Future[bool]"]] = field(default_factory=list)
+    watchers: List[Tuple[Hashable, "asyncio.Future[bool]"]] = field(default_factory=list)
 
 
 class TileRequestRegistry:
@@ -66,6 +70,18 @@ class TileRequestRegistry:
         flight.waiters.append((requester, subscription))
         return subscription
 
+    def watch(self, key: TileCacheKey, requester: Hashable) -> "asyncio.Future[bool]":
+        """Ask for ``key`` from ``requester``'s own client and get a future for its arrival.
+
+        The future resolves ``True`` when the tile reaches the cache (:meth:`arrived`, called by every upload), so the
+        stream that asked uses the tile as soon as its upload lands. It resolves ``False`` if the flight ends without it
+        and is cancelled by :meth:`release_all`. Must be called on the event loop.
+        """
+        self.join(key, requester)
+        subscription: "asyncio.Future[bool]" = asyncio.get_running_loop().create_future()
+        self._flights[key].watchers.append((requester, subscription))
+        return subscription
+
     def join(self, key: TileCacheKey, requester: Hashable) -> None:
         """Record that ``requester`` is asking its own client for ``key`` (after a timeout, or when sharing is off)."""
         self._flights.setdefault(key, _Flight()).requesters.add(requester)
@@ -82,7 +98,7 @@ class TileRequestRegistry:
         for requester in flight.requesters:
             self._forget(requester, key)
         woken = 0
-        for _requester, subscription in flight.waiters:
+        for _requester, subscription in flight.waiters + flight.watchers:
             if not subscription.done():
                 subscription.set_result(True)
                 woken += 1
@@ -101,7 +117,7 @@ class TileRequestRegistry:
         if flight.requesters:
             return
         del self._flights[key]
-        for _requester, subscription in flight.waiters:
+        for _requester, subscription in flight.waiters + flight.watchers:
             if not subscription.done():
                 subscription.set_result(False)
 
@@ -119,14 +135,8 @@ class TileRequestRegistry:
             self.release(key, requester)
         self._held.pop(requester, None)
         for flight in self._flights.values():
-            kept: List[Tuple[Hashable, "asyncio.Future[bool]"]] = []
-            for owner, subscription in flight.waiters:
-                if owner == requester:
-                    if not subscription.done():
-                        subscription.cancel()
-                else:
-                    kept.append((owner, subscription))
-            flight.waiters = kept
+            flight.waiters = _without(flight.waiters, requester)
+            flight.watchers = _without(flight.watchers, requester)
 
     def _forget(self, requester: Hashable, key: TileCacheKey) -> None:
         held = self._held.get(requester)
@@ -135,3 +145,17 @@ class TileRequestRegistry:
         held.discard(key)
         if not held:
             del self._held[requester]
+
+
+def _without(
+    subscriptions: List[Tuple[Hashable, "asyncio.Future[bool]"]], requester: Hashable
+) -> List[Tuple[Hashable, "asyncio.Future[bool]"]]:
+    """``subscriptions`` without ``requester``'s, which are cancelled."""
+    kept: List[Tuple[Hashable, "asyncio.Future[bool]"]] = []
+    for owner, subscription in subscriptions:
+        if owner == requester:
+            if not subscription.done():
+                subscription.cancel()
+        else:
+            kept.append((owner, subscription))
+    return kept

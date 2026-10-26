@@ -1,5 +1,6 @@
 ﻿using Grpc.Core;
 using WebAnnotationModel.ServerInterface;
+using Viking.AnnotationServiceTypes.gRPC.V1;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using WebAnnotationModel.Objects;
 using Grpc.Net.Client;
@@ -17,7 +18,6 @@ using Microsoft.Extensions.Options;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.AnnotationServiceTypes;
 using WebAnnotationModel.gRPC;
-using Geometry = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -162,28 +162,25 @@ namespace WebAnnotationModel.gRPC
         /// </summary>
         public Task<ServerUpdate<long, ILocation[]>> GetAsync(
             long Z,
-            string geometryWellKnownText,
+            Rectangle bounds,
             double screenPixelSizeInVolume,
             DateTime? modifiedAfter,
             CancellationToken token,
             Func<ServerUpdate<long, ILocation[]>, Task> onChunk) =>
-            GetRegionAsync(Z, geometryWellKnownText, screenPixelSizeInVolume, modifiedAfter, token, onChunk);
+            GetRegionAsync(Z, bounds, screenPixelSizeInVolume, modifiedAfter, token, onChunk);
 
-        public Task<ServerUpdate<long, ILocation[]>> GetAsync(long Z, string geometryWellKnownText, double screenPixelSizeInVolume, DateTime? modifiedAfter, CancellationToken token) =>
-            GetRegionAsync(Z, geometryWellKnownText, screenPixelSizeInVolume, modifiedAfter, token, onChunk: null);
+        public Task<ServerUpdate<long, ILocation[]>> GetAsync(long Z, Rectangle bounds, double screenPixelSizeInVolume, DateTime? modifiedAfter, CancellationToken token) =>
+            GetRegionAsync(Z, bounds, screenPixelSizeInVolume, modifiedAfter, token, onChunk: null);
 
         private async Task<ServerUpdate<long, ILocation[]>> GetRegionAsync(
             long Z,
-            string geometryWellKnownText,
+            Rectangle bounds,
             double screenPixelSizeInVolume,
             DateTime? modifiedAfter,
             CancellationToken token,
             Func<ServerUpdate<long, ILocation[]>, Task> onChunk)
         {
-            var region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
-            {
-                Text = geometryWellKnownText
-            };
+            var region = bounds.ToProtoRectangle();
 
             var request = new GetLocationChangesInMosaicRegionRequest()
             {
@@ -252,12 +249,9 @@ namespace WebAnnotationModel.gRPC
             }
         }
 
-        async Task<ServerUpdate<long, AnnotationSet[]>> IServerSpatialAnnotationsClient<long, AnnotationSet>.GetAsync(long Z, string geometryWellKnownText, double screenPixelSizeInVolume, DateTime? modifiedAfter, CancellationToken token, Func<ServerUpdate<long, AnnotationSet[]>, Task> onChunk)
+        async Task<ServerUpdate<long, AnnotationSet[]>> IServerSpatialAnnotationsClient<long, AnnotationSet>.GetAsync(long Z, Rectangle bounds, double screenPixelSizeInVolume, DateTime? modifiedAfter, CancellationToken token, Func<ServerUpdate<long, AnnotationSet[]>, Task> onChunk)
         {
-            var region = new Viking.AnnotationServiceTypes.gRPC.V1.Protos.Geometry
-            {
-                Text = geometryWellKnownText
-            };
+            var region = bounds.ToProtoRectangle();
 
             var request = new GetAnnotationsInMosaicRegionRequest()
             {

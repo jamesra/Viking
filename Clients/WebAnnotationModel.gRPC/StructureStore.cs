@@ -56,10 +56,9 @@ namespace WebAnnotationModel.gRPC
             ProtoLocationPositionOnly[] tips = await client.GetUnfinishedLocationsWithPosition(structureID).ConfigureAwait(false);
             return tips.Select(t =>
             {
-                var z = t.Position?.HasZ == true ? t.Position.Z : 0;
                 var pos = t.Position == null
-                    ? default
-                    : new Vector3(t.Position.X, t.Position.Y, z);
+                    ? new Vector3(0, 0, t.Section)
+                    : new Vector3(t.Position.X, t.Position.Y, t.Section);
                 return new WebAnnotationModel.LocationPositionOnly(t.Id, pos, t.Radius);
             }).ToArray();
         }
@@ -267,9 +266,8 @@ namespace WebAnnotationModel.gRPC
         public async Task<(ICollection<StructureObj> Objects, DateTime QueryCompletedTime)> GetServerObjectsInRegion(long SectionNumber, Rectangle bounds, double MinRadius, DateTime? LastQueryUtc)
         {
             var client = StructureClientFactory.GetOrCreate();
-            string regionWkt = ToWktPolygon(bounds);
             var update = await ((IServerSpatialAnnotationsClient<long, IStructure>)client)
-                .GetAsync(SectionNumber, regionWkt, MinRadius, LastQueryUtc, CancellationToken.None, null)
+                .GetAsync(SectionNumber, bounds, MinRadius, LastQueryUtc, CancellationToken.None, null)
                 .ConfigureAwait(false);
 
             var changes = await MergeServerStructuresAsync(update.NewOrUpdated, update.DeletedIDs, update.QueryTime).ConfigureAwait(false);
@@ -304,13 +302,5 @@ namespace WebAnnotationModel.gRPC
         /// </summary>
         public Task<StructureLinkObj> GetLinksForStructure() =>
             Task.FromResult<StructureLinkObj>(null);
-
-        private static string ToWktPolygon(Rectangle bounds)
-        {
-            var ci = System.Globalization.CultureInfo.InvariantCulture;
-            return string.Format(ci,
-                "POLYGON(({0} {1}, {2} {1}, {2} {3}, {0} {3}, {0} {1}))",
-                bounds.Left, bounds.Bottom, bounds.Right, bounds.Top);
-        }
     }
 }

@@ -5,14 +5,14 @@ Image tiles are 1024x1024 on a grid anchored at the volume origin. A client send
 the tiles that hold mask and cuts each cell window from them on demand, so a mask 4000 px across costs the tiles it
 touches and no more.
 
-There are two kinds. The FOREGROUND (the seed or correction) is announced up front and is complete once its tiles have
-arrived; a tile not sent is empty. The BACKGROUND (the neighbors) is built on demand: the walk asks for the tiles a
-window covers before it predicts that window, so a tile the server has not been told about is *unknown*, not empty.
+There are two kinds, a painted bitmap of what the object is (FOREGROUND, used as drawn) and of what it is not
+(BACKGROUND). Every tile of both is sent right after ``start`` (``SegmentTilesRequest.mask_tile_count`` counts them), so
+each bitmap is complete once they have arrived: a tile not sent is empty.
 """
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Set, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
@@ -62,7 +62,7 @@ def decode_mask_tile(tile: Any) -> Optional[TilePixels]:
         MaskTileError: ``full`` and ``png`` are both set, the scale is not 0, 1 or 4, or the PNG is not the size the
             scale calls for.
     """
-    where = f"row {tile.coord.row} col {tile.coord.col}"
+    where = f"row {tile.cell.row} col {tile.cell.col}"
     if tile.full:
         if tile.png:
             raise MaskTileError(f"Mask tile {where} sets both full and png.")
@@ -94,8 +94,8 @@ class TiledMaskShape(MaskShape):
     """A :class:`MaskShape` whose pixels live in sparse 1024 tiles instead of one bitmap.
 
     It is filled in as tiles arrive (:meth:`settle`). ``complete`` says whether a tile it has not been told about is
-    empty (a foreground mask: every tile it touches was sent) or unknown (a background mask: the walk asks for the
-    tiles of each window, see :meth:`unknown_tiles`). A tile that is unknown or empty reads as no mask.
+    empty (every tile the mask touches was sent) or unknown (:meth:`unknown_tiles` lists it, and the walk waits for it).
+    A tile that is unknown or empty reads as no mask.
 
     ``box`` is the tight box of the pixels settled so far, and is only meaningful when :attr:`empty` is False.
     """
@@ -143,6 +143,10 @@ class TiledMaskShape(MaskShape):
 
     def is_known(self, key: TileKey) -> bool:
         return key in self._known
+
+    def tiles(self) -> List[Tuple[TileKey, TilePixels]]:
+        """The tiles that hold mask: ``((row, col), pixels)``, pixels True for a full tile or a Y-up bool square."""
+        return list(self._pixels.items())
 
     def unknown_tiles(self, cell: Cell) -> List[TileIndex]:
         if self._complete:
@@ -226,74 +230,49 @@ class TiledMaskShape(MaskShape):
 
 
 class MaskTileCollector:
-    """One request's mask tiles: the foreground and the on-demand background, with their duplicate and count rules.
+    """One request's mask tiles: the foreground and background bitmaps, with their duplicate and count rules.
 
-    ``announced`` is ``SegmentTilesRequest.foreground_mask_tile_count``, how many FOREGROUND tiles follow ``start`` (0 for a
-    request with no foreground mask, such as clicks only). Every request serves BACKGROUND tiles on request.
+    ``announced`` is ``SegmentTilesRequest.mask_tile_count``, how many tiles of either kind follow ``start`` (0 for a
+    request with no bitmap). Both bitmaps are complete once that many have arrived.
     """
 
     def __init__(self, announced: int = 0) -> None:
         self.announced = int(announced)
         self.foreground = TiledMaskShape(complete=False)
         self.background = TiledMaskShape(complete=False)
-        self.foreground_received = 0
-        # Background tiles the server has asked the client for, and those it let a client answer after sending early.
-        self.asked_background: Set[TileKey] = set()
-        self._tolerated: Set[TileKey] = set()
+        self.received = 0
 
     @property
-    def foreground_done(self) -> bool:
-        return self.foreground_received >= self.announced
+    def done(self) -> bool:
+        return self.received >= self.announced
 
-    def add(self, message: Any, identity: Any, same_identity: Any) -> int:
-        """Take one ``MaskTiles`` message. Returns how many of its tiles were new (all of them: a repeat is an error).
-
-        Args:
-            message: The ``MaskTiles`` message.
-            identity: A ``TileCoord`` of the request's image tiles: the volume, section, channel, transform and
-                downsample the mask tiles must share.
-            same_identity: ``(TileCoord, TileCoord) -> bool``.
+    def add(self, message: Any) -> int:
+        """Take one ``MaskTiles`` message. Returns how many tiles it held (all new: a repeat is an error).
 
         Raises:
-            MaskTileError: The kind is unset, a tile is at another volume, section, channel, transform or downsample,
-                a (coord, kind) repeats, more foreground tiles arrive than were announced, or a tile is not usable
-                (see :func:`decode_mask_tile`).
+            MaskTileError: The kind is unset, a (cell, kind) repeats, more tiles arrive than were announced, or a tile
+                is not usable (see :func:`decode_mask_tile`).
         """
         for tile in message.tiles:
             kind = int(tile.kind)
             if kind not in (FOREGROUND, BACKGROUND):
-                raise MaskTileError(f"Mask tile row {tile.coord.row} col {tile.coord.col} has no kind.")
-            if not same_identity(tile.coord, identity):
-                raise MaskTileError(
-                    f"Mask tile row {tile.coord.row} col {tile.coord.col} is not in the same volume, section, "
-                    "channel, transform and downsample as the image tiles."
-                )
-            key = (int(tile.coord.row), int(tile.coord.col))
+                raise MaskTileError(f"Mask tile row {tile.cell.row} col {tile.cell.col} has no kind.")
+            key = (int(tile.cell.row), int(tile.cell.col))
             shape = self.foreground if kind == FOREGROUND else self.background
-            if kind == BACKGROUND and shape.is_known(key) and key in self.asked_background and key not in self._tolerated:
-                # The client sent this tile before it was asked, and the server asked before it had read it.
-                # Answering that ask once is not a duplicate.
-                self._tolerated.add(key)
-                continue
             if shape.is_known(key):
                 raise MaskTileError(f"Mask tile row {key[0]} col {key[1]} was sent twice for the same kind.")
-            if kind == FOREGROUND and self.foreground_received >= self.announced:
-                raise MaskTileError(
-                    f"More foreground mask tiles were sent than the {self.announced} announced."
-                )
+            if self.received >= self.announced:
+                raise MaskTileError(f"More mask tiles were sent than the {self.announced} announced.")
             shape.settle(key, decode_mask_tile(tile))
-            if kind == FOREGROUND:
-                self.foreground_received += 1
+            self.received += 1
         return len(message.tiles)
 
-    def background_unavailable(self, key: TileKey) -> bool:
-        """The client cannot supply this background tile: it has no neighbors. False when it was already settled."""
-        if self.background.is_known(key):
-            return False
-        self.background.settle(key, None)
-        return True
-
     def foreground_shape(self) -> Optional[TiledMaskShape]:
-        """The foreground mask, complete, or None when it holds no pixel."""
+        """The foreground bitmap, complete, or None when it holds no pixel."""
         self.foreground.mark_complete()
         return None if self.foreground.empty else self.foreground
+
+    def background_shape(self) -> Optional[TiledMaskShape]:
+        """The background bitmap, complete, or None when it holds no pixel."""
+        self.background.mark_complete()
+        return None if self.background.empty else self.background

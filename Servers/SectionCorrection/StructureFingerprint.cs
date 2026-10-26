@@ -7,7 +7,7 @@ namespace Viking.SectionCorrection
     /// <summary>
     /// What a set of structures' annotations looked like when they were read: the per-structure counterpart of
     /// <see cref="SectionFingerprintDto"/>, with the same summaries.  CorrectStructures returns its <see cref="Token"/>
-    /// and GetStructureFingerprint returns the current one, so a client can tell whether cached offsets are stale
+    /// and GetAnswerStamp returns the current one, so a client can tell whether cached offsets are stale
     /// without re-running the correction.
     /// </summary>
     /// <remarks>
@@ -86,7 +86,7 @@ namespace Viking.SectionCorrection
 
         public override bool Equals(object obj) => Equals(obj as StructureFingerprint);
 
-        public override int GetHashCode() => Token.GetHashCode(StringComparison.Ordinal);
+        public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(Token);
 
         public override string ToString() => Token;
     }

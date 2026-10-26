@@ -4,12 +4,22 @@ from __future__ import annotations
 
 import pytest
 
-from segmentation_grpc import Feature, Point, SegmentTilesRequest, UploadTileRequest
-from segmentation_server.cell_grid import TILE_SIZE
+from segmentation_grpc import UploadTileRequest
 from segmentation_server.embedding_store import EmbeddingStore
 from segmentation_server.image_cache import ImageCache
 from segmentation_server.tile_store import TileStore, open_tile_store
-from test_segment_tiles import _all_unavailable, _context, _converse, _needed_tiles, _png, _result, _servicer, _tile
+from protocol import (
+    all_unavailable as _all_unavailable,
+    cell,
+    context as _context,
+    converse as _converse,
+    grid,
+    needed_tiles as _needed_tiles,
+    png as _png,
+    result as _result,
+    servicer as _servicer,
+    start,
+)
 
 
 def _key(row: int = 0, col: int = 0):
@@ -99,7 +109,7 @@ def test_without_an_embedding_cache_the_store_is_memory_only(monkeypatch) -> Non
 
 
 def _upload(row: int, col: int, data: bytes) -> UploadTileRequest:
-    return UploadTileRequest(coord=_tile(row, col), image_data=data, width=TILE_SIZE, height=TILE_SIZE)
+    return UploadTileRequest(grid=grid(), cell=cell(row, col), image_data=data)
 
 
 @pytest.mark.asyncio
@@ -116,7 +126,7 @@ async def test_a_tile_the_image_cache_dropped_is_rebuilt_without_asking_the_clie
         await servicer.UploadTile(_upload(row, col, png), _context())
     # GPU pressure, or a restart of the image cache: every embedding and its bytes are gone from it.
     await cache.clear()
-    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=10, y=10)]))
+    request = start([(10, 10)])
     context = _context()
 
     updates = await _converse(servicer, request, context, answer_for=_all_unavailable)
@@ -139,7 +149,7 @@ async def test_a_stored_tile_the_image_cache_cannot_take_is_used_from_its_pixels
         store.remember(_key(row, col), _png())
     servicer = _servicer(cache)
     servicer._tile_store = store
-    request = SegmentTilesRequest(tiles=[_tile(0, 0)], foreground_feature=Feature(points=[Point(x=10, y=10)]))
+    request = start([(10, 10)])
     context = _context()
 
     updates = await _converse(servicer, request, context, answer_for=_all_unavailable)

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>net48;netstandard2.0</TargetFrameworks>
@@ -8,16 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Protos\AnnotationMetaData.proto" />
-    <None Remove="Protos\AnnotationTypes.proto" />
-    <None Remove="Protos\Correction.proto" />
-    <None Remove="Protos\Location.proto" />
-    <None Remove="Protos\PermittedStructureLinks.proto" />
-    <None Remove="Protos\Structure.proto" />
-    <None Remove="Protos\StructureType.proto" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.19.1" />
     <PackageReference Include="Grpc.Core" Version="2.43.0" />
     <PackageReference Include="Grpc.Tools" Version="2.43.0">
@@ -25,27 +15,25 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.11.1" />
-    <PackageReference Include="NetTopologySuite" Version="2.4.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
     <ProjectReference Include="..\Geometry\Geometry.csproj" />
+    <ProjectReference Include="..\GeometrySqlTypeMapper\GeometryOGCMapper.csproj" />
+    <ProjectReference Include="..\gRPCGeometryTypes\GeometryTypes.gRPC.csproj" />
     <ProjectReference Include="..\UnitsAndScale\UnitsAndScale.csproj" />
   </ItemGroup>
 
+  <!-- The annotation protos live in gRPC_Protos/Annotation. Common/geometry.proto is imported through ProtoRoot and
+       compiled by GeometryTypes.gRPC, not here. -->
   <ItemGroup>
-    <Protobuf Include="Protos\AnnotationMetaData.proto" GrpcServices="Both" />
-    <Protobuf Include="Protos\Correction.proto" GrpcServices="Both" />
-    <Protobuf Include="Protos\PermittedStructureLinks.proto" GrpcServices="Both" />
-    <Protobuf Include="Protos\AnnotationTypes.proto">
-      <GrpcServices>Both</GrpcServices>
-    </Protobuf>
-    <Protobuf Include="Protos\StructureType.proto" GrpcServices="Both" />
-    <Protobuf Include="Protos\Structure.proto" GrpcServices="Both" />
-    <Protobuf Include="Protos\Location.proto">
-      <GrpcServices>Both</GrpcServices>
-    </Protobuf>
+    <Protobuf Include="..\gRPC_Protos\Annotation\AnnotationMetaData.proto" ProtoRoot="..\gRPC_Protos" GrpcServices="Both" />
+    <Protobuf Include="..\gRPC_Protos\Annotation\AnnotationTypes.proto" ProtoRoot="..\gRPC_Protos" GrpcServices="Both" />
+    <Protobuf Include="..\gRPC_Protos\Annotation\Location.proto" ProtoRoot="..\gRPC_Protos" GrpcServices="Both" />
+    <Protobuf Include="..\gRPC_Protos\Annotation\PermittedStructureLinks.proto" ProtoRoot="..\gRPC_Protos" GrpcServices="Both" />
+    <Protobuf Include="..\gRPC_Protos\Annotation\Structure.proto" ProtoRoot="..\gRPC_Protos" GrpcServices="Both" />
+    <Protobuf Include="..\gRPC_Protos\Annotation\StructureType.proto" ProtoRoot="..\gRPC_Protos" GrpcServices="Both" />
   </ItemGroup>
 
 </Project>

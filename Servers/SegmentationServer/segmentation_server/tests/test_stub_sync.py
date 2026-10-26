@@ -16,30 +16,32 @@ import pytest
 from google.protobuf import descriptor_pb2
 
 import segmentation_grpc
-from segmentation_grpc import segmentation_pb2, segmentation_pb2_grpc
+from segmentation_grpc import geometry_pb2, segmentation_pb2, segmentation_pb2_grpc
 
 pytest.importorskip("grpc_tools")
 
 _SERVER_ROOT = Path(__file__).resolve().parents[1]
 _SEGMENTATION_ROOT = _SERVER_ROOT.parent
 _REPO_ROOT = _SEGMENTATION_ROOT.parents[1]
-_PROTO = _REPO_ROOT / "gRPC_Protos" / "Segmentation" / "SAM2" / "segmentation.proto"
+_PROTO_ROOT = _REPO_ROOT / "gRPC_Protos"
+_PROTO = _PROTO_ROOT / "Segmentation" / "SAM2" / "segmentation.proto"
 
 
-def _descriptor_from_proto(tmp_path: Path) -> descriptor_pb2.FileDescriptorProto:
+def _descriptors_from_protos(tmp_path: Path) -> dict:
+    """Each file's descriptor, by its name under gRPC_Protos, as protoc reads them with the shared import root."""
     out = tmp_path / "segmentation.desc"
     subprocess.check_call(
         [
             sys.executable, "-m", "grpc_tools.protoc",
-            f"--proto_path={_PROTO.parent}",
+            f"--proto_path={_PROTO_ROOT}",
+            "--include_imports",
             f"--descriptor_set_out={out}",
             str(_PROTO),
         ]
     )
     file_set = descriptor_pb2.FileDescriptorSet()
     file_set.ParseFromString(out.read_bytes())
-    (file_proto,) = file_set.file
-    return file_proto
+    return {file_proto.name: file_proto for file_proto in file_set.file}
 
 
 def _drop_json_names(file_proto: descriptor_pb2.FileDescriptorProto) -> None:
@@ -56,16 +58,20 @@ def _drop_json_names(file_proto: descriptor_pb2.FileDescriptorProto) -> None:
 
 
 @pytest.mark.skipif(not _PROTO.exists(), reason="shared proto is not checked out beside the server")
-def test_committed_stubs_describe_exactly_the_shared_proto(tmp_path) -> None:
-    from_proto = _descriptor_from_proto(tmp_path)
+@pytest.mark.parametrize(
+    "module,name",
+    [(segmentation_pb2, "Segmentation/SAM2/segmentation.proto"), (geometry_pb2, "Common/geometry.proto")],
+    ids=["segmentation", "geometry"],
+)
+def test_committed_stubs_describe_exactly_the_shared_proto(tmp_path, module, name) -> None:
+    from_proto = _descriptors_from_protos(tmp_path)[name]
     from_stub = descriptor_pb2.FileDescriptorProto()
-    segmentation_pb2.DESCRIPTOR.CopyToProto(from_stub)
+    module.DESCRIPTOR.CopyToProto(from_stub)
     _drop_json_names(from_proto)
     _drop_json_names(from_stub)
 
     assert from_stub == from_proto, (
-        "segmentation_pb2.py is out of date with gRPC_Protos/Segmentation/SAM2/segmentation.proto. "
-        "Run: python -m segmentation_grpc"
+        f"{module.__name__} is out of date with gRPC_Protos/{name}. Run: python -m segmentation_grpc"
     )
 
 

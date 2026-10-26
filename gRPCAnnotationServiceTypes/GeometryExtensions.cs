@@ -1,4 +1,4 @@
-﻿using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
+﻿using System;
 
 namespace Viking.AnnotationServiceTypes.gRPC.V1
 {
@@ -8,20 +8,14 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1
     /// </summary>
     public static class GeometryExtensions
     {
-        public static string ToMosaicCircleWKT(this Location loc)
-        { 
-            return ToCircleWKT(loc.MosaicPosition.X, loc.MosaicPosition.Y, loc.Radius);
-        }
-
-        public static string ToVolumeCircleWKT(this Location loc)
-        {
-            return ToCircleWKT(loc.VolumePosition.X, loc.VolumePosition.Y, loc.Radius);
-        }
-
+        /// <summary>
+        /// The SQL Server WKT Viking stores for a circle: a CURVEPOLYGON of one CIRCULARSTRING through the west, north,
+        /// east and south rim points, starting and ending at the west point. Numbers use the invariant culture.
+        /// </summary>
         public static string ToCircleWKT(in double X, in double Y, in double radius)
         {
-            return
-                $"CURVEPOLYGON (CIRCULARSTRING ({X - radius} {Y}, {X} {Y + radius}, {X + radius} {Y}, {X} {Y - radius}, {X - radius} {Y}))";
+            return FormattableString.Invariant(
+                $"CURVEPOLYGON (CIRCULARSTRING ({X - radius} {Y}, {X} {Y + radius}, {X + radius} {Y}, {X} {Y - radius}, {X - radius} {Y}))");
         }
     }
 }

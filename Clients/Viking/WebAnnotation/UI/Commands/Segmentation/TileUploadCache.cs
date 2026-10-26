@@ -7,7 +7,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// </summary>
     /// <remarks>
     /// Thread safety: upload continuations run on thread-pool threads (<c>ConfigureAwait(false)</c>), while
-    /// <see cref="SegmentationViewportSession.ClearImageId"/> runs from the UI thread when a camera move cancels
+    /// <see cref="SegmentationViewportSession.ClearUploadedView"/> runs from the UI thread when a camera move cancels
     /// work, and status code reads <see cref="Count"/>. A bare <see cref="HashSet{T}"/> corrupts under
     /// concurrent writes, so every member takes one lock. The lock is never held across an await or a call out.
     /// </remarks>
@@ -49,7 +49,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 keys.Remove(key);
         }
 
-        /// <summary>Forgets every tile, when the view identity or server image changes.</summary>
+        /// <summary>Forgets every tile, when the view identity changes.</summary>
         public void Clear()
         {
             lock (gate)

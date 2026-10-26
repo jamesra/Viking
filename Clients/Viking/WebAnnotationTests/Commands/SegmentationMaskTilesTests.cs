@@ -9,21 +9,18 @@ using WebAnnotation.UI.Commands.Segmentation;
 using Rectangle = Geometry.Rectangle;
 using MaskKind = Viking.gRPC.SegmentationServiceTypes.V1.MaskKind;
 using MaskTile = Viking.gRPC.SegmentationServiceTypes.V1.MaskTile;
-using TileCoord = Viking.gRPC.SegmentationServiceTypes.V1.TileCoord;
-using CoordinateSpace = Viking.gRPC.SegmentationServiceTypes.V1.CoordinateSpace;
+using GridCell = Viking.gRPC.Geometry.V1.GridCell;
 
 namespace WebAnnotationTests.Commands
 {
     /// <summary>
-    /// Mask prompts as grid tiles: what the client sends for a seed of any size and for the neighbours the server asks about.
-    /// A tile is full, a 1-bit PNG (Y down like the image tile) or empty, and the tiles of one mask rebuild exactly the mask.
+    /// Painted bitmaps as grid tiles: what the client sends for a mask of any size. A tile is full, a 1-bit PNG (Y down like the
+    /// image tile) or empty, and the tiles of one mask rebuild exactly the mask.
     /// </summary>
     [TestClass]
     public class SegmentationMaskTilesTests
     {
         private const int Tile = 1024;
-
-        private static readonly TileCoord Template = new() { Volume = "vol", Section = 7, Channel = "c", Transform = "t", Downsample = 1 };
 
         private static Rectangle Box(double x0, double y0, double x1, double y1) => new(new Vector2(x0, y0), new Vector2(x1, y1));
 
@@ -34,15 +31,6 @@ namespace WebAnnotationTests.Commands
                 union.Add(rectangle);
 
             return union;
-        }
-
-        private static TileCoord Coord(int row, int col, int downsample = 1)
-        {
-            TileCoord coord = Template.Clone();
-            coord.Row = row;
-            coord.Col = col;
-            coord.Downsample = downsample;
-            return coord;
         }
 
         private static bool Inside(Rectangle rectangle, int x, int y)
@@ -76,7 +64,7 @@ namespace WebAnnotationTests.Commands
         /// <summary>Mosaic pixel (x, y) of the tiles as one mask; false for a tile not sent.</summary>
         private static Func<int, int, bool> Rebuild(IEnumerable<MaskTile> tiles)
         {
-            Dictionary<(int Row, int Col), bool[]> decoded = tiles.ToDictionary(tile => (tile.Coord.Row, tile.Coord.Col), Decode);
+            Dictionary<(int Row, int Col), bool[]> decoded = tiles.ToDictionary(tile => (tile.Cell.Row, tile.Cell.Col), Decode);
             return (x, y) =>
             {
                 int col = (int)Math.Floor(x / (double)Tile), row = (int)Math.Floor(y / (double)Tile);
@@ -89,7 +77,7 @@ namespace WebAnnotationTests.Commands
         {
             Rectangle region = Box(500, 500, 2900, 2900);
 
-            List<MaskTile> tiles = SegmentationMaskTiles.BuildForeground(UnionOf(region), Template, null, 0, 1);
+            List<MaskTile> tiles = SegmentationMaskTiles.BuildBitmap(UnionOf(region), 1, MaskKind.Foreground, null, 0, 1);
             Func<int, int, bool> on = Rebuild(tiles);
 
             Assert.AreEqual(9, tiles.Count);
@@ -103,13 +91,13 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void ATileTheShapeFillsIsFullAndAnEdgeTileIsAPngAtFullResolution()
         {
-            List<MaskTile> tiles = SegmentationMaskTiles.BuildForeground(UnionOf(Box(500, 500, 2900, 2900)), Template, null, 0, 1);
+            List<MaskTile> tiles = SegmentationMaskTiles.BuildBitmap(UnionOf(Box(500, 500, 2900, 2900)), 1, MaskKind.Foreground, null, 0, 1);
 
-            MaskTile middle = tiles.Single(tile => tile.Coord.Row == 1 && tile.Coord.Col == 1);
+            MaskTile middle = tiles.Single(tile => tile.Cell.Row == 1 && tile.Cell.Col == 1);
             Assert.IsTrue(middle.Full);
             Assert.IsTrue(middle.Png.IsEmpty, "a full tile has no PNG");
 
-            MaskTile corner = tiles.Single(tile => tile.Coord.Row == 0 && tile.Coord.Col == 0);
+            MaskTile corner = tiles.Single(tile => tile.Cell.Row == 0 && tile.Cell.Col == 0);
             Assert.IsFalse(corner.Full);
             Assert.IsFalse(corner.Png.IsEmpty);
             Assert.AreEqual(0u, corner.Scale, "scale is unset at full resolution");
@@ -123,7 +111,7 @@ namespace WebAnnotationTests.Commands
         public void PngRowZeroIsTheTilesHighestY()
         {
             // A strip across the top 10 mosaic rows of tile (0, 0): y 1014..1023.
-            List<MaskTile> tiles = SegmentationMaskTiles.BuildForeground(UnionOf(Box(100, 1014, 400, 1024)), Template, null, 0, 1);
+            List<MaskTile> tiles = SegmentationMaskTiles.BuildBitmap(UnionOf(Box(100, 1014, 400, 1024)), 1, MaskKind.Foreground, null, 0, 1);
             MaskTile tile = tiles.Single();
             using Image<L8> png = Image.Load<L8>(tile.Png.ToByteArray());
 
@@ -133,40 +121,25 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void AnEmptyForegroundTileIsLeftOutButAnEmptyBackgroundTileIsSentEmpty()
+        public void AnEmptyTileIsLeftOut()
         {
             // The triangle's bounding box reaches tiles (2, 2), (1, 2) and (2, 1); the triangle does not.
             SegmentationMaskUnion union = new();
             union.Add([[new Vector2(0, 0), new Vector2(3000, 0), new Vector2(0, 3000)]]);
 
-            List<MaskTile> foreground = SegmentationMaskTiles.BuildForeground(union, Template, null, 0, 1);
+            List<MaskTile> foreground = SegmentationMaskTiles.BuildBitmap(union, 1, MaskKind.Foreground, null, 0, 1);
             Assert.AreEqual(6, foreground.Count, "the three tiles past the hypotenuse are not announced or sent");
-            Assert.IsFalse(foreground.Any(tile => (tile.Coord.Row, tile.Coord.Col) is (2, 2) or (1, 2) or (2, 1)));
+            Assert.IsFalse(foreground.Any(tile => (tile.Cell.Row, tile.Cell.Col) is (2, 2) or (1, 2) or (2, 1)));
 
-            List<MaskTile> background = SegmentationMaskTiles.BuildBackground(union, [Coord(2, 2)], 1);
-            MaskTile empty = background.Single();
+            MaskTile empty = SegmentationMaskTiles.BuildTile(union, 1, new TileCell(2, 2), MaskKind.Background, null, 0, 1, sendEmpty: true)!;
             Assert.AreEqual(MaskKind.Background, empty.Kind);
             Assert.IsFalse(empty.Full);
             Assert.IsTrue(empty.Png.IsEmpty, "empty is sent with no PNG, so it differs from a tile never sent");
+            Assert.IsNull(SegmentationMaskTiles.BuildTile(union, 1, new TileCell(2, 2), MaskKind.Foreground, null, 0, 1, sendEmpty: false));
         }
 
         [TestMethod]
-        public void EveryAskedBackgroundTileIsAnsweredIncludingThoseWithNoNeighbourAtAll()
-        {
-            TileCoord[] asked = [Coord(0, 0), Coord(5, 5), Coord(-3, 9)];
-
-            List<MaskTile> none = SegmentationMaskTiles.BuildBackground(null, asked, 1);
-            List<MaskTile> some = SegmentationMaskTiles.BuildBackground(UnionOf(Box(0, 0, 100, 100)), asked, 1);
-
-            Assert.AreEqual(3, none.Count);
-            Assert.AreEqual(3, some.Count);
-            Assert.IsTrue(none.All(tile => !tile.Full && tile.Png.IsEmpty && tile.Kind == MaskKind.Background));
-            Assert.IsFalse(some[0].Png.IsEmpty, "tile (0, 0) holds the neighbour");
-            Assert.IsTrue(some[1].Png.IsEmpty && some[2].Png.IsEmpty);
-        }
-
-        [TestMethod]
-        public void ANeighbourSpanningTwentyTilesCostsOnlyTheTilesAskedAbout()
+        public void AShapeSpanningTwentyTilesCostsOnlyTheTilesAskedAbout()
         {
             SegmentationMaskUnion union = new();
             union.Add(Box(0, 0, 20 * Tile - 1, 900));
@@ -177,9 +150,8 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual(1, union.ShapesReaching(1, new TileCell(0, 13)), "one shape reaches tile (0, 13)");
             Assert.AreEqual(0, union.ShapesReaching(1, new TileCell(3, 13)), "none reaches a tile above it");
 
-            List<MaskTile> tile = SegmentationMaskTiles.BuildBackground(union, [Coord(0, 13)], 1);
-            Assert.IsFalse(tile.Single().Png.IsEmpty);
-            Assert.IsTrue(SegmentationMaskTiles.BuildBackground(union, [Coord(3, 13)], 1).Single().Png.IsEmpty);
+            Assert.IsFalse(SegmentationMaskTiles.BuildTile(union, 1, new TileCell(0, 13), MaskKind.Foreground, null, 0, 1, sendEmpty: true)!.Png.IsEmpty);
+            Assert.IsTrue(SegmentationMaskTiles.BuildTile(union, 1, new TileCell(3, 13), MaskKind.Foreground, null, 0, 1, sendEmpty: true)!.Png.IsEmpty);
         }
 
         [TestMethod]
@@ -188,8 +160,8 @@ namespace WebAnnotationTests.Commands
             Rectangle region = Box(503, 501, 2899, 2903);
             SegmentationMaskUnion union = UnionOf(region);
 
-            List<MaskTile> fine = SegmentationMaskTiles.BuildForeground(union, Template, null, 0, 1);
-            List<MaskTile> coarse = SegmentationMaskTiles.BuildForeground(union, Template, null, 0, SegmentationMaskTiles.CoarseScale);
+            List<MaskTile> fine = SegmentationMaskTiles.BuildBitmap(union, 1, MaskKind.Foreground, null, 0, 1);
+            List<MaskTile> coarse = SegmentationMaskTiles.BuildBitmap(union, 1, MaskKind.Foreground, null, 0, SegmentationMaskTiles.CoarseScale);
 
             Assert.AreEqual(fine.Count, coarse.Count);
             Assert.IsTrue(coarse.Where(tile => !tile.Full).All(tile => tile.Scale == 4));
@@ -227,7 +199,7 @@ namespace WebAnnotationTests.Commands
         {
             SegmentationMaskUnion union = UnionOf(Box(0, 0, 1000, 1000));
 
-            List<MaskTile> tiles = SegmentationMaskTiles.BuildForeground(union, Template, [new Vector2(300, 300)], 10, 1);
+            List<MaskTile> tiles = SegmentationMaskTiles.BuildBitmap(union, 1, MaskKind.Foreground, [new Vector2(300, 300)], 10, 1);
             Func<int, int, bool> on = Rebuild(tiles);
 
             Assert.IsFalse(on(300, 300), "the background click is not overruled by the seed");
@@ -242,7 +214,7 @@ namespace WebAnnotationTests.Commands
             SegmentationMaskUnion union = UnionOf(Box(0, 0, 17 * Tile, 16 * Tile));
 
             InvalidOperationException error = Assert.ThrowsException<InvalidOperationException>(
-                () => SegmentationMaskTiles.BuildForeground(union, Template, null, 0, 1));
+                () => SegmentationMaskTiles.BuildBitmap(union, 1, MaskKind.Foreground, null, 0, 1));
 
             StringAssert.Contains(error.Message, "256");
         }
@@ -252,7 +224,7 @@ namespace WebAnnotationTests.Commands
         {
             Rectangle soma = Box(300, 300, 4300, 4300);
 
-            List<MaskTile> tiles = SegmentationMaskTiles.BuildForeground(UnionOf(soma), Template, null, 0, 1);
+            List<MaskTile> tiles = SegmentationMaskTiles.BuildBitmap(UnionOf(soma), 1, MaskKind.Foreground, null, 0, 1);
 
             Assert.AreEqual(25, tiles.Count, "4000 pixels from 300 reach a 5 x 5 block of tiles");
             Assert.AreEqual(9, tiles.Count(tile => tile.Full), "the 3 x 3 tiles inside the soma are full");
@@ -269,7 +241,7 @@ namespace WebAnnotationTests.Commands
             SegmentationMaskUnion union = new();
             union.Add(SegmentationSeed.FromMask(mask)!.Value);
 
-            List<MaskTile> tiles = SegmentationMaskTiles.BuildForeground(union, Template, null, 0, 1);
+            List<MaskTile> tiles = SegmentationMaskTiles.BuildBitmap(union, 1, MaskKind.Foreground, null, 0, 1);
             Func<int, int, bool> on = Rebuild(tiles);
 
             Assert.IsTrue(tiles.Count >= 3 * 2);
@@ -288,13 +260,13 @@ namespace WebAnnotationTests.Commands
             SegmentationMaskUnion seeds = new();
             seeds.Add(SegmentationSeed.FromMask(mask)!.Value);
 
-            List<MaskTile> tiles = SegmentationMaskTiles.BuildForeground(seeds, Template, null, 0, 1);
+            List<MaskTile> tiles = SegmentationMaskTiles.BuildBitmap(seeds, 1, MaskKind.Foreground, null, 0, 1);
             Func<int, int, bool> on = Rebuild(tiles);
 
             // 12000 x 3000 reaches 12 columns by 3 rows of tiles. The raster's margin (128 pixels of 8 each side, a whole tile) reaches more,
             // and none of those tiles is sent.
             Assert.AreEqual(12 * 3, tiles.Count);
-            Assert.IsTrue(tiles.All(tile => tile.Coord.Row >= 0 && tile.Coord.Row <= 2 && tile.Coord.Col >= 0 && tile.Coord.Col <= 11), "no tile of the margin");
+            Assert.IsTrue(tiles.All(tile => tile.Cell.Row >= 0 && tile.Cell.Row <= 2 && tile.Cell.Col >= 0 && tile.Cell.Col <= 11), "no tile of the margin");
             Assert.IsTrue(SegmentationMaskTiles.TilesSpanned(mask.WorldBounds, 1) >= tiles.Count, "the guard's bound covers what is sent");
             Assert.IsTrue(SegmentationMaskTiles.TilesSpanned(mask.WorldBounds, 1) > tiles.Count, "and the margin is why it is larger");
             for (int y = 0; y < 3000; y += 37)
@@ -319,12 +291,12 @@ namespace WebAnnotationTests.Commands
             SegmentationMaskUnion seeds = SeedOf(edited);
 
             int scale = SegmentationMaskTiles.ScaleFor(seeds, 1);
-            List<MaskTile> tiles = SegmentationMaskTiles.BuildForeground(seeds, Template, null, 0, scale);
+            List<MaskTile> tiles = SegmentationMaskTiles.BuildBitmap(seeds, 1, MaskKind.Foreground, null, 0, scale);
 
             Assert.IsTrue(edited.Scale >= 1 && edited.Width <= 4096 && edited.Height <= 4096, "the raster fits the texture at whatever scale it needed");
             Assert.AreEqual(4, scale);
             Assert.AreEqual(4, tiles.Count, "a 1 x 4 grid of tiles");
-            Assert.IsTrue(tiles.All(tile => tile.Coord.Col == 0 && tile.Coord.Row >= 0 && tile.Coord.Row <= 3));
+            Assert.IsTrue(tiles.All(tile => tile.Cell.Col == 0 && tile.Cell.Row >= 0 && tile.Cell.Row <= 3));
             foreach (MaskTile tile in tiles)
             {
                 Assert.AreEqual(4u, tile.Scale);
@@ -348,7 +320,7 @@ namespace WebAnnotationTests.Commands
             RasterMask edited = RasterMask.FromRings([ring], downsample: 1, marginPixels: 128, maxRasterSide: 512)!;
             SegmentationMaskUnion seeds = SeedOf(edited);
 
-            List<MaskTile> tiles = SegmentationMaskTiles.BuildForeground(seeds, Template, null, 0, SegmentationMaskTiles.ScaleFor(seeds, 1));
+            List<MaskTile> tiles = SegmentationMaskTiles.BuildBitmap(seeds, 1, MaskKind.Foreground, null, 0, SegmentationMaskTiles.ScaleFor(seeds, 1));
             Func<int, int, bool> on = Rebuild(tiles);
 
             Assert.IsTrue(edited.Scale > 4, $"raster scale {edited.Scale}");
@@ -393,7 +365,7 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void AnEditedMaskWithinOneWindowKeepsFullResolutionAndOtherSeedsFollowTheSetting()
+        public void AnEditedMaskWithinOneWindowKeepsFullResolutionAndOtherShapesFollowTheSetting()
         {
             Vector2[] small = [new(100, 100), new(900, 100), new(900, 800), new(100, 800)];
             RasterMask smallMask = RasterMask.FromRings([small], downsample: 1, marginPixels: 128)!;
@@ -404,14 +376,14 @@ namespace WebAnnotationTests.Commands
 
             Assert.AreEqual(1, SegmentationMaskTiles.ScaleFor(editedSmall, 1), "a mask that fits one window keeps its edge exact");
             Assert.AreEqual(4, SegmentationMaskTiles.ScaleFor(editedLarge, 1));
-            Assert.AreEqual(1, SegmentationMaskTiles.ScaleFor(UnionOf(Box(0, 0, 3000, 1500)), 1), "a polygon seed is not an edit: it follows the setting");
+            Assert.AreEqual(1, SegmentationMaskTiles.ScaleFor(UnionOf(Box(0, 0, 3000, 1500)), 1), "a polygon is not an edit: it follows the setting");
             Assert.AreEqual(1, SegmentationMaskTiles.ScaleFor(null, 1));
         }
 
         [TestMethod]
         public void TheTilesAreSentInMessagesOfAtMostEight()
         {
-            List<MaskTile> tiles = Enumerable.Range(0, 20).Select(i => new MaskTile { Coord = Coord(0, i) }).ToList();
+            List<MaskTile> tiles = Enumerable.Range(0, 20).Select(i => new MaskTile { Cell = new GridCell { Row = 0, Col = i } }).ToList();
 
             List<Viking.gRPC.SegmentationServiceTypes.V1.MaskTiles> messages = SegmentationMaskTiles.Chunk(tiles).ToList();
 
@@ -427,166 +399,6 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual(1, SegmentationMaskTiles.ReadScale("2"), "no other scale is accepted by the server");
             Assert.AreEqual(1, SegmentationMaskTiles.ReadScale("junk"));
             Assert.AreEqual(4, SegmentationMaskTiles.ReadScale("4"));
-        }
-
-        private static Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesRequest StartRequest(params TileCoord[] startTiles)
-        {
-            Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesRequest request = new();
-            request.Tiles.AddRange(startTiles);
-            return request;
-        }
-
-        [TestMethod]
-        public void AClickOnlyRequestAnnouncesZeroForegroundTilesAndStillSendsTheStartWindowsBackground()
-        {
-            // Two start windows' image tiles, no seed mask: the user only clicked.
-            Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesRequest request = StartRequest(Coord(2, 3), Coord(2, 4));
-            SegmentationMaskUnion neighbours = UnionOf(Box(4 * Tile + 100, 2 * Tile + 100, 4 * Tile + 400, 2 * Tile + 400));
-
-            SegmentationMaskTiles.StartTiles start = SegmentationMaskTiles.PrepareStart(request, null, Template, null, 0, neighbours, 1);
-
-            Assert.AreEqual(0u, request.ForegroundMaskTileCount);
-            Assert.AreEqual(0, start.Foreground.Count);
-            Assert.AreEqual(2, start.Background.Count, "one background tile for each start window's image tile");
-            CollectionAssert.AreEqual(new[] { (2, 3), (2, 4) }, start.Background.Select(tile => (tile.Coord.Row, tile.Coord.Col)).ToArray());
-            Assert.IsTrue(start.Background.All(tile => tile.Kind == MaskKind.Background));
-            Assert.IsTrue(start.Background[0].Png.IsEmpty && !start.Background[0].Full, "tile (2, 3) has no neighbour and is sent empty");
-            Assert.IsFalse(start.Background[1].Png.IsEmpty, "tile (2, 4) holds the neighbour");
-        }
-
-        [TestMethod]
-        public void AClickOnlyRequestWithNoNeighboursSendsEmptyBackgroundTilesAndNoForegroundMessage()
-        {
-            Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesRequest request = StartRequest(Coord(0, 0), Coord(0, 1), Coord(1, 0));
-
-            SegmentationMaskTiles.StartTiles start = SegmentationMaskTiles.PrepareStart(request, null, Template, null, 0, null, 1);
-            List<Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesStreamRequest> messages = start.Messages().ToList();
-
-            Assert.AreEqual(0u, request.ForegroundMaskTileCount);
-            Assert.AreEqual(1, messages.Count, "only the background tiles are written");
-            Assert.IsTrue(messages.All(message => message.BodyCase == Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesStreamRequest.BodyOneofCase.MaskTiles));
-            Assert.AreEqual(3, messages[0].MaskTiles.Tiles.Count);
-            Assert.IsTrue(messages[0].MaskTiles.Tiles.All(tile => tile.Kind == MaskKind.Background && !tile.Full && tile.Png.IsEmpty),
-                "an empty tile is sent, so 'no neighbour' differs from 'not sent yet'");
-        }
-
-        [TestMethod]
-        public void ASeededRequestAnnouncesItsTileCountAndWritesTheForegroundBeforeTheBackground()
-        {
-            Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesRequest request = StartRequest(Coord(0, 0), Coord(0, 1));
-
-            SegmentationMaskTiles.StartTiles start = SegmentationMaskTiles.PrepareStart(
-                request, UnionOf(Box(100, 100, 2500, 800)), Template, null, 0, null, 1);
-            List<Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesStreamRequest> messages = start.Messages().ToList();
-
-            Assert.AreEqual(3u, request.ForegroundMaskTileCount, "the seed touches tiles (0, 0), (0, 1) and (0, 2)");
-            Assert.AreEqual(3, start.Foreground.Count);
-            Assert.AreEqual(2, start.Background.Count);
-            IEnumerable<MaskKind> kinds = messages.SelectMany(message => message.MaskTiles.Tiles.Select(tile => tile.Kind));
-            CollectionAssert.AreEqual(
-                new[] { MaskKind.Foreground, MaskKind.Foreground, MaskKind.Foreground, MaskKind.Background, MaskKind.Background },
-                kinds.ToArray(),
-                "the server waits for every announced foreground tile, so they come first");
-        }
-
-
-        private sealed class RecordingWriter : Grpc.Core.IClientStreamWriter<Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesStreamRequest>
-        {
-            public List<Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesStreamRequest> Written { get; } = [];
-
-            public Grpc.Core.WriteOptions? WriteOptions { get; set; }
-
-            public System.Threading.Tasks.Task WriteAsync(Viking.gRPC.SegmentationServiceTypes.V1.SegmentTilesStreamRequest message)
-            {
-                Written.Add(message);
-                return System.Threading.Tasks.Task.CompletedTask;
-            }
-
-            public System.Threading.Tasks.Task CompleteAsync() => System.Threading.Tasks.Task.CompletedTask;
-        }
-
-        private static SegmentationViewportSession.TileSignature Signature(int downsample) => new("vol", 7, "c", "t", downsample, CoordinateSpace.Volume);
-
-        [TestMethod]
-        public void ClicksAreThePointsOfTheTwoFeaturesInMosaicPixels()
-        {
-            (var foreground, var background) = SegmentationViewportSession.ClickFeatures(
-                [new Vector2(2000, 3000), new Vector2(4100, 100)], [new Vector2(40, 80)], downsample: 4);
-
-            Assert.AreEqual(Viking.gRPC.SegmentationServiceTypes.V1.MaskRole.Seed, foreground.MaskRole);
-            CollectionAssert.AreEqual(new[] { (500, 750), (1025, 25) }, foreground.Points.Select(p => (p.X, p.Y)).ToArray());
-            CollectionAssert.AreEqual(new[] { (10, 20) }, background!.Points.Select(p => (p.X, p.Y)).ToArray());
-        }
-
-        [TestMethod]
-        public void AClickOnlyRequestHasAForegroundFeatureAndNoBackgroundFeature()
-        {
-            (var foreground, var background) = SegmentationViewportSession.ClickFeatures([new Vector2(10, 10)], [], downsample: 1);
-
-            Assert.AreEqual(1, foreground.Points.Count, "the server needs a click, a rectangle or a FOREGROUND tile, and this is the click");
-            Assert.IsNull(background, "no background clicks: no background feature");
-        }
-
-        [TestMethod]
-        public void AMaskOnlyRequestStillHasAForegroundFeatureForTheRoleOfItsTiles()
-        {
-            (var foreground, var background) = SegmentationViewportSession.ClickFeatures(null, null, downsample: 1);
-
-            Assert.AreEqual(0, foreground.Points.Count);
-            Assert.AreEqual(Viking.gRPC.SegmentationServiceTypes.V1.MaskRole.Seed, foreground.MaskRole);
-            Assert.IsNull(background);
-        }
-
-        [TestMethod]
-        public async System.Threading.Tasks.Task AskedBackgroundTilesAreAnsweredEmptyOnesIncludedAndOneAlreadySentIsNotSentTwice()
-        {
-            SegmentationMaskUnion neighbours = UnionOf(Box(100, 100, 300, 300));
-            RecordingWriter writer = new();
-            HashSet<TileCell> sent = [new TileCell(0, 0)];   // the start windows' tile went with `start`
-            Viking.gRPC.SegmentationServiceTypes.V1.TilesNeeded needed = new();
-            needed.Masks.AddRange([Coord(0, 0), Coord(0, 1), Coord(5, 5)]);
-            Viking.gRPC.SegmentationServiceTypes.V1.TilesAnswer answer = new();
-
-            await SegmentationViewportSession.AnswerNeededMasksAsync(
-                writer, needed, answer, Signature(1), neighbours, sent, scale: 1, System.Threading.CancellationToken.None);
-
-            MaskTile[] tiles = [.. writer.Written.SelectMany(message => message.MaskTiles.Tiles)];
-            CollectionAssert.AreEqual(new[] { (0, 1), (5, 5) }, tiles.Select(tile => (tile.Coord.Row, tile.Coord.Col)).ToArray(),
-                "tile (0, 0) is not sent again: the server refuses a duplicate");
-            Assert.IsTrue(tiles.All(tile => tile.Kind == MaskKind.Background && !tile.Full && tile.Png.IsEmpty), "empty tiles are sent, not skipped");
-            Assert.AreEqual(0, answer.MasksUnavailable.Count);
-            Assert.IsTrue(sent.Contains(new TileCell(5, 5)));
-        }
-
-        [TestMethod]
-        public async System.Threading.Tasks.Task AMaskTileAtAnotherDownsampleIsListedUnavailableNotSent()
-        {
-            RecordingWriter writer = new();
-            Viking.gRPC.SegmentationServiceTypes.V1.TilesNeeded needed = new();
-            needed.Masks.AddRange([Coord(0, 1, downsample: 1), Coord(0, 2, downsample: 2)]);
-            Viking.gRPC.SegmentationServiceTypes.V1.TilesAnswer answer = new();
-
-            await SegmentationViewportSession.AnswerNeededMasksAsync(
-                writer, needed, answer, Signature(1), null, [], scale: 1, System.Threading.CancellationToken.None);
-
-            MaskTile[] tiles = [.. writer.Written.SelectMany(message => message.MaskTiles.Tiles)];
-            Assert.AreEqual(1, tiles.Length);
-            Assert.AreEqual(1, tiles[0].Coord.Col);
-            Assert.AreEqual(1, answer.MasksUnavailable.Count);
-            Assert.AreEqual(2, answer.MasksUnavailable[0].Downsample);
-        }
-
-        [TestMethod]
-        public async System.Threading.Tasks.Task ManyAskedTilesAreWrittenInMessagesOfAtMostEight()
-        {
-            RecordingWriter writer = new();
-            Viking.gRPC.SegmentationServiceTypes.V1.TilesNeeded needed = new();
-            needed.Masks.AddRange(Enumerable.Range(0, 19).Select(col => Coord(0, col)));
-
-            await SegmentationViewportSession.AnswerNeededMasksAsync(
-                writer, needed, new Viking.gRPC.SegmentationServiceTypes.V1.TilesAnswer(), Signature(1), null, [], scale: 1, System.Threading.CancellationToken.None);
-
-            CollectionAssert.AreEqual(new[] { 8, 8, 3 }, writer.Written.Select(message => message.MaskTiles.Tiles.Count).ToArray());
         }
     }
 }
