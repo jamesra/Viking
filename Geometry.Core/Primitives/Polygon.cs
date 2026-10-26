@@ -368,11 +368,19 @@ namespace Geometry
             RemoveRingFromRTree(iInner);
             this._InteriorPolygons.RemoveAt(iInner);
 
+            // A refused replacement leaves the polygon as it was, with its original ring back in place.
+            string refusal = null;
             if (this._InteriorPolygons.Any(p => p.Intersects(replacement)))
-                throw new ArgumentException("Cannot add interior polygon that intersects and existing interior polygon");
+                refusal = "Cannot add interior polygon that intersects and existing interior polygon";
+            else if (this.ExteriorSegments.Any(line => line.Intersects(replacement)))
+                refusal = "Cannot add interior polygon that intersects a polygon's exterior boundary";
 
-            if (this.ExteriorSegments.Any(line => line.Intersects(replacement)))
-                throw new ArgumentException("Cannot add interior polygon that intersects a polygon's exterior boundary");
+            if (refusal is not null)
+            {
+                this._InteriorPolygons.Insert(iInner, original);
+                AddRingToRTree(iInner);
+                throw new ArgumentException(refusal);
+            }
 
             this._InteriorPolygons.Insert(iInner, replacement);
 

@@ -85,10 +85,21 @@ namespace WebAnnotation.UI.Actions
                 //We don't want to change the interior rings, so replace the smooth versions with the originals from the LocationObj
                 Polygon unsmooth_mosaic_poly = locObj.MosaicShape.ToPolygon();
 
-                for (int i = 0; i < PolyToCut.InteriorRings.Count; i++)
+                for (int i = 0; i < PolyToCut.InteriorRings.Count && i < unsmooth_mosaic_poly.InteriorPolygons.Count; i++)
                 {
                     Polygon unsmooth_volume_inner_poly = Transform.TryMapShapeSectionToVolume(unsmooth_mosaic_poly.InteriorPolygons[i]);
-                    PolyToCut.ReplaceInteriorRing(i, unsmooth_volume_inner_poly);
+                    if (unsmooth_volume_inner_poly is null)
+                        continue;
+
+                    try
+                    {
+                        PolyToCut.ReplaceInteriorRing(i, unsmooth_volume_inner_poly);
+                    }
+                    catch (ArgumentException e)
+                    {
+                        // The original hole can touch the smoothed outline once mapped; the smoothed hole stays and is not cut.
+                        Trace.WriteLine($"Pen retrace of location {locID}: hole {i} keeps its smoothed ring: {e.Message}");
+                    }
                 }
             }
 

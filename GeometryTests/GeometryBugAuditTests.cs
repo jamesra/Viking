@@ -238,6 +238,19 @@ namespace GeometryTests
         }
 
         [TestMethod]
+        public void ReplaceInteriorRing_ReplacementTouchingTheExterior_KeepsTheOriginalHole()
+        {
+            Polygon outer = RectanglePolygon(new Rectangle(-10, 10, -10, 10));
+            Polygon inner = RectanglePolygon(new Rectangle(-2, 2, -2, 2));
+            outer.AddInteriorRing(inner);
+
+            Assert.ThrowsException<ArgumentException>(() => outer.ReplaceInteriorRing(0, RectanglePolygon(new Rectangle(-2, 12, -2, 2))));
+
+            Assert.AreEqual(1, outer.InteriorRings.Count);
+            Assert.AreEqual(inner.Area, outer.InteriorPolygons[0].Area, 1e-9);
+        }
+
+        [TestMethod]
         public void AddInteriorRing_ValidHole_Succeeds()
         {
             Polygon outer = RectanglePolygon(new Rectangle(-10, 10, -10, 10));
