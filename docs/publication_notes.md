@@ -2,7 +2,7 @@
 
 Annotation software for connectomes: the Viking and Jotunn clients, their servers (annotation, section correction,
 SAM2 segmentation) and the gRPC protocols. VikingLegacy (the `Legacy` branch) keeps its own notes from 2026-10-26
-(`D:srcgitVikingLegacydocspublication_notes.md`); older WCF client entries stay here. Material for future
+(`D:\src\git\VikingLegacy\docs\publication_notes.md`); older WCF client entries stay here. Material for future
 papers: citations, formulas, algorithmic decisions and the reasoning behind them. Index of all projects:
 `~/.cursor/publication-notes.md`. Format and rules: the `publication-notes` skill.
 
