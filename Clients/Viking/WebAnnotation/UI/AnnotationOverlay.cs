@@ -3141,11 +3141,12 @@ break;
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, StartingStencilValue);
 
             //Get all the lines to draw first so the text and geometric shapes are over top of them
-            LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, HiddenStructureTypes.ExcludeLocationLinks(HiddenStructures.ExcludeLocationLinks(
+            List<LocationLinkView> linksToDraw = [.. HiddenStructureTypes.ExcludeLocationLinks(HiddenStructures.ExcludeLocationLinks(
                 currentSectionAnnotations.NonOverlappedLocationLinksInRegion(scene.VisibleWorldBounds),
                 hiddenStructures,
                 locationId => Store.Locations.GetObjectByID(locationId, false)?.ParentID),
-                locationId => Store.Locations.GetObjectByID(locationId, false)?.Parent?.TypeID));
+                locationId => Store.Locations.GetObjectByID(locationId, false)?.Parent?.TypeID)];
+            LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, linksToDraw);
 
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, 1, 0);
 
@@ -3179,6 +3180,9 @@ break;
             graphicsDevice.BlendState = defaultBlendState;
 
             //Draw text
+            if (Global.AnnotationSettings.LocationLinkLabels)
+                DrawLocationLinkLabels(linksToDraw, scene);
+
             DrawLocationLabels(listLocationsToDraw, scene);
 
             DrawLocationLabels(listVisibleNonOverlappingLocationsOnAdjacentSections, scene);
@@ -3200,6 +3204,29 @@ break;
             }
             //Make sure we update the nextStencilValue for the calling function ref parameter
             nextStencilValue++;// DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1;
+        }
+
+        /// <summary>Labels the ends of the location links drawn this frame; see <see cref="LocationLinkView.DrawLabels"/>.</summary>
+        private void DrawLocationLinkLabels(ICollection<LocationLinkView> links, VikingXNA.Scene scene)
+        {
+            if (links.Count == 0)
+                return;
+
+            DeviceStateManager.SaveDeviceState(_Parent.Device);
+            bool batchBegun = false;
+            try
+            {
+                _Parent.spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+                batchBegun = true;
+                LocationLinkView.DrawLabels(_Parent.spriteBatch, _Parent.fontArial, scene, links);
+            }
+            finally
+            {
+                if (batchBegun)
+                    _Parent.spriteBatch.End();
+
+                DeviceStateManager.RestoreDeviceState(_Parent.Device);
+            }
         }
 
         private void DrawLocationLabels(ICollection<LocationCanvasView> locations, VikingXNA.Scene scene)

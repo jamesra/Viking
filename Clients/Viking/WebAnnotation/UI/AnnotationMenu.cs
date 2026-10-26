@@ -204,7 +204,9 @@ namespace WebAnnotation
                 Global.AnnotationSettings.HideAnnotationSeconds,
                 Global.AnnotationSettings.LabelOutlineEnabled,
                 Global.AnnotationSettings.LabelOutlineWhiteText,
-                Viking.UI.BarrelButtonBinding.Format(Global.AnnotationSettings.BarrelButton)
+                Viking.UI.BarrelButtonBinding.Format(Global.AnnotationSettings.BarrelButton),
+                Global.AnnotationSettings.LocationLinkVisibilityPercent,
+                Global.AnnotationSettings.LocationLinkLabels
             );
 
             VikingXNA.Scene scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
@@ -406,6 +408,8 @@ namespace WebAnnotation
             Global.AnnotationSettings.AdjacentLocationRadiusScalar = viewModel.AdjacentLocationRadiusScalar;
             Global.AnnotationSettings.LocationLinkWaistPixels = viewModel.LocationLinkWaistPixels;
             Global.AnnotationSettings.LocationLinkDrawUnderMarkers = viewModel.LocationLinkDrawUnderMarkers;
+            Global.AnnotationSettings.LocationLinkVisibilityPercent = viewModel.LocationLinkVisibilityPercent;
+            Global.AnnotationSettings.LocationLinkLabels = viewModel.LocationLinkLabels;
             Global.AnnotationSettings.HideAnnotationSeconds = viewModel.HideAnnotationSeconds;
             Global.AnnotationSettings.LabelOutlineEnabled = viewModel.LabelOutlineEnabled;
             Global.AnnotationSettings.LabelOutlineWhiteText = viewModel.LabelOutlineWhiteText;

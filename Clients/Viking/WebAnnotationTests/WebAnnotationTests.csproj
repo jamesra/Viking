@@ -59,6 +59,7 @@
         <Compile Include="GoToActionFormIdTests.cs" />
         <Compile Include="AnnotationPreferencesResetToDefaultsTests.cs" />
         <Compile Include="AnnotationPreferencesRevertTests.cs" />
+        <Compile Include="AnnotationPreferencesLocationLinkTests.cs" />
         <Compile Include="AnnotationPreferencesBarrelButtonTests.cs" />
         <Compile Include="BarrelButtonBindingTests.cs" />
         <Compile Include="Commands\PaintCanvasTests.cs" />
@@ -72,6 +73,7 @@
         <Compile Include="TemporarilyHiddenAnnotationsTests.cs" />
         <Compile Include="LabelOutlineTests.cs" />
         <Compile Include="LocationLinkBorderTests.cs" />
+        <Compile Include="LocationLinkVisibilityTests.cs" />
         <Compile Include="HiddenStructuresTests.cs" />
         <Compile Include="HiddenStructureTypeSetTests.cs" />
         <Compile Include="ObjAttributeTests.cs" />

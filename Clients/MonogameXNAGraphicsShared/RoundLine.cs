@@ -135,6 +135,9 @@ namespace RoundLineCode
         protected EffectParameter pinchedWaistOpacityParameter;
         protected EffectParameter pinchedBorderColorParameter;
         protected EffectParameter pinchedBorderPixelsParameter;
+        protected EffectParameter pinchedShadowColorParameter;
+        protected EffectParameter pinchedShadowPixelsParameter;
+        protected EffectParameter pinchedShadowWorldParameter;
         protected VertexBuffer vb;
         protected IndexBuffer ib;
         protected VertexDeclaration vdecl;
@@ -199,6 +202,9 @@ namespace RoundLineCode
             pinchedWaistOpacityParameter = e.Parameters["pinchedWaistOpacity"];
             pinchedBorderColorParameter = e.Parameters["pinchedBorderColor"];
             pinchedBorderPixelsParameter = e.Parameters["pinchedBorderPixels"];
+            pinchedShadowColorParameter = e.Parameters["pinchedShadowColor"];
+            pinchedShadowPixelsParameter = e.Parameters["pinchedShadowPixels"];
+            pinchedShadowWorldParameter = e.Parameters["pinchedShadowWorld"];
         }
 
         /// <summary>True when the loaded effect has the Pinched technique (RoundLineHSV does, RoundLine does not).</summary>
@@ -521,11 +527,16 @@ namespace RoundLineCode
         /// <paramref name="drawCaps"/> draws a round end the size of each radius beyond the line's ends.
         /// <paramref name="waistOpacity"/> is the waist's opacity as a fraction of the full width's; alpha fades linearly between them.
         /// <paramref name="borderColor"/> and <paramref name="borderPixels"/> draw a border that wide, in screen pixels, just inside
-        /// the outline; the colour must be in the same form as <paramref name="lineColor"/> (HCL for the HSL manager) and opaque.
-        /// A width of 0 draws no border.
+        /// the outline. A width of 0 draws no border.
+        /// <paramref name="shadowColor"/> and <paramref name="shadowPixels"/> draw a shadow outside the outline that fades to nothing
+        /// that many screen pixels out, as opaque as the line and fading toward the waist with it. A width of 0 draws no shadow.
+        /// <paramref name="worldUnitsPerPixel"/> is the size of a screen pixel in world units, so the lines can be widened to
+        /// make room for the shadow.
+        /// Both colours are plain RGB, not HCL, even for the HSL manager, and should be opaque.
         /// </summary>
         public void DrawPinched(IReadOnlyList<RoundLine> roundLines, IReadOnlyList<Vector4> shapes, Color lineColor,
-            Matrix viewProjMatrix, float time, bool drawCaps, float waistOpacity, Color borderColor = default, float borderPixels = 0)
+            Matrix viewProjMatrix, float time, bool drawCaps, float waistOpacity, Color borderColor = default, float borderPixels = 0,
+            Color shadowColor = default, float shadowPixels = 0, float worldUnitsPerPixel = 0)
         {
             if (roundLines.Count != shapes.Count)
                 throw new ArgumentException("Every line needs a shape", nameof(shapes));
@@ -542,6 +553,9 @@ namespace RoundLineCode
             pinchedWaistOpacityParameter?.SetValue(waistOpacity);
             pinchedBorderColorParameter?.SetValue(borderColor.ToVector4());
             pinchedBorderPixelsParameter?.SetValue(borderPixels);
+            pinchedShadowColorParameter?.SetValue(shadowColor.ToVector4());
+            pinchedShadowPixelsParameter?.SetValue(shadowPixels);
+            pinchedShadowWorldParameter?.SetValue(shadowPixels * worldUnitsPerPixel);
 
             effect.CurrentTechnique = effect.Techniques["Pinched"];
 

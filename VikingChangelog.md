@@ -7,6 +7,12 @@ Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Docum
 
 Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
 
+## 1.2.128 — not yet released
+
+* Location links (the hourglass between two linked locations on different sections) are easier to see. They are drawn more strongly next to the linked locations and fade toward the middle, with a contrasting shadow around them (black around a light link, white around a dark one). The thin border added in 1.2.120 now really is black or white; before, it took on the brightness of the image under it and barely showed.
+* **Link visibility (%)** in Annotation Preferences sets how strongly links and their shadows are drawn, from 10% to 100% (default 60%).
+* Each end of a location link is labelled, just beyond the location, with the ID of the location at the other end and an arrow pointing to it, for example `34532 ->`. Labels appear when the link is long enough on screen for both, and can be turned off with **Label link ends with the linked location ID** in Annotation Preferences.
+
 ## 1.2.127 — 2026-10-26 (Viking Test, unsigned)
 
 * Circles: when you draw, resize, move or link a circle, the circle on the other side of the section-to-volume warp now gets the radius the warp's local scale implies, instead of a copy of the radius. Auto-segment of a circle also tolerates a rim point that does not map.

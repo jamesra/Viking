@@ -138,10 +138,20 @@ namespace VikingXNAGraphics
             }
 
             (Color text, Color outline) = OutlineColors(this._Color, style);
-            foreach (Vector2 offset in OutlineOffsets)
-                spriteBatch.DrawString(font, row, position + offset, outline, this.Rotation, origin, fontScale, SpriteEffects.None, 0);
+            DrawOutlinedString(spriteBatch, font, row, position, text, outline, this.Rotation, origin, fontScale);
+        }
 
-            spriteBatch.DrawString(font, row, position, text, this.Rotation, origin, fontScale, SpriteEffects.None, 0);
+        /// <summary>
+        /// Draws <paramref name="text"/> in <paramref name="textColor"/> over copies of it in <paramref name="outlineColor"/>
+        /// shifted one screen pixel in each direction. The caller has begun <paramref name="spriteBatch"/>.
+        /// </summary>
+        public static void DrawOutlinedString(SpriteBatch spriteBatch, SpriteFont font, string text, Vector2 position,
+            Color textColor, Color outlineColor, float rotation, Vector2 origin, float scale)
+        {
+            foreach (Vector2 offset in OutlineOffsets)
+                spriteBatch.DrawString(font, text, position + offset, outlineColor, rotation, origin, scale, SpriteEffects.None, 0);
+
+            spriteBatch.DrawString(font, text, position, textColor, rotation, origin, scale, SpriteEffects.None, 0);
         }
 
         public Microsoft.Xna.Framework.Color _Color = new((byte)(0),

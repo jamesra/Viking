@@ -24,10 +24,25 @@ float pinchedWaistOpacity = 0.5;
 // Width in screen pixels over which the outline fades from opaque to clear, half inside it and half outside.
 static const float pinchedFeatherPixels = 3;
 
-// A border drawn just inside the outline so the link stands out from the image under it. The colour is in the same
-// HCL form as lineColor and should be opaque; the width is in screen pixels, and 0 draws no border.
+// A border drawn just inside the outline so the link stands out from the image under it. The colour is plain RGB, not
+// HCL: the HCL blend keeps the background's luma, so black came out as the background and white as a grey. The width
+// is in screen pixels, and 0 draws no border.
 float4 pinchedBorderColor = float4(0, 0, 0, 1);
 float pinchedBorderPixels = 0;
+
+// A shadow behind the link, outside its outline, so the link stands out from the image under it. The colour is plain RGB.
+// It is strongest at the outline and fades to nothing pinchedShadowPixels screen pixels out. Its opacity follows the
+// link's: lineColor.a, faded toward the waist the same way. 0 pixels draws no shadow.
+float4 pinchedShadowColor = float4(0, 0, 0, 1);
+float pinchedShadowPixels = 0;
+
+// pinchedShadowPixels in world units at the current zoom. The vertex shader widens each line by this much so the
+// shadow has room outside the widest part of the outline.
+float pinchedShadowWorld = 0;
+
+// How much of the fill's luma is the link colour's rather than the image's. Fixed at the blend links used when they
+// were drawn at alpha 64, so raising the link's opacity makes it cover more without changing its colour.
+static const float pinchedFillLumaAlpha = 0.75;
 
 //NOTE: THE VERTEX SHADER OUTPUT AND PIXEL SHADER INPUT MUST MATCH EXACTLY WHEN USING MONOGAME
 struct PINCHED_VS_OUTPUT
@@ -48,7 +63,8 @@ struct PINCHED_PS_INPUT
 	float4 shape : TEXCOORD3;
 };
 
-// Same as LineVertexShader, but each line is scaled by the larger of its two radii instead of lineRadius.
+// Same as LineVertexShader, but each line is scaled by the larger of its two radii, plus room for the shadow, instead of
+// lineRadius.
 PINCHED_VS_OUTPUT PinchedLineVertexShader(LINE_VS_INPUT In)
 {
 	PINCHED_VS_OUTPUT Out;
@@ -60,7 +76,7 @@ PINCHED_VS_OUTPUT PinchedLineVertexShader(LINE_VS_INPUT In)
 	float rho = instanceData[index].z;
 	float theta = instanceData[index].w;
 	float4 shape = instanceShape[index];
-	float radius = max(shape.x, shape.y);
+	float radius = max(shape.x, shape.y) + pinchedShadowWorld;
 
 	pos.x *= (In.vertScaleTrans.x * radius);
 	pos.x += (distanceToOriginNormalized * rho);
@@ -173,22 +189,49 @@ Color_Depth_Output MyPSPinchedHSV(PINCHED_PS_INPUT input)
 	float d = PinchedDistance(input, squeeze);
 	// Feather the outline over pinchedFeatherPixels screen pixels, centred on it, so the edge looks soft.
 	float coverage = saturate((d / (pinchedFeatherPixels * max(fwidth(d), 1e-6))) + 0.5);
-	clip(coverage - 0.001);
 
-	float alpha = saturate(lineColor.a * lerp(1, pinchedWaistOpacity, squeeze));
+	// Full opacity next to the markers, fading linearly in squeeze to pinchedWaistOpacity of it at the waist.
+	float fade = lerp(1, pinchedWaistOpacity, squeeze);
+	float fillAlpha = saturate(lineColor.a * fade) * coverage;
+
+	// The shadow lies outside the outline. x runs along the line, so its change per pixel is the world size of a pixel
+	// in any direction; d's own change per pixel jumps where the outline meets a marker.
+	float shadowAlpha = 0;
+	if (pinchedShadowPixels > 0)
+	{
+		float2 xStep = float2(ddx(input.posModelSpace.x), ddy(input.posModelSpace.x));
+		float pixelsOutside = -d / max(length(xStep), 1e-6);
+		float falloff = saturate(1 - (pixelsOutside / pinchedShadowPixels));
+		falloff *= falloff;
+
+		// Without caps nothing is drawn inside the markers, and that includes the shadow.
+		float L = input.shape.w;
+		if (pinchedDrawCaps <= 0.5 &&
+			(length(input.posModelSpace) < input.shape.x || length(input.posModelSpace - float2(L, 0)) < input.shape.y))
+		{
+			falloff = 0;
+		}
+
+		shadowAlpha = saturate(lineColor.a * fade) * falloff * (1 - coverage);
+	}
+
+	// The fill is drawn over the shadow.
+	float alpha = fillAlpha + (shadowAlpha * (1 - fillAlpha));
+	clip(alpha - 0.001);
+
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((input.ScreenTexCoord.xy) / (RenderTargetSize.xy - 1)));
 
 	Color_Depth_Output output;
-	// Blend the colour exactly as the Standard line does; only the coverage alpha fades toward the waist.
-	float4 fillColor = BlendHCLColorOverBackground(lineColor, RGBBackgroundColor, 1.0f - lineColor.a);
-	float4 borderColor = BlendHCLColorOverBackground(pinchedBorderColor, RGBBackgroundColor, 1.0f - pinchedBorderColor.a);
+	float4 fillColor = BlendHCLColorOverBackground(lineColor, RGBBackgroundColor, pinchedFillLumaAlpha);
 
 	// d is a distance in world units, so dividing by its change per pixel gives pixels in from the outline. The border
 	// is full strength out to pinchedBorderPixels in from it, then fades over one pixel into the fill.
 	float pixelsFromOutline = d / max(fwidth(d), 1e-6);
 	float borderMix = pinchedBorderPixels > 0 ? 1 - saturate(pixelsFromOutline - pinchedBorderPixels + 0.5) : 0;
-	output.Color = lerp(fillColor, borderColor, borderMix);
-	output.Color.a = alpha * coverage;
+	float3 linkColor = lerp(fillColor.rgb, pinchedBorderColor.rgb, borderMix);
+
+	output.Color.rgb = ((linkColor * fillAlpha) + (pinchedShadowColor.rgb * shadowAlpha * (1 - fillAlpha))) / alpha;
+	output.Color.a = alpha;
 	output.Depth = 0;
 	return output;
 }

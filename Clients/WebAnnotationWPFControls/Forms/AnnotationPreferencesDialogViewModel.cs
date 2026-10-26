@@ -22,6 +22,8 @@ namespace WebAnnotation.WPF.Forms
         private double _originalAdjacentLocationRadiusScalar;
         private int _originalLocationLinkWaistPixels;
         private bool _originalLocationLinkDrawUnderMarkers;
+        private int _originalLocationLinkVisibilityPercent = DefaultLocationLinkVisibilityPercent;
+        private bool _originalLocationLinkLabels = true;
         private int _originalHideAnnotationSeconds;
         private bool _originalLabelOutlineEnabled = true;
         private bool _originalLabelOutlineWhiteText;
@@ -266,6 +268,51 @@ namespace WebAnnotation.WPF.Forms
                 if (_locationLinkDrawUnderMarkers != value)
                 {
                     _locationLinkDrawUnderMarkers = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>Starting <see cref="LocationLinkVisibilityPercent"/>; matches WebAnnotation's stored default.</summary>
+        public const int DefaultLocationLinkVisibilityPercent = 60;
+
+        /// <summary>Faintest allowed <see cref="LocationLinkVisibilityPercent"/>.</summary>
+        public const int MinLocationLinkVisibilityPercent = 10;
+
+        /// <summary>Strongest allowed <see cref="LocationLinkVisibilityPercent"/>.</summary>
+        public const int MaxLocationLinkVisibilityPercent = 100;
+
+        private int _locationLinkVisibilityPercent = DefaultLocationLinkVisibilityPercent;
+
+        /// <summary>
+        /// How strongly location links are drawn, as a percent: the link's opacity next to its markers and the strength of
+        /// its contrasting shadow. The middle of a link is always fainter than its ends.
+        /// </summary>
+        public int LocationLinkVisibilityPercent
+        {
+            get => _locationLinkVisibilityPercent;
+            set
+            {
+                int clampedValue = MathUtils.Clamp(value, MinLocationLinkVisibilityPercent, MaxLocationLinkVisibilityPercent);
+                if (_locationLinkVisibilityPercent != clampedValue)
+                {
+                    _locationLinkVisibilityPercent = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _locationLinkLabels = true;
+
+        /// <summary>Labels each end of a location link with the ID of the location at its other end.</summary>
+        public bool LocationLinkLabels
+        {
+            get => _locationLinkLabels;
+            set
+            {
+                if (_locationLinkLabels != value)
+                {
+                    _locationLinkLabels = value;
                     OnPropertyChanged();
                 }
             }
@@ -1026,7 +1073,9 @@ namespace WebAnnotation.WPF.Forms
             int hideAnnotationSeconds = DefaultHideAnnotationSeconds,
             bool labelOutlineEnabled = true,
             bool labelOutlineWhiteText = false,
-            string barrelButton = DefaultBarrelButton)
+            string barrelButton = DefaultBarrelButton,
+            int locationLinkVisibilityPercent = DefaultLocationLinkVisibilityPercent,
+            bool locationLinkLabels = true)
         {
             _barrelButton = _originalBarrelButton = string.IsNullOrEmpty(barrelButton) ? DefaultBarrelButton : barrelButton;
             _polygonPointOpacity = _originalPolygonPointOpacity = polygonPointOpacity;
@@ -1075,6 +1124,8 @@ namespace WebAnnotation.WPF.Forms
             _originalAdjacentLocationRadiusScalar = adjacentLocationRadiusScalar;
             _originalLocationLinkWaistPixels = locationLinkWaistPixels;
             _originalLocationLinkDrawUnderMarkers = locationLinkDrawUnderMarkers;
+            _originalLocationLinkVisibilityPercent = locationLinkVisibilityPercent;
+            _originalLocationLinkLabels = locationLinkLabels;
             _originalHideAnnotationSeconds = hideAnnotationSeconds;
             _originalLabelOutlineEnabled = labelOutlineEnabled;
             _originalLabelOutlineWhiteText = labelOutlineWhiteText;
@@ -1146,6 +1197,8 @@ namespace WebAnnotation.WPF.Forms
             AutoPolygonizeShimmerStyle = autoPolygonizeShimmerStyle;
             LocationLinkWaistPixels = locationLinkWaistPixels;
             LocationLinkDrawUnderMarkers = locationLinkDrawUnderMarkers;
+            LocationLinkVisibilityPercent = locationLinkVisibilityPercent;
+            LocationLinkLabels = locationLinkLabels;
             HideAnnotationSeconds = hideAnnotationSeconds;
             LabelOutlineEnabled = labelOutlineEnabled;
             LabelOutlineWhiteText = labelOutlineWhiteText;
@@ -1172,6 +1225,8 @@ namespace WebAnnotation.WPF.Forms
             _originalAdjacentLocationRadiusScalar = _adjacentLocationRadiusScalar;
             _originalLocationLinkWaistPixels = _locationLinkWaistPixels;
             _originalLocationLinkDrawUnderMarkers = _locationLinkDrawUnderMarkers;
+            _originalLocationLinkVisibilityPercent = _locationLinkVisibilityPercent;
+            _originalLocationLinkLabels = _locationLinkLabels;
             _originalHideAnnotationSeconds = _hideAnnotationSeconds;
             _originalLabelOutlineEnabled = _labelOutlineEnabled;
             _originalLabelOutlineWhiteText = _labelOutlineWhiteText;
@@ -1223,6 +1278,8 @@ namespace WebAnnotation.WPF.Forms
             _adjacentLocationRadiusScalar = _originalAdjacentLocationRadiusScalar;
             _locationLinkWaistPixels = _originalLocationLinkWaistPixels;
             _locationLinkDrawUnderMarkers = _originalLocationLinkDrawUnderMarkers;
+            _locationLinkVisibilityPercent = _originalLocationLinkVisibilityPercent;
+            _locationLinkLabels = _originalLocationLinkLabels;
             _hideAnnotationSeconds = _originalHideAnnotationSeconds;
             _labelOutlineEnabled = _originalLabelOutlineEnabled;
             _labelOutlineWhiteText = _originalLabelOutlineWhiteText;
@@ -1276,6 +1333,8 @@ namespace WebAnnotation.WPF.Forms
             _adjacentLocationRadiusScalar = 0.5;
             _locationLinkWaistPixels = DefaultLocationLinkWaistPixels;
             _locationLinkDrawUnderMarkers = false;
+            _locationLinkVisibilityPercent = DefaultLocationLinkVisibilityPercent;
+            _locationLinkLabels = true;
             _hideAnnotationSeconds = DefaultHideAnnotationSeconds;
             _labelOutlineEnabled = true;
             _labelOutlineWhiteText = false;

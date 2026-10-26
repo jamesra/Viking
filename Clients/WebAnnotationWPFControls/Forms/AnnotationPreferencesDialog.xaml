@@ -312,6 +312,52 @@
                                    TextWrapping="Wrap"
                                    Text="Also draws each link under its two location markers as a round end the size of each marker. Off draws nothing under the markers."/>
 
+                        <!-- Location Link Visibility -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Link visibility (%):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding LocationLinkVisibilityPercent, Mode=TwoWay}"
+                                    Minimum="10"
+                                    Maximum="100"
+                                    TickFrequency="5"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding LocationLinkVisibilityPercent, StringFormat='F0'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="How strongly links between locations on different sections are drawn: their opacity next to the linked locations and the strength of the contrasting shadow around them. The middle of a link is always fainter than its ends."/>
+                        </Grid>
+
+                        <!-- Location Link Labels -->
+                        <CheckBox IsChecked="{Binding LocationLinkLabels, Mode=TwoWay}"
+                                  Content="Label link ends with the linked location ID"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="10,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Next to each end of a link, shows the ID of the location at the other end with an arrow pointing to it, for example 34532 -&gt;. Shown when the link is long enough on screen."/>
+
                         <!-- Label Outline -->
                         <CheckBox IsChecked="{Binding LabelOutlineEnabled, Mode=TwoWay}"
                                   Content="Outline annotation text"
