@@ -292,22 +292,57 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// How much of a link's colour saturation its fill keeps. The direction colours (red toward a lower section, blue
-        /// toward a higher one) are fully saturated and looked harsh at the opacity links are now drawn with; toning only
-        /// the saturation keeps the fill's brightness, opacity, border and shadow, so the link is as easy to see.
+        /// How much of a link's colour chroma its fill keeps. The direction colours (red, orange or yellow toward a lower
+        /// section, blue toward a higher one) are fully saturated and the red looked harsh at the opacity links are now drawn
+        /// with. The chroma is reduced in OKLCH (<see cref="Soften"/>), which keeps hue and lightness as the eye sees them:
+        /// fading the RGB channels toward grey instead turned a burnt orange into a yellowish tan.
         /// </summary>
-        internal const float FillSaturation = 0.55f;
+        internal const float FillChroma = 0.75f;
 
         /// <summary>
-        /// <paramref name="color"/> with its saturation scaled by <paramref name="saturation"/>: each channel moved toward the
-        /// colour's perceived brightness (the weights <see cref="BorderColorFor"/> uses), so the brightness is unchanged.
-        /// Alpha is kept.
+        /// The colour a link of direction colour <paramref name="linkColor"/> is filled with, and the colour the section
+        /// number on an overlapped-link marker going the same way is drawn in, so the two always match.
         /// </summary>
-        internal static Color Desaturate(Color color, float saturation)
+        internal static Color FillColorFor(Color linkColor) => Soften(linkColor, FillChroma);
+
+        /// <summary>
+        /// <paramref name="color"/> with its OKLCH chroma scaled by <paramref name="chroma"/>, keeping its OKLCH hue and
+        /// lightness (Ottosson 2020, "A perceptual color space for image processing"): the colour stays the same hue to the
+        /// eye, only less vivid. Alpha is kept.
+        /// </summary>
+        internal static Color Soften(Color color, float chroma)
         {
-            float grey = (0.3f * color.R) + (0.59f * color.G) + (0.11f * color.B);
-            byte Toward(byte channel) => (byte)MathHelper.Clamp((float)Math.Round(grey + ((channel - grey) * saturation)), 0f, 255f);
-            return new Color(Toward(color.R), Toward(color.G), Toward(color.B), color.A);
+            static double ToLinear(byte channel)
+            {
+                double c = channel / 255.0;
+                return c <= 0.04045 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+            }
+
+            static byte FromLinear(double c)
+            {
+                c = Math.Max(0, Math.Min(1, c));
+                double s = c <= 0.0031308 ? 12.92 * c : (1.055 * Math.Pow(c, 1 / 2.4)) - 0.055;
+                return (byte)Math.Round(Math.Max(0, Math.Min(1, s)) * 255);
+            }
+
+            double r = ToLinear(color.R), g = ToLinear(color.G), b = ToLinear(color.B);
+            double l = Math.Pow((0.4122214708 * r) + (0.5363325363 * g) + (0.0514459929 * b), 1 / 3.0);
+            double m = Math.Pow((0.2119034982 * r) + (0.6806995451 * g) + (0.1073969566 * b), 1 / 3.0);
+            double s = Math.Pow((0.0883024619 * r) + (0.2817188376 * g) + (0.6299787005 * b), 1 / 3.0);
+
+            double lightness = (0.2104542553 * l) + (0.7936177850 * m) - (0.0040720468 * s);
+            double labA = ((1.9779984951 * l) - (2.4285922050 * m) + (0.4505937099 * s)) * chroma;
+            double labB = ((0.0259040371 * l) + (0.7827717662 * m) - (0.8086757660 * s)) * chroma;
+
+            double l3 = Math.Pow(lightness + (0.3963377774 * labA) + (0.2158037573 * labB), 3);
+            double m3 = Math.Pow(lightness - (0.1055613458 * labA) - (0.0638541728 * labB), 3);
+            double s3 = Math.Pow(lightness - (0.0894841775 * labA) - (1.2914855480 * labB), 3);
+
+            return new Color(
+                FromLinear((4.0767416621 * l3) - (3.3077115913 * m3) + (0.2309699292 * s3)),
+                FromLinear((-1.2684380046 * l3) + (2.6097574011 * m3) - (0.3413193965 * s3)),
+                FromLinear((-0.0041960863 * l3) - (0.7034186147 * m3) + (1.7076147010 * s3)),
+                color.A);
         }
 
         /// <summary>
@@ -1090,7 +1125,7 @@ namespace WebAnnotation.ViewModel
                 return;
 
             float visibility = Global.AnnotationSettings.LocationLinkVisibility;
-            Color DrawnColor(LocationLinkView l) => Desaturate(l.Color, FillSaturation).SetAlpha(
+            Color DrawnColor(LocationLinkView l) => FillColorFor(l.Color).SetAlpha(
                 DrawnAlpha(l.Alpha, MathHelper.Lerp(visibility, 1f, l.HoverAmount)) * ClosenessOpacity(l.LineSegment.Length, l.A.Radius, l.B.Radius));
             float DrawnWaistOpacity(LocationLinkView l) => MathHelper.Lerp(WaistOpacity, 1f, l.HoverAmount);
 

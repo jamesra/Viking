@@ -54,18 +54,36 @@ namespace WebAnnotationTests
             Assert.AreEqual(255, color.A);
         }
 
-        /// <summary>The fill is toned down by saturation only, so it stays as bright and as opaque as before.</summary>
-        [TestMethod]
-        public void TheFillIsLessSaturatedButJustAsBright()
+        /// <summary>RGB hue in degrees, 0 to 360.</summary>
+        private static double Hue(Microsoft.Xna.Framework.Color c)
         {
-            Microsoft.Xna.Framework.Color red = new((byte)255, (byte)0, (byte)0, (byte)200);
-            Microsoft.Xna.Framework.Color fill = LocationLinkView.Desaturate(red, LocationLinkView.FillSaturation);
+            double r = c.R / 255.0, g = c.G / 255.0, b = c.B / 255.0;
+            double max = System.Math.Max(r, System.Math.Max(g, b)), min = System.Math.Min(r, System.Math.Min(g, b));
+            double d = max - min;
+            double h = max == r ? ((g - b) / d) % 6 : max == g ? ((b - r) / d) + 2 : ((r - g) / d) + 4;
+            return ((h * 60) + 360) % 360;
+        }
 
-            static float Brightness(Microsoft.Xna.Framework.Color c) => (0.3f * c.R) + (0.59f * c.G) + (0.11f * c.B);
-            Assert.AreEqual(Brightness(red), Brightness(fill), 1.5, "brightness kept");
+        private static int Spread(Microsoft.Xna.Framework.Color c) => System.Math.Max(c.R, System.Math.Max(c.G, c.B)) - System.Math.Min(c.R, System.Math.Min(c.G, c.B));
+
+        /// <summary>
+        /// The fill is softened without changing hue: a burnt orange down link stays burnt orange (fading the RGB channels
+        /// toward grey had turned it a yellowish tan), and the red stays red, only less vivid. Softening keeps the OKLCH
+        /// (perceived) hue; RGB hue, measured here, is not perceptual and drifts a few degrees more for blue-violet.
+        /// </summary>
+        [TestMethod]
+        [DataRow(255, 165, 27, 6.0, DisplayName = "burnt orange")]
+        [DataRow(255, 0, 0, 6.0, DisplayName = "red")]
+        [DataRow(127, 0, 255, 12.0, DisplayName = "up-link blue")]
+        public void TheFillKeepsItsHueAndIsLessVivid(int r, int g, int b, double maxRgbHueChange)
+        {
+            Microsoft.Xna.Framework.Color link = new((byte)r, (byte)g, (byte)b, (byte)200);
+            Microsoft.Xna.Framework.Color fill = LocationLinkView.FillColorFor(link);
+
+            double hueChange = System.Math.Abs(Hue(fill) - Hue(link));
+            Assert.IsTrue(System.Math.Min(hueChange, 360 - hueChange) < maxRgbHueChange, $"hue {Hue(link):F1} became {Hue(fill):F1}");
+            Assert.IsTrue(Spread(fill) < Spread(link), "less vivid");
             Assert.AreEqual(200, fill.A, "alpha kept");
-            Assert.IsTrue(fill.R < 255 && fill.G > 0 && fill.B > 0, "less saturated");
-            Assert.IsTrue(fill.R > fill.G, "still red");
         }
 
         /// <summary>Links long enough to fade fully keep their look; shorter ones are see-through, half as opaque when touching.</summary>
@@ -92,10 +110,10 @@ namespace WebAnnotationTests
         }
 
         [TestMethod]
-        public void AGreyLinkIsUnchangedByDesaturation()
+        public void AGreyLinkIsUnchangedBySoftening()
         {
             Microsoft.Xna.Framework.Color grey = new((byte)120, (byte)120, (byte)120, (byte)255);
-            Assert.AreEqual(grey, LocationLinkView.Desaturate(grey, LocationLinkView.FillSaturation));
+            Assert.AreEqual(grey, LocationLinkView.FillColorFor(grey));
         }
 
         [TestMethod]

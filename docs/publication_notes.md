@@ -67,6 +67,14 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
 
 ## Algorithmic decisions
 
+- **2026-10-26 Link fill colours are softened in OKLCH, 75% chroma; marker numbers use the same colour.** Why: the
+  earlier RGB fade toward grey (55% saturation, entry below) shifted how colours look: a burnt orange down link,
+  RGB (255, 165, 27), became a yellowish tan (220, 170, 94), which the user disliked, and marker numbers took the same
+  blend. Scaling OKLab $a, b$ by 0.75 keeps OKLCH lightness and hue (Ottosson 2020): that orange becomes (239, 172, 91),
+  red (230, 75, 60), the up-link blue (127, 0, 255) becomes (119, 65, 219). Overlapped-link marker numbers use exactly
+  the link fill colour (`FillColorFor`). Rejected: restoring the raw colours (the user chose the original hue, softer).
+  Where: `LocationLinkView.Soften`, `FillColorFor`, `OverlappedLocationLinkView`.
+
 - **2026-10-26 Location link rendering mirrored from Legacy** (VikingLegacy `a892564c`, `5291eb09`, `31b45d9c`,
   `4101c96a`, `d455fb72`, `4cffd674`, `1ef4e036`; their entries follow, from VikingLegacy's notes). Left out because
   the gRPC client lacks the features they hook into: Del/Insert hiding of links (no `TemporarilyHiddenAnnotations`)
@@ -91,7 +99,7 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   location), so a link to it from elsewhere ended in empty space (user, RC1 screenshot). The end is now drawn at that
   covering location, found with the same shape intersection that hides it (`OverlapShape`); the colour, sections and
   labels still describe the real ends. Where: `LocationLinkView.CoveringLocation`.
-- **2026-10-26 Link fill colours keep 55% of their saturation.** Why: the direction colours (pure red toward a lower
+- ~~**2026-10-26 Link fill colours keep 55% of their saturation.**~~ Superseded 2026-10-26 by the OKLCH entry above. Why: the direction colours (pure red toward a lower
   section, blue toward a higher one) looked harsh at the new opacity. Each channel moves toward the perceived
   brightness $0.3R + 0.59G + 0.11B$ by 45%, so brightness, opacity, border and shadow, and with them visibility, are
   unchanged. Rejected: lowering opacity, which makes links harder to see. Where: `LocationLinkView.Desaturate`.
@@ -132,9 +140,9 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
 
 - **2026-10-26 Overlapped-link marker numbers use the toned link colour.** Why: the section number on a down marker
   was the saturated direction colour, which came out yellow; the user wants the burnt orange of a down link body (as
-  Legacy draws it). The label is now `Desaturate(GetLocationLinkColor(ColorForStructure(parent), span, direction),
-  FillSaturation)` at full opacity, so up markers take the toned up-link colour too. Link bodies are drawn in it too since
-  Legacy 4cffd674 was mirrored (entry below). Where: `OverlappedLocationLinkView` constructor, `LocationLinkView.Desaturate`.
+  Legacy draws it). The label is now `FillColorFor(GetLocationLinkColor(ColorForStructure(parent), span, direction))`
+  (originally the RGB `Desaturate`; see the OKLCH entry) at full opacity, so up markers take the toned up-link colour too. Link bodies are drawn in it too since
+  Legacy 4cffd674 was mirrored (entry below). Where: `OverlappedLocationLinkView` constructor, `LocationLinkView.FillColorFor`.
 - **2026-10-26 Polygon labels use the maximum inscribed circle or a rotated run, never the centroid circle.** Why: the
   old "inscribed circle" (centroid, radius to the nearest vertex) lies outside C-shaped cells and cells with holes, is
   tiny on long processes, and pokes past edges between vertices (user report). The same circle placed adjacent-section
