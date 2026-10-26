@@ -1621,52 +1621,11 @@ namespace WebAnnotation
                     Trace.WriteLine("WebAnnotationModel.IAnnotationStores is not registered with the service provider. Store.X will throw until the gRPC composition root is completed.", "WebAnnotation");
                 }
 
-                ScheduleStartupLocationJump();
+                // A startup Location ID is applied once, by AnnotationOverlay.TryApplyStartupLocation.
                 return true;
             }
 
             return false;
-        }
-
-        /// <summary>
-        /// After the viewer is up, jump to StartupArguments["location"] if it is a Location ID
-        /// (same action as Annotation → Goto Location ID). Coordinate jumps use X/Y/Z/DS instead.
-        /// Viking.UI.State is the WinForms viewer; Jotunn's net10 WebAnnotation build has no equivalent.
-        /// </summary>
-        private static void ScheduleStartupLocationJump()
-        {
-            var args = Viking.UI.State.StartupArguments;
-            if (args == null)
-                return;
-
-            var location = args["location"] ?? args["Location"];
-            if (string.IsNullOrWhiteSpace(location) || !long.TryParse(location.Trim(), out long locId))
-                return;
-
-            Task.Run(async () =>
-            {
-                for (int i = 0; i < 50; i++)
-                {
-                    await Task.Delay(200).ConfigureAwait(false);
-                    if (Viking.UI.State.ViewerForm == null || Viking.UI.State.MainThreadDispatcher == null)
-                        continue;
-
-                    await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
-                    {
-                        try
-                        {
-                            AnnotationOverlay.GoToLocation(locId);
-                        }
-                        catch (Exception ex)
-                        {
-                            Trace.WriteLine("Startup Goto Location failed: " + ex.Message, "WebAnnotation");
-                        }
-                    });
-                    return;
-                }
-
-                Trace.WriteLine("Startup Goto Location timed out waiting for viewer.", "WebAnnotation");
-            });
         }
 
         private static bool GetEndpointFromXML(XElement elem)
