@@ -43,6 +43,11 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
 
 ## Algorithmic decisions
 
+- **2026-10-26 Overlapped-link marker numbers use the link body's toned colour.** Why: the section number on a down
+  marker was the saturated direction colour, which came out yellow; the user wants the burnt orange of a down link body.
+  The label is now `Desaturate(GetLocationLinkColor(ColorForStructure(parent), span, direction), FillSaturation)` at full
+  opacity, the link fill's expression, so up markers take the toned up-link colour too. Where:
+  `OverlappedLocationLinkView` constructor.
 - **2026-10-26 Links re-point when an adjacent location becomes hidden or visible.** Why: link ends are decided when
   a link view is built, so a link kept ending in empty space (or on the covering location) until the section's links
   were rebuilt. The only places a location becomes hidden or visible are where an overlapped link is added to or

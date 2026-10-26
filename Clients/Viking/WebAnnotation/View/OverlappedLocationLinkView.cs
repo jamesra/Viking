@@ -96,12 +96,16 @@ namespace WebAnnotation.View
             LocationID = locationID;
             linkKey = new LocationLinkKey(locationID, linkedObj.ID);
 
+            // The section number is drawn in the toned colour of a link body going the same way, so a down marker
+            // matches the burnt orange of a down link instead of the saturated yellow of the raw direction colour
             int sectionSpan = Math.Abs((int)Math.Round(linkedObj.Z) - currentSectionNumber);
-            Microsoft.Xna.Framework.Color labelColor = LocationLinkView.GetLocationLinkColor(
-                linkedObj.Parent.Type.Color.ToXNAColor(),
-                sectionSpan,
-                Up ? 1 : -1,
-                false).SetAlpha(1.0f);
+            Microsoft.Xna.Framework.Color labelColor = LocationLinkView.Desaturate(
+                LocationLinkView.GetLocationLinkColor(
+                    LocationCanvasView.ColorForStructure(linkedObj.Parent, 1f),
+                    sectionSpan,
+                    Up ? 1 : -1,
+                    false),
+                LocationLinkView.FillSaturation).SetAlpha(1.0f);
 
             label = new LabelView(((int)linkedObj.Z).ToString(), gridCircle.Center)
             {
