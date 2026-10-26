@@ -432,7 +432,9 @@ namespace Viking.UI
         /// <summary>
         /// Low 32 bits of a window-message parameter. <c>IntPtr.ToInt32()</c> throws <see cref="OverflowException"/> on
         /// 64-bit processes when the value exceeds <see cref="int.MaxValue"/>, and Win32 <c>MAKELPARAM</c> zero-extends,
-        /// so a negative Y coordinate (pen above the primary monitor) arrives as 0x8000xxxx.
+        /// so a negative Y coordinate (pen above the primary monitor) arrives as 0x8000xxxx. The same holds for
+        /// <c>GetMessageExtraInfo</c>, whose pen signature is 0xFF5157xx; <c>unchecked((uint)ptr)</c> does not help, because
+        /// on .NET Framework that cast goes through IntPtr's checked conversion to int.
         /// </summary>
         private static uint LowDWord(IntPtr param) => unchecked((uint)(long)param);
 
@@ -468,7 +470,7 @@ namespace Viking.UI
 
         public static bool IsPenEvent(out System.UInt32 pointerID)
         {
-            uint word = unchecked((uint)GetMessageExtraInfo());
+            uint word = LowDWord(GetMessageExtraInfo());
             const uint SignatureMask = 0xFFFFFF00;
             const uint PointerIDMask = 0x0000007F;
             const uint MI_WP_SIGNATURE = 0xFF515700;
@@ -480,7 +482,7 @@ namespace Viking.UI
 
         public static bool IsTouchEvent(out System.UInt32 pointerID)
         {
-            uint word = unchecked((uint)GetMessageExtraInfo());
+            uint word = LowDWord(GetMessageExtraInfo());
             const uint PointerIDMask = 0x0000007F;
             const uint TOUCH_SIGNATURE = 0x80;
             uint signature = word & TOUCH_SIGNATURE;
