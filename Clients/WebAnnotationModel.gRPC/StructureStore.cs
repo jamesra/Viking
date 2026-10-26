@@ -138,9 +138,16 @@ namespace WebAnnotationModel.gRPC
             var serverResult = await client.Create(new CreateStructureRequestParameter(newStruct, newLocation), CancellationToken.None);
             
             var obj = await Add(ServerObjConverter.Convert(serverResult.Structure));
-            var result = (obj, ServerLocationObjToObjConverter.Convert(serverResult.Location));
-             
-            return result;
+
+            // The location goes into the location store after its parent structure, raising its Add event so
+            // section and adjacent-section views, and the section index, see it at once. A detached copy waited
+            // for a later server poll, so a new polygon had no marker on the next section.
+            ILocation createdLocation = serverResult.Location;
+            LocationObj location = createdLocation is null
+                ? null
+                : await Store.Locations.GetOrAdd(createdLocation.ID, _ => ServerLocationObjToObjConverter.Convert(createdLocation), out _);
+
+            return (obj, location);
 
             /*
             AnnotateStructures.AnnotateStructuresClient proxy = null;
