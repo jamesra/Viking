@@ -76,6 +76,7 @@
         <Compile Include="LocationLinkBorderTests.cs" />
         <Compile Include="LocationLinkVisibilityTests.cs" />
         <Compile Include="LocationLinkPolygonEndTests.cs" />
+        <Compile Include="LocationLinkRepointTests.cs" />
         <Compile Include="HiddenStructuresTests.cs" />
         <Compile Include="HiddenStructureTypeSetTests.cs" />
         <Compile Include="ObjAttributeTests.cs" />

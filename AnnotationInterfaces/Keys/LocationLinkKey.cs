@@ -54,8 +54,8 @@ namespace Viking.AnnotationServiceTypes
 
         public override bool Equals(object obj)
         {
-            if (System.Object.Equals(this, obj))
-                return true;
+            // No System.Object.Equals(this, obj) shortcut: for a boxed struct it calls back into this method and
+            // overflows the stack, and a struct is never reference-equal to anything anyway.
             if (obj is null)
                 return false;
             if (obj is LocationLinkKey otherKey)

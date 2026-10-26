@@ -43,6 +43,13 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
 
 ## Algorithmic decisions
 
+- **2026-10-26 Links re-point when an adjacent location becomes hidden or visible.** Why: link ends are decided when
+  a link view is built, so a link kept ending in empty space (or on the covering location) until the section's links
+  were rebuilt. The only places a location becomes hidden or visible are where an overlapped link is added to or
+  removed from the section's tracker, so there the section's other links touching that adjacent location are removed
+  and re-added. This runs after the tracker's write lock is released, and rebuilt links do not re-point their own
+  neighbours, so it cannot cascade. Where: `SectionLocationLinkAnnotationsViewModel.RepointLinksOfAdjacentEnds`.
+
 - **2026-10-26 Polygon labels use the maximum inscribed circle or a rotated run, never the centroid circle.** Why: the
   old "inscribed circle" (centroid, radius to the nearest vertex) lies outside C-shaped cells and cells with holes, is
   tiny on long processes, and pokes past edges between vertices (user report). The same circle placed adjacent-section
