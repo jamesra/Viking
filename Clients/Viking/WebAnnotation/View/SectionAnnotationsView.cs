@@ -163,19 +163,20 @@ namespace WebAnnotation.ViewModel
 
         protected void AddLocationOnAdjacent(LocationObj loc, bool subscribe)
         {
+            // Known only once its marker exists: an ID kept after a failed view build blocked every later add,
+            // so that location never showed on this adjacent section.
             KnownLocations.TryAdd(loc.ID, () =>
             {
-                bool AnyOverlap = false;
-                if (!AnyOverlap)
-                {
-                    AddNonOverlappedOrUnlinkedLocation(loc);
-                }
+                if (!AddNonOverlappedOrUnlinkedLocation(loc))
+                    return false;
 
                 ///Do not add an object if we are already tracking it
                 if (subscribe)
                 {
                     SubscribeToLocationChangeEvents(loc);
                 }
+
+                return true;
             });
         }
 
@@ -240,10 +241,10 @@ namespace WebAnnotation.ViewModel
             {
                 locView = AnnotationViewFactory.CreateAdjacent(loc, mapper);
             }
-            catch (ArgumentOutOfRangeException)
+            catch (ArgumentException e)
             {
-                //Thrown when the point cannot be mapped.
-                Trace.WriteLine($"Could not map location {loc.ID} on section {loc.Section}");
+                //Thrown when the point cannot be mapped (MappingBase throws ArgumentException, not only ArgumentOutOfRangeException).
+                Trace.WriteLine($"Could not map location {loc.ID} on section {loc.Section}: {e.Message}");
                 return false;
             }
 
