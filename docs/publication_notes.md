@@ -43,10 +43,18 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
 
 ## Algorithmic decisions
 
+- **2026-10-26 Link fill colours are softened in OKLCH, 75% chroma; marker numbers use the same colour.** Why: the
+  earlier RGB fade toward grey (55% saturation, entry below) shifted how colours look: a burnt orange down link,
+  RGB (255, 165, 27), became a yellowish tan (220, 170, 94), which the user disliked, and marker numbers took the same
+  blend. Scaling OKLab $a, b$ by 0.75 keeps OKLCH lightness and hue (Ottosson 2020): that orange becomes (239, 172, 91),
+  red (230, 75, 60), the up-link blue (127, 0, 255) becomes (119, 65, 219). Overlapped-link marker numbers use exactly
+  the link fill colour (`FillColorFor`). Rejected: restoring the raw colours (the user chose the original hue, softer).
+  Where: `LocationLinkView.Soften`, `FillColorFor`, `OverlappedLocationLinkView`.
+
 - **2026-10-26 Overlapped-link marker numbers use the link body's toned colour.** Why: the section number on a down
   marker was the saturated direction colour, which came out yellow; the user wants the burnt orange of a down link body.
-  The label is now `Desaturate(GetLocationLinkColor(ColorForStructure(parent), span, direction), FillSaturation)` at full
-  opacity, the link fill's expression, so up markers take the toned up-link colour too. Where:
+  The label is now `FillColorFor(GetLocationLinkColor(ColorForStructure(parent), span, direction))` at full
+  opacity (originally the RGB `Desaturate`; see the OKLCH entry), the link fill's expression, so up markers take the toned up-link colour too. Where:
   `OverlappedLocationLinkView` constructor.
 - **2026-10-26 Links re-point when an adjacent location becomes hidden or visible.** Why: link ends are decided when
   a link view is built, so a link kept ending in empty space (or on the covering location) until the section's links
@@ -88,7 +96,7 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
   location), so a link to it from elsewhere ended in empty space (user, RC1 screenshot). The end is now drawn at that
   covering location, found with the same shape intersection that hides it (`OverlapShape`); the colour, sections and
   labels still describe the real ends. Where: `LocationLinkView.CoveringLocation`.
-- **2026-10-26 Link fill colours keep 55% of their saturation.** Why: the direction colours (pure red toward a lower
+- ~~**2026-10-26 Link fill colours keep 55% of their saturation.**~~ Superseded 2026-10-26 by the OKLCH entry above. Why: the direction colours (pure red toward a lower
   section, blue toward a higher one) looked harsh at the new opacity. Each channel moves toward the perceived
   brightness $0.3R + 0.59G + 0.11B$ by 45%, so brightness, opacity, border and shadow, and with them visibility, are
   unchanged. Rejected: lowering opacity, which makes links harder to see. Where: `LocationLinkView.Desaturate`.
