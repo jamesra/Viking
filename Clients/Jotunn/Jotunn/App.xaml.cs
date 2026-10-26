@@ -46,7 +46,12 @@ namespace Jotunn
             Viking.SectionCorrectionClient.SectionShimContext.DatabaseName = string.IsNullOrWhiteSpace(login.CorrectionDatabaseName) ? null : login.CorrectionDatabaseName;
             var shimChannels = new System.Collections.Concurrent.ConcurrentDictionary<Uri, Grpc.Net.Client.GrpcChannel>();
             Viking.SectionCorrectionClient.SectionShimContext.Source = new Viking.SectionCorrectionClient.GrpcSectionShimSource(
-                uri => shimChannels.GetOrAdd(uri, u => Grpc.Net.Client.GrpcChannel.ForAddress(u)).CreateCallInvoker());
+                uri => shimChannels.GetOrAdd(uri, u => Grpc.Net.Client.GrpcChannel.ForAddress(u, new Grpc.Net.Client.GrpcChannelOptions
+                {
+                    HttpHandler = GrpcHttpHandlers.CreateSocketsHttpHandler(),
+                    MaxReceiveMessageSize = GrpcHttpHandlers.MaxMessageBytes,
+                    MaxSendMessageSize = GrpcHttpHandlers.MaxMessageBytes,
+                })).CreateCallInvoker());
             WebAnnotation.Global.AnnotationSettings.ApplyCorrectionShimSettings();
             if (login.BearerToken != null)
             {

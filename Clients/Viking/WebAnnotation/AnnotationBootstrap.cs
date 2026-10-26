@@ -123,7 +123,8 @@ namespace WebAnnotation
 
         /// <summary>
         /// Viking (net48) needs WinHttpHandler for gRPC-over-HTTP/2. Jotunn (net10) uses
-        /// HttpClientHandler. Both accept the Docker localhost cert whose root is not in
+        /// SocketsHttpHandler (several HTTP/2 connections, keepalive pings, see
+        /// <see cref="Viking.Common.GrpcHttpHandlers"/>). Both accept the Docker localhost cert whose root is not in
         /// the Windows trust store. TLS fails before any Bearer token is sent.
         /// </summary>
         static HttpMessageHandler CreateGrpcHttpHandler()
@@ -135,13 +136,18 @@ namespace WebAnnotation
                 ServerCertificateValidationCallback = AcceptLocalDevCertificate
             };
 #else
-            return new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = AcceptLocalDevCertificate
-            };
+            return Viking.Common.GrpcHttpHandlers.CreateSocketsHttpHandler(
+                (sender, certificate, chain, errors) =>
+                    errors == SslPolicyErrors.None || IsLoopbackHost((sender as SslStream)?.TargetHostName));
 #endif
         }
 
+        static bool IsLoopbackHost(string host) =>
+            string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
+            || host == "127.0.0.1"
+            || host == "::1";
+
+#if NETFRAMEWORK
         static bool AcceptLocalDevCertificate(
             HttpRequestMessage request,
             System.Security.Cryptography.X509Certificates.X509Certificate2 certificate,
@@ -151,11 +157,9 @@ namespace WebAnnotation
             if (errors == SslPolicyErrors.None)
                 return true;
 
-            string host = request?.RequestUri?.Host;
-            return string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
-                || host == "127.0.0.1"
-                || host == "::1";
+            return IsLoopbackHost(request?.RequestUri?.Host);
         }
+#endif
 
         sealed class TokenStoreAccessTokenProvider : IAnnotationAccessTokenProvider
         {

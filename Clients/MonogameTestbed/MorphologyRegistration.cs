@@ -137,7 +137,12 @@ namespace MonogameTestbed
             Uri morphologyUri = options.EndpointUri;
 
             var loader = new GrpcPublishedCorrectionLoader(uri =>
-                CorrectionChannels.GetOrAdd(uri, u => GrpcChannel.ForAddress(u)).CreateCallInvoker());
+                CorrectionChannels.GetOrAdd(uri, u => GrpcChannel.ForAddress(u, new GrpcChannelOptions
+                {
+                    HttpHandler = GrpcHttpHandlers.CreateSocketsHttpHandler(),
+                    MaxReceiveMessageSize = GrpcHttpHandlers.MaxMessageBytes,
+                    MaxSendMessageSize = GrpcHttpHandlers.MaxMessageBytes,
+                })).CreateCallInvoker());
 
             LogCorrectionService(
                 $"Downloading residual field from {serviceUrl}" +

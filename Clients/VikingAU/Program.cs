@@ -759,7 +759,7 @@ namespace Viking.AU
 #if NETFRAMEWORK
                     channelOpts.HttpHandler = CreateWinHttpHandler();
 #else
-                    _ = channelOpts;
+                    channelOpts.HttpHandler = Viking.Common.GrpcHttpHandlers.CreateSocketsHttpHandler();
 #endif
                 });
 

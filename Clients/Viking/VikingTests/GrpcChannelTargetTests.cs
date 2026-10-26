@@ -1,3 +1,5 @@
+using System.Linq;
+using Grpc.Core;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Viking.Services.Grpc;
 
@@ -72,6 +74,19 @@ namespace VikingTests
 
             Assert.IsNotNull(target);
             Assert.AreEqual("segmentation.example:40080", target.Value.Target);
+        }
+
+        [TestMethod]
+        public void ChannelOptions_KeepTheConnectionAliveAndReconnectQuietly()
+        {
+            var options = GrpcChannelManager.CreateChannelOptions().ToDictionary(o => o.Name, o => o.IntValue);
+
+            Assert.AreEqual(30_000, options["grpc.keepalive_time_ms"]);
+            Assert.AreEqual(1, options["grpc.keepalive_permit_without_calls"]);
+            Assert.AreEqual(15_000, options["grpc.max_reconnect_backoff_ms"]);
+            Assert.AreEqual(1, options["grpc.use_local_subchannel_pool"]);
+            Assert.AreEqual(GrpcChannelManager.MaxMessageBytes, options[ChannelOptions.MaxReceiveMessageLength]);
+            Assert.AreEqual(GrpcChannelManager.MaxMessageBytes, options[ChannelOptions.MaxSendMessageLength]);
         }
 
         [TestMethod]

@@ -63,7 +63,7 @@ namespace WebAnnotationModel.gRPC
         /// </summary>
         private GrpcChannel CreateChannel(Uri endpoint)
         {
-            var channelOptions = CloneOptions(_options);
+            var channelOptions = GrpcChannelDefaults.Apply(CloneOptions(_options));
             ApplyAuthCredentials(channelOptions, endpoint);
             return GrpcChannel.ForAddress(endpoint, channelOptions);
         }

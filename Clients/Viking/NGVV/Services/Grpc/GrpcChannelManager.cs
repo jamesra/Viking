@@ -11,14 +11,29 @@ namespace Viking.Services.Grpc
     /// </summary>
     public class GrpcChannelManager(IGrpcServiceConfiguration configuration) : IGrpcChannelManager
     {
-        /// <summary>Max message size (64 MB) to match the segmentation server configuration.</summary>
-        private const int MaxMessageSizeBytes = 64 * 1024 * 1024;
+        /// <summary>Largest message the channel will send or receive (64 MB, matching the segmentation server); masks and tiles exceed the 4 MB default.</summary>
+        internal const int MaxMessageBytes = 64 * 1024 * 1024;
 
-        private static readonly ChannelOption[] SegmentationChannelOptions =
-        {
-            new(ChannelOptions.MaxReceiveMessageLength, MaxMessageSizeBytes),
-            new(ChannelOptions.MaxSendMessageLength, MaxMessageSizeBytes)
-        };
+        /// <summary>
+        /// Native channel arguments for a long-lived, high-throughput channel. Keepalive pings keep an idle connection from being
+        /// dropped by a proxy or NAT and notice a dead one within about a minute; the reconnect backoff bounds how long a dropped
+        /// connection waits before the native layer retries, so recovery is quiet. A local subchannel pool gives this channel its
+        /// own connection instead of sharing one process-wide, which is the Grpc.Core analogue of Grpc.Net.Client's
+        /// EnableMultipleHttp2Connections (concurrent calls are not all capped by one HTTP/2 connection's stream limit).
+        /// </summary>
+        internal static ChannelOption[] CreateChannelOptions() =>
+        [
+            new ChannelOption("grpc.keepalive_time_ms", 30_000),
+            new ChannelOption("grpc.keepalive_timeout_ms", 20_000),
+            new ChannelOption("grpc.keepalive_permit_without_calls", 1),
+            new ChannelOption("grpc.http2.max_pings_without_data", 0),
+            new ChannelOption("grpc.initial_reconnect_backoff_ms", 1_000),
+            new ChannelOption("grpc.min_reconnect_backoff_ms", 1_000),
+            new ChannelOption("grpc.max_reconnect_backoff_ms", 15_000),
+            new ChannelOption("grpc.use_local_subchannel_pool", 1),
+            new ChannelOption(ChannelOptions.MaxReceiveMessageLength, MaxMessageBytes),
+            new ChannelOption(ChannelOptions.MaxSendMessageLength, MaxMessageBytes),
+        ];
 
         private readonly object _lock = new();
         private readonly IGrpcServiceConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -49,7 +64,7 @@ namespace Viking.Services.Grpc
 
                         // The segmentation server no longer has a cleartext listener, so every
                         // channel is TLS whatever scheme the saved endpoint was written with.
-                        _channel = new Channel(target.Target, new SslCredentials(), SegmentationChannelOptions);
+                        _channel = new Channel(target.Target, new SslCredentials(), CreateChannelOptions());
                         _currentServiceUrl = target.ChannelKey;
 
                         Trace.WriteLine(target.UpgradedFromPlaintext
