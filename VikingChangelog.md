@@ -9,9 +9,11 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.128 — not yet released
 
-* Location links (the hourglass between two linked locations on different sections) are easier to see. They are drawn more strongly next to the linked locations and fade toward the middle, with a contrasting shadow around them (black around a light link, white around a dark one). The thin border added in 1.2.120 now really is black or white; before, it took on the brightness of the image under it and barely showed.
-* **Link visibility (%)** in Annotation Preferences sets how strongly links and their shadows are drawn, from 10% to 100% (default 60%).
-* Each end of a location link is labelled, just beyond the location, with the ID of the location at the other end and an arrow pointing to it, for example `34532 ->`. Labels appear when the link is long enough on screen for both, and can be turned off with **Label link ends with the linked location ID** in Annotation Preferences.
+* Location links (the hourglass between two linked locations on different sections) are easier to see next to the locations they join and stay out of the way in between. Each end is drawn strongly, with a contrasting shadow around it (black around a light link, white around a dark one), and fades to nothing toward the middle; the invisible middle cannot be clicked. Move the mouse over a link and the whole link is drawn fully, and can be followed all the way along. The thin border added in 1.2.120 now really is black or white; before, it took on the brightness of the image under it and barely showed.
+* **Link visibility (%)** in Annotation Preferences sets how strongly links and their shadows are drawn when the mouse is not over them, from 10% to 100% (default 60%).
+* Each end of a location link is labelled, just beyond the location, with the ID of the location at the other end and an arrow pointing to it, for example `34532 ->`. Labels are sized from the location's radius, like location labels, so they zoom with the image. They are left out where they would be too small to read or the link is too short for both, and can be turned off with **Label link ends with the linked location ID** in Annotation Preferences.
+* Right-click a location link for **Go to partner**, which jumps to the location at the end of the link farther from the mouse.
+* Del now hides the location link under the mouse, as it hides annotations, and Insert brings it back. A link also hides while either of its locations is hidden.
 
 ## 1.2.127 — 2026-10-26 (Viking Test, unsigned)
 

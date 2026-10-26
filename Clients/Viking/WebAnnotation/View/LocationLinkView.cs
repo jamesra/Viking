@@ -119,9 +119,16 @@ namespace WebAnnotation.ViewModel
         {
             get => _Color.GetAlpha();
 
-            // SetAlpha returns a new colour, so assign it back; the mouse-over effect halves the link's alpha here.
+            // SetAlpha returns a new colour, so assign it back; the Del fade-in scales the link's alpha here.
             set => Color = _Color.SetAlpha(value);
         }
+
+        /// <summary>
+        /// True while the mouse is over the link; set by <see cref="WebAnnotation.Actions.MouseOverLocationCanvasViewEffect"/>.
+        /// A hovered link is drawn fully opaque along its whole length, and all of it can be picked, so the mouse can follow
+        /// it through the waist that is invisible and unpickable otherwise.
+        /// </summary>
+        public bool IsMouseOver { get; set; }
 
         public int MinSection { get; private set; }
         public int MaxSection { get; private set; }
@@ -134,11 +141,17 @@ namespace WebAnnotation.ViewModel
         public double MaxRadius => Math.Max(A.Radius, B.Radius);
 
         /// <summary>
-        /// Opacity at the link's waist as a fraction of its opacity at full width. The shader fades alpha linearly
-        /// with how far the local width has narrowed from full width toward the waist, so a link is strongest next to the
-        /// locations it joins and faint in the middle.
+        /// Opacity at the waist of a link the mouse is not over, as a fraction of its opacity next to the markers. The
+        /// shader fades alpha linearly in <see cref="FadeDepthAt"/>, so a link is strongest next to the locations it joins
+        /// and its middle is invisible. A hovered link does not fade.
         /// </summary>
-        internal const float WaistOpacity = 0.3f;
+        internal const float WaistOpacity = 0f;
+
+        /// <summary>
+        /// Deepest <see cref="FadeDepthAt"/> at which a link the mouse is not over can be picked: where it is drawn at
+        /// least a quarter as opaque as next to its markers. What cannot be seen cannot be picked.
+        /// </summary>
+        internal const double MaxPickableFadeDepth = 0.75;
 
         /// <summary>Width in screen pixels of the contrasting border drawn just inside a link's outline.</summary>
         internal const float BorderPixels = 1.5f;
@@ -149,24 +162,51 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         internal const float ShadowPixels = 5f;
 
-        /// <summary>Height in screen pixels of the text labelling each end of a link.</summary>
-        internal const float LabelPixels = 14f;
+        /// <summary>
+        /// Height of an end label's text as a fraction of the radius of the marker it sits beside. Labels are sized in
+        /// volume space, as location labels are, so they zoom with the image, and at this size a label of up to seven
+        /// digits fits in the strong part of the link before it fades.
+        /// </summary>
+        internal const double LabelHeightPerRadius = 0.2;
 
-        /// <summary>Screen pixels between a marker's edge and the label beside it, and between the two labels.</summary>
-        internal const float LabelGapPixels = 4f;
+        /// <summary>Gap between a marker's edge and its label, and between the two labels, as a fraction of that marker's radius.</summary>
+        internal const double LabelGapPerRadius = 0.05;
+
+        /// <summary>An end label shorter than this many screen pixels is not drawn; it could not be read.</summary>
+        internal const double MinLabelPixels = 6;
 
         /// <summary>
-        /// The opacity a link of stored alpha <paramref name="linkAlpha"/> is drawn with at <paramref name="visibility"/>
-        /// (0.1 to 1, from the Link visibility preference). Links are stored fully opaque; the mouse-over effect halves the
-        /// stored alpha, and the drawn opacity follows it.
+        /// The opacity a link of stored alpha <paramref name="linkAlpha"/> is drawn with. <paramref name="visibility"/> is the
+        /// Link visibility preference (0.1 to 1), or 1 for a hovered link. Links are stored fully opaque; Del's fade-in
+        /// scales the stored alpha, and the drawn opacity follows it.
         /// </summary>
         internal static float DrawnAlpha(float linkAlpha, float visibility) => MathHelper.Clamp(linkAlpha * visibility, 0f, 1f);
 
         /// <summary>
         /// Opacity of the end labels for a link of stored alpha <paramref name="linkAlpha"/>. Labels stay readable at low
-        /// visibility: fully opaque from 50% up, and never below half, but they fade with the link on mouse-over.
+        /// visibility: fully opaque from 50% up, and never below half, but they fade in with the link after Del hid it.
         /// </summary>
         internal static float LabelAlpha(float linkAlpha, float visibility) => MathHelper.Clamp(linkAlpha * Math.Min(1f, 0.5f + visibility), 0f, 1f);
+
+        /// <summary>
+        /// How far <paramref name="x"/> world units from A's centre is into the fade from the nearer marker: 0 at the
+        /// marker's edge and inside it, 1 one marker radius further on, where a long link reaches its waist. Each end is
+        /// measured by its own radius, so the end at a small marker starts at full opacity as the large one's does.
+        /// Matches PinchedFadeDepth in PinchedLineShaders.fx.
+        /// </summary>
+        internal static double FadeDepthAt(double x, double length, double radiusA, double radiusB)
+        {
+            double fromA = (x - radiusA) / Math.Max(radiusA, 1e-6);
+            double fromB = (length - x - radiusB) / Math.Max(radiusB, 1e-6);
+            return Math.Max(0, Math.Min(1, Math.Min(fromA, fromB)));
+        }
+
+        /// <summary>
+        /// True when the end at <paramref name="aCentre"/> is at least as far from <paramref name="position"/> as the end at
+        /// <paramref name="bCentre"/>, so Go to partner from there goes to A.
+        /// </summary>
+        internal static bool AIsPartnerOf(Geometry.Vector2 position, Geometry.Vector2 aCentre, Geometry.Vector2 bCentre) =>
+            Geometry.Vector2.Distance(position, aCentre) >= Geometry.Vector2.Distance(position, bCentre);
 
         /// <summary>
         /// The label beside one end of a link: the ID of the location at the other end, with an arrow pointing to it.
@@ -178,11 +218,11 @@ namespace WebAnnotation.ViewModel
         internal static string EndLabelText(long otherID, bool upright) => upright ? $"{otherID} ->" : $"<- {otherID}";
 
         /// <summary>
-        /// True when labels <paramref name="widthA"/> and <paramref name="widthB"/> pixels wide fit, with their gaps, in the
-        /// <paramref name="roomPixels"/> of link between the two markers' edges.
+        /// True when the end labels fit in the <paramref name="room"/> of link between the two markers' edges: each label
+        /// its own gap from its marker, and the larger gap between them. All lengths in the same units.
         /// </summary>
-        internal static bool EndLabelsFit(double roomPixels, double widthA, double widthB) =>
-            roomPixels >= widthA + widthB + (3 * LabelGapPixels);
+        internal static bool EndLabelsFit(double room, double widthA, double gapA, double widthB, double gapB) =>
+            room >= gapA + widthA + Math.Max(gapA, gapB) + widthB + gapB;
 
         /// <summary>
         /// The border and shadow color for a link of color <paramref name="linkColor"/>: black for a light link and white for
@@ -289,6 +329,12 @@ namespace WebAnnotation.ViewModel
             }
 
             double clamped = Math.Max(0, Math.Min(length, along));
+            if (!IsMouseOver && FadeDepthAt(clamped, length, A.Radius, B.Radius) > MaxPickableFadeDepth)
+            {
+                normalized = double.MaxValue;
+                return double.MaxValue;
+            }
+
             double halfWidth = HalfWidthAt(clamped, length, A.Radius, B.Radius, waist);
             double beyondEnd = along - clamped;
             double beyondSide = Math.Max(0, across - halfWidth);
@@ -583,8 +629,24 @@ namespace WebAnnotation.ViewModel
                     return ContextMenuGenerator(this);
                 }
 
-                return null;
+                return LinkContextMenu();
             }
+        }
+
+        /// <summary>
+        /// The menu a right-click on the link opens. Go to partner jumps to whichever end is farther from where the mouse
+        /// was when the menu opened, the other side of the link from the end the user is looking at.
+        /// </summary>
+        private System.Windows.Forms.ContextMenuStrip LinkContextMenu()
+        {
+            Geometry.Vector2 mouse = AnnotationOverlay.CurrentOverlay?.MouseWorldPosition ?? LineSegment.PointAlongLine(0.5);
+            long partnerID = AIsPartnerOf(mouse, A.Center, B.Center) ? Key.A : Key.B;
+
+            System.Windows.Forms.ContextMenuStrip menu = new();
+            System.Windows.Forms.ToolStripMenuItem goToPartner = new($"Go to partner {partnerID}");
+            goToPartner.Click += (sender, e) => AnnotationOverlay.GoToLocation(partnerID);
+            menu.Items.Add(goToPartner);
+            return menu;
         }
 
         public override string ToolTip => Key.A.ToString() + " -> " + Key.B.ToString();
@@ -658,7 +720,7 @@ namespace WebAnnotation.ViewModel
                 return;
 
             float visibility = Global.AnnotationSettings.LocationLinkVisibility;
-            Color DrawnColor(LocationLinkView l) => l.Color.SetAlpha(DrawnAlpha(l.Alpha, visibility));
+            Color DrawnColor(LocationLinkView l) => l.Color.SetAlpha(DrawnAlpha(l.Alpha, l.IsMouseOver ? 1f : visibility));
 
             if (!lineManager.SupportsPinched)
             {
@@ -673,7 +735,8 @@ namespace WebAnnotation.ViewModel
             bool drawCaps = Global.AnnotationSettings.LocationLinkDrawUnderMarkers;
             float time = (float)(DateTime.UtcNow.Millisecond / 1000.0);
 
-            foreach (IGrouping<Color, LocationLinkView> group in links.GroupBy(l => lineManager.UseHSLColor ? DrawnColor(l).ConvertToHCL() : DrawnColor(l)))
+            foreach (IGrouping<(Color Color, bool Hovered), LocationLinkView> group in links.GroupBy(l =>
+                (lineManager.UseHSLColor ? DrawnColor(l).ConvertToHCL() : DrawnColor(l), l.IsMouseOver)))
             {
                 RoundLineCode.RoundLine[] lines = [.. group.Select(l => new RoundLineCode.RoundLine(
                     new Vector2((float)l.A.Center.X, (float)l.A.Center.Y),
@@ -687,23 +750,24 @@ namespace WebAnnotation.ViewModel
                 // The border and shadow are plain RGB even for the HSL manager; see DrawPinched.
                 Color contrast = BorderColorFor(group.First().Color);
 
-                lineManager.DrawPinched(lines, shapes, group.Key, scene.ViewProj, time, drawCaps, WaistOpacity, contrast, BorderPixels,
+                lineManager.DrawPinched(lines, shapes, group.Key.Color, scene.ViewProj, time, drawCaps,
+                    group.Key.Hovered ? 1f : WaistOpacity, contrast, BorderPixels,
                     contrast, ShadowPixels, (float)scene.Camera.Downsample);
             }
         }
 
         /// <summary>
         /// Labels both ends of each link, just beyond its markers where the link is strongest, with the ID of the location
-        /// at the other end and an arrow pointing to it. The text runs along the link and is turned to stay upright. A link
-        /// too short on screen for both labels gets none. The caller has begun <paramref name="spriteBatch"/> with
-        /// premultiplied alpha blending.
+        /// at the other end and an arrow pointing to it. The text runs along the link and is turned to stay upright. Each
+        /// label is sized in volume space from its marker's radius (<see cref="LabelHeightPerRadius"/>), so it zooms with
+        /// the image; one too small to read is skipped, and a link too short for both labels gets none. The caller has
+        /// begun <paramref name="spriteBatch"/> with premultiplied alpha blending.
         /// </summary>
         public static void DrawLabels(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                                       Microsoft.Xna.Framework.Graphics.SpriteFont font,
                                       VikingXNA.Scene scene,
                                       IEnumerable<LocationLinkView> listToDraw)
         {
-            float fontScale = LabelPixels / font.LineSpacing;
             float visibility = Global.AnnotationSettings.LocationLinkVisibility;
 
             // Labels sit on the image, so they are always outlined, in the colors the label outline preference picks.
@@ -733,30 +797,36 @@ namespace WebAnnotation.ViewModel
                 string textB = EndLabelText(link.Key.A, uprightAtB);
                 Vector2 sizeA = font.MeasureString(textA);
                 Vector2 sizeB = font.MeasureString(textB);
+                float scaleA = (float)(LabelHeightPerRadius * radiusA / font.LineSpacing);
+                float scaleB = (float)(LabelHeightPerRadius * radiusB / font.LineSpacing);
+                double gapA = LabelGapPerRadius * radiusA;
+                double gapB = LabelGapPerRadius * radiusB;
 
-                if (!EndLabelsFit(screenLength - radiusA - radiusB, sizeA.X * fontScale, sizeB.X * fontScale))
+                if (!EndLabelsFit(screenLength - radiusA - radiusB, sizeA.X * scaleA, gapA, sizeB.X * scaleB, gapB))
                     continue;
 
                 float alpha = LabelAlpha(link.Alpha, visibility);
                 Color text = textColor * alpha;
                 Color outline = outlineColor * alpha;
 
-                DrawEndLabel(spriteBatch, font, screenA, towardB, radiusA, textA, sizeA, uprightAtA, fontScale, text, outline);
-                DrawEndLabel(spriteBatch, font, screenB, -towardB, radiusB, textB, sizeB, uprightAtB, fontScale, text, outline);
+                if (LabelHeightPerRadius * radiusA >= MinLabelPixels)
+                    DrawEndLabel(spriteBatch, font, screenA, towardB, radiusA, gapA, textA, sizeA, uprightAtA, scaleA, text, outline);
+                if (LabelHeightPerRadius * radiusB >= MinLabelPixels)
+                    DrawEndLabel(spriteBatch, font, screenB, -towardB, radiusB, gapB, textB, sizeB, uprightAtB, scaleB, text, outline);
             }
         }
 
         /// <summary>
-        /// Draws <paramref name="text"/> along the link, starting <see cref="LabelGapPixels"/> beyond the edge of the marker
-        /// centred at <paramref name="markerCentre"/> and running <paramref name="towardOther"/>.
+        /// Draws <paramref name="text"/> along the link, starting <paramref name="gap"/> screen pixels beyond the edge of the
+        /// marker centred at <paramref name="markerCentre"/> and running <paramref name="towardOther"/>.
         /// </summary>
         private static void DrawEndLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                                          Microsoft.Xna.Framework.Graphics.SpriteFont font,
-                                         Geometry.Vector2 markerCentre, Vector2 towardOther, double markerRadius,
+                                         Geometry.Vector2 markerCentre, Vector2 towardOther, double markerRadius, double gap,
                                          string text, Vector2 textSize, bool upright, float fontScale,
                                          Color textColor, Color outlineColor)
         {
-            float along = (float)markerRadius + LabelGapPixels + (textSize.X * fontScale / 2f);
+            float along = (float)(markerRadius + gap) + (textSize.X * fontScale / 2f);
             Vector2 position = new Vector2((float)markerCentre.X, (float)markerCentre.Y) + (towardOther * along);
             float rotation = (float)Math.Atan2(towardOther.Y, towardOther.X) + (upright ? 0f : MathHelper.Pi);
             LabelView.DrawOutlinedString(spriteBatch, font, text, position, textColor, outlineColor, rotation, textSize / 2f, fontScale);

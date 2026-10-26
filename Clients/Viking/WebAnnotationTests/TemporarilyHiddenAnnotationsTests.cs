@@ -7,10 +7,12 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Windows.Forms;
+using Viking.AnnotationServiceTypes;
 using WebAnnotation;
 using WebAnnotation.UI;
 using WebAnnotation.UI.Actions;
 using WebAnnotation.View;
+using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 using GridVector2 = Geometry.Vector2;
 
@@ -207,6 +209,92 @@ namespace WebAnnotationTests
         {
             Assert.AreEqual(expected, OverlayHotkeys.IsReserved(keyData));
         }
+
+        [TestMethod]
+        public void ALinkIsHiddenUntilItsTimeRunsOut()
+        {
+            TemporarilyHiddenAnnotations hidden = Create();
+            LocationLinkKey key = new(1, 2);
+            hidden.Hide(key, TimeSpan.FromSeconds(30));
+
+            Assert.IsTrue(hidden.IsHidden(key));
+            Assert.IsFalse(hidden.IsHidden(1), "hiding a link leaves its locations alone");
+            Assert.AreEqual(0f, hidden.FadeIn(key));
+            now += TimeSpan.FromSeconds(30.1);
+            Assert.IsFalse(hidden.IsHidden(key));
+            Assert.IsTrue(hidden.IsEmpty);
+        }
+
+        /// <summary>A link to a hidden location would point at nothing, so it hides and fades back in with the location.</summary>
+        [TestMethod]
+        public void ALinkIsHiddenWhileEitherOfItsLocationsIs()
+        {
+            TemporarilyHiddenAnnotations hidden = Create();
+            LocationLinkKey key = new(1, 2);
+            hidden.Hide(2, TimeSpan.FromSeconds(30));
+
+            Assert.IsTrue(hidden.IsHidden(key));
+            Assert.AreEqual(0f, hidden.FadeIn(key));
+            Assert.IsFalse(hidden.Restore(key), "the link itself was not hidden");
+            Assert.IsFalse(hidden.IsHidden(new LocationLinkKey(1, 3)));
+        }
+
+        [TestMethod]
+        public void HiddenLinksAreNeitherHitNorDrawn()
+        {
+            TemporarilyHiddenAnnotations hidden = Create();
+            LocationLinkView shown = LocationLinkVisibilityTests.CreateLink(a: 1, b: 2);
+            LocationLinkView gone = LocationLinkVisibilityTests.CreateLink(a: 3, b: 4);
+            hidden.Hide(gone.Key, TimeSpan.FromSeconds(30));
+
+            List<HitTestResult> remaining = hidden.Exclude([LinkHit(shown, 0.2), LinkHit(gone, 0.1)]);
+            CollectionAssert.AreEqual(new object[] { shown }, remaining.Select(h => h.obj).ToArray());
+            CollectionAssert.AreEqual(new[] { shown }, hidden.VisibleLinksToDraw([shown, gone]));
+        }
+
+        [TestMethod]
+        public void DelHidesALinkWhenItIsWhatAClickWouldPick()
+        {
+            TemporarilyHiddenAnnotations hidden = Create();
+            LocationLinkView link = LocationLinkVisibilityTests.CreateLink();
+
+            Assert.AreSame(link, hidden.PickLinkToHide([LinkHit(link, 0.4)], Section));
+            Assert.IsNull(hidden.PickLinkToHide([LinkHit(link, 1.4)], Section), "the mouse is not over it");
+
+            hidden.Hide(link.Key, TimeSpan.FromSeconds(30));
+            Assert.IsNull(hidden.PickLinkToHide([LinkHit(link, 0.4)], Section), "already hidden");
+        }
+
+        [TestMethod]
+        public void InsertBringsBackAHiddenLinkUnderTheMouse()
+        {
+            TemporarilyHiddenAnnotations hidden = Create();
+            LocationLinkView link = LocationLinkVisibilityTests.CreateLink();
+            hidden.Hide(link.Key, TimeSpan.FromSeconds(30));
+
+            Assert.AreSame(link, hidden.PickLinkToRestore([LinkHit(link, 0.4)]));
+            Assert.IsTrue(hidden.Restore(link.Key));
+            now += TimeSpan.FromSeconds(30 * TemporarilyHiddenAnnotations.FadeFraction + 0.1);
+            Assert.IsFalse(hidden.IsHidden(link.Key));
+        }
+
+        [TestMethod]
+        public void ALinkFadingBackInIsDrawnFainterUntilTheDrawIsDone()
+        {
+            TemporarilyHiddenAnnotations hidden = Create();
+            LocationLinkView link = LocationLinkVisibilityTests.CreateLink();
+            hidden.Hide(link.Key, TimeSpan.FromSeconds(30));
+            now += TimeSpan.FromSeconds(30 * (1 - (TemporarilyHiddenAnnotations.FadeFraction / 2)));
+
+            using (hidden.ApplyLinkFade([link]))
+            {
+                Assert.IsTrue(link.Alpha > 0f && link.Alpha < 1f);
+            }
+
+            Assert.AreEqual(1f, link.Alpha, 1e-6);
+        }
+
+        private static HitTestResult LinkHit(LocationLinkView link, double distance) => new(link, Section, 0, distance);
 
         [TestMethod]
         public void TheDefaultHideTimeIsThirtySeconds()

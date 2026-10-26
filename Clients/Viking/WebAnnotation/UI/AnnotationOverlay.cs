@@ -1849,7 +1849,8 @@ break;
 
         /// <summary>
         /// Del: hides the annotation on the current section under the mouse for <see cref="Global.AnnotationSettings.HideAnnotationSeconds"/>,
-        /// so an annotation beneath it (for example one from an adjacent section) can be picked and dragged.
+        /// so an annotation beneath it (for example one from an adjacent section) can be picked and dragged. A location link
+        /// is hidden instead when it is what a click there would pick.
         /// </summary>
         private void HideAnnotationUnderMouse()
         {
@@ -1866,6 +1867,16 @@ break;
 
             if (!TryGetAnnotationsUnderMouse(out List<HitTestResult> hits))
                 return;
+
+            LocationLinkView link = hiddenAnnotations.PickLinkToHide(hits, CurrentSectionNumber);
+            if (link is not null)
+            {
+                hiddenAnnotations.Hide(link.Key, hideFor);
+                Trace.WriteLine($"Hid location link {link.Key} for {Global.AnnotationSettings.HideAnnotationSeconds} s");
+                ScheduleHiddenAnnotationRedraw();
+                _Parent.Invalidate();
+                return;
+            }
 
             LocationCanvasView target = hiddenAnnotations.PickToHide(hits, CurrentSectionNumber);
             if (target is null)
@@ -1894,7 +1905,16 @@ break;
 
             LocationCanvasView target = hiddenAnnotations.PickToRestore(hits, CurrentSectionNumber);
             if (target is null || !hiddenAnnotations.Restore(target.ID))
+            {
+                LocationLinkView link = hiddenAnnotations.PickLinkToRestore(hits);
+                if (link is null || !hiddenAnnotations.Restore(link.Key))
+                    return;
+
+                Trace.WriteLine($"Restored location link {link.Key}");
+                ScheduleHiddenAnnotationRedraw();
+                _Parent.Invalidate();
                 return;
+            }
 
             Trace.WriteLine($"Restored location {target.ID}");
             ScheduleHiddenAnnotationRedraw();
@@ -1912,6 +1932,9 @@ break;
             hits = locView.GetAnnotations(GetMouseWorldPosition());
             return true;
         }
+
+        /// <summary>The mouse position in volume (world) coordinates, for menus built where the user clicked.</summary>
+        internal Geometry.Vector2 MouseWorldPosition => GetMouseWorldPosition();
 
         /// <summary>The mouse position in volume (world) coordinates.</summary>
         private Geometry.Vector2 GetMouseWorldPosition()
@@ -3141,12 +3164,15 @@ break;
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, StartingStencilValue);
 
             //Get all the lines to draw first so the text and geometric shapes are over top of them
-            List<LocationLinkView> linksToDraw = [.. HiddenStructureTypes.ExcludeLocationLinks(HiddenStructures.ExcludeLocationLinks(
+            List<LocationLinkView> linksToDraw = hiddenAnnotations.VisibleLinksToDraw(HiddenStructureTypes.ExcludeLocationLinks(HiddenStructures.ExcludeLocationLinks(
                 currentSectionAnnotations.NonOverlappedLocationLinksInRegion(scene.VisibleWorldBounds),
                 hiddenStructures,
                 locationId => Store.Locations.GetObjectByID(locationId, false)?.ParentID),
-                locationId => Store.Locations.GetObjectByID(locationId, false)?.Parent?.TypeID)];
-            LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, linksToDraw);
+                locationId => Store.Locations.GetObjectByID(locationId, false)?.Parent?.TypeID));
+            using (hiddenAnnotations.ApplyLinkFade(linksToDraw))
+            {
+                LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, linksToDraw);
+            }
 
             graphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Black, 1, 0);
 
@@ -3181,7 +3207,12 @@ break;
 
             //Draw text
             if (Global.AnnotationSettings.LocationLinkLabels)
-                DrawLocationLinkLabels(linksToDraw, scene);
+            {
+                using (hiddenAnnotations.ApplyLinkFade(linksToDraw))
+                {
+                    DrawLocationLinkLabels(linksToDraw, scene);
+                }
+            }
 
             DrawLocationLabels(listLocationsToDraw, scene);
 

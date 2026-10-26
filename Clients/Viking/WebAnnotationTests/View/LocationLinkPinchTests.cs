@@ -63,23 +63,18 @@ namespace WebAnnotationTests
         }
 
         /// <summary>
-        /// The mouse-over effect halves an <see cref="VikingXNAGraphics.IColorView"/>'s alpha and restores it on
-        /// leave. The link's Alpha setter used to discard the colour SetAlpha returned, so hovering a link did nothing.
+        /// Del's fade-in scales a link's alpha through its Alpha setter, which used to discard the colour SetAlpha returned.
         /// </summary>
         [TestMethod]
-        public void HoveringALinkHalvesItsAlphaAndLeavingRestoresIt()
+        public void SettingALinksAlphaChangesOnlyItsAlpha()
         {
             // The constructors read the location store; the colour is all this test needs.
             LocationLinkView link = (LocationLinkView)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(LocationLinkView));
             link.Color = new Microsoft.Xna.Framework.Color((byte)200, (byte)100, (byte)50, (byte)64);
-            WebAnnotation.Actions.MouseOverLocationCanvasViewEffect effect = new();
 
-            effect.viewObj = link;
-            Assert.AreEqual(32, link.Color.A, 1, "hovered");
+            link.Alpha = 0.125f;
+            Assert.AreEqual(32, link.Color.A, 1);
             Assert.AreEqual(200, link.Color.R, "only the alpha changes");
-
-            effect.viewObj = null;
-            Assert.AreEqual(64, link.Color.A, "left");
         }
     }
 }

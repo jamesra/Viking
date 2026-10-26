@@ -345,7 +345,7 @@
                                      FontSize="10"
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
-                                     Text="How strongly links between locations on different sections are drawn: their opacity next to the linked locations and the strength of the contrasting shadow around them. The middle of a link is always fainter than its ends."/>
+                                     Text="How strongly links between locations on different sections are drawn when the mouse is not over them: their opacity next to the linked locations and the strength of the contrasting shadow around them. The middle of a link fades to nothing; move the mouse over a link to see all of it."/>
                         </Grid>
 
                         <!-- Location Link Labels -->
@@ -356,7 +356,7 @@
                                    FontSize="10"
                                    Foreground="Gray"
                                    TextWrapping="Wrap"
-                                   Text="Next to each end of a link, shows the ID of the location at the other end with an arrow pointing to it, for example 34532 -&gt;. Shown when the link is long enough on screen."/>
+                                   Text="Next to each end of a link, shows the ID of the location at the other end with an arrow pointing to it, for example 34532 -&gt;. Sized from the location, so they zoom with the image; left out when too small to read or when the link is too short for both."/>
 
                         <!-- Label Outline -->
                         <CheckBox IsChecked="{Binding LabelOutlineEnabled, Mode=TwoWay}"

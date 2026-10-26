@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Viking.AnnotationServiceTypes;
 using WebAnnotation.View;
+using WebAnnotation.ViewModel;
 
 namespace WebAnnotation.UI
 {
@@ -11,6 +13,8 @@ namespace WebAnnotation.UI
     /// its time runs out or Insert restores it. During the last <see cref="FadeFraction"/> of the time it fades back in
     /// (a quarter sine wave, from invisible to fully opaque) but is still not clickable, so the user sees it return before
     /// it can be picked. Thread-safe: drawing, mouse handling and the redraw timer all read it.
+    /// Location links can be hidden the same way, by their key. A link is also hidden while either of its locations is,
+    /// since it would point at nothing.
     /// </summary>
     internal sealed class TemporarilyHiddenAnnotations(Func<DateTime> utcNow)
     {
@@ -24,6 +28,7 @@ namespace WebAnnotation.UI
 
         private readonly object gate = new();
         private readonly Dictionary<long, Entry> entryByLocationId = [];
+        private readonly Dictionary<LocationLinkKey, Entry> entryByLinkKey = [];
 
         public TemporarilyHiddenAnnotations() : this(() => DateTime.UtcNow)
         {
@@ -37,7 +42,7 @@ namespace WebAnnotation.UI
                 lock (gate)
                 {
                     Prune();
-                    return entryByLocationId.Count == 0;
+                    return entryByLocationId.Count == 0 && entryByLinkKey.Count == 0;
                 }
             }
         }
@@ -50,10 +55,24 @@ namespace WebAnnotation.UI
         {
             lock (gate)
             {
-                TimeSpan fadeLength = TimeSpan.FromTicks((long)(duration.Ticks * FadeFraction));
-                DateTime expiry = utcNow() + duration;
-                entryByLocationId[locationId] = new Entry(expiry - fadeLength, expiry, fadeLength);
+                entryByLocationId[locationId] = NewEntry(duration);
             }
+        }
+
+        /// <summary>Hides the link <paramref name="linkKey"/> the way <see cref="Hide(long, TimeSpan)"/> hides a location.</summary>
+        public void Hide(LocationLinkKey linkKey, TimeSpan duration)
+        {
+            lock (gate)
+            {
+                entryByLinkKey[linkKey] = NewEntry(duration);
+            }
+        }
+
+        private Entry NewEntry(TimeSpan duration)
+        {
+            TimeSpan fadeLength = TimeSpan.FromTicks((long)(duration.Ticks * FadeFraction));
+            DateTime expiry = utcNow() + duration;
+            return new Entry(expiry - fadeLength, expiry, fadeLength);
         }
 
         /// <summary>
@@ -65,15 +84,33 @@ namespace WebAnnotation.UI
             lock (gate)
             {
                 Prune();
-                if (!entryByLocationId.TryGetValue(locationId, out Entry entry))
-                    return false;
-
-                DateTime now = utcNow();
-                if (now < entry.FadeStart)
-                    entryByLocationId[locationId] = entry with { FadeStart = now, Expiry = now + entry.FadeLength };
-
-                return true;
+                return Restore(entryByLocationId, locationId);
             }
+        }
+
+        /// <summary>
+        /// Brings back the link <paramref name="linkKey"/> the way <see cref="Restore(long)"/> brings back a location. False
+        /// when the link itself was not hidden, even if it is hidden because one of its locations is.
+        /// </summary>
+        public bool Restore(LocationLinkKey linkKey)
+        {
+            lock (gate)
+            {
+                Prune();
+                return Restore(entryByLinkKey, linkKey);
+            }
+        }
+
+        private bool Restore<TKey>(Dictionary<TKey, Entry> entries, TKey key)
+        {
+            if (!entries.TryGetValue(key, out Entry entry))
+                return false;
+
+            DateTime now = utcNow();
+            if (now < entry.FadeStart)
+                entries[key] = entry with { FadeStart = now, Expiry = now + entry.FadeLength };
+
+            return true;
         }
 
         /// <summary>
@@ -89,6 +126,21 @@ namespace WebAnnotation.UI
         }
 
         /// <summary>
+        /// True while the link <paramref name="linkKey"/> cannot be picked: hidden itself, or one of its locations is, or
+        /// still fading back in.
+        /// </summary>
+        public bool IsHidden(LocationLinkKey linkKey)
+        {
+            lock (gate)
+            {
+                return IsLinkHiddenItself(linkKey) || IsHidden(linkKey.A) || IsHidden(linkKey.B);
+            }
+        }
+
+        private bool IsLinkHiddenItself(LocationLinkKey linkKey) =>
+            entryByLinkKey.TryGetValue(linkKey, out Entry entry) && entry.Expiry > utcNow();
+
+        /// <summary>
         /// How opaque <paramref name="locationId"/> is drawn: 1 when it is not hidden, 0 before its fade starts, then the
         /// first quarter of a sine wave (0 rising to 1, steepest at the start) over the fade.
         /// </summary>
@@ -96,16 +148,33 @@ namespace WebAnnotation.UI
         {
             lock (gate)
             {
-                DateTime now = utcNow();
-                if (!entryByLocationId.TryGetValue(locationId, out Entry entry) || entry.Expiry <= now)
-                    return 1f;
-
-                if (now <= entry.FadeStart)
-                    return 0f;
-
-                double progress = (now - entry.FadeStart).TotalMilliseconds / entry.FadeLength.TotalMilliseconds;
-                return (float)Math.Sin(Math.Min(progress, 1.0) * Math.PI / 2.0);
+                return entryByLocationId.TryGetValue(locationId, out Entry entry) ? FadeOf(entry, utcNow()) : 1f;
             }
+        }
+
+        /// <summary>
+        /// How opaque the link <paramref name="linkKey"/> is drawn: the least of its own <see cref="FadeIn(long)"/>-style
+        /// fade and its two locations', so it reappears with them.
+        /// </summary>
+        public float FadeIn(LocationLinkKey linkKey)
+        {
+            lock (gate)
+            {
+                float own = entryByLinkKey.TryGetValue(linkKey, out Entry entry) ? FadeOf(entry, utcNow()) : 1f;
+                return Math.Min(own, Math.Min(FadeIn(linkKey.A), FadeIn(linkKey.B)));
+            }
+        }
+
+        private static float FadeOf(Entry entry, DateTime now)
+        {
+            if (entry.Expiry <= now)
+                return 1f;
+
+            if (now <= entry.FadeStart)
+                return 0f;
+
+            double progress = (now - entry.FadeStart).TotalMilliseconds / entry.FadeLength.TotalMilliseconds;
+            return (float)Math.Sin(Math.Min(progress, 1.0) * Math.PI / 2.0);
         }
 
         /// <summary>
@@ -117,12 +186,12 @@ namespace WebAnnotation.UI
             lock (gate)
             {
                 Prune();
-                if (entryByLocationId.Count == 0)
+                if (entryByLocationId.Count == 0 && entryByLinkKey.Count == 0)
                     return null;
 
                 DateTime now = utcNow();
                 TimeSpan wait = TimeSpan.MaxValue;
-                foreach (Entry entry in entryByLocationId.Values)
+                foreach (Entry entry in entryByLocationId.Values.Concat(entryByLinkKey.Values))
                 {
                     TimeSpan next = now < entry.FadeStart
                         ? entry.FadeStart - now
@@ -135,13 +204,61 @@ namespace WebAnnotation.UI
             }
         }
 
-        /// <summary>The hits that are not a hidden annotation.</summary>
+        /// <summary>The hits that are not a hidden annotation or a hidden link.</summary>
         public List<HitTestResult> Exclude(IEnumerable<HitTestResult> hits)
         {
             if (IsEmpty)
                 return [.. hits];
 
-            return [.. hits.Where(h => !(h.obj is LocationCanvasView view && IsHidden(view.ID)))];
+            return [.. hits.Where(h => !IsHiddenHit(h))];
+        }
+
+        private bool IsHiddenHit(HitTestResult hit) => hit.obj switch
+        {
+            LocationCanvasView view => IsHidden(view.ID),
+            LocationLinkView link => IsHidden(link.Key),
+            _ => false,
+        };
+
+        /// <summary>The links to draw: not hidden, or fading back in.</summary>
+        public List<LocationLinkView> VisibleLinksToDraw(IEnumerable<LocationLinkView> links)
+        {
+            if (IsEmpty)
+                return [.. links];
+
+            return [.. links.Where(l => FadeIn(l.Key) > 0f)];
+        }
+
+        /// <summary>
+        /// Scales the alpha of each link in <paramref name="links"/> that is fading back in by its fade. Dispose the result
+        /// after drawing the links and their labels to put the alphas back.
+        /// </summary>
+        public IDisposable ApplyLinkFade(IEnumerable<LocationLinkView> links)
+        {
+            List<(LocationLinkView View, float Alpha)> originals = [];
+            if (!IsEmpty)
+            {
+                foreach (LocationLinkView link in links)
+                {
+                    float fade = FadeIn(link.Key);
+                    if (fade >= 1f)
+                        continue;
+
+                    originals.Add((link, link.Alpha));
+                    link.Alpha *= fade;
+                }
+            }
+
+            return new LinkRestorer(originals);
+        }
+
+        private sealed class LinkRestorer(List<(LocationLinkView View, float Alpha)> originals) : IDisposable
+        {
+            public void Dispose()
+            {
+                foreach ((LocationLinkView view, float alpha) in originals)
+                    view.Alpha = alpha;
+            }
         }
 
         /// <summary>
@@ -245,11 +362,41 @@ namespace WebAnnotation.UI
                 .FirstOrDefault();
         }
 
+        /// <summary>
+        /// The link Del hides: the visible link the mouse is over when it is what a click would pick (the same ranking hover
+        /// uses, which lets a link win over a larger circle it is closer to). Null when a location wins, so Del hides that.
+        /// </summary>
+        /// <param name="hits">Every hit at the mouse position, hidden or not.</param>
+        public LocationLinkView? PickLinkToHide(IEnumerable<HitTestResult> hits, int sectionNumber)
+        {
+            List<HitTestResult> visible = [.. hits.Where(h => !IsHiddenHit(h))];
+            HitTestResult? best = visible.NearestObjectOnCurrentSectionThenAdjacent(sectionNumber, preferCloserLocationLinks: true);
+            return best is { obj: LocationLinkView link } && best.Distance <= 1.0 ? link : null;
+        }
+
+        /// <summary>
+        /// The hidden link Insert restores: among the links hidden themselves (not only through a hidden location) that the
+        /// mouse is over, the one nearest its centre line.
+        /// </summary>
+        public LocationLinkView? PickLinkToRestore(IEnumerable<HitTestResult> hits)
+        {
+            lock (gate)
+            {
+                return hits
+                    .Where(h => h.obj is LocationLinkView link && IsLinkHiddenItself(link.Key))
+                    .OrderBy(h => h.Distance)
+                    .Select(h => h.obj as LocationLinkView)
+                    .FirstOrDefault();
+            }
+        }
+
         private void Prune()
         {
             DateTime now = utcNow();
             foreach (long id in entryByLocationId.Where(e => e.Value.Expiry <= now).Select(e => e.Key).ToList())
                 entryByLocationId.Remove(id);
+            foreach (LocationLinkKey key in entryByLinkKey.Where(e => e.Value.Expiry <= now).Select(e => e.Key).ToList())
+                entryByLinkKey.Remove(key);
         }
     }
 }

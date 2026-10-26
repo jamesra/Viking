@@ -17,8 +17,9 @@ float4 instanceShape[200];
 // 1 draws a round end the size of each marker under it, 0 draws nothing beyond the marker centres.
 float pinchedDrawCaps = 0;
 
-// Opacity at the waist as a fraction of the opacity at full width. Alpha runs from alpha at full width to
-// alpha * pinchedWaistOpacity at the waist, linearly in squeeze, so the link fades where it narrows.
+// Opacity at the waist as a fraction of the opacity next to the markers. Alpha runs from alpha at a marker's edge to
+// alpha * pinchedWaistOpacity one marker radius further on, where the link has narrowed to its waist, linearly in the
+// fade depth (see PinchedFadeDepth). 0 makes the middle of a long link invisible.
 float pinchedWaistOpacity = 0.5;
 
 // Width in screen pixels over which the outline fades from opaque to clear, half inside it and half outside.
@@ -136,14 +137,24 @@ float PinchedHalfWidth(float x, float4 shape)
 	return neck;
 }
 
-// Signed distance to the outline in world units, positive inside. squeeze is 0 at full width and 1 at the waist.
-float PinchedDistance(PINCHED_PS_INPUT input, out float squeeze)
+// How far x is into the fade from the nearer marker: 0 at the marker's edge and inside it, 1 one marker radius further on,
+// where a long link reaches its waist. Each end is measured by its own radius, so a small marker's end starts at full
+// opacity as a large one's does. Keep LocationLinkView.FadeDepthAt in step.
+float PinchedFadeDepth(float x, float4 shape)
+{
+	float L = shape.w;
+	return saturate(min((x - shape.x) / max(shape.x, 1e-6), (L - x - shape.y) / max(shape.y, 1e-6)));
+}
+
+// Signed distance to the outline in world units, positive inside. fadeDepth is PinchedFadeDepth at the pixel, 0 beyond
+// the line's ends.
+float PinchedDistance(PINCHED_PS_INPUT input, out float fadeDepth)
 {
 	float x = input.posModelSpace.x;
 	float y = abs(input.posModelSpace.y);
 	float4 shape = input.shape;
 	float L = shape.w;
-	squeeze = 0;
+	fadeDepth = 0;
 
 	float fromA = length(input.posModelSpace);
 	float fromB = length(input.posModelSpace - float2(L, 0));
@@ -161,9 +172,7 @@ float PinchedDistance(PINCHED_PS_INPUT input, out float squeeze)
 	}
 
 	float h = PinchedHalfWidth(x, shape);
-	float full = max(shape.x, shape.y);
-	float w = min(shape.z, min(shape.x, shape.y));
-	squeeze = full > w ? saturate((full - h) / (full - w)) : 0;
+	fadeDepth = PinchedFadeDepth(x, shape);
 	float d = h - y;
 
 	// Without caps the markers cover their own circles, so keep the link out of them.
@@ -174,8 +183,8 @@ float PinchedDistance(PINCHED_PS_INPUT input, out float squeeze)
 
 Color_Depth_Output DepthOnlyPinchedShader(PINCHED_PS_INPUT input)
 {
-	float squeeze;
-	clip(PinchedDistance(input, squeeze));
+	float fadeDepth;
+	clip(PinchedDistance(input, fadeDepth));
 
 	Color_Depth_Output output;
 	output.Color = float4(0, 0, 0, 0);
@@ -185,13 +194,13 @@ Color_Depth_Output DepthOnlyPinchedShader(PINCHED_PS_INPUT input)
 
 Color_Depth_Output MyPSPinchedHSV(PINCHED_PS_INPUT input)
 {
-	float squeeze;
-	float d = PinchedDistance(input, squeeze);
+	float fadeDepth;
+	float d = PinchedDistance(input, fadeDepth);
 	// Feather the outline over pinchedFeatherPixels screen pixels, centred on it, so the edge looks soft.
 	float coverage = saturate((d / (pinchedFeatherPixels * max(fwidth(d), 1e-6))) + 0.5);
 
-	// Full opacity next to the markers, fading linearly in squeeze to pinchedWaistOpacity of it at the waist.
-	float fade = lerp(1, pinchedWaistOpacity, squeeze);
+	// Full opacity next to the markers, fading linearly to pinchedWaistOpacity of it at the waist.
+	float fade = lerp(1, pinchedWaistOpacity, fadeDepth);
 	float fillAlpha = saturate(lineColor.a * fade) * coverage;
 
 	// The shadow lies outside the outline. x runs along the line, so its change per pixel is the world size of a pixel
