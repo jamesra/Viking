@@ -30,6 +30,11 @@ namespace VikingXNAGraphics
             }
             set => _DefaultFont = value;
         }
+
+        /// <summary>
+        /// <see cref="DefaultFont"/> if it is loaded or can be, otherwise null (no content manager yet, as in tests).
+        /// </summary>
+        public static SpriteFont TryGetDefaultFont() => _DefaultFont ?? (Content is null ? null : DefaultFont);
     }
 
     /// <summary>

@@ -21,6 +21,16 @@ papers: citations, formulas, algorithmic decisions and the reasoning behind them
 - **Depth-relative seed trust** (served by `Servers/SegmentationServer`; defined in Sam2Trainer
   `docs/depth_relative_trust.md`): the planned v7 prompt encoding for circle and carried-polygon seeds; Viking's part is
   the proto field for circle seeds and the server encoder.
+- **Polygon label placement** (`Geometry.Core/Algorithms/LabelLayout.cs`, `InscribedRuns.cs`, `PoleOfInaccessibility.cs`;
+  client `Clients/Viking/WebAnnotation/View/PolygonLabelSet.cs`): a polygon or closed curve's ID, structure label, tags,
+  parent ID and overlapped-link markers go either in the true maximum inscribed circle (pole of inaccessibility, by
+  polylabel's branch and bound over signed distance to exterior and hole segments) or along the largest inscribed
+  oriented rectangle ("run") at 13 angles, whichever allows the larger ID font. Runs come from rasterising the rotated
+  polygon to a 128×128 grid and the histogram-and-stack maximal-rectangle pass, keeping the (width, height) Pareto front
+  so any text aspect fits without rasterising again; the candidate chosen is verified against the real segments
+  (Liang–Barsky clip) and shrunk by 10% up to four times if a raster cell hid an edge. Markers that do not fit go one at a
+  time to the point of greatest clearance from outline, text and earlier markers, found with the same branch and bound
+  on a 1-Lipschitz clearance function.
 
 ## Formulas
 
@@ -34,7 +44,39 @@ $$
 Depth-relative trust of a seed (Sam2Trainer `docs/depth_relative_trust.md`): $w(\rho)$, $\rho = 1 - d / D_\ell$, full
 trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_scale`).
 
+- **Label font score** (`LabelLayout.RunFontSize`): for content whose rows at an ID font of 1 are $t_w$ wide (widest
+  row, each row's width times its scale) and $t_h$ tall (sum of row scales: structure label 0.5, tags 0.25, ID 1, parent
+  0.5), a run of width $W$ and height $H$ holding $k$ end markers of diameter $F$ allows the ID font
+  $F_k = \min\left(\frac{H}{1.1\,t_h}, \frac{W}{k + 1.1\,t_w}\right)$; its score is $F_k$ for a level run and $0.9\,F_k$
+  otherwise. The circle of radius $R$ allows $F_c = R/2$ (the circle labels' existing size). A run is used when its
+  text-only score $s_0 \ge 1.25\,F_c$; it then keeps the largest $k \le n$ markers with $s_k \ge 0.6\,s_0$, split between
+  down and up links in proportion. Free-space markers maximise
+  $f(p) = \min(d_P(p),\ d_T(p),\ \min_j(\lVert p - c_j\rVert - r_j))$, with $d_P$ the signed distance to the polygon,
+  $d_T$ the signed distance outside the text box and $c_j, r_j$ the markers placed so far; radius
+  $\min(F/2, 0.95 f)$, at least $0.1F$.
+
 ## Algorithmic decisions
+
+- **2026-10-26 Polygon labels use the maximum inscribed circle or a rotated run, never the centroid circle.** Why: the
+  old "inscribed circle" (centroid, radius to the nearest vertex) lies outside C-shaped cells and cells with holes, is
+  tiny on long processes, and pokes past edges between vertices (user report). The same circle placed adjacent-section
+  markers and translate targets, so `Polygon.InscribedCircle` and `CalculateInscribedCircle` now return the maximum
+  inscribed circle and the centroid version is deleted. Decisions: angles −75° to 90° in 15° steps plus the principal
+  axis of the second moments of area, all in (−90°, 90°] so text never reads upside down and a vertical process reads
+  bottom to top; a tilted run scores 0.9 so near-level text snaps to level; the circle is kept unless a run beats it by
+  25%, so round cells look as before, only correctly centred; in a run down-links sit at the left end and up-links at
+  the right (user's convention), in the circle up-links above and down-links below as before; markers that do not fit
+  go to the next-deepest free spots, as Sam2Trainer `seed.py interior_points` picks seeds. A raster cell counts as
+  inside only if the scanlines at its bottom, middle and top all cover it, and only the run the fit picks is checked
+  against the segments, best score first until no unchecked run could win. Measured 2026-10-26 on synthetic smoothed
+  cells: 2.7 ms (round, 300 vertices), 7.3 ms (process, 600), 11 ms (process, 2000) for the circle, runs and first fit
+  on the background `Initialize`; a refit when links change takes under 0.5 ms. Rejected: NTS
+  `MaximumInscribedCircle` (no client project references NTS); the nornir and Sam2Trainer raster routines (Python).
+  Where: `Geometry.Core/Algorithms/LabelLayout.cs`, `Clients/Viking/WebAnnotation/View/PolygonLabelSet.cs`.
+- **2026-10-26 Labels and link markers are laid out together, after smoothing.** Why: the fit depends on how many links
+  go up and down, and the links setter could run before the background `Initialize` and cache a circle from the
+  unsmoothed polygon. The setter now stores the links and `Initialize` applies them, under a lock. Where:
+  `LocationPolygonView`, `LocationClosedCurveView`.
 
 - **2026-10-22 Section corrections: detect change per section, rebuild the whole group.** The joint registration fit
   (one sparse least-squares solve over every section's shift, process second differences driven to zero) couples all
@@ -121,6 +163,9 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
 
 ## References
 
+- Agafonkin, V. (2016). Polylabel: a fast algorithm for finding the pole of inaccessibility of a polygon. Mapbox,
+  https://github.com/mapbox/polylabel (verify blog date). Used for: the branch and bound behind
+  `PoleOfInaccessibility.Maximize`.
 - Anderson, J. R., Jones, B. W., Yang, J.-H., Shaw, M. V., Watt, C. B., Koshevoy, P., Spaltenstein, J., Jurrus, E.,
   Kannan, U. V., Whitaker, R. T., Mastronarde, D., Tasdizen, T., Marc, R. E. (2009). A computational framework for
   ultrastructural mapping of neural circuitry. *PLoS Biology* 7(3), e1000074. (verify) Used for: the connectome
@@ -130,6 +175,9 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   *Journal of Microscopy* 241(1), 13-28. (verify) Used for: Viking's design.
 - Bajaj, C. L., Coyle, E. J., Lin, K.-N. (1996). Arbitrary topology shape reconstruction from planar cross sections.
   *Graphical Models and Image Processing* 58(6), 524-543. (verify) Used for: `MorphologyMesh` contour-to-mesh tiling.
+- Garcia-Castellanos, D. & Lombardo, U. (2007). Poles of inaccessibility: a calculation algorithm for the remotest
+  places on Earth. *Scottish Geographical Journal* 123(3), 227–233. doi:10.1080/14702540801897809 (verify). Used for: the
+  pole of inaccessibility as the label anchor.
 - Ravi, N., et al. (2024). SAM 2: Segment Anything in Images and Videos. arXiv:2408.00714. Used for: the segmentation
   server's model.
 

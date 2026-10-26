@@ -494,7 +494,7 @@ namespace SqlGeometryUtils
                 points = [.. listPoints];
             }
 
-            return points.ToPolygon().CalculateInscribedCircle(points).ToSqlGeometry(0);
+            return points.ToPolygon().CalculateInscribedCircle().ToSqlGeometry(0);
         }
 
         /// <summary>
@@ -999,8 +999,6 @@ namespace SqlGeometryUtils
 
         public static Circle CalculateInscribedCircle(this IShape2D shape) => shape.ToSqlGeometry().CalculateInscribedCircle();
 
-        public static Circle CalculateInscribedCircle(this IShape2D shape, ICollection<Vector2> ControlPoints) => shape.ToSqlGeometry().CalculateInscribedCircle(ControlPoints);
-
         public static SqlGeometry AddInteriorPolygon(this IShape2D shape, Vector2[] NewInteriorRing) => shape.ToSqlGeometry().AddInteriorPolygon(NewInteriorRing);
 
         /// <summary>
@@ -1091,23 +1089,16 @@ namespace SqlGeometryUtils
             return ToGeometry(geometry.GeometryType(), translated_points);
         }
 
+        /// <summary>
+        /// The largest circle inside the shape and clear of its holes (<see cref="PoleOfInaccessibility.MaximumInscribedCircle"/>).
+        /// A closed curve stored as a LINESTRING is read as the ring through its control points.
+        /// </summary>
         public static Circle CalculateInscribedCircle(this SqlGeometry shape)
         {
-            Vector2[] ControlPoints = shape.ToPoints();
-            return shape.CalculateInscribedCircle(ControlPoints);
-        }
-
-        /// <summary>
-        /// Determines the centroid of the shape to find center of circle and nearest point to centroid to determine radius
-        /// </summary>
-        /// <param name="shape"></param>
-        /// <param name="ControlPoints"></param>
-        /// <returns></returns>
-        public static Circle CalculateInscribedCircle(this SqlGeometry shape, ICollection<Vector2> ControlPoints)
-        {
-            Vector2 center = shape.Centroid();
-            double Radius = ControlPoints.Select(p => Vector2.Distance(center, p)).Min();
-            return new Circle(center, Radius);
+            Polygon polygon = shape.GeometryType() == SupportedGeometryType.POLYLINE
+                ? new Polygon(shape.ToPoints().EnsureClosedRing())
+                : shape.ToPolygon();
+            return polygon.MaximumInscribedCircle();
         }
 
         public static SqlGeometry AddInteriorPolygon(this SqlGeometry shape, Vector2[] NewInteriorRing)

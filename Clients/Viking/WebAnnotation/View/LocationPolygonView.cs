@@ -29,8 +29,20 @@ namespace WebAnnotation.View
     /// </summary>
     internal class LocationPolygonView : LocationCanvasView, ILabelView, ICanvasViewContainer, Viking.Common.IHelpStrings, IColorView
     {
-        private StructureCircleLabels curveLabels;
-        private OverlappedLinkCircleView OverlappedLinkView;
+        private StructureLabelsBase? curveLabels;
+        private OverlappedLinkCircleView? OverlappedLinkView;
+
+        /// <summary>
+        /// Guards <see cref="labelLayout"/>, <see cref="overlappedLinks"/> and the label and marker views built from them:
+        /// links are set on the UI thread while <see cref="Initialize"/> runs on a background task.
+        /// </summary>
+        private readonly object labelSync = new();
+
+        /// <summary>Inscribed circle and runs of <see cref="SmoothedVolumePolygon"/>; null until <see cref="Initialize"/>.</summary>
+        private LabelLayout? labelLayout;
+
+        /// <summary>Links set before <see cref="Initialize"/> are kept here and laid out when it finishes.</summary>
+        private ICollection<long> overlappedLinks = [];
         private LocationInteriorHoleView[] InteriorHoleViews;
         private SolidPolygonView polygonMesh;
         private readonly Polygon VolumePolygon;
@@ -304,7 +316,18 @@ namespace WebAnnotation.View
             mesh.MeshBuildCompleted = timing is null ? null : timing.RecordTriangulation;
             mesh.MeshBuildStarted = timing is null ? null : timing.RecordTriangulationStarted;
             polygonMesh = mesh;
-            CreateLabelObjects();
+
+            long layoutStart = Stopwatch.GetTimestamp();
+            LabelLayout layout = new(SmoothedVolumePolygon);
+            LabelPlacementKind labelKind;
+            lock (labelSync)
+            {
+                labelLayout = layout;
+                labelKind = CreateLabelObjects();
+            }
+
+            PolygonViewTimingLog.RecordLabelLayout(timing, ID, Stopwatch.GetTimestamp() - layoutStart,
+                SmoothedVolumePolygon.TotalUniqueVertices, labelKind.ToString());
 
             InteriorHoleViews = new LocationInteriorHoleView[VolumePolygon.InteriorPolygons.Count];
             for (int iInner = 0; iInner < VolumePolygon.InteriorPolygons.Count; iInner++)
@@ -332,21 +355,37 @@ namespace WebAnnotation.View
             return radius;
         }
 
-        private Circle? _InscribedCircle;
-        protected Circle InscribedCircle
+        /// <summary>
+        /// Maximum inscribed circle of <see cref="SmoothedVolumePolygon"/>, from the label layout once
+        /// <see cref="Initialize"/> has made it.
+        /// </summary>
+        protected Circle InscribedCircle => labelLayout?.InscribedCircle ?? SmoothedVolumePolygon.InscribedCircle();
+
+        /// <summary>
+        /// Rebuilds the labels and overlapped-link markers together, since the fit depends on the link counts. Does
+        /// nothing before <see cref="Initialize"/> has laid out the smoothed polygon; it builds them then.
+        /// </summary>
+        /// <returns>Where the label went, Circle if nothing was built.</returns>
+        public LabelPlacementKind CreateLabelObjects()
         {
-            get
+            lock (labelSync)
             {
-                if (!_InscribedCircle.HasValue)
+                if (labelLayout is null)
                 {
-                    _InscribedCircle = SmoothedVolumePolygon.InscribedCircle();
+                    return LabelPlacementKind.Circle;
                 }
 
-                return _InscribedCircle.Value;
+                PolygonLabelSet labels = PolygonLabelSet.Build(labelLayout, modelObj, ID, (int)Z, overlappedLinks);
+                if (labels.LinkView != null)
+                {
+                    labels.LinkView.Color = Color;
+                }
+
+                curveLabels = labels.Labels;
+                OverlappedLinkView = labels.LinkView;
+                return labels.Kind;
             }
         }
-
-        public void CreateLabelObjects() => curveLabels = new StructureCircleLabels(modelObj, InscribedCircle);
 
         /// <summary>
         /// Return a collection of Geometry.Vector2s containing the location of every vertex
@@ -601,7 +640,7 @@ namespace WebAnnotation.View
         public void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, Scene scene)
         {
             OverlappedLinkView?.DrawLabel(spriteBatch, font, scene);
-            curveLabels.DrawLabel(spriteBatch, font, scene);
+            curveLabels?.DrawLabel(spriteBatch, font, scene);
         }
 
         public ICanvasView GetAnnotationAtPosition(Geometry.Vector2 position)
@@ -641,30 +680,15 @@ namespace WebAnnotation.View
 
         public override ICollection<long> OverlappedLinks
         {
-            protected get
-            {
-                if (OverlappedLinkView is null)
-                {
-                    return new long[0];
-                }
-
-                return OverlappedLinkView.OverlappedLinks;
-            }
+            protected get => overlappedLinks;
 
             set
             {
-                if (value is null || value.Count == 0)
+                lock (labelSync)
                 {
-                    OverlappedLinkView = null;
-                    return;
+                    overlappedLinks = value is null ? [] : [.. value];
+                    CreateLabelObjects();
                 }
-
-                OverlappedLinkView = new OverlappedLinkCircleView(InscribedCircle, ID, (int)Z, value)
-                {
-                    Color = Color
-                };
-
-                CreateLabelObjects();
             }
         }
 
@@ -793,7 +817,7 @@ namespace WebAnnotation.View
                 return false;
             }
 
-            return curveLabels.IsLabelVisible(scene);
+            return curveLabels?.IsLabelVisible(scene) ?? false;
         }
 
         public override bool IsVisible(Scene scene)

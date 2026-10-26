@@ -24,8 +24,16 @@ namespace WebAnnotation.View
     {
         public CurveView curveView;
 
-        public StructureCircleLabels curveLabels;
-        public OverlappedLinkCircleView OverlappedLinkView;
+        public StructureLabelsBase? curveLabels;
+        public OverlappedLinkCircleView? OverlappedLinkView;
+
+        /// <summary>Guards the label layout inputs and the views built from them; links are set on the UI thread.</summary>
+        private readonly object labelSync = new();
+
+        /// <summary>Inscribed circle and runs of the rendered curve's polygon; null until the constructor makes it.</summary>
+        private LabelLayout? labelLayout;
+
+        private ICollection<long> overlappedLinks = [];
 
         public override string[] HelpStrings
         {
@@ -65,26 +73,60 @@ namespace WebAnnotation.View
             float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(obj.TypeCode, hasParent);
             Color color = obj.Parent is null ? Color.Gray.SetAlpha(opacity) : ColorForStructure(obj.Parent, opacity);
             curveView = new CurveView(VolumeControlPoints, color, true, lineWidth: VolumeControlPoints.MinDistanceBetweenAnyPoints(), controlPointRadius: ControlPointRadius, lineStyle: LineStyle.HalfTube, numInterpolations: NumInterpolationPoints);
-            CreateLabelObjects();
+
+            long layoutStart = System.Diagnostics.Stopwatch.GetTimestamp();
+            Polygon rendered;
+            try
+            {
+                rendered = VolumeShapeAsRendered.ToPolygon();
+            }
+            catch (ArgumentException e)
+            {
+                // The curve through the control points is not a valid ring; draw it without labels or link markers
+                System.Diagnostics.Trace.WriteLine($"Closed curve {ID} has no label layout: {e.Message}");
+                return;
+            }
+
+            LabelLayout layout = new(rendered);
+            LabelPlacementKind labelKind;
+            lock (labelSync)
+            {
+                labelLayout = layout;
+                labelKind = CreateLabelObjects();
+            }
+
+            PolygonViewTimingLog.RecordLabelLayout(null, ID, System.Diagnostics.Stopwatch.GetTimestamp() - layoutStart,
+                rendered.TotalUniqueVertices, labelKind.ToString());
         }
 
-        private Circle? _InscribedCircle;
-        protected Circle InscribedCircle
+        /// <summary>
+        /// Maximum inscribed circle of the rendered curve's polygon, or a control-point-sized circle at the curve's centre
+        /// when the curve is not a valid ring.
+        /// </summary>
+        protected Circle InscribedCircle => labelLayout?.InscribedCircle ?? new Circle(BoundingBox.Center, ControlPointRadius);
+
+        /// <summary>Rebuilds the labels and overlapped-link markers together, since the fit depends on the link counts.</summary>
+        /// <returns>Where the label went, Circle if nothing was built.</returns>
+        public LabelPlacementKind CreateLabelObjects()
         {
-            get
+            lock (labelSync)
             {
-                if (!_InscribedCircle.HasValue)
+                if (labelLayout is null)
                 {
-                    _InscribedCircle = VolumeShapeAsRendered.CalculateInscribedCircle(VolumeControlPoints);
+                    return LabelPlacementKind.Circle;
                 }
 
-                return _InscribedCircle.Value;
+                PolygonLabelSet labels = PolygonLabelSet.Build(labelLayout, modelObj, ID, (int)Z, overlappedLinks);
+                if (labels.LinkView != null)
+                {
+                    labels.LinkView.Color = Color;
+                }
+
+                curveLabels = labels.Labels;
+                OverlappedLinkView = labels.LinkView;
+                return labels.Kind;
             }
         }
-
-
-
-        public void CreateLabelObjects() => curveLabels = new StructureCircleLabels(modelObj, InscribedCircle);
 
         private Geometry.Vector2[] _MosaicCurveControlPoints;
         public override Geometry.Vector2[] MosaicCurveControlPoints
@@ -188,7 +230,7 @@ namespace WebAnnotation.View
         public void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, Scene scene)
         {
             OverlappedLinkView?.DrawLabel(spriteBatch, font, scene);
-            curveLabels.DrawLabel(spriteBatch, font, scene);
+            curveLabels?.DrawLabel(spriteBatch, font, scene);
         }
 
         public ICanvasView GetAnnotationAtPosition(Geometry.Vector2 position)
@@ -214,30 +256,15 @@ namespace WebAnnotation.View
 
         public override ICollection<long> OverlappedLinks
         {
-            protected get
-            {
-                if (OverlappedLinkView is null)
-                {
-                    return new long[0];
-                }
-
-                return OverlappedLinkView.OverlappedLinks;
-            }
+            protected get => overlappedLinks;
 
             set
             {
-                if (value is null || value.Count == 0)
+                lock (labelSync)
                 {
-                    OverlappedLinkView = null;
-                    return;
+                    overlappedLinks = value is null ? [] : [.. value];
+                    CreateLabelObjects();
                 }
-
-                OverlappedLinkView = new OverlappedLinkCircleView(InscribedCircle, ID, (int)Z, value)
-                {
-                    Color = Color
-                };
-
-                CreateLabelObjects();
             }
         }
 

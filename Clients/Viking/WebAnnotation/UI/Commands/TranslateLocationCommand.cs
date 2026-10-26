@@ -26,7 +26,7 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
 
         public override double AnnotationRadius => LineWidth;
 
-        protected double LineWidth => curveView.ControlPoints.ToPolygon().CalculateInscribedCircle(curveView.ControlPoints).Radius;
+        protected double LineWidth => curveView.ControlPoints.ToPolygon().CalculateInscribedCircle().Radius;
 
 
         protected override void OnAngleChanged() => curveView = CreateView(CalculateTranslatedMosaicControlPoints(), curveView.Color);
@@ -65,7 +65,7 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
                     return;
                 }
 
-                Circle circle = TranslatedOriginalControlPoints.ToPolygon().CalculateInscribedCircle(TranslatedOriginalControlPoints);
+                Circle circle = TranslatedOriginalControlPoints.ToPolygon().CalculateInscribedCircle();
                 success_callback(TranslatedOriginalControlPoints, MosaicControlPoints, circle.Radius * 2);
             }
 

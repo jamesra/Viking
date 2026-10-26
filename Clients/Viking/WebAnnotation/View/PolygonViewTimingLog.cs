@@ -20,6 +20,12 @@ namespace WebAnnotation.View
         public static readonly TimeSpan SlowThreshold = TimeSpan.FromMilliseconds(250);
 
         /// <summary>
+        /// A label layout taking longer than this is written to the log for any view, pen-edited or not. Layouts are
+        /// expected to take a few milliseconds per cell.
+        /// </summary>
+        public static readonly TimeSpan SlowLabelLayoutThreshold = TimeSpan.FromMilliseconds(25);
+
+        /// <summary>
         /// How long a mark stays claimable. A mark that is never claimed (the location is not drawn, or the
         /// save failed) must not be attributed to an unrelated view built much later.
         /// </summary>
@@ -147,6 +153,24 @@ namespace WebAnnotation.View
 
         internal static double ToMilliseconds(long stopwatchTicks) => stopwatchTicks * 1000.0 / Stopwatch.Frequency;
 
+        /// <summary>
+        /// Reports the label layout of a polygon or closed-curve view: finding the inscribed circle and runs, and the
+        /// first fit. Written through <paramref name="timing"/> for a pen-edited view, and for any view when slower than
+        /// <see cref="SlowLabelLayoutThreshold"/>.
+        /// </summary>
+        public static void RecordLabelLayout(PolygonViewTiming? timing, long locationId, long stopwatchTicks, int vertices, string kind)
+        {
+            string detail = FormattableString.Invariant($"verts={vertices} kind={kind}");
+            if (timing != null)
+            {
+                timing.RecordLabelLayout(stopwatchTicks, detail);
+            }
+            else if (ToMilliseconds(stopwatchTicks) > SlowLabelLayoutThreshold.TotalMilliseconds)
+            {
+                Write(FormattableString.Invariant($"label-layout-slow loc={locationId} ms={ToMilliseconds(stopwatchTicks):F1} {detail}"));
+            }
+        }
+
         internal static void Write(string line)
         {
             Trace.WriteLine(line);
@@ -239,6 +263,12 @@ namespace WebAnnotation.View
             LogPart("meshstart", 0, FormattableString.Invariant($"verts={polygon.TotalUniqueVertices} holes={polygon.InteriorRings.Count}"));
             PolygonViewTimingLog.DumpPolygon(locationId, polygon);
         }
+
+        /// <summary>
+        /// Reports the label layout as its own part. Its time is also inside <c>Initialize</c>'s other time, so it does
+        /// not count towards the parts the summary line waits for.
+        /// </summary>
+        public void RecordLabelLayout(long stopwatchTicks, string detail) => LogPart("labellayout", stopwatchTicks, detail);
 
         /// <summary>Reports the background mesh build. Matches <c>SolidPolygonView.MeshBuildCompleted</c>.</summary>
         public void RecordTriangulation(TimeSpan elapsed, bool succeeded)

@@ -83,6 +83,10 @@ namespace VikingXNAGraphics
 
         static readonly byte DefaultAlpha = 192;
 
+        /// <summary>Draws one row of text turned <paramref name="screenRotation"/> radians clockwise on screen.</summary>
+        private void DrawRow(SpriteBatch spriteBatch, SpriteFont font, string row, Vector2 position, Vector2 origin, float fontScale, float screenRotation = 0f)
+            => spriteBatch.DrawString(font, row, position, this._Color, screenRotation, origin, fontScale, SpriteEffects.None, 0);
+
         public Microsoft.Xna.Framework.Color _Color = new((byte)(0),
                                                                                     (byte)(0),
                                                                                     (byte)(0),
@@ -99,6 +103,12 @@ namespace VikingXNAGraphics
             set => _Color = this._Color.SetAlpha(value);
         }
 
+        /// <summary>
+        /// Direction of the text's baseline in world space: radians counter-clockwise from world +X, with world +Y up the
+        /// screen. When non-zero, <see cref="Draw(SpriteBatch, SpriteFont, VikingXNA.IScene)"/> centres the rows on
+        /// <see cref="Position"/> and ignores <see cref="Anchor"/> and <see cref="Alignment"/>; text that would read
+        /// upside down on screen is turned half a turn.
+        /// </summary>
         public float Rotation
         {
             get; set;
@@ -187,28 +197,16 @@ namespace VikingXNAGraphics
         public LabelView(string Text, LineSegment VolumePosition, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double lineWidth = 16.0)
             : this(Text, VolumePosition.PointAlongLine(0.5), Global.DefaultFont, alignment, anchor, scaleFontWithScene, lineWidth)
         {
-            this.Rotation = ReadableRotation(VolumePosition);
+            Geometry.Vector2 direction = VolumePosition.Direction;
+            this.Rotation = (float)Math.Atan2(direction.Y, direction.X);
         }
 
         public LabelView(string Text, LineSegment VolumePosition, Color color, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double lineWidth = 16.0)
             : this(Text, VolumePosition, alignment, anchor, scaleFontWithScene, lineWidth)
         {
-            this.Rotation = ReadableRotation(VolumePosition);
+            Geometry.Vector2 direction = VolumePosition.Direction;
+            this.Rotation = (float)Math.Atan2(direction.Y, direction.X);
             this.Color = color;
-        }
-
-        /// <summary>
-        /// Angle at which text laid along <paramref name="segment"/> reads upright.  Which endpoint a segment calls
-        /// A is arbitrary, so following its direction blindly renders half of the labels upside down; a leftward
-        /// direction is reversed to run the other way along the same line instead.
-        /// </summary>
-        protected static float ReadableRotation(LineSegment segment)
-        {
-            Geometry.Vector2 direction = segment.Direction;
-            if (direction.X < 0 || (direction.X == 0 && direction.Y < 0))
-                direction = new Geometry.Vector2(-direction.X, -direction.Y);
-
-            return (float)Geometry.Vector2.ArcAngle(Geometry.Vector2.Zero, Geometry.Vector2.UnitX, direction);
         }
 
         public LabelView(string Text, Geometry.Vector2 VolumePosition, SpriteFont font, Alignment alignment = null, Anchor anchor = null, bool scaleFontWithScene = true, double fontSize = 16.0)
@@ -734,7 +732,7 @@ namespace VikingXNAGraphics
                 for (int iRow = 0; iRow < _Rows.Length; iRow++)
                 {
                     offlineBatch.DrawString(font, _Rows[iRow], new Vector2(0, yPos), Color.White,
-                        this.Rotation, Vector2.Zero, fontScale, SpriteEffects.None, 0);
+                        0f, Vector2.Zero, fontScale, SpriteEffects.None, 0);
                     yPos += _RowMeasurements[iRow].Y * fontScale;
                 }
                 offlineBatch.End();
@@ -812,7 +810,7 @@ namespace VikingXNAGraphics
                         yPos
                     );
                     spriteBatch.DrawString(font, _Rows[iRow], drawPos, this._Color, 
-                        this.Rotation, Vector2.Zero, fontScale, SpriteEffects.None, 0);
+                        0f, Vector2.Zero, fontScale, SpriteEffects.None, 0);
                     yPos += rowMeasurement.Y;
                 }
             }
@@ -875,6 +873,13 @@ namespace VikingXNAGraphics
             if (this._Rows is null || this._Rows.Length == 0)
                 return;
 
+            if (this.Rotation != 0)
+            {
+                float rotatedFontScale = this.ScaleFontWithScene ? (float)ScaleForMagnification(FontScaleForVolume, scene) : (float)FontScaleForVolume;
+                DrawRotated(spriteBatch, font, scene, rotatedFontScale);
+                return;
+            }
+
             //Vector3 LocationCenterScreenPosition_v3 = scene.Viewport.Project(Position.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
             Rectangle bounds = BoundingRect;
             Vector3 LocationCenterScreenPosition_v3 = scene.Viewport.Project(bounds.UpperLeft.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
@@ -890,49 +895,51 @@ namespace VikingXNAGraphics
 
             Vector2 max_row_size = new(_RowMeasurements.Max(r => r.X), _RowMeasurements.Max(r => r.Y));
 
-            //Rotated text needs its own anchoring.  BoundingRect is axis-aligned and is only correct for upright
-            //text, so pivoting off its corner throws a rotated label away from the point it labels by half its own
-            //width - the further the rotation from horizontal and the longer the text, the further it lands.
-            //Rotating about the row's center over Position instead keeps the label on its anchor at any angle.
-            bool rotated = Math.Abs(this.Rotation) > float.Epsilon;
-            Vector2 rowStep = Vector2.Zero;
-            if (rotated)
-            {
-                Vector3 anchor_v3 = scene.Viewport.Project(Position.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
-                LocationCenterScreenPosition = new Vector2(anchor_v3.X, anchor_v3.Y);
-
-                //Successive rows advance along the label's own down axis rather than straight down the screen.
-                rowStep = new Vector2((float)-Math.Sin(this.Rotation), (float)Math.Cos(this.Rotation)) * LineStep;
-                LocationCenterScreenPosition -= rowStep * ((_Rows.Length - 1) / 2.0f);
-            }
-
             for (int iRow = 0; iRow < _Rows.Length; iRow++)
             {
                 Vector2 DrawPosition = LocationCenterScreenPosition;
-                Vector2 origin;
 
-                if (rotated)
-                {
-                    DrawPosition += rowStep * iRow;
-                    origin = _RowMeasurements[iRow] / 2.0f;
-                }
-                else
-                {
-                    //DrawPosition = AdjustPositionForHorzAlignment(DrawPosition, _RowMeasurements[iRow]);
-                    //DrawPosition = AdjustPositionForVertAlignment(DrawPosition, _RowMeasurements[iRow]);
-                    DrawPosition.Y += LineStep * iRow;
-                    origin = AlignmentAdjustmentForRow(_RowMeasurements[iRow], bounds, max_row_size, Alignment);
-                }
+                //DrawPosition = AdjustPositionForHorzAlignment(DrawPosition, _RowMeasurements[iRow]);
+                //DrawPosition = AdjustPositionForVertAlignment(DrawPosition, _RowMeasurements[iRow]);
+                DrawPosition.Y += LineStep * iRow;
+                Vector2 origin = AlignmentAdjustmentForRow(_RowMeasurements[iRow], bounds, max_row_size, Alignment);
 
-                spriteBatch.DrawString(font,
-                                       _Rows[iRow],
-                                       DrawPosition,
-                                       this._Color,
-                                       this.Rotation,
-                                       origin, //_RowMeasurements[iRow] / 2.0f, //The string is centered on the drawing position, instead of starting at the top left
-                                       fontScale,
-                                       SpriteEffects.None,
-                                       0);
+                //The string is centered on the drawing position, instead of starting at the top left
+                DrawRow(spriteBatch, font, _Rows[iRow], DrawPosition, origin, fontScale);
+            }
+        }
+
+        /// <summary>
+        /// Draws the rows along <see cref="Rotation"/>, stacked across it and centred on <see cref="Position"/>. The screen
+        /// angle comes from projecting a step along the world direction, so a rotated camera turns the text with the scene.
+        /// Text is kept reading left to right; vertical text reads bottom to top.
+        /// </summary>
+        private void DrawRotated(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.IScene scene, float fontScale)
+        {
+            Geometry.Vector2 step = new Geometry.Vector2(Math.Cos(Rotation), Math.Sin(Rotation)) * Math.Max(FontSize, 1e-6);
+            Vector3 center3 = scene.Viewport.Project(Position.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
+            Vector3 ahead3 = scene.Viewport.Project((Position + step).ToXNAVector3(0), scene.Projection, scene.View, scene.World);
+            Vector2 center = new(center3.X, center3.Y);
+
+            // Screen Y points down, so this angle turns clockwise like SpriteBatch rotation
+            double angle = Math.Atan2(ahead3.Y - center3.Y, ahead3.X - center3.X);
+            double cos = Math.Cos(angle), sin = Math.Sin(angle);
+            const double vertical = 1e-3;
+            if (cos < -vertical || (Math.Abs(cos) <= vertical && sin > 0))
+            {
+                angle += Math.PI;
+                cos = -cos;
+                sin = -sin;
+            }
+
+            Vector2 down = new((float)-sin, (float)cos);
+            float lineStep = font.LineSpacing * fontScale;
+            float firstOffset = (lineStep - (lineStep * _Rows.Length)) / 2.0f;
+            for (int iRow = 0; iRow < _Rows.Length; iRow++)
+            {
+                Vector2 rowCenter = center + (down * (firstOffset + (lineStep * iRow)));
+                Vector2 origin = new(_RowMeasurements[iRow].X / 2.0f, font.LineSpacing / 2.0f);
+                DrawRow(spriteBatch, font, _Rows[iRow], rowCenter, origin, fontScale, (float)angle);
             }
         }
 
