@@ -4,27 +4,26 @@ using Geometry;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
+using GridCell = Viking.gRPC.Geometry.V1.GridCell;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
-    /// Mask prompts as grid tiles for <c>SegmentTilesStream</c>: the seed or correction as the tiles it touches, and the
-    /// neighbouring annotations as the tiles the server asks for.
+    /// A painted bitmap (an edited mask) as grid tiles for <c>SegmentTilesStream</c>: the FOREGROUND tiles it touches, all sent
+    /// right after <c>start</c> and counted in its <c>mask_tile_count</c>.
     /// </summary>
     /// <remarks>
-    /// A tile is on the same grid as the image tiles (<see cref="SegmentationTileGrid"/>), named by the same
-    /// <c>TileCoord</c>, and is <c>full</c> (every pixel in the mask, no PNG), a 1-bit PNG, or empty (no PNG, not full), which
-    /// the server tells apart from a tile that was never sent. Nothing is merged across tiles, so there is no combined
-    /// bounds to cut down, no PNG side to fit and no scale to raise: a region of any size is only more tiles. The PNG is full
-    /// resolution (1024 square) unless <see cref="ConfiguredScale"/> asks for 4 (256 square blocks of 4 x 4 pixels).
-    /// Mask tiles are the only way a mask reaches the server: protocol aac7308 removed the single <c>Mask</c>.
+    /// A tile is on the same grid as the image tiles (<see cref="SegmentationTileGrid"/>), named by a <c>GridCell</c> of the
+    /// request's <c>TileGrid</c>, and is <c>full</c> (every pixel set, no PNG), a 1-bit PNG, or empty (no PNG, not full). Nothing
+    /// is merged across tiles, so a bitmap of any size is only more tiles. The PNG is full resolution (1024 square) unless
+    /// <see cref="ConfiguredScale"/> asks for 4 (256 square blocks of 4 x 4 pixels). Geometry (circles, polygons, the
+    /// neighbouring annotations) is never rasterized here: it goes as shapes (<see cref="SegmentationPromptShapes"/>).
     /// </remarks>
     internal static class SegmentationMaskTiles
     {
         /// <summary>
-        /// The most FOREGROUND tiles one request sends. The server's default limit; a larger seed is refused here with a
+        /// The most mask tiles one request sends. The server's default limit; a larger bitmap is refused here with a
         /// message instead of ending the call with RESOURCE_EXHAUSTED.
         /// </summary>
         public const int MaxForegroundTiles = 256;
@@ -51,7 +50,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// How many grid tiles the volume-space rectangle reaches at <paramref name="downsample"/>: an upper bound on the
-        /// FOREGROUND tiles a shape inside it sends, for refusing a mask the server would not accept before it is built.
+        /// FOREGROUND tiles a bitmap inside it sends, for refusing a mask the server would not accept before it is built.
         /// </summary>
         public static long TilesSpanned(Rectangle volumeBounds, int downsample)
         {
@@ -65,13 +64,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// The tile scale for the seeds: <see cref="CoarseScale"/> (a 256 x 256 PNG per tile) when <see cref="ConfiguredScale"/> asks for it
-        /// or the seeds hold an edited mask larger than one SAM2 window, otherwise 1. An edit is made on a raster that was already
+        /// The tile scale for a painted bitmap: <see cref="CoarseScale"/> (a 256 x 256 PNG per tile) when <see cref="ConfiguredScale"/>
+        /// asks for it or the bitmap is larger than one SAM2 window, otherwise 1. An edit is made on a raster that was already
         /// downsampled to fit the screen's texture, so a large mask loses nothing it still had by going out at one pixel per 4 x 4 block;
         /// a mask within one window keeps full resolution.
         /// </summary>
-        public static int ScaleFor(SegmentationMaskUnion? seeds, int downsample) =>
-            ConfiguredScale == CoarseScale || (seeds is not null && seeds.LargestBitmapSide(downsample) > LargeMaskSide)
+        public static int ScaleFor(SegmentationMaskUnion? bitmap, int downsample) =>
+            ConfiguredScale == CoarseScale || (bitmap is not null && bitmap.LargestBitmapSide(downsample) > LargeMaskSide)
                 ? CoarseScale
                 : 1;
 
@@ -80,12 +79,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// A tile is <c>Full</c> when every pixel is set; otherwise a PNG at <paramref name="scale"/>; an empty tile is sent
         /// with no PNG and not full.
         /// </summary>
-        /// <param name="coord">The tile; its downsample is the mosaic pixel size the union is rasterized at.</param>
+        /// <param name="downsample">The grid's downsample: the mosaic pixel size the union is rasterized at.</param>
+        /// <param name="cell">The tile.</param>
         /// <param name="holePointsVolume">Background clicks that clear a disc of <paramref name="holeRadiusPixels"/> from a foreground tile.</param>
         /// <param name="scale">1 for a 1024 square PNG, <see cref="CoarseScale"/> for 256.</param>
         public static SegmentationServiceTypes.MaskTile? BuildTile(
             SegmentationMaskUnion union,
-            SegmentationServiceTypes.TileCoord coord,
+            int downsample,
+            TileCell cell,
             SegmentationServiceTypes.MaskKind kind,
             IReadOnlyList<Vector2>? holePointsVolume,
             double holeRadiusPixels,
@@ -93,9 +94,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             bool sendEmpty)
         {
             int tileScale = scale == CoarseScale ? CoarseScale : 1;
-            byte[]? pixels = union.RasterizeTile(
-                coord.Downsample, new TileCell(coord.Row, coord.Col), holePointsVolume, holeRadiusPixels, tileScale);
-            SegmentationServiceTypes.MaskTile tile = new() { Coord = coord, Kind = kind };
+            byte[]? pixels = union.RasterizeTile(downsample, cell, holePointsVolume, holeRadiusPixels, tileScale);
+            SegmentationServiceTypes.MaskTile tile = new()
+            {
+                Cell = new GridCell { Row = cell.Row, Col = cell.Col },
+                Kind = kind
+            };
             if (pixels is null)
                 return sendEmpty ? tile : null;
 
@@ -114,29 +118,23 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// The FOREGROUND tiles of the seed or correction: every tile with something set, in row then column order, empty
-        /// tiles left out (the count the request announces is the number returned).
+        /// The tiles of a painted bitmap of <paramref name="kind"/>: every tile with something set, in row then column order,
+        /// empty tiles left out (each one sent counts in the request's <c>mask_tile_count</c>).
         /// </summary>
-        /// <param name="template">Names the volume, section, channel and transform of every tile; its row and column are replaced.</param>
-        /// <exception cref="InvalidOperationException">The seed reaches more than <see cref="MaxForegroundTiles"/> tiles.</exception>
-        public static List<SegmentationServiceTypes.MaskTile> BuildForeground(
-            SegmentationMaskUnion seeds,
-            SegmentationServiceTypes.TileCoord template,
-            IReadOnlyList<Vector2>? backgroundPoints,
+        /// <exception cref="InvalidOperationException">The bitmap reaches more than <see cref="MaxForegroundTiles"/> tiles.</exception>
+        public static List<SegmentationServiceTypes.MaskTile> BuildBitmap(
+            SegmentationMaskUnion bitmap,
+            int downsample,
+            SegmentationServiceTypes.MaskKind kind,
+            IReadOnlyList<Vector2>? holePoints,
             double holeRadiusPixels,
             int scale)
         {
             List<SegmentationServiceTypes.MaskTile> tiles = [];
-            foreach (TileCell cell in seeds.TilesTouched(template.Downsample))
+            foreach (TileCell cell in bitmap.TilesTouched(downsample))
             {
                 SegmentationServiceTypes.MaskTile? tile = BuildTile(
-                    seeds,
-                    CoordOf(template, cell),
-                    SegmentationServiceTypes.MaskKind.Foreground,
-                    backgroundPoints,
-                    holeRadiusPixels,
-                    scale,
-                    sendEmpty: false);
+                    bitmap, downsample, cell, kind, holePoints, holeRadiusPixels, scale, sendEmpty: false);
                 if (tile is null)
                     continue;
 
@@ -153,73 +151,46 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// The BACKGROUND tiles for <paramref name="coords"/>, every one of them, empty ones included: the server waits for an
-        /// answer for each tile it asked about. <paramref name="neighbours"/> null means there is no background at all.
+        /// The tiles of the painted bitmaps, FOREGROUND (<paramref name="foreground"/>) then BACKGROUND (<paramref name="background"/>),
+        /// either null or empty for a request without one, and the request's <c>mask_tile_count</c> set to their number: they are
+        /// all written right after <c>start</c>. Each side's scale is <paramref name="scale"/> unless its bitmap needs coarse tiles
+        /// (<see cref="ScaleFor"/>).
         /// </summary>
-        public static List<SegmentationServiceTypes.MaskTile> BuildBackground(
-            SegmentationMaskUnion? neighbours,
-            IEnumerable<SegmentationServiceTypes.TileCoord> coords,
+        /// <param name="request">The start request; its count is set here.</param>
+        /// <param name="backgroundPoints">Background clicks; each clears a disc of <paramref name="holeRadiusPixels"/> from the foreground.</param>
+        /// <exception cref="InvalidOperationException">The bitmaps reach more than <see cref="MaxForegroundTiles"/> tiles together.</exception>
+        public static List<SegmentationServiceTypes.MaskTile> PrepareStart(
+            SegmentationServiceTypes.SegmentTilesRequest request,
+            SegmentationMaskUnion? foreground,
+            SegmentationMaskUnion? background,
+            int downsample,
+            IReadOnlyList<Vector2>? backgroundPoints,
+            double holeRadiusPixels,
             int scale)
         {
             List<SegmentationServiceTypes.MaskTile> tiles = [];
-            foreach (SegmentationServiceTypes.TileCoord coord in coords)
+            if (foreground is { IsEmpty: false })
             {
-                SegmentationServiceTypes.MaskTile tile = neighbours is null
-                    ? new() { Coord = coord, Kind = SegmentationServiceTypes.MaskKind.Background }
-                    : BuildTile(neighbours, coord, SegmentationServiceTypes.MaskKind.Background, null, 0, scale, sendEmpty: true)!;
-                tiles.Add(tile);
+                tiles.AddRange(BuildBitmap(
+                    foreground, downsample, SegmentationServiceTypes.MaskKind.Foreground, backgroundPoints, holeRadiusPixels,
+                    Math.Max(scale, ScaleFor(foreground, downsample))));
             }
 
+            if (background is { IsEmpty: false })
+            {
+                tiles.AddRange(BuildBitmap(
+                    background, downsample, SegmentationServiceTypes.MaskKind.Background, null, 0,
+                    Math.Max(scale, ScaleFor(background, downsample))));
+            }
+
+            if (tiles.Count > MaxForegroundTiles)
+            {
+                throw new InvalidOperationException(
+                    $"The painted masks span more than {MaxForegroundTiles} tiles, which is as many as the segmentation server accepts. Zoom out or paint a smaller area.");
+            }
+
+            request.MaskTileCount = (uint)tiles.Count;
             return tiles;
-        }
-
-        /// <summary>The mask tiles a tiled request writes right after <c>start</c>.</summary>
-        public readonly struct StartTiles
-        {
-            public StartTiles(List<SegmentationServiceTypes.MaskTile> foreground, List<SegmentationServiceTypes.MaskTile> background)
-            {
-                Foreground = foreground;
-                Background = background;
-            }
-
-            /// <summary>The FOREGROUND tiles, the count the start announces. Empty for a click-only request.</summary>
-            public List<SegmentationServiceTypes.MaskTile> Foreground { get; }
-
-            /// <summary>The BACKGROUND tiles of the start windows, one for every image tile of the start, empty ones included.</summary>
-            public List<SegmentationServiceTypes.MaskTile> Background { get; }
-
-            /// <summary>The stream messages to write after <c>start</c>, foreground first: the server waits for every announced foreground tile.</summary>
-            public IEnumerable<SegmentationServiceTypes.SegmentTilesStreamRequest> Messages() =>
-                Chunk(Foreground).Concat(Chunk(Background)).Select(tiles => new SegmentationServiceTypes.SegmentTilesStreamRequest { MaskTiles = tiles });
-        }
-
-        /// <summary>
-        /// What a request on the tiled path sends with <c>start</c>: sets <paramref name="request"/>'s
-        /// <c>foreground_mask_tile_count</c> to the number of FOREGROUND tiles (0 for a request with no seed mask, which the server
-        /// reads as clicks or rectangles only), and builds the BACKGROUND tiles of the start windows (<paramref name="request"/>.Tiles)
-        /// so the server need not ask for them. The server asks for BACKGROUND tiles on every request.
-        /// </summary>
-        /// <param name="request">The start request, with its image tiles already listed; its count is set here.</param>
-        /// <param name="seeds">The seed or correction shapes, or null for a click-only request.</param>
-        /// <param name="template">Names the volume, section, channel, transform and downsample of every tile.</param>
-        /// <param name="neighbours">The neighbouring annotations, or null when there are none; every start tile still gets a (possibly empty) tile.</param>
-        /// <param name="scale">The scale of the BACKGROUND tiles (and of the FOREGROUND ones unless <paramref name="foregroundScale"/> is given).</param>
-        /// <param name="foregroundScale">The scale of the FOREGROUND tiles, when it differs: see <see cref="ScaleFor"/>.</param>
-        public static StartTiles PrepareStart(
-            SegmentationServiceTypes.SegmentTilesRequest request,
-            SegmentationMaskUnion? seeds,
-            SegmentationServiceTypes.TileCoord template,
-            IReadOnlyList<Vector2>? backgroundPoints,
-            double holeRadiusPixels,
-            SegmentationMaskUnion? neighbours,
-            int scale,
-            int? foregroundScale = null)
-        {
-            List<SegmentationServiceTypes.MaskTile> foreground = seeds is null
-                ? []
-                : BuildForeground(seeds, template, backgroundPoints, holeRadiusPixels, foregroundScale ?? scale);
-            request.ForegroundMaskTileCount = (uint)foreground.Count;
-            return new StartTiles(foreground, BuildBackground(neighbours, request.Tiles, scale));
         }
 
         /// <summary>The tiles split into <c>MaskTiles</c> messages of at most <see cref="TilesPerMessage"/>.</summary>
@@ -233,14 +204,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
                 yield return message;
             }
-        }
-
-        private static SegmentationServiceTypes.TileCoord CoordOf(SegmentationServiceTypes.TileCoord template, TileCell cell)
-        {
-            SegmentationServiceTypes.TileCoord coord = template.Clone();
-            coord.Row = cell.Row;
-            coord.Col = cell.Col;
-            return coord;
         }
     }
 }

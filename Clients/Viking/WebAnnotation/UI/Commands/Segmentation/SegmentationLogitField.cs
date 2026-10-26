@@ -4,7 +4,7 @@ using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
-    /// One decoded segment as a reduced-size soft field plus where it sits in the response's frame.
+    /// One decoded island as a reduced-size soft field plus where it sits on the request's tile grid.
     /// </summary>
     /// <param name="Data">
     /// Soft bytes, 0–255, with <see cref="SegmentationMaskPolygonizer.SoftMaskIsoLevel"/> as the object boundary.
@@ -12,25 +12,31 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// </param>
     /// <param name="Width">Samples across.</param>
     /// <param name="Height">Samples down.</param>
-    /// <param name="Scale">Image pixels per sample: 1 for a full-resolution mask, 4 for SAM2's native logit grid.</param>
-    /// <param name="X">Image-pixel X of the field's top-left, in the frame <see cref="SegmentationServiceTypes.SegmentResult.X"/> uses.</param>
-    /// <param name="Y">Image-pixel Y of the field's top-left.</param>
+    /// <param name="Scale">Grid pixels per sample: 4 for SAM2's native logit grid.</param>
+    /// <param name="X">
+    /// Grid-space pixel index X (at the grid's downsample, X right) of the top-left pixel of sample (0, 0):
+    /// <see cref="SegmentationServiceTypes.SegmentResult.LogitsOrigin"/>.
+    /// </param>
+    /// <param name="Y">
+    /// Grid-space pixel index Y (Y up) of that pixel; pixel y covers [y, y + 1), so the field's top edge is Y + 1 and row j
+    /// lies below it.
+    /// </param>
     /// <param name="ServerData">
     /// The same grid as <paramref name="Data"/> with the logits exactly as the server sent them (no smoothing), so the
-    /// mask overlay shows the server's mask. Null for a mask decoded from a PNG, which has nothing to smooth.
+    /// mask overlay shows the server's mask.
     /// </param>
     internal sealed record SegmentField(byte[]? Data, int Width, int Height, int Scale, int X, int Y, byte[]? ServerData = null)
     {
-        /// <summary>Width of the field in image pixels.</summary>
+        /// <summary>Width of the field in grid pixels.</summary>
         public int PixelWidth => Width * Scale;
 
-        /// <summary>Height of the field in image pixels.</summary>
+        /// <summary>Height of the field in grid pixels.</summary>
         public int PixelHeight => Height * Scale;
     }
 
     /// <summary>
-    /// Turns the raw SAM2 logits a server sends with <c>ResponseContent.Logits | NoUpscale</c> into the soft byte field the
-    /// rest of the segmentation code already traces, without upscaling.
+    /// Turns the raw SAM2 logits of a <see cref="SegmentationServiceTypes.SegmentResult"/> into the soft byte field the rest of the
+    /// segmentation code traces, without upscaling.
     /// </summary>
     /// <remarks>
     /// The logits stay at SAM2's native resolution (four image pixels per sample). Marching squares runs on them
@@ -60,12 +66,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// True when <paramref name="segment"/> carries logits that match its declared size.
         /// </summary>
         public static bool HasLogits(SegmentationServiceTypes.SegmentResult segment) =>
-            segment.LogitsWidth > 0 &&
-            segment.LogitsHeight > 0 &&
-            segment.Logits.Length == 2L * segment.LogitsWidth * segment.LogitsHeight;
+            segment.LogitsSize is { Width: > 0, Height: > 0 } size &&
+            segment.LogitsOrigin is not null &&
+            segment.Logits.Length == 2L * size.Width * size.Height;
 
         /// <summary>
-        /// Image pixels per logit sample for <paramref name="segment"/>, 1 when it has no logits.
+        /// Grid pixels per logit sample for <paramref name="segment"/>, 1 when it has no logits.
         /// </summary>
         public static int PixelScale(SegmentationServiceTypes.SegmentResult segment) =>
             HasLogits(segment) && segment.LogitsScale >= 1f ? (int)Math.Round(segment.LogitsScale) : 1;
@@ -73,16 +79,16 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// The segment's logits as a soft byte field at their own resolution, or null data when it has none.
         /// </summary>
-        /// <param name="segment">A segment from a response that asked for logits.</param>
+        /// <param name="segment">One island of a response.</param>
         /// <param name="iso">The logit the server thresholded at; it becomes the boundary at byte 127.5.</param>
         /// <param name="sigma">Smoothing, in logit samples, applied to the traced field; 0 or less leaves it as sent.</param>
         public static SegmentField Decode(SegmentationServiceTypes.SegmentResult segment, double iso, double sigma = DefaultSmoothingSigma)
         {
             if (!HasLogits(segment))
-                return new SegmentField(null, 0, 0, 1, segment.X, segment.Y);
+                return new SegmentField(null, 0, 0, 1, 0, 0);
 
-            int width = segment.LogitsWidth;
-            int height = segment.LogitsHeight;
+            int width = segment.LogitsSize.Width;
+            int height = segment.LogitsSize.Height;
             byte[] half = segment.Logits.ToByteArray();
             float[] logits = new float[width * height];
             for (int i = 0; i < logits.Length; i++)
@@ -100,7 +106,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     soft[i] = ToSoftByte(smoothed[i], iso);
             }
 
-            return new SegmentField(soft, width, height, PixelScale(segment), segment.LogitsX, segment.LogitsY, server);
+            return new SegmentField(soft, width, height, PixelScale(segment), segment.LogitsOrigin.X, segment.LogitsOrigin.Y, server);
         }
 
         /// <summary>

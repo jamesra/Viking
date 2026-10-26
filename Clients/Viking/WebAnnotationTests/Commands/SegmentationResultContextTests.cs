@@ -14,8 +14,8 @@ namespace WebAnnotationTests.Commands
         public void EachResponseKeepsItsOwnRequestedLevel()
         {
             SegmentationResultContexts contexts = new();
-            SegmentationResponse atLevelOne = new() { Width = 100, Height = 100 };
-            SegmentationResponse atLevelFour = new() { Width = 100, Height = 100 };
+            SegmentationResponse atLevelOne = new() { RequestId = 1 };
+            SegmentationResponse atLevelFour = new() { RequestId = 1 };
 
             contexts.Record(atLevelOne, 1);
             contexts.Record(atLevelFour, 4);
@@ -46,21 +46,23 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void MosaicBoundsScaleByTheRequestedLevelNotTheSessionLevel()
+        public void LogitBoundsScaleByTheRequestedLevelNotTheSessionLevel()
         {
-            SegmentationResponse response = new() { OriginX = 2, OriginY = 3, Width = 10, Height = 20 };
+            // 10 x 20 samples of 4 pixels; sample (0, 0)'s top-left pixel is grid pixel (2, 83), Y up, so the logits cover pixel
+            // columns 2..41 and rows 4..83: x in [2, 42), y in [4, 84).
+            SegmentResult segment = SegmentationLogitFieldTests.SegmentWithLogits(10, 20, 4, 2, 83, (_, _) => 0f);
 
-            Geometry.Rectangle atLevelOne = SegmentationViewportSession.MosaicWorldBounds(response, 1);
-            Geometry.Rectangle atLevelFour = SegmentationViewportSession.MosaicWorldBounds(response, 4);
+            Geometry.Rectangle atLevelOne = SegmentationViewportSession.SegmentWorldBounds(segment, 1)!.Value;
+            Geometry.Rectangle atLevelFour = SegmentationViewportSession.SegmentWorldBounds(segment, 4)!.Value;
 
-            Assert.AreEqual(2, atLevelOne.LowerLeft.X);
-            Assert.AreEqual(3, atLevelOne.LowerLeft.Y);
-            Assert.AreEqual(12, atLevelOne.UpperRight.X);
-            Assert.AreEqual(23, atLevelOne.UpperRight.Y);
-            Assert.AreEqual(8, atLevelFour.LowerLeft.X);
-            Assert.AreEqual(12, atLevelFour.LowerLeft.Y);
-            Assert.AreEqual(48, atLevelFour.UpperRight.X);
-            Assert.AreEqual(92, atLevelFour.UpperRight.Y);
+            Assert.AreEqual(2, atLevelOne.Left);
+            Assert.AreEqual(4, atLevelOne.Bottom);
+            Assert.AreEqual(42, atLevelOne.Right);
+            Assert.AreEqual(84, atLevelOne.Top);
+            Assert.AreEqual(8, atLevelFour.Left);
+            Assert.AreEqual(16, atLevelFour.Bottom);
+            Assert.AreEqual(168, atLevelFour.Right);
+            Assert.AreEqual(336, atLevelFour.Top);
         }
     }
 }

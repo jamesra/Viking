@@ -28,9 +28,9 @@ namespace WebAnnotation.UI.AutoPolygonize
     /// A batch starts once the view has been quiet for 500 ms. The view snapshot taken when that window opens is
     /// compared with the live camera when it closes, so a UI hitch cannot pass the timer. Circles go out one at a
     /// time, nearest the cursor first (the view centre when the cursor is off the view). The next circle is picked
-    /// again before each request. A camera move cancels the upload. It cancels the queue only when
-    /// <see cref="SegmentationCameraPolicy"/> says the move made results stale. Otherwise the queue keeps sending
-    /// its circles that are still on screen, and the next batch collects the ones that came into view.
+    /// again before each request. A camera move cancels the upload but never the queue: a result on the
+    /// single-resolution tile grid does not depend on the camera (<see cref="SegmentationCameraPolicy"/>), so the queue
+    /// keeps sending its circles that are still on screen, and the next batch collects the ones that came into view.
     /// Section changes cancel both phases. An interactive <see cref="SegmentationCommand"/> cancels proposal work
     /// but leaves an in-flight viewport upload so that command can adopt the same image.
     /// </summary>
@@ -63,7 +63,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         private readonly SectionViewerControl parent;
         private readonly Action requestAnnotationLoad;
         private readonly AutoPolygonizeCache cache = new();
-        private readonly SharedViewportImageLease viewportImageLease;
+        private readonly SharedViewportImageLease viewportImageLease = new();
         private readonly Dictionary<long, AutoPolygonizeProposal> proposals = [];
         private readonly object proposalLock = new();
 
@@ -96,11 +96,6 @@ namespace WebAnnotation.UI.AutoPolygonize
         private readonly List<ProcessBatch> processBatches = [];
         private readonly object lifecycleLock = new();
         private Rectangle lastViewBounds;
-        /// <summary>
-        /// Last submitted tile pyramid level from <see cref="SegmentationViewportSession.ResolveTileDownsample"/>.
-        /// A change in that level drops stale proposals and re-queues. The current ceiling is 1.
-        /// </summary>
-        private int lastResolvedTileDownsample;
         private AutoPolygonizeProposal? hoveredProposal;
 
         /// <summary>
@@ -160,7 +155,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// One uploaded viewport plus the per-response polygonize tasks that still
-        /// own that server image. Survives camera moves after upload.
+        /// use it. Survives camera moves after upload.
         /// </summary>
         private sealed class ProcessBatch(SegmentationViewportSession session)
         {
@@ -191,19 +186,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         {
             this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
             this.requestAnnotationLoad = requestAnnotationLoad ?? throw new ArgumentNullException(nameof(requestAnnotationLoad));
-            viewportImageLease = new SharedViewportImageLease(cache);
-            // Image releases stay subscribed even while disabled: a SegmentationCommand holds images in this
-            // cache and its release must still delete the server image. Geometry and forget events only
-            // matter while enabled, so SetEnabled/Stop attach and detach them.
-            cache.ImageLeaseReleased += OnImageLeaseReleased;
-            cache.ImageLeaseReleased += viewportImageLease.Forget;
         }
-
-        /// <summary>Cache that owns SAM2 image holds. Segmentation commands take and release holds here.</summary>
-        internal AutoPolygonizeCache ImageCache => cache;
-
-        /// <summary>Current-view upload shared with <see cref="SegmentationCommand"/>.</summary>
-        internal SharedViewportImageLease ViewportImages => viewportImageLease;
 
         public bool IsEnabled => enabled;
 
@@ -245,7 +228,6 @@ namespace WebAnnotation.UI.AutoPolygonize
                 };
                 idleTimer.Elapsed += OnIdleElapsed;
                 lastViewBounds = GetCurrentViewportBounds();
-                lastResolvedTileDownsample = SegmentationViewportSession.ResolveTileDownsample(GetCurrentDownsample());
                 lastCameraChangeUtc = DateTime.UtcNow;
                 RestartIdleTimer();
             }
@@ -322,13 +304,10 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Restarts settle when the view moved or the resolved tile pyramid level changed.
-        /// Tile results depend on the submitted level, not on the viewport rectangle, so the
-        /// in-flight SegmentTiles call, finished proposals and the completion cache are only
-        /// discarded when the model's profile says the move made them stale
-        /// (<see cref="SegmentationCameraPolicy"/>): any view move for a full-viewport model, a changed
-        /// level for multi-resolution tiles. For single-resolution tiles that never happens, so a pan or zoom only stops the queue
-        /// after the current circle; the next idle batch orders the rest from the new view center.
+        /// Restarts settle when the view moved. A result on the single-resolution tile grid depends on the prompts and the fixed
+        /// tile level, not on the viewport rectangle (<see cref="SegmentationCameraPolicy"/>), so the in-flight SegmentTiles
+        /// call, finished proposals and the completion cache are kept: a pan or zoom only stops the queue after the current
+        /// circle; the next idle batch orders the rest from the new view center.
         /// </summary>
         public void OnCameraChanged()
         {
@@ -336,58 +315,21 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
 
             Rectangle current = GetCurrentViewportBounds();
-            int resolvedTile = SegmentationViewportSession.ResolveTileDownsample(GetCurrentDownsample());
-            bool boundsMoved = !SegmentationViewportSession.AreViewportBoundsSimilar(lastViewBounds, current);
-            SegmentationModelProfile profile = SegmentationViewportSession.ModelProfile;
-            bool tileLevelChanged = SegmentationCameraPolicy.TileLevelChanged(
-                profile, lastResolvedTileDownsample, resolvedTile);
-            if (!boundsMoved && !tileLevelChanged)
+            if (SegmentationViewportSession.AreViewportBoundsSimilar(lastViewBounds, current))
                 return;
-
-            SegmentationCameraPolicy.CameraMoveResponse response = SegmentationCameraPolicy.OnCameraMoved(
-                profile, boundsMoved, tileLevelChanged);
 
             lastViewBounds = current;
             lastCameraChangeUtc = DateTime.UtcNow;
-            if (response.ReorderQueue)
-                Interlocked.Increment(ref cameraGeneration);
-            if (response.DropFinishedResults)
-            {
-                DropProposalsForTileDownsampleChange();
-                cache.InvalidateCompletionsAtOtherTileDownsample(resolvedTile);
-            }
-
-            lastResolvedTileDownsample = resolvedTile;
+            Interlocked.Increment(ref cameraGeneration);
             viewportImageLease.ForgetIfViewMoved(current, GetCurrentDownsample());
             CancelUploadPhase();
-            if (response.CancelInFlightSegmentation)
-                CancelProcessPhase();
             RestartIdleTimer();
         }
 
         /// <summary>
-        /// Removes on-screen proposal rings when the submitted tile level changes so a
-        /// zoom out past DS=1 (or zoom in back to DS=1) does not leave the old masks.
-        /// </summary>
-        private void DropProposalsForTileDownsampleChange()
-        {
-            lock (proposalLock)
-            {
-                foreach (AutoPolygonizeProposal proposal in proposals.Values)
-                    proposal.DisposeMaskOverlay();
-
-                proposals.Clear();
-            }
-
-            hoveredProposal = null;
-            parent.Invalidate();
-        }
-
-        /// <summary>
-        /// Drops proposals and image leases from the previous segmentation server.
+        /// Drops proposals and the shared viewport capture from the previous segmentation server.
         /// When <paramref name="newEndpointIsUsable"/> and auto-polygonize is on, restarts
         /// the idle settle so the current view is uploaded to the new server.
-        /// Call before the gRPC channel resets so DeleteImage still reaches the old server.
         /// </summary>
         public void OnSegmentationEndpointChanged(bool newEndpointIsUsable)
         {
@@ -1286,15 +1228,12 @@ namespace WebAnnotation.UI.AutoPolygonize
                     uploadToken).ConfigureAwait(false);
                 SegmentationDiag.Log(
                     $"RunBatch CaptureSharedViewportAsync done null={uploadContext is null} " +
-                    $"imageId={uploadContext?.ImageId} wh={uploadContext?.Width}x{uploadContext?.Height}");
+                    $"wh={uploadContext?.Width}x{uploadContext?.Height}");
                 if (uploadContext is null)
                     return;
 
                 if (uploadToken.IsCancellationRequested || !enabled || parent.CurrentCommand is SegmentationCommand)
                     return;
-
-                if (uploadContext.Value.ImageId != 0)
-                    cache.AcquireBatchHold(uploadContext.Value.ImageId);
 
                 long uploadMs = stepTimer.ElapsedMilliseconds;
                 Debug.WriteLine(
@@ -1317,22 +1256,19 @@ namespace WebAnnotation.UI.AutoPolygonize
                 List<LocationObj> queue = candidates;
 
                 // Tiles around every queued circle go up in the background, nearest the cursor first, so most requests
-                // find them already encoded on the server. Only the fixed tile grid takes tiles; a full-viewport image
-                // was uploaded whole. Stopped when the queue is done: what is left belongs to circles no longer sent.
+                // find them already encoded on the server. Stopped when the queue is done: what is left belongs to
+                // circles no longer sent.
                 prefetchCts = CancellationTokenSource.CreateLinkedTokenSource(processToken);
-                if (uploadContext.Value.ImageId == 0)
+                LiveView startView = await ReadLiveViewAsync().ConfigureAwait(false);
+                Vector2 priority = AutoPolygonizeSelection.QueuePriorityPoint(startView.Cursor, startView.Bounds);
+                List<Rectangle> regions = [];
+                foreach (LocationObj circle in queue.OrderBy(circle => Vector2.DistanceSquared(circle.VolumePosition, priority)))
                 {
-                    LiveView startView = await ReadLiveViewAsync().ConfigureAwait(false);
-                    Vector2 priority = AutoPolygonizeSelection.QueuePriorityPoint(startView.Cursor, startView.Bounds);
-                    List<Rectangle> regions = [];
-                    foreach (LocationObj circle in queue.OrderBy(circle => Vector2.DistanceSquared(circle.VolumePosition, priority)))
-                    {
-                        if (TryPrefetchRegion(circle, transform, out Rectangle region))
-                            regions.Add(region);
-                    }
-
-                    processBatch.AddResponseTask(localUploadSession.PrefetchTilesAsync(regions, prefetchCts.Token));
+                    if (TryPrefetchRegion(circle, transform, out Rectangle region))
+                        regions.Add(region);
                 }
+
+                processBatch.AddResponseTask(localUploadSession.PrefetchTilesAsync(regions, prefetchCts.Token));
 
                 // One circle's request. Returns once its response is handed to ProcessResponseAsync.
                 async Task SendCircleAsync(LocationObj circle, List<LocationObj> visibleForPrompts)
@@ -1353,37 +1289,27 @@ namespace WebAnnotation.UI.AutoPolygonize
                     IReadOnlyList<SegmentationSeed> startingBoxes = [startingPrompt.Seed];
                     IReadOnlyList<Vector2> keepPoints = [startingPrompt.Center];
 
-                    IReadOnlyList<Vector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
-                        visibleForPrompts,
-                        transform,
-                        foreground,
-                        Global.AnnotationSettings.SegmentationPointRadius * downsample,
-                        [circle.ID],
-                        circle.ParentID);
-                    SegmentationMaskUnion backgroundMask = CircleSegmentationPrompts.CreateOtherStructureBackgroundMask(
+                    SegmentationBackgroundShapes backgroundShapes = CircleSegmentationPrompts.CreateOtherStructureBackgroundShapes(
                         visibleForPrompts, transform, [circle.ID], circle.ParentID);
                     SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
-                        "auto-circle-batch", [circle.ID], circle.ParentID, visibleForPrompts, foreground, background));
+                        "auto-circle-batch", [circle.ID], circle.ParentID, visibleForPrompts, foreground, null, backgroundShapes));
                     long promptMs = proposalTimer.ElapsedMilliseconds;
 
                     long requestTicket = NextRequestTicket();
                     Stopwatch segmentTimer = Stopwatch.StartNew();
                     var response = await localUploadSession.SegmentAsync(
                         foreground,
-                        background,
+                        [],
                         processToken,
                         startingBoxes,
                         requestId: (ulong)requestTicket,
-                        backgroundMask: backgroundMask).ConfigureAwait(false);
+                        backgroundShapes: backgroundShapes).ConfigureAwait(false);
                     long segmentMs = segmentTimer.ElapsedMilliseconds;
                     if (response is null)
                         return;
 
                     try
                     {
-                        // The live level and viewport are read here, before the response is handed to a
-                        // worker, so processing never blocks a pool thread on the UI dispatcher.
-                        LiveViewCheck liveCheck = await CaptureLiveViewCheckAsync(processBatch.Session, response).ConfigureAwait(false);
                         Task responseTask = ProcessResponseAsync(
                             processBatch.Session,
                             circle,
@@ -1391,7 +1317,6 @@ namespace WebAnnotation.UI.AutoPolygonize
                             downsample,
                             simplifyTolerance,
                             foreground,
-                            background,
                             response,
                             promptMs,
                             segmentMs,
@@ -1399,7 +1324,6 @@ namespace WebAnnotation.UI.AutoPolygonize
                             batchTimer,
                             batchId,
                             generation,
-                            liveCheck,
                             processToken,
                             requestTicket,
                             keepPoints,
@@ -1664,63 +1588,15 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// The live camera at the moment a response arrived, read on the UI thread by the caller so
-        /// <see cref="ProcessResponseAsync"/> never blocks a worker thread on the dispatcher.
-        /// </summary>
-        private readonly struct LiveViewCheck
-        {
-            public LiveViewCheck(int resultLevel, int liveLevel, bool viewportUnchanged)
-            {
-                ResultLevel = resultLevel;
-                LiveLevel = liveLevel;
-                ViewportUnchanged = viewportUnchanged;
-            }
-
-            /// <summary>Tile level the response was requested at (fixed per response, not the session's current level).</summary>
-            public int ResultLevel { get; }
-
-            /// <summary>Tile level the live camera would submit now.</summary>
-            public int LiveLevel { get; }
-
-            /// <summary>False when a viewport-dependent model's result no longer matches the camera.</summary>
-            public bool ViewportUnchanged { get; }
-        }
-
-        /// <summary>
-        /// Reads the live tile level and viewport through the dispatcher without blocking. Await it before handing
-        /// the response to <see cref="ProcessResponseAsync"/>.
-        /// </summary>
-        private static async Task<LiveViewCheck> CaptureLiveViewCheckAsync(
-            SegmentationViewportSession session,
-            Viking.gRPC.SegmentationServiceTypes.V1.SegmentationResponse response)
-        {
-            SegmentationModelProfile profile = SegmentationViewportSession.ModelProfile;
-            int resultLevel = session.DownsampleFor(response);
-            int liveLevel = profile.TileLevelCanChange
-                ? await session.GetLiveTileDownsampleAsync().ConfigureAwait(false)
-                : resultLevel;
-
-            bool viewportUnchanged = true;
-            if (profile.ResultDependsOnViewport)
-            {
-                Rectangle liveBounds = await session.GetLiveViewportBoundsAsync().ConfigureAwait(false);
-                viewportUnchanged = SegmentationViewportSession.AreViewportBoundsSimilar(session.ViewportBounds, liveBounds);
-            }
-
-            return new LiveViewCheck(resultLevel, liveLevel, viewportUnchanged);
-        }
-
-        /// <summary>
-        /// Turns one SegmentImage response into a published proposal. The mask is polygonized and simplified on a
+        /// Turns one SegmentTilesStream response into a published proposal. The mask is polygonized and simplified on a
         /// worker (pure CPU work); everything that touches the location store, colors, the cache or the proposal
         /// list then runs as one UI-thread step, so no store access races a commit or a property change.
-        /// Drops the result without caching if the section changed, or (multi-resolution only) the camera now
-        /// resolves to a different tile level (<paramref name="liveCheck"/>), so a level change can retry.
-        /// A pan or zoom inside one level keeps the result. An empty union is a LastModified skip (no overlay)
-        /// so the next idle batch does not SegmentImage the same circle again. GPU mask textures are created
+        /// Drops the result without caching if the section changed; a pan or zoom keeps it. A circle becomes one
+        /// polygon, so only island 1 of the response (the island with the largest trusted area, the circle's own
+        /// object) is traced; the other islands are dropped. An empty union is a LastModified skip (no overlay)
+        /// so the next idle batch does not segment the same circle again. GPU mask textures are created
         /// later on the UI thread in <see cref="PublishProposalOnUiThread"/>.
         /// </summary>
-        /// <param name="liveCheck">Null skips the level check (single-circle refresh, which segments against the live view).</param>
         private async Task ProcessResponseAsync(
             SegmentationViewportSession session,
             LocationObj circle,
@@ -1728,7 +1604,6 @@ namespace WebAnnotation.UI.AutoPolygonize
             double downsample,
             double simplifyTolerance,
             IReadOnlyList<Vector2> foreground,
-            IReadOnlyList<Vector2> background,
             Viking.gRPC.SegmentationServiceTypes.V1.SegmentationResponse response,
             long promptMs,
             long segmentMs,
@@ -1736,7 +1611,6 @@ namespace WebAnnotation.UI.AutoPolygonize
             Stopwatch batchTimer,
             long batchId,
             int generation,
-            LiveViewCheck? liveCheck,
             CancellationToken processToken,
             long requestTicket,
             IReadOnlyList<Vector2>? extraKeepPoints = null,
@@ -1744,18 +1618,6 @@ namespace WebAnnotation.UI.AutoPolygonize
         {
             if (processToken.IsCancellationRequested || !enabled || !cache.IsGenerationCurrent(circle.ID, generation))
                 return;
-
-            if (liveCheck is LiveViewCheck check &&
-                !SegmentationCameraPolicy.IsResultStillValid(
-                    SegmentationViewportSession.ModelProfile,
-                    check.ResultLevel,
-                    check.LiveLevel,
-                    check.ViewportUnchanged))
-            {
-                Debug.WriteLine(
-                    $"[SegmentationProfile] Auto batch={batchId} location={circle.ID} dropped: view or tile level changed before publish");
-                return;
-            }
 
             Stopwatch polygonTimer = Stopwatch.StartNew();
             (Polygon? Polygon, AutoPolygonizeMaskOverlay? Mask, int VerticesBeforeSimplify) processed = await Task.Run(() =>
@@ -1767,8 +1629,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                     : foreground;
                 IReadOnlyList<Polygon> polygons = session.CreatePolygonsFromResponse(
                     response,
-                    preserveHolesContainingWorldPoints: background,
-                    keepComponentsContainingWorldPoints: keepPoints);
+                    keepComponentsContainingWorldPoints: keepPoints,
+                    primaryIslandOnly: true);
                 Polygon? first = polygons.FirstOrDefault();
                 if (first is null)
                     return ((Polygon?)null, (AutoPolygonizeMaskOverlay?)null, 0);
@@ -1821,7 +1683,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     : foreground;
                 IReadOnlyList<AutoPolygonizeMaskSource> maskSources = processed.Mask is null
                     ? []
-                    : [new AutoPolygonizeMaskSource(processed.Mask, sourceKeepPoints, background)];
+                    : [new AutoPolygonizeMaskSource(processed.Mask, sourceKeepPoints)];
                 AutoPolygonizeProposal proposal = new(
                     this,
                     circle.ID,
@@ -1838,7 +1700,6 @@ namespace WebAnnotation.UI.AutoPolygonize
                     locationIds: [circle.ID],
                     parentId: circle.ParentID,
                     foregroundPrompts: foreground,
-                    backgroundPrompts: background,
                     startingBoxes: startingBoxes,
                     maskSources: maskSources)
                 {
@@ -1868,7 +1729,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     $"prompts={promptMs}ms segmentRpc={segmentMs}ms polygonize={polygonMs}ms " +
                     $"simplifyAndViews={renderPreparationMs}ms vertices={processed.VerticesBeforeSimplify}->{ready.TotalUniqueVertices} " +
                     $"proposal={proposalTimer.ElapsedMilliseconds}ms " +
-                    $"batchElapsed={batchTimer.ElapsedMilliseconds}ms foreground={foreground.Count} background={background.Count}");
+                    $"batchElapsed={batchTimer.ElapsedMilliseconds}ms foreground={foreground.Count}");
             }).Task.ConfigureAwait(false);
         }
 
@@ -2124,8 +1985,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
 
             toCancel.CancelPendingWork();
-            if (toCancel.CurrentImageId.HasValue)
-                _ = toCancel.DeleteCurrentImageAsync();
+            toCancel.ClearUploadedView();
         }
 
         /// <summary>
@@ -2160,8 +2020,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Finally of <see cref="RunBatchAsync"/>. If the session reached process
-        /// phase, wait for response tasks then delete the server image; otherwise
-        /// delete an unused upload.
+        /// phase, wait for response tasks; otherwise cancel and forget the unused upload.
         /// </summary>
         private async Task FinishUploadOrProcessBatchAsync(
             SegmentationViewportSession? localUploadSession,
@@ -2183,13 +2042,10 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
 
             localUploadSession.CancelPendingWork();
-            if (localUploadSession.CurrentImageId is ulong uploadedId && !cache.IsImageHeld(uploadedId))
-                await localUploadSession.DeleteCurrentImageAsync().ConfigureAwait(false);
-            else
-                localUploadSession.ClearImageId();
+            localUploadSession.ClearUploadedView();
         }
 
-        /// <summary>Waits for remaining polygonize tasks, then DeleteImage so the SAM2 cache does not keep an orphan.</summary>
+        /// <summary>Waits for remaining polygonize tasks, then drops the batch from the live set.</summary>
         private async Task FinishProcessBatchAsync(ProcessBatch batch)
         {
             if (!batch.TryBeginFinish())
@@ -2213,12 +2069,6 @@ namespace WebAnnotation.UI.AutoPolygonize
                 lock (lifecycleLock)
                 {
                     processBatches.Remove(batch);
-                }
-
-                if (batch.Session.CurrentImageId is ulong imageId)
-                {
-                    batch.Session.ClearImageId();
-                    cache.ReleaseBatchHold(imageId);
                 }
             }
         }
@@ -2318,24 +2168,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                 parent.Invalidate();
         }
 
-        private void OnImageLeaseReleased(ulong imageId)
-        {
-            ObserveFaults(DeleteLeasedImageAsync(imageId), "delete leased image");
-        }
-
-        /// <summary>Creates a short-lived session only to DeleteImage a lease the cache no longer holds.</summary>
-        private async Task DeleteLeasedImageAsync(ulong imageId)
-        {
-            var session = new SegmentationViewportSession(parent);
-            if (!session.TryInitializeClient())
-                return;
-
-            await session.DeleteImageByIdAsync(imageId).ConfigureAwait(false);
-        }
-
         /// <summary>
-        /// Single-ID refresh after a translate/scale/resize. Reuses the leased SAM2 image when zoom
-        /// and uploaded bounds still apply; otherwise uploads the current view. NotFound re-upload
+        /// Single-ID refresh after a translate/scale/resize. Reuses the shared viewport capture when the
+        /// live view still matches it; otherwise captures the current view. Missing-tile re-upload
         /// is owned by <see cref="SegmentationViewportSession.SegmentAsync"/>.
         /// </summary>
         private async Task RunForLocationAsync(long locationId, int sectionNumber, int generation)
@@ -2385,50 +2220,15 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
 
             double downsample = GetCurrentDownsample();
-            bool acquiredHold = false;
-            ulong? holdImageId = null;
             try
             {
-                bool reuse = cache.TryGetUploadContext(locationId, out AutoPolygonizeUploadContext uploadContext) &&
-                             AutoPolygonizeSelection.CanReuseUploadedImage(uploadContext, downsample, circle.VolumePosition);
-                if (reuse && uploadContext.ImageId != 0)
-                {
-                    session.AdoptUploadedImage(
-                        uploadContext.ImageId,
-                        uploadContext.WorldBounds,
-                        uploadContext.Width,
-                        uploadContext.Height);
-                    if (uploadContext.MatchesViewportForReuse(viewBounds, downsample))
-                        viewportImageLease.Publish(uploadContext);
-                }
-                else if (reuse)
-                {
-                    // Tiled mode: ImageId is 0. Refresh tiles on this session; do not Adopt/DeleteImage.
-                    AutoPolygonizeUploadContext? uploaded = await CaptureSharedViewportAsync(
-                        session,
-                        viewBounds,
-                        downsample,
-                        processToken).ConfigureAwait(false);
-                    if (uploaded is null)
-                        return;
-                }
-                else
-                {
-                    AutoPolygonizeUploadContext? uploaded = await CaptureSharedViewportAsync(
-                        session,
-                        viewBounds,
-                        downsample,
-                        processToken).ConfigureAwait(false);
-                    if (uploaded is null)
-                        return;
-
-                    if (uploaded.Value.ImageId != 0)
-                    {
-                        cache.AcquireBatchHold(uploaded.Value.ImageId);
-                        acquiredHold = true;
-                        holdImageId = uploaded.Value.ImageId;
-                    }
-                }
+                AutoPolygonizeUploadContext? uploaded = await CaptureSharedViewportAsync(
+                    session,
+                    viewBounds,
+                    downsample,
+                    processToken).ConfigureAwait(false);
+                if (uploaded is null)
+                    return;
 
                 IVolumeToSectionTransform transform = parent.Section.ActiveSectionToVolumeTransform;
                 if (!CircleSegmentationPrompts.TryCreateStartingPrompt(
@@ -2445,41 +2245,25 @@ namespace WebAnnotation.UI.AutoPolygonize
                 IReadOnlyList<Vector2> keepPoints = [startingPrompt.Center];
 
                 List<LocationObj> visibleForPrompts = [.. CollectVisibleLocationObjs(viewBounds)];
-                IReadOnlyList<Vector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
-                    visibleForPrompts,
-                    transform,
-                    foreground,
-                    Global.AnnotationSettings.SegmentationPointRadius * downsample,
-                    [circle.ID],
-                    circle.ParentID);
-                SegmentationMaskUnion backgroundMask = CircleSegmentationPrompts.CreateOtherStructureBackgroundMask(
+                SegmentationBackgroundShapes backgroundShapes = CircleSegmentationPrompts.CreateOtherStructureBackgroundShapes(
                     visibleForPrompts, transform, [circle.ID], circle.ParentID);
                 SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
-                    "auto-circle", [circle.ID], circle.ParentID, visibleForPrompts, foreground, background));
+                    "auto-circle", [circle.ID], circle.ParentID, visibleForPrompts, foreground, null, backgroundShapes));
 
                 Stopwatch proposalTimer = Stopwatch.StartNew();
                 long requestTicket = NextRequestTicket();
                 var response = await session.SegmentAsync(
                     foreground,
-                    background,
+                    [],
                     processToken,
                     startingBoxes,
                     requestId: (ulong)requestTicket,
-                    backgroundMask: backgroundMask).ConfigureAwait(false);
+                    backgroundShapes: backgroundShapes).ConfigureAwait(false);
                 if (response is null)
                     return;
 
                 downsample = GetCurrentDownsample();
                 AutoPolygonizeUploadContext? afterSegment = SharedViewportImageLease.TryCreateContext(session);
-                if (afterSegment is { ImageId: not 0 } next &&
-                    holdImageId is ulong held &&
-                    held != next.ImageId)
-                {
-                    cache.AcquireBatchHold(next.ImageId);
-                    cache.ReleaseBatchHold(held);
-                    holdImageId = next.ImageId;
-                }
-
                 int liveGeneration = cache.MarkPending(circle.ID, sectionNumber, circle, afterSegment);
                 await ProcessResponseAsync(
                     session,
@@ -2488,7 +2272,6 @@ namespace WebAnnotation.UI.AutoPolygonize
                     downsample,
                     AutoPolygonizeSelection.CreatedShapeSimplifyWorld(parent.Downsample),
                     foreground,
-                    background,
                     response,
                     0,
                     0,
@@ -2496,7 +2279,6 @@ namespace WebAnnotation.UI.AutoPolygonize
                     proposalTimer,
                     0,
                     liveGeneration,
-                    liveCheck: null,
                     processToken,
                     requestTicket,
                     keepPoints,
@@ -2511,12 +2293,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
             finally
             {
-                if (acquiredHold && holdImageId is ulong id)
-                    cache.ReleaseBatchHold(id);
-                else if (session.CurrentImageId is ulong leftover && !cache.IsImageHeld(leftover))
-                    await session.DeleteCurrentImageAsync().ConfigureAwait(false);
-                else
-                    session.ClearImageId();
+                session.ClearUploadedView();
             }
         }
 
@@ -2542,7 +2319,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Reuses a viewport-similar upload or runs one capture shared with <see cref="SegmentationCommand"/>.
-        /// Installs the image on <paramref name="session"/>. The lease holds the id; callers add their own hold while segmenting.
+        /// A <paramref name="session"/> that joined another caller's capture records the view itself.
         /// </summary>
         private async Task<AutoPolygonizeUploadContext?> CaptureSharedViewportAsync(
             SegmentationViewportSession session,
@@ -2575,15 +2352,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return null;
             }
 
-            if (ready.ImageId != 0 && session.CurrentImageId != ready.ImageId)
-            {
-                session.AdoptUploadedImage(
-                    ready.ImageId,
-                    ready.WorldBounds,
-                    ready.Width,
-                    ready.Height);
-            }
-            else if (ready.ImageId == 0 && !session.HasUploadedTiles)
+            if (!session.HasUploadedTiles)
             {
                 session.ViewportBounds = viewBounds;
                 if (!await session.UploadCurrentImageAsync(cancellationToken).ConfigureAwait(false))
@@ -2595,7 +2364,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Runs only for the lease starter. Joined callers wait on the same task and then adopt.
+        /// Runs only for the capture starter. Joined callers wait on the same task and then record the view.
         /// </summary>
         private static async Task<AutoPolygonizeUploadContext?> UploadSessionForLeaseAsync(
             SegmentationViewportSession session,
@@ -3078,19 +2847,6 @@ namespace WebAnnotation.UI.AutoPolygonize
                     ? members.Max(member => member.CircleRadius)
                     : locationIds.Select(id => Store.Locations.GetObjectByID(id, false)?.Radius ?? 0).DefaultIfEmpty(0).Max();
 
-                Rectangle viewBounds = GetCurrentViewportBounds();
-                HashSet<long> involved = [.. locationIds];
-                List<LocationObj> visibleForPrompts = [.. CollectVisibleLocationObjs(viewBounds)];
-                IReadOnlyList<Vector2> background = CircleSegmentationPrompts.CreateOtherStructureBackgroundVolumePoints(
-                        visibleForPrompts,
-                        parent.Section.ActiveSectionToVolumeTransform,
-                        foreground,
-                        Global.AnnotationSettings.SegmentationPointRadius * downsample,
-                        involved,
-                        parentId);
-                SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
-                    "auto-overlap-merge", involved, parentId, visibleForPrompts, foreground, background));
-
                 List<Polygon> originalPolygons = [.. promptPolygons];
                 AutoPolygonizeMaskOverlay? mergedMask = AutoPolygonizeMaskOverlay.TryOr(
                     [.. members.Select(member => member.MaskOverlay)]);
@@ -3107,7 +2863,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 List<AutoPolygonizeMaskSource> maskSources = mergedMask is null
                     ? []
-                    : [new AutoPolygonizeMaskSource(mergedMask, foreground, background)];
+                    : [new AutoPolygonizeMaskSource(mergedMask, foreground)];
                 double simplifyTolerance = AutoPolygonizeSelection.CreatedShapeSimplifyWorld(parent.Downsample);
                 double holeDrop = Global.AnnotationSettings.SegmentationHoleDropFraction;
                 int cleanupRadius = Global.AnnotationSettings.SegmentationEdgeCleanupRadius;
@@ -3195,8 +2951,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                         parentId,
                         overlapRound,
                         foreground,
-                        background,
-                        [],
+                        startingBoxes: [],
                         maskSources,
                         fixedPolygons,
                         members)

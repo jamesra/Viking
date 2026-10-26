@@ -33,8 +33,8 @@ namespace WebAnnotation
             bool endpointChanged = !string.Equals(previous, normalized, StringComparison.OrdinalIgnoreCase);
             if (endpointChanged)
             {
-                // The capabilities belong to the old server; the next connection asks the new one.
-                WebAnnotation.UI.Commands.Segmentation.SegmentationViewportSession.ResetModelProfile();
+                // The model id belongs to the old server; the next connection asks the new one.
+                WebAnnotation.UI.Commands.Segmentation.SegmentationViewportSession.ResetServerModel();
                 SegmentationServiceHealth.Reset();
                 bool newEndpointIsUsable = Global.HasValidSegmentationServiceUrl(normalized);
                 AutoPolygonizeResubmit?.Invoke(newEndpointIsUsable);

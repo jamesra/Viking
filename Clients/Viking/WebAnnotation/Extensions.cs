@@ -297,75 +297,14 @@ namespace WebAnnotation
     }
 
     /// <summary>
-    /// Extensions for generating representative points from annotations for segmentation background prompts.
+    /// Interior points of polygons, used for SAM2 foreground clicks.
     /// </summary>
     public static class AnnotationPointExtensions
     {
-        internal static readonly PolygonNegativePromptCache PolygonPromptCache = new();
-
-        /// <summary>
-        /// Returns representative points for a collection of annotations.
-        /// For polygons: one centroid per constrained-triangulation face of the
-        /// unsmoothed control-point ring (<see cref="LocationObj.MosaicShape"/>).
-        /// <see cref="LocationObj.VolumeShape"/> is <c>GetSmoothedShape</c> for
-        /// CURVEPOLYGON and must not be meshed here — interpolation multiplies
-        /// faces. Polygon avoid marks are the centroid of the largest MosaicShape
-        /// Delaunay triangle (one point), not every face. Falls back to the polygon
-        /// centroid if meshing fails and that centroid is inside. For lines/points:
-        /// vertices. For circles/ellipses: center.
-        /// Polygon samples are cached by location ID and LastModified so a batch of
-        /// SegmentImage calls does not retriangulate the same neighbors.
-        /// </summary>
-        /// <returns>Points in section/mosaic coordinates.</returns>
-        public static IReadOnlyList<Vector2> GetAnnotationRepresentativePoints(IEnumerable<LocationObj> annotations)
-        {
-            if (annotations is null)
-                return [];
-
-            List<Vector2> result = [];
-            foreach (LocationObj loc in annotations)
-            {
-                if (loc?.MosaicShape is null)
-                    continue;
-
-                LocationType typeCode = loc.TypeCode;
-
-                switch (typeCode)
-                {
-                    case LocationType.POLYGON:
-                    case LocationType.CURVEPOLYGON:
-                    case LocationType.CLOSEDCURVE:
-                        result.AddRange(PolygonPromptCache.GetOrAdd(
-                            loc.ID,
-                            loc.LastModified,
-                            typeCode,
-                            () => TryGetUnsmoothedPolygonRepresentativePoints(loc)));
-                        break;
-                    case LocationType.POLYLINE:
-                    case LocationType.OPENCURVE:
-                        Vector2[] linePoints = loc.MosaicShape.ToPoints();
-                        if (linePoints?.Length > 0)
-                            result.AddRange(linePoints);
-                        break;
-                    case LocationType.POINT:
-                        result.Add(loc.Position);
-                        break;
-                    case LocationType.CIRCLE:
-                    case LocationType.ELLIPSE:
-                        result.Add(loc.MosaicShape.BoundingBox().Center);
-                        break;
-                    default:
-                        break;
-                }
-            }
-            return result;
-        }
-
         /// <summary>
         /// One interior point per constrained Delaunay triangle, in mesh order. Triangulate is
         /// centroid-relative, so each face centroid is translated back. SAM2 foreground clicks
         /// decimate this set in <see cref="WebAnnotation.UI.Commands.Segmentation.PolygonSegmentationPrompts"/>.
-        /// Neighbor avoid marks use <see cref="GetLargestTriangleCentroidPoint"/> instead.
         /// </summary>
         internal static IReadOnlyList<Vector2> GetPolygonTriangleCentroidPoints(Polygon polygon)
             => [.. GetPolygonTriangleCentroidSamples(polygon).Select(sample => sample.Point)];
@@ -422,131 +361,6 @@ namespace WebAnnotation
             Vector2 fallback = polygon.Centroid;
             return polygon.Contains(fallback) ? [new PolygonTriangleCentroid(fallback, 0)] : [];
         }
-
-        /// <summary>
-        /// Centroid of the largest constrained Delaunay face whose centroid is inside
-        /// the ring. Called from the polygon negative-prompt factory so dense neighbors
-        /// send one avoid mark, not one per triangle. Fallback is the polygon centroid
-        /// when meshing fails and that point is inside.
-        /// </summary>
-        internal static IReadOnlyList<Vector2> GetLargestTriangleCentroidPoint(Polygon polygon)
-        {
-            if (polygon is null)
-                return [];
-
-            try
-            {
-                TriangulationMesh<IVertex2D<PolygonIndex>> mesh = polygon.Triangulate();
-                if (mesh?.Faces.Count > 0)
-                {
-                    Vector2 origin = polygon.Centroid;
-                    Vector2 best = default;
-                    double bestArea = double.NegativeInfinity;
-                    bool found = false;
-                    foreach (IFace face in mesh.Faces)
-                    {
-                        if (!face.IsTriangle())
-                            continue;
-
-                        try
-                        {
-                            Vector2 centroid = mesh.Centroid(face) + origin;
-                            if (!polygon.Contains(centroid))
-                                continue;
-
-                            double area = mesh.ToTriangle(face).Area;
-                            if (area <= bestArea)
-                                continue;
-
-                            bestArea = area;
-                            best = centroid;
-                            found = true;
-                        }
-                        catch (ArgumentException)
-                        {
-                        }
-                    }
-
-                    if (found)
-                        return [best];
-                }
-            }
-            catch (EdgesIntersectTriangulationException)
-            {
-            }
-            catch (NonconformingTriangulationException)
-            {
-            }
-            catch (ArgumentException)
-            {
-            }
-
-            Vector2 fallback = polygon.Centroid;
-            return polygon.Contains(fallback) ? [fallback] : [];
-        }
-
-        /// <summary>
-        /// Largest MosaicShape Delaunay-face centroid of the stored control-point ring.
-        /// Called from the polygon cache factory. Do not mesh VolumeShape here.
-        /// </summary>
-        private static IReadOnlyList<Vector2> TryGetUnsmoothedPolygonRepresentativePoints(LocationObj loc)
-        {
-            try
-            {
-                SqlGeometry mosaic = loc?.MosaicShape;
-                if (mosaic is null)
-                    return [];
-
-                if (mosaic.GeometryType() != SupportedGeometryType.POLYGON &&
-                    mosaic.GeometryType() != SupportedGeometryType.CURVEPOLYGON)
-                {
-                    return [];
-                }
-
-                return GetLargestTriangleCentroidPoint(mosaic.ToPolygon());
-            }
-            catch (ArgumentException)
-            {
-                return [];
-            }
-        }
-    }
-
-    /// <summary>
-    /// Caches polygon negative-prompt points by location ID. Entries are reused until
-    /// LastModified or TypeCode changes, then dropped when the cache exceeds a cap so
-    /// unused IDs from earlier sections do not grow without bound.
-    /// </summary>
-    internal sealed class PolygonNegativePromptCache
-    {
-        internal const int MaxEntries = 2048;
-
-        private readonly ConcurrentDictionary<long, (DateTime LastModified, LocationType TypeCode, IReadOnlyList<Vector2> Points)> entries = new();
-
-        public IReadOnlyList<Vector2> GetOrAdd(
-            long locationId,
-            DateTime lastModified,
-            LocationType typeCode,
-            Func<IReadOnlyList<Vector2>> factory)
-        {
-            if (entries.TryGetValue(locationId, out var cached) &&
-                cached.LastModified == lastModified &&
-                cached.TypeCode == typeCode)
-            {
-                return cached.Points;
-            }
-
-            IReadOnlyList<Vector2> points = factory?.Invoke() ?? [];
-            if (entries.Count >= MaxEntries)
-                entries.Clear();
-
-            entries[locationId] = (lastModified, typeCode, points);
-            return points;
-        }
-
-        public void Remove(long locationId) => entries.TryRemove(locationId, out _);
-
-        public void Clear() => entries.Clear();
     }
 
     /// <summary>

@@ -5,6 +5,8 @@ using System;
 using System.Linq;
 using WebAnnotation.UI.Commands.Segmentation;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
+using IntPoint = Viking.gRPC.Geometry.V1.IntPoint;
+using IntSize = Viking.gRPC.Geometry.V1.IntSize;
 
 namespace WebAnnotationTests.Commands
 {
@@ -94,32 +96,19 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void ASegmentWithoutMatchingLogitsFallsBackToTheMaskPlacement()
+        public void ASegmentWithoutMatchingLogitsHasNoField()
         {
-            SegmentationServiceTypes.SegmentResult segment = new() { X = 3, Y = 4 };
-            segment.Logits = ByteString.CopyFrom(new byte[3]);
-            segment.LogitsWidth = 2;
-            segment.LogitsHeight = 2;
+            SegmentationServiceTypes.SegmentResult segment = new()
+            {
+                Logits = ByteString.CopyFrom(new byte[3]),
+                LogitsSize = new IntSize { Width = 2, Height = 2 },
+                LogitsOrigin = new IntPoint { X = 3, Y = 4 }
+            };
 
             Assert.IsFalse(SegmentationLogitField.HasLogits(segment));
             Assert.AreEqual(1, SegmentationLogitField.PixelScale(segment));
-            SegmentField field = SegmentationLogitField.Decode(segment, 1.0);
-            Assert.IsNull(field.Data);
-            Assert.AreEqual(3, field.X);
-            Assert.AreEqual(4, field.Y);
-        }
-
-        [TestMethod]
-        public void TheResponseScaleComesFromTheSegmentThatCarriesLogits()
-        {
-            SegmentationServiceTypes.SegmentationResponse withLogits = new();
-            withLogits.Segments.Add(SegmentWithLogits(2, 2, 4, 0, 0, (_, _) => 0f));
-            SegmentationServiceTypes.SegmentationResponse maskOnly = new();
-            maskOnly.Segments.Add(new SegmentationServiceTypes.SegmentResult { X = 1 });
-
-            Assert.AreEqual(4, withLogits.PixelScale());
-            Assert.AreEqual(1, maskOnly.PixelScale());
-            Assert.AreEqual(1, new SegmentationServiceTypes.SegmentationResponse().PixelScale());
+            Assert.IsNull(SegmentationLogitField.Decode(segment, 1.0).Data);
+            Assert.IsFalse(SegmentationLogitField.HasLogits(new SegmentationServiceTypes.SegmentResult()), "no size, no origin");
         }
 
         [TestMethod]
@@ -243,7 +232,11 @@ namespace WebAnnotationTests.Commands
             Assert.IsTrue(smooth.All(value => !float.IsNaN(value) && value < 0f));
         }
 
-        private static SegmentationServiceTypes.SegmentResult SegmentWithLogits(
+        /// <summary>
+        /// One island of <paramref name="width"/> x <paramref name="height"/> samples, sample (0, 0)'s top-left corner at grid
+        /// pixel (<paramref name="x"/>, <paramref name="y"/>), Y up; <paramref name="logit"/> takes (column, row), row 0 the top.
+        /// </summary>
+        internal static SegmentationServiceTypes.SegmentResult SegmentWithLogits(
             int width,
             int height,
             int scale,
@@ -266,11 +259,9 @@ namespace WebAnnotationTests.Commands
             return new SegmentationServiceTypes.SegmentResult
             {
                 Logits = ByteString.CopyFrom(half),
-                LogitsWidth = width,
-                LogitsHeight = height,
+                LogitsSize = new IntSize { Width = width, Height = height },
                 LogitsScale = scale,
-                LogitsX = x,
-                LogitsY = y
+                LogitsOrigin = new IntPoint { X = x, Y = y }
             };
         }
 

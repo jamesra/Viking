@@ -383,16 +383,8 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void MosaicPixelToWorld_MapsTopLeftPixelToTheHighWorldEdge()
+        public void WorldToMosaicPixel_DividesByTheDownsample()
         {
-            Vector2 topLeft = SegmentationTileGrid.MosaicPixelToWorld(0, 0, 0, 0, 1024, 2);
-            Assert.AreEqual(0, topLeft.X, 1e-6);
-            Assert.AreEqual(2048, topLeft.Y, 1e-6);
-
-            Vector2 bottomLeft = SegmentationTileGrid.MosaicPixelToWorld(0, 0, 0, 1024, 1024, 2);
-            Assert.AreEqual(0, bottomLeft.X, 1e-6);
-            Assert.AreEqual(0, bottomLeft.Y, 1e-6);
-
             (int x, int y) = SegmentationTileGrid.WorldToMosaicPixel(2048, 1024, 2);
             Assert.AreEqual(1024, x);
             Assert.AreEqual(512, y);

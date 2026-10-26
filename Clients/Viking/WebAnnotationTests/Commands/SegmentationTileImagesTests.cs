@@ -208,7 +208,7 @@ namespace WebAnnotationTests.Commands
                     calls++;
                     return polygon;
                 });
-            AutoPolygonizeMaskSource source = new(overlay, [], []);
+            AutoPolygonizeMaskSource source = new(overlay, []);
 
             bool original = WebAnnotation.Properties.Settings.Default.SegmentationEdgeSnapEnabled;
             try

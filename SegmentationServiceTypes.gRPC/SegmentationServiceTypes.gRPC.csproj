@@ -26,7 +26,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="..\gRPC_Protos\Segmentation\SAM2\segmentation.proto" GrpcServices="Client" />
+    <ProjectReference Include="..\gRPCGeometryTypes\GeometryTypes.gRPC.csproj" />
+  </ItemGroup>
+
+  <!-- Common/geometry.proto is imported through ProtoRoot and compiled by GeometryTypes.gRPC, not here. -->
+  <ItemGroup>
+    <Protobuf Include="..\gRPC_Protos\Segmentation\SAM2\segmentation.proto" ProtoRoot="..\gRPC_Protos" GrpcServices="Client" />
   </ItemGroup>
 
 </Project>

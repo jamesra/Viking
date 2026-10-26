@@ -18,7 +18,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="..\gRPC_Protos\SectionCorrection\section_correction_v2.proto" GrpcServices="Client" />
+    <ProjectReference Include="..\gRPCGeometryTypes\GeometryTypes.gRPC.csproj" />
+  </ItemGroup>
+
+  <!-- section_correction_v2.proto imports Common/geometry.proto through ProtoRoot; GeometryTypes.gRPC compiles it, not here. -->
+  <ItemGroup>
+    <Protobuf Include="..\gRPC_Protos\SectionCorrection\section_correction_v2.proto" ProtoRoot="..\gRPC_Protos" GrpcServices="Client" />
   </ItemGroup>
 
 </Project>

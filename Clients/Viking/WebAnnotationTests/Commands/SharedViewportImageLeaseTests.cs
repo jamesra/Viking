@@ -7,32 +7,20 @@ using WebAnnotation.UI.Commands.Segmentation;
 namespace WebAnnotationTests.Commands
 {
     /// <summary>
-    /// Viewport image sharing between auto-polygonize and segmentation commands.
-    /// Bounds must stay within 1% and resolved tile downsample must match.
+    /// Viewport capture sharing between auto-polygonize and segmentation commands.
+    /// Bounds must stay within 1% and the stored tile level must be the single level every camera resolves to.
     /// </summary>
     [TestClass]
     public class SharedViewportImageLeaseTests
     {
-        // The default profile is a single tile level; these tests exercise tile levels that follow zoom.
-        [TestInitialize]
-        public void UseMultiResolutionProfile() => SegmentationViewportSession.AdoptModelCapabilities(
-            new Viking.gRPC.SegmentationServiceTypes.V1.ModelCapabilities
-            {
-                SubmissionMode = Viking.gRPC.SegmentationServiceTypes.V1.SubmissionMode.FixedTileGrid,
-                ResolutionMode = Viking.gRPC.SegmentationServiceTypes.V1.ResolutionMode.Multi
-            });
-
-        [TestCleanup]
-        public void RestoreDefaultProfile() => SegmentationViewportSession.ResetModelProfile();
-
-        private static AutoPolygonizeUploadContext Context(ulong id, double downsample, Rectangle bounds)
-            => new(id, downsample, bounds, 64, 64);
+        private static AutoPolygonizeUploadContext Context(double downsample, Rectangle bounds)
+            => new(downsample, bounds, 64, 64);
 
         [TestMethod]
         public void CanReuse_SameView_IsTrue()
         {
             Rectangle bounds = new(0, 1000, 0, 800);
-            AutoPolygonizeUploadContext context = Context(7, 2, bounds);
+            AutoPolygonizeUploadContext context = Context(1, bounds);
 
             Assert.IsTrue(context.MatchesViewportForReuse(bounds, 2));
             Assert.IsTrue(context.MatchesViewportForReuse(new Rectangle(4, 1004, 0, 800), 1.5));
@@ -42,27 +30,26 @@ namespace WebAnnotationTests.Commands
         public void CanReuse_ViewMovedPastOnePercent_IsFalse()
         {
             Rectangle bounds = new(0, 1000, 0, 800);
-            AutoPolygonizeUploadContext context = Context(7, 2, bounds);
+            AutoPolygonizeUploadContext context = Context(1, bounds);
 
             Assert.IsFalse(context.MatchesViewportForReuse(new Rectangle(20, 1020, 0, 800), 2));
         }
 
         [TestMethod]
-        public void CanReuse_ResolvedTileDownsampleChanged_IsFalse()
+        public void CanReuse_EveryCameraLevelResolvesToTheSingleTileLevel()
         {
             Rectangle bounds = new(0, 1000, 0, 800);
-            AutoPolygonizeUploadContext atDs2 = Context(7, 2, bounds);
 
-            Assert.IsFalse(atDs2.MatchesViewportForReuse(bounds, 1));
-            Assert.IsFalse(atDs2.MatchesViewportForReuse(bounds, 4));
-            Assert.IsTrue(atDs2.MatchesViewportForReuse(bounds, 1.2));
+            Assert.IsTrue(Context(1, bounds).MatchesViewportForReuse(bounds, 1));
+            Assert.IsTrue(Context(1, bounds).MatchesViewportForReuse(bounds, 1.2));
+            Assert.IsTrue(Context(1, bounds).MatchesViewportForReuse(bounds, 4));
+            Assert.IsFalse(Context(2, bounds).MatchesViewportForReuse(bounds, 2), "no camera submits level 2");
         }
 
         [TestMethod]
         public async Task GetOrUpload_SecondCallerJoinsInFlightCapture()
         {
-            AutoPolygonizeCache cache = new();
-            SharedViewportImageLease lease = new(cache);
+            SharedViewportImageLease lease = new();
             Rectangle bounds = new(0, 1000, 0, 800);
             var started = new TaskCompletionSource<bool>();
             var release = new TaskCompletionSource<AutoPolygonizeUploadContext?>();
@@ -80,13 +67,12 @@ namespace WebAnnotationTests.Commands
             await started.Task;
 
             Assert.AreEqual(1, calls);
-            release.SetResult(Context(11, 2, bounds));
+            release.SetResult(Context(1, bounds));
 
             AutoPolygonizeUploadContext? a = await first;
             AutoPolygonizeUploadContext? b = await second;
-            Assert.AreEqual(11ul, a?.ImageId);
-            Assert.AreEqual(11ul, b?.ImageId);
-            Assert.IsTrue(cache.IsImageHeld(11));
+            Assert.AreEqual(bounds, a?.WorldBounds);
+            Assert.AreEqual(bounds, b?.WorldBounds);
 
             int extraUploads = 0;
             AutoPolygonizeUploadContext? cached = await lease.GetOrUploadAsync(
@@ -98,37 +84,35 @@ namespace WebAnnotationTests.Commands
                     return Task.FromResult<AutoPolygonizeUploadContext?>(null);
                 });
             Assert.AreEqual(0, extraUploads);
-            Assert.AreEqual(11ul, cached?.ImageId);
+            Assert.AreEqual(bounds, cached?.WorldBounds);
         }
 
         [TestMethod]
         public async Task AbandonInFlight_DoesNotReplaceALaterUpload()
         {
-            AutoPolygonizeCache cache = new();
-            SharedViewportImageLease lease = new(cache);
+            SharedViewportImageLease lease = new();
             Rectangle bounds = new(0, 1000, 0, 800);
+            Rectangle laterBounds = new(4, 1004, 0, 800);
             var gate = new TaskCompletionSource<bool>();
 
             Task<AutoPolygonizeUploadContext?> first = lease.GetOrUploadAsync(bounds, 2, async () =>
             {
                 await gate.Task;
-                return Context(1, 2, bounds);
+                return Context(1, bounds);
             });
 
             lease.AbandonInFlight();
             Task<AutoPolygonizeUploadContext?> second = lease.GetOrUploadAsync(
                 bounds,
                 2,
-                () => Task.FromResult<AutoPolygonizeUploadContext?>(Context(2, 2, bounds)));
+                () => Task.FromResult<AutoPolygonizeUploadContext?>(Context(1, laterBounds)));
 
             gate.SetResult(true);
             AutoPolygonizeUploadContext? abandoned = await first;
             AutoPolygonizeUploadContext? current = await second;
 
-            Assert.AreEqual(1ul, abandoned?.ImageId);
-            Assert.AreEqual(2ul, current?.ImageId);
-            Assert.IsFalse(cache.IsImageHeld(1));
-            Assert.IsTrue(cache.IsImageHeld(2));
+            Assert.AreEqual(bounds, abandoned?.WorldBounds);
+            Assert.AreEqual(laterBounds, current?.WorldBounds);
 
             int extraUploads = 0;
             AutoPolygonizeUploadContext? cached = await lease.GetOrUploadAsync(
@@ -140,25 +124,18 @@ namespace WebAnnotationTests.Commands
                     return Task.FromResult<AutoPolygonizeUploadContext?>(null);
                 });
             Assert.AreEqual(0, extraUploads);
-            Assert.AreEqual(2ul, cached?.ImageId);
+            Assert.AreEqual(laterBounds, cached?.WorldBounds, "the abandoned capture must not replace the later one");
         }
 
         [TestMethod]
-        public async Task ForgetIfViewMoved_ReleasesTheLeaseHold()
+        public async Task ForgetIfViewMoved_DropsThePublishedCapture()
         {
-            AutoPolygonizeCache cache = new();
-            SharedViewportImageLease lease = new(cache);
+            SharedViewportImageLease lease = new();
             Rectangle bounds = new(0, 1000, 0, 800);
-            ulong? released = null;
-            cache.ImageLeaseReleased += id => released = id;
 
-            await lease.GetOrUploadAsync(bounds, 2, () => Task.FromResult<AutoPolygonizeUploadContext?>(Context(5, 2, bounds)));
-            Assert.IsTrue(cache.IsImageHeld(5));
+            await lease.GetOrUploadAsync(bounds, 2, () => Task.FromResult<AutoPolygonizeUploadContext?>(Context(1, bounds)));
 
             lease.ForgetIfViewMoved(new Rectangle(20, 1020, 0, 800), 2);
-
-            Assert.IsFalse(cache.IsImageHeld(5));
-            Assert.AreEqual(5ul, released);
 
             int uploadsAfterForget = 0;
             AutoPolygonizeUploadContext? afterForget = await lease.GetOrUploadAsync(
@@ -167,10 +144,10 @@ namespace WebAnnotationTests.Commands
                 () =>
                 {
                     uploadsAfterForget++;
-                    return Task.FromResult<AutoPolygonizeUploadContext?>(Context(99, 2, bounds));
+                    return Task.FromResult<AutoPolygonizeUploadContext?>(Context(1, bounds));
                 });
             Assert.AreEqual(1, uploadsAfterForget);
-            Assert.AreEqual(99ul, afterForget?.ImageId);
+            Assert.IsNotNull(afterForget);
         }
     }
 }

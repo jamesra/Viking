@@ -7,72 +7,44 @@ using WebAnnotation.UI.Commands.Segmentation;
 namespace WebAnnotationTests.Commands
 {
     /// <summary>
-    /// Pins <see cref="SegmentationExtensions.GetHighestScoringSegment"/> to the prior
-    /// <c>OrderByDescending(s =&gt; s.Score).First()</c> rule used by debug overlay and auto-polygonize.
+    /// A response holds one segment per island, numbered from 1 by decreasing trusted area. Callers that keep one shape keep
+    /// island 1 (<see cref="SegmentationExtensions.GetPrimaryIsland"/>); callers that keep every island walk them in island order.
     /// </summary>
     [TestClass]
     public class SegmentationResponseExtensionsTests
     {
         [TestMethod]
-        public void GetHighestScoringSegmentReturnsNullWhenEmpty()
+        public void APrimaryIslandOfNothingIsNull()
         {
-            Assert.IsNull(new SegmentationResponse().GetHighestScoringSegment());
-            Assert.IsNull(((SegmentationResponse?)null).GetHighestScoringSegment());
+            Assert.IsNull(new SegmentationResponse().GetPrimaryIsland());
+            Assert.IsNull(((SegmentationResponse?)null).GetPrimaryIsland());
+            Assert.AreEqual(0, ((SegmentationResponse?)null).GetSegmentsByIsland().Count());
         }
 
         [TestMethod]
-        public void GetHighestScoringSegmentReturnsTheOnlySegment()
+        public void TheOnlyIslandIsThePrimaryOne()
         {
-            var response = new SegmentationResponse();
-            var only = new SegmentResult { Score = 0.25f, Index = 3 };
+            SegmentResult only = new() { Island = 1, Score = 0.1f };
+            SegmentationResponse response = new();
             response.Segments.Add(only);
 
-            Assert.AreSame(only, response.GetHighestScoringSegment());
+            Assert.AreSame(only, response.GetPrimaryIsland());
         }
 
         [TestMethod]
-        public void GetHighestScoringSegmentPicksMaxScore()
+        public void IslandOneIsPrimaryWhateverTheScoresAndTheOrderTheyArrivedIn()
         {
-            var response = new SegmentationResponse();
-            response.Segments.Add(new SegmentResult { Score = 0.1f, Index = 0 });
-            var best = new SegmentResult { Score = 0.9f, Index = 1 };
-            response.Segments.Add(best);
-            response.Segments.Add(new SegmentResult { Score = 0.5f, Index = 2 });
+            SegmentResult second = new() { Island = 2, Score = 0.99f };
+            SegmentResult first = new() { Island = 1, Score = 0.2f };
+            SegmentResult third = new() { Island = 3, Score = 0.5f };
+            SegmentationResponse response = new();
+            response.Segments.Add(second);
+            response.Segments.Add(first);
+            response.Segments.Add(third);
 
-            Assert.AreSame(best, response.GetHighestScoringSegment());
-        }
-
-        [TestMethod]
-        public void GetHighestScoringSegmentMatchesOrderByDescendingFirstOnTies()
-        {
-            var response = new SegmentationResponse();
-            var firstTie = new SegmentResult { Score = 0.5f, Index = 1 };
-            var secondTie = new SegmentResult { Score = 0.5f, Index = 2 };
-            response.Segments.Add(firstTie);
-            response.Segments.Add(secondTie);
-
-            SegmentResult? fromHelper = response.GetHighestScoringSegment();
-            SegmentResult fromLinq = response.Segments.OrderByDescending(s => s.Score).First();
-
-            Assert.AreSame(fromLinq, fromHelper);
-            Assert.AreSame(firstTie, fromHelper);
-        }
-
-        [TestMethod]
-        public void GetSegmentsByDescendingScoreMatchesOrderByDescendingOnScores()
-        {
-            var response = new SegmentationResponse();
-            var low = new SegmentResult { Score = 0.1f, Index = 0 };
-            var mid = new SegmentResult { Score = 0.5f, Index = 1 };
-            var high = new SegmentResult { Score = 0.9f, Index = 2 };
-            response.Segments.Add(mid);
-            response.Segments.Add(high);
-            response.Segments.Add(low);
-
-            List<SegmentResult> fromHelper = [.. response.GetSegmentsByDescendingScore()];
-            List<SegmentResult> fromLinq = response.Segments.OrderByDescending(s => s.Score).ToList();
-
-            CollectionAssert.AreEqual(fromLinq, fromHelper);
+            Assert.AreSame(first, response.GetPrimaryIsland(), "the largest island, not the most confident one");
+            List<SegmentResult> ordered = [.. response.GetSegmentsByIsland()];
+            CollectionAssert.AreEqual(new[] { first, second, third }, ordered);
         }
     }
 }

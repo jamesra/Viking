@@ -355,14 +355,17 @@ namespace WebAnnotationTests.Commands
         public void DescribePromptsReportsLocationStructureAndCounts()
         {
             Vector2[] foreground = [new Vector2(1234.4, 5678.6), new Vector2(1, 2)];
-            Vector2[] background = [new Vector2(9, 9)];
+            Vector2[] userBackground = [new Vector2(9, 9)];
+            SegmentationBackgroundShapes shapes = new();
+            shapes.AddCircle(new Circle(new Vector2(50, 50), 5));
+            shapes.AddCircle(new Circle(new Vector2(80, 80), 5));
 
             string line = CircleSegmentationPrompts.DescribePrompts(
-                "auto-circle", [15320L], 100, [], foreground, background, ParentOf);
+                "auto-circle", [15320L], 100, [], foreground, userBackground, shapes, ParentOf);
 
             Assert.AreEqual(
-                "Prompts source=auto-circle loc=[15320] structure=100 fg=2 fg0=(1234,5679) bg=1 visible=0 " +
-                "otherAnnotations=0 bgFrom=[] sameStructure=[] childStructure=[]",
+                "Prompts source=auto-circle loc=[15320] structure=100 fg=2 fg0=(1234,5679) bgClicks=1 bgShapes=2 visible=0 " +
+                "otherAnnotations=0 shapesFrom=[] sameStructure=[] childStructure=[]",
                 line);
         }
 
@@ -370,11 +373,11 @@ namespace WebAnnotationTests.Commands
         public void DescribePromptsHandlesMissingLocationStructureAndForeground()
         {
             string line = CircleSegmentationPrompts.DescribePrompts(
-                "context-menu", null, null, [], [], []);
+                "context-menu", null, null, [], [], null, null);
 
             Assert.AreEqual(
-                "Prompts source=context-menu loc=[-] structure=- fg=0 fg0=none bg=0 visible=0 " +
-                "otherAnnotations=0 bgFrom=[] sameStructure=[] childStructure=[]",
+                "Prompts source=context-menu loc=[-] structure=- fg=0 fg0=none bgClicks=0 bgShapes=0 visible=0 " +
+                "otherAnnotations=0 shapesFrom=[] sameStructure=[] childStructure=[]",
                 line);
         }
 
@@ -440,7 +443,6 @@ namespace WebAnnotationTests.Commands
         {
             Polygon square = Square(0, 0, 10);
             List<Vector2> foreground = [new Vector2(1, 1)];
-            List<Vector2> background = [new Vector2(2, 2), new Vector2(8, 8)];
             AutoPolygonizeProposal proposal = new(
                 null!,
                 7,
@@ -449,18 +451,13 @@ namespace WebAnnotationTests.Commands
                 8,
                 square,
                 [],
-                foregroundPrompts: foreground,
-                backgroundPrompts: background);
+                foregroundPrompts: foreground);
 
             Assert.AreEqual(1, proposal.ForegroundPrompts.Count);
-            Assert.AreEqual(2, proposal.BackgroundPrompts.Count);
             Assert.AreEqual(new Vector2(1, 1), proposal.ForegroundPrompts[0]);
-            Assert.AreEqual(new Vector2(8, 8), proposal.BackgroundPrompts[1]);
 
             foreground.Add(new Vector2(9, 9));
-            background.Clear();
             Assert.AreEqual(1, proposal.ForegroundPrompts.Count);
-            Assert.AreEqual(2, proposal.BackgroundPrompts.Count);
         }
 
         [TestMethod]
@@ -606,31 +603,6 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void BackgroundPointsEmptyWhenNoOtherAnnotations()
-        {
-            var points = CircleSegmentationPrompts.CreateBackgroundVolumePoints([], null);
-            Assert.AreEqual(0, points.Count);
-        }
-
-        [TestMethod]
-        public void BackgroundPointOnForegroundCenterIsDropped()
-        {
-            Vector2 center = new(10, 20);
-            IReadOnlyList<Vector2> foreground = [center, new Vector2(14, 20)];
-            IReadOnlyList<Vector2> background =
-            [
-                center,
-                new Vector2(10.2, 20.1),
-                new Vector2(100, 100)
-            ];
-
-            var kept = CircleSegmentationPrompts.ExceptNearForeground(background, foreground, 1.0);
-
-            Assert.AreEqual(1, kept.Count);
-            Assert.AreEqual(new Vector2(100, 100), kept[0]);
-        }
-
-        [TestMethod]
         public void SimplePolygonProducesOneNegativePointPerTriangle()
         {
             Polygon square = new(
@@ -649,49 +621,6 @@ namespace WebAnnotationTests.Commands
             Assert.IsTrue(points.Count >= 2);
             foreach (Vector2 point in points)
                 Assert.IsTrue(square.Contains(point));
-        }
-
-        [TestMethod]
-        public void PolygonAvoidMarkIsLargestTriangleCentroid()
-        {
-            Polygon lShape = new(
-            [
-                new Vector2(0, 0),
-                new Vector2(10, 0),
-                new Vector2(10, 3),
-                new Vector2(3, 3),
-                new Vector2(3, 10),
-                new Vector2(0, 10),
-                new Vector2(0, 0)
-            ]);
-
-            IReadOnlyList<Vector2> points = AnnotationPointExtensions.GetLargestTriangleCentroidPoint(lShape);
-            Assert.AreEqual(1, points.Count);
-            Assert.IsTrue(lShape.Contains(points[0]));
-
-            var mesh = lShape.Triangulate();
-            Vector2 origin = lShape.Centroid;
-            double maxArea = double.NegativeInfinity;
-            Vector2 expected = default;
-            foreach (IFace face in mesh.Faces)
-            {
-                if (!face.IsTriangle())
-                    continue;
-
-                Vector2 centroid = mesh.Centroid(face) + origin;
-                if (!lShape.Contains(centroid))
-                    continue;
-
-                double area = mesh.ToTriangle(face).Area;
-                if (area <= maxArea)
-                    continue;
-
-                maxArea = area;
-                expected = centroid;
-            }
-
-            Assert.AreEqual(expected.X, points[0].X, 1e-6);
-            Assert.AreEqual(expected.Y, points[0].Y, 1e-6);
         }
 
         [TestMethod]
@@ -744,7 +673,10 @@ namespace WebAnnotationTests.Commands
             IReadOnlyList<Vector2> prompts = PolygonSegmentationPrompts.CreateMosaicForegroundPoints(unsmoothed);
             IReadOnlyList<Vector2> fromControlRing = AnnotationPointExtensions.GetPolygonTriangleCentroidPoints(unsmoothed);
             IReadOnlyList<Vector2> ifSmoothed = AnnotationPointExtensions.GetPolygonTriangleCentroidPoints(smoothed);
-            IReadOnlyList<Vector2> largest = AnnotationPointExtensions.GetLargestTriangleCentroidPoint(unsmoothed);
+            IReadOnlyList<Vector2> largest = [.. AnnotationPointExtensions.GetPolygonTriangleCentroidSamples(unsmoothed)
+                .OrderByDescending(sample => sample.Area)
+                .Take(1)
+                .Select(sample => sample.Point)];
 
             Assert.IsTrue(prompts.Count > 0);
             Assert.IsTrue(prompts.Count <= fromControlRing.Count);
@@ -758,36 +690,6 @@ namespace WebAnnotationTests.Commands
             Assert.IsTrue(prompts.Any(prompt =>
                 Math.Abs(prompt.X - largest[0].X) < 1e-6 && Math.Abs(prompt.Y - largest[0].Y) < 1e-6));
             Assert.IsTrue(ifSmoothed.Count > prompts.Count);
-        }
-
-        [TestMethod]
-        public void PolygonNegativePointsUseUnsmoothedMosaicShapeNotSmoothedVolumeShape()
-        {
-            AnnotationPointExtensions.PolygonPromptCache.Clear();
-            try
-            {
-                Polygon unsmoothed = CreateRegularPolygon(6, 20);
-                Polygon smoothed = unsmoothed.Smooth(Geometry.Global.NumClosedCurveInterpolationPoints);
-
-                LocationObj loc = new();
-                loc.TypeCode = LocationType.CURVEPOLYGON;
-                loc.MosaicShape = unsmoothed.ToSqlGeometry();
-                loc.VolumeShape = smoothed.ToSqlGeometry();
-
-                IReadOnlyList<Vector2> points = AnnotationPointExtensions.GetAnnotationRepresentativePoints([loc]);
-                IReadOnlyList<Vector2> expected = AnnotationPointExtensions.GetLargestTriangleCentroidPoint(unsmoothed);
-                IReadOnlyList<Vector2> ifSmoothed = AnnotationPointExtensions.GetPolygonTriangleCentroidPoints(smoothed);
-
-                Assert.AreEqual(1, points.Count);
-                Assert.AreEqual(1, expected.Count);
-                Assert.AreEqual(expected[0].X, points[0].X, 1e-6);
-                Assert.AreEqual(expected[0].Y, points[0].Y, 1e-6);
-                Assert.IsTrue(ifSmoothed.Count > expected.Count);
-            }
-            finally
-            {
-                AnnotationPointExtensions.PolygonPromptCache.Clear();
-            }
         }
 
         [TestMethod]
@@ -822,33 +724,6 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void PolygonPromptCacheSkipsFactoryUntilLocationUpdates()
-        {
-            PolygonNegativePromptCache cache = new();
-            DateTime first = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            DateTime second = first.AddMinutes(1);
-            int factoryCalls = 0;
-            Vector2[] firstPoints = [new Vector2(1, 1)];
-            Vector2[] secondPoints = [new Vector2(2, 2)];
-
-            IReadOnlyList<Vector2> Factory()
-            {
-                factoryCalls++;
-                return factoryCalls == 1 ? firstPoints : secondPoints;
-            }
-
-            Func<IReadOnlyList<Vector2>> factory = Factory;
-            var cached = cache.GetOrAdd(12, first, LocationType.CURVEPOLYGON, factory);
-            var reused = cache.GetOrAdd(12, first, LocationType.CURVEPOLYGON, factory);
-            var updated = cache.GetOrAdd(12, second, LocationType.CURVEPOLYGON, factory);
-
-            Assert.AreEqual(2, factoryCalls);
-            Assert.AreEqual(firstPoints[0], cached[0]);
-            Assert.AreEqual(firstPoints[0], reused[0]);
-            Assert.AreEqual(secondPoints[0], updated[0]);
-        }
-
-        [TestMethod]
         public void CacheRemoveAllowsSameLastModifiedAgain()
         {
             AutoPolygonizeCache cache = new();
@@ -877,7 +752,7 @@ namespace WebAnnotationTests.Commands
         {
             AutoPolygonizeCache cache = new();
             DateTime first = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            AutoPolygonizeUploadContext upload = new(42, 4, new Rectangle(0, 100, 0, 100), 64, 64);
+            AutoPolygonizeUploadContext upload = new(4, new Rectangle(0, 100, 0, 100), 64, 64);
             int invalidated = 0;
             cache.GeometryInvalidated += (_, _, _) => invalidated++;
 
@@ -887,7 +762,6 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual(1, invalidated);
             Assert.IsTrue(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE));
             Assert.IsTrue(cache.TryGetUploadContext(7, out AutoPolygonizeUploadContext kept));
-            Assert.AreEqual(42ul, kept.ImageId);
             Assert.AreEqual(4, kept.Downsample, 1e-6);
         }
 
@@ -937,16 +811,6 @@ namespace WebAnnotationTests.Commands
 
             Assert.AreEqual(1, forgotten);
             Assert.IsFalse(cache.IsGenerationCurrent(location.ID, generation));
-        }
-
-        [TestMethod]
-        public void SameZoomAndBoundsReusesUploadedImage()
-        {
-            AutoPolygonizeUploadContext context = new(9, 1, new Rectangle(0, 100, 0, 100), 32, 32);
-            Assert.IsTrue(AutoPolygonizeSelection.CanReuseUploadedImage(context, 1, new Vector2(50, 50)));
-            Assert.IsTrue(AutoPolygonizeSelection.CanReuseUploadedImage(context, 1.5, new Vector2(50, 50)));
-            Assert.IsTrue(AutoPolygonizeSelection.CanReuseUploadedImage(context, 4, new Vector2(50, 50)));
-            Assert.IsFalse(AutoPolygonizeSelection.CanReuseUploadedImage(context, 1, new Vector2(200, 200)));
         }
 
         [TestMethod]
@@ -1011,23 +875,12 @@ namespace WebAnnotationTests.Commands
         {
             AutoPolygonizeCache cache = new();
             DateTime first = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            AutoPolygonizeUploadContext upload = new(42, 2, new Rectangle(0, 100, 0, 100), 16, 16);
+            AutoPolygonizeUploadContext upload = new(2, new Rectangle(0, 100, 0, 100), 16, 16);
 
             cache.RememberProposal(7, 1, first, LocationType.CIRCLE, upload: upload);
             Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 2));
             Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 4));
             Assert.IsFalse(cache.ShouldProcess(7, 1, first, LocationType.CIRCLE, liveDownsample: 1));
-        }
-
-        [TestMethod]
-        public void UploadReuseRequiresMatchingResolvedTileDownsample()
-        {
-            AutoPolygonizeUploadContext atDs2 = new(9, 2, new Rectangle(0, 100, 0, 100), 32, 32);
-            Assert.IsFalse(AutoPolygonizeSelection.CanReuseUploadedImage(atDs2, 1.5, new Vector2(50, 50)));
-            Assert.IsFalse(AutoPolygonizeSelection.CanReuseUploadedImage(atDs2, 1, new Vector2(50, 50)));
-            AutoPolygonizeUploadContext atDs1 = new(9, 1, new Rectangle(0, 100, 0, 100), 32, 32);
-            Assert.IsTrue(AutoPolygonizeSelection.CanReuseUploadedImage(atDs1, 1.5, new Vector2(50, 50)));
-            Assert.IsFalse(AutoPolygonizeSelection.CanReuseUploadedImage(atDs2, 2, new Vector2(200, 200)));
         }
 
         [TestMethod]
@@ -1069,27 +922,6 @@ namespace WebAnnotationTests.Commands
                 2,
                 new Rectangle(20, 1020, 0, 800),
                 2));
-        }
-
-        [TestMethod]
-        public void LastImageLeaseReleaseIsReported()
-        {
-            AutoPolygonizeCache cache = new();
-            DateTime first = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            AutoPolygonizeUploadContext upload = new(42, 1, new Rectangle(0, 100, 0, 100), 16, 16);
-            List<ulong> released = [];
-            cache.ImageLeaseReleased += id => released.Add(id);
-
-            cache.AcquireBatchHold(42);
-            cache.RememberProposal(7, 1, first, LocationType.CIRCLE, upload: upload);
-            cache.ReleaseBatchHold(42);
-            Assert.AreEqual(0, released.Count);
-            Assert.IsTrue(cache.IsImageHeld(42));
-
-            cache.Remove(7);
-            Assert.AreEqual(1, released.Count);
-            Assert.AreEqual(42ul, released[0]);
-            Assert.IsFalse(cache.IsImageHeld(42));
         }
 
         [TestMethod]

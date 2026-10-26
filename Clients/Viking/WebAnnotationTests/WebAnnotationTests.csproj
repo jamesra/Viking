@@ -67,7 +67,6 @@
         <Compile Include="SplitStructuresFormTests.cs" />
         <Compile Include="HotkeyKeyCodeTests.cs" />
         <Compile Include="CreateStructureCommandActionAttributeListTests.cs" />
-        <Compile Include="SegmentationMissingTileParseTests.cs" />
         <Compile Include="OverlayHotkeysTests.cs" />
         <Compile Include="TemporarilyHiddenAnnotationsTests.cs" />
         <Compile Include="LabelOutlineTests.cs" />
@@ -85,6 +84,7 @@
         <Compile Include="Commands\SegmentationMaskUnionTests.cs" />
         <Compile Include="Commands\SegmentationMaskScaleTests.cs" />
         <Compile Include="Commands\SegmentationMaskTilesTests.cs" />
+        <Compile Include="Commands\SegmentationProtocolTests.cs" />
         <Compile Include="View\LocationIndexDiagTests.cs" />
         <Compile Include="Commands\PolygonCutMeshBuilderTests.cs" />
         <Compile Include="Commands\PolygonCutFillCacheTests.cs" />

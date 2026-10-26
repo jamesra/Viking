@@ -327,22 +327,6 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// True when the cached SAM2 tiles can be reused for a single-ID refresh:
-        /// usable context, matching resolved tile downsample, and the circle center still
-        /// inside the uploaded world rectangle.
-        /// </summary>
-        public static bool CanReuseUploadedImage(
-            in AutoPolygonizeUploadContext context,
-            double liveDownsample,
-            Vector2 volumeCenter)
-        {
-            if (!context.MatchesSubmittedTileDownsample(liveDownsample))
-                return false;
-
-            return context.WorldBounds.Covers(volumeCenter);
-        }
-
-        /// <summary>
         /// Index of the item nearest <paramref name="point"/>, or -1 when <paramref name="items"/> is empty.
         /// The first of equal distances wins. The auto-polygonize queue calls this before every request so a
         /// moved cursor or view changes which circle goes next.
