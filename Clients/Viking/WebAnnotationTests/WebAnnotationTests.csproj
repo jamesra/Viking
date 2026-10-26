@@ -60,6 +60,7 @@
     <Compile Include="GoToActionFormIdTests.cs" />
     <Compile Include="AnnotationPreferencesResetToDefaultsTests.cs" />
     <Compile Include="AnnotationPreferencesRevertTests.cs" />
+    <Compile Include="AnnotationPreferencesLivePreviewTests.cs" />
     <Compile Include="SplitStructuresFormTests.cs" />
     <Compile Include="HotkeyKeyCodeTests.cs" />
     <Compile Include="OverlayHotkeysTests.cs" />

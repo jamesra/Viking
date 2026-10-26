@@ -3788,6 +3788,8 @@ namespace Viking.UI.Controls
             {
                 ApplySectionNumberOverlaySettings(viewModel);
             };
+            // Also runs on Cancel and Reset: both raise PropertyChanged for every property.
+            viewModel.PropertyChanged += (_, e) => ApplyTextureLoadingSettings(viewModel, e.PropertyName);
 
             _viewerPreferencesDialog = new Viking.UI.WPF.Forms.ViewerPreferencesDialog(viewModel);
 
@@ -3824,6 +3826,30 @@ namespace Viking.UI.Controls
             sectionNumberOverlay.PidPositionThresholdScreenHeights = viewModel.PidPositionThreshold;
 
             this.Invalidate();
+        }
+
+        /// <summary>
+        /// Copies the texture-loading settings that are read when used into the (unsaved) settings, so they apply while
+        /// the dialog is open; Apply/OK saves them. Called per changed property, and with an empty name when the view
+        /// model is reverted or reset. MaxConcurrentTextureRequests waits for Apply: each change replaces the request
+        /// throttle, so changing it per slider step would let requests already running overshoot the new limit.
+        /// </summary>
+        private static void ApplyTextureLoadingSettings(Viking.UI.WPF.Forms.ViewerPreferencesDialogViewModel viewModel, string? propertyName)
+        {
+            bool all = string.IsNullOrEmpty(propertyName);
+            var settings = Viking.Properties.Settings.Default;
+
+            if (all || propertyName == nameof(viewModel.TextureLoadingWindow))
+                settings.TextureLoadingWindow = viewModel.TextureLoadingWindow;
+            if (all || propertyName == nameof(viewModel.MinTexturesToLoadFromQueue))
+                settings.MinTexturesToLoadFromQueue = viewModel.MinTexturesToLoadFromQueue;
+            if (all || propertyName == nameof(viewModel.LoadAdjacentSectionTextures))
+                settings.LoadAdjacentSectionTextures = viewModel.LoadAdjacentSectionTextures;
+            if (all || propertyName == nameof(viewModel.VisibleTileSortIntervalMs))
+            {
+                settings.VisibleTileSortIntervalMs = viewModel.VisibleTileSortIntervalMs;
+                Viking.PendingTextureQueue.UpdateSortInterval(viewModel.VisibleTileSortIntervalMs);
+            }
         }
 
         /// <summary>
