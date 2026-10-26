@@ -626,6 +626,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     backgroundBitmap).ConfigureAwait(false);
 
                 resultContexts.Record(response, downsample);
+                await CaptureMissingTileImagesAsync(response, signature, downsample, grayscale, cancellationToken).ConfigureAwait(false);
                 AttachTileImages(response, signature, downsample);
                 if (ResponseWorldBounds(response, downsample) is Geometry.Rectangle bounds)
                 {

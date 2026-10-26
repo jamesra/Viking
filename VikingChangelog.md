@@ -10,6 +10,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 ## 1.2.127 — not yet released
 
 * Circles: when you draw, resize, move or link a circle, the circle on the other side of the section-to-volume warp now gets the radius the warp's local scale implies, instead of a copy of the radius. Auto-segment of a circle also tolerates a rim point that does not map.
+* Segmentation uses the segmentation server's own tile caches before asking Viking to render tiles, so repeat segmentations over the same area start faster. Views with a blended or colored channel set, or with colorize or mesh overlays on, no longer share tiles with a plain grayscale view.
 
 ## 1.2.122 — not yet released
 
