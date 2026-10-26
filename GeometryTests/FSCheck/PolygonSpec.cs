@@ -249,6 +249,43 @@ namespace GeometryTests
                 nameof(InscribedCircleCenterIsContained));
 
         [TestMethod]
+        public void InscribedCircleClearsEveryRing() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbHoledPolygon(), p =>
+                {
+                    Circle inscribed = p.InscribedCircle();
+                    RingSegmentSet rings = new(p);
+                    return rings.SignedDistance(inscribed.Center.X, inscribed.Center.Y) >= inscribed.Radius - LayoutSlack(p);
+                }),
+                nameof(InscribedCircleClearsEveryRing));
+
+        /// <summary>
+        /// Wherever <see cref="LabelLayout"/> puts the text and markers, they are inside the polygon and out of its holes.
+        /// </summary>
+        [TestMethod]
+        public void LabelPlacementStaysInside() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbHoledPolygon(), p =>
+                {
+                    LabelContent content = new([new LabelRow(6, 0.5), new LabelRow(4, 1.0)], 3, 3);
+                    LabelPlacement placement = new LabelLayout(p).Fit(content);
+                    RingSegmentSet rings = new(p);
+                    double slack = LayoutSlack(p);
+                    bool Inside(Vector2 v) => rings.SignedDistance(v.X, v.Y) >= -slack;
+
+                    if (placement.Kind == LabelPlacementKind.Circle)
+                        return rings.SignedDistance(placement.Circle.Center.X, placement.Circle.Center.Y) >= placement.Circle.Radius - slack;
+
+                    return placement.TextBox.Corners.All(Inside) &&
+                           placement.RowCenters.All(Inside) &&
+                           placement.Markers.Count == content.MarkerCount &&
+                           placement.Markers.All(m => Inside(m.Center));
+                }),
+                nameof(LabelPlacementStaysInside));
+
+        private static double LayoutSlack(Polygon p) => PoleOfInaccessibility.DefaultTolerance(p.BoundingBox) * 1.01;
+
+        [TestMethod]
         public void IntersectsCircleIsSymmetric() =>
             CoreCheck.Run(
                 Prop.ForAll(CoreArbitraries.ArbSimplePolygon(), CoreArbitraries.ArbCircle(),

@@ -1920,15 +1920,10 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Not the true incircle (tangent to every edge). Center is the centroid; radius is the
-        /// distance to the nearest vertex, so the disk can extend past edges.
+        /// The largest circle inside the polygon and clear of its holes (its pole of inaccessibility), with the radius
+        /// within a thousandth of the bounding-box diagonal. See <see cref="PoleOfInaccessibility.MaximumInscribedCircle"/>.
         /// </summary>
-        public Circle InscribedCircle()
-        {
-            Vector2 center = this.Centroid;
-            double Radius = ExteriorRing.Select(p => Vector2.Distance(center, p)).Min();
-            return new Circle(center, Radius);
-        }
+        public Circle InscribedCircle() => this.MaximumInscribedCircle();
 
         /// <summary>
         /// Per-thread scratch for <see cref="IsPointInsidePolygonByWindingTest"/>. The test is not re-entrant on a

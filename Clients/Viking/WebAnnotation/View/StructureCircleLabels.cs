@@ -1,29 +1,22 @@
 using Geometry;
 using Microsoft.Xna.Framework;
-using System;
 using VikingXNAGraphics;
-using WebAnnotationModel;
-using Vector2 = Microsoft.Xna.Framework.Vector2;
-using Vector3 = Microsoft.Xna.Framework.Vector3;
+using WebAnnotationModel;
 
 namespace WebAnnotation.View
 {
     /// <summary>
     /// Renders labels for a Structure inside a circle
     /// </summary>
-    public class StructureCircleLabels : ILabelView
+    public class StructureCircleLabels : StructureLabelsBase
     {
-        public LabelView StructureIDLabelView;
-        public LabelView StructureLabelView;
-        public LabelView StructureAttributeView;
-        public LabelView ParentStructureLabelView;
-        private readonly LocationObj? locationObj = null;
         private Circle VolumeCircle;
-        private readonly bool ShowAttributeLabels = true;
 
         public double DesiredRowsOfText { get; set; } = 4.0;
 
-        public double DefaultFontSize => (Radius * 2.0) / DesiredRowsOfText;
+        public override double DefaultFontSize => (Radius * 2.0) / DesiredRowsOfText;
+
+        protected override double IDLineWidth => Radius * 2.0;
 
         public double Radius
         {
@@ -35,79 +28,10 @@ namespace WebAnnotation.View
             }
         }
 
-        public StructureCircleLabels(LocationObj obj, Circle circle, bool ShowAttributeLabels = true)
+        public StructureCircleLabels(LocationObj obj, Circle circle, bool ShowAttributeLabels = true) : base(obj, ShowAttributeLabels)
         {
             VolumeCircle = circle;
-            locationObj = obj;
-            this.ShowAttributeLabels = ShowAttributeLabels;
             CreateLabelObjects();
-        }
-
-        protected string StructureIDLabelWithTypeCode(StructureObj obj)
-        {
-            if (obj is null)
-            {
-                return "";
-            }
-
-            return obj.Type.Code + " " + obj.ID.ToString();
-        }
-
-        /// <summary>
-        /// Full label and tag text
-        /// </summary>
-        /// <returns></returns>
-        protected string FullLabelText()
-        {
-            string fullLabel = StructureLabel();
-
-            if (fullLabel.Length == 0)
-            {
-                fullLabel = TagLabel();
-            }
-            else
-            {
-                fullLabel += '\n' + TagLabel();
-            }
-
-            return fullLabel;
-        }
-
-        protected string TagLabel()
-        {
-            if (locationObj.Parent is null)
-            {
-                return "";
-            }
-
-            string InfoLabel = "";
-            foreach (ObjAttribute tag in locationObj.Parent.Attributes)
-            {
-                InfoLabel += tag.ToString() + " ";
-            }
-
-            foreach (ObjAttribute tag in locationObj.Attributes)
-            {
-                InfoLabel += tag.ToString() + " ";
-            }
-
-            return InfoLabel.Trim();
-        }
-
-        protected string StructureLabel()
-        {
-            string InfoLabel = "";
-            if (locationObj.Parent is null)
-            {
-                return InfoLabel;
-            }
-
-            if (locationObj.Parent.Label != null)
-            {
-                InfoLabel = locationObj.Parent.Label.Trim();
-            }
-
-            return InfoLabel;
         }
 
         private void CreateLabelObjects()
@@ -118,13 +42,13 @@ namespace WebAnnotation.View
                 {
                     MaxLineWidth = Circle.WidthAtHeight(Height / Radius) * (Radius * 2.0),
                     Outlined = true,
-                    _Color = locationObj.IsUnverifiedTerminal ? Color.Orange : Color.Black
+                    _Color = IDColor
                 };
             }
 
             if (ShowAttributeLabels)
             {
-                string Label = StructureLabel();
+                string Label = StructureLabel(locationObj);
                 if (Label is null || Label?.Length == 0)
                 {
                     StructureLabelView = null;
@@ -139,7 +63,7 @@ namespace WebAnnotation.View
                     };
                 }
 
-                string Tags = TagLabel();
+                string Tags = TagLabel(locationObj);
                 if (Tags is null || Tags?.Length == 0)
                 {
                     StructureAttributeView = null;
@@ -168,92 +92,6 @@ namespace WebAnnotation.View
             else
             {
                 ParentStructureLabelView = null;
-            }
-        }
-
-        public bool IsLabelVisible(VikingXNA.Scene scene) => StructureIDLabelView.IsVisible(scene);
-
-        /// <summary>
-        /// Draw the text for the location at the specified screen coordinates
-        /// </summary>
-        /// <param name="spriteBatch"></param>
-        /// <param name="font"></param>
-        /// <param name="ScreenDrawPosition">Center of the annotation in screen space, which is the coordinate system used for text</param>
-        /// <param name="MagnificationFactor"></param>
-        /// <param name="DirectionToVisiblePlane">The Z distance of the location to the plane viewed by user.</param>
-        public void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
-                              Microsoft.Xna.Framework.Graphics.SpriteFont font,
-                              VikingXNA.Scene scene)
-        {
-            if (font is null)
-            {
-                throw new ArgumentNullException("font");
-            }
-
-            if (spriteBatch is null)
-            {
-                throw new ArgumentNullException("spriteBatch");
-            }
-
-            //Scale the label alpha based on the zoom factor 
-            bool OscillateSize = locationObj.IsLastEditedAnnotation();
-
-            StructureIDLabelView.FontSize = DefaultFontSize; //We only desire one line of text
-
-            if (OscillateSize)
-            {
-                double Scalar = GetOscillationFactor;
-                StructureIDLabelView.FontSize *= Scalar;
-                StructureIDLabelView.MaxLineWidth *= Scalar > 1 ? Scalar : 1.0;
-            }
-            else
-            {
-                StructureIDLabelView.MaxLineWidth = Radius * 2.0;
-            }
-
-            StructureIDLabelView.Draw(spriteBatch, font, scene);
-
-            if (ShowAttributeLabels)
-            {
-                if (StructureLabelView != null)
-                {
-                    StructureLabelView.FontSize = DefaultFontSize / 2.0f;
-
-                    //StructureIDLabelView.Position = modelObj.VolumePosition - new Geometry.Vector2(0.0, this.Radius / 3.0f);
-
-                    StructureLabelView.Draw(spriteBatch, font, scene);
-                }
-
-                if (StructureAttributeView != null)
-                {
-                    StructureAttributeView.FontSize = DefaultFontSize / 4.0f;
-                    StructureAttributeView.Draw(spriteBatch, font, scene);
-                }
-            }
-
-            if (ParentStructureLabelView != null)
-            {
-                ParentStructureLabelView.FontSize = DefaultFontSize / 2.0f;
-                ParentStructureLabelView.Draw(spriteBatch, font, scene);
-            }
-
-            return;
-        }
-
-        /// <summary>
-        /// Returns a number from .9 to 1.1 on a 1Hz wave
-        /// </summary>
-        private static double GetOscillationFactor
-        {
-            get
-            {
-                double SecondsPerCycle = 3;
-                double Hz = 1.0 / SecondsPerCycle;
-                double ms = (double)DateTime.UtcNow.Ticks / TimeSpan.TicksPerSecond;
-                ms %= SecondsPerCycle;
-                ms /= SecondsPerCycle;
-                ms *= Math.PI * 2;
-                return (Math.Sin(ms) / 20.0) + 1.0;
             }
         }
     }

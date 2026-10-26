@@ -13,7 +13,8 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 namespace WebAnnotation.View
 {
     /// <summary>
-    /// Draw overlapped links as a set of circles inscribed in a larger circle
+    /// Draw overlapped links as a set of circles inscribed in a larger circle, or at the marker slots a run
+    /// <see cref="LabelPlacement"/> chose
     /// </summary>
     internal class OverlappedLinkCircleView : ICanvasGeometryView, ICanvasViewContainer, IColorView, ILabelView
     {
@@ -37,16 +38,39 @@ namespace WebAnnotation.View
         private readonly long ID;
         private readonly int Z;
 
+        /// <summary>Marker positions from a run placement; null when markers go on the arcs of the outer circle.</summary>
+        private readonly IReadOnlyList<MarkerSlot> Slots;
+
+        /// <summary>Run axis that slots and linked locations are both ordered along.</summary>
+        private readonly Geometry.Vector2 SlotAxis;
+
         public OverlappedLinkCircleView(Circle outerCircle_MosaicSpace, long LocationID, int ZCut, ICollection<long> OverlappedLinks)
         {
             OuterCircle_MosaicSpace = outerCircle_MosaicSpace;
             OuterCircle_VolumeSpace = outerCircle_MosaicSpace;
+            BoundingBox = OuterCircle_VolumeSpace.BoundingBox;
             Z = ZCut;
             ID = LocationID;
             this.OverlappedLinks = OverlappedLinks;
         }
 
-        public Geometry.Rectangle BoundingBox => OuterCircle_VolumeSpace.BoundingBox;
+        /// <summary>
+        /// Markers at the slots of a run <paramref name="placement"/>. Links to sections above take the up slots and links
+        /// below the down slots, matched in order along the run so each marker sits on its link's side.
+        /// </summary>
+        public OverlappedLinkCircleView(LabelPlacement placement, long LocationID, int ZCut, ICollection<long> OverlappedLinks)
+        {
+            Slots = placement.Markers;
+            SlotAxis = placement.Region.AxisU;
+            BoundingBox = Slots.Count == 0
+                ? placement.Region.ToPolygon().BoundingBox
+                : Slots.Select(s => s.Circle.BoundingBox).Aggregate((a, b) => Geometry.Rectangle.Union(a, b));
+            Z = ZCut;
+            ID = LocationID;
+            this.OverlappedLinks = OverlappedLinks;
+        }
+
+        public Geometry.Rectangle BoundingBox { get; }
 
         private Color _Color;
 
@@ -105,7 +129,34 @@ namespace WebAnnotation.View
 
         public int VisualHeight => 0;
 
-        private void CreateViews() => linkViews = CalculateOverlappedLocationCircles(OuterCircle_VolumeSpace, ID, Store.Locations.GetObjectsByIDs(_OverlappedLinks, false), Z);
+        private void CreateViews()
+        {
+            ICollection<LocationObj> links = Store.Locations.GetObjectsByIDs(_OverlappedLinks, false);
+            linkViews = Slots is null
+                ? CalculateOverlappedLocationCircles(OuterCircle_VolumeSpace, ID, links, Z)
+                : PlaceOverlappedLocationCircles(Slots, SlotAxis, ID, links, Z);
+        }
+
+        /// <summary>
+        /// Puts each linked location in a slot of its direction. Both are sorted by position along <paramref name="axis"/>,
+        /// so the leftmost link takes the leftmost slot. Links on the same section have no slot, as on the circle's arcs.
+        /// </summary>
+        private static ICollection<OverlappedLocationLinkView> PlaceOverlappedLocationCircles(IReadOnlyList<MarkerSlot> slots, Geometry.Vector2 axis, long locationID, ICollection<LocationObj> OverlappingLinks, int ZCut)
+        {
+            List<OverlappedLocationLinkView> listCircles = new(OverlappingLinks.Count);
+            foreach (bool up in new[] { true, false })
+            {
+                LocationObj[] links = [.. OverlappingLinks.Where(loc => up ? loc.Z > ZCut : loc.Z < ZCut)
+                                                          .OrderBy(loc => Geometry.Vector2.Dot(loc.VolumePosition, axis))];
+                MarkerSlot[] directionSlots = [.. slots.Where(s => s.IsUp == up).OrderBy(s => Geometry.Vector2.Dot(s.Center, axis))];
+                for (int i = 0; i < Math.Min(links.Length, directionSlots.Length); i++)
+                {
+                    listCircles.Add(new OverlappedLocationLinkView(locationID, links[i], directionSlots[i].Circle, up, ZCut));
+                }
+            }
+
+            return listCircles;
+        }
 
         /// <summary>
         /// A linked location overlapping with our location is drawn as a small circle.  This function stores the position of those smaller circles along an arc
