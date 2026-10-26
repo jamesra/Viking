@@ -455,16 +455,29 @@ namespace WebAnnotation.ViewModel
         /// volume at all (the factory throws <see cref="ArgumentException"/>) leaves the answer unknown, and the
         /// link is reported as not overlapped so its line is drawn.
         /// </remarks>
-        public bool LinksOverlap()
+        /// <returns>
+        /// False when an endpoint is no longer in the location store (deleted, or evicted when another section was
+        /// opened) after the caller found it; <paramref name="overlaps"/> is then meaningless and the link should be
+        /// skipped. Reads the store with the same non-throwing lookup the caller's checks use.
+        /// </returns>
+        public bool TryLinksOverlap(out bool overlaps)
         {
+            overlaps = false;
             if (LinkDirection == 0) //Links on the same section never overlap, this is to ensure they are displayed and because the convention of Viking is annotations of the same structure do not overlap
+            {
+                return true;
+            }
+
+            if (!Store.Locations.TryGetObjectByID(Key.A, out LocationObj locationA) ||
+                !Store.Locations.TryGetObjectByID(Key.B, out LocationObj locationB))
             {
                 return false;
             }
 
-            SqlGeometry? shapeA = OverlapShape(Store.Locations[Key.A]);
-            SqlGeometry? shapeB = OverlapShape(Store.Locations[Key.B]);
-            return shapeA is not null && shapeB is not null && shapeA.STIntersects(shapeB).IsTrue;
+            SqlGeometry? shapeA = OverlapShape(locationA);
+            SqlGeometry? shapeB = OverlapShape(locationB);
+            overlaps = shapeA is not null && shapeB is not null && shapeA.STIntersects(shapeB).IsTrue;
+            return true;
         }
 
         /// <summary>

@@ -748,7 +748,10 @@ namespace WebAnnotation.ViewModel
             SectionStructureLinks.RemoveStructureLinks(locsOnOurSection);
             RemoveLocations(locations);
 
-            AddOverlappedLocations(locsOnOurSectionOrLinkedByInputLocations);
+            // Re-mark only the locations that still have views: the ones just removed have none, and marking them
+            // logged a "does not contain expected location" line for each (tens of thousands per session, every
+            // time opening a section evicted the previous one's annotations).
+            AddOverlappedLocations(locsOnOurSectionOrLinkedByInputLocations.Where(loc => KnownLocations.Contains(loc.ID)));
         }
 
         //Called when a key is added or removed from the store
@@ -1087,8 +1090,11 @@ namespace WebAnnotation.ViewModel
                     {
                         locView.OverlappedLinks = [.. overlapped_links.Select(linkKey => linkKey.A == loc.ID ? linkKey.B : linkKey.A)];
                     }
-                    else
+                    else if (KnownLocations.Contains(loc.ID))
                     {
+                        // Known locations have a view (AddLocation tracks one only when its view is made), so this
+                        // is a real inconsistency. A location without a view (not on this section, removed, or whose
+                        // view could not be made) is skipped silently.
                         Trace.WriteLine("Location Views does not contain expected location: " + loc.ToString());
                     }
                 }
