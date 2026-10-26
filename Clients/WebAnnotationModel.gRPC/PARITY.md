@@ -8,7 +8,7 @@ The client above the stores was brought to parity by merging Legacy 00014315 (ba
 |---|---|---|---|---|
 | StoreBaseWithKey.GetObjectsForSection / GetObjectsForSectionAsynch | `GetObjectsForSectionAsync` | done | | |
 | GetLocalObjectsForSection (all stores) | `LocationStore.GetLocalObjectsForSection` (section index); `StoreBaseWithKey` section queries read the same-named store member | done | | |
-| GetLastQueryTimeForSection / AdvanceLastQueryTimeForSection | `GetLastQueryTimeForSection`, `AdvanceSectionQueryTime`, `TouchSectionQueryTime` | done | | |
+| GetLastQueryTimeForSection / AdvanceLastQueryTimeForSection | `GetLastQueryTimeForSection`, `AdvanceSectionQueryTime` (poll, server time), `SeedSectionQueryTime` (first region load); eviction order is `MarkSectionUsed` | done | | |
 | HasOutstandingSectionQuery, RemoveSection, FreeExcessSections | same names (plus `CancelExcessSectionQueries`) | done | | |
 | ProxyGetByID / ProxyGetByIDs | `TryGetObjectByID`, `TryGetObjectsByIDs` | done | | |
 | ProxyGetBySection / Begin/Callback | `LocationsClient` `GetLocationChanges*` (async) | done | | |
@@ -45,7 +45,7 @@ The client above the stores was brought to parity by merging Legacy 00014315 (ba
 | Legacy: one lock across store, section list and R-tree; duplicate R-tree ID replaces (efaa2d78) | R-tree owned by `RegionLoader` (`SpatialSearch`) | n/a: different index ownership; not re-checked | | |
 | Legacy: `LastSaveFault` on the store (c5295588) | `IStore.LastSaveFault`, set when an update RPC fails or `Save` throws and cleared by the next `Save`; Viking's save-failed message and Jotunn's status show it | done | `StoreSaveFailureTests` | |
 | Legacy: `LastServerFetchError` so Goto Location reports access denied (05e38245) | `IStoreWithKey.LastServerFetchError`, read by `AnnotationOverlay` deep-link lookups | done | | |
-| Legacy: 30 s visible-section poll, outstanding-query guard, watermark from region-load time, `InvalidateSection` on eviction (81fd3192) | `SectionLocationPollPolicy`, `LocationStore.HasOutstandingSectionQuery`/`TouchSectionQueryTime`, `IRegionLoader.InvalidateSection` | done | `SectionLocationPollPolicyTests` | |
+| Legacy: 30 s visible-section poll, outstanding-query guard, watermark from region-load time, `InvalidateSection` on eviction (81fd3192) | `SectionLocationPollPolicy`, `LocationStore.HasOutstandingSectionQuery`/`SeedSectionQueryTime` (first region load seeds from the cells' server query time; only the poll advances it), `IRegionLoader.InvalidateSection` | done | `SectionLocationPollPolicyTests` | |
 | Legacy: region refresh compares `TotalSeconds` (66460820) | `RegionRefreshTiming` | done | | |
 | Legacy: cancelled or failed region cell clears its LastQuery; `AreRegionQueriesComplete` (03154886) | `RegionRequestData.ClearLastQuery`, `IRegionLoader.AreRegionQueriesComplete` | done | | |
 | Legacy: cache-only lookups `GetObjectByID(id, false)`, `Values` | `GetCachedObject`, `CachedObjects` | done | | |

@@ -30,10 +30,18 @@ namespace WebAnnotationModel.gRPC
         System.Collections.Concurrent.ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>> SectionToLocations = new ConcurrentDictionary<long, ConcurrentDictionary<long, LocationObj>>();
 
         /// <summary>
-        /// Last successful region query time per section. Used by FreeExcessSections
-        /// and incremental deleted-link sync. Not passed into mosaic-region RPCs.
+        /// Server watermark per section: every location change on the section up to this server time is in the store.
+        /// The 30s poll and incremental deleted-link sync ask for changes after it. Only server query times set it:
+        /// a region load seeds it, and only the poll advances it. Not passed into mosaic-region RPCs.
         /// </summary>
         private readonly ConcurrentDictionary<long, DateTime> LastQueryForSection = new ConcurrentDictionary<long, DateTime>();
+
+        /// <summary>
+        /// Client time each section was last loaded or polled; <see cref="FreeExcessSections"/> evicts the oldest first.
+        /// Kept apart from <see cref="LastQueryForSection"/> so a cache-only region load can mark a section in use without
+        /// moving its watermark past changes the server has not sent.
+        /// </summary>
+        private readonly ConcurrentDictionary<long, DateTime> LastUsedForSection = new ConcurrentDictionary<long, DateTime>();
 
         /// <summary>
         /// Sections with an in-flight <see cref="RefreshSectionLocationsAsync"/> so the 30s poll does not stack duplicates.
@@ -121,8 +129,23 @@ namespace WebAnnotationModel.gRPC
         public bool HasOutstandingSectionQuery(long SectionNumber) =>
             OutstandingSectionRefreshes.ContainsKey(SectionNumber);
 
-        internal void TouchSectionQueryTime(long sectionNumber) =>
-            AdvanceSectionQueryTime(sectionNumber, DateTime.UtcNow);
+        /// <summary>
+        /// Sets the section watermark to <paramref name="serverQueryTimeUtc"/> when it has none yet; an existing watermark
+        /// is left for the poll to advance. Called after a region load with the oldest server query time of its cells.
+        /// </summary>
+        internal void SeedSectionQueryTime(long sectionNumber, DateTime serverQueryTimeUtc)
+        {
+            if (serverQueryTimeUtc == DateTime.MinValue)
+                return;
+
+            LastQueryForSection.AddOrUpdate(
+                sectionNumber,
+                serverQueryTimeUtc,
+                (_, existing) => existing > DateTime.MinValue ? existing : serverQueryTimeUtc);
+        }
+
+        /// <summary>Records that the section was just loaded or polled, for <see cref="FreeExcessSections"/>.</summary>
+        internal void MarkSectionUsed(long sectionNumber) => LastUsedForSection[sectionNumber] = DateTime.UtcNow;
 
         /// <summary>
         /// Monotonic advance of the section watermark (server QueryExecutedTime preferred when available).
@@ -168,6 +191,7 @@ namespace WebAnnotationModel.gRPC
                 await OnServerObjectsLoaded(locations, update.QueryTime).ConfigureAwait(false);
 
                 AdvanceSectionQueryTime(SectionNumber, update.QueryTime);
+                MarkSectionUsed(SectionNumber);
                 onLoaded?.Invoke(changes.ObjectsInStore);
             }
             catch (OperationCanceledException)
@@ -383,6 +407,7 @@ namespace WebAnnotationModel.gRPC
             Store.LocationsByRegion?.InvalidateSection((int)SectionNumber);
 
             LastQueryForSection.TryRemove(SectionNumber, out _);
+            LastUsedForSection.TryRemove(SectionNumber, out _);
             if (!SectionToLocations.TryRemove(SectionNumber, out var sectionObjects))
                 return true;
 
@@ -392,7 +417,7 @@ namespace WebAnnotationModel.gRPC
         }
 
         /// <summary>
-        /// Evict least-recently-queried section caches when over <paramref name="LoadedSectionLimit"/>.
+        /// Evict least-recently-used section caches when over <paramref name="LoadedSectionLimit"/>.
         /// <paramref name="LoadingSectionLimit"/> is reserved for cancelling in-flight section loads
         /// once those are wired through the gRPC region path.
         /// </summary>
@@ -400,11 +425,11 @@ namespace WebAnnotationModel.gRPC
         {
             _ = LoadingSectionLimit;
 
-            if (LoadedSectionLimit < 0 || LastQueryForSection.Count <= LoadedSectionLimit)
+            if (LoadedSectionLimit < 0 || LastUsedForSection.Count <= LoadedSectionLimit)
                 return;
 
-            var oldestFirst = LastQueryForSection.OrderBy(kv => kv.Value).ToList();
-            while (LastQueryForSection.Count > LoadedSectionLimit && oldestFirst.Count > 0)
+            var oldestFirst = LastUsedForSection.OrderBy(kv => kv.Value).ToList();
+            while (LastUsedForSection.Count > LoadedSectionLimit && oldestFirst.Count > 0)
             {
                 var section = oldestFirst[0].Key;
                 oldestFirst.RemoveAt(0);

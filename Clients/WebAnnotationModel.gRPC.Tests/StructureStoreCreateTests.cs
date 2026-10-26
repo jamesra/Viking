@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Specialized;
-using System.Threading;
 using System.Threading.Tasks;
 using Google.Protobuf.WellKnownTypes;
 using Geometry;
@@ -59,7 +58,13 @@ namespace WebAnnotationModel.gRPC.Tests
                     _locationAdded.TrySetResult(e);
             };
 
-            await Store.InitializeAsync(new Stores(_locations, _structures, types, locationLinks));
+            await Store.InitializeAsync(new TestAnnotationStores
+            {
+                Locations = _locations,
+                Structures = _structures,
+                StructureTypes = types,
+                LocationLinks = locationLinks,
+            });
         }
 
         private static Structure ServerStructure() => new Structure
@@ -98,27 +103,6 @@ namespace WebAnnotationModel.gRPC.Tests
             Assert.That(_locationAdded.Task.Result.NewItems, Does.Contain(stored));
             Assert.That(_locations.GetLocalObjectsForSection(Section).ContainsKey(LocationId), Is.True,
                 "adjacent-section views seed from the section index");
-        }
-
-        /// <summary>The stores <see cref="StructureStore.Create"/> reaches through <see cref="Store"/>.</summary>
-        private sealed class Stores : IAnnotationStores
-        {
-            public Stores(ILocationStore locations, IStructureStore structures, IStructureTypeStore types, ILocationLinkStore locationLinks)
-            {
-                Locations = locations;
-                Structures = structures;
-                StructureTypes = types;
-                LocationLinks = locationLinks;
-            }
-
-            public ILocationStore Locations { get; }
-            public IStructureStore Structures { get; }
-            public IStructureTypeStore StructureTypes { get; }
-            public IStructureLinkStore StructureLinks => null;
-            public ILocationLinkStore LocationLinks { get; }
-            public IPermittedStructureLinkStore PermittedStructureLinks => null;
-            public IRegionLoader<LocationObj> LocationsByRegion => null;
-            public Task InitializeAsync(CancellationToken token = default) => Task.CompletedTask;
         }
     }
 }

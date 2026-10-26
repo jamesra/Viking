@@ -261,6 +261,30 @@ namespace WebAnnotationModel
             return true;
         }
 
+        /// <summary>
+        /// Oldest completed server query time among the cells covering <paramref name="volumeBounds"/> at this pixel size: every
+        /// object in the region is current as of this time. Null when any cell has no finished query or one is in flight.
+        /// The time is the server's QueryExecutedTime the cell's last query returned.
+        /// </summary>
+        public DateTime? OldestQueryTimeInRegion(Geometry.Rectangle? volumeBounds, double screenPixelSizeInVolume, int sectionNumber)
+        {
+            if (!AreRegionQueriesComplete(volumeBounds, screenPixelSizeInVolume, sectionNumber)
+                || !sectionPyramids.TryGetValue(sectionNumber, out RegionPyramid<OBJECT> regionPyramid))
+                return null;
+
+            IRegionPyramidLevel<RegionRequestData<OBJECT>> level = regionPyramid.GetLevel(screenPixelSizeInVolume);
+            DateTime oldest = DateTime.MaxValue;
+            foreach (RegionRequestData<OBJECT> cell in level.ArrayForRegion(volumeBounds.Value))
+            {
+                if (cell.LastQuery is not DateTime lastQuery)
+                    return null;
+                if (lastQuery < oldest)
+                    oldest = lastQuery;
+            }
+
+            return oldest;
+        }
+
         /*
         private async Task ReportLocalObjectsInRegion(RegionRequestData<OBJECT> cell,
             IRegionPyramidLevel<RegionRequestData<OBJECT>> level, int sectionNumber, CancellationToken aToken,

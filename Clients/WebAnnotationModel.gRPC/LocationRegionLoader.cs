@@ -14,7 +14,8 @@ namespace WebAnnotationModel.gRPC
     /// <summary>
     /// Mosaic region loads through RegionLoader 2000×2000 cells. Each cell passes its own LastQuery.
     /// After cells complete, at most one incremental GetLocationLinksForSection for deleted links —
-    /// never a full-section dump on first visit.
+    /// never a full-section dump on first visit. The first load of a section seeds its watermark with the oldest
+    /// server query time of the cells in view; later loads leave it to the 30s poll.
     /// </summary>
     class LocationRegionLoader : IRegionLoader<LocationObj>
     {
@@ -57,6 +58,7 @@ namespace WebAnnotationModel.gRPC
             var result = await _cells.GetObjectsInRegionAsync(
                 VolumeBounds, screenPixelSizeInVolume, sectionNumber, queryTargets, token, foundObjectsCallback)
                 .ConfigureAwait(false);
+            _locations.MarkSectionUsed(sectionNumber);
 
             if (hadWatermark)
             {
@@ -78,7 +80,15 @@ namespace WebAnnotationModel.gRPC
                 }
             }
 
-            _locations.TouchSectionQueryTime(sectionNumber);
+            // Seed, never advance: a load served from warm cells asked the server nothing, so stamping "now" made the
+            // poll skip changes made since those cells were fetched (a new polygon, another user's edit).
+            if (!hadWatermark)
+            {
+                DateTime? oldestCellQuery = _cells.OldestQueryTimeInRegion(VolumeBounds, screenPixelSizeInVolume, sectionNumber);
+                if (oldestCellQuery.HasValue)
+                    _locations.SeedSectionQueryTime(sectionNumber, oldestCellQuery.Value);
+            }
+
             return result;
         }
 
