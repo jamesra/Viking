@@ -57,8 +57,8 @@ namespace Viking.Services.Grpc
             }
         }
 
-        /// <summary>Largest message the channel will send or receive; segmentation masks and tiles are far bigger than the 4 MB default.</summary>
-        internal const int MaxMessageBytes = 128 * 1024 * 1024;
+        /// <summary>Largest message the channel will send or receive (64 MB, matching the segmentation server); masks and tiles exceed the 4 MB default.</summary>
+        internal const int MaxMessageBytes = 64 * 1024 * 1024;
 
         /// <summary>
         /// Native channel arguments for a long-lived, high-throughput channel. Keepalive pings keep an idle connection from being
