@@ -24,13 +24,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
     {
         internal readonly struct TileSignature
         {
-            public TileSignature(string volume, int section, string channel, string transform, int downsample)
+            public TileSignature(string volume, int section, string channel, string transform, int downsample, CoordinateSpace space)
             {
                 Volume = volume;
                 Section = section;
                 Channel = channel;
                 Transform = transform;
                 Downsample = downsample;
+                Space = space;
             }
 
             public string Volume { get; }
@@ -38,6 +39,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
             public string Channel { get; }
             public string Transform { get; }
             public int Downsample { get; }
+
+            /// <summary>The space of the tiles and of every prompt and result of a request naming them.</summary>
+            public CoordinateSpace Space { get; }
         }
 
         /// <summary>
@@ -67,21 +71,27 @@ namespace WebAnnotation.UI.Commands.Segmentation
             string volume = parent.Section?.VolumeViewModel?.Name ?? string.Empty;
             int section = parent.Section?.Number ?? 0;
             string channel = parent.CurrentChannel ?? string.Empty;
-            string volumeTransform = parent.Section?.VolumeViewModel?.ActiveVolumeTransform ?? string.Empty;
+            // A section the active volume transform has no entry for is drawn with an identity transform, so it is in
+            // mosaic space even while a volume transform is chosen, and its volume transform part is empty.
+            bool inVolumeSpace = parent.Section?.VolumeViewModel?.HasVolumeTransformFor(section) ?? false;
+            string volumeTransform = inVolumeSpace ? parent.Section!.VolumeViewModel.ActiveVolumeTransform ?? string.Empty : string.Empty;
             string sectionTransform = parent.CurrentTransform ?? string.Empty;
-            return new TileSignature(volume, section, channel, volumeTransform + "|" + sectionTransform, downsample);
+            return new TileSignature(
+                volume, section, channel, volumeTransform + "|" + sectionTransform, downsample,
+                inVolumeSpace ? CoordinateSpace.Volume : CoordinateSpace.Mosaic);
         }
 
-        private static string TileKey(TileSignature signature, int row, int col) =>
-            $"{signature.Volume}\n{signature.Section}\n{signature.Channel}\n{signature.Transform}\n{signature.Downsample}\n{row}\n{col}";
+        internal static string TileKey(TileSignature signature, int row, int col) =>
+            $"{signature.Volume}\n{signature.Section}\n{signature.Channel}\n{signature.Transform}\n{signature.Space}\n{signature.Downsample}\n{row}\n{col}";
 
-        private TileCoord ToCoord(TileSignature signature, TileCell cell) => new()
+        internal static TileCoord ToCoord(TileSignature signature, TileCell cell) => new()
         {
             Volume = signature.Volume,
             Section = signature.Section,
             Channel = signature.Channel,
             Transform = signature.Transform,
             Downsample = signature.Downsample,
+            Space = signature.Space,
             Row = cell.Row,
             Col = cell.Col
         };
@@ -329,6 +339,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Stopwatch timer = Stopwatch.StartNew();
             int uploaded = 0;
             int skipped = 0;
+            int held = 0;
             long pausedMs = 0;
             try
             {
@@ -352,7 +363,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 }
 
                 SegmentationDiag.Log($"Prefetch start regions={regions.Count} tiles={cells.Count} ds={downsample}");
-                (uploaded, skipped, pausedMs) = await UploadPrefetchCellsAsync(signature, cells, grayscale, token).ConfigureAwait(false);
+                (uploaded, skipped, held, pausedMs) = await UploadPrefetchCellsAsync(signature, cells, grayscale, token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -362,7 +373,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 SegmentationDiag.Log($"Prefetch stopped: UploadTile RPC {rpcEx.StatusCode}");
             }
 
-            SegmentationDiag.Log($"Prefetch done uploaded={uploaded} alreadySent={skipped} pausedForRequests={pausedMs}ms ms={timer.ElapsedMilliseconds}");
+            SegmentationDiag.Log($"Prefetch done uploaded={uploaded} alreadySent={skipped} serverHeld={held} pausedForRequests={pausedMs}ms ms={timer.ElapsedMilliseconds}");
         }
 
         /// <summary>
@@ -378,6 +389,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Stopwatch timer = Stopwatch.StartNew();
             int uploaded = 0;
             int skipped = 0;
+            int held = 0;
             long pausedMs = 0;
             try
             {
@@ -386,7 +398,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 List<TileCell> cells = [.. mask.TilesTouched(downsample).OrderBy(cell => Geometry.Vector2.DistanceSquared(
                     new Geometry.Vector2((cell.Col + 0.5) * cellWorld, (cell.Row + 0.5) * cellWorld), nearest))];
                 SegmentationDiag.Log($"Prefetch mask tiles={cells.Count} ds={downsample}");
-                (uploaded, skipped, pausedMs) = await UploadPrefetchCellsAsync(signature, cells, grayscale, token).ConfigureAwait(false);
+                (uploaded, skipped, held, pausedMs) = await UploadPrefetchCellsAsync(signature, cells, grayscale, token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -396,7 +408,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 SegmentationDiag.Log($"Prefetch mask stopped: UploadTile RPC {rpcEx.StatusCode}");
             }
 
-            SegmentationDiag.Log($"Prefetch mask done uploaded={uploaded} alreadySent={skipped} pausedForRequests={pausedMs}ms ms={timer.ElapsedMilliseconds}");
+            SegmentationDiag.Log($"Prefetch mask done uploaded={uploaded} alreadySent={skipped} serverHeld={held} pausedForRequests={pausedMs}ms ms={timer.ElapsedMilliseconds}");
         }
 
         /// <summary>The tile level, signature and colour mode a request sent now would use, read on the UI thread.</summary>
@@ -408,23 +420,43 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }).Task;
 
         /// <summary>
-        /// Uploads <paramref name="cells"/> one at a time, skipping those already sent and holding back while a request uploads
-        /// tiles it waits for. <paramref name="token"/> stops the loop; an upload already started is left to finish.
-        /// Returns (uploaded, skipped, milliseconds paused for requests).
+        /// Uploads <paramref name="cells"/> one at a time, skipping those already sent and those the server says it holds, and
+        /// holding back while a request uploads tiles it waits for. <paramref name="token"/> stops the loop; an upload already
+        /// started is left to finish. Returns (uploaded, skipped as already sent, skipped as held, milliseconds paused for requests).
         /// </summary>
-        private async Task<(int Uploaded, int Skipped, long PausedMs)> UploadPrefetchCellsAsync(
+        private async Task<(int Uploaded, int Skipped, int Held, long PausedMs)> UploadPrefetchCellsAsync(
             TileSignature signature, IReadOnlyList<TileCell> cells, bool grayscale, CancellationToken token)
         {
-            int uploaded = 0;
             int skipped = 0;
-            long pausedMs = 0;
+            List<TileCell> unsent = [];
             foreach (TileCell cell in cells)
             {
-                token.ThrowIfCancellationRequested();
                 string key = TileKey(signature, cell.Row, cell.Col);
                 if (prefetchedToServer.Contains(key) || uploadedTileKeys.Contains(key))
-                {
                     skipped++;
+                else
+                    unsent.Add(cell);
+            }
+
+            HashSet<TileCell> held = grpcClient is null
+                ? []
+                : await HeldCellsAsync(
+                    request => grpcClient.GetHeldTilesAsync(
+                        request, new CallOptions(deadline: DateTime.UtcNow.AddSeconds(HeldTilesDeadlineSeconds), cancellationToken: token)).ResponseAsync,
+                    signature,
+                    unsent,
+                    Viking.Common.AccessibleVolumeSession.AnnotationContextId,
+                    token).ConfigureAwait(false);
+
+            int uploaded = 0;
+            long pausedMs = 0;
+            foreach (TileCell cell in unsent)
+            {
+                token.ThrowIfCancellationRequested();
+                if (held.Contains(cell))
+                {
+                    // The stream will not ask for it, so neither does the next prefetch.
+                    prefetchedToServer.Add(TileKey(signature, cell.Row, cell.Col));
                     continue;
                 }
 
@@ -433,7 +465,73 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     uploaded++;
             }
 
-            return (uploaded, skipped, pausedMs);
+            return (uploaded, skipped, held.Count, pausedMs);
+        }
+
+        /// <summary>Most cells one GetHeldTiles call names; the server refuses more.</summary>
+        internal const int MaxHeldTilesCells = 256;
+
+        /// <summary>How long a GetHeldTiles call may take. It is a few dictionary lookups; a slow answer is not worth waiting for.</summary>
+        private const int HeldTilesDeadlineSeconds = 5;
+
+        /// <summary>
+        /// The cells of <paramref name="cells"/> the server says it holds or reads itself, asked through <paramref name="ask"/>
+        /// (GetHeldTiles) in batches of <see cref="MaxHeldTilesCells"/>. A batch whose call fails (a server without the RPC, a
+        /// timeout) counts as holding nothing, so those cells are uploaded as before.
+        /// </summary>
+        internal static async Task<HashSet<TileCell>> HeldCellsAsync(
+            Func<HeldTilesRequest, Task<HeldTilesResponse>> ask,
+            TileSignature signature,
+            IReadOnlyList<TileCell> cells,
+            long annotationContextId,
+            CancellationToken token)
+        {
+            HashSet<TileCell> held = [];
+            for (int start = 0; start < cells.Count; start += MaxHeldTilesCells)
+            {
+                token.ThrowIfCancellationRequested();
+                List<TileCell> batch = [.. cells.Skip(start).Take(MaxHeldTilesCells)];
+                HeldTilesRequest request = new()
+                {
+                    Grid = new TileGrid
+                    {
+                        Volume = signature.Volume,
+                        Section = signature.Section,
+                        Channel = signature.Channel,
+                        Transform = signature.Transform,
+                        Downsample = signature.Downsample,
+                        Space = signature.Space
+                    },
+                    AnnotationContextId = annotationContextId
+                };
+                foreach (TileCell cell in batch)
+                    request.Cells.Add(new GridCell { Row = cell.Row, Col = cell.Col });
+
+                HeldTilesResponse response;
+                try
+                {
+                    response = await ask(request).ConfigureAwait(false);
+                }
+                catch (RpcException rpcEx) when (!token.IsCancellationRequested)
+                {
+                    SegmentationDiag.Log($"GetHeldTiles {rpcEx.StatusCode}: {rpcEx.Status.Detail}; uploading these {batch.Count} tiles");
+                    continue;
+                }
+
+                if (response.Held.Count != batch.Count)
+                {
+                    SegmentationDiag.Log($"GetHeldTiles answered {response.Held.Count} of {batch.Count} cells; uploading them");
+                    continue;
+                }
+
+                for (int k = 0; k < batch.Count; k++)
+                {
+                    if (response.Held[k])
+                        held.Add(batch[k]);
+                }
+            }
+
+            return held;
         }
 
         /// <summary>
@@ -476,7 +574,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 OmitLabeledImage = true,
                 MaskThreshold = (float)WebAnnotation.Global.AnnotationSettings.SegmentationMaskThreshold,
                 UseMaskInput = WebAnnotation.Global.AnnotationSettings.SegmentationUseMaskInput,
-                ResponseContent = (uint)RequestedContent
+                ResponseContent = (uint)RequestedContent,
+                // A server the context is local to reads plain greyscale mosaic cells from its tileset instead of asking.
+                AnnotationContextId = Viking.Common.AccessibleVolumeSession.AnnotationContextId
             };
             foreach (TileCell cell in cells)
             {

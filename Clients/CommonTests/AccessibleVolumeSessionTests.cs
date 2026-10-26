@@ -26,6 +26,7 @@ namespace CommonTests
             AccessibleVolumeSession.SetAnnotationEndpointFromIdentity(ServiceUrl);
             AccessibleVolumeSession.SetAnnotationServerNameFromIdentity("RC2-Annotate");
             AccessibleVolumeSession.SetServiceUrlsFromIdentity(ExportUrl, ODataUrl);
+            AccessibleVolumeSession.AnnotationContextId = 42;
         }
 
         [TestMethod]
@@ -51,6 +52,7 @@ namespace CommonTests
             Assert.IsNull(AccessibleVolumeSession.AnnotationServerName);
             Assert.IsNull(AccessibleVolumeSession.ExportEndpoint);
             Assert.IsNull(AccessibleVolumeSession.ODataEndpoint);
+            Assert.AreEqual(0L, AccessibleVolumeSession.AnnotationContextId, "a stale context id would send the segmentation server another volume's context");
         }
 
         [DataTestMethod]

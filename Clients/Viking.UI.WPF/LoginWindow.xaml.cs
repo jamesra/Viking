@@ -956,6 +956,7 @@ namespace Viking.UI.WPF
             if (accessibleVolume is null)
                 return;
 
+            AccessibleVolumeSession.AnnotationContextId = accessibleVolume.Id;
             AccessibleVolumeSession.SetAnnotationEndpointFromIdentity(choice?.AnnotationEndpoint ?? accessibleVolume.AnnotationEndpoint);
             AccessibleVolumeSession.SetAnnotationServerNameFromIdentity(choice?.Name ?? accessibleVolume.AnnotationServerName);
             AccessibleVolumeSession.SetServiceUrlsFromIdentity(
