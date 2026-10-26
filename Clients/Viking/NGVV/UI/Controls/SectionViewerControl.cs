@@ -709,6 +709,9 @@ namespace Viking.UI.Controls
                 return;
             }
 
+            if (HandleSectionNumberOverlayPen(ref msg))
+                return;
+
             if (penEventManager != null && penEventManager.ProcessPenMessages(ref msg))
             {
                 uint pointerID = WinMsgInput.GetPointerID(msg.WParam);
@@ -3347,14 +3350,7 @@ namespace Viking.UI.Controls
         /// </summary>
         private void DrawSectionNumberOverlay(GraphicsDevice graphicsDevice, Scene scene)
         {
-            if (sectionNumberOverlay == null || spriteBatch == null || fontArial == null)
-                return;
-
-            if (!sectionNumberOverlay.Enabled)
-                return;
-
-            // Only show overlay when volume has multiple sections
-            if (State.volume == null || State.volume.SectionViewModels.Count <= 1)
+            if (spriteBatch == null || fontArial == null || !SectionNumberOverlayShown())
                 return;
 
             // Draw the overlay (animation uses precomputed trajectory sampled in Draw)
@@ -3364,6 +3360,67 @@ namespace Viking.UI.Controls
                 graphicsDevice.Viewport.Width,
                 graphicsDevice.Viewport.Height
             );
+        }
+
+        /// <summary>
+        /// True when the section number overlay is enabled and the volume has more than one section to show.
+        /// </summary>
+        private bool SectionNumberOverlayShown() =>
+            sectionNumberOverlay is not null && sectionNumberOverlay.Enabled &&
+            State.volume is not null && State.volume.SectionViewModels.Count > 1;
+
+        /// <summary>
+        /// Pointer ID of a pen that touched down on the section number overlay. Its pointer messages are kept from
+        /// <see cref="penEventManager"/> until it lifts, so the tap does not also start a pen command's stroke.
+        /// </summary>
+        private uint? _sectionNumberOverlayPenPointerId;
+
+        /// <summary>
+        /// A pen tap on the section number overlay shows the tapped section; a tapped number missing from the volume
+        /// goes to the next existing section in the direction of the tap (<see cref="SectionStepper.Target"/>).
+        /// Called from <see cref="WndProc"/> before pen messages reach <see cref="penEventManager"/>.
+        /// </summary>
+        /// <returns>True when the message belongs to such a tap and must not be processed further.</returns>
+        private bool HandleSectionNumberOverlayPen(ref Message msg)
+        {
+            if (msg.Msg != WinMsgInput.WM_POINTERDOWN && msg.Msg != WinMsgInput.WM_POINTERUPDATE && msg.Msg != WinMsgInput.WM_POINTERUP)
+                return false;
+
+            PointerMessageData pointer = new(msg);
+            if (msg.Msg != WinMsgInput.WM_POINTERDOWN)
+            {
+                if (_sectionNumberOverlayPenPointerId != pointer.PointerID)
+                    return false;
+
+                if (msg.Msg == WinMsgInput.WM_POINTERUP)
+                {
+                    _sectionNumberOverlayPenPointerId = null;
+                    return true;
+                }
+
+                if (pointer.Flags.InContact)
+                    return true;
+
+                // The up was lost and the pen hovers again: let its messages through
+                _sectionNumberOverlayPenPointerId = null;
+                return false;
+            }
+
+            _sectionNumberOverlayPenPointerId = null;
+            if (Section is null || !SectionNumberOverlayShown())
+                return false;
+
+            if (!WinMsgInput.GetPointerType(pointer.PointerID, out PointerType type) || type != PointerType.Pen)
+                return false;
+
+            System.Drawing.Point client = PointToClient(new System.Drawing.Point(pointer.X, pointer.Y));
+            int? tapped = sectionNumberOverlay!.HitTestSection(client.X, client.Y);
+            if (tapped is null)
+                return false;
+
+            _sectionNumberOverlayPenPointerId = pointer.PointerID;
+            StepNSections(tapped.Value - Section.Number);
+            return true;
         }
 
         /// <summary>

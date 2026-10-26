@@ -291,6 +291,17 @@ namespace VikingXNAGraphics
         /// </summary>
         private long _trajectoryStartTicks;
 
+        /// <summary>
+        /// True when the last <see cref="Draw"/> drew labels; false when it returned early (disabled, faded out).
+        /// <see cref="HitTestSection"/> answers only while this is set.
+        /// </summary>
+        private bool _labelsDrawn;
+
+        /// <summary>
+        /// Width in pixels of the bar the last <see cref="Draw"/> drew labels in, measured from <see cref="Edge"/>.
+        /// </summary>
+        private double _lastBarWidth;
+
         #endregion
 
         #region Constructor
@@ -352,6 +363,7 @@ namespace VikingXNAGraphics
         /// <param name="screenHeight">Current screen height in pixels</param>
         public void Draw(SpriteBatch spriteBatch, SpriteFont font, int screenWidth, int screenHeight)
         {
+            _labelsDrawn = false;
             if (!Enabled || spriteBatch == null || font == null)
                 return;
 
@@ -394,6 +406,45 @@ namespace VikingXNAGraphics
 
             // Calculate positions and draw labels
             DrawLabels(spriteBatch, font, screenWidth, screenHeight, alpha);
+        }
+
+        /// <summary>
+        /// The section number whose label slot holds the client point (<paramref name="x"/>, <paramref name="y"/>), as the
+        /// overlay was last drawn (mid-animation positions included), clamped to <see cref="MinSectionNumber"/>..<see cref="MaxSectionNumber"/>.
+        /// The number may be one missing from the volume.
+        /// </summary>
+        /// <param name="x">Client X in pixels, origin at the left edge.</param>
+        /// <param name="y">Client Y in pixels, origin at the top edge.</param>
+        /// <returns>Null when the point is outside the bar or the last <see cref="Draw"/> drew no labels.</returns>
+        public int? HitTestSection(double x, double y)
+        {
+            if (!_labelsDrawn || _lastScreenHeight <= 0)
+                return null;
+
+            bool inBar = Edge == OverlayEdge.Left
+                ? x >= 0 && x <= _lastBarWidth
+                : x >= _lastScreenWidth - _lastBarWidth && x <= _lastScreenWidth;
+            if (!inBar || y < 0 || y > _lastScreenHeight)
+                return null;
+
+            double slotHeight = _lastScreenHeight / TotalSlots;
+            int section = SectionAtY(y, _lastScreenHeight, slotHeight, AnimationController.CurrentPosition / slotHeight);
+            return section < MinSectionNumber ? MinSectionNumber : (section > MaxSectionNumber ? MaxSectionNumber : section);
+        }
+
+        /// <summary>
+        /// Inverse of the label placement in <see cref="DrawLabels"/>: the section whose label centre is nearest <paramref name="y"/>.
+        /// Higher section numbers are drawn above (smaller Y).
+        /// </summary>
+        /// <param name="y">Client Y in pixels, origin at the top edge.</param>
+        /// <param name="screenHeight">Viewport height in pixels.</param>
+        /// <param name="slotHeight">Pixels between neighbouring labels.</param>
+        /// <param name="animatedSectionPosition">Section number drawn at the centre slot; fractional while animating.</param>
+        public static int SectionAtY(double y, double screenHeight, double slotHeight, double animatedSectionPosition)
+        {
+            double centreLabelY = screenHeight / 2.0 - slotHeight / 2.0;
+            double fractionalOffset = (centreLabelY - y) / slotHeight;
+            return (int)Math.Round(animatedSectionPosition + fractionalOffset, MidpointRounding.AwayFromZero);
         }
 
         /// <summary>
@@ -667,6 +718,9 @@ namespace VikingXNAGraphics
             float combinedAlpha = (float)(alpha * _opacity);
             if (combinedAlpha <= 0)
                 return;
+
+            _lastBarWidth = barWidth;
+            _labelsDrawn = true;
 
             // Build or reuse draw context
             if (_drawContext == null || _drawContext.SpriteBatch != spriteBatch || _drawContext.Font != font)
