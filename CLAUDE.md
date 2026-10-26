@@ -9,12 +9,18 @@ User-level rules are imported from `~/.claude/CLAUDE.md` (which links `~/.cursor
 @.cursor/rules/Solution-Overview.mdc
 @.cursor/rules/repo-roles.mdc
 @.cursor/rules/commenting-to-build.mdc
+@.cursor/rules/imported/cursor-rules/.cursor/rules/commenting-code.mdc
 Slack: post only to `#ai` or `#ai-requests`, never `#general` or other human channels. Read the `slack-ai-channel` skill
 (`.cursor/skills/slack-ai-channel/SKILL.md`) before posting; the full rule is `.cursor/rules/slack-ai-protocol.mdc`.
 
-## Path-scoped rules (read the file before editing anything matching its globs)
+## Path-scoped rules (loaded automatically from `.claude/rules/`)
 
-The `.mdc` frontmatter `globs:` line says which paths each rule covers.
+Each `.cursor/rules/**/*.mdc` rule with `globs:` is mirrored into `.claude/rules/<name>.md` with a `paths:` list, so
+Claude loads it when it reads or edits a matching file. After adding or editing a `.cursor/rules` `.mdc` file, rerun
+`python .claude/sync_claude_rules.py` and commit the result; never edit `.claude/rules/` by hand
+(`python .claude/sync_claude_rules.py --check` reports drift). The table is an index of this repo's own rules; the
+generic rules under `.cursor/rules/imported/` (C#, .NET configuration, generated code, PowerShell, Python) load the
+same way.
 
 | Rule | Applies to |
 |------|-----------|

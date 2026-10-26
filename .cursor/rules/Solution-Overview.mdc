@@ -5,7 +5,7 @@ alwaysApply: true
 
 **Project:** Image viewing, annotation, and analysis suite — Viking client plus servers that serve images and annotations from SQL. Client projects live under `Clients/`, server projects under `Servers/`.
 
-**Where to edit:** Server and container work belongs in this repo. Client work belongs in VikingLegacy, with a best-effort mirror back into this repo's `Clients/` tree. See the repo-roles rule.
+**Where to edit:** Server and container work, `gRPC_Protos` and the gRPC clients (gRPC Viking, Jotunn) belong in this repo. WCF client work belongs in VikingLegacy, mirrored into this repo's `Clients/` tree where the code matches. See the repo-roles rule.
 
 **Clients**
 - **Viking** (`Clients/Viking/`) — current production WinForms client. Keep working until Jotunn covers daily tracing.

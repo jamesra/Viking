@@ -1,5 +1,5 @@
 ---
-description: Viking is servers and containers; VikingLegacy is clients; keep client trees in parallel for a later merge
+description: Viking is servers, containers and the gRPC clients; VikingLegacy is the WCF clients; keep the two client trees in parallel
 alwaysApply: true
 ---
 
@@ -7,25 +7,25 @@ alwaysApply: true
 
 Two checkouts share this product. Put the change in the repo that owns that kind of work.
 
-| Work | Repo | Path |
-|------|------|------|
-| Servers, Docker, containers, identity, annotation, export, OData, segmentation, section correction | **Viking** | `d:\src\git\Viking` |
-| Clients (Viking, VikingAU, Jotunn, MonogameTestbed, shared client libraries) | **VikingLegacy** | `d:\src\git\VikingLegacy` |
+| Work | Repo | Path | Branch |
+|------|------|------|--------|
+| Servers, Docker, containers, identity, annotation, export, OData, segmentation, section correction, `gRPC_Protos`, and the gRPC clients (the gRPC Viking, Jotunn) | **Viking** | `d:\src\git\Viking` | `dev` |
+| WCF clients (Viking, VikingAU, MonogameTestbed, shared client libraries); Viking Test builds are packed from here | **VikingLegacy** | `d:\src\git\VikingLegacy` | `Legacy` |
 
 ## Keep clients in parallel
 
-Viking still has a `Clients/` tree. Keep it aligned with VikingLegacy so the two can merge later.
+Viking has a `Clients/` tree too: the gRPC client was ported from VikingLegacy's. Keep the two aligned so fixes reach both.
 
-- Land client changes in **VikingLegacy** first.
-- Mirror the same change into Viking `Clients/` (and any shared client projects it touches) on a best-effort basis in the same piece of work.
-- If a client fix is made in Viking, mirror it back into VikingLegacy the same way.
+- Land WCF client changes in **VikingLegacy** first.
+- Mirror the same change into Viking `Clients/` (and any shared client projects it touches) on a best-effort basis in the same piece of work, where the gRPC client has the same code.
+- If a client fix is made in Viking and it affects the WCF client, back port it into VikingLegacy the same way.
 - Do not let the two client trees drift when the mirror is practical in the same change.
 
-Server and container changes stay in Viking. Do not start that work in VikingLegacy.
+Server and container changes stay in Viking. VikingLegacy runs no servers; do not start that work there.
 
 ```text
-Jotunn panel change
-  → edit Clients/Jotunn in VikingLegacy
+WCF Viking annotation fix
+  → edit Clients/Viking in VikingLegacy
   → mirror the same edit under Clients/ in Viking
 
 IdentityServer compose / cert change

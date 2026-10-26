@@ -30,6 +30,20 @@ managed by nornir-docker's `stack.ps1` / `Initialize-DockerHost.ps1`:
   never a literal `D:/Docker/...` path, so the same file runs on Windows and Ubuntu.
 - TLS services mount `${DOCKER_CERTS_DIR}:/certs:ro`, read `/certs/${TLS_CERT_NAME}/{fullchain,privkey}.pem`,
   and carry the label `viking.tls-reload: "true"`. Do not add per-service certbot containers.
-- Do **not** reintroduce `D:\Docker\Builds\<Service>` env files or `D:\Docker\mounted-configs\<Service>` mounts.
+- Put a new container's settings and secrets in `Run/<stack>/`, not in a `D:\Docker\Builds\<Service>` env file or a new
+  `D:\Docker\mounted-configs\<Service>` mount.
+
+## This workstation today (checked 2026-10-26)
+
+- `Run/_host`, `Data/`, `Certs/` and `Logs/` do not exist on `D:\Docker` yet; the stack layout is in use on the
+  connectomes hosts.
+- `D:\Docker\Builds\<Service>` rebuild/restart scripts (AnnotationGallery, IdentityServer, ReverseProxy,
+  SectionCorrectionService, SegmentationServer, sam2-trainer, nornir) are live and build from the live checkouts. They
+  are edited in place, with dated `.bak-*` copies.
+- `D:\Docker\mounted-configs` is still mounted by IdentityServer (`restart_omni*.cmd`, `.env.All.Docker`), ReverseProxy
+  (`docker-compose.yml`), SectionCorrectionService (`docker-compose.legacy.yml`), sam2-trainer / sam2-trainer-sem
+  (Sam2Trainer `docker/compose.cursor-dev.yaml`, `Run/sam2-dev/*.env`) and nornir-cursor-worker. Retiring it means
+  moving each of these to `Run/<stack>/` first. Its `nornir-build-*` folders are per-run leftovers of
+  `start-nornir-build.ps1`.
 
 Docs: `Documentation/source/deployment/` and https://nornir.github.io/deployment/ (host layout, stack.ps1).
