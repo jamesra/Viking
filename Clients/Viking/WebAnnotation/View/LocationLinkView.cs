@@ -403,6 +403,24 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
+        /// How much of a link's colour saturation the toned link colour keeps. The direction colours (red toward a lower
+        /// section, blue toward a higher one) are fully saturated; a down link's colour toned this way is the burnt orange
+        /// overlapped-link marker numbers are drawn in. Legacy also draws link bodies in it.
+        /// </summary>
+        internal const float FillSaturation = 0.55f;
+
+        /// <summary>
+        /// <paramref name="color"/> with its saturation scaled by <paramref name="saturation"/>: each channel moved toward the
+        /// colour's perceived brightness (0.3R + 0.59G + 0.11B), so the brightness is unchanged. Alpha is kept.
+        /// </summary>
+        internal static Color Desaturate(Color color, float saturation)
+        {
+            float grey = (0.3f * color.R) + (0.59f * color.G) + (0.11f * color.B);
+            byte Toward(byte channel) => (byte)MathHelper.Clamp((float)Math.Round(grey + ((channel - grey) * saturation)), 0f, 255f);
+            return new Color(Toward(color.R), Toward(color.G), Toward(color.B), color.A);
+        }
+
+        /// <summary>
         /// 
         /// </summary>
         /// <param name="StructureTypeColor"></param>

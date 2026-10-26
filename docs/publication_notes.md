@@ -57,6 +57,11 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
 
 ## Algorithmic decisions
 
+- **2026-10-26 Overlapped-link marker numbers use the toned link colour.** Why: the section number on a down marker
+  was the saturated direction colour, which came out yellow; the user wants the burnt orange of a down link body (as
+  Legacy draws it). The label is now `Desaturate(GetLocationLinkColor(ColorForStructure(parent), span, direction),
+  FillSaturation)` at full opacity, so up markers take the toned up-link colour too. Dev's link bodies are not toned yet
+  (Legacy 4cffd674 not backported). Where: `OverlappedLocationLinkView` constructor, `LocationLinkView.Desaturate`.
 - **2026-10-26 Polygon labels use the maximum inscribed circle or a rotated run, never the centroid circle.** Why: the
   old "inscribed circle" (centroid, radius to the nearest vertex) lies outside C-shaped cells and cells with holes, is
   tiny on long processes, and pokes past edges between vertices (user report). The same circle placed adjacent-section
