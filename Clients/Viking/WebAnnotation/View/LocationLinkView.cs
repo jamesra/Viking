@@ -133,6 +133,12 @@ namespace WebAnnotation.ViewModel
         public int MinSection { get; private set; }
         public int MaxSection { get; private set; }
 
+        /// <summary>Section of the location at end A (<see cref="LocationLinkKey.A"/>).</summary>
+        public int SectionA { get; private set; }
+
+        /// <summary>Section of the location at end B (<see cref="LocationLinkKey.B"/>).</summary>
+        public int SectionB { get; private set; }
+
         protected int LinkDirection => MinSection == MaxSection ? 0 : MinSection < Z ? -1 : 1;
 
         public Geometry.Rectangle BoundingBox => Geometry.Rectangle.Pad(LineSegment.BoundingBox, MaxRadius);
@@ -167,7 +173,7 @@ namespace WebAnnotation.ViewModel
         /// volume space, as location labels are, so they zoom with the image, and at this size a label of up to seven
         /// digits fits in the strong part of the link before it fades.
         /// </summary>
-        internal const double LabelHeightPerRadius = 0.2;
+        internal const double LabelHeightPerRadius = 0.16;
 
         /// <summary>Gap between a marker's edge and its label, and between the two labels, as a fraction of that marker's radius.</summary>
         internal const double LabelGapPerRadius = 0.05;
@@ -209,13 +215,13 @@ namespace WebAnnotation.ViewModel
             Geometry.Vector2.Distance(position, aCentre) >= Geometry.Vector2.Distance(position, bCentre);
 
         /// <summary>
-        /// The label beside one end of a link: the ID of the location at the other end, with an arrow pointing to it.
-        /// <paramref name="upright"/> is true when the link runs left to right on screen from this end, so the text reads
-        /// toward the other end and the arrow follows the ID ("34532 ->"). Otherwise the text is turned over to stay
-        /// upright and reads back toward this end, so the arrow comes first ("&lt;- 34532"). Either way the arrow points
-        /// away from this end.
+        /// Which section arrow goes with the label at an end on <paramref name="endSection"/> whose partner is on
+        /// <paramref name="otherSection"/>, seen from <paramref name="viewedSection"/>: 1 for an up arrow (the partner is on
+        /// a higher section, as Viking draws adjacent locations above with its up arrow), -1 for a down arrow, and 0 for
+        /// none. Only the end on the viewed section gets an arrow; the adjacent section's end shows the number alone.
         /// </summary>
-        internal static string EndLabelText(long otherID, bool upright) => upright ? $"{otherID} ->" : $"<- {otherID}";
+        internal static int SectionArrowAt(int endSection, int otherSection, int viewedSection) =>
+            endSection != viewedSection ? 0 : Math.Sign(otherSection - endSection);
 
         /// <summary>
         /// True when the end labels fit in the <paramref name="room"/> of link between the two markers' edges: each label
@@ -368,12 +374,12 @@ namespace WebAnnotation.ViewModel
 
             if (!TryMapEndpointPositions(locA, locB, Z, mapProvider,
                     out Circle circleA, out Circle circleB,
-                    out int minSection, out int maxSection, out Color color))
+                    out int sectionA, out int sectionB, out Color color))
             {
                 return false;
             }
 
-            view = new LocationLinkView(key, Z, mapProvider, circleA, circleB, minSection, maxSection, color);
+            view = new LocationLinkView(key, Z, mapProvider, circleA, circleB, sectionA, sectionB, color);
             return true;
         }
 
@@ -399,15 +405,14 @@ namespace WebAnnotation.ViewModel
         }
 
         private LocationLinkView(LocationLinkKey key, int Z, IVolumeTransformProvider mapProvider,
-            Circle circleA, Circle circleB, int minSection, int maxSection, Color color)
+            Circle circleA, Circle circleB, int sectionA, int sectionB, Color color)
         {
             Key = key;
             this.Z = Z;
             this.mapProvider = mapProvider;
             A = circleA;
             B = circleB;
-            MinSection = minSection;
-            MaxSection = maxSection;
+            SetSections(sectionA, sectionB);
             Color = color;
             lineView = CreateView();
         }
@@ -425,28 +430,35 @@ namespace WebAnnotation.ViewModel
 
             if (!TryMapEndpointPositions(locA, locB, Z, mapProvider,
                     out Circle circleA, out Circle circleB,
-                    out int minSection, out int maxSection, out Color color))
+                    out int sectionA, out int sectionB, out Color color))
             {
                 return false;
             }
 
             A = circleA;
             B = circleB;
-            MinSection = minSection;
-            MaxSection = maxSection;
+            SetSections(sectionA, sectionB);
             Color = color;
             return true;
+        }
+
+        private void SetSections(int sectionA, int sectionB)
+        {
+            SectionA = sectionA;
+            SectionB = sectionB;
+            MinSection = Math.Min(sectionA, sectionB);
+            MaxSection = Math.Max(sectionA, sectionB);
         }
 
         private static bool TryMapEndpointPositions(
             LocationObj locA, LocationObj locB, int displayZ, IVolumeTransformProvider mapProvider,
             out Circle circleA, out Circle circleB,
-            out int minSection, out int maxSection, out Color color)
+            out int sectionA, out int sectionB, out Color color)
         {
             circleA = default;
             circleB = default;
-            minSection = 0;
-            maxSection = 0;
+            sectionA = 0;
+            sectionB = 0;
             color = default;
 
             IVolumeToSectionTransform sourceMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(locA.Z));
@@ -460,8 +472,10 @@ namespace WebAnnotation.ViewModel
             circleA = new Circle(aVolumePosition, locA.Radius * (displayZ == locA.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
             circleB = new Circle(bVolumePosition, locB.Radius * (displayZ == locB.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
 
-            minSection = (int)Math.Round(locA.Z < locB.Z ? locA.Z : locB.Z);
-            maxSection = (int)Math.Round(locA.Z < locB.Z ? locB.Z : locA.Z);
+            sectionA = (int)Math.Round(locA.Z);
+            sectionB = (int)Math.Round(locB.Z);
+            int minSection = Math.Min(sectionA, sectionB);
+            int maxSection = Math.Max(sectionA, sectionB);
 
             color = GetLocationLinkColor(LocationCanvasView.ColorForStructure(locA.Parent, 1f), maxSection - minSection, minSection < displayZ ? -1 : 1, false);
             return true;
@@ -790,11 +804,11 @@ namespace WebAnnotation.ViewModel
                 double radiusB = link.B.Radius * pixelsPerUnit;
                 Vector2 towardB = delta / (float)screenLength;
 
-                // Near A the label names B and points toward it; near B it names A and points back.
+                // Near A the label names B; near B it names A. Text runs along the link and is turned over to stay upright.
                 bool uprightAtA = towardB.X >= 0;
                 bool uprightAtB = towardB.X <= 0;
-                string textA = EndLabelText(link.Key.B, uprightAtA);
-                string textB = EndLabelText(link.Key.A, uprightAtB);
+                string textA = link.Key.B.ToString();
+                string textB = link.Key.A.ToString();
                 Vector2 sizeA = font.MeasureString(textA);
                 Vector2 sizeB = font.MeasureString(textB);
                 float scaleA = (float)(LabelHeightPerRadius * radiusA / font.LineSpacing);
@@ -809,27 +823,59 @@ namespace WebAnnotation.ViewModel
                 Color text = textColor * alpha;
                 Color outline = outlineColor * alpha;
 
+                Color icon = Color.White * alpha;
+
                 if (LabelHeightPerRadius * radiusA >= MinLabelPixels)
-                    DrawEndLabel(spriteBatch, font, screenA, towardB, radiusA, gapA, textA, sizeA, uprightAtA, scaleA, text, outline);
+                {
+                    DrawEndLabel(spriteBatch, font, screenA, towardB, radiusA, gapA, textA, sizeA, uprightAtA, scaleA, text, outline,
+                        SectionArrowAt(link.SectionA, link.SectionB, link.Z), icon);
+                }
+
                 if (LabelHeightPerRadius * radiusB >= MinLabelPixels)
-                    DrawEndLabel(spriteBatch, font, screenB, -towardB, radiusB, gapB, textB, sizeB, uprightAtB, scaleB, text, outline);
+                {
+                    DrawEndLabel(spriteBatch, font, screenB, -towardB, radiusB, gapB, textB, sizeB, uprightAtB, scaleB, text, outline,
+                        SectionArrowAt(link.SectionB, link.SectionA, link.Z), icon);
+                }
             }
         }
 
         /// <summary>
         /// Draws <paramref name="text"/> along the link, starting <paramref name="gap"/> screen pixels beyond the edge of the
-        /// marker centred at <paramref name="markerCentre"/> and running <paramref name="towardOther"/>.
+        /// marker centred at <paramref name="markerCentre"/> and running <paramref name="towardOther"/>. A
+        /// <paramref name="sectionArrow"/> of 1 adds Viking's up-arrow icon on the line above the text, -1 its down-arrow
+        /// icon on the line below, each at the end of the line nearest the marker; 0 adds none.
         /// </summary>
         private static void DrawEndLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                                          Microsoft.Xna.Framework.Graphics.SpriteFont font,
                                          Geometry.Vector2 markerCentre, Vector2 towardOther, double markerRadius, double gap,
                                          string text, Vector2 textSize, bool upright, float fontScale,
-                                         Color textColor, Color outlineColor)
+                                         Color textColor, Color outlineColor, int sectionArrow, Color iconColor)
         {
             float along = (float)(markerRadius + gap) + (textSize.X * fontScale / 2f);
             Vector2 position = new Vector2((float)markerCentre.X, (float)markerCentre.Y) + (towardOther * along);
             float rotation = (float)Math.Atan2(towardOther.Y, towardOther.X) + (upright ? 0f : MathHelper.Pi);
             LabelView.DrawOutlinedString(spriteBatch, font, text, position, textColor, outlineColor, rotation, textSize / 2f, fontScale);
+
+            Microsoft.Xna.Framework.Graphics.Texture2D? arrow = sectionArrow > 0 ? GlobalPrimitives.UpArrowTexture
+                : sectionArrow < 0 ? GlobalPrimitives.DownArrowTexture
+                : null;
+            if (arrow is null)
+                return;
+
+            // The text's own axes: along its line, and down to the next line.
+            Vector2 alongText = new((float)Math.Cos(rotation), (float)Math.Sin(rotation));
+            Vector2 downText = new(-alongText.Y, alongText.X);
+            float lineHeight = font.LineSpacing * fontScale;
+            float iconSize = lineHeight * 0.9f;
+
+            // Upright text starts at the marker; turned-over text ends there.
+            float halfWidth = textSize.X * fontScale / 2f;
+            float acrossLine = upright ? -halfWidth + (iconSize / 2f) : halfWidth - (iconSize / 2f);
+            Vector2 iconCentre = position + (alongText * acrossLine) + (downText * (sectionArrow > 0 ? -lineHeight : lineHeight));
+
+            // The icon names a section direction, not a screen direction, so it is not turned with the text.
+            spriteBatch.Draw(arrow, iconCentre, null, iconColor, 0f, new Vector2(arrow.Width / 2f, arrow.Height / 2f),
+                iconSize / arrow.Width, Microsoft.Xna.Framework.Graphics.SpriteEffects.None, 0f);
         }
 
         public bool Equals(LocationLinkView other)

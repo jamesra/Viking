@@ -8,8 +8,9 @@ namespace WebAnnotationTests
     /// <summary>
     /// A location link (the hourglass between two markers) is drawn as strongly as the Link visibility preference asks
     /// next to its markers and fades to nothing in the middle unless the mouse is over it; what is invisible cannot be
-    /// picked. Each end is labelled with the ID of the location at the other end and an arrow pointing to it, sized in
-    /// volume space. Go to partner jumps to the end farther from the mouse. Pins those rules.
+    /// picked. Each end is labelled with the ID of the location at the other end, sized in volume space, and the end on
+    /// the viewed section gets an up or down arrow for the partner's section. Go to partner jumps to the end farther from
+    /// the mouse. Pins those rules.
     /// </summary>
     [TestClass]
     public class LocationLinkVisibilityTests
@@ -101,15 +102,17 @@ namespace WebAnnotationTests
             Assert.IsTrue(link.Contains(middle), "hovered, the whole link can be followed");
         }
 
-        /// <summary>Upright text reads toward the other end, so the arrow follows the ID and points away from this end.</summary>
+        /// <summary>The end on the viewed section shows which way to go in Z: up to a higher section, down to a lower one.</summary>
         [TestMethod]
-        public void AnUprightLabelPutsTheArrowAfterTheID() =>
-            Assert.AreEqual("34532 ->", LocationLinkView.EndLabelText(34532, upright: true));
+        public void TheEndOnTheViewedSectionPointsTowardItsPartnersSection()
+        {
+            Assert.AreEqual(1, LocationLinkView.SectionArrowAt(endSection: 10, otherSection: 11, viewedSection: 10), "partner above");
+            Assert.AreEqual(-1, LocationLinkView.SectionArrowAt(endSection: 10, otherSection: 8, viewedSection: 10), "partner below");
+        }
 
-        /// <summary>Turned-over text reads back toward this end, so the arrow comes first to still point away from it.</summary>
         [TestMethod]
-        public void ATurnedOverLabelPutsTheArrowBeforeTheID() =>
-            Assert.AreEqual("<- 34532", LocationLinkView.EndLabelText(34532, upright: false));
+        public void TheEndOnTheAdjacentSectionHasNoArrow() =>
+            Assert.AreEqual(0, LocationLinkView.SectionArrowAt(endSection: 11, otherSection: 10, viewedSection: 10));
 
         [TestMethod]
         public void LabelsNeedRoomForBothAndTheirGaps()
