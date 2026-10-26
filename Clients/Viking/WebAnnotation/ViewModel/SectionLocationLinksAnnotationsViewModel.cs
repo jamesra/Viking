@@ -80,46 +80,47 @@ namespace WebAnnotation.ViewModel
                 return;
             }
 
-            // KnownLinks is the source of truth for membership. This action runs under its write lock,
+            // KnownLinks is the source of truth for membership. This callback runs under its write lock,
             // so it must not Debug.Assert (a modal dialog here blocks every reader of the tracker and
-            // freezes the UI) and must not leave a half-added entry: KeyTracker rolls the key back when
-            // the action throws, but LocationLinks is ours to clean up. A leftover entry would otherwise
-            // make every later add of the same link fail.
-            try
+            // freezes the UI) and must not leave a half-added entry: the Func overload adds the key only when
+            // the callback returns true (not when it returns false or throws), but LocationLinks is ours to
+            // clean up. A leftover entry would otherwise make every later add of the same link fail.
+            bool endpointGone = false;
+            KnownLinks.TryAdd(key, () =>
             {
-                KnownLinks.TryAdd(key, () =>
+                // An endpoint can leave the store after the checks above (deleted, or evicted when another
+                // section opens); the link goes with it, so it is skipped without an exception.
+                if (!lv.TryLinksOverlap(out bool overlaps))
                 {
-                    LocationLinks[key] = lv;
+                    endpointGone = true;
+                    return false;
+                }
 
-                    try
+                LocationLinks[key] = lv;
+                try
+                {
+                    if (overlaps)
                     {
-                        if (lv.LinksOverlap())
+                        OverlappedLinkKeys.TryAdd(key, () =>
                         {
-                            OverlappedLinkKeys.TryAdd(key, () =>
-                            {
-                                OverlappedAdjacentLocationIDs.AddRef(key.A);
-                                OverlappedAdjacentLocationIDs.AddRef(key.B);
-                            });
-                        }
-                        else
-                        {
-                            NonOverlappedLinksSearch.Add(lv.BoundingBox.ToRTreeRect(lv.Z), key);
-                        }
+                            OverlappedAdjacentLocationIDs.AddRef(key.A);
+                            OverlappedAdjacentLocationIDs.AddRef(key.B);
+                        });
                     }
-                    catch (System.Exception ex)
+                    else
                     {
-                        LocationLinks.TryRemove(key, out _);
-                        Trace.WriteLine($"AddLocationLink {key.A}-{key.B} on section {Section.Number} failed and was rolled back: {ex}");
-                        throw;
+                        NonOverlappedLinksSearch.Add(lv.BoundingBox.ToRTreeRect(lv.Z), key);
                     }
-                });
-            }
-            catch (KeyNotFoundException)
-            {
-                // An endpoint was deleted after the TryGetValue checks above (LinksOverlap re-reads the store).
-                // The tracker and LocationLinks are already rolled back, and the link is gone with its location,
-                // so skip it rather than abort the caller's loop over the remaining links.
-            }
+                }
+                catch (System.Exception ex)
+                {
+                    LocationLinks.TryRemove(key, out _);
+                    Trace.WriteLine($"AddLocationLink {key.A}-{key.B} on section {Section.Number} failed and was rolled back: {ex}");
+                    throw;
+                }
+
+                return true;
+            });
         }
 
         protected void RemoveLocationLink(LocationLinkKey key, bool unsubscribe)
