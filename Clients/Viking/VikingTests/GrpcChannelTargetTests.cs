@@ -81,7 +81,9 @@ namespace VikingTests
         {
             var options = GrpcChannelManager.CreateChannelOptions().ToDictionary(o => o.Name, o => o.IntValue);
 
-            Assert.AreEqual(30_000, options["grpc.keepalive_time_ms"]);
+            // Faster than the server's 5 minute minimum ping interval and it drops the connection (GOAWAY too_many_pings).
+            Assert.IsTrue(options["grpc.keepalive_time_ms"] > 5 * 60 * 1000);
+            Assert.AreEqual(GrpcChannelManager.KeepaliveTimeMs, options["grpc.keepalive_time_ms"]);
             Assert.AreEqual(1, options["grpc.keepalive_permit_without_calls"]);
             Assert.AreEqual(15_000, options["grpc.max_reconnect_backoff_ms"]);
             Assert.AreEqual(1, options["grpc.use_local_subchannel_pool"]);

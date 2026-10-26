@@ -15,15 +15,25 @@ namespace Viking.Services.Grpc
         internal const int MaxMessageBytes = 64 * 1024 * 1024;
 
         /// <summary>
+        /// How often the channel pings a connection that has carried no data (6 minutes). Keep it above the server's
+        /// grpc.http2.min_recv_ping_interval_without_data_ms (gRPC's default, 5 minutes, which the segmentation server keeps):
+        /// a server receiving pings more often than that while it sends nothing counts strikes and, after two, closes the
+        /// connection with GOAWAY "too many pings", failing every call on it. At 30 s that happened whenever a busy
+        /// segmentation server was silent for about two minutes.
+        /// </summary>
+        internal const int KeepaliveTimeMs = 6 * 60 * 1000;
+
+        /// <summary>
         /// Native channel arguments for a long-lived, high-throughput channel. Keepalive pings keep an idle connection from being
-        /// dropped by a proxy or NAT and notice a dead one within about a minute; the reconnect backoff bounds how long a dropped
+        /// dropped by a proxy or NAT and notice a dead one within about six and a half minutes (<see cref="KeepaliveTimeMs"/> plus
+        /// the 20 s ping timeout), without pinging faster than the server allows; the reconnect backoff bounds how long a dropped
         /// connection waits before the native layer retries, so recovery is quiet. A local subchannel pool gives this channel its
         /// own connection instead of sharing one process-wide, which is the Grpc.Core analogue of Grpc.Net.Client's
         /// EnableMultipleHttp2Connections (concurrent calls are not all capped by one HTTP/2 connection's stream limit).
         /// </summary>
         internal static ChannelOption[] CreateChannelOptions() =>
         [
-            new ChannelOption("grpc.keepalive_time_ms", 30_000),
+            new ChannelOption("grpc.keepalive_time_ms", KeepaliveTimeMs),
             new ChannelOption("grpc.keepalive_timeout_ms", 20_000),
             new ChannelOption("grpc.keepalive_permit_without_calls", 1),
             new ChannelOption("grpc.http2.max_pings_without_data", 0),
