@@ -17,12 +17,14 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
-    internal class LocationClosedCurveView : LocationCurveView, ILabelView, ICanvasViewContainer, Viking.Common.IHelpStrings
+    internal class LocationClosedCurveView : LocationCurveView, ILabelView, ICanvasViewContainer, Viking.Common.IHelpStrings, IOverlappedLinkHost
     {
         public CurveView curveView;
 
         public StructureLabelsBase? curveLabels;
         public OverlappedLinkCircleView? OverlappedLinkView;
+
+        OverlappedLinkCircleView? IOverlappedLinkHost.OverlappedLinkView => OverlappedLinkView;
 
         /// <summary>Guards the label layout inputs and the views built from them; links are set on the UI thread.</summary>
         private readonly object labelSync = new();

@@ -27,6 +27,9 @@ namespace WebAnnotationTests
     {
         private const int Section = 10;
 
+        /// <summary>Mouse position for link picks whose hits carry no arrow markers, where it is not read.</summary>
+        private static readonly GridVector2 Mouse = new(0, 0);
+
         private DateTime now = new(2026, 10, 20, 12, 0, 0, DateTimeKind.Utc);
 
         private TemporarilyHiddenAnnotations Create() => new(() => now);
@@ -258,11 +261,11 @@ namespace WebAnnotationTests
             TemporarilyHiddenAnnotations hidden = Create();
             LocationLinkView link = LocationLinkVisibilityTests.CreateLink();
 
-            Assert.AreSame(link, hidden.PickLinkToHide([LinkHit(link, 0.4)], Section));
-            Assert.IsNull(hidden.PickLinkToHide([LinkHit(link, 1.4)], Section), "the mouse is not over it");
+            Assert.AreSame(link, hidden.PickLinkToHide([LinkHit(link, 0.4)], Section, Mouse));
+            Assert.IsNull(hidden.PickLinkToHide([LinkHit(link, 1.4)], Section, Mouse), "the mouse is not over it");
 
             hidden.Hide(link.Key, TimeSpan.FromSeconds(30));
-            Assert.IsNull(hidden.PickLinkToHide([LinkHit(link, 0.4)], Section), "already hidden");
+            Assert.IsNull(hidden.PickLinkToHide([LinkHit(link, 0.4)], Section, Mouse), "already hidden");
         }
 
         [TestMethod]
@@ -272,7 +275,7 @@ namespace WebAnnotationTests
             LocationLinkView link = LocationLinkVisibilityTests.CreateLink();
             hidden.Hide(link.Key, TimeSpan.FromSeconds(30));
 
-            Assert.AreSame(link, hidden.PickLinkToRestore([LinkHit(link, 0.4)]));
+            Assert.AreSame(link, hidden.PickLinkToRestore([LinkHit(link, 0.4)], Mouse));
             Assert.IsTrue(hidden.Restore(link.Key));
             now += TimeSpan.FromSeconds(30 * TemporarilyHiddenAnnotations.FadeFraction + 0.1);
             Assert.IsFalse(hidden.IsHidden(link.Key));
@@ -296,6 +299,66 @@ namespace WebAnnotationTests
 
         private static HitTestResult LinkHit(LocationLinkView link, double distance) => new(link, Section, 0, distance);
 
+        /// <summary>
+        /// A link to an overlapping location on an adjacent section is drawn as an arrow marker inside the location. Del on
+        /// the marker hides that link, not the location, and Insert there brings it back.
+        /// </summary>
+        [TestMethod]
+        public void DelAndInsertActOnTheArrowMarkerUnderTheMouseNotItsLocation()
+        {
+            TemporarilyHiddenAnnotations hidden = Create();
+            OverlappedLocationLinkView up = Marker(1, 2, new GridVector2(0, 5));
+            OverlappedLocationLinkView down = Marker(1, 3, new GridVector2(0, -5));
+            HitTestResult[] hits = [Hit(Host(1, up, down), 0.5)];
+            GridVector2 onUp = new(0, 5.2);
+
+            Assert.AreSame(up, hidden.PickLinkToHide(hits, Section, onUp));
+            Assert.IsNull(hidden.PickLinkToHide(hits, Section, new GridVector2(0, 0)), "between the markers the location wins");
+
+            hidden.Hide(new LocationLinkKey(1, 2), TimeSpan.FromSeconds(30));
+            Assert.IsNull(hidden.PickLinkToHide(hits, Section, onUp), "the hidden marker is gone, so Del goes to the location");
+            CollectionAssert.AreEqual(new[] { down }, hidden.VisibleLinksToDraw([up, down]));
+
+            Assert.AreSame(up, hidden.PickLinkToRestore(hits, onUp));
+            Assert.IsNull(hidden.PickLinkToRestore(hits, new GridVector2(0, -5)), "the down marker was never hidden");
+        }
+
+        [TestMethod]
+        public void AnArrowMarkerGetsTheLinkContextMenu()
+        {
+            using ContextMenuStrip menu = new LocationLink_CanvasContextMenuView().BuildMenuFor(Marker(1, 2, new GridVector2(0, 5)), new ContextMenuStrip());
+
+            CollectionAssert.AreEqual(new[] { "Delete Link", "Split structure" },
+                menu.Items.OfType<ToolStripMenuItem>().Select(i => i.Text).ToArray());
+            Assert.IsInstanceOfType(menu.Items[0], typeof(ToolStripMenuItem), "no separator above the first item");
+        }
+
+        /// <summary>A marker of radius 1 at <paramref name="center"/>, skipping the constructor (which reads the linked location's structure).</summary>
+        private static OverlappedLocationLinkView Marker(long locationId, long linkedId, GridVector2 center)
+        {
+            OverlappedLocationLinkView marker = (OverlappedLocationLinkView)FormatterServices.GetUninitializedObject(typeof(OverlappedLocationLinkView));
+            SetField(marker, "circleView", new VikingXNAGraphics.TextureCircleView(null!, new Geometry.Circle(center, 1), Microsoft.Xna.Framework.Color.White));
+            SetField(marker, "linkKey", new LocationLinkKey(locationId, linkedId));
+            marker.LocationID = locationId;
+            return marker;
+        }
+
+        private static StubMarkerHost Host(long id, params OverlappedLocationLinkView[] markers)
+        {
+            StubMarkerHost host = Line<StubMarkerHost>(id, Section);
+            OverlappedLinkCircleView links = (OverlappedLinkCircleView)FormatterServices.GetUninitializedObject(typeof(OverlappedLinkCircleView));
+            SetField(links, "linkViews", new List<OverlappedLocationLinkView>(markers));
+            host.OverlappedLinkView = links;
+            return host;
+        }
+
+        private static void SetField(object target, string name, object value)
+        {
+            FieldInfo field = target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(field, name);
+            field.SetValue(target, value);
+        }
+
         [TestMethod]
         public void TheDefaultHideTimeIsThirtySeconds()
         {
@@ -308,16 +371,24 @@ namespace WebAnnotationTests
         /// A line view that skips the constructor (which needs a real shape and transform) and only knows its location,
         /// which is all the ID and Z the hit ranking reads.
         /// </summary>
-        private static StubLine Line(long id, int section)
+        private static StubLine Line(long id, int section) => Line<StubLine>(id, section);
+
+        private static T Line<T>(long id, int section) where T : StubLine
         {
-            StubLine view = (StubLine)FormatterServices.GetUninitializedObject(typeof(StubLine));
+            T view = (T)FormatterServices.GetUninitializedObject(typeof(T));
             FieldInfo field = typeof(LocationCanvasView).GetField("modelObj", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.IsNotNull(field);
             field.SetValue(view, new LocationObj(new Location { ID = id, ParentID = id, Position = new AnnotationPoint(0, 0, section) }));
             return view;
         }
 
-        private sealed class StubLine : LocationLineViewBase
+        /// <summary>A location that draws arrow markers, like a circle, polygon or closed curve.</summary>
+        private sealed class StubMarkerHost : StubLine, IOverlappedLinkHost
+        {
+            public OverlappedLinkCircleView? OverlappedLinkView { get; set; }
+        }
+
+        private class StubLine : LocationLineViewBase
         {
             public StubLine() : base(null!, null!) { }
 

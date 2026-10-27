@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Viking.AnnotationServiceTypes;
+using VikingXNAGraphics;
 using WebAnnotation.View;
 using WebAnnotation.ViewModel;
 
@@ -13,8 +14,9 @@ namespace WebAnnotation.UI
     /// its time runs out or Insert restores it. During the last <see cref="FadeFraction"/> of the time it fades back in
     /// (a quarter sine wave, from invisible to fully opaque) but is still not clickable, so the user sees it return before
     /// it can be picked. Thread-safe: drawing, mouse handling and the redraw timer all read it.
-    /// Location links can be hidden the same way, by their key. A link is also hidden while either of its locations is,
-    /// since it would point at nothing.
+    /// Location links can be hidden the same way, by their key, whichever view draws them (<see cref="IViewLocationLink"/>:
+    /// a line, or an arrow marker inside a location for an overlapping location on an adjacent section). A link is also
+    /// hidden while either of its locations is, since it would point at nothing.
     /// </summary>
     internal sealed class TemporarilyHiddenAnnotations(Func<DateTime> utcNow)
     {
@@ -216,12 +218,15 @@ namespace WebAnnotation.UI
         private bool IsHiddenHit(HitTestResult hit) => hit.obj switch
         {
             LocationCanvasView view => IsHidden(view.ID),
-            LocationLinkView link => IsHidden(link.Key),
+            IViewLocationLink link => IsHidden(link.Key),
             _ => false,
         };
 
-        /// <summary>The links to draw: not hidden, or fading back in.</summary>
-        public List<LocationLinkView> VisibleLinksToDraw(IEnumerable<LocationLinkView> links)
+        /// <summary>
+        /// The links to draw: not hidden, or fading back in. Any view of a link (a line, or a location's arrow marker for an
+        /// overlapping location on an adjacent section) is hidden by the link's key.
+        /// </summary>
+        public List<T> VisibleLinksToDraw<T>(IEnumerable<T> links) where T : IViewLocationLink
         {
             if (IsEmpty)
                 return [.. links];
@@ -233,12 +238,12 @@ namespace WebAnnotation.UI
         /// Scales the alpha of each link in <paramref name="links"/> that is fading back in by its fade. Dispose the result
         /// after drawing the links and their labels to put the alphas back.
         /// </summary>
-        public IDisposable ApplyLinkFade(IEnumerable<LocationLinkView> links)
+        public IDisposable ApplyLinkFade<T>(IEnumerable<T> links) where T : IViewLocationLink, IColorView
         {
-            List<(LocationLinkView View, float Alpha)> originals = [];
+            List<(IColorView View, float Alpha)> originals = [];
             if (!IsEmpty)
             {
-                foreach (LocationLinkView link in links)
+                foreach (T link in links)
                 {
                     float fade = FadeIn(link.Key);
                     if (fade >= 1f)
@@ -252,11 +257,11 @@ namespace WebAnnotation.UI
             return new LinkRestorer(originals);
         }
 
-        private sealed class LinkRestorer(List<(LocationLinkView View, float Alpha)> originals) : IDisposable
+        private sealed class LinkRestorer(List<(IColorView View, float Alpha)> originals) : IDisposable
         {
             public void Dispose()
             {
-                foreach ((LocationLinkView view, float alpha) in originals)
+                foreach ((IColorView view, float alpha) in originals)
                     view.Alpha = alpha;
             }
         }
@@ -364,28 +369,50 @@ namespace WebAnnotation.UI
 
         /// <summary>
         /// The link Del hides: the visible link the mouse is over when it is what a click would pick (the same ranking hover
-        /// uses, which lets a link win over a larger circle it is closer to). Null when a location wins, so Del hides that.
+        /// uses, which lets a link win over a larger circle it is closer to). When the pick is a location on
+        /// <paramref name="sectionNumber"/> and the mouse is on one of its arrow markers (a link to an overlapping location on
+        /// an adjacent section), that marker's link is picked, as a click there would. Null when a location wins, so Del
+        /// hides that.
         /// </summary>
         /// <param name="hits">Every hit at the mouse position, hidden or not.</param>
-        public LocationLinkView? PickLinkToHide(IEnumerable<HitTestResult> hits, int sectionNumber)
+        /// <param name="position">The mouse position the hits were taken at, to find the marker under it.</param>
+        public IViewLocationLink? PickLinkToHide(IEnumerable<HitTestResult> hits, int sectionNumber, Geometry.Vector2 position)
         {
             List<HitTestResult> visible = [.. hits.Where(h => !IsHiddenHit(h))];
             HitTestResult? best = visible.NearestObjectOnCurrentSectionThenAdjacent(sectionNumber, preferCloserLocationLinks: true);
-            return best is { obj: LocationLinkView link } && best.Distance <= 1.0 ? link : null;
+            if (best is { obj: IOverlappedLinkHost host } && best.Z == sectionNumber)
+            {
+                IViewLocationLink? marker = host.OverlappedLinkView?.LinkViewsAt(position).Cast<IViewLocationLink>().FirstOrDefault(l => !IsHidden(l.Key));
+                if (marker is not null)
+                    return marker;
+            }
+
+            return best is { obj: IViewLocationLink link } && best.Distance <= 1.0 ? link : null;
         }
 
         /// <summary>
         /// The hidden link Insert restores: among the links hidden themselves (not only through a hidden location) that the
-        /// mouse is over, the one nearest its centre line.
+        /// mouse is over, as a line or as an arrow marker inside a hit location, the one nearest its centre.
         /// </summary>
-        public LocationLinkView? PickLinkToRestore(IEnumerable<HitTestResult> hits)
+        /// <param name="position">The mouse position the hits were taken at, to find a marker under it.</param>
+        public IViewLocationLink? PickLinkToRestore(IEnumerable<HitTestResult> hits, Geometry.Vector2 position)
         {
+            List<HitTestResult> hitList = [.. hits];
+            IEnumerable<(IViewLocationLink Link, double Distance)> lines = hitList
+                .Where(h => h.obj is IViewLocationLink)
+                .Select(h => ((IViewLocationLink)h.obj, h.Distance));
+            IEnumerable<(IViewLocationLink Link, double Distance)> markers = hitList
+                .Select(h => h.obj)
+                .OfType<IOverlappedLinkHost>()
+                .SelectMany(host => host.OverlappedLinkView?.LinkViewsAt(position) ?? [])
+                .Select(m => ((IViewLocationLink)m, m.DistanceFromCenterNormalized(position)));
+
             lock (gate)
             {
-                return hits
-                    .Where(h => h.obj is LocationLinkView link && IsLinkHiddenItself(link.Key))
-                    .OrderBy(h => h.Distance)
-                    .Select(h => h.obj as LocationLinkView)
+                return lines.Concat(markers)
+                    .Where(c => IsLinkHiddenItself(c.Link.Key))
+                    .OrderBy(c => c.Distance)
+                    .Select(c => c.Link)
                     .FirstOrDefault();
             }
         }

@@ -87,6 +87,9 @@ namespace WebAnnotation
         /// <summary>Annotations on the current section that Del hid, see <see cref="HideAnnotationUnderMouse"/>.</summary>
         private readonly TemporarilyHiddenAnnotations hiddenAnnotations = new();
 
+        /// <summary>What Del hid, for views that draw or hit-test nested link markers themselves.</summary>
+        internal TemporarilyHiddenAnnotations HiddenAnnotations => hiddenAnnotations;
+
         /// <summary>Bumped for each redraw timer so only the newest one runs.</summary>
         private int hiddenAnnotationRedrawGeneration;
 
@@ -1850,7 +1853,7 @@ break;
         /// <summary>
         /// Del: hides the annotation on the current section under the mouse for <see cref="Global.AnnotationSettings.HideAnnotationSeconds"/>,
         /// so an annotation beneath it (for example one from an adjacent section) can be picked and dragged. A location link
-        /// is hidden instead when it is what a click there would pick.
+        /// (a line, or an arrow marker inside a location) is hidden instead when it is what a click there would pick.
         /// </summary>
         private void HideAnnotationUnderMouse()
         {
@@ -1865,10 +1868,10 @@ break;
                 return;
             }
 
-            if (!TryGetAnnotationsUnderMouse(out List<HitTestResult> hits))
+            if (!TryGetAnnotationsUnderMouse(out List<HitTestResult> hits, out Geometry.Vector2 mouse))
                 return;
 
-            LocationLinkView link = hiddenAnnotations.PickLinkToHide(hits, CurrentSectionNumber);
+            IViewLocationLink link = hiddenAnnotations.PickLinkToHide(hits, CurrentSectionNumber, mouse);
             if (link is not null)
             {
                 hiddenAnnotations.Hide(link.Key, hideFor);
@@ -1900,13 +1903,13 @@ break;
                 return;
             }
 
-            if (!TryGetAnnotationsUnderMouse(out List<HitTestResult> hits))
+            if (!TryGetAnnotationsUnderMouse(out List<HitTestResult> hits, out Geometry.Vector2 mouse))
                 return;
 
             LocationCanvasView target = hiddenAnnotations.PickToRestore(hits, CurrentSectionNumber);
             if (target is null || !hiddenAnnotations.Restore(target.ID))
             {
-                LocationLinkView link = hiddenAnnotations.PickLinkToRestore(hits);
+                IViewLocationLink link = hiddenAnnotations.PickLinkToRestore(hits, mouse);
                 if (link is null || !hiddenAnnotations.Restore(link.Key))
                     return;
 
@@ -1921,15 +1924,16 @@ break;
             _Parent.Invalidate();
         }
 
-        /// <summary>Every annotation hit at the mouse on the current section, including hidden ones.</summary>
-        private bool TryGetAnnotationsUnderMouse(out List<HitTestResult> hits)
+        /// <summary>Every annotation hit at the mouse on the current section, including hidden ones, and the mouse position used.</summary>
+        private bool TryGetAnnotationsUnderMouse(out List<HitTestResult> hits, out Geometry.Vector2 mouse)
         {
             hits = null;
+            mouse = GetMouseWorldPosition();
             SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView is null)
                 return false;
 
-            hits = locView.GetAnnotations(GetMouseWorldPosition());
+            hits = locView.GetAnnotations(mouse);
             return true;
         }
 

@@ -21,10 +21,12 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
-    internal class LocationPolygonView : LocationCanvasView, ILabelView, ICanvasViewContainer, Viking.Common.IHelpStrings, IColorView
+    internal class LocationPolygonView : LocationCanvasView, ILabelView, ICanvasViewContainer, Viking.Common.IHelpStrings, IColorView, IOverlappedLinkHost
     {
         private StructureLabelsBase? curveLabels;
         private OverlappedLinkCircleView? OverlappedLinkView;
+
+        OverlappedLinkCircleView? IOverlappedLinkHost.OverlappedLinkView => OverlappedLinkView;
 
         /// <summary>
         /// Guards <see cref="labelLayout"/>, <see cref="overlappedLinks"/> and the label and marker views built from them:
