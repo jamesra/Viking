@@ -140,23 +140,25 @@ namespace MonogameTestbed
 
             /// <summary>
             /// Registration correction flags before SliceGraph.Create.
-            /// Values: none, neighbor, curvefit, all/everything (default). Combine as "neighbor,curvefit".
+            /// Values: none, neighbor (default), curvefit, all/everything. Combine as "neighbor,curvefit".
+            /// The default matches the correction service, which applies the published field only. CurveFit stays here
+            /// as an opt-in for experiments: the service dropped it on 2026-10-27 (docs/publication_notes.md).
             /// </summary>
-            [Option("correction", Default = "all",
-                HelpText = "Registration fixes (flags): none | neighbor (residual displacement field) | curvefit (outlier pass for folds/tears) | all/everything (neighbor then curvefit). Default all.")]
+            [Option("correction", Default = "neighbor",
+                HelpText = "Registration fixes (flags): none | neighbor (residual displacement field, the default and what the correction service applies) | curvefit (leave-one-out Catmull-Rom pass, opt-in) | all/everything (neighbor then curvefit).")]
             public string CorrectionParam { get; set; }
 
             /// <summary>
-            /// Parsed <see cref="CorrectionParam"/>. Omitted / blank is <see cref="CorrectionMode.All"/> (everything).
+            /// Parsed <see cref="CorrectionParam"/>. Omitted / blank is <see cref="CorrectionMode.Neighbor"/>.
             /// </summary>
-            public CorrectionMode Correction { get; private set; } = CorrectionMode.All;
+            public CorrectionMode Correction { get; private set; } = CorrectionMode.Neighbor;
 
             /// <summary>
             /// XY search radius in nanometres when neighbor correction runs. Pads the loaded cells' AABB
             /// to discover neighboring structures on each occupied section.
             /// </summary>
             [Option("correction-radius", Default = 2000.0,
-                HelpText = "Neighbor search radius in nm for --correction neighbor|all (default 2000).")]
+                HelpText = "Neighbor search radius in nm for --correction neighbor|all (default 2000). Used only without a published field (no --correction-url or --corrections-dir).")]
             public double CorrectionRadiusNm { get; set; }
 
             /// <summary>
@@ -467,7 +469,7 @@ namespace MonogameTestbed
             {
                 if (string.IsNullOrWhiteSpace(CorrectionParam))
                 {
-                    Correction = CorrectionMode.All;
+                    Correction = CorrectionMode.Neighbor;
                     return;
                 }
 

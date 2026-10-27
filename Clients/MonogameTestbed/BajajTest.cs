@@ -1775,7 +1775,7 @@ namespace MonogameTestbed
             //
             //BajajMultiTest applies --correction before building its slice graph. Match that here so a
             //failed-slice repro shows the same geometry. Residual-field and curvefit both need extra Z hops.
-            CorrectionMode correction = Program.options?.Correction ?? CorrectionMode.All;
+            CorrectionMode correction = Program.options?.Correction ?? CorrectionMode.Neighbor;
             bool needsWideLoad = correction != CorrectionMode.None;
             int loadHops = needsWideLoad ? Math.Max(hops, 3) : hops;
             Morphology = AnnotationVizLib.OData.ODataMorphologyFactory.FromODataLocationIDs([.. SliceLocations.Select(id => (long)id)], Endpoint, loadHops);

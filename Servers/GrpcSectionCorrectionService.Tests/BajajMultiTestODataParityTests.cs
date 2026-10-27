@@ -24,7 +24,8 @@ namespace GrpcSectionCorrectionService.Tests
     /// <summary>
     /// BajajMultiTest load of RC1 structure 180 versus the section-correction service.
     /// Oracle A–C compare CorrectPoints. Leave-one-out neighbor correction is Oracle B (median cap, not bit equality).
-    /// <see cref="CorrectStructuresMatchesBajajCenters"/> compares final centers after the published field and curve fit.
+    /// <see cref="CorrectStructuresMatchesBajajCenters"/> compares final centers after the published field (BajajMultiTest's
+    /// default <c>--correction neighbor</c>; the service never applies CurveFit).
     /// </summary>
     [TestClass]
     public class BajajMultiTestODataParityTests
@@ -277,7 +278,6 @@ namespace GrpcSectionCorrectionService.Tests
             double kernel = published.Provenance?.KernelRadiusNm > 0 ? published.Provenance.KernelRadiusNm : NeighborResidualField.KernelRadiusNm;
             NeighborResidualField field = NeighborResidualField.FromLattice(published.EnumerateLattice(), pitch, kernel);
             MorphologyGraph.ApplyResidualField(graph, field);
-            MorphologyGraph.CurveFitProcesses(graph, MorphologyGraph.CurveFitOptions.Default);
 
             Dictionary<long, (long Z, Vector2 Xy)> bajaj = [];
             CollectCenters(graph, bajaj);

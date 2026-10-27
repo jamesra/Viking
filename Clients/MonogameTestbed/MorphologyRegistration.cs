@@ -19,7 +19,8 @@ namespace MonogameTestbed
 {
     /// <summary>
     /// Runs the <see cref="CorrectionMode"/> flags on a morphology graph before SliceGraph.Create.
-    /// Each flag is an independent fix; <see cref="CorrectionMode.All"/> (default) enables every fix, in order.
+    /// Each flag is an independent fix; the default is <see cref="CorrectionMode.Neighbor"/>, what the correction service
+    /// applies. <see cref="CorrectionMode.CurveFit"/> is opt-in here only; the service dropped it on 2026-10-27.
     /// Residual fields prefer a live correction-service URL, then a local <c>--corrections-dir</c>, then OData neighbors.
     /// </summary>
     static class MorphologyRegistration

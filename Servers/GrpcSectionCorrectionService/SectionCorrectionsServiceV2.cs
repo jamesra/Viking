@@ -154,13 +154,14 @@ namespace Viking.GrpcSectionCorrectionService
             AnnotationWatermark = CorrectionServiceCore.ToTimestamp(fingerprint.Newest)
         };
 
-        /// <summary>V2's zero value is All, so the mode needs no presence flag.</summary>
+        /// <summary>
+        /// V2's zero value is Neighbor (the published field), so the mode needs no presence flag. The retired ALL and
+        /// CURVE_FIT values (2, 3) are refused like any unknown value.
+        /// </summary>
         public static FitMode ToFitMode(CorrectionMode mode) => mode switch
         {
-            CorrectionMode.All => FitMode.All,
-            CorrectionMode.None => FitMode.None,
             CorrectionMode.Neighbor => FitMode.Neighbor,
-            CorrectionMode.CurveFit => FitMode.CurveFit,
+            CorrectionMode.None => FitMode.None,
             _ => throw new RpcException(new Status(StatusCode.InvalidArgument, $"unknown correction mode {(int)mode}"))
         };
 

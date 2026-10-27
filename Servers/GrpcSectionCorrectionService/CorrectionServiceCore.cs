@@ -195,7 +195,8 @@ namespace Viking.GrpcSectionCorrectionService
 
         /// <summary>
         /// Loads the structures (plus children when asked) mapped through the StosGroup, then applies
-        /// <paramref name="mode"/>: the published field if it includes Neighbor, then curvefit if it includes CurveFit.
+        /// <paramref name="mode"/>: the published field if it includes Neighbor. The service applies nothing else: the
+        /// CurveFit pass was dropped in 1.5.0 (see docs/publication_notes.md, 2026-10-27).
         /// </summary>
         public async Task<StructuresAnswer> CorrectStructuresAsync(
             string volumeName,
@@ -250,9 +251,6 @@ namespace Viking.GrpcSectionCorrectionService
 
                 if (mode.HasFlag(FitMode.Neighbor))
                     MorphologyGraph.ApplyResidualField(cell, field);
-                if (mode.HasFlag(FitMode.CurveFit))
-                    MorphologyGraph.CurveFitProcesses(cell, new MorphologyGraph.CurveFitOptions(
-                        MorphologyGraph.DefaultCurveFitHalfWindow, null, null));
 
                 foreach (MorphologyNode node in cell.Nodes.Values)
                 {

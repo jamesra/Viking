@@ -26,14 +26,12 @@ The protocol is versioned by package name. V2 (``section_correction_v2.proto``, 
 
    * - Value
      - Meaning
-   * - ``CORRECTION_MODE_ALL`` (0, the default)
-     - Neighbor, then curve fit.
-   * - ``CORRECTION_MODE_NONE``
-     - Do not move points.
-   * - ``CORRECTION_MODE_NEIGHBOR``
+   * - ``CORRECTION_MODE_NEIGHBOR`` (0, the default)
      - Sample the published residual field.
-   * - ``CORRECTION_MODE_CURVE_FIT``
-     - Leave-one-out Catmull-Rom along each process.
+   * - ``CORRECTION_MODE_NONE`` (1)
+     - Do not move points: the StosGroup mapping alone.
+
+Values 2 and 3 (``ALL`` and ``CURVE_FIT``, a leave-one-out Catmull-Rom fit along each process after the field) were removed in service 1.5.0 and are reserved. A request with either is refused with ``INVALID_ARGUMENT``. On 11 cells the fit kept the field's mean overlap of linked outlines and quadrupled the large losses. The measurements are in ``docs/publication_notes.md`` (2026-10-27). MonogameTestbed keeps the fit as an opt-in ``--correction curvefit`` or ``all`` for experiments.
 
 Status codes
 ============

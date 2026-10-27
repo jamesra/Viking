@@ -168,17 +168,21 @@ namespace GrpcSectionCorrectionService.Tests
             Assert.AreEqual(StatusCode.InvalidArgument, ex.StatusCode);
         }
 
-        /// <summary>The zero value is All, so an unset mode corrects fully without a presence flag.</summary>
-        [TestMethod]
-        public void CorrectionMode_MapsEveryValue_AndZeroIsAll()
+        /// <summary>
+        /// The zero value is Neighbor, so an unset mode gets the published field without a presence flag. The service
+        /// never runs CurveFit: the retired ALL (2) and CURVE_FIT (3) values are refused, as is any unknown value.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(2)]
+        [DataRow(3)]
+        [DataRow(9)]
+        public void CorrectionMode_ZeroIsNeighbor_AndRetiredValuesAreRefused(int retired)
         {
-            Assert.AreEqual(CorrectionMode.All, new CorrectStructuresRequest().Correction);
-            Assert.AreEqual(FitMode.All, SectionCorrectionsServiceV2.ToFitMode(CorrectionMode.All));
-            Assert.AreEqual(FitMode.None, SectionCorrectionsServiceV2.ToFitMode(CorrectionMode.None));
+            Assert.AreEqual(CorrectionMode.Neighbor, new CorrectStructuresRequest().Correction);
             Assert.AreEqual(FitMode.Neighbor, SectionCorrectionsServiceV2.ToFitMode(CorrectionMode.Neighbor));
-            Assert.AreEqual(FitMode.CurveFit, SectionCorrectionsServiceV2.ToFitMode(CorrectionMode.CurveFit));
+            Assert.AreEqual(FitMode.None, SectionCorrectionsServiceV2.ToFitMode(CorrectionMode.None));
             Assert.AreEqual(StatusCode.InvalidArgument,
-                Assert.ThrowsExactly<RpcException>(() => SectionCorrectionsServiceV2.ToFitMode((CorrectionMode)9)).StatusCode);
+                Assert.ThrowsExactly<RpcException>(() => SectionCorrectionsServiceV2.ToFitMode((CorrectionMode)retired)).StatusCode);
         }
 
         [TestMethod]

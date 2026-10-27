@@ -67,6 +67,38 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
 
 ## Algorithmic decisions
 
+- **2026-10-27 Section correction drops CurveFit: answers are the published field only.** CurveFit moved each
+  location to a leave-one-out Catmull-Rom fit along its process after the field was applied. It was meant to remove
+  outliers (folds, tears), but in practice it pulled every node toward its neighbours, and from one cell it cannot tell
+  registration error from a change of shape: a soma whose outline takes in a process base on one section (InferiorMonkey
+  c16137, 1337465) or a process leaving a soma (c1178). The joint field pools many cells, so one cell's lobe barely
+  moves it. Measured by SBFSEM-tools 2.39.0 against service 1.4.0 on 2026-10-27 (02:40–03:05 UTC). The run used 11
+  cells across InferiorMonkey, RC1, RC2, RPC1 and RPC2, all on builder-2 sets, and 7,347 linked outline pairs, with
+  overlap measured as shared area ÷ smaller area. Each mode was compared with NONE:
+
+  | | NEIGHBOR (field) | ALL (field + fit) |
+  |---|---|---|
+  | Mean overlap (NONE 0.761) | 0.792 | 0.791 |
+  | Pairs rose / fell / same (±0.01) | 3,457 / 1,324 / 2,566 | 3,429 / 2,053 / 1,865 |
+  | Median, p5, p1 change | +0.008, −0.06, −0.17 | +0.007, −0.19, −0.44 |
+  | Pairs losing / gaining > 0.1 | 185 / 977 | 733 / 1,351 |
+  | Outlines moved ≥ 0.25 µm / lost overlap / pushed off neighbours / by a change of shape | 72 / 20 / 6 / 0 | 352 / 194 / 46 / 20 |
+
+  - ALL against NEIGHBOR: 783 pairs lose more than 0.1 and 707 gain.
+  - Per cell, the fit helped only RC1 c410 (0.844 → 0.862). It made no difference on the InferiorMonkey cells and RC2
+    c5106, and made RPC1 c430 (0.817 → 0.802), RPC1 c2628 (0.738 → 0.732) and RPC2 c787 worse.
+  - It moved no outline more than 2 µm beyond the field. Its large moves were all on circles: RC2 c74420 769565 by
+    20.4 µm, 772432 by 9.0 and 779690 by 3.6, all on Z 792, are still to be explained.
+  - The 1.3.x branch and tip rules had already cut ALL's harm from 1.2.0's 1,262 / 991 / 368 / 196 (same columns as the
+    last table row).
+
+  Rejected: an overlap guard on the fit (SBFSEMpy's proposal), which adds a rule to keep a step that does not improve
+  the answer. V2 `CorrectionMode` keeps `NEIGHBOR = 0` (the default) and `NONE = 1`; 2 and 3 are reserved (service
+  1.5.0). The fit itself stays in `AnnotationVizLib` (`MorphologyGraph.CurveFitProcesses`) as an opt-in MonogameTestbed
+  option (`--correction curvefit` or `all`). The testbed default is now `neighbor`, matching the service. Where:
+  `Servers/GrpcSectionCorrectionService`, `gRPC_Protos/SectionCorrection/section_correction_v2.proto`,
+  `Clients/MonogameTestbed/Program.cs`; Slack #ai thread 1792781373.698579.
+
 - **2026-10-26 Link fill colours are softened in OKLCH, 75% chroma; marker numbers use the same colour.** Why: the
   earlier RGB fade toward grey (55% saturation, entry below) shifted how colours look: a burnt orange down link,
   RGB (255, 165, 27), became a yellowish tan (220, 170, 94), which the user disliked, and marker numbers took the same
