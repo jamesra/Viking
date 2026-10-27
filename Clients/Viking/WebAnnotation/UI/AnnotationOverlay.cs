@@ -84,7 +84,7 @@ namespace WebAnnotation
         /// </summary>
         private bool _isShutdown;
 
-        /// <summary>Annotations on the current section that Del hid, see <see cref="HideAnnotationUnderMouse"/>.</summary>
+        /// <summary>Everything Del hid, auto-segmentation rings included; see <see cref="HideAnnotationUnderMouse"/>.</summary>
         private readonly TemporarilyHiddenAnnotations hiddenAnnotations = new();
 
         /// <summary>What Del hid, for views that draw or hit-test nested link markers themselves.</summary>
@@ -594,21 +594,18 @@ namespace WebAnnotation
 
             HitTestResult bestHit = listObjects.NearestObjectOnCurrentSectionThenAdjacent(CurrentSectionNumber, preferCloserLocationLinks: true);
 
-            //Use objects on our section, then other sections 
+            //Use objects on our section, then other sections
             if (bestHit != null)
             {
                 distance = bestHit.Distance;
-                bestObj = bestHit.obj as ICanvasGeometryView;
 
-                /*Hit testing for containers should probably be cleaned up and incorporated into the GetAnnotationsAtPositions calls*/
-                if (bestObj is ICanvasViewContainer container)
+                // A location with link markers returns the marker under the mouse; nothing there falls through to a ring
+                HitTestResult expanded = bestHit.ExpandICanvasViewContainer(position);
+                bestObj = expanded?.obj as ICanvasGeometryView;
+                if (bestObj != null && bestHit.obj is ICanvasViewContainer)
                 {
-                    bestObj = container.GetAnnotationAtPosition(position) as ICanvasGeometryView;
-                    if (bestObj != null)
-                    {
-                        distance = bestObj.DistanceFromCenterNormalized(position);
-                        return bestObj;
-                    }
+                    distance = expanded.Distance;
+                    return bestObj;
                 }
             }
 
@@ -809,7 +806,7 @@ namespace WebAnnotation
 
             _Parent.Camera.PropertyChanged += new System.ComponentModel.PropertyChangedEventHandler(OnCameraPropertyChanged);
 
-            autoPolygonizeController = new AutoCirclePolygonizeController(_Parent, RequestCurrentSectionAnnotationsLoad);
+            autoPolygonizeController = new AutoCirclePolygonizeController(_Parent, RequestCurrentSectionAnnotationsLoad, hiddenAnnotations);
             cacheSectionAnnotations.EntryEvicted -= OnSectionAnnotationsViewEvicted;
             cacheSectionAnnotations.EntryEvicted += OnSectionAnnotationsViewEvicted;
             if (Global.AnnotationSettings.AutoPolygonizeCircles)
@@ -845,7 +842,7 @@ namespace WebAnnotation
         /// </summary>
         public void SetAutoPolygonizeEnabled(bool enabled)
         {
-            autoPolygonizeController ??= new AutoCirclePolygonizeController(_Parent, RequestCurrentSectionAnnotationsLoad);
+            autoPolygonizeController ??= new AutoCirclePolygonizeController(_Parent, RequestCurrentSectionAnnotationsLoad, hiddenAnnotations);
             autoPolygonizeController.SetEnabled(enabled);
             AnnotationStatusChips.Refresh();
         }
@@ -1621,8 +1618,8 @@ break;
                 "F11: Open goto structure ID dialog",
                 "SHIFT + F8: Send the circles in view to auto-polygonize again",
                 "Numpad * or SHIFT + 8: Toggle Pen Mode",
-                "DEL: Hide the auto-segmentation ring or annotation under the mouse for a while (time is in Annotation Preferences) to reach one beneath it; it fades back in",
-                "INSERT: Bring back the hidden ring or annotation under the mouse now"
+                "DEL: Hide the auto-segmentation ring, annotation or link under the mouse for a while (time is in Annotation Preferences) to reach one beneath it; it fades back in",
+                "INSERT: Bring back the hidden ring, annotation or link under the mouse now"
             };
         }
 
@@ -1851,9 +1848,10 @@ break;
         }
 
         /// <summary>
-        /// Del: hides the annotation on the current section under the mouse for <see cref="Global.AnnotationSettings.HideAnnotationSeconds"/>,
-        /// so an annotation beneath it (for example one from an adjacent section) can be picked and dragged. A location link
-        /// (a line, or an arrow marker inside a location) is hidden instead when it is what a click there would pick.
+        /// Del: hides what a click under the mouse would pick for <see cref="Global.AnnotationSettings.HideAnnotationSeconds"/>,
+        /// so an annotation beneath it (for example one from an adjacent section) can be picked and dragged: an
+        /// auto-segmentation ring, a location on this or an adjacent section, a location link (a line, or an arrow marker
+        /// inside a location) or a structure link. See <see cref="TemporarilyHiddenAnnotations"/>.
         /// </summary>
         private void HideAnnotationUnderMouse()
         {
@@ -1868,25 +1866,14 @@ break;
                 return;
             }
 
-            if (!TryGetAnnotationsUnderMouse(out List<HitTestResult> hits, out Geometry.Vector2 mouse))
+            if (!TryGetAnnotationsUnderMouse(out SectionAnnotationsView _, out List<HitTestResult> hits, out Geometry.Vector2 mouse))
                 return;
 
-            IViewLocationLink link = hiddenAnnotations.PickLinkToHide(hits, CurrentSectionNumber, mouse);
-            if (link is not null)
-            {
-                hiddenAnnotations.Hide(link.Key, hideFor);
-                Trace.WriteLine($"Hid location link {link.Key} for {Global.AnnotationSettings.HideAnnotationSeconds} s");
-                ScheduleHiddenAnnotationRedraw();
-                _Parent.Invalidate();
-                return;
-            }
-
-            LocationCanvasView target = hiddenAnnotations.PickToHide(hits, CurrentSectionNumber);
-            if (target is null)
+            object target = hiddenAnnotations.PickToHide(hits, CurrentSectionNumber, mouse);
+            if (target is null || !hiddenAnnotations.Hide(target, hideFor))
                 return;
 
-            hiddenAnnotations.Hide(target.ID, TimeSpan.FromSeconds(Global.AnnotationSettings.HideAnnotationSeconds));
-            Trace.WriteLine($"Hid location {target.ID} for {Global.AnnotationSettings.HideAnnotationSeconds} s");
+            Trace.WriteLine($"Hid {TemporarilyHiddenAnnotations.KeyOf(target)} for {Global.AnnotationSettings.HideAnnotationSeconds} s");
             ScheduleHiddenAnnotationRedraw();
             _Parent.Invalidate();
         }
@@ -1903,33 +1890,26 @@ break;
                 return;
             }
 
-            if (!TryGetAnnotationsUnderMouse(out List<HitTestResult> hits, out Geometry.Vector2 mouse))
+            if (!TryGetAnnotationsUnderMouse(out SectionAnnotationsView locView, out List<HitTestResult> hits, out Geometry.Vector2 mouse))
                 return;
 
-            LocationCanvasView target = hiddenAnnotations.PickToRestore(hits, CurrentSectionNumber);
-            if (target is null || !hiddenAnnotations.Restore(target.ID))
-            {
-                IViewLocationLink link = hiddenAnnotations.PickLinkToRestore(hits, mouse);
-                if (link is null || !hiddenAnnotations.Restore(link.Key))
-                    return;
-
-                Trace.WriteLine($"Restored location link {link.Key}");
-                ScheduleHiddenAnnotationRedraw();
-                _Parent.Invalidate();
+            // A hidden marker outside its polygon's outline leaves the polygon unhit, so also take locations by bounding box
+            IEnumerable<IOverlappedLinkHost> markerHosts = locView.GetAnnotations(new Geometry.Rectangle(mouse, 0)).Select(h => h.obj).OfType<IOverlappedLinkHost>();
+            object target = hiddenAnnotations.PickToRestore(hits, mouse, markerHosts);
+            if (target is null || !hiddenAnnotations.Restore(target))
                 return;
-            }
 
-            Trace.WriteLine($"Restored location {target.ID}");
+            Trace.WriteLine($"Restored {TemporarilyHiddenAnnotations.KeyOf(target)}");
             ScheduleHiddenAnnotationRedraw();
             _Parent.Invalidate();
         }
 
         /// <summary>Every annotation hit at the mouse on the current section, including hidden ones, and the mouse position used.</summary>
-        private bool TryGetAnnotationsUnderMouse(out List<HitTestResult> hits, out Geometry.Vector2 mouse)
+        private bool TryGetAnnotationsUnderMouse(out SectionAnnotationsView locView, out List<HitTestResult> hits, out Geometry.Vector2 mouse)
         {
             hits = null;
             mouse = GetMouseWorldPosition();
-            SectionAnnotationsView locView = GetAnnotationsForSection(CurrentSectionNumber);
+            locView = GetAnnotationsForSection(CurrentSectionNumber);
             if (locView is null)
                 return false;
 
@@ -1951,11 +1931,7 @@ break;
         private void ScheduleHiddenAnnotationRedraw()
         {
             int generation = Interlocked.Increment(ref hiddenAnnotationRedrawGeneration);
-            TimeSpan? annotationWait = hiddenAnnotations.TimeUntilNextRedraw();
-            TimeSpan? ringWait = autoPolygonizeController?.TimeUntilNextHiddenRedraw();
-            TimeSpan? wait = annotationWait is null ? ringWait
-                : ringWait is null ? annotationWait
-                : (annotationWait < ringWait ? annotationWait : ringWait);
+            TimeSpan? wait = hiddenAnnotations.TimeUntilNextRedraw();
             if (wait is null)
                 return;
 
@@ -3149,7 +3125,7 @@ break;
             ICollection<LocationCanvasView> Locations = currentSectionAnnotations.GetLocations(scene.VisibleWorldBounds);
             List<LocationCanvasView> listLocationsToDraw = hiddenAnnotations.VisibleToDraw(HiddenStructureTypes.ExcludeLocations(HiddenStructures.ExcludeLocations(FindVisibleLocations(Locations, scene), hiddenStructures)));
             ICollection<LocationCanvasView> RefLocations = currentSectionAnnotations.AdjacentLocationsNotOverlappedInRegion(Bounds);
-            List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = HiddenStructureTypes.ExcludeLocations(HiddenStructures.ExcludeLocations(FindVisibleAdjacentLocations(RefLocations, scene), hiddenStructures)); //Find the locations on the adjacent sections
+            List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = hiddenAnnotations.VisibleToDraw(HiddenStructureTypes.ExcludeLocations(HiddenStructures.ExcludeLocations(FindVisibleAdjacentLocations(RefLocations, scene), hiddenStructures))); //Find the locations on the adjacent sections
 
             //Draw all of the locations on the current section
             //An annotation Del hid fades back in over the end of its hide time; scale its alpha for this draw only.
@@ -3161,19 +3137,22 @@ break;
             nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1; //Record the next open stencil value for later draw calls that can overwrite the backgrounds
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
-            WebAnnotation.LocationObjRenderer.DrawBackgrounds(listVisibleNonOverlappingLocationsOnAdjacentSections, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, Parent.LumaOverlayCurveManager, scene, SectionNumber);
+            using (hiddenAnnotations.ApplyFade(listVisibleNonOverlappingLocationsOnAdjacentSections))
+            {
+                WebAnnotation.LocationObjRenderer.DrawBackgrounds(listVisibleNonOverlappingLocationsOnAdjacentSections, graphicsDevice, basicEffect, overlayEffect, Parent.LumaOverlayLineManager, Parent.LumaOverlayCurveManager, scene, SectionNumber);
+            }
 
             //Draw the LocationLinks, but use the starting stencil value so we don't overwrite any backgrounds
             nextStencilValue = DeviceStateManager.GetDepthStencilValue(graphicsDevice) + 1; //Record the next open stencil value for later draw calls that can overwrite the backgrounds
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, StartingStencilValue);
 
             //Get all the lines to draw first so the text and geometric shapes are over top of them
-            List<LocationLinkView> linksToDraw = hiddenAnnotations.VisibleLinksToDraw(HiddenStructureTypes.ExcludeLocationLinks(HiddenStructures.ExcludeLocationLinks(
+            List<LocationLinkView> linksToDraw = hiddenAnnotations.VisibleToDraw(HiddenStructureTypes.ExcludeLocationLinks(HiddenStructures.ExcludeLocationLinks(
                 currentSectionAnnotations.NonOverlappedLocationLinksInRegion(scene.VisibleWorldBounds),
                 hiddenStructures,
                 locationId => Store.Locations.GetObjectByID(locationId, false)?.ParentID),
                 locationId => Store.Locations.GetObjectByID(locationId, false)?.Parent?.TypeID));
-            using (hiddenAnnotations.ApplyLinkFade(linksToDraw))
+            using (hiddenAnnotations.ApplyFade(linksToDraw))
             {
                 LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, linksToDraw);
             }
@@ -3201,18 +3180,21 @@ break;
             //Draw structure links over any annotations
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
-            List<StructureLinkViewModelBase> VisibleStructureLinks = HiddenStructureTypes.ExcludeStructureLinks(
+            List<StructureLinkViewModelBase> VisibleStructureLinks = hiddenAnnotations.VisibleToDraw(HiddenStructureTypes.ExcludeStructureLinks(
                 HiddenStructures.ExcludeStructureLinks(currentSectionAnnotations.VisibleStructureLinks(scene), hiddenStructures),
-                structureId => Store.Structures.GetObjectByID(structureId, false)?.TypeID);
-            StructureLinkCirclesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, [.. VisibleStructureLinks.Where(l => l as StructureLinkCirclesView != null).Cast<StructureLinkCirclesView>()]);
-            StructureLinkCurvesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, [.. VisibleStructureLinks.Where(l => l as StructureLinkCurvesView != null).Cast<StructureLinkCurvesView>()]);
+                structureId => Store.Structures.GetObjectByID(structureId, false)?.TypeID));
+            using (hiddenAnnotations.ApplyFade(VisibleStructureLinks))
+            {
+                StructureLinkCirclesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, [.. VisibleStructureLinks.OfType<StructureLinkCirclesView>()]);
+                StructureLinkCurvesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, [.. VisibleStructureLinks.OfType<StructureLinkCurvesView>()]);
+            }
 
             graphicsDevice.BlendState = defaultBlendState;
 
             //Draw text
             if (Global.AnnotationSettings.LocationLinkLabels)
             {
-                using (hiddenAnnotations.ApplyLinkFade(linksToDraw))
+                using (hiddenAnnotations.ApplyFade(linksToDraw))
                 {
                     DrawLocationLinkLabels(linksToDraw, scene);
                 }

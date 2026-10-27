@@ -119,7 +119,7 @@ namespace WebAnnotation.View
             get
             {
                 TemporarilyHiddenAnnotations? hidden = Hidden;
-                return hidden is null || hidden.IsEmpty ? linkViews : linkViews.Where(l => !hidden.IsHidden(((IViewLocationLink)l).Key));
+                return hidden is null || hidden.IsEmpty ? linkViews : linkViews.Where(l => !hidden.IsHidden(l));
             }
         }
 
@@ -290,8 +290,8 @@ namespace WebAnnotation.View
             }
 
             // A marker Del hid is skipped, and fades back in like a link line
-            List<OverlappedLocationLinkView> visible = hidden.VisibleLinksToDraw(linkViewArray);
-            using (hidden.ApplyLinkFade(visible))
+            List<OverlappedLocationLinkView> visible = hidden.VisibleToDraw(linkViewArray);
+            using (hidden.ApplyFade(visible))
             {
                 OverlappedLocationLinkView.Draw(device, scene, basicEffect, overlayEffect, [.. visible]);
             }
@@ -304,7 +304,7 @@ namespace WebAnnotation.View
             TemporarilyHiddenAnnotations? hidden = Hidden;
             foreach (OverlappedLocationLinkView ov in linkViews.Where(ov => ov.IsLabelVisible(scene)))
             {
-                float fade = hidden?.FadeIn(((IViewLocationLink)ov).Key) ?? 1f;
+                float fade = hidden?.FadeIn(ov) ?? 1f;
                 if (fade > 0f)
                     ov.DrawLabel(spriteBatch, font, scene, fade);
             }

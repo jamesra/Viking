@@ -19,15 +19,16 @@ using GridVector2 = Geometry.Vector2;
 namespace WebAnnotationTests
 {
     /// <summary>
-    /// Del hides the annotation under the mouse on the current section for a while and Insert brings it back, so an
-    /// annotation beneath a large one can be picked. Pins the timing, which annotation each key picks, and the keys.
+    /// Del hides what a click under the mouse would pick for a while and Insert brings it back, so an annotation beneath
+    /// a large one can be picked. Pins the timing, which view each key picks, the keys every kind of view is hidden under,
+    /// and the keys on the keyboard.
     /// </summary>
     [TestClass]
     public class TemporarilyHiddenAnnotationsTests
     {
         private const int Section = 10;
 
-        /// <summary>Mouse position for link picks whose hits carry no arrow markers, where it is not read.</summary>
+        /// <summary>Mouse position for picks whose hits carry no arrow markers, where it is not read.</summary>
         private static readonly GridVector2 Mouse = new(0, 0);
 
         private DateTime now = new(2026, 10, 20, 12, 0, 0, DateTimeKind.Utc);
@@ -159,14 +160,24 @@ namespace WebAnnotationTests
         }
 
         [TestMethod]
-        public void DelPicksTheTopAnnotationOnTheSectionNotOneOnAnAdjacentSection()
+        public void DelPicksTheTopAnnotationOnTheSectionBeforeOneOnAnAdjacentSection()
         {
             TemporarilyHiddenAnnotations hidden = Create();
             StubLine big = Line(1, Section);
             StubLine adjacent = Line(2, Section + 1);
 
-            Assert.AreSame(big, hidden.PickToHide([Hit(adjacent, 0.1), Hit(big, 0.9)], Section));
-            Assert.IsNull(hidden.PickToHide([Hit(adjacent, 0.1)], Section), "nothing of this section under the mouse");
+            Assert.AreSame(big, hidden.PickToHide([Hit(adjacent, 0.1), Hit(big, 0.9)], Section, Mouse));
+            Assert.AreSame(adjacent, hidden.PickToHide([Hit(adjacent, 0.1)], Section, Mouse), "with nothing of this section there, the adjacent one");
+        }
+
+        [TestMethod]
+        public void InsertBringsBackAHiddenAnnotationOnAnAdjacentSection()
+        {
+            TemporarilyHiddenAnnotations hidden = Create();
+            StubLine adjacent = Line(2, Section - 1);
+            hidden.Hide(2, TimeSpan.FromSeconds(30));
+
+            Assert.AreSame(adjacent, hidden.PickToRestore([Hit(adjacent, 0.3)], Mouse));
         }
 
         [TestMethod]
@@ -177,7 +188,7 @@ namespace WebAnnotationTests
             StubLine next = Line(2, Section);
             hidden.Hide(1, TimeSpan.FromSeconds(30));
 
-            Assert.AreSame(next, hidden.PickToHide([Hit(top, 0.1), Hit(next, 0.5)], Section));
+            Assert.AreSame(next, hidden.PickToHide([Hit(top, 0.1), Hit(next, 0.5)], Section, Mouse));
         }
 
         [TestMethod]
@@ -186,7 +197,7 @@ namespace WebAnnotationTests
             TemporarilyHiddenAnnotations hidden = Create();
             StubLine hole = Line(1, Section);
 
-            Assert.IsNull(hidden.PickToHide([Hit(hole, 1.4)], Section), "distance above 1 is outside the shape");
+            Assert.IsNull(hidden.PickToHide([Hit(hole, 1.4)], Section, Mouse), "distance above 1 is outside the shape");
         }
 
         [TestMethod]
@@ -199,8 +210,8 @@ namespace WebAnnotationTests
             hidden.Hide(1, TimeSpan.FromSeconds(30));
             hidden.Hide(2, TimeSpan.FromSeconds(30));
 
-            Assert.AreSame(near, hidden.PickToRestore([Hit(far, 0.8), Hit(near, 0.2), Hit(visible, 0.0)], Section));
-            Assert.IsNull(hidden.PickToRestore([Hit(visible, 0.0)], Section));
+            Assert.AreSame(near, hidden.PickToRestore([Hit(far, 0.8), Hit(near, 0.2), Hit(visible, 0.0)], Mouse));
+            Assert.IsNull(hidden.PickToRestore([Hit(visible, 0.0)], Mouse));
         }
 
         [TestMethod]
@@ -252,7 +263,7 @@ namespace WebAnnotationTests
 
             List<HitTestResult> remaining = hidden.Exclude([LinkHit(shown, 0.2), LinkHit(gone, 0.1)]);
             CollectionAssert.AreEqual(new object[] { shown }, remaining.Select(h => h.obj).ToArray());
-            CollectionAssert.AreEqual(new[] { shown }, hidden.VisibleLinksToDraw([shown, gone]));
+            CollectionAssert.AreEqual(new[] { shown }, hidden.VisibleToDraw([shown, gone]));
         }
 
         [TestMethod]
@@ -261,11 +272,11 @@ namespace WebAnnotationTests
             TemporarilyHiddenAnnotations hidden = Create();
             LocationLinkView link = LocationLinkVisibilityTests.CreateLink();
 
-            Assert.AreSame(link, hidden.PickLinkToHide([LinkHit(link, 0.4)], Section, Mouse));
-            Assert.IsNull(hidden.PickLinkToHide([LinkHit(link, 1.4)], Section, Mouse), "the mouse is not over it");
+            Assert.AreSame(link, hidden.PickToHide([LinkHit(link, 0.4)], Section, Mouse));
+            Assert.IsNull(hidden.PickToHide([LinkHit(link, 1.4)], Section, Mouse), "the mouse is not over it");
 
             hidden.Hide(link.Key, TimeSpan.FromSeconds(30));
-            Assert.IsNull(hidden.PickLinkToHide([LinkHit(link, 0.4)], Section, Mouse), "already hidden");
+            Assert.IsNull(hidden.PickToHide([LinkHit(link, 0.4)], Section, Mouse), "already hidden");
         }
 
         [TestMethod]
@@ -275,7 +286,7 @@ namespace WebAnnotationTests
             LocationLinkView link = LocationLinkVisibilityTests.CreateLink();
             hidden.Hide(link.Key, TimeSpan.FromSeconds(30));
 
-            Assert.AreSame(link, hidden.PickLinkToRestore([LinkHit(link, 0.4)], Mouse));
+            Assert.AreSame(link, hidden.PickToRestore([LinkHit(link, 0.4)], Mouse));
             Assert.IsTrue(hidden.Restore(link.Key));
             now += TimeSpan.FromSeconds(30 * TemporarilyHiddenAnnotations.FadeFraction + 0.1);
             Assert.IsFalse(hidden.IsHidden(link.Key));
@@ -289,7 +300,7 @@ namespace WebAnnotationTests
             hidden.Hide(link.Key, TimeSpan.FromSeconds(30));
             now += TimeSpan.FromSeconds(30 * (1 - (TemporarilyHiddenAnnotations.FadeFraction / 2)));
 
-            using (hidden.ApplyLinkFade([link]))
+            using (hidden.ApplyFade([link]))
             {
                 Assert.IsTrue(link.Alpha > 0f && link.Alpha < 1f);
             }
@@ -309,18 +320,100 @@ namespace WebAnnotationTests
             TemporarilyHiddenAnnotations hidden = Create();
             OverlappedLocationLinkView up = Marker(1, 2, new GridVector2(0, 5));
             OverlappedLocationLinkView down = Marker(1, 3, new GridVector2(0, -5));
-            HitTestResult[] hits = [Hit(Host(1, up, down), 0.5)];
+            StubMarkerHost host = Host(1, up, down);
+            HitTestResult[] hits = [Hit(host, 0.5)];
             GridVector2 onUp = new(0, 5.2);
 
-            Assert.AreSame(up, hidden.PickLinkToHide(hits, Section, onUp));
-            Assert.IsNull(hidden.PickLinkToHide(hits, Section, new GridVector2(0, 0)), "between the markers the location wins");
+            Assert.AreSame(up, hidden.PickToHide(hits, Section, onUp));
+            Assert.AreSame(host, hidden.PickToHide(hits, Section, new GridVector2(0, 0)), "between the markers the location wins");
 
             hidden.Hide(new LocationLinkKey(1, 2), TimeSpan.FromSeconds(30));
-            Assert.IsNull(hidden.PickLinkToHide(hits, Section, onUp), "the hidden marker is gone, so Del goes to the location");
-            CollectionAssert.AreEqual(new[] { down }, hidden.VisibleLinksToDraw([up, down]));
+            Assert.AreSame(host, hidden.PickToHide(hits, Section, onUp), "the hidden marker is gone, so Del goes to the location");
+            CollectionAssert.AreEqual(new[] { down }, hidden.VisibleToDraw([up, down]));
 
-            Assert.AreSame(up, hidden.PickLinkToRestore(hits, onUp));
-            Assert.IsNull(hidden.PickLinkToRestore(hits, new GridVector2(0, -5)), "the down marker was never hidden");
+            Assert.AreSame(up, hidden.PickToRestore(hits, onUp));
+            Assert.IsNull(hidden.PickToRestore(hits, new GridVector2(0, -5)), "the down marker was never hidden");
+        }
+
+        /// <summary>
+        /// A polygon's marker can sit outside its outline. Once the marker is hidden the polygon is not hit there, so Insert
+        /// also looks in the locations whose bounding box holds the mouse.
+        /// </summary>
+        [TestMethod]
+        public void InsertFindsAHiddenMarkerWhoseLocationIsNotHit()
+        {
+            TemporarilyHiddenAnnotations hidden = Create();
+            OverlappedLocationLinkView up = Marker(1, 2, new GridVector2(0, 5));
+            StubMarkerHost host = Host(1, up);
+            hidden.Hide(new LocationLinkKey(1, 2), TimeSpan.FromSeconds(30));
+
+            Assert.IsNull(hidden.PickToRestore([], new GridVector2(0, 5)));
+            Assert.AreSame(up, hidden.PickToRestore([], new GridVector2(0, 5), [host]));
+        }
+
+        [TestMethod]
+        public void DelHidesAStructureLinkAndItHidesWithEitherOfItsLocations()
+        {
+            TemporarilyHiddenAnnotations hidden = Create();
+            StructureLinkCirclesView link = StructureLink(source: 1, target: 2);
+            HitTestResult[] hits = [new(link, Section, 0, 0.3)];
+
+            Assert.AreSame(link, hidden.PickToHide(hits, Section, Mouse));
+            Assert.IsTrue(hidden.Hide(link, TimeSpan.FromSeconds(30)));
+            Assert.IsTrue(hidden.IsHidden(link));
+            Assert.IsFalse(hidden.IsHidden(1), "hiding a structure link leaves its locations alone");
+            Assert.AreEqual(0, hidden.Exclude(hits).Count);
+            Assert.AreSame(link, hidden.PickToRestore(hits, Mouse));
+
+            TemporarilyHiddenAnnotations byLocation = Create();
+            byLocation.Hide(2, TimeSpan.FromSeconds(30));
+            Assert.IsTrue(byLocation.IsHidden(link), "it would point at a hidden location");
+            Assert.IsNull(byLocation.PickToRestore(hits, Mouse), "the link itself was not hidden");
+        }
+
+        [TestMethod]
+        public void StructureLinksAndPolylinesFadeByTheirAlpha()
+        {
+            TemporarilyHiddenAnnotations hidden = Create();
+            StructureLinkCirclesView link = StructureLink(source: 1, target: 2);
+            float original = link.alpha;
+            hidden.Hide(link, TimeSpan.FromSeconds(30));
+            now += TimeSpan.FromSeconds(30 * (1 - (TemporarilyHiddenAnnotations.FadeFraction / 2)));
+
+            Assert.AreEqual(1, hidden.VisibleToDraw([link]).Count, "a view with an alpha is drawn as soon as its fade starts");
+            using (hidden.ApplyFade([link]))
+            {
+                Assert.IsTrue(link.alpha > 0f && link.alpha < original);
+            }
+
+            Assert.AreEqual(original, link.alpha, 1f / 255);
+            Assert.IsInstanceOfType(FormatterServices.GetUninitializedObject(typeof(LocationLineView)), typeof(VikingXNAGraphics.IColorView), "polylines fade too");
+            Assert.IsInstanceOfType(FormatterServices.GetUninitializedObject(typeof(AdjacentLocationLineView)), typeof(VikingXNAGraphics.IColorView));
+        }
+
+        /// <summary>Rings share the store with locations, so a ring's key cannot collide with the location it came from.</summary>
+        [TestMethod]
+        public void ARingIsHiddenUnderItsOwnKey()
+        {
+            TemporarilyHiddenAnnotations hidden = Create();
+            hidden.Hide(new TemporarilyHiddenAnnotations.RingKey(5), TimeSpan.FromSeconds(30));
+
+            Assert.IsTrue(hidden.IsHidden(new TemporarilyHiddenAnnotations.RingKey(5)));
+            Assert.IsFalse(hidden.IsHidden(5), "location 5 is not hidden by its ring");
+            Assert.IsNull(TemporarilyHiddenAnnotations.KeyOf(new object()), "Del cannot hide an unknown view");
+        }
+
+        /// <summary>A structure link between two locations, skipping the constructor (which reads the store and maps the shapes).</summary>
+        private static StructureLinkCirclesView StructureLink(long source, long target)
+        {
+            StructureLinkCirclesView link = (StructureLinkCirclesView)FormatterServices.GetUninitializedObject(typeof(StructureLinkCirclesView));
+            FieldInfo model = typeof(StructureLinkViewModelBase).GetField("modelObj", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(model);
+            model.SetValue(link, new StructureLinkObj(source + 100, target + 100, false));
+            link.SourceLocation = new LocationObj(new Location { ID = source, ParentID = source + 100, Position = new AnnotationPoint(0, 0, Section) });
+            link.TargetLocation = new LocationObj(new Location { ID = target, ParentID = target + 100, Position = new AnnotationPoint(0, 0, Section) });
+            link.lineView = new VikingXNAGraphics.LineView(new GridVector2(0, 0), new GridVector2(10, 0), 1, new Microsoft.Xna.Framework.Color(255, 255, 255, 128), VikingXNAGraphics.LineStyle.Standard);
+            return link;
         }
 
         [TestMethod]
@@ -382,10 +475,12 @@ namespace WebAnnotationTests
             return view;
         }
 
-        /// <summary>A location that draws arrow markers, like a circle, polygon or closed curve.</summary>
-        private sealed class StubMarkerHost : StubLine, IOverlappedLinkHost
+        /// <summary>A location that draws arrow markers, like a circle, polygon or closed curve, and returns the one under the mouse.</summary>
+        private sealed class StubMarkerHost : StubLine, IOverlappedLinkHost, ICanvasViewContainer
         {
             public OverlappedLinkCircleView? OverlappedLinkView { get; set; }
+
+            public ICanvasView GetAnnotationAtPosition(GridVector2 position) => OverlappedLinkView?.GetAnnotationAtPosition(position) ?? this;
         }
 
         private class StubLine : LocationLineViewBase

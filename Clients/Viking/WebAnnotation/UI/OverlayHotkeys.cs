@@ -19,7 +19,7 @@ namespace WebAnnotation
         /// <summary>Shift+8 on the main keyboard: toggle Pen Mode (the numpad * is in <see cref="AnyModifierKeys"/>).</summary>
         internal const Keys PenModeMainKeyboard = Keys.Shift | Keys.D8;
 
-        /// <summary>Del: hide the annotation under the mouse on this section for a while.</summary>
+        /// <summary>Del: hide what a click under the mouse would pick for a while.</summary>
         internal const Keys HideAnnotation = Keys.Delete;
 
         /// <summary>Insert: bring back the hidden annotation under the mouse.</summary>

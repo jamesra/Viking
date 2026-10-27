@@ -68,10 +68,10 @@ namespace WebAnnotation.UI.AutoPolygonize
         private readonly object proposalLock = new();
 
         /// <summary>
-        /// Proposals that Del hid, keyed by <see cref="HiddenKey"/>. A hidden ring is neither drawn nor hit-tested until its
-        /// time runs out; it then fades back in before it can be picked.
+        /// What Del hid, shared with the overlay; a ring is kept under <see cref="TemporarilyHiddenAnnotations.RingKey"/>. A
+        /// hidden ring is neither drawn nor hit-tested until its time runs out; it then fades back in before it can be picked.
         /// </summary>
-        private readonly TemporarilyHiddenAnnotations hiddenProposals = new();
+        private readonly TemporarilyHiddenAnnotations hiddenProposals;
 
         private bool enabled;
         private System.Timers.Timer? idleTimer;
@@ -182,8 +182,9 @@ namespace WebAnnotation.UI.AutoPolygonize
             public bool TryBeginFinish() => Interlocked.Exchange(ref finishStarted, 1) == 0;
         }
 
-        public AutoCirclePolygonizeController(SectionViewerControl parent, Action requestAnnotationLoad)
+        public AutoCirclePolygonizeController(SectionViewerControl parent, Action requestAnnotationLoad, TemporarilyHiddenAnnotations hidden)
         {
+            hiddenProposals = hidden ?? throw new ArgumentNullException(nameof(hidden));
             this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
             this.requestAnnotationLoad = requestAnnotationLoad ?? throw new ArgumentNullException(nameof(requestAnnotationLoad));
         }
@@ -587,7 +588,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     if (proposal.SectionNumber != sectionNumber)
                         continue;
 
-                    proposal.FadeIn = hiddenProposals.FadeIn(HiddenKey(proposal));
+                    proposal.FadeIn = hiddenProposals.FadeIn(proposal);
                     if (proposal.FadeIn <= 0f)
                         continue;
 
@@ -608,11 +609,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         /// <returns>False when overlays are hidden or nothing is in range.</returns>
         public bool TryHit(Vector2 worldPosition, out AutoPolygonizeProposal proposal, out double distance) =>
-            TryFindProposal(worldPosition, p => !hiddenProposals.IsHidden(HiddenKey(p)), out proposal, out distance);
-
-        /// <summary>The key a proposal is hidden under: its lowest source location, which survives the proposal being rebuilt.</summary>
-        private static long HiddenKey(AutoPolygonizeProposal proposal) =>
-            proposal.LocationIds.Count > 0 ? proposal.LocationIds.Min() : proposal.LocationId;
+            TryFindProposal(worldPosition, p => !hiddenProposals.IsHidden(p), out proposal, out distance);
 
         /// <summary>
         /// Del: hides the ring nearest <paramref name="worldPosition"/> (within the hit radius) for <paramref name="duration"/>.
@@ -623,7 +620,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (!TryHit(worldPosition, out AutoPolygonizeProposal proposal, out _))
                 return false;
 
-            hiddenProposals.Hide(HiddenKey(proposal), duration);
+            hiddenProposals.Hide(proposal, duration);
             if (ReferenceEquals(hoveredProposal, proposal))
             {
                 proposal.IsHighlighted = false;
@@ -641,16 +638,13 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <returns>False when no hidden ring is under the mouse.</returns>
         public bool TryRestoreProposalAt(Vector2 worldPosition)
         {
-            if (!TryFindProposal(worldPosition, p => hiddenProposals.IsHidden(HiddenKey(p)), out AutoPolygonizeProposal proposal, out _))
+            if (!TryFindProposal(worldPosition, p => hiddenProposals.IsHidden(p), out AutoPolygonizeProposal proposal, out _))
                 return false;
 
-            hiddenProposals.Restore(HiddenKey(proposal));
+            hiddenProposals.Restore(proposal);
             parent.Invalidate();
             return true;
         }
-
-        /// <summary>How long until a hidden ring next needs a redraw (its fade starts or advances), or null when none is hidden.</summary>
-        public TimeSpan? TimeUntilNextHiddenRedraw() => hiddenProposals.TimeUntilNextRedraw();
 
         /// <summary>The ring nearest <paramref name="worldPosition"/> within the hit radius among those <paramref name="accept"/> allows.</summary>
         private bool TryFindProposal(Vector2 worldPosition, Func<AutoPolygonizeProposal, bool> accept, out AutoPolygonizeProposal proposal, out double distance)
