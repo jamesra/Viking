@@ -3416,7 +3416,8 @@ namespace Viking.UI.Controls
 
         /// <summary>
         /// A pen tap on the section number overlay shows the tapped section; a tapped number missing from the volume
-        /// goes to the next existing section in the direction of the tap (<see cref="SectionStepper.Target"/>).
+        /// goes to the next existing section in the direction of the tap (<see cref="SectionStepper.Target"/>). Ignored
+        /// while the current command is drawing with the pen (<see cref="Commands.Command.IsPenDrawing"/>).
         /// Called from <see cref="WndProc"/> before pen messages reach <see cref="penEventManager"/>.
         /// </summary>
         /// <returns>True when the message belongs to such a tap and must not be processed further.</returns>
@@ -3447,6 +3448,10 @@ namespace Viking.UI.Controls
 
             _sectionNumberOverlayPenPointerId = null;
             if (Section is null || !SectionNumberOverlayShown())
+                return false;
+
+            // Lifting the pen only pauses a pen command's stroke, so a touch on the overlay while one draws belongs to it
+            if (CurrentCommand?.IsPenDrawing == true)
                 return false;
 
             if (!WinMsgInput.GetPointerType(pointer.PointerID, out PointerType type) || type != PointerType.Pen)

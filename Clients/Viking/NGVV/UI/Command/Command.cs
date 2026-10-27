@@ -493,6 +493,12 @@ namespace Viking.UI.Commands
             }
         }
 
+        /// <summary>
+        /// True while the command is drawing with the pen, including while its stroke is paused between touches. A pen
+        /// touch on the section number overlay then goes to the command instead of changing sections.
+        /// </summary>
+        public virtual bool IsPenDrawing => false;
+
         public virtual void OnActivate() { }
 
         protected virtual void OnDeactivate() { }

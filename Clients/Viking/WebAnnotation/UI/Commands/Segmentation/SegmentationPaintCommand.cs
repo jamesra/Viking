@@ -55,6 +55,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private PanZoomDebouncer? submitDebouncer;
         private double radiusPixels = DefaultRadiusPixels;
 
+        /// <summary>Every touch outside the buttons paints, so the whole command is drawing.</summary>
+        public override bool IsPenDrawing => true;
+
         private bool painting;
         private PaintMode mode;
         private GVector2 lastStrokeWorld;
