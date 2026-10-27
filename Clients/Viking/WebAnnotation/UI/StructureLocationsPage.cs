@@ -63,7 +63,7 @@ namespace WebAnnotation.UI
         /// </summary>
         private async Task LoadLocationsAsync()
         {
-            Structure structure = Obj;
+            Structure? structure = Obj;
             if (structure is null || loadedObjectNumber == shownObjectNumber)
             {
                 return;

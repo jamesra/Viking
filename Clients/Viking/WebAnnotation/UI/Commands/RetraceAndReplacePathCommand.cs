@@ -31,7 +31,7 @@ namespace WebAnnotation.UI.Commands
 
         //Meshes of the individual cut pieces of the retrace and replace
         private PositionColorMeshModel? _choiceBaseMesh;
-        private PositionColorMeshModel _choiceCapMesh;
+        private PositionColorMeshModel? _choiceCapMesh;
         private Task<Geometry.Meshing.PolygonCutFill> _fillTask;
         private Geometry.Meshing.PolygonCutFill _fill;
         private Geometry.Vector2[] _cutPath;
@@ -461,7 +461,7 @@ namespace WebAnnotation.UI.Commands
         /// The walked piece that is kept: the larger one for a growth, the counterclockwise one for a shrink unless Ctrl swaps it.
         /// Null when there is no cut.
         /// </summary>
-        private Polygon ChosenPiece() => CutAction switch
+        private Polygon? ChosenPiece() => CutAction switch
         {
             RetraceCommandAction.GROW_EXTERIOR_RING or RetraceCommandAction.GROW_INTERNAL_RING =>
                 CounterClockwiseCutPolygon.Area > ClockwiseCutPolygon.Area ? CounterClockwiseCutPolygon : ClockwiseCutPolygon,
@@ -477,7 +477,7 @@ namespace WebAnnotation.UI.Commands
         /// The exterior piece <see cref="GenerateOutputVolumePolygon"/> does not keep.
         /// Null unless this is a shrink cut with both pieces.
         /// </summary>
-        private Polygon DiscardedVolumePolygon()
+        private Polygon? DiscardedVolumePolygon()
         {
             if (CutAction != RetraceCommandAction.SHRINK_EXTERIOR_RING)
                 return null;

@@ -129,7 +129,7 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="NearestTarget"></param>
         /// <returns></returns>
-        private LocationObj TrySetTarget(IViewLocation nearest, in Geometry.Rectangle targetBoundingRect)
+        private LocationObj? TrySetTarget(IViewLocation nearest, in Geometry.Rectangle targetBoundingRect)
         {
             if (nearest != null)
             {
@@ -148,7 +148,7 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="NearestTarget"></param>
         /// <returns></returns>
-        private LocationObj TrySetTarget(LocationObj nearest_target)
+        private LocationObj? TrySetTarget(LocationObj nearest_target)
         {
             if (nearest_target is null)
             {

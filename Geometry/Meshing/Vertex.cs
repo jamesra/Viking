@@ -48,7 +48,7 @@ namespace Geometry.Meshing
 
         protected SortedSet<EdgeKey> _Edges;
 
-        private ImmutableSortedSet<IEdgeKey> _ImmutableEdges;
+        private ImmutableSortedSet<IEdgeKey>? _ImmutableEdges;
         public ImmutableSortedSet<IEdgeKey> Edges => _ImmutableEdges ??= ImmutableSortedSet.CreateRange(
             _ifaceEdgeComparer ?? Comparer<IEdgeKey>.Default,
             _Edges.Select(static e => (IEdgeKey)e));

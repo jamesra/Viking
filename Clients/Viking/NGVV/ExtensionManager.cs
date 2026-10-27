@@ -577,7 +577,7 @@ namespace Viking.Common
             }
         }
 
-        private static VikingExtensionAttribute GetAssemblyExtensionAttribute(Assembly A)
+        private static VikingExtensionAttribute? GetAssemblyExtensionAttribute(Assembly A)
         {
             VikingExtensionAttribute[]? Attribs = A.GetCustomAttributes(typeof(VikingExtensionAttribute), false) as VikingExtensionAttribute[];
             Debug.Assert(Attribs.Length < 2, A.FullName + " contained two AssemblyExtensionAttribues. Maximum number is one.");
@@ -902,7 +902,7 @@ namespace Viking.Common
         /// <summary>
         /// Custom assembly resolver to handle dependencies in module directories
         /// </summary>
-        private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
+        private static Assembly? OnAssemblyResolve(object sender, ResolveEventArgs args)
         {
             try
             {

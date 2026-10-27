@@ -132,7 +132,7 @@ namespace Geometry
         /// <summary>
         /// Recursively splits the vertex set, triangulates each half, then stitches along the cut.
         /// </summary>
-        private static TriangulationMesh<VERTEX> RecursiveDivideAndConquerDelaunay(TriangulationMesh<VERTEX> mesh, MeshCut? VertSet = null, IVertex2D[]? verts = null, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
+        private static TriangulationMesh<VERTEX>? RecursiveDivideAndConquerDelaunay(TriangulationMesh<VERTEX> mesh, MeshCut? VertSet = null, IVertex2D[]? verts = null, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
         {
             //The first recursion we populate variables to include all the verticies in the mesh
             VertSet ??= new MeshCut(mesh.XSorted, mesh.YSorted, CutDirection.HORIZONTAL, mesh.BoundingBox);
@@ -1079,7 +1079,7 @@ namespace Geometry
         /// is usually outside it. Treating the band as inside deletes an edge the triangulation needs; keeping a
         /// borderline edge is safe because the final flip pass in <see cref="TriangulateToMesh"/> restores Delaunay.
         /// </remarks>
-        private static IVertex2D TryGetNextCandidate(TriangulationMesh<VERTEX> mesh, ref List<EdgeAngle> sortedCandidates, in Baseline baseline, bool Clockwise, out double angle, out Circle? circle)
+        private static IVertex2D? TryGetNextCandidate(TriangulationMesh<VERTEX> mesh, ref List<EdgeAngle> sortedCandidates, in Baseline baseline, bool Clockwise, out double angle, out Circle? circle)
         {
             if (sortedCandidates is null || sortedCandidates.Count == 0)
             {

@@ -60,7 +60,7 @@ namespace Geometry.Transforms
         {
             get
             {
-                Vector2[] cached = _mappedPointsCache;
+                Vector2[]? cached = _mappedPointsCache;
                 if (cached is not null)
                     return cached;
 
@@ -79,7 +79,7 @@ namespace Geometry.Transforms
         {
             get
             {
-                Vector2[] cached = _controlPointsCache;
+                Vector2[]? cached = _controlPointsCache;
                 if (cached is not null)
                     return cached;
 
@@ -117,7 +117,7 @@ namespace Geometry.Transforms
         {
             get
             {
-                double[] cached = _ControlToMappedSpaceWeights;
+                double[]? cached = _ControlToMappedSpaceWeights;
                 if (cached is not null)
                     return cached;
 
@@ -133,7 +133,7 @@ namespace Geometry.Transforms
         {
             get
             {
-                double[] cached = _MappedToControlSpaceWeights;
+                double[]? cached = _MappedToControlSpaceWeights;
                 if (cached is not null)
                     return cached;
 

@@ -429,7 +429,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         private AutoPolygonizeMaskOverlay? displayMask;
 
         private Texture2D? maskTexture;
-        private TextureOverlayView maskOverlayView;
+        private TextureOverlayView? maskOverlayView;
         private PointSetView? foregroundPointsView;
         private bool isHighlighted;
 
@@ -1406,7 +1406,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// Packs the soft field into a Color texture. Samples on the inside of the iso level
         /// use <paramref name="color"/>; the outside halo stays transparent.
         /// </summary>
-        private static Texture2D CreateMaskTexture(
+        private static Texture2D? CreateMaskTexture(
             GraphicsDevice graphicsDevice,
             AutoPolygonizeMaskOverlay overlay,
             Color color)

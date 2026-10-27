@@ -243,7 +243,7 @@ namespace Viking.ViewModels
         /// </summary>
         /// <param name="device"></param>
         /// <returns></returns>
-        private static VertexBuffer CreateVertexBuffer(GraphicsDevice device, VolumeModel.PositionNormalTextureVertex[] Verticies)
+        private static VertexBuffer? CreateVertexBuffer(GraphicsDevice device, VolumeModel.PositionNormalTextureVertex[] Verticies)
         {
             if (Verticies.Length == 0)
                 return null;

@@ -874,7 +874,7 @@ namespace WebAnnotation.ViewModel
         /// <param name="link"></param>
         /// <param name="SectionNumber"></param>
         /// <returns></returns>
-        private static LocationObj GetLocationFromLinkOnThisSection(LocationLinkKey link, int SectionNumber)
+        private static LocationObj? GetLocationFromLinkOnThisSection(LocationLinkKey link, int SectionNumber)
         {
             if (!Store.Locations.TryGetValue(link.A, out LocationObj AObj))
             {

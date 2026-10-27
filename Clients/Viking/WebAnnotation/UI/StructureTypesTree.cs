@@ -236,7 +236,7 @@ namespace WebAnnotation.UI
         }
 
         /// <summary>The visible node whose row contains client y, or null.</summary>
-        private TreeNode NodeAtRow(int y)
+        private TreeNode? NodeAtRow(int y)
         {
             for (TreeNode node =Tree.TopNode; node is not null; node = node.NextVisibleNode)
             {

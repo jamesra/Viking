@@ -94,7 +94,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     return tileUploadLifetime.Token;
             }
         }
-        private CancellationTokenSource uploadCancellationTokenSource;
+        private CancellationTokenSource? uploadCancellationTokenSource;
         private readonly TileUploadCache uploadedTileKeys = new();
 
         /// <summary>Blurred grayscale copies of the tiles captured for SAM2, for the edge snap.</summary>
