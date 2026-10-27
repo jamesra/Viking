@@ -232,6 +232,9 @@ namespace WebAnnotation.UI.Commands
 
         public Path Path => PenInput.path;
 
+        /// <summary>The command lives for one stroke, so it draws until it ends and releases <see cref="PenInput"/>.</summary>
+        public override bool IsPenDrawing => PenInput is not null;
+
         public PlaceGeometryWithPenCommandBase(Viking.UI.Controls.SectionViewerControl parent,
                                         Microsoft.Xna.Framework.Color color,
                                         double LineWidth,
