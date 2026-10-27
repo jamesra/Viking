@@ -170,19 +170,19 @@ namespace GrpcSectionCorrectionService.Tests
 
         /// <summary>
         /// The zero value is Neighbor, so an unset mode gets the published field without a presence flag. The service
-        /// never runs CurveFit: the retired ALL (2) and CURVE_FIT (3) values are refused, as is any unknown value.
+        /// never runs CurveFit. Stopgap: the retired values 2 and 3 are answered as Neighbor until SBFSEM-tools stops
+        /// sending them; any other value is refused.
         /// </summary>
-        [DataTestMethod]
-        [DataRow(2)]
-        [DataRow(3)]
-        [DataRow(9)]
-        public void CorrectionMode_ZeroIsNeighbor_AndRetiredValuesAreRefused(int retired)
+        [TestMethod]
+        public void CorrectionMode_ZeroIsNeighbor_RetiredValuesAreTheField_UnknownIsRefused()
         {
             Assert.AreEqual(CorrectionMode.Neighbor, new CorrectStructuresRequest().Correction);
             Assert.AreEqual(FitMode.Neighbor, SectionCorrectionsServiceV2.ToFitMode(CorrectionMode.Neighbor));
             Assert.AreEqual(FitMode.None, SectionCorrectionsServiceV2.ToFitMode(CorrectionMode.None));
+            Assert.AreEqual(FitMode.Neighbor, SectionCorrectionsServiceV2.ToFitMode((CorrectionMode)2));
+            Assert.AreEqual(FitMode.Neighbor, SectionCorrectionsServiceV2.ToFitMode((CorrectionMode)3));
             Assert.AreEqual(StatusCode.InvalidArgument,
-                Assert.ThrowsExactly<RpcException>(() => SectionCorrectionsServiceV2.ToFitMode((CorrectionMode)retired)).StatusCode);
+                Assert.ThrowsExactly<RpcException>(() => SectionCorrectionsServiceV2.ToFitMode((CorrectionMode)9)).StatusCode);
         }
 
         [TestMethod]
