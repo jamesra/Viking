@@ -24,6 +24,10 @@
             <Setter Property="Margin" Value="5"/>
             <Setter Property="Height" Value="25"/>
         </Style>
+        <Style x:Key="VisualsHeading" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,5,0,5"/>
+        </Style>
         <Style TargetType="Expander">
             <Setter Property="Margin" Value="10"/>
         </Style>
@@ -88,6 +92,38 @@
                                      Text="Maximum number of sections to load simultaneously. Higher values load faster but use more bandwidth."/>
                         </Grid>
 
+                        <!-- Default Closed Line Width -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Default Line Width:"/>
+                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
+                                             Value="{Binding DefaultClosedLineWidth}" 
+                                             Minimum="1.0" 
+                                             Maximum="100.0"
+                                             Increment="1.0"
+                                             FormatString="F1"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Default width in pixels for newly created closed curve annotations."/>
+                        </Grid>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Visuals: settings that change only how the view looks -->
+                <Expander Header="Visuals" IsExpanded="False" Margin="10">
+                    <StackPanel Margin="10">
+                        <TextBlock Style="{StaticResource VisualsHeading}" Text="Text"/>
                         <!-- Location Text Scale Factor -->
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -140,106 +176,149 @@
                                      Text="Size multiplier for reference location text on adjacent sections."/>
                         </Grid>
 
-                        <!-- Default Closed Line Width -->
+                        <TextBlock Style="{StaticResource VisualsHeading}" Text="Annotations"/>
+                        <!-- Polygon Opacity Parentless -->
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             
-                            <Label Grid.Row="0" Grid.Column="0" Content="Default Line Width:"/>
-                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
-                                             Value="{Binding DefaultClosedLineWidth}" 
-                                             Minimum="1.0" 
-                                             Maximum="100.0"
-                                             Increment="1.0"
-                                             FormatString="F1"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                            <Label Grid.Row="0" Grid.Column="0" Content="Polygon Opacity (Parentless):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding PolygonOpacityParentless, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    TickFrequency="0.01"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding PolygonOpacityParentless, StringFormat='F2'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
                                      Margin="10,0,10,10"
                                      FontSize="10"
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
-                                     Text="Default width in pixels for newly created closed curve annotations."/>
+                                     Text="Opacity for polygons without a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
                         </Grid>
-                    </StackPanel>
-                </Expander>
 
-                <!-- Advanced Settings -->
-                <Expander Header="Section Corrections" IsExpanded="False" Margin="10">
-                    <StackPanel Margin="10">
-                        <TextBlock Margin="0,0,0,10" TextWrapping="Wrap" Foreground="Gray" FontSize="11"
-                                   Text="When the open annotation context has a correction service, each section's image is shifted to line up with its neighbors. The shift is not accurate when zoomed out, so it fades in as you zoom in: none at or above the start downsample, full at or below the end downsample. Annotations move with the image and are always saved at their true position. The status bar shows whether a correction service is present and lets you turn it on or off."/>
-                        <CheckBox Margin="0,0,0,10"
-                                  IsChecked="{Binding CorrectionShimEnabled, Mode=TwoWay}"
-                                  Content="Apply section corrections"
-                                  VerticalContentAlignment="Center"/>
-                        <CheckBox Margin="0,0,0,10"
-                                  IsChecked="{Binding CorrectionShimShowOffset, Mode=TwoWay}"
-                                  Content="Show the correction offset (nm) in the status bar"
-                                  VerticalContentAlignment="Center"/>
-                        <Grid Margin="0,0,0,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="150"/>
-                            </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="Start fading in at downsample:"/>
-                            <xctk:DoubleUpDown Grid.Column="1"
-                                               Value="{Binding CorrectionShimFadeStartDownsample}"
-                                               Minimum="0.25"
-                                               Maximum="256"
-                                               Increment="1.0"
-                                               FormatString="F1"/>
-                        </Grid>
-                        <Grid Margin="0,0,0,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="150"/>
-                            </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="Fully applied at downsample:"/>
-                            <xctk:DoubleUpDown Grid.Column="1"
-                                               Value="{Binding CorrectionShimFadeEndDownsample}"
-                                               Minimum="0.25"
-                                               Maximum="256"
-                                               Increment="1.0"
-                                               FormatString="F1"/>
-                        </Grid>
-                        <TextBlock Margin="10,0,10,0" FontSize="10" Foreground="Gray" TextWrapping="Wrap"
-                                   Text="The start must be larger than the end. Defaults: 8 and 4."/>
-                    </StackPanel>
-                </Expander>
-
-                <Expander Header="Advanced Settings" IsExpanded="False" Margin="10">
-                    <StackPanel Margin="10">
-                        <!-- General -->
-                        <TextBlock Text="General" FontWeight="Bold" Margin="5,5,5,2"/>
-                        <!-- Default Location Jump Downsample -->
+                        <!-- Polygon Opacity With Parent -->
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             
-                            <Label Grid.Row="0" Grid.Column="0" Content="Jump Zoom Downsample:"/>
-                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
-                                             Value="{Binding DefaultLocationJumpDownsample}" 
-                                             Minimum="1.0" 
-                                             Maximum="64.0"
-                                             Increment="1.0"
-                                             FormatString="F1"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                            <Label Grid.Row="0" Grid.Column="0" Content="Polygon Opacity (With Parent):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding PolygonOpacityWithParent, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    TickFrequency="0.01"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding PolygonOpacityWithParent, StringFormat='F2'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
                                      Margin="10,0,10,10"
                                      FontSize="10"
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
-                                     Text="Controls zoom level when jumping to locations. Higher values zoom out more (location occupies 1/8 screen width ÷ this value)."/>
+                                     Text="Opacity for polygons with a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
+                        </Grid>
+
+                        <!-- Circle Opacity Parentless -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Circle Opacity (Parentless):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding CircleOpacityParentless, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    TickFrequency="0.01"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding CircleOpacityParentless, StringFormat='F2'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Opacity for circles without a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
+                        </Grid>
+
+                        <!-- Circle Opacity With Parent -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Circle Opacity (With Parent):"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding CircleOpacityWithParent, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    TickFrequency="0.01"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding CircleOpacityWithParent, StringFormat='F2'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Opacity for circles with a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
                         </Grid>
 
                         <!-- Adjacent Location Radius Scalar -->
@@ -268,124 +347,14 @@
                                      Text="Size multiplier for annotations displayed on adjacent sections. Default 0.5 shows them at half size."/>
                         </Grid>
 
-                        <!-- Location Link Waist Width -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="150"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="60"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+                        <controls:CircleSizePreviewSlider
+                            Header="Smallest Rendered Size:"
+                            Description="Minimum on-screen circle diameter before an annotation is hidden. The circle below shows the cutoff; the slider max is the width of this page."
+                            Value="{Binding SmallestRenderedSize, Mode=TwoWay}"
+                            Minimum="0.5"
+                            TickFrequency="0.1"
+                            PreviewMode="PixelDiameter"/>
 
-                            <Label Grid.Row="0" Grid.Column="0" Content="Link waist width (pixels):"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding LocationLinkWaistPixels, Mode=TwoWay}"
-                                    Minimum="2"
-                                    Maximum="32"
-                                    TickFrequency="1"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding LocationLinkWaistPixels, StringFormat='F0'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
-                                     Margin="10,0,10,10"
-                                     FontSize="10"
-                                     Foreground="Gray"
-                                     TextWrapping="Wrap"
-                                     Text="Screen width of the narrowest part of a link line between locations on different sections."/>
-                        </Grid>
-
-                        <!-- Location Link Under Markers -->
-                        <CheckBox IsChecked="{Binding LocationLinkDrawUnderMarkers, Mode=TwoWay}"
-                                  Content="Draw links under location markers"
-                                  VerticalContentAlignment="Center"/>
-                        <TextBlock Margin="10,0,10,10"
-                                   FontSize="10"
-                                   Foreground="Gray"
-                                   TextWrapping="Wrap"
-                                   Text="Also draws each link under its two location markers as a round end the size of each marker. Off draws nothing under the markers."/>
-
-                        <!-- Hide Annotation Seconds -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="150"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <Label Grid.Row="0" Grid.Column="0" Content="Hide annotation time (seconds):"/>
-                            <xctk:IntegerUpDown Grid.Row="0" Grid.Column="1"
-                                              Value="{Binding HideAnnotationSeconds}"
-                                              Minimum="1"
-                                              Maximum="600"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                                     Margin="10,0,10,10"
-                                     FontSize="10"
-                                     Foreground="Gray"
-                                     TextWrapping="Wrap"
-                                     Text="Del hides what a click under the mouse would pick (an annotation, link or auto-segmentation ring) for this long, so one beneath it can be reached; it fades back in at the end. Insert brings it back early."/>
-                        </Grid>
-
-                        <!-- Location Link Visibility -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="150"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="60"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <Label Grid.Row="0" Grid.Column="0" Content="Link visibility (%):"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding LocationLinkVisibilityPercent, Mode=TwoWay}"
-                                    Minimum="10"
-                                    Maximum="100"
-                                    TickFrequency="5"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding LocationLinkVisibilityPercent, StringFormat='F0'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
-                                     Margin="10,0,10,10"
-                                     FontSize="10"
-                                     Foreground="Gray"
-                                     TextWrapping="Wrap"
-                                     Text="How strongly links between locations on different sections are drawn when the mouse is not over them: their opacity next to the linked locations and the strength of the contrasting shadow around them. The middle of a link fades to nothing; move the mouse over a link to see all of it."/>
-                        </Grid>
-
-                        <!-- Location Link Labels -->
-                        <CheckBox IsChecked="{Binding LocationLinkLabels, Mode=TwoWay}"
-                                  Content="Label link ends with the linked location ID"
-                                  VerticalContentAlignment="Center"/>
-                        <TextBlock Margin="10,0,10,10"
-                                   FontSize="10"
-                                   Foreground="Gray"
-                                   TextWrapping="Wrap"
-                                   Text="While the mouse is over a link, shows next to each end the ID of the location at the other end. At the end on the viewed section, an up or down arrow shows whether that location is on a higher or lower section. Sized from the location, so they zoom with the image; left out when too small to read or when the link is too short for both."/>
-
-                        <!-- Polygon Annotations -->
-                        <TextBlock Text="Polygon Annotations" FontWeight="Bold" Margin="5,15,5,2"/>
                         <!-- Num Curve Interpolation Points -->
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -410,30 +379,7 @@
                                      Text="Controls visual smoothness of curves. Higher values produce smoother curves but slower rendering, loading, and manipulation."/>
                         </Grid>
 
-                        <!-- Pen Simplify Threshold -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="150"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            
-                            <Label Grid.Row="0" Grid.Column="0" Content="Pen Simplify Threshold:"/>
-                            <xctk:IntegerUpDown Grid.Row="0" Grid.Column="1" 
-                                              Value="{Binding PenSimplifyThreshold}" 
-                                              Minimum="1" 
-                                              Maximum="100"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                                     Margin="10,0,10,10"
-                                     FontSize="10"
-                                     Foreground="Gray"
-                                     TextWrapping="Wrap"
-                                     Text="How close polygon edges must be to the pen stroke. Smaller numbers are more accurate but require more points, negatively impacting performance."/>
-                        </Grid>
-
+                        <TextBlock Style="{StaticResource VisualsHeading}" Text="Control points"/>
                         <!-- Polygon vertex point display diameter info -->
                         <TextBlock Margin="10,0,10,5" FontSize="10" Foreground="Gray"
                                    Text="{Binding PolygonVertexDisplayDiameterPx, StringFormat='Current display diameter: {0} px (at current viewport)'}"/>
@@ -551,7 +497,16 @@
                                   IsChecked="{Binding HidePolygonPointsInPenMode, Mode=TwoWay}"
                                   Margin="5,5,5,10"/>
 
-                        <!-- Polygon Opacity Parentless -->
+                        <controls:CircleSizePreviewSlider
+                            Header="Segmentation Point Radius:"
+                            Description="Radius in pixels for segmentation prompt points on the image. The circle below is the on-screen size."
+                            Value="{Binding SegmentationPointRadius, Mode=TwoWay}"
+                            Minimum="1"
+                            TickFrequency="0.1"
+                            PreviewMode="PixelRadius"/>
+
+                        <TextBlock Style="{StaticResource VisualsHeading}" Text="Location links"/>
+                        <!-- Location Link Waist Width -->
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -563,17 +518,17 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            
-                            <Label Grid.Row="0" Grid.Column="0" Content="Polygon Opacity (Parentless):"/>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Link waist width (pixels):"/>
                             <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding PolygonOpacityParentless, Mode=TwoWay}"
-                                    Minimum="0"
-                                    Maximum="1"
-                                    TickFrequency="0.01"
+                                    Value="{Binding LocationLinkWaistPixels, Mode=TwoWay}"
+                                    Minimum="2"
+                                    Maximum="32"
+                                    TickFrequency="1"
                                     IsSnapToTickEnabled="True"
                                     Margin="5"/>
                             <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding PolygonOpacityParentless, StringFormat='F2'}"
+                                     Text="{Binding LocationLinkWaistPixels, StringFormat='F0'}"
                                      IsReadOnly="True"
                                      Margin="5,0,0,0"
                                      VerticalAlignment="Center"
@@ -584,10 +539,20 @@
                                      FontSize="10"
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
-                                     Text="Opacity for polygons without a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
+                                     Text="Screen width of the narrowest part of a link line between locations on different sections."/>
                         </Grid>
 
-                        <!-- Polygon Opacity With Parent -->
+                        <!-- Location Link Under Markers -->
+                        <CheckBox IsChecked="{Binding LocationLinkDrawUnderMarkers, Mode=TwoWay}"
+                                  Content="Draw links under location markers"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="10,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Also draws each link under its two location markers as a round end the size of each marker. Off draws nothing under the markers."/>
+
+                        <!-- Location Link Visibility -->
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -599,17 +564,17 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            
-                            <Label Grid.Row="0" Grid.Column="0" Content="Polygon Opacity (With Parent):"/>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Link visibility (%):"/>
                             <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding PolygonOpacityWithParent, Mode=TwoWay}"
-                                    Minimum="0"
-                                    Maximum="1"
-                                    TickFrequency="0.01"
+                                    Value="{Binding LocationLinkVisibilityPercent, Mode=TwoWay}"
+                                    Minimum="10"
+                                    Maximum="100"
+                                    TickFrequency="5"
                                     IsSnapToTickEnabled="True"
                                     Margin="5"/>
                             <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding PolygonOpacityWithParent, StringFormat='F2'}"
+                                     Text="{Binding LocationLinkVisibilityPercent, StringFormat='F0'}"
                                      IsReadOnly="True"
                                      Margin="5,0,0,0"
                                      VerticalAlignment="Center"
@@ -620,7 +585,198 @@
                                      FontSize="10"
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
-                                     Text="Opacity for polygons with a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
+                                     Text="How strongly links between locations on different sections are drawn when the mouse is not over them: their opacity next to the linked locations and the strength of the contrasting shadow around them. The middle of a link fades to nothing; move the mouse over a link to see all of it."/>
+                        </Grid>
+
+                        <!-- Location Link Labels -->
+                        <CheckBox IsChecked="{Binding LocationLinkLabels, Mode=TwoWay}"
+                                  Content="Label link ends with the linked location ID"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="10,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="While the mouse is over a link, shows next to each end the ID of the location at the other end. At the end on the viewed section, an up or down arrow shows whether that location is on a higher or lower section. Sized from the location, so they zoom with the image; left out when too small to read or when the link is too short for both."/>
+
+                        <TextBlock Style="{StaticResource VisualsHeading}" Text="Auto-segmentation"/>
+                        <CheckBox Margin="0,10,0,0"
+                                  IsChecked="{Binding AutoPolygonizeShimmerEnabled, Mode=TwoWay}"
+                                  Content="Shimmer new auto-segmentations"
+                                  VerticalContentAlignment="Center"/>
+                        <TextBlock Margin="10,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Sweeps a band of white lines across each auto-polygonize result once when it first appears."/>
+                        <Grid IsEnabled="{Binding AutoPolygonizeShimmerEnabled}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Shimmer brightness:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding AutoPolygonizeShimmerBrightness, Mode=TwoWay}"
+                                    Minimum="0.1"
+                                    Maximum="1"
+                                    TickFrequency="0.05"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding AutoPolygonizeShimmerBrightness, StringFormat='F2'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+
+                            <Label Grid.Row="1" Grid.Column="0" Content="Shimmer duration (ms):"/>
+                            <Slider Grid.Row="1" Grid.Column="1"
+                                    Value="{Binding AutoPolygonizeShimmerDurationMs, Mode=TwoWay}"
+                                    Minimum="250"
+                                    Maximum="1000"
+                                    TickFrequency="50"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="1" Grid.Column="3"
+                                     Text="{Binding AutoPolygonizeShimmerDurationMs, StringFormat='F0'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                        </Grid>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Section Corrections -->
+                <Expander Header="Section Corrections" IsExpanded="False" Margin="10">
+                    <StackPanel Margin="10">
+                        <TextBlock Margin="0,0,0,10" TextWrapping="Wrap" Foreground="Gray" FontSize="11"
+                                   Text="When the open annotation context has a correction service, each section's image is shifted to line up with its neighbors. The shift is not accurate when zoomed out, so it fades in as you zoom in: none at or above the start downsample, full at or below the end downsample. Annotations move with the image and are always saved at their true position. The status bar shows whether a correction service is present and lets you turn it on or off."/>
+                        <CheckBox Margin="0,0,0,10"
+                                  IsChecked="{Binding CorrectionShimEnabled, Mode=TwoWay}"
+                                  Content="Apply section corrections"
+                                  VerticalContentAlignment="Center"/>
+                        <CheckBox Margin="0,0,0,10"
+                                  IsChecked="{Binding CorrectionShimShowOffset, Mode=TwoWay}"
+                                  Content="Show the correction offset (nm) in the status bar"
+                                  VerticalContentAlignment="Center"/>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Column="0" Content="Start fading in at downsample:"/>
+                            <xctk:DoubleUpDown Grid.Column="1"
+                                               Value="{Binding CorrectionShimFadeStartDownsample}"
+                                               Minimum="0.25"
+                                               Maximum="256"
+                                               Increment="1.0"
+                                               FormatString="F1"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Column="0" Content="Fully applied at downsample:"/>
+                            <xctk:DoubleUpDown Grid.Column="1"
+                                               Value="{Binding CorrectionShimFadeEndDownsample}"
+                                               Minimum="0.25"
+                                               Maximum="256"
+                                               Increment="1.0"
+                                               FormatString="F1"/>
+                        </Grid>
+                        <TextBlock Margin="10,0,10,0" FontSize="10" Foreground="Gray" TextWrapping="Wrap"
+                                   Text="The start must be larger than the end. Defaults: 8 and 4."/>
+                    </StackPanel>
+                </Expander>
+
+                <Expander Header="Advanced Settings" IsExpanded="False" Margin="10">
+                    <StackPanel Margin="10">
+                        <!-- General -->
+                        <TextBlock Text="General" FontWeight="Bold" Margin="5,5,5,2"/>
+                        <!-- Default Location Jump Downsample -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Jump Zoom Downsample:"/>
+                            <xctk:DoubleUpDown Grid.Row="0" Grid.Column="1" 
+                                             Value="{Binding DefaultLocationJumpDownsample}" 
+                                             Minimum="1.0" 
+                                             Maximum="64.0"
+                                             Increment="1.0"
+                                             FormatString="F1"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Controls zoom level when jumping to locations. Higher values zoom out more (location occupies 1/8 screen width ÷ this value)."/>
+                        </Grid>
+
+                        <!-- Hide Annotation Seconds -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Hide annotation time (seconds):"/>
+                            <xctk:IntegerUpDown Grid.Row="0" Grid.Column="1"
+                                              Value="{Binding HideAnnotationSeconds}"
+                                              Minimum="1"
+                                              Maximum="600"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="Del hides what a click under the mouse would pick (an annotation, link or auto-segmentation ring) for this long, so one beneath it can be reached; it fades back in at the end. Insert brings it back early."/>
+                        </Grid>
+
+                        <!-- Polygon Annotations -->
+                        <TextBlock Text="Polygon Annotations" FontWeight="Bold" Margin="5,15,5,2"/>
+                        <!-- Pen Simplify Threshold -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0" Content="Pen Simplify Threshold:"/>
+                            <xctk:IntegerUpDown Grid.Row="0" Grid.Column="1" 
+                                              Value="{Binding PenSimplifyThreshold}" 
+                                              Minimum="1" 
+                                              Maximum="100"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="How close polygon edges must be to the pen stroke. Smaller numbers are more accurate but require more points, negatively impacting performance."/>
                         </Grid>
 
                         <!-- Circle Annotations -->
@@ -649,86 +805,6 @@
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
                                      Text="Smallest allowed radius for circle annotations."/>
-                        </Grid>
-
-                        <controls:CircleSizePreviewSlider
-                            Header="Smallest Rendered Size:"
-                            Description="Minimum on-screen circle diameter before an annotation is hidden. The circle below shows the cutoff; the slider max is the width of this page."
-                            Value="{Binding SmallestRenderedSize, Mode=TwoWay}"
-                            Minimum="0.5"
-                            TickFrequency="0.1"
-                            PreviewMode="PixelDiameter"/>
-
-                        <!-- Circle Opacity Parentless -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="150"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="60"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            
-                            <Label Grid.Row="0" Grid.Column="0" Content="Circle Opacity (Parentless):"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding CircleOpacityParentless, Mode=TwoWay}"
-                                    Minimum="0"
-                                    Maximum="1"
-                                    TickFrequency="0.01"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding CircleOpacityParentless, StringFormat='F2'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
-                                     Margin="10,0,10,10"
-                                     FontSize="10"
-                                     Foreground="Gray"
-                                     TextWrapping="Wrap"
-                                     Text="Opacity for circles without a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
-                        </Grid>
-
-                        <!-- Circle Opacity With Parent -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="150"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="60"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            
-                            <Label Grid.Row="0" Grid.Column="0" Content="Circle Opacity (With Parent):"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding CircleOpacityWithParent, Mode=TwoWay}"
-                                    Minimum="0"
-                                    Maximum="1"
-                                    TickFrequency="0.01"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding CircleOpacityWithParent, StringFormat='F2'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
-                                     Margin="10,0,10,10"
-                                     FontSize="10"
-                                     Foreground="Gray"
-                                     TextWrapping="Wrap"
-                                     Text="Opacity for circles with a parent structure. Range: 0.0 (transparent) to 1.0 (opaque)."/>
                         </Grid>
 
                         <!-- Segmentation -->
@@ -810,14 +886,6 @@
                 <!-- Segmentation Settings -->
                 <Expander Header="Segmentation" IsExpanded="False" Margin="10">
                     <StackPanel Margin="10">
-                        <controls:CircleSizePreviewSlider
-                            Header="Segmentation Point Radius:"
-                            Description="Radius in pixels for segmentation prompt points on the image. The circle below is the on-screen size."
-                            Value="{Binding SegmentationPointRadius, Mode=TwoWay}"
-                            Minimum="1"
-                            TickFrequency="0.1"
-                            PreviewMode="PixelRadius"/>
-
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -1037,59 +1105,6 @@
                                    Foreground="Gray"
                                    TextWrapping="Wrap"
                                    Text="Draws the green foreground and red background clicks sent with each auto-polygonize request. Debug builds start with this on; turn it off for normal tracing."/>
-                        <CheckBox Margin="0,10,0,0"
-                                  IsChecked="{Binding AutoPolygonizeShimmerEnabled, Mode=TwoWay}"
-                                  Content="Shimmer new auto-segmentations"
-                                  VerticalContentAlignment="Center"/>
-                        <TextBlock Margin="10,0,10,10"
-                                   FontSize="10"
-                                   Foreground="Gray"
-                                   TextWrapping="Wrap"
-                                   Text="Sweeps a band of white lines across each auto-polygonize result once when it first appears."/>
-                        <Grid IsEnabled="{Binding AutoPolygonizeShimmerEnabled}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="150"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="60"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <Label Grid.Row="0" Grid.Column="0" Content="Shimmer brightness:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding AutoPolygonizeShimmerBrightness, Mode=TwoWay}"
-                                    Minimum="0.1"
-                                    Maximum="1"
-                                    TickFrequency="0.05"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding AutoPolygonizeShimmerBrightness, StringFormat='F2'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
-
-                            <Label Grid.Row="1" Grid.Column="0" Content="Shimmer duration (ms):"/>
-                            <Slider Grid.Row="1" Grid.Column="1"
-                                    Value="{Binding AutoPolygonizeShimmerDurationMs, Mode=TwoWay}"
-                                    Minimum="250"
-                                    Maximum="1000"
-                                    TickFrequency="50"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="1" Grid.Column="3"
-                                     Text="{Binding AutoPolygonizeShimmerDurationMs, StringFormat='F0'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
-                        </Grid>
                     </StackPanel>
                 </Expander>
             </StackPanel>
