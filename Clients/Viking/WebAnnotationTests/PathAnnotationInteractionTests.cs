@@ -153,5 +153,63 @@ namespace WebAnnotationTests
 
             CompareLogEntries(expected, log.Log.Entries);
         }
+
+        /// <summary>
+        /// A link marker drawn inside a location is crossed without leaving the location, so the only crossings of the
+        /// location in the log are the real crossings of its outline. A stroke over a marker used to log an exit and an
+        /// entry there, and the pen cut, which reads the last two crossings, then found nothing to cut.
+        /// </summary>
+        [TestMethod]
+        public void TestPathAcrossLinkMarkerStaysInsideTheLocation()
+        {
+            Polygon poly = new Polygon(Primitives.BoxVerticies(5));
+            DummyLinkMarker marker = new DummyLinkMarker(new Polygon(Primitives.BoxVerticies(2)));
+            DummyMarkerHost host = new DummyMarkerHost(poly, marker);
+
+            DummyCanvas dc = new DummyCanvas();
+            dc.Add(host);
+
+            Path path = new Path();
+            PathInteractionLogger log = new PathInteractionLogger(path, dc);
+            foreach (Vector2 p in StraightIntegerXAxisPath(-8, 8))
+            {
+                path.Push(p);
+            }
+
+            InteractionLogEvent[] expected = new InteractionLogEvent[]
+            {
+                new InteractionLogEvent(AnnotationRegionInteraction.ENTER, null, 0),
+                new InteractionLogEvent(AnnotationRegionInteraction.EXIT,  null, 3),
+                new InteractionLogEvent(AnnotationRegionInteraction.ENTER, host, 3),
+                new InteractionLogEvent(AnnotationRegionInteraction.ENTER, marker, 6),
+                new InteractionLogEvent(AnnotationRegionInteraction.EXIT, marker, 11),
+                new InteractionLogEvent(AnnotationRegionInteraction.EXIT, host, 14),
+                new InteractionLogEvent(AnnotationRegionInteraction.ENTER, null, 14)
+            };
+
+            CompareLogEntries(expected, log.Log.Entries);
+        }
+
+        /// <summary>An arrow marker for a location link, like the ones drawn inside a circle or polygon.</summary>
+        private sealed class DummyLinkMarker : DummyAnnotation, WebAnnotation.IViewLocationLink
+        {
+            public DummyLinkMarker(IShape2D shape) : base(shape) { }
+
+            public Viking.AnnotationServiceTypes.LocationLinkKey Key => new Viking.AnnotationServiceTypes.LocationLinkKey(1, 2);
+        }
+
+        /// <summary>A location that returns its marker when the point is on it, as a circle or polygon does.</summary>
+        private sealed class DummyMarkerHost : DummyAnnotation, WebAnnotation.ICanvasViewContainer
+        {
+            private readonly DummyLinkMarker marker;
+
+            public DummyMarkerHost(IShape2D shape, DummyLinkMarker marker) : base(shape)
+            {
+                this.marker = marker;
+            }
+
+            public WebAnnotation.ICanvasView GetAnnotationAtPosition(Vector2 position) =>
+                marker.Contains(position) ? marker : Contains(position) ? this : null;
+        }
     }
 }
