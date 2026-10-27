@@ -87,8 +87,11 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   - ALL against NEIGHBOR: 783 pairs lose more than 0.1 and 707 gain.
   - Per cell, the fit helped only RC1 c410 (0.844 → 0.862). It made no difference on the InferiorMonkey cells and RC2
     c5106, and made RPC1 c430 (0.817 → 0.802), RPC1 c2628 (0.738 → 0.732) and RPC2 c787 worse.
-  - It moved no outline more than 2 µm beyond the field. Its large moves were all on circles: RC2 c74420 769565 by
-    20.4 µm, 772432 by 9.0 and 779690 by 3.6, all on Z 792, are still to be explained.
+  - It moved no outline more than 2 µm beyond the field. Its large moves were all on circles. The largest three are
+    RC2 c74420 769565 by 20.4 µm, 772432 by 9.0 and 779690 by 3.6, all on Z 792. RC2 section 792 is extensively
+    damaged and is in the block's `NonStosSectionNumbers` (`Y:\Volumes\RC2\TEM\VolumeData.xml`), which lists the
+    sections left out of slice-to-volume registration. A fit along the process will move whatever sits on such a
+    section; the list is the input to use if damaged sections should be skipped or down-weighted.
   - The 1.3.x branch and tip rules had already cut ALL's harm from 1.2.0's 1,262 / 991 / 368 / 196 (same columns as the
     last table row).
 
