@@ -127,7 +127,7 @@ namespace WebAnnotation.UI.Commands
 
         protected Polygon CalculateTransformedPolygon()
         {
-            Polygon poly = OriginalMosaicPolygon.Clone() as Polygon;
+            Polygon? poly = OriginalMosaicPolygon.Clone() as Polygon;
             if (Angle != 0)
             {
                 poly = OriginalMosaicPolygon.Rotate(Angle);

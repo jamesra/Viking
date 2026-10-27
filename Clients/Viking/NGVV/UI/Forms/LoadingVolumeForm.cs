@@ -23,7 +23,7 @@ namespace Viking.UI.Forms
         private DateTime startTime;
         private readonly string VolumePath;
         private readonly CancellationTokenSource _cancellationTokenSource;
-        private Task _loadingTask;
+        private Task? _loadingTask;
 
         /// <summary>
         /// Using the built-in Dialog result always seems to return DialogResult.Cancel

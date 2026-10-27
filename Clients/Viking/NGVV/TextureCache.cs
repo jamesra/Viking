@@ -111,7 +111,7 @@ namespace Viking
         //      static public List<int> AllocatedTextures = new List<int>();
         protected override FileStream Fetch(LocalTextureCacheEntry entry)
         {
-            FileStream stream = null;
+            FileStream? stream = null;
 
             if (System.IO.File.Exists(entry.Key))
             {

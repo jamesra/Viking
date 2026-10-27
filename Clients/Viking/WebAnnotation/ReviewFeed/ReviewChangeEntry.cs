@@ -25,7 +25,7 @@ namespace WebAnnotation.ReviewFeed
             string typeName = parent?.Type?.Name
                 ?? parent?.Type?.Code
                 ?? "Location";
-            string label = parent?.Label;
+            string? label = parent?.Label;
 
             bool useVolume = location.VolumeShape != null && !location.VolumeShape.IsNull;
             var shape = useVolume ? location.VolumeShape : location.MosaicShape;

@@ -132,7 +132,7 @@ namespace Geometry
         /// <summary>
         /// Recursively splits the vertex set, triangulates each half, then stitches along the cut.
         /// </summary>
-        private static TriangulationMesh<VERTEX> RecursiveDivideAndConquerDelaunay(TriangulationMesh<VERTEX> mesh, MeshCut VertSet = null, IVertex2D[] verts = null, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
+        private static TriangulationMesh<VERTEX> RecursiveDivideAndConquerDelaunay(TriangulationMesh<VERTEX> mesh, MeshCut? VertSet = null, IVertex2D[]? verts = null, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
         {
             //The first recursion we populate variables to include all the verticies in the mesh
             VertSet ??= new MeshCut(mesh.XSorted, mesh.YSorted, CutDirection.HORIZONTAL, mesh.BoundingBox);
@@ -231,8 +231,8 @@ namespace Geometry
 
             IVertex2D LOrigin = L;
             IVertex2D ROrigin = R;
-            IVertex2D LeftCandidate = null;
-            IVertex2D RightCandidate = null;
+            IVertex2D? LeftCandidate = null;
+            IVertex2D? RightCandidate = null;
             List<EdgeAngle> LCandidates = [.. EdgesByAngle(mesh, L, R.Index, false)];
             List<EdgeAngle> RCandidates = [.. EdgesByAngle(mesh, R, L.Index, true)];
 
@@ -1216,7 +1216,7 @@ namespace Geometry
         /// Lawson, "Software for C1 Surface Interpolation," in Rice (ed.), Mathematical Software III,
         /// Academic Press, 1977.
         /// </remarks>
-        static void CheckEdgeFlip(TriangulationMesh<VERTEX> mesh, TriangleFace f, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null, Dictionary<IFace, SortedSet<IFace>> AlreadyFlipped = null)
+        static void CheckEdgeFlip(TriangulationMesh<VERTEX> mesh, TriangleFace f, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null, Dictionary<IFace, SortedSet<IFace>>? AlreadyFlipped = null)
         {
             //Check if the face has already been removed.
             if (mesh.Contains(f) == false)
@@ -1234,7 +1234,7 @@ namespace Geometry
 
 
 
-            SortedSet<IFace> AlreadyFlippedOppositeFaces = null;
+            SortedSet<IFace>? AlreadyFlippedOppositeFaces = null;
             if (AlreadyFlipped != null && AlreadyFlipped.ContainsKey(f))
             {
                 AlreadyFlippedOppositeFaces = AlreadyFlipped[f];
@@ -1369,8 +1369,8 @@ namespace Geometry
             if (edge.Faces.Count < 2)
                 return;
 
-            TriangleFace f = edge.Faces[0] as TriangleFace;
-            TriangleFace oppositeFace = edge.Faces[1] as TriangleFace;
+            TriangleFace? f = edge.Faces[0] as TriangleFace;
+            TriangleFace? oppositeFace = edge.Faces[1] as TriangleFace;
 
             VERTEX[] verts = [.. f.iVerts.Select(v => mesh[v])];
             Vector2[] circlePoints = [.. verts.Select(v => v.Position)];

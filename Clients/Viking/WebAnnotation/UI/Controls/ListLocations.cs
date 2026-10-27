@@ -10,7 +10,7 @@ namespace WebAnnotation.UI.Controls
     [Viking.Common.SupportedUITypes(typeof(Location_PropertyPageViewModel))]
     public partial class ListLocations : Viking.UI.BaseClasses.DockingListControl
     {
-        private Location_PropertyPageViewModel[] _locations;
+        private Location_PropertyPageViewModel[]? _locations;
         private readonly EventHandler LocationCreateEventHandler;
 
 
@@ -32,7 +32,7 @@ namespace WebAnnotation.UI.Controls
 
         protected override void OnObjectDoubleClick(IUIObject obj)
         {
-            Location_PropertyPageViewModel loc = obj as Location_PropertyPageViewModel;
+            Location_PropertyPageViewModel? loc = obj as Location_PropertyPageViewModel;
             Debug.Assert(loc != null);
 
             AnnotationOverlay.GoToLocation(loc.modelObj);
@@ -40,7 +40,7 @@ namespace WebAnnotation.UI.Controls
 
         public void OnLocationCreate(object sender, EventArgs e)
         {
-            Location_PropertyPageViewModel loc = sender as Location_PropertyPageViewModel;
+            Location_PropertyPageViewModel? loc = sender as Location_PropertyPageViewModel;
             Debug.Assert(loc != null);
             if (loc != null)
             {

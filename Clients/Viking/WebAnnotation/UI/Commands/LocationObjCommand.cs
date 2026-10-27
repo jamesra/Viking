@@ -36,7 +36,7 @@ namespace WebAnnotation.UI.Commands
         public LocationObjCommand(Viking.UI.Controls.SectionViewerControl parent)
             : base(parent)
         {
-            LocationCanvasView select_ViewObj = Viking.UI.State.SelectedObject as LocationCanvasView;
+            LocationCanvasView? select_ViewObj = Viking.UI.State.SelectedObject as LocationCanvasView;
             selected = Store.Locations[select_ViewObj.ID];
             Debug.Assert(selected != null);
 

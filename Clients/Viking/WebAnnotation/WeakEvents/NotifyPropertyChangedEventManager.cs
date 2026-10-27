@@ -25,7 +25,7 @@ namespace WebAnnotation.ViewModel
         protected override void StartListening(object source)
         {
             //Check if we can subscribe to the source
-            INotifyPropertyChanged INotify = source as INotifyPropertyChanged;
+            INotifyPropertyChanged? INotify = source as INotifyPropertyChanged;
             System.Diagnostics.Debug.Assert(INotify != null, "Attempt to create weak subscription to object that does not support it");
             if (INotify is null)
             {

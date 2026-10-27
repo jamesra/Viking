@@ -25,7 +25,7 @@ namespace WebAnnotation.UI.Commands
         private Geometry.Vector2 transformedPos;
         private readonly StructureObj putativeStruct;
         private readonly LocationObj putativeLoc;
-        private LocationObj nearestParent;
+        private LocationObj? nearestParent;
         private readonly LocationCanvasView locView;
         private Microsoft.Xna.Framework.Color linecolor;
         private CurveLabel? labelView = null;
@@ -73,7 +73,7 @@ namespace WebAnnotation.UI.Commands
                 return loc.ID != putativeLoc.ID && loc.ParentID != putativeStruct.ID;
             })];
 
-            LocationCanvasView nearestVisible = null;
+            LocationCanvasView? nearestVisible = null;
             HitTestResult BestMatch = listHitTestResults.NearestObjectOnCurrentSectionThenAdjacent((int)putativeLoc.Z);
             if (BestMatch != null)
             {

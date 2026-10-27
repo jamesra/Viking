@@ -150,7 +150,7 @@ namespace WebAnnotation.ReviewFeed
         public static Bitmap Compose(
             ReviewChangeEntry entry,
             int size = DefaultSize,
-            Bitmap emBackground = null,
+            Bitmap? emBackground = null,
             Color? tint = null,
             float visibility = DefaultVisibility)
         {

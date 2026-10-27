@@ -428,7 +428,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         private AutoPolygonizeMaskOverlay? displayMask;
 
-        private Texture2D maskTexture;
+        private Texture2D? maskTexture;
         private TextureOverlayView maskOverlayView;
         private PointSetView? foregroundPointsView;
         private bool isHighlighted;

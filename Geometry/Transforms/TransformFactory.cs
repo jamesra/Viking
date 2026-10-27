@@ -179,7 +179,7 @@ namespace Geometry.Transforms
             int nRetries = 5;
 
             using HttpClient client = new();
-            HttpResponseMessage response = null;
+            HttpResponseMessage? response = null;
             while (nRetries >= 0)
             {
                 response = await client.GetAsync(stosURI, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
@@ -617,7 +617,7 @@ namespace Geometry.Transforms
                     int iFileName = Transform.IndexOf(TileFileName);
                     Transform = Transform.Remove(0, iFileName + TileFileName.Length);
 
-                    ITransformControlPoints newTGT = ParseMosaicTileEntry(Transform, null) as ITransformControlPoints;
+                    ITransformControlPoints? newTGT = ParseMosaicTileEntry(Transform, null) as ITransformControlPoints;
                     TileTransformInfo info = new(TileFileName, iTileNumber, lastModified, newTGT.MappedBounds.Width, newTGT.MappedBounds.Height);
                     ((ITransformInfo)newTGT).Info = info;
 

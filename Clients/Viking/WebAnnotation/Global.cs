@@ -1442,7 +1442,7 @@ namespace WebAnnotation
         /// </summary>
 //        static internal readonly string XSDUri = "http://connectomes.utah.edu/XSD/BookmarkSchema.xsd";
 
-        private static XRoot _userSettingsDoc;
+        private static XRoot? _userSettingsDoc;
         private static Task? _loadUserPreferencesTask = null;
 
         public static string EndpointName
@@ -1770,7 +1770,7 @@ namespace WebAnnotation
         private static Task LoadUserPreferencesAsync()
         {
             // Check if a load is already in progress
-            Task existingTask = _loadUserPreferencesTask;
+            Task? existingTask = _loadUserPreferencesTask;
             if (existingTask != null && !existingTask.IsCompleted)
             {
                 return existingTask;

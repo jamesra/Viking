@@ -69,7 +69,7 @@ namespace LocalBookmarks
 
         public Geometry.Rectangle BoundingRect => new(GridPosition, Global.DefaultBookmarkRadius);
 
-        protected static event EventHandler OnCreate;
+        protected static event EventHandler? OnCreate;
         protected void CallOnCreate()
         {
             if (OnCreate != null)

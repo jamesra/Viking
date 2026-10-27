@@ -175,7 +175,7 @@ namespace Viking.UI.Forms
 
                 foreach (IPropertyPage IPage in TabsProperty.IPropertyPages)
                 {
-                    IToolBarButtons IButtons = IPage as IToolBarButtons;
+                    IToolBarButtons? IButtons = IPage as IToolBarButtons;
                     IButtons?.AddButtons(this.Tools);
                 }
             }

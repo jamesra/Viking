@@ -47,7 +47,7 @@ namespace WebAnnotation.View
         private readonly int Z;
 
         /// <summary>Marker positions from a run placement; null when markers go on the arcs of the outer circle.</summary>
-        private readonly IReadOnlyList<MarkerSlot> Slots;
+        private readonly IReadOnlyList<MarkerSlot>? Slots;
 
         /// <summary>Run axis that slots and linked locations are both ordered along.</summary>
         private readonly Geometry.Vector2 SlotAxis;

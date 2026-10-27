@@ -10,7 +10,7 @@ namespace WebAnnotation.UI
     [PropertyPage(typeof(Structure), 2)]
     public partial class StructureChildStructuresPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        private Structure Obj;
+        private Structure? Obj;
         private bool listLoaded = false;
 
         public StructureChildStructuresPage()

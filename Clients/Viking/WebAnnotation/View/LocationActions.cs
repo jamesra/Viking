@@ -621,7 +621,7 @@ namespace WebAnnotation
                                                                      //Drawing from inside to outside:
                                                                      RetraceAndReplacePathCommand cmd = (RetraceAndReplacePathCommand)sender;
 
-                                                                     Action recordUndo = null;
+                                                                     Action? recordUndo = null;
                                                                      try
                                                                      {
                                                                          recordUndo = cmd.ApplyCut(loc);
@@ -689,7 +689,7 @@ namespace WebAnnotation
                                                                      out SqlGeometry volumeShape)
         {
             volumeShape = source.TryMapShapeSectionToVolume(sourceShape);
-            SqlGeometry mosaicShape = volumeShape is null ? null : destination.TryMapShapeVolumeToSection(volumeShape);
+            SqlGeometry? mosaicShape = volumeShape is null ? null : destination.TryMapShapeVolumeToSection(volumeShape);
             if (mosaicShape is null)
                 System.Diagnostics.Trace.WriteLine("Linked location: shape lies partly outside the section mapping; no command created.", "WebAnnotation");
 

@@ -21,7 +21,7 @@ namespace WebAnnotation.ViewModel
                 return modelObj.Equals(Obj.modelObj);
             }
 
-            StructureTypeObj Obj2 = obj as StructureTypeObj;
+            StructureTypeObj? Obj2 = obj as StructureTypeObj;
             if (Obj2 != null)
             {
                 return modelObj.Equals(Obj2);

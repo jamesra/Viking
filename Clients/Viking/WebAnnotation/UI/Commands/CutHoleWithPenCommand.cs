@@ -12,7 +12,7 @@ namespace WebAnnotation.UI.Commands
     {
         private readonly Polygon OriginalMosaicPolygon;
         private readonly Polygon OriginalVolumePolygon;
-        private readonly List<LineSegment> ExteriorSegments;
+        private readonly List<LineSegment>? ExteriorSegments;
         public override uint NumCurveInterpolations => Global.NumClosedCurveInterpolationPoints;
 
         private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;

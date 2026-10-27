@@ -121,7 +121,7 @@ namespace Viking.UI.Commands
         {
             Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
             double distance = double.MaxValue;
-            object context_obj = null;
+            object? context_obj = null;
 
             // #region agent log
             try
@@ -171,7 +171,7 @@ namespace Viking.UI.Commands
             if (e.Button == MouseButtons.Right || e.Button == MouseButtons.Middle)
             {
                 //Create a context menu and show it where the mouse clicked
-                ContextMenuStrip menu = null;
+                ContextMenuStrip? menu = null;
                 if (context_obj is IContextMenu menu_obj)
                 {
                     menu = menu_obj.ContextMenu;

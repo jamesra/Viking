@@ -202,7 +202,7 @@ namespace Geometry.Meshing
 
         IEdgeKey IEdge.Key => this.Key;
 
-        private ImmutableSortedSet<IFace> _ImmutableFaces;
+        private ImmutableSortedSet<IFace>? _ImmutableFaces;
 
         public ImmutableSortedSet<IFace> Faces
         {

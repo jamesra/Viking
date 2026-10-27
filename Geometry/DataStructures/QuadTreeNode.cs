@@ -32,7 +32,7 @@ namespace Geometry
     public class QuadTreeNode<T>
     {
         readonly QuadTree<T> Tree;
-        internal QuadTreeNode<T> Parent = null;
+        internal QuadTreeNode<T>? Parent = null;
 
         /// <summary>
         /// It is assumed the "up" has a larger Y value than "down"
@@ -552,7 +552,7 @@ namespace Geometry
             else
             {
                 Quadrant quad = GetQuad(point);
-                T retValue = default;
+                T? retValue = default;
                 nodePoint = new Vector2(double.MinValue, double.MinValue);
 
                 //If we aren't a leaf node then do a depth first search to find the nearest point

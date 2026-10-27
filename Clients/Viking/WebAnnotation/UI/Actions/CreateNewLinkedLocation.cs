@@ -93,7 +93,7 @@ namespace WebAnnotation.UI.Actions
 
         public bool Equals(IAction other)
         {
-            CreateNewLinkedLocationAction other_obj = other as CreateNewLinkedLocationAction;
+            CreateNewLinkedLocationAction? other_obj = other as CreateNewLinkedLocationAction;
             if (object.ReferenceEquals(other_obj, null))
             {
                 return false;

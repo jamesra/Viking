@@ -44,7 +44,7 @@ namespace Geometry.Meshing
             }
         }
 
-        IComparer<IEdgeKey> _ifaceEdgeComparer;
+        IComparer<IEdgeKey>? _ifaceEdgeComparer;
 
         protected SortedSet<EdgeKey> _Edges;
 
@@ -64,7 +64,7 @@ namespace Geometry.Meshing
             this._Index = index;
         }
 
-        protected VertexBase(IComparer<IEdgeKey> edgeComparer = null)
+        protected VertexBase(IComparer<IEdgeKey>? edgeComparer = null)
         {
             _Edges = [];
             _ImmutableEdges = null;
@@ -72,7 +72,7 @@ namespace Geometry.Meshing
                 EdgeComparer = edgeComparer;
         }
 
-        protected VertexBase(int index, IComparer<IEdgeKey> edgeComparer = null) : this(edgeComparer)
+        protected VertexBase(int index, IComparer<IEdgeKey>? edgeComparer = null) : this(edgeComparer)
         {
             this._Index = index;
         }
@@ -260,17 +260,17 @@ namespace Geometry.Meshing
     {
         public T Data { get; set; }
 
-        public Vertex2D(int index, Vector2 p, T data, IComparer<IEdgeKey> edgeComparer = null) : base(index, p, edgeComparer)
+        public Vertex2D(int index, Vector2 p, T data, IComparer<IEdgeKey>? edgeComparer = null) : base(index, p, edgeComparer)
         {
             Data = data;
         }
 
-        public Vertex2D(Vector2 p, T data, IComparer<IEdgeKey> edgeComparer = null) : base(p, edgeComparer)
+        public Vertex2D(Vector2 p, T data, IComparer<IEdgeKey>? edgeComparer = null) : base(p, edgeComparer)
         {
             Data = data;
         }
 
-        public Vertex2D(Vector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(p, edgeComparer)
+        public Vertex2D(Vector2 p, IComparer<IEdgeKey>? edgeComparer = null) : base(p, edgeComparer)
         {
         }
 
@@ -289,12 +289,12 @@ namespace Geometry.Meshing
         public Vector2 Position { get; set; }
 
 
-        public Vertex2D(Vector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(edgeComparer)
+        public Vertex2D(Vector2 p, IComparer<IEdgeKey>? edgeComparer = null) : base(edgeComparer)
         {
             Position = p;
         }
 
-        public Vertex2D(int index, Vector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(index, edgeComparer)
+        public Vertex2D(int index, Vector2 p, IComparer<IEdgeKey>? edgeComparer = null) : base(index, edgeComparer)
         {
             Position = p;
         }

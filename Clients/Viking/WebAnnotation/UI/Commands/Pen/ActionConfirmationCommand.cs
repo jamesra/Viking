@@ -83,7 +83,7 @@ namespace WebAnnotation.UI.Commands
 
             foreach (IAction action in AvailableActions)
             {
-                CircleView btnView = null;
+                CircleView? btnView = null;
 
                 Color color = action is not IColorView colorView ? Color.Green : colorView.Color;
 

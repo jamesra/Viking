@@ -110,7 +110,7 @@ namespace Viking.UI.BaseClasses
             if (e.Button == MouseButtons.Right)
             {
                 ListViewItem Item = ListItems.GetItemAt(e.X, e.Y);
-                IContextMenu ObjContextMenu = Item?.Tag as IContextMenu;
+                IContextMenu? ObjContextMenu = Item?.Tag as IContextMenu;
 
                 //If we clicked an item on the list, show the context menu for the item.
                 //Otherwise, show the generic context menu for the item type the list shows. 

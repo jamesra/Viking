@@ -46,10 +46,10 @@ namespace Geometry.Transforms
         private const long ParallelWorkThreshold = 16384;
 
         [NonSerialized]
-        private volatile Vector2[] _mappedPointsCache = null;
+        private volatile Vector2[]? _mappedPointsCache = null;
 
         [NonSerialized]
-        private volatile Vector2[] _controlPointsCache = null;
+        private volatile Vector2[]? _controlPointsCache = null;
 
         /// <summary>
         /// The mapped point of every <see cref="ReferencePointBasedTransform.MapPoints"/> element, in the same order. Built on first use
@@ -112,7 +112,7 @@ namespace Geometry.Transforms
             base.OnMapPointsChanged();
         }
 
-        private volatile double[] _ControlToMappedSpaceWeights = null;
+        private volatile double[]? _ControlToMappedSpaceWeights = null;
         private double[] ControlToMappedSpaceWeights
         {
             get
@@ -128,7 +128,7 @@ namespace Geometry.Transforms
             }
         }
 
-        private volatile double[] _MappedToControlSpaceWeights = null;
+        private volatile double[]? _MappedToControlSpaceWeights = null;
         private double[] MappedToControlSpaceWeights
         {
             get
@@ -394,7 +394,7 @@ namespace Geometry.Transforms
         /// <param name="ControlPoints"></param>
         /// <param name="BasisFunction">How to weight pairs of points, if null, use Euclidean distance</param>
         /// <returns></returns>
-        public static Matrix<double> CreateBetaMatrixWithLinear(Vector2[] ControlPoints, BasisFunctionDelegate BasisFunction = null)
+        public static Matrix<double> CreateBetaMatrixWithLinear(Vector2[] ControlPoints, BasisFunctionDelegate? BasisFunction = null)
         {
             if (ControlPoints is null)
                 throw new ArgumentNullException(nameof(ControlPoints));

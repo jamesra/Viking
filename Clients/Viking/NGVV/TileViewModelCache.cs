@@ -70,7 +70,7 @@ namespace Viking
         {
             TileUniqueKey key = tileViewModel.UniqueKey;
 
-            TileView tileView = null;
+            TileView? tileView = null;
             bool added = false;
             try
             {

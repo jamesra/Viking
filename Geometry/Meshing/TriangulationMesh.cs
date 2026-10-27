@@ -157,11 +157,11 @@ namespace Geometry.Meshing
 
     public class TriangulationVertex : Vertex2D, IVertexSortEdgeByAngle
     {
-        public TriangulationVertex(Vector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(p, edgeComparer)
+        public TriangulationVertex(Vector2 p, IComparer<IEdgeKey>? edgeComparer = null) : base(p, edgeComparer)
         {
         }
 
-        protected TriangulationVertex(int index, Vector2 p, IComparer<IEdgeKey> edgeComparer = null) : base(index, p, edgeComparer)
+        protected TriangulationVertex(int index, Vector2 p, IComparer<IEdgeKey>? edgeComparer = null) : base(index, p, edgeComparer)
         {
         }
 
@@ -380,8 +380,8 @@ namespace Geometry.Meshing
             if (!edge.Faces.All(f => f.IsTriangle()))
                 throw new ArgumentException(string.Format("Edge cannot flip unless it has two triangular faces. {0} has non-triangular face: {1} and/or {2}", edge, edge.Faces.First(), edge.Faces.Last()));
 
-            TriangleFace f1 = edge.Faces[0] as TriangleFace;
-            TriangleFace f2 = edge.Faces[1] as TriangleFace;
+            TriangleFace? f1 = edge.Faces[0] as TriangleFace;
+            TriangleFace? f2 = edge.Faces[1] as TriangleFace;
 
             Edge newEdge = new(f1.OppositeVertex(edge), f2.OppositeVertex(edge));
 
@@ -410,8 +410,8 @@ namespace Geometry.Meshing
             if (!existing.Faces.All(f => f.IsTriangle()))
                 throw new ArgumentException(string.Format("Edge cannot flip unless it has two triangular faces. {0} has non-triangular face: {1} and/or {2}", existing, existing.Faces.First(), existing.Faces.Last()));
 
-            TriangleFace f1 = existing.Faces[0] as TriangleFace;
-            TriangleFace f2 = existing.Faces[1] as TriangleFace;
+            TriangleFace? f1 = existing.Faces[0] as TriangleFace;
+            TriangleFace? f2 = existing.Faces[1] as TriangleFace;
 
             InfiniteSequentialIndexSet TriangleIndexer = new(0, 3, 0);
 
@@ -447,7 +447,7 @@ namespace Geometry.Meshing
         internal SortedSet<long> _XSorted;
         internal SortedSet<long> _YSorted;
 
-        private long[] _XSortedArrayCache = null;
+        private long[]? _XSortedArrayCache = null;
         public long[] XSorted
         {
             get
@@ -462,7 +462,7 @@ namespace Geometry.Meshing
             }
         }
 
-        private long[] _YSortedArrayCache = null;
+        private long[]? _YSortedArrayCache = null;
         public long[] YSorted
         {
             get
@@ -692,7 +692,7 @@ namespace Geometry.Meshing
         /// <param name="constrained_edge"></param>
         /// <param name="ReportProgress"></param>
         /// <returns>A list of edges added.  This is empty if the edge was already in the mesh and a constrained edge.  It may have two or more entries if the constrained edge intersected verticies.</returns>
-        public List<IEdge> AddConstrainedEdge(IEdge constrained_edge, ProgressUpdate ReportProgress = null)
+        public List<IEdge> AddConstrainedEdge(IEdge constrained_edge, ProgressUpdate? ReportProgress = null)
         {
             List<IEdge> EdgesAdded = new(1);
             //If the edge already exists, just return
@@ -790,7 +790,7 @@ namespace Geometry.Meshing
                     })];
                 }
 
-                Edge edge = IntersectedEdges[iEdge] as Edge;
+                Edge? edge = IntersectedEdges[iEdge] as Edge;
 
 #if TRACEDELAUNAY
                 Trace.WriteLine(string.Format("Check intersecting edge {0}", edge));
@@ -811,8 +811,8 @@ namespace Geometry.Meshing
 
                 //Debug.Assert(edge.Faces.Count() == 2, "Expect two faces for any edge intersecting an edge constraint.");
 
-                TriangleFace A = edge.Faces[0] as TriangleFace;
-                TriangleFace B = edge.Faces[1] as TriangleFace;
+                TriangleFace? A = edge.Faces[0] as TriangleFace;
+                TriangleFace? B = edge.Faces[1] as TriangleFace;
 
                 int[] quadVerts = edge.FacesBoundary();
                 Face quad = new(quadVerts);
@@ -910,15 +910,15 @@ namespace Geometry.Meshing
             {
 
                 iEdge = iEdge < 0 ? CreatedEdges.Count - 1 : iEdge;
-                Edge edge = CreatedEdges[iEdge] as Edge;
+                Edge? edge = CreatedEdges[iEdge] as Edge;
                 CreatedEdges.RemoveAt(iEdge);
                 iEdge--;
 
                 if (edge.Faces.Count < 2) //Should not be possible but added it as an edge case check because it was hit during bajaj generation
                     continue;
 
-                TriangleFace A = edge.Faces[0] as TriangleFace;
-                TriangleFace B = edge.Faces[1] as TriangleFace;
+                TriangleFace? A = edge.Faces[0] as TriangleFace;
+                TriangleFace? B = edge.Faces[1] as TriangleFace;
 
                 /*
                 bool CanAFlip = A.Edges.Count(e => this[e] as ConstrainedEdge != null) <= 1;
@@ -1003,7 +1003,7 @@ namespace Geometry.Meshing
 
             foreach (var f in faces)
             {
-                ITriangleFace face = f as ITriangleFace;
+                ITriangleFace? face = f as ITriangleFace;
                 IEdge oppEdge = this[face.OppositeEdge(v.Index)]; //Identify the edge we have a chance of intersecting.
 
                 LineSegment oppEdgeSeg = this.ToLineSegment(oppEdge);
@@ -1015,7 +1015,7 @@ namespace Geometry.Meshing
                     //Todo: Handle endpoint intersection case
                     if (intersection.ShapeType == ShapeType2D.Point)
                     {
-                        IPoint2D iPoint = intersection as IPoint2D;
+                        IPoint2D? iPoint = intersection as IPoint2D;
                         if (oppEdgeSeg.IsEndpoint(iPoint))
                         {
                             int iIntersectedVert = oppEdgeSeg.A == iPoint ? oppEdge.A : oppEdge.B;

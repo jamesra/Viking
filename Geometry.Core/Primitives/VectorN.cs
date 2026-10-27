@@ -11,8 +11,8 @@ namespace Geometry
     /// </summary>
     public class AxisComparer : IComparer<IPointN>
     {
-        private readonly int[] AxisCompareOrder = null;
-        private readonly bool[] Ascending = null; //True if the axis should be sorted in ascending order
+        private readonly int[]? AxisCompareOrder = null;
+        private readonly bool[]? Ascending = null; //True if the axis should be sorted in ascending order
 
         /// <summary>
         /// Defaults to comparing the axis values in the order they appear in the points coordinate array. i.e. X,Y,Z..
@@ -205,7 +205,7 @@ namespace Geometry
             if (other is null)
                 return false;
 
-            IPointN p = other as IPointN;
+            IPointN? p = other as IPointN;
             return ((IEquatable<IPointN>)this).Equals(p);
 
         }

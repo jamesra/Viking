@@ -31,7 +31,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
     internal sealed partial class SegmentationViewportSession
     {
         private readonly SectionViewerControl parent;
-        private SegmentationServiceTypes.SegmentationService.SegmentationServiceClient grpcClient;
+        private SegmentationServiceTypes.SegmentationService.SegmentationServiceClient? grpcClient;
 
         private Geometry.Rectangle? uploadedImageBounds;
         private int uploadedImageWidth;
@@ -691,10 +691,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public IReadOnlyList<Polygon> CreatePolygonsFromResponse(
             SegmentationResponse response,
             double? holeDropFraction = null,
-            IReadOnlyList<Geometry.Vector2> preserveHolesContainingWorldPoints = null,
+            IReadOnlyList<Geometry.Vector2>? preserveHolesContainingWorldPoints = null,
             int? edgeCleanupRadius = null,
             CancellationToken cancellationToken = default,
-            IReadOnlyList<Geometry.Vector2> keepComponentsContainingWorldPoints = null,
+            IReadOnlyList<Geometry.Vector2>? keepComponentsContainingWorldPoints = null,
             bool primaryIslandOnly = false)
         {
             if (response is null || response.Segments.Count == 0)

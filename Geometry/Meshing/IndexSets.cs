@@ -183,7 +183,7 @@ namespace Geometry
 
         public IIndexSet Reverse()
         {
-            long[] reversedIndicies = Indices.Clone() as long[];
+            long[]? reversedIndicies = Indices.Clone() as long[];
             Array.Reverse(reversedIndicies);
             return new IndexSet(reversedIndicies);
         }

@@ -858,7 +858,7 @@ namespace Geometry
             //Only return unique values
             List<U> unique_list = new(LineList.Count);
             LineList.Sort();
-            U lastItem = default;
+            U? lastItem = default;
             foreach (U item in LineList)
             {
                 if (item.Equals(lastItem))

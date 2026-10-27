@@ -10,7 +10,7 @@ namespace WebAnnotation.UI.Controls
     [Viking.Common.SupportedUITypes(typeof(StructureObj))]
     public partial class ListStructures : Viking.UI.BaseClasses.DockingListControl
     {
-        private Structure[] _structures;
+        private Structure[]? _structures;
         private readonly EventHandler StructureCreateEventHandler;
 
         public ListStructures()
@@ -33,7 +33,7 @@ namespace WebAnnotation.UI.Controls
 
         protected override void OnObjectDoubleClick(IUIObject obj)
         {
-            Structure s = obj as Structure;
+            Structure? s = obj as Structure;
             Debug.Assert(s != null);
 
             LocationObj centerLoc = s.Center;
@@ -45,7 +45,7 @@ namespace WebAnnotation.UI.Controls
 
         public void OnLocationCreate(object sender, EventArgs e)
         {
-            Structure structure = sender as Structure;
+            Structure? structure = sender as Structure;
             Debug.Assert(structure != null);
             if (structure != null)
             {

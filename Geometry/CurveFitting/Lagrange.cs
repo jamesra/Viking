@@ -9,7 +9,7 @@ namespace Geometry
     /// </summary>
     public class Lagrange
     {
-        public static Vector2[] RecursivelyFitCurve(Vector2[] cp, SortedSet<double> TPoints = null)
+        public static Vector2[] RecursivelyFitCurve(Vector2[] cp, SortedSet<double>? TPoints = null)
         {
             int nPoints = cp.Length;
             int NumInterpolations;

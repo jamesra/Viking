@@ -8,7 +8,7 @@ namespace WebAnnotation.UI
     [PropertyPage(typeof(Structure), 6)]
     public partial class StructureExtendedPropertiesPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        private Structure Obj;
+        private Structure? Obj;
 
         public StructureExtendedPropertiesPage()
         {

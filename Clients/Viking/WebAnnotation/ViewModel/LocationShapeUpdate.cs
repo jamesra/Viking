@@ -85,7 +85,7 @@ namespace WebAnnotation.ViewModel
             Polygon simplified = AutoPolygonizeSelection.SimplifyForSave(volumePolygon, mustContain);
             modelObj.TypeCode = LocationType.CURVEPOLYGON;
 
-            ICollection<Vector2[]> interior = simplified.HasInteriorRings
+            ICollection<Vector2[]>? interior = simplified.HasInteriorRings
                 ? simplified.InteriorRings.ToList()
                 : null;
 

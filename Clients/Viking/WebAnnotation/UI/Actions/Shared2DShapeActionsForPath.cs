@@ -76,7 +76,7 @@ namespace WebAnnotation.UI.Actions
             // Cuts near or past the edge of the registration grid have vertices a discrete grid cannot map; the RBF fallback extrapolates them.
             IVolumeToSectionTransform Transform = AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform.WithContinuousFallback();
 
-            Polygon PolyToCut = OriginalVolumePolygon.Clone() as Polygon;
+            Polygon? PolyToCut = OriginalVolumePolygon.Clone() as Polygon;
             if (FirstIntersection.IsInner)
             {
                 PolyToCut = OriginalVolumePolygon.InteriorPolygons[FirstIntersection.InnerShapeIndex.Value];
@@ -143,10 +143,10 @@ namespace WebAnnotation.UI.Actions
 
             // What is saved keeps the location's stored control points and adds only the pen stretch. Saving the walked piece
             // instead turned the drawn curve into control points and curved it again, moving the whole outline at every edit.
-            Polygon saved_clockwise_poly = clockwise_poly;
-            Polygon saved_counter_clockwise_poly = counter_clockwise_poly;
-            Polygon mosaic_clockwise_poly = null;
-            Polygon mosaic_counter_clockwise_poly = null;
+            Polygon? saved_clockwise_poly = clockwise_poly;
+            Polygon? saved_counter_clockwise_poly = counter_clockwise_poly;
+            Polygon? mosaic_clockwise_poly = null;
+            Polygon? mosaic_counter_clockwise_poly = null;
             if (ControlPointCut.TrySplice(locObj.MosaicShape.ToPolygon(), Transform, FirstIntersection, subpath, tolerance, out ControlPointCut.Piece afterFirst, out ControlPointCut.Piece afterSecond))
             {
                 ControlPointCut.PairWithWalk(afterFirst, afterSecond, clockwise_poly, counter_clockwise_poly, out ControlPointCut.Piece splicedClockwise, out ControlPointCut.Piece splicedCounterClockwise);
@@ -192,8 +192,8 @@ namespace WebAnnotation.UI.Actions
                     case RetraceCommandAction.GROW_EXTERIOR_RING:
                         if (TryChooseGrownSide(PolyToCut, clockwise_poly, counter_clockwise_poly, out UseCCW) == false)
                             return Rejected(output, locID, "the only valid side of the cut does not enlarge the outline");
-                        Polygon outputVolumePoly = UseCCW ? saved_counter_clockwise_poly : saved_clockwise_poly;
-                        Polygon outputMosaicPoly = UseCCW ? mosaic_counter_clockwise_poly : mosaic_clockwise_poly;
+                        Polygon? outputVolumePoly = UseCCW ? saved_counter_clockwise_poly : saved_clockwise_poly;
+                        Polygon? outputMosaicPoly = UseCCW ? mosaic_counter_clockwise_poly : mosaic_clockwise_poly;
                         Polygon growthLobe = UseCCW ? clockwise_poly : counter_clockwise_poly;
                         // Only the kept piece is saved, so an unmappable discarded lobe must not block the cut.
                         if (outputMosaicPoly is null)
@@ -291,7 +291,7 @@ namespace WebAnnotation.UI.Actions
                 return true;
             }
 
-            Polygon only = clockwise ?? counterClockwise;
+            Polygon? only = clockwise ?? counterClockwise;
             useCounterClockwise = counterClockwise is not null;
             return only.Area > source.Area;
         }
@@ -397,7 +397,7 @@ namespace WebAnnotation.UI.Actions
 
             if (smooth_volume_shape is Polygon)
             {
-                Polygon smooth_volume_polygon = smooth_volume_shape as Polygon;
+                Polygon? smooth_volume_polygon = smooth_volume_shape as Polygon;
                 Polygon smooth_exterior_polygon = new(smooth_volume_polygon.ExteriorRing);
                 Polygon closedpath = new(path.SimplifiedFirstLoop);
                 if (smooth_exterior_polygon.Covers(closedpath))
@@ -425,7 +425,7 @@ namespace WebAnnotation.UI.Actions
                     //Remove the intersected interior polygons, add the new interior polygon
                     if (IntersectedInteriorPolygons.Count > 0)
                     {
-                        Polygon volume_shape_copy = ((Polygon)volume_shape).Clone() as Polygon;
+                        Polygon? volume_shape_copy = ((Polygon)volume_shape).Clone() as Polygon;
 
                         IntersectedInteriorPolygons.Reverse(); //Have to delete high to low to remove the correct polygons
                         foreach (int iInnerPoly in IntersectedInteriorPolygons)

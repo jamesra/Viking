@@ -39,7 +39,7 @@ namespace WebAnnotation.UI.Forms
         {
             //  SectionViewerForm form = new SectionViewerForm(section);
             //  form.Show();
-            PenAnnotationViewForm form = Global.PenAnnotationForm;
+            PenAnnotationViewForm? form = Global.PenAnnotationForm;
             if (form is null)
             {
                 form = new PenAnnotationViewForm(section);

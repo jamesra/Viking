@@ -22,9 +22,9 @@ namespace Viking.ViewModels
         /// <summary>
         /// Fires when the transform used to render the section changes
         /// </summary>
-        public event Viking.Common.TransformChangedEventHandler TransformChanged;
+        public event Viking.Common.TransformChangedEventHandler? TransformChanged;
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
 
         [Column("Name")]
@@ -202,7 +202,7 @@ namespace Viking.ViewModels
                 if (section == value)
                     return;
 
-                Section _oldReference = this._ReferenceSectionBelow;
+                Section? _oldReference = this._ReferenceSectionBelow;
 
                 //See if the new section is really below us
                 if (value != null)
@@ -340,7 +340,7 @@ namespace Viking.ViewModels
 
         public Section GetSectionToDrawForChannel(ChannelInfo channel)
         {
-            Section sectionToDraw = null;
+            Section? sectionToDraw = null;
 
             switch (channel.SectionSource)
             {

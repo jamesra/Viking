@@ -47,7 +47,7 @@ namespace WebAnnotation.ReviewFeed
                 return null;
 
             string channel = State.ViewerControl?.CurrentChannel ?? sectionVm.DefaultChannel;
-            string sectionTransform = sectionVm.DefaultPyramidTransform
+            string? sectionTransform = sectionVm.DefaultPyramidTransform
                 ?? State.ViewerControl?.CurrentTransform;
 
             ReviewChangeCardCrop.GetPaddedBounds(entry, out double left, out double bottom, out double spanX, out double spanY);

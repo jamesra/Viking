@@ -19,7 +19,7 @@ namespace Geometry
         /// <summary>
         /// Fires an event when a loop in the path is found or removed
         /// </summary>
-        public event LoopChangedEventHandler OnLoopChanged;
+        public event LoopChangedEventHandler? OnLoopChanged;
 
         private void FireOnLoopChangedEvent(bool HasLoop) =>
             //Trace.WriteLine(string.Format("FireOnLoopChangedEvent: {0}", HasLoop));
@@ -121,20 +121,20 @@ namespace Geometry
         public bool HasSelfIntersection => _Loop != null;
 
         /// <summary>Vertices of the first self-intersection loop; null if none. Invalidated when the path changes.</summary>
-        private Vector2[] _Loop = null;
+        private Vector2[]? _Loop = null;
 
         /// <summary>Vertices of the first loop, or null if the path does not self-intersect.</summary>
         public Vector2[] Loop => _Loop;
 
         /// <summary>Segments of <see cref="_Loop"/>; null if no loop. Same A-newer/B-older order as <see cref="_Segments"/>.</summary>
-        private LineSegment[] _LoopSegments = null;
+        private LineSegment[]? _LoopSegments = null;
 
         /// <summary>Segments of <see cref="Loop"/>, or null if none.</summary>
         public LineSegment[] LoopSegments => _LoopSegments;
 
 
         /// <summary>Catmull-Rom simplification of <see cref="_Loop"/>; null means dirty.</summary>
-        private Vector2[] _SimplifiedLoop = null;
+        private Vector2[]? _SimplifiedLoop = null;
 
         /// <summary>Simplified vertices of the first loop, or null if none.</summary>
         public Vector2[] SimplifiedFirstLoop
@@ -155,7 +155,7 @@ namespace Geometry
 
 
         /// <summary>Segments of <see cref="_SimplifiedLoop"/>; null means dirty.</summary>
-        private LineSegment[] _SimplifiedLoopSegments = null;
+        private LineSegment[]? _SimplifiedLoopSegments = null;
 
         /// <summary>Segments of <see cref="SimplifiedFirstLoop"/>, or null if none.</summary>
         public LineSegment[] SimplifiedLoopSegments

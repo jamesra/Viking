@@ -36,7 +36,7 @@ namespace Geometry.Transforms
         /// <summary>
         /// This stores the output of the Delaunay triangulation.  Every group of three integers represents a triangle
         /// </summary>
-        protected int[] _TriangleIndicies = null;
+        protected int[]? _TriangleIndicies = null;
         public virtual int[] TriangleIndicies
         {
             get
@@ -336,7 +336,7 @@ namespace Geometry.Transforms
         /// tree for that, so the two trees are built independently.
         /// </remarks>
         [NonSerialized]
-        private Lazy<RTree.RTree<MappingTriangle>> _mapTrianglesRTree;
+        private Lazy<RTree.RTree<MappingTriangle>>? _mapTrianglesRTree;
 
         [NonSerialized]
         private Lazy<RTree.RTree<MappingTriangle>> _controlTrianglesRTree;
@@ -539,7 +539,7 @@ namespace Geometry.Transforms
                                                                QuadTreeWithUniqueValues<List<MappingTriangle>> pointTreeWithUniqueValues)
         {
 
-            List<MappingVector2> MappingPointList = null;
+            List<MappingVector2>? MappingPointList = null;
 
             if (gridRect.Covers(pointTreeWithUniqueValues.Border))
             {
@@ -727,7 +727,7 @@ namespace Geometry.Transforms
                 return null;
             }
 
-            ITransformControlPoints newTransform = null;
+            ITransformControlPoints? newTransform = null;
 
             //If we started with a grid transform and all the control points mapped then we can create a new grid transform
             if (AtoB is GridTransform gridTransform && AllPointsTransformed)

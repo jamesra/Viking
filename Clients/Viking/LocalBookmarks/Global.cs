@@ -62,7 +62,7 @@ namespace LocalBookmarks
             set => ReplaceLocalXml(value);
         }
 
-        public static event System.ComponentModel.PropertyChangedEventHandler RootBookmarkChanged;
+        public static event System.ComponentModel.PropertyChangedEventHandler? RootBookmarkChanged;
 
         internal static Folder FolderRoot => BookmarkXMLDoc.Folder;
 
@@ -70,7 +70,7 @@ namespace LocalBookmarks
         public static Microsoft.Xna.Framework.Color DefaultColor = Microsoft.Xna.Framework.Color.Gold;
         public static double BookmarkArea = DefaultBookmarkRadius * DefaultBookmarkRadius * Math.PI;
 
-        private static FolderUIObj _SelectedFolder;
+        private static FolderUIObj? _SelectedFolder;
         internal static FolderUIObj SelectedFolder
         {
             get => _SelectedFolder;
@@ -93,7 +93,7 @@ namespace LocalBookmarks
 
         internal static bool BookmarksVisible = true;
 
-        public static event EventHandler AfterUndo;
+        public static event EventHandler? AfterUndo;
 
         /// <summary>
         /// Folder that should own a newly placed bookmark: the selected folder, the parent of a selected

@@ -7,7 +7,7 @@ namespace Geometry
         where TPoint : struct, IPoint2D
     {
         readonly QuadTreeTemplatePoint<TPoint, TValue> Tree;
-        internal QuadTreeNodeTemplatePoint<TPoint, TValue> Parent = null;
+        internal QuadTreeNodeTemplatePoint<TPoint, TValue>? Parent = null;
 
         /// <summary>
         /// It is assumed the "up" has a larger Y value than "down"
@@ -281,7 +281,7 @@ namespace Geometry
             else
             {
                 Quadrant quad = GetQuad(point);
-                TValue retValue = default;
+                TValue? retValue = default;
                 nodePoint = default;
 
                 //If we aren't a leaf node then do a depth first search to find the nearest point

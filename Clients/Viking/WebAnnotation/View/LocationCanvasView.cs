@@ -221,13 +221,13 @@ namespace WebAnnotation.View
 
         public override bool Equals(object obj)
         {
-            LocationCanvasView LocObj = obj as LocationCanvasView;
+            LocationCanvasView? LocObj = obj as LocationCanvasView;
             if (LocObj != null)
             {
                 return modelObj.Equals(LocObj.modelObj);
             }
 
-            LocationObj LocObj2 = obj as LocationObj;
+            LocationObj? LocObj2 = obj as LocationObj;
             if (LocObj2 != null)
             {
                 return modelObj.Equals(LocObj2);

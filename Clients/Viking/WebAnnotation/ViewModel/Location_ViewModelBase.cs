@@ -45,13 +45,13 @@ namespace WebAnnotation.ViewModel
 
         public override bool Equals(object obj)
         {
-            Location_ViewModelBase LocObj = obj as Location_ViewModelBase;
+            Location_ViewModelBase? LocObj = obj as Location_ViewModelBase;
             if (LocObj != null)
             {
                 return modelObj.Equals(LocObj.modelObj);
             }
 
-            LocationObj LocObj2 = obj as LocationObj;
+            LocationObj? LocObj2 = obj as LocationObj;
             if (LocObj2 != null)
             {
                 return modelObj.Equals(LocObj2);
@@ -448,7 +448,7 @@ namespace WebAnnotation.ViewModel
 
         protected void ContextMenu_ExportNetwork(object sender, EventArgs e)
         {
-            ToolStripMenuItem item = sender as ToolStripMenuItem;
+            ToolStripMenuItem? item = sender as ToolStripMenuItem;
             long? hops = item.Tag as long?;
 
             Global.Export.OpenNetwork(ParentID.Value, hops);
@@ -456,7 +456,7 @@ namespace WebAnnotation.ViewModel
 
         protected void ContextMenu_ConvertShape(object sender, EventArgs e)
         {
-            ToolStripMenuItem item = sender as ToolStripMenuItem;
+            ToolStripMenuItem? item = sender as ToolStripMenuItem;
             Viking.AnnotationServiceTypes.Interfaces.LocationType targetShape = (Viking.AnnotationServiceTypes.Interfaces.LocationType)item.Tag;
 
             switch (targetShape)
@@ -478,7 +478,7 @@ namespace WebAnnotation.ViewModel
         public void ContextMenu_SimplifyPolygon(object sender, EventArgs e)
         {
             //If tag is None, we simplify the exterior.  If tag is a number, we simplify that internal polygon
-            ToolStripMenuItem item = sender as ToolStripMenuItem;
+            ToolStripMenuItem? item = sender as ToolStripMenuItem;
             int? innerPoly = item.Tag is null ? new int?() : (int?)item.Tag;
 
             Polygon poly = modelObj.MosaicShape.ToPolygon();
@@ -522,7 +522,7 @@ namespace WebAnnotation.ViewModel
         public void ContextMenu_RemoveInnerPolygon(object sender, EventArgs e)
         {
             //If tag is None, we simplify the exterior.  If tag is a number, we simplify that internal polygon
-            ToolStripMenuItem item = sender as ToolStripMenuItem;
+            ToolStripMenuItem? item = sender as ToolStripMenuItem;
             int? innerPoly = item.Tag is null ? new int?() : (int?)item.Tag;
 
             Polygon poly = modelObj.MosaicShape.ToPolygon();
@@ -695,7 +695,7 @@ namespace WebAnnotation.ViewModel
                 // texture is downsampled until it fits. The server's limits apply when the mask is sent (SubmitEditedMask).
                 Geometry.Rectangle polygonBounds = RasterMask.BoundsOf(volumeRings[0]);
                 SegmentationDiag.Log($"EditMask start ds={downsample} polygon={polygonBounds.Width:0}x{polygonBounds.Height:0} maxTexture={parent.MaxTextureSide}");
-                RasterMask mask = RasterMask.FromRings(
+                RasterMask? mask = RasterMask.FromRings(
                     volumeRings, downsample, marginPixels: EditMaskMarginPixels, maxRasterSide: parent.MaxTextureSide);
                 SegmentationDiag.Log(mask is null
                     ? "EditMask raster is null: the polygon covers no pixel centre"
@@ -899,7 +899,7 @@ namespace WebAnnotation.ViewModel
         {
             if (e is PropertyChangedEventArgs PropertyChangedArgs)
             {
-                StructureObj structObj = sender as StructureObj;
+                StructureObj? structObj = sender as StructureObj;
                 if (structObj != null && structObj.ID == modelObj.ParentID)
                 {
                     OnParentPropertyChanged(sender, PropertyChangedArgs);

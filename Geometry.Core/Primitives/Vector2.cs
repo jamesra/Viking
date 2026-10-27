@@ -221,7 +221,7 @@ namespace Geometry
             if (other is null)
                 return false;
 
-            IPoint2D p = other as IPoint2D;
+            IPoint2D? p = other as IPoint2D;
             return ((IEquatable<IPoint2D>)this).Equals(p);
         }
 

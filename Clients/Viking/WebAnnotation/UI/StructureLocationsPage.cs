@@ -11,7 +11,7 @@ namespace WebAnnotation.UI
     [PropertyPage(typeof(Structure), 3)]
     public partial class StructureLocationsPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        private Structure Obj;
+        private Structure? Obj;
 
         /// <summary>
         /// Counts the structures this page has been asked to show. A list load carries the number it started with, so the

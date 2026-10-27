@@ -210,7 +210,7 @@ namespace MeasurementExtension
         private string DistanceLabel(LengthMeasurement volumeDistance, LengthMeasurement? mosaicDistance)
         {
             string volume_space_string = DistanceToString(volumeDistance);
-            string mosaic_space_string = DistanceToString(mosaicDistance);
+            string? mosaic_space_string = DistanceToString(mosaicDistance);
             if (mosaicDistance != null)
             {
                 return $"{mosaic_space_string} Mosaic\n{volume_space_string} Volume";

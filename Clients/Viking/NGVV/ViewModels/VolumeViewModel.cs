@@ -84,7 +84,7 @@ namespace Viking.ViewModels
         {
             try
             {
-                string volumeLocalDir = _Volume?.LocalVolumeDir;
+                string? volumeLocalDir = _Volume?.LocalVolumeDir;
                 if (string.IsNullOrWhiteSpace(volumeLocalDir))
                 {
                     return;
@@ -206,7 +206,7 @@ namespace Viking.ViewModels
             if (!SectionTransforms.TryGetValue(SectionNumber, out var transform))
                 return GetIdentitySectionTransform(SectionNumber);
 
-            ActiveTransformCache cache = _SectionTransformCache;
+            ActiveTransformCache? cache = _SectionTransformCache;
             if (cache is null || !string.Equals(cache.VolumeTransformName, activeTransform, StringComparison.Ordinal))
             {
                 cache = new ActiveTransformCache(activeTransform);
@@ -235,7 +235,7 @@ namespace Viking.ViewModels
         /// <summary>
         /// Fires when the transform used to place the section into the volume changes
         /// </summary>
-        public event Viking.Common.TransformChangedEventHandler TransformChanged;
+        public event Viking.Common.TransformChangedEventHandler? TransformChanged;
 
         #endregion
 

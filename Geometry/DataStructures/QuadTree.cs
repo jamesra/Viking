@@ -13,14 +13,14 @@ namespace Geometry
         private readonly QuadTreeNode<T> _root;
 
         private Quadrant CurrentQuad = (Quadrant)0;
-        QuadTreeNodeEnumerator<T> QuadEnumerator = null;
+        QuadTreeNodeEnumerator<T>? QuadEnumerator = null;
 
         internal QuadTreeNodeEnumerator(QuadTreeNode<T> root)
         {
             _root = root;
         }
 
-        QuadTreeNode<T> Current = null;
+        QuadTreeNode<T>? Current = null;
 
         public void Dispose()
         {
@@ -462,7 +462,7 @@ namespace Geometry
 
         public List<DistanceToPoint<T>> FindNearestPoints(Vector2 point, int nPoints)
         {
-            List<DistanceToPoint<T>> listResults = null;
+            List<DistanceToPoint<T>>? listResults = null;
 
             if (nPoints < 0)
             {

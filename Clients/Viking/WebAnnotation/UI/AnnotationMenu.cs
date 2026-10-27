@@ -23,9 +23,9 @@ namespace WebAnnotation
     {
         private static MergeStructuresForm? _MergeStructuresForm = null;
         private static WebAnnotation.WPF.Forms.AnnotationPreferencesDialog? _preferencesDialog = null;
-        private static ToolStripMenuItem menuPenMode;
-        private static ToolStripMenuItem menuShowPenActionButtons;
-        private static ToolStripMenuItem menuAutoPolygonizeCircles;
+        private static ToolStripMenuItem? menuPenMode;
+        private static ToolStripMenuItem? menuShowPenActionButtons;
+        private static ToolStripMenuItem? menuAutoPolygonizeCircles;
         /// <summary>Cancels the running opacity preview pass. Read and replaced only under <see cref="_circleOpacityUpdateLock"/>.</summary>
         private static CancellationTokenSource? _opacityUpdateCancellationTokenSource;
         private static System.Threading.Timer? _circleOpacityUpdateTimer;
@@ -209,7 +209,7 @@ namespace WebAnnotation
                 Global.AnnotationSettings.LocationLinkLabels
             );
 
-            VikingXNA.Scene scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
+            VikingXNA.Scene? scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
             if (scene != null)
                 viewModel.NanometersPerPixel = scene.ScreenPixelSizeInVolume * Global.Scale.X;
 

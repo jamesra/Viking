@@ -127,7 +127,7 @@ namespace WebAnnotation.UI
 
                         foreach (object o in args.OldItems)
                         {
-                            StructureTypeObj oldTypeObj = o as StructureTypeObj;
+                            StructureTypeObj? oldTypeObj = o as StructureTypeObj;
                             if (oldTypeObj != null)
                             {
                                 StructureType oldType = new(oldTypeObj);
@@ -143,7 +143,7 @@ namespace WebAnnotation.UI
                     case NotifyCollectionChangedAction.Replace:
                         foreach (object o in args.OldItems)
                         {
-                            StructureTypeObj TypeObj = o as StructureTypeObj;
+                            StructureTypeObj? TypeObj = o as StructureTypeObj;
                             if (TypeObj != null)
                             {
                                 StructureType t = new(TypeObj);
@@ -158,7 +158,7 @@ namespace WebAnnotation.UI
                     case NotifyCollectionChangedAction.Reset:
                         foreach (object o in args.OldItems)
                         {
-                            StructureTypeObj TypeObj = o as StructureTypeObj;
+                            StructureTypeObj? TypeObj = o as StructureTypeObj;
                             if (TypeObj != null)
                             {
                                 StructureType t = new(TypeObj);

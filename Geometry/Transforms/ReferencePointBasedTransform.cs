@@ -306,7 +306,7 @@ namespace Geometry.Transforms
         [NonSerialized]
         readonly ReaderWriterLockSlim rwLockTriangles = new();
 
-        private RTree.RTree<MappingVector2> _mappedPointsRTree = null;
+        private RTree.RTree<MappingVector2>? _mappedPointsRTree = null;
 
         /// <summary>
         /// Quadtree mapping mapped points to triangles that contain the points
@@ -348,7 +348,7 @@ namespace Geometry.Transforms
             }
         }
 
-        private RTree.RTree<MappingVector2> _controlPointsRTree = null;
+        private RTree.RTree<MappingVector2>? _controlPointsRTree = null;
 
         /// <summary>
         /// Quadtree mapping control points to triangles that contain the points

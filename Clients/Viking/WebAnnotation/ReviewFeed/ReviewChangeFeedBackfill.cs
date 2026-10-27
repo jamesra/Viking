@@ -47,7 +47,7 @@ namespace WebAnnotation.ReviewFeed
                 }
 
                 Uri annotationEndpoint = WebAnnotationModel.State.Endpoint;
-                string annotationUrl = annotationEndpoint?.AbsoluteUri;
+                string? annotationUrl = annotationEndpoint?.AbsoluteUri;
                 if (!ReviewChangeODataQuery.TryODataRoot(annotationUrl, out Uri odataRoot))
                 {
                     string message =
@@ -59,7 +59,7 @@ namespace WebAnnotation.ReviewFeed
                     return;
                 }
 
-                IReadOnlyList<long> sections = null;
+                IReadOnlyList<long>? sections = null;
                 if (!filter.IsAllSections)
                 {
                     IReadOnlyList<int> present = ResolveSectionsToQuery(filter);
@@ -129,7 +129,7 @@ namespace WebAnnotation.ReviewFeed
         /// order) decides which seed is newest; earlier seeds still in flight are superseded.
         /// No-op when <paramref name="feed"/> is null (a filter Apply before the view is attached).
         /// </summary>
-        public static void StartAsync(ReviewChangeFeed feed, ReviewChangeFeedFilter filter = null)
+        public static void StartAsync(ReviewChangeFeed feed, ReviewChangeFeedFilter? filter = null)
         {
             if (feed is null)
                 return;
@@ -177,7 +177,7 @@ namespace WebAnnotation.ReviewFeed
             client.Timeout = TimeSpan.FromSeconds(60);
             client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
 
-            string token = State.UserBearerToken?.AccessToken;
+            string? token = State.UserBearerToken?.AccessToken;
             if (!string.IsNullOrWhiteSpace(token))
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 

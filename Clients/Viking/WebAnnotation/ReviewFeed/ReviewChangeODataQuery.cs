@@ -80,8 +80,8 @@ namespace WebAnnotation.ReviewFeed
             Uri odataRoot,
             int maxCount,
             IReadOnlyList<long> sections,
-            IReadOnlyList<string> usernames = null,
-            string structureOrLabel = null)
+            IReadOnlyList<string>? usernames = null,
+            string? structureOrLabel = null)
         {
             if (odataRoot is null)
                 throw new ArgumentNullException(nameof(odataRoot));
@@ -239,7 +239,7 @@ namespace WebAnnotation.ReviewFeed
                 root = JToken.Load(reader);
             }
 
-            JArray rows = root?["value"] as JArray;
+            JArray? rows = root?["value"] as JArray;
             if (rows is null)
                 return Array.Empty<ReviewChangeEntry>();
 
@@ -273,9 +273,9 @@ namespace WebAnnotation.ReviewFeed
                 section = (int)z;
 
             JToken parent = Prop(row, "Parent");
-            string label = Prop(parent, "Label")?.Value<string>();
+            string? label = Prop(parent, "Label")?.Value<string>();
             JToken type = Prop(parent, "Type");
-            string typeName = Prop(type, "Name")?.Value<string>();
+            string? typeName = Prop(type, "Name")?.Value<string>();
             if (string.IsNullOrWhiteSpace(typeName))
                 typeName = Prop(type, "Code")?.Value<string>();
             if (string.IsNullOrWhiteSpace(typeName))
@@ -389,13 +389,13 @@ namespace WebAnnotation.ReviewFeed
 
             try
             {
-                SqlGeometry sql = null;
-                string wkt = Prop(geometry, "WellKnownText")?.Value<string>();
+                SqlGeometry? sql = null;
+                string? wkt = Prop(geometry, "WellKnownText")?.Value<string>();
                 if (!string.IsNullOrWhiteSpace(wkt))
                     sql = SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(wkt), srid);
                 else
                 {
-                    string wkbText = Prop(geometry, "WellKnownBinary")?.Value<string>();
+                    string? wkbText = Prop(geometry, "WellKnownBinary")?.Value<string>();
                     if (!string.IsNullOrWhiteSpace(wkbText))
                     {
                         byte[] wkb = Convert.FromBase64String(wkbText);
@@ -459,7 +459,7 @@ namespace WebAnnotation.ReviewFeed
             if (token is null || token.Type == JTokenType.Null)
                 return false;
 
-            string text = token.Type == JTokenType.Date
+            string? text = token.Type == JTokenType.Date
                 ? token.Value<DateTime>().ToString("o", CultureInfo.InvariantCulture)
                 : token.Value<string>();
             if (string.IsNullOrWhiteSpace(text))

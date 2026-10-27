@@ -236,7 +236,7 @@ namespace WebAnnotation.ViewModel
 
         private bool AddNonOverlappedOrUnlinkedLocation(LocationObj loc)
         {
-            LocationCanvasView locView = null;
+            LocationCanvasView? locView = null;
             try
             {
                 locView = AnnotationViewFactory.CreateAdjacent(loc, mapper);
@@ -777,7 +777,7 @@ namespace WebAnnotation.ViewModel
             return KnownLocations.TryAdd(loc.ID, () =>
             {
                 //Add location if it hasn't been seen before
-                LocationCanvasView locView = null;
+                LocationCanvasView? locView = null;
                 try
                 {
                     locView = AnnotationViewFactory.Create(loc, mapper);

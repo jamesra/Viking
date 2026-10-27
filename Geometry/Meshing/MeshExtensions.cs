@@ -464,7 +464,7 @@ namespace Geometry.Meshing
         /// <param name="verts"></param>
         /// <param name="InteriorPoints">Must lie inside the polygon defined by <paramref name="verts"/>.</param>
         /// <param name="OnProgress"></param>
-        public static TriangulationMesh<IVertex2D<int>> Triangulate(IVertex2D[] verts, IVertex2D[] InteriorPoints = null, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
+        public static TriangulationMesh<IVertex2D<int>> Triangulate(IVertex2D[] verts, IVertex2D[]? InteriorPoints = null, TriangulationMesh<IVertex2D<int>>.ProgressUpdate OnProgress = null)
         {
             if (verts.Last() == verts.First())
             {

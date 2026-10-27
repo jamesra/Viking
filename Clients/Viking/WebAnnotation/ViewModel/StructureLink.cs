@@ -28,8 +28,8 @@ namespace WebAnnotation.ViewModel
         {
             //Brute force a search for the shortest distance between the two structures.
             double MinDistance = double.MaxValue;
-            LocationCanvasView BestSourceLoc = null;
-            LocationCanvasView BestTargetLoc = null;
+            LocationCanvasView? BestSourceLoc = null;
+            LocationCanvasView? BestTargetLoc = null;
 
             if (SourceLocations.Count == 1 && TargetLocations.Count == 1)
             {
@@ -102,7 +102,7 @@ namespace WebAnnotation.ViewModel
                 return modelObj.Equals(Obj.modelObj);
             }
 
-            StructureLinkObj Obj2 = obj as StructureLinkObj;
+            StructureLinkObj? Obj2 = obj as StructureLinkObj;
             if (Obj2 != null)
             {
                 return modelObj.Equals(Obj2);

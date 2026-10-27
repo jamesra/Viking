@@ -68,7 +68,7 @@ namespace Viking.Common
         /// <returns></returns>
         public static Bitmap ToBmp(this byte[] textureData, int width, int height)
         {
-            BitmapData lockedBmpData = null;
+            BitmapData? lockedBmpData = null;
             Bitmap bmp = new(
                 width, height,
                 System.Drawing.Imaging.PixelFormat.Format32bppArgb);

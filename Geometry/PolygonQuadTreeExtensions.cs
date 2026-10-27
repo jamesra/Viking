@@ -72,7 +72,7 @@ namespace Geometry
         /// <summary>
         /// Maps vertices to polygon indexes when polygons may share vertices.
         /// </summary>
-        public static QuadTreeWithUniqueValues<List<PolygonIndex>> CreatePointToPolyMap(this Polygon[] polygons, IReadOnlyList<int> polygonIndices = null)
+        public static QuadTreeWithUniqueValues<List<PolygonIndex>> CreatePointToPolyMap(this Polygon[] polygons, IReadOnlyList<int>? polygonIndices = null)
         {
             if (polygons is null)
                 throw new ArgumentNullException(nameof(polygons));

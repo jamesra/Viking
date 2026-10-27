@@ -91,7 +91,7 @@ namespace Viking.UI.Controls
 
         static readonly short[] indicies = [0, 1, 2, 2, 1, 3];
 
-        CommandCompleteEventHandler OnCommandCompleteHandler;
+        CommandCompleteEventHandler? OnCommandCompleteHandler;
 
         ISectionOverlayExtension[] listOverlays = [];
 
@@ -216,7 +216,7 @@ namespace Viking.UI.Controls
                         channelName = this.CurrentChannel;
                     }
 
-                    ToolStripItem tsChannelItem = null;
+                    ToolStripItem? tsChannelItem = null;
                     if (_StatusChannels.Count > i)
                     {
                         tsChannelItem = _StatusChannels[i];
@@ -273,8 +273,8 @@ namespace Viking.UI.Controls
                 if (_Section == value)
                     return;
 
-                SectionViewModel OldSection = _Section;
-                string oldtransform = null;
+                SectionViewModel? OldSection = _Section;
+                string? oldtransform = null;
                 if (_Section != null)
                     oldtransform = this.CurrentTransform;
 
@@ -1109,7 +1109,7 @@ namespace Viking.UI.Controls
         /// <param name="e"></param>
         private void OnCommandInjected(object sender, CommandInjectedEventHandler e)
         {
-            Command ActiveCommand = this.CurrentCommand;
+            Command? ActiveCommand = this.CurrentCommand;
             CurrentCommand = e.injectedCommand;
 
             if (e.SaveCurrentCommand == true && ActiveCommand is not DefaultCommand && ActiveCommand != null)
@@ -1216,7 +1216,7 @@ namespace Viking.UI.Controls
             List<Task> listTasks = [];
             int MaxActiveExports = 2;
             {
-                GraphicsDevice graphicsDevice = this.graphicsDeviceService.GraphicsDevice;
+                GraphicsDevice? graphicsDevice = this.graphicsDeviceService.GraphicsDevice;
 
                 //Figure out how to cut the rectangle into 512x512 cells and take the screenshots
                 for (int iRow = 0; iRow < plan.NumTilesY; iRow++)
@@ -1271,7 +1271,7 @@ namespace Viking.UI.Controls
 
             //            this.CurrentVolumeTransform = null; 
 
-            Scene originalScene = this.Scene;
+            Scene? originalScene = this.Scene;
 
 
             foreach (SectionViewModel S in State.volume.SectionViewModels.Values.Where(S => S.Number >= FirstSection && S.Number <= LastSection))
@@ -1397,7 +1397,7 @@ namespace Viking.UI.Controls
 
                 }
 
-                System.IO.StreamWriter stream = null;
+                System.IO.StreamWriter? stream = null;
 
                 string XMLString =
                     $"<?xml version=\"1.0\"?>\n<Level FilePostfix=\".png\" FilePrefix=\"\" Downsample=\"{Downsample}\" TileYDim=\"{TileImageSize.Width}\" TileXDim=\"{TileImageSize.Height}\" GridDimY=\"{TileDim.Height}\" GridDimX=\"{TileDim.Width}\"/>";
@@ -1440,7 +1440,7 @@ namespace Viking.UI.Controls
 
             this.Section = State.volume.SectionViewModels[Z];
 
-            GraphicsDevice graphicsDevice = this.graphicsDeviceService.GraphicsDevice;
+            GraphicsDevice? graphicsDevice = this.graphicsDeviceService.GraphicsDevice;
 
             RenderTarget2D renderTargetTile = new(graphicsDevice, TileScene.Viewport.Width, TileScene.Viewport.Height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.PreserveContents);
 
@@ -1698,7 +1698,7 @@ namespace Viking.UI.Controls
             if (Section is null)
                 return;
 
-            GraphicsDevice graphicsDevice = Device;
+            GraphicsDevice? graphicsDevice = Device;
             RenderTargetBinding[] originalRenderTargets = Device.GetRenderTargets();
             Geometry.Rectangle Bounds = scene.VisibleWorldBounds;
 
@@ -1728,8 +1728,8 @@ namespace Viking.UI.Controls
             StatusChannels = Channelset;
             State.CurrentMode = this.CurrentChannel;
 
-            Texture backgroundSectionTexture = null;
-            Texture ChannelOverlay = null;
+            Texture? backgroundSectionTexture = null;
+            Texture? ChannelOverlay = null;
             if (Channelset.Length == 1)
             {
                 ChannelInfo singleChannel = Channelset[0];
@@ -2343,7 +2343,7 @@ namespace Viking.UI.Controls
 
             if (Viking.UI.State.ShowStosMesh)
             {
-                ITransform transform = null;
+                ITransform? transform = null;
 
                 if (mapping is SectionToVolumeMapping StosMapping)
                 {
@@ -2469,7 +2469,7 @@ namespace Viking.UI.Controls
 
         private Texture2D DrawSectionsWithChannels(GraphicsDevice graphicsDevice, ChannelInfo[] Channelset, Scene scene, out Texture ChannelOverlay)
         {
-            Texture2D backgroundSection = null;
+            Texture2D? backgroundSection = null;
 
             List<Texture2D> renderedSections = new(Channelset.Length - 1);
             List<ChannelInfo> renderedChannels = new(Channelset.Length - 1);
@@ -2630,8 +2630,8 @@ namespace Viking.UI.Controls
             //this.mergeHSVImagesEffect.HueBeta = renderedBetas.ToArray();
 
             //We cannot read from an active render target.  So we alternate which target is being written to so we can merge the textures. 
-            RenderTarget2D activeRenderTarget = null;
-            RenderTarget2D inactiveRenderTarget = null;
+            RenderTarget2D? activeRenderTarget = null;
+            RenderTarget2D? inactiveRenderTarget = null;
             BlendState oldBlendState = graphicsDevice.BlendState;
 
             try
@@ -3098,7 +3098,7 @@ namespace Viking.UI.Controls
 
         protected void ShowGoToLocationForm()
         {
-            Viking.UI.Forms.GoToLocationForm form = null;
+            Viking.UI.Forms.GoToLocationForm? form = null;
             try
             {
                 form = new GoToLocationForm

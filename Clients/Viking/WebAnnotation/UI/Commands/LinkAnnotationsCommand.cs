@@ -89,7 +89,7 @@ namespace WebAnnotation.UI.Commands
                 return loc.ID != OriginObj.ID && !OriginObj.Links.Contains(loc.ID);
             })];
 
-            IViewLocation nearestVisible = null;
+            IViewLocation? nearestVisible = null;
             HitTestResult BestMatch = listHitTestResults.NearestObjectOnCurrentSectionThenAdjacent((int)OriginObj.Z);
             if (BestMatch?.obj is IViewLocation bestViewLocMatch)
             {
@@ -295,7 +295,7 @@ namespace WebAnnotation.UI.Commands
             }
 
             Color lineColor = noTarget;
-            string lineStyle = null;
+            string? lineStyle = null;
             double lineRadius = LineRadiusForLocationLink();
             bool UseLumaLineManager = false;
 

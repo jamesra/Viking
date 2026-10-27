@@ -38,7 +38,7 @@ namespace Viking.UI.Controls
         public string folderPath;
         public string keyFile;
         private readonly string passkey;
-        private readonly string readUserName;
+        private readonly string? readUserName;
         private readonly int counter = 0;
 
         public NetworkCredential Credentials = UI.State.AnonymousCredentials;

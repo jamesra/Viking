@@ -134,8 +134,8 @@ namespace Geometry.Transforms
         public static MappingVector2[] TransformControlPoints(this IContinuousTransform BtoC, MappingVector2[] AtoB) => [.. AtoB.Select(mp => new MappingVector2(BtoC.Transform(mp.ControlPoint), mp.MappedPoint))];
         public static IContinuousTransform TransformTransform(this IContinuousTransform BtoC, ITransformControlPoints AtoB)
         {
-            StosTransformInfo BtoCInfo = ((ITransformInfo)BtoC)?.Info as StosTransformInfo;
-            StosTransformInfo AtoBInfo = ((ITransformInfo)AtoB)?.Info as StosTransformInfo;
+            StosTransformInfo? BtoCInfo = ((ITransformInfo)BtoC)?.Info as StosTransformInfo;
+            StosTransformInfo? AtoBInfo = ((ITransformInfo)AtoB)?.Info as StosTransformInfo;
             MappingVector2[] newControlPoints = BtoC.TransformControlPoints(AtoB.MapPoints);
             IContinuousTransform rbfTransform = new RBFTransform(newControlPoints,
                 StosTransformInfo.Merge(AtoBInfo, BtoCInfo));
@@ -144,8 +144,8 @@ namespace Geometry.Transforms
 
         public static ITransform TransformTransform(this IContinuousTransform BtoC, ITransformControlPoints AtoB, Type transformType)
         {
-            StosTransformInfo BtoCInfo = ((ITransformInfo)BtoC)?.Info as StosTransformInfo;
-            StosTransformInfo AtoBInfo = ((ITransformInfo)AtoB)?.Info as StosTransformInfo;
+            StosTransformInfo? BtoCInfo = ((ITransformInfo)BtoC)?.Info as StosTransformInfo;
+            StosTransformInfo? AtoBInfo = ((ITransformInfo)AtoB)?.Info as StosTransformInfo;
 
             StosTransformInfo AtoCInfo = StosTransformInfo.Merge(AtoBInfo, BtoCInfo);
 

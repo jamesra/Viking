@@ -44,7 +44,7 @@ namespace WebAnnotation.UI.ActionViews
 
             if (model is Create2DStructureAction)
             {
-                Create2DStructureAction action = model as Create2DStructureAction;
+                Create2DStructureAction? action = model as Create2DStructureAction;
                 Polygon smoothedPoly = action.NewVolumePolygon; //NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
                 Shape = smoothedPoly;
                 SolidPolygonView view = new(action.NewVolumePolygon, Color);
@@ -52,7 +52,7 @@ namespace WebAnnotation.UI.ActionViews
             }
             else if (model is Create1DStructureAction)
             {
-                Create1DStructureAction action = model as Create1DStructureAction;
+                Create1DStructureAction? action = model as Create1DStructureAction;
                 Polyline smoothedPoly = action.NewVolumeShape; //NewVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
                 Shape = smoothedPoly;
                 PolyLineView view = new(smoothedPoly, Color);

@@ -11,10 +11,10 @@ namespace Geometry.Transforms
             if (discreteTransform is IContinuousTransform ct)
                 return ct;
 
-            ITransformInfo IInfo = discreteTransform as ITransformInfo;
-            Geometry.Transforms.StosTransformInfo info = IInfo.Info as Geometry.Transforms.StosTransformInfo;
-            ITransformControlPoints IcPoints = discreteTransform as ITransformControlPoints;
-            IContinuousTransform continuousTransform = null;
+            ITransformInfo? IInfo = discreteTransform as ITransformInfo;
+            Geometry.Transforms.StosTransformInfo? info = IInfo.Info as Geometry.Transforms.StosTransformInfo;
+            ITransformControlPoints? IcPoints = discreteTransform as ITransformControlPoints;
+            IContinuousTransform? continuousTransform = null;
 
             if (Global.IsCacheFileValid(SerializerCacheFullPath, info.LastModified))
             {

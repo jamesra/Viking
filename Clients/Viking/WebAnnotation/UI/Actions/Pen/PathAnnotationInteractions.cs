@@ -135,7 +135,7 @@ namespace WebAnnotation.UI
 
         private readonly List<InteractionLogEvent> _Entries = [];
 
-        public event System.Collections.Specialized.NotifyCollectionChangedEventHandler OnLogChanged;
+        public event System.Collections.Specialized.NotifyCollectionChangedEventHandler? OnLogChanged;
         event NotifyCollectionChangedEventHandler System.Collections.Specialized.INotifyCollectionChanged.CollectionChanged
         {
             add => OnLogChanged += value;
@@ -330,11 +330,11 @@ namespace WebAnnotation.UI
         /// </summary>
         private void AddLogEntriesForNewSegment()
         {
-            HitTestResult[] candidates = null;
-            HitTestResult[] line_intersect_candidates = null; //Canvas entities that intersect the most recent line
-            HitTestResult[] point_intersect_candidates = null; //Canvas entities that intersect the most recent point
+            HitTestResult[]? candidates = null;
+            HitTestResult[]? line_intersect_candidates = null; //Canvas entities that intersect the most recent line
+            HitTestResult[]? point_intersect_candidates = null; //Canvas entities that intersect the most recent point
 
-            ICanvasView[] point_intersections = null;
+            ICanvasView[]? point_intersections = null;
 
             if (_Path.HasSegment)
             {

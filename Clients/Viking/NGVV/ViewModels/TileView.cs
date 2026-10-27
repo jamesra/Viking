@@ -262,7 +262,7 @@ namespace Viking.ViewModels
 
             }
 
-            VertexBuffer vb = null;
+            VertexBuffer? vb = null;
             try
             {
                 vb = new VertexBuffer(device, typeof(VertexPositionNormalTexture), vertArray.Length, BufferUsage.None);
@@ -396,7 +396,7 @@ namespace Viking.ViewModels
                 return;
             }
 
-            Texture2D currentTexture = null;
+            Texture2D? currentTexture = null;
             try
             {
                 //rwTextureLock.EnterReadLock();

@@ -261,7 +261,7 @@ namespace Viking.UI.Commands
         /// </summary>
         protected Geometry.Vector2 oldWorldPosition = new(0, 0);
 
-        MouseEventHandler MyMouseClick;
+        MouseEventHandler? MyMouseClick;
         MouseEventHandler MyMouseDoubleClick;
         MouseEventHandler MyMouseDown;
         MouseEventHandler MyMouseUp;
@@ -279,8 +279,8 @@ namespace Viking.UI.Commands
 
         /* UI Extensions, extensions can register with these delegates to be notified whenever the default command does not process input.  This gives
         * extensions the chance to select objects only they are aware of or provide special behavior for key presses */
-        public static event MouseEventHandler OnUnhandledMouseDown;
-        public static event KeyPressEventHandler OnUnhandledKeyPress;
+        public static event MouseEventHandler? OnUnhandledMouseDown;
+        public static event KeyPressEventHandler? OnUnhandledKeyPress;
 
         /// <summary>
         /// Event fired whenever a command completes successfully

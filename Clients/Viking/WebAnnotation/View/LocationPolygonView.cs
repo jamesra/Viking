@@ -39,7 +39,7 @@ namespace WebAnnotation.View
 
         /// <summary>Links set before <see cref="Initialize"/> are kept here and laid out when it finishes.</summary>
         private ICollection<long> overlappedLinks = [];
-        private LocationInteriorHoleView[] InteriorHoleViews;
+        private LocationInteriorHoleView[]? InteriorHoleViews;
         private SolidPolygonView polygonMesh;
         private readonly Polygon VolumePolygon;
         private Polygon SmoothedVolumePolygon;
@@ -443,7 +443,7 @@ namespace WebAnnotation.View
             List<OverlappedLinkCircleView>? overlappedList = null;
             for (int i = 0; i < listToDraw.Length; i++)
             {
-                OverlappedLinkCircleView overlapped = listToDraw[i].OverlappedLinkView;
+                OverlappedLinkCircleView? overlapped = listToDraw[i].OverlappedLinkView;
                 if (overlapped != null && overlapped.IsVisible(scene))
                     (overlappedList ??= []).Add(overlapped);
             }

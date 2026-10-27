@@ -189,7 +189,7 @@ namespace WebAnnotation.ReviewFeed
         }
 
         /// <summary>Fired after upserts or deletes change the ordered list. May run on a worker thread.</summary>
-        public event EventHandler Changed;
+        public event EventHandler? Changed;
 
         /// <summary>Newest-first snapshot for binding. Callers must not mutate the returned list.</summary>
         public IReadOnlyList<ReviewChangeEntry> Entries

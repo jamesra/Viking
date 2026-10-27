@@ -317,7 +317,7 @@ namespace Viking
                         continue;
                     }
 
-                    GraphicsDevice device = null;
+                    GraphicsDevice? device = null;
                     var viewer = State.ViewerControl;
                     if (viewer is GraphicsDeviceControl gdc)
                         device = gdc.Device;
@@ -328,7 +328,7 @@ namespace Viking
                         break;
                     }
 
-                    Texture2D texture = null;
+                    Texture2D? texture = null;
                     try
                     {
                         texture = TextureReaderV2.TextureFromData(device, item.Data, item.UseMipMaps);

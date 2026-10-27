@@ -27,7 +27,7 @@ namespace Geometry
 
 
         /// <summary>Authoritative vertices. <see cref="ExteriorRing"/> get/set copies this; mutators must write here.</summary>
-        Vector2[] _ExteriorRing;
+        Vector2[]? _ExteriorRing;
 
         /// <summary>Internal alias of <see cref="_ExteriorRing"/>. Do not use <see cref="ExteriorRing"/> for in-place edits (that copies).</summary>
         internal Vector2[] RingStorage => _ExteriorRing;
@@ -80,7 +80,7 @@ namespace Geometry
         /// Mutators must null this field or patch it; do not assign <see cref="SegmentRTree"/>.
         /// </summary>
         [NonSerialized]
-        BoundingBoxIndex<PolygonIndex> _SegmentRTree = null;
+        BoundingBoxIndex<PolygonIndex>? _SegmentRTree = null;
 
         /// <summary>Rebuilds from current rings when <see cref="_SegmentRTree"/> is null.</summary>
         internal BoundingBoxIndex<PolygonIndex> SegmentRTree
@@ -369,7 +369,7 @@ namespace Geometry
             this._InteriorPolygons.RemoveAt(iInner);
 
             // A refused replacement leaves the polygon as it was, with its original ring back in place.
-            string refusal = null;
+            string? refusal = null;
             if (this._InteriorPolygons.Any(p => p.Intersects(replacement)))
                 refusal = "Cannot add interior polygon that intersects and existing interior polygon";
             else if (this.ExteriorSegments.Any(line => line.Intersects(replacement)))
@@ -462,7 +462,7 @@ namespace Geometry
 
             if (iVertex.IsInner)
             {
-                Polygon original_poly = iVertex.Polygon(this).Clone() as Polygon;
+                Polygon? original_poly = iVertex.Polygon(this).Clone() as Polygon;
 
                 //If InserrVertex throws an exception it should have restored the inner polygon state, so we don't need to react to an exception here
 
@@ -564,7 +564,7 @@ namespace Geometry
 
             if (iVertex.IsInner)
             {
-                Polygon original_poly = iVertex.Polygon(this).Clone() as Polygon;
+                Polygon? original_poly = iVertex.Polygon(this).Clone() as Polygon;
 
                 try
                 {
@@ -659,7 +659,7 @@ namespace Geometry
 
             if (iVertex.IsInner)
             {
-                Polygon original_poly = iVertex.Polygon(this).Clone() as Polygon;
+                Polygon? original_poly = iVertex.Polygon(this).Clone() as Polygon;
 
                 this._InteriorPolygons[iVertex.InnerShapeIndex.Value].RemoveVertex(iVertex.ReindexToOuter());
                 //this.InteriorRings[iVertex.InnerShapeIndex.Value] = this.InteriorPolygons[iVertex.InnerShapeIndex.Value]._ExteriorRing;
@@ -1930,7 +1930,7 @@ namespace Geometry
         /// thread (it calls no code that starts another winding test) and clears the list before use.
         /// </summary>
         [ThreadStatic]
-        private static List<SegmentIsLeftData> t_windingScratch;
+        private static List<SegmentIsLeftData>? t_windingScratch;
 
         /// <summary>
         /// The results of whether a polygon segment is left, right, or on a test line
@@ -2447,7 +2447,7 @@ namespace Geometry
                     if (!segment.Intersects(line, false, out IShape2D intersection))
                         continue;
 
-                    IPoint2D p = intersection as IPoint2D;
+                    IPoint2D? p = intersection as IPoint2D;
                     Vector2 p2 = new(p.X, p.Y);
                     double distance = Vector2.Distance(line.A, p2) + totalLength;
                     if (segment.IsEndpoint(p2))
@@ -2682,7 +2682,7 @@ namespace Geometry
             Polygon clone = new(this.ExteriorRing.Clone() as Vector2[]);
             foreach (Polygon innerPoly in this.InteriorPolygons)
             {
-                Polygon innerClone = innerPoly.Clone() as Polygon;
+                Polygon? innerClone = innerPoly.Clone() as Polygon;
                 clone.AddInteriorRing(innerClone);
             }
 
@@ -3147,7 +3147,7 @@ namespace Geometry
             bool FirstCutIntersectionFound = false;
 
             //Add the intersection points to the polygon
-            Polygon output = input.Clone() as Polygon;
+            Polygon? output = input.Clone() as Polygon;
             output.AddPointsAtIntersections(cutLines);
 
             //Identify where the cut crosses the polygon rings 

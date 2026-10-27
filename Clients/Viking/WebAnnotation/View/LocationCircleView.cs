@@ -527,7 +527,7 @@ namespace WebAnnotation.View
 
         public ICanvasView GetAnnotationAtPosition(Geometry.Vector2 position)
         {
-            ICanvasView annotation = null;
+            ICanvasView? annotation = null;
 
             if (Contains(position))
             {

@@ -45,7 +45,7 @@ namespace WebAnnotation.ReviewFeed
 
         readonly ObservableCollection<ReviewChangeCardViewModel> _cards = new();
         readonly SemaphoreSlim _thumbGate = new(MaxConcurrentThumbLoads);
-        ReviewChangeFeed _feed;
+        ReviewChangeFeed? _feed;
         ReviewChangeFeedFilter _filter;
         CancellationTokenSource _reloadCts;
         int _reloadGeneration;
@@ -218,7 +218,7 @@ namespace WebAnnotation.ReviewFeed
 
             ReviewChangeFeed feed = _feed;
             ReviewChangeFeedFilter filter = _filter ?? ReviewChangeFeedFilter.Session;
-            string currentUser = Viking.UI.State.UserCredentials?.UserName;
+            string? currentUser = Viking.UI.State.UserCredentials?.UserName;
 
             // Reuse only thumbs that include an EM crop — mask-only results must be retried.
             var priorThumbs = new Dictionary<long, (DateTime ModifiedUtc, BitmapSource Thumb)>();
@@ -448,7 +448,7 @@ namespace WebAnnotation.ReviewFeed
     /// </summary>
     public sealed class ReviewChangeCardViewModel : INotifyPropertyChanged
     {
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         public long LocationId { get; private set; }
         public DateTime LastModifiedUtc { get; private set; }

@@ -12,7 +12,7 @@ namespace WebAnnotation.UI
     //TODO: Work in progresss [PropertyPage(typeof(Structure), 4)]
     public partial class StructureLocationsChangeLogPropertiesPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        private Structure Obj;
+        private Structure? Obj;
         private bool listLoaded = false;
 
         public StructureLocationsChangeLogPropertiesPage()

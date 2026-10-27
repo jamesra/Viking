@@ -38,7 +38,7 @@ namespace Geometry
 
         private static Vector2[] CalculateClosedCurvePoints(this ICollection<Vector2> ControlPoints, uint NumInterpolations)
         {
-            Vector2[] CurvePoints = null;
+            Vector2[]? CurvePoints = null;
             if (ControlPoints.Count <= 2)
             {
                 CurvePoints = new Vector2[ControlPoints.Count];
@@ -135,7 +135,7 @@ namespace Geometry
 
         private static Vector2[] CalculateOpenCurvePoints(this ICollection<Vector2> ControlPoints, uint NumInterpolations)
         {
-            Vector2[] CurvePoints = null;
+            Vector2[]? CurvePoints = null;
             if (ControlPoints.Count <= 2)
             {
                 CurvePoints = new Vector2[ControlPoints.Count];
@@ -373,7 +373,7 @@ namespace Geometry
         /// <param name="PointsToPreserveIndicies">Indices of points that must be kept in the result</param>
         /// <returns></returns>
         public static List<Vector2> DouglasPeuckerReduction
-        (this IList<Vector2> Points, Double Tolerance, IEnumerable<int> PointsToPreserveIndicies = null)
+        (this IList<Vector2> Points, Double Tolerance, IEnumerable<int>? PointsToPreserveIndicies = null)
         {
             if (Points is null || Points.Count < 3)
                 return [.. Points];

@@ -55,7 +55,7 @@ namespace WebAnnotation.UI.Actions
             uint interpolations = Global.AnnotationSettings.NumClosedCurveInterpolationPointsForDisplay;
 
             Dictionary<(long, long), Tag> tags = [];
-            Polygon drawn = null;
+            Polygon? drawn = null;
             for (int r = 0; r < storedRings.Count; r++)
             {
                 if (transform.TrySectionToVolume(storedRings[r], out Vector2[] volumeRing).Any(mapped => !mapped))

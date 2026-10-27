@@ -14,7 +14,7 @@ namespace WebAnnotation.UI
     [PropertyPage(typeof(Structure), 1)]
     public partial class StructureGeneralPage : Viking.UI.BaseClasses.PropertyPageBase
     {
-        private Structure Obj;
+        private Structure? Obj;
         private BindingList<WebAnnotationModel.ObjAttribute>? ListTags = null;
 
         public StructureGeneralPage()
@@ -121,7 +121,7 @@ namespace WebAnnotation.UI
 
         private void dataGridTags_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
         {
-            string dataval = e.FormattedValue as string;
+            string? dataval = e.FormattedValue as string;
 
             dataval = dataval.Trim();
             dataval = dataval.ToLower();
