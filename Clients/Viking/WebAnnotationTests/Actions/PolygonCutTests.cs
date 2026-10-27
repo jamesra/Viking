@@ -25,6 +25,9 @@ namespace WebAnnotationTests.Actions
         /// <summary>Same tolerance <see cref="PolygonCut.GetRetraceActionForPath"/> uses at downsample 1.</summary>
         private const double ReduceTolerance = 4;
 
+        /// <summary>Largest distance, in volume pixels, between the saved curve and the pen stroke.</summary>
+        private const double PenTolerance = 2;
+
         private static Vector2[] Square(double min, double max) =>
             [new(min, min), new(max, min), new(max, max), new(min, max), new(min, min)];
 
@@ -50,7 +53,7 @@ namespace WebAnnotationTests.Actions
             Trace.Listeners.Add(listener);
             try
             {
-                List<Change2DContourAction> result = PolygonCut.GetRetraceActionForPath(LocID, poly, path, start, next);
+                List<Change2DContourAction> result = PolygonCut.GetRetraceActionForPath(LocID, poly, path, start, next, PenTolerance);
                 return (result, log.ToString());
             }
             finally

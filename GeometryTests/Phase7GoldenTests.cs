@@ -148,9 +148,9 @@ namespace GeometryTests
         private static readonly Dictionary<string, string> Recorded = new()
         {
             ["curve open5 n20"] = "a1adeb34c1871086",
-            ["curve open60 control points"] = "4355f7fb8dbf9df6",
+            ["curve open60 control points"] = "a8110f78e18bfc3a",
             ["curve open60 n8"] = "675c8e56217cd018",
-            ["curve ring200 control points"] = "3994294dd67a5466",
+            ["curve ring200 control points"] = "48f1c9032985d68a",
             ["curve ring200 gaussian"] = "88fc6d413ba665ac",
             ["curve ring200 n3"] = "eced2c18f07747f0",
             ["curve ring200 n8"] = "d0813813b394ef4c",

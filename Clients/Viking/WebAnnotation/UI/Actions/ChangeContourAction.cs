@@ -29,14 +29,12 @@ namespace WebAnnotation.UI.Actions
         public readonly Polygon NewVolumePolygon;
 
         /// <summary>
-        /// The volume space polygon we want to add to the location
+        /// <see cref="NewVolumePolygon"/> as it will be drawn: its points are curve control points, so the choice shows the
+        /// curve through them. Smoothed the first time it is drawn.
         /// </summary>
-        public readonly Polygon NewSmoothedVolumePolygon;
+        public Polygon NewSmoothedVolumePolygon => _newSmoothedVolumePolygon.Value;
 
-        /// <summary>
-        /// The volume space polygon after smoothing
-        /// </summary>
-        //public readonly Polygon NewSmoothVolumePolygon;
+        private readonly Lazy<Polygon> _newSmoothedVolumePolygon;
 
         /// <summary>
         /// Cell ring the cut started from. When set, the choice fill reuses that triangulation
@@ -80,7 +78,7 @@ namespace WebAnnotation.UI.Actions
 
             NewMosaicPolygon = newMosaicPolygon;
             NewVolumePolygon = newVolumePolygon ?? Transform.TryMapShapeSectionToVolume(newMosaicPolygon);
-            NewSmoothedVolumePolygon = NewVolumePolygon;//newVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints); 
+            _newSmoothedVolumePolygon = SmoothWhenDrawn(NewVolumePolygon);
         }
 
         public Change2DContourAction(LocationObj location, RetraceCommandAction retraceType, Polygon newMosaicPolygon, Polygon? newVolumePolygon = null, bool ClockwiseContour = false, IVolumeToSectionTransform? transform = null)
@@ -93,8 +91,11 @@ namespace WebAnnotation.UI.Actions
             NewMosaicPolygon = newMosaicPolygon;
 
             NewVolumePolygon = newVolumePolygon is null ? Transform.TryMapShapeSectionToVolume(newMosaicPolygon) : newVolumePolygon;
-            NewSmoothedVolumePolygon = NewVolumePolygon;//newVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
+            _newSmoothedVolumePolygon = SmoothWhenDrawn(NewVolumePolygon);
         }
+
+        private static Lazy<Polygon> SmoothWhenDrawn(Polygon volumePolygon) =>
+            new(() => volumePolygon?.Smooth(Global.NumClosedCurveInterpolationPointsForDisplay));
 
         public void OnExecute()
         {

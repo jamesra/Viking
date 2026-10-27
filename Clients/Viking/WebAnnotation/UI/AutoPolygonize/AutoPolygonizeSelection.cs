@@ -957,7 +957,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             return parts.OrderByDescending(part => part.Area).First().Shape;
         }
 
-        private static IEnumerable<SqlGeometry> EnumeratePolygons(SqlGeometry geometry)
+        internal static IEnumerable<SqlGeometry> EnumeratePolygons(SqlGeometry geometry)
         {
             if (geometry is null || geometry.IsNull || geometry.STIsEmpty().IsTrue)
                 yield break;

@@ -35,6 +35,7 @@
         <Compile Include="WebAnnotationModelExtensionsTests.cs" />
         <Compile Include="Actions\ChangeContourActionTests.cs" />
         <Compile Include="Actions\PolygonCutTests.cs" />
+        <Compile Include="Actions\PenRegionCutTests.cs" />
         <Compile Include="Actions\CreateNewLinkedLocationActionTests.cs" />
     <Compile Include="Tools\CircleLocationScaleTests.cs" />
         <Compile Include="View\LinkedLocationShapeMappingTests.cs" />

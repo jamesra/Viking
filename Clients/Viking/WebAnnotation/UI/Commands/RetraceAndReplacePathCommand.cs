@@ -13,6 +13,7 @@ using Viking.UI;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
+using WebAnnotation.UI.Actions;
 using WebAnnotationModel;
 
 namespace WebAnnotation.UI.Commands
@@ -185,7 +186,17 @@ namespace WebAnnotation.UI.Commands
             try
             {
                 OutputVolumePolygon = original_copy;
-                OutputMosaicPolygon = MapToSectionSimplified(mapping, OutputVolumePolygon, PenInput.SimplifiedPathToleranceInPixels * Parent.Downsample);
+
+                // The stored outline keeps its own points; only the new hole is mapped to the section
+                Polygon mosaicHole = mapping.TryMapShapeVolumeToSection(proposed_hole);
+                Polygon mosaic = null;
+                if (mosaicHole is not null)
+                {
+                    mosaic = (Polygon)OriginalMosaicPolygon.Clone();
+                    mosaic.AddInteriorRing(mosaicHole);
+                }
+
+                OutputMosaicPolygon = mosaic;
             }
             catch (ArgumentException)
             {
@@ -267,16 +278,19 @@ namespace WebAnnotation.UI.Commands
         private void FinishCut()
         {
             using WebAnnotation.View.PolygonViewTimingLog.PenStepTimer timer = WebAnnotation.View.PolygonViewTimingLog.Measure("finish-cut", $"verts={OriginalVolumePolygon.TotalVertices}");
+            Polygon keptPiece = ChosenPiece();
+            Polygon discardedPiece = KeepBothPieces ? OtherPiece(keptPiece) : null;
             OutputVolumePolygon = GenerateOutputVolumePolygon();
             Polygon discardedVolume = KeepBothPieces ? DiscardedVolumePolygon() : null;
 
             try
             {
-                double tolerance = PenInput.SimplifiedPathToleranceInPixels * Parent.Downsample;
-                OutputMosaicPolygon = MapToSectionSimplified(mapping, OutputVolumePolygon, tolerance);
-                SplitOffMosaicPolygon = discardedVolume is null
-                    ? null
-                    : MapToSectionSimplified(mapping, discardedVolume, tolerance);
+                if (!TrySpliceOutput(keptPiece, discardedPiece))
+                {
+                    // The stroke could not be spliced into the stored points; save the walked pieces as they are
+                    OutputMosaicPolygon = mapping.TryMapShapeVolumeToSection(OutputVolumePolygon);
+                    SplitOffMosaicPolygon = discardedVolume is null ? null : mapping.TryMapShapeVolumeToSection(discardedVolume);
+                }
             }
             catch (ArgumentOutOfRangeException)
             {
@@ -295,11 +309,46 @@ namespace WebAnnotation.UI.Commands
         }
 
         /// <summary>
-        /// Maps <paramref name="volumePolygon"/> to section space and simplifies it to <paramref name="tolerance"/>.
+        /// Sets the outputs from the stored control points: the kept piece, and the split-off piece when one is given, keep
+        /// the location's points on their side exactly as stored and add only the pen stretch (<see cref="ControlPointCut"/>).
+        /// Only the new stretch is fitted; re-simplifying the whole outline moved the parts the pen never touched.
         /// </summary>
-        /// <returns>Null when any exterior or hole vertex falls outside <paramref name="mapping"/>.</returns>
-        internal static Polygon MapToSectionSimplified(IVolumeToSectionTransform mapping, Polygon volumePolygon, double tolerance) =>
-            mapping.TryMapShapeVolumeToSection(volumePolygon)?.Simplify(tolerance);
+        /// <param name="keptPiece">The walked piece (<see cref="ClockwiseCutPolygon"/> or <see cref="CounterClockwiseCutPolygon"/>) that is kept.</param>
+        /// <param name="splitOffPiece">The other walked piece when both are kept, else null.</param>
+        /// <returns>False when the stroke cannot be spliced; the outputs are then unchanged.</returns>
+        private bool TrySpliceOutput(Polygon keptPiece, Polygon splitOffPiece)
+        {
+            if (!PolyBeingCut.HasValue || keptPiece is null ||
+                !ControlPointCut.TrySplice(OriginalMosaicPolygon, mapping, PolyBeingCut.Value, PenInput.Points, PenInput.SimplifiedPathTolerance,
+                                           out ControlPointCut.Piece afterFirst, out ControlPointCut.Piece afterSecond))
+                return false;
+
+            ControlPointCut.PairWithWalk(afterFirst, afterSecond, ClockwiseCutPolygon, CounterClockwiseCutPolygon, out ControlPointCut.Piece clockwise, out ControlPointCut.Piece counterClockwise);
+            ControlPointCut.Piece Spliced(Polygon walked) => ReferenceEquals(walked, ClockwiseCutPolygon) ? clockwise : ReferenceEquals(walked, CounterClockwiseCutPolygon) ? counterClockwise : null;
+
+            ControlPointCut.Piece kept = Spliced(keptPiece);
+            ControlPointCut.Piece splitOff = splitOffPiece is null ? null : Spliced(splitOffPiece);
+            if (kept is null || (splitOffPiece is not null && splitOff is null))
+                return false;
+
+            if (PolyBeingCut.Value.IsInner)
+            {
+                int hole = PolyBeingCut.Value.InnerShapeIndex.Value;
+                Polygon volume = (Polygon)OriginalVolumePolygon.Clone();
+                volume.ReplaceInteriorRing(hole, kept.Volume);
+                Polygon mosaic = (Polygon)OriginalMosaicPolygon.Clone();
+                mosaic.ReplaceInteriorRing(hole, kept.Mosaic);
+                OutputVolumePolygon = volume;
+                OutputMosaicPolygon = mosaic;
+                SplitOffMosaicPolygon = null;
+                return true;
+            }
+
+            OutputVolumePolygon = kept.Volume;
+            OutputMosaicPolygon = kept.Mosaic;
+            SplitOffMosaicPolygon = splitOff?.Mosaic;
+            return true;
+        }
 
         /// <summary>
         /// Writes the kept piece onto <paramref name="location"/>. When Shift was held, also creates
@@ -394,28 +443,35 @@ namespace WebAnnotation.UI.Commands
 
         public Polygon? GenerateOutputVolumePolygon()
         {
-            Polygon output;
+            Polygon piece = ChosenPiece();
+            if (piece is null)
+                return null;
 
-            switch (CutAction)
+            if (CutAction is RetraceCommandAction.GROW_INTERNAL_RING or RetraceCommandAction.SHRINK_INTERNAL_RING)
             {
-                case RetraceCommandAction.NONE:
-                    return null;
-                case RetraceCommandAction.GROW_EXTERIOR_RING:
-                    return CounterClockwiseCutPolygon.Area > ClockwiseCutPolygon.Area ? CounterClockwiseCutPolygon : ClockwiseCutPolygon;
-                case RetraceCommandAction.SHRINK_EXTERIOR_RING:
-                    return SwitchSide ? ClockwiseCutPolygon : CounterClockwiseCutPolygon;
-                case RetraceCommandAction.GROW_INTERNAL_RING:
-                    output = (Polygon)OriginalVolumePolygon.Clone();
-                    output.ReplaceInteriorRing(PolyBeingCut.Value.InnerShapeIndex.Value, CounterClockwiseCutPolygon.Area > ClockwiseCutPolygon.Area ? CounterClockwiseCutPolygon : ClockwiseCutPolygon);
-                    return output;
-                case RetraceCommandAction.SHRINK_INTERNAL_RING:
-                    output = (Polygon)OriginalVolumePolygon.Clone();
-                    output.ReplaceInteriorRing(PolyBeingCut.Value.InnerShapeIndex.Value, SwitchSide ? ClockwiseCutPolygon : CounterClockwiseCutPolygon);
-                    return output;
+                Polygon output = (Polygon)OriginalVolumePolygon.Clone();
+                output.ReplaceInteriorRing(PolyBeingCut.Value.InnerShapeIndex.Value, piece);
+                return output;
             }
 
-            return null;
+            return piece;
         }
+
+        /// <summary>
+        /// The walked piece that is kept: the larger one for a growth, the counterclockwise one for a shrink unless Ctrl swaps it.
+        /// Null when there is no cut.
+        /// </summary>
+        private Polygon ChosenPiece() => CutAction switch
+        {
+            RetraceCommandAction.GROW_EXTERIOR_RING or RetraceCommandAction.GROW_INTERNAL_RING =>
+                CounterClockwiseCutPolygon.Area > ClockwiseCutPolygon.Area ? CounterClockwiseCutPolygon : ClockwiseCutPolygon,
+            RetraceCommandAction.SHRINK_EXTERIOR_RING or RetraceCommandAction.SHRINK_INTERNAL_RING =>
+                SwitchSide ? ClockwiseCutPolygon : CounterClockwiseCutPolygon,
+            _ => null,
+        };
+
+        private Polygon OtherPiece(Polygon piece) =>
+            piece is null ? null : ReferenceEquals(piece, ClockwiseCutPolygon) ? CounterClockwiseCutPolygon : ClockwiseCutPolygon;
 
         /// <summary>
         /// The exterior piece <see cref="GenerateOutputVolumePolygon"/> does not keep.
