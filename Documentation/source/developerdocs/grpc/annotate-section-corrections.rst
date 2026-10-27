@@ -31,7 +31,7 @@ The protocol is versioned by package name. V2 (``section_correction_v2.proto``, 
    * - ``CORRECTION_MODE_NONE`` (1)
      - Do not move points: the StosGroup mapping alone.
 
-Values 2 and 3 (``ALL`` and ``CURVE_FIT``, a leave-one-out Catmull-Rom fit along each process after the field) were removed in service 1.5.0 and are reserved. From 1.5.1, as a temporary measure, a request with either is answered as ``NEIGHBOR``. SBFSEM-tools still sends 3, and its cells drew uncorrected while 1.5.0 refused it. New code must send 0, or leave the field unset. Any other value is refused with ``INVALID_ARGUMENT``. On 11 cells the fit kept the field's mean overlap of linked outlines and quadrupled the large losses. The measurements are in ``docs/publication_notes.md`` (2026-10-27). MonogameTestbed keeps the fit as an opt-in ``--correction curvefit`` or ``all`` for experiments.
+Values 2 and 3 (``ALL`` and ``CURVE_FIT``) are reserved in the proto. Service 1.5.2 restores the leave-one-out Catmull-Rom fit along each process, for a damaged-sections-only test: sent as a raw integer, 4 answers the field then the fit; 2 and 3 still answer the field. Unset or 0 is the field, 1 is none, and any other value is refused with ``INVALID_ARGUMENT``. New code should send 0 or 1. The measurements are in ``docs/publication_notes.md`` (2026-10-27).
 
 Status codes
 ============

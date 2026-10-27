@@ -169,18 +169,19 @@ namespace GrpcSectionCorrectionService.Tests
         }
 
         /// <summary>
-        /// The zero value is Neighbor, so an unset mode gets the published field without a presence flag. The service
-        /// never runs CurveFit. Stopgap: the retired values 2 and 3 are answered as Neighbor until SBFSEM-tools stops
-        /// sending them; any other value is refused.
+        /// The zero value is Neighbor, so an unset mode gets the published field without a presence flag. 1.5.2 restores
+        /// the CurveFit pass: 2 and 3 stay the field (production clients still send them) and 4 is the field then CurveFit
+        /// (a raw integer, since the proto reserves 2 and 3); any other value is refused.
         /// </summary>
         [TestMethod]
-        public void CorrectionMode_ZeroIsNeighbor_RetiredValuesAreTheField_UnknownIsRefused()
+        public void CorrectionMode_ZeroIsNeighbor_OnlyFourRunsCurveFit_UnknownIsRefused()
         {
             Assert.AreEqual(CorrectionMode.Neighbor, new CorrectStructuresRequest().Correction);
             Assert.AreEqual(FitMode.Neighbor, SectionCorrectionsServiceV2.ToFitMode(CorrectionMode.Neighbor));
             Assert.AreEqual(FitMode.None, SectionCorrectionsServiceV2.ToFitMode(CorrectionMode.None));
             Assert.AreEqual(FitMode.Neighbor, SectionCorrectionsServiceV2.ToFitMode((CorrectionMode)2));
             Assert.AreEqual(FitMode.Neighbor, SectionCorrectionsServiceV2.ToFitMode((CorrectionMode)3));
+            Assert.AreEqual(FitMode.All, SectionCorrectionsServiceV2.ToFitMode((CorrectionMode)4));
             Assert.AreEqual(StatusCode.InvalidArgument,
                 Assert.ThrowsExactly<RpcException>(() => SectionCorrectionsServiceV2.ToFitMode((CorrectionMode)9)).StatusCode);
         }

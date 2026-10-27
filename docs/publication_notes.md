@@ -102,6 +102,17 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   `Servers/GrpcSectionCorrectionService`, `gRPC_Protos/SectionCorrection/section_correction_v2.proto`,
   `Clients/MonogameTestbed/Program.cs`; Slack #ai thread 1792781373.698579.
 
+- **2026-10-27 Service 1.5.2 restores the CurveFit pass, for a damaged-sections-only test.** Why: SBFSEMpy's split of
+  the 11-cell run by damaged section (each block's `NonStosSectionNumbers`) showed the fit adding overlap there (194
+  pairs, mean 0.699 field to 0.763 field + fit; 81% from RPC1 c2628) and not elsewhere (7,153 pairs, 0.794 to 0.792).
+  Deciding whether a damaged-sections-only fit is worth keeping needs fit positions for more cells, and 1.5.1 computed
+  none. James Anderson asked for the code back as 1.5.2 rather than a second 1.4.0 instance. The proto is unchanged
+  (0 NEIGHBOR default, 1 NONE, 2 and 3 reserved), so the fit is a raw integer outside it: 4, field then CurveFit (0 before 1.5.0),
+  because 0 cannot carry both. 2 and 3 stay the field, as in 1.5.1: production SBFSEM-tools still sends them, and
+  mapping 3 back to its 1.4.0 meaning (fit alone) would have moved four volumes from the field to the fit at cutover. Unset or 0 is still the field. This is a measurement aid; the decision on a limited fit is
+  pending. Where: `Servers/GrpcSectionCorrectionService/SectionCorrectionsServiceV2.cs` (`ToFitMode`),
+  `CorrectionServiceCore.cs`; Slack #ai thread 1792781373.698579.
+
 - **2026-10-26 Link fill colours are softened in OKLCH, 75% chroma; marker numbers use the same colour.** Why: the
   earlier RGB fade toward grey (55% saturation, entry below) shifted how colours look: a burnt orange down link,
   RGB (255, 165, 27), became a yellowish tan (220, 170, 94), which the user disliked, and marker numbers took the same
