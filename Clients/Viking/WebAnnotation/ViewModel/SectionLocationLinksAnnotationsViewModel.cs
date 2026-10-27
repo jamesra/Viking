@@ -90,7 +90,6 @@ namespace WebAnnotation.ViewModel
             // freezes the UI) and must not leave a half-added entry: the Func overload adds the key only when
             // the callback returns true (not when it returns false or throws), but LocationLinks is ours to
             // clean up. A leftover entry would otherwise make every later add of the same link fail.
-            bool endpointGone = false;
             bool becameOverlapped = false;
             KnownLinks.TryAdd(key, () =>
             {
@@ -98,7 +97,6 @@ namespace WebAnnotation.ViewModel
                 // section opens); the link goes with it, so it is skipped without an exception.
                 if (!lv.TryLinksOverlap(out bool overlaps))
                 {
-                    endpointGone = true;
                     return false;
                 }
 

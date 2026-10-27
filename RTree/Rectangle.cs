@@ -342,7 +342,6 @@ namespace RTree
 
             if (obj is Rectangle r && obj.GetType() == typeof(Rectangle))
             {
-#warning possible didn't convert properly
                 if (CompareArrays(r.min, min) && CompareArrays(r.max, max))
                 {
                     equals = true;

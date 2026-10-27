@@ -12,7 +12,7 @@ namespace Annotation.ViewModels
 {
     public class ClearStructureTypeParentCommand : System.Windows.Input.ICommand
     {
-        public event EventHandler CanExecuteChanged;
+        public event EventHandler CanExecuteChanged { add { } remove { } }
 
         public bool CanExecute(object item)
         {
@@ -350,7 +350,6 @@ namespace Annotation.ViewModels
         private bool CanSaveModel(object item)
         {
             return true;
-            return Model.DBAction != AnnotationService.Types.DBACTION.NONE;
         }
 
         /// <summary>

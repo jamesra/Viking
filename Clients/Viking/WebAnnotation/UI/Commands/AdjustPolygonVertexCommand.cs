@@ -109,7 +109,7 @@ namespace WebAnnotation.UI.Commands
                 if (oldMouse.Button.Left())
                 {
                     Geometry.Vector2 LastWorldPosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
-                    UpdatePosition(NewPosition - LastWorldPosition);
+                    _ = UpdatePosition(NewPosition - LastWorldPosition);
                 }
             }
 

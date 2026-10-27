@@ -115,7 +115,7 @@ namespace Viking
         private void VikingMain_Load(object sender, EventArgs e)
         {
             TextureRequestQueue.StartWorkers();
-            PendingTextureQueue.PostPump(500); //Start the queue to load textures
+            _ = PendingTextureQueue.PostPump(500); //Start the queue to load textures
             PendingTextureQueue.StartSortTimer();
 
             if (UI.State.volume is null)

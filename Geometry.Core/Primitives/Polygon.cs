@@ -3013,7 +3013,7 @@ namespace Geometry
                             }
                         }
                     }
-                    catch (ArgumentException e)
+                    catch (ArgumentException)
                     {
                         Trace.WriteLine($"{this} could not add corresponding point {polyIndex} : {p} ");
                         continue;

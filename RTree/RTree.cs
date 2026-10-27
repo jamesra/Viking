@@ -69,7 +69,7 @@ namespace RTree
         private readonly Dictionary<int, Node<T>> nodeMap = [];
 
         // internal consistency checking - set to true if debugging tree corruption
-        private const bool INTERNAL_CONSISTENCY_CHECKING = false;
+        private static readonly bool INTERNAL_CONSISTENCY_CHECKING = false;
 
         // used to mark the status of entries during a Node&lt;T&gt; split
         private const int ENTRY_STATUS_ASSIGNED = 0;

@@ -1036,7 +1036,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
             finally
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() => renderTarget.Dispose()));
+                _ = Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() => renderTarget.Dispose()));
             }
         }
     }

@@ -254,49 +254,17 @@ namespace Viking.ViewModels
             return;
         }
 
+        event System.ComponentModel.PropertyChangedEventHandler IUIObject.ValueChanged { add { } remove { } }
 
-        private event System.ComponentModel.PropertyChangedEventHandler? OnValueChanged;
-        internal event EventHandler? OnBeforeDelete;
-        internal event EventHandler? OnAfterDelete;
-        internal event EventHandler? OnBeforeSave;
-        internal event EventHandler? OnAfterSave;
-        private event System.Collections.Specialized.NotifyCollectionChangedEventHandler? OnChildChanged;
+        event EventHandler IUIObject.BeforeDelete { add { } remove { } }
 
-        event System.ComponentModel.PropertyChangedEventHandler IUIObject.ValueChanged
-        {
-            add => OnValueChanged += value;
-            remove => OnValueChanged -= value;
-        }
+        event EventHandler IUIObject.AfterDelete { add { } remove { } }
 
-        event EventHandler IUIObject.BeforeDelete
-        {
-            add => OnBeforeDelete += value;
-            remove => OnBeforeDelete -= value;
-        }
+        event EventHandler IUIObject.BeforeSave { add { } remove { } }
 
-        event EventHandler IUIObject.AfterDelete
-        {
-            add => OnAfterDelete += value;
-            remove => OnAfterDelete -= value;
-        }
+        event EventHandler IUIObject.AfterSave { add { } remove { } }
 
-        event EventHandler IUIObject.BeforeSave
-        {
-            add => OnBeforeSave += value;
-            remove => OnBeforeSave -= value;
-        }
-
-        event EventHandler IUIObject.AfterSave
-        {
-            add => OnAfterSave += value;
-            remove => OnAfterSave -= value;
-        }
-
-        event System.Collections.Specialized.NotifyCollectionChangedEventHandler IUIObject.ChildChanged
-        {
-            add => OnChildChanged += value;
-            remove => OnChildChanged -= value;
-        }
+        event System.Collections.Specialized.NotifyCollectionChangedEventHandler IUIObject.ChildChanged { add { } remove { } }
 
         event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
         {

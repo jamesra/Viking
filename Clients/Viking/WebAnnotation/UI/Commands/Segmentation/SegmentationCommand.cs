@@ -725,7 +725,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
             else
             {
-                RequestSegmentation();
+                _ = RequestSegmentation();
             }
         }
 
@@ -819,7 +819,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             if (e.KeyCode == Keys.Return)
             {
-                RequestSegmentation();
+                _ = RequestSegmentation();
             }
             base.OnKeyDown(sender, e);
         }

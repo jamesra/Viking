@@ -1,3 +1,4 @@
+#nullable enable annotations
 using Duende.IdentityModel.Client;
 using System;
 using System.Collections.Concurrent;

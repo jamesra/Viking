@@ -199,7 +199,7 @@ namespace Viking
             if (msDelay > 0)
                 await Task.Delay(msDelay).ConfigureAwait(false);
 
-            State.MainThreadDispatcher.BeginInvoke(new Action(ProcessQueue), priority: DispatcherPriority.Background);
+            _ = State.MainThreadDispatcher.BeginInvoke(new Action(ProcessQueue), priority: DispatcherPriority.Background);
         }
 
         /// <summary>

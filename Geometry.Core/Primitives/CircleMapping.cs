@@ -32,6 +32,7 @@ namespace Geometry
         /// <param name="sourceRadius">Radius of the circle before mapping, in its own space.</param>
         /// <param name="mapped">The five mapped points, same order as <see cref="SamplePoints"/>. Entries that failed to map are ignored.</param>
         /// <param name="mappedOk">Whether each of the five points mapped.</param>
+        /// <param name="circle">The mapped circle, or default when this returns false.</param>
         /// <returns>False when the source radius is not positive, the centre did not map, or no rim point mapped.</returns>
         public static bool TryCircleFromMappedPoints(double sourceRadius, IReadOnlyList<Vector2> mapped, IReadOnlyList<bool> mappedOk, out Circle circle)
         {

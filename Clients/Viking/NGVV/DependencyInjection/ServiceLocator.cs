@@ -59,7 +59,7 @@ namespace Viking.DependencyInjection
         /// Resolve a service from the container, throwing if it is missing.
         /// </summary>
         /// <typeparam name="T">Type of service to resolve.</typeparam>
-        public static T GetRequiredService<T>() => ServiceProvider.GetRequiredService<T>();
+        public static T GetRequiredService<T>() where T : notnull => ServiceProvider.GetRequiredService<T>();
 
         /// <summary>
         /// Resolve a service from the container, returning null if it is missing.

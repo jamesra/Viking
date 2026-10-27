@@ -72,11 +72,11 @@ namespace Viking.UI.Commands
 
         protected object NearestObjectAtPositionAcrossAllExtensions(Vector2 WorldPosition)
         {
-            object nearest_obj = null;
+            object? nearest_obj = null;
             double distance = double.MaxValue;
             foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
             {
-                object nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
+                object? nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
                     if (nearObj != null && newDistance < distance)
                     {
                         nearest_obj = nearObj;
@@ -152,7 +152,7 @@ namespace Viking.UI.Commands
             {
                 foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
                 {
-                    object nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
+                    object? nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
                     if (nearObj != null && newDistance < distance)
                     {
                         context_obj = nearObj;

@@ -730,7 +730,7 @@ namespace WebAnnotation
 
             IEnumerable<LocationCanvasView> listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode == LocationType.CIRCLE);
 
-            IEnumerable<LocationCircleView> listCircles = listObjects.Select(o => o as LocationCircleView).Where(o => o != null);
+            IEnumerable<LocationCircleView> listCircles = listObjects.OfType<LocationCircleView>();
 
             return [.. listCircles.Where(o => o.VolumeCircle.Intersects(bounds) || bounds.Contains(o.VolumeCircle))];
         }
@@ -752,7 +752,7 @@ namespace WebAnnotation
 
             IEnumerable<LocationCanvasView> listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode.AllowsInteriorHoles());
 
-            IEnumerable<LocationPolygonView> listPolygons = listObjects.Select(o => o as LocationPolygonView).Where(o => o != null);
+            IEnumerable<LocationPolygonView> listPolygons = listObjects.OfType<LocationPolygonView>();
 
             return [.. listPolygons.Where(o =>
             {

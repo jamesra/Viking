@@ -5,8 +5,8 @@ using System.Linq;
 namespace Geometry
 {
     /// <summary>
-    /// Heterogeneous set of 2D shapes. <see cref="GetRelation"/> ORs child flags;
-    /// <see cref="Contains"/>, <see cref="Covers"/>, and <see cref="Intersects"/> are any-child.
+    /// Heterogeneous set of 2D shapes. <see cref="GetRelation(in IShape2D)"/> ORs child flags;
+    /// <see cref="Contains(in IShape2D)"/>, <see cref="Covers(in IShape2D)"/>, and <see cref="Intersects"/> are any-child.
     /// </summary>
     public class Shape2DCollection : IShapeCollection2D
     {

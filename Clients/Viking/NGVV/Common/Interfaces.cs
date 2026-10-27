@@ -36,7 +36,7 @@ namespace Viking.Common
         /// <param name="WorldPosition"></param>
         /// <param name="distance"></param>
         /// <returns></returns>
-        object ObjectAtPosition(Geometry.Vector2 WorldPosition, out double distance);
+        object? ObjectAtPosition(Geometry.Vector2 WorldPosition, out double distance);
 
         /// <summary>
         /// Draw the specified overlay extension on the render target.  

@@ -87,7 +87,7 @@ namespace Viking.UI
         /// <summary>
         /// Fires when the user asks to show/hide a control type
         /// </summary>
-        public static event ViewChangeEventHandler ViewChanged;
+        public static event ViewChangeEventHandler ViewChanged { add { } remove { } }
 
         #endregion
 

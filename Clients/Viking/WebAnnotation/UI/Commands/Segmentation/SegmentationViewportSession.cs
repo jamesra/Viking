@@ -113,8 +113,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// request while an earlier response is still being polygonized, so mapping a mask to world space reads this.
         /// </summary>
         private readonly SegmentationResultContexts resultContexts = new();
-        private int mosaicOriginX;
-        private int mosaicOriginY;
 
         /// <summary>
         /// The tile level every request is sent at. Every served model is a single-resolution tile grid, so the level does not
@@ -485,8 +483,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             uploadedTileKeys.Clear();
             tileImages.Clear();
             mosaicDownsample = ResolveTileDownsample(parent.Camera?.Downsample ?? parent.Downsample);
-            mosaicOriginX = 0;
-            mosaicOriginY = 0;
             Interlocked.Exchange(ref isUploadingImage, 0);
         }
 

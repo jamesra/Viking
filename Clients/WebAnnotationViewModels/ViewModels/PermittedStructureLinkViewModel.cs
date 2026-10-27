@@ -243,7 +243,6 @@ namespace Annotation.ViewModels
         private bool CanSaveModel(object item)
         {
             return true;
-            return Model.DBAction != AnnotationService.Types.DBACTION.NONE;
         }
 
         private void SaveModel(object item)
