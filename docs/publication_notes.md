@@ -67,6 +67,20 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
 
 ## Algorithmic decisions
 
+- **2026-10-27 Del hides what a click would pick; the item fades back in before it can be clicked.**
+  - **Why:** a large annotation on the current section covers the adjacent-section annotation the user wants to drag
+    onto this section. Del must hide whatever a click there would pick, in the same order hover uses: this section
+    first, then adjacent sections, links, and the arrow markers inside a location. Otherwise it would hide something
+    other than what blocks the click.
+  - **Links:** a link to a hidden location would point at nothing, so a link hides while either end is hidden.
+  - **Return:** the item is invisible for 95% of the hide time, then fades in over the last 5% along a quarter sine
+    wave, $\sin(\pi t/2)$, which rises fastest at the start so the item shows up at once. It is not clickable until
+    the fade ends, so the user sees it return before it can take a click.
+  - **One store:** hidden items are kept in one store keyed by what a view shows (location ID, link key,
+    structure-link key, ring key), so every view of one item hides together.
+  - Ported from VikingLegacy 57dd42bd, 7ccd32e7, 38bb08dd, 5a460603 and f946d5b0 (dev 372b4f35). Where:
+    `Clients/Viking/WebAnnotation/UI/TemporarilyHiddenAnnotations.cs`.
+
 - **2026-10-27 Section correction drops CurveFit: answers are the published field only.** CurveFit moved each
   location to a leave-one-out Catmull-Rom fit along its process after the field was applied. It was meant to remove
   outliers (folds, tears), but in practice it pulled every node toward its neighbours, and from one cell it cannot tell
