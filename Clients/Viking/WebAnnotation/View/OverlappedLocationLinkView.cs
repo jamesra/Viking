@@ -130,14 +130,22 @@ namespace WebAnnotation.View
             TextureCircleView.Draw(device, scene, OverlayStyle.Luma, [.. backgroundCircles]);
         }
 
-        public void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene)
+        public void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene) => DrawLabel(spriteBatch, font, scene, 1f);
+
+        /// <summary>Draws the section number with its alpha scaled by <paramref name="opacity"/>, for a marker fading back in after Del hid it.</summary>
+        public void DrawLabel(SpriteBatch spriteBatch, SpriteFont font, VikingXNA.Scene scene, float opacity)
         {
             double DesiredRowsOfText = 4.0;
             double DefaultFontSize = (Radius * 2) / DesiredRowsOfText;
             label.FontSize = DefaultFontSize;
             label.MaxLineWidth = Radius * 2;
 
+            float alpha = label.Alpha;
+            if (opacity < 1f)
+                label.Alpha = alpha * opacity;
+
             label.Draw(spriteBatch, font, scene);
+            label.Alpha = alpha;
         }
 
         public bool IsLabelVisible(Scene scene) => label.IsVisible(scene);
@@ -162,7 +170,9 @@ namespace WebAnnotation.View
         public List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => [];
 
         public string[] HelpStrings => [
-                    "Hold left click + drag: Create additional annotation for this structure linked to the annotation on the adjacent section."
+                    "Hold left click + drag: Create additional annotation for this structure linked to the annotation on the adjacent section.",
+                    "Del: Hide this link marker for a while. Insert: Bring it back.",
+                    "Double right click: Delete the link or split the structure."
                 ];
 
         int ICanvasView.VisualHeight => 0;

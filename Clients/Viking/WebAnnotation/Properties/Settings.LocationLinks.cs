@@ -56,5 +56,18 @@ namespace WebAnnotation.Properties
             get => (bool)this[nameof(LocationLinkLabels)];
             set => this[nameof(LocationLinkLabels)] = value;
         }
+
+        /// <summary>
+        /// Seconds an annotation hidden with the Del key stays hidden before it reappears, 1 to 600.
+        /// Keep the default in step with <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_HIDE_ANNOTATION_SECONDS"/>.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("30")]
+        public int HideAnnotationSeconds
+        {
+            get => (int)this[nameof(HideAnnotationSeconds)];
+            set => this[nameof(HideAnnotationSeconds)] = value;
+        }
     }
 }

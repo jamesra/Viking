@@ -69,6 +69,7 @@
     <Compile Include="SplitStructuresFormTests.cs" />
     <Compile Include="HotkeyKeyCodeTests.cs" />
     <Compile Include="OverlayHotkeysTests.cs" />
+    <Compile Include="TemporarilyHiddenAnnotationsTests.cs" />
     <Compile Include="UserSettingsHotkeysTests.cs" />
     <Compile Include="VertexEditTargetTests.cs" />
     <Compile Include="GlobalWithoutVikingVolumeTests.cs" />

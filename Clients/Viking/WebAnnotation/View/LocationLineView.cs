@@ -19,7 +19,7 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
-    internal class AdjacentLocationLineView : LocationLineViewBase
+    internal class AdjacentLocationLineView : LocationLineViewBase, IColorView
     {
         protected PolyLineView upPolyLineView;
         protected PolyLineView downPolyLineView;
@@ -32,6 +32,13 @@ namespace WebAnnotation.View
                 upPolyLineView.Color = value;
                 downPolyLineView.Color = value;
             }
+        }
+
+        /// <summary>Lets Del's fade-in scale the line's alpha.</summary>
+        public float Alpha
+        {
+            get => Color.GetAlpha();
+            set => Color = Color.SetAlpha(value);
         }
 
         public override double LineWidth => upPolyLineView.LineWidth;
@@ -86,7 +93,7 @@ namespace WebAnnotation.View
         public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => [];
     }
 
-    internal class LocationLineView : LocationLineViewBase
+    internal class LocationLineView : LocationLineViewBase, IColorView
     {
         protected PolyLineView polyLineView;
 
@@ -95,6 +102,13 @@ namespace WebAnnotation.View
         {
             get => polyLineView.Color;
             set => polyLineView.Color = value;
+        }
+
+        /// <summary>Lets Del's fade-in scale the line's alpha.</summary>
+        public float Alpha
+        {
+            get => Color.GetAlpha();
+            set => Color = Color.SetAlpha(value);
         }
 
         public override double LineWidth => polyLineView.LineWidth;

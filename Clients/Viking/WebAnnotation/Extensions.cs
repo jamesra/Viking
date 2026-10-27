@@ -148,32 +148,30 @@ namespace WebAnnotation
         /// <param name="listHitTestObjects"></param>
         /// <param name="WorldPos"></param>
         /// <returns></returns>
-        public static List<HitTestResult> ExpandICanvasViewContainers(this IEnumerable<HitTestResult> listHitTestObjects, Vector2 WorldPos)
+        public static List<HitTestResult> ExpandICanvasViewContainers(this IEnumerable<HitTestResult> listHitTestObjects, Vector2 WorldPos) =>
+            [.. listHitTestObjects.Select(lc => lc.ExpandICanvasViewContainer(WorldPos))];
+
+        /// <summary>
+        /// The nested object under <paramref name="WorldPos"/> when <paramref name="hit"/> is a container (a location with
+        /// link markers), the hit itself when it is not a container or the mouse is on the container's own shape, or null
+        /// when the container has nothing there. Every caller that looks inside a location uses this.
+        /// </summary>
+        public static HitTestResult? ExpandICanvasViewContainer(this HitTestResult hit, Vector2 WorldPos)
         {
-            List<HitTestResult> nestedContainers = [.. listHitTestObjects.Select(lc =>
-                 {
-                     if (lc.obj is not ICanvasViewContainer container)
-                     {
-                         return lc;
-                     }
+            if (hit.obj is not ICanvasViewContainer container)
+            {
+                return hit;
+            }
 
-                     ICanvasView nestedObj = container.GetAnnotationAtPosition(WorldPos);
-                     if (nestedObj is null)
-                     {
-                         return null;
-                     }
-                     else if (nestedObj != lc.obj)
-                     {
-                         return new HitTestResult(nestedObj, lc.Z, lc.VisualHeight, nestedObj.DistanceFromCenterNormalized(WorldPos));
-                     }
-                     else
-                     {
-                         return lc;
-                     }
+            ICanvasView nestedObj = container.GetAnnotationAtPosition(WorldPos);
+            if (nestedObj is null)
+            {
+                return null;
+            }
 
-                 })];
-
-            return [.. nestedContainers];
+            return nestedObj != hit.obj
+                ? new HitTestResult(nestedObj, hit.Z, hit.VisualHeight, nestedObj.DistanceFromCenterNormalized(WorldPos))
+                : hit;
         }
     }
 

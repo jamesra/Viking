@@ -292,7 +292,7 @@ namespace WebAnnotation.ViewModel
         public abstract double Distance(SqlGeometry Position);
     }
 
-    internal class StructureLinkCirclesView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper) : StructureLinkViewModelBase(key, mapper)
+    internal class StructureLinkCirclesView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper) : StructureLinkViewModelBase(key, mapper), IColorView
     {
         public LineView lineView;
         public Geometry.LineSegment lineSegment;
@@ -315,6 +315,11 @@ namespace WebAnnotation.ViewModel
             get => lineView.Color;
             set => lineView.Color = value;
         }
+
+        Microsoft.Xna.Framework.Color IColorView.Color { get => color; set => color = value; }
+
+        /// <summary>Lets Del's fade-in scale the link's alpha.</summary>
+        float IColorView.Alpha { get => alpha; set => alpha = value; }
 
 
         public static Microsoft.Xna.Framework.Color DefaultColor = new(255,
@@ -367,7 +372,7 @@ namespace WebAnnotation.ViewModel
     /// <summary>
     /// Link structures represented by curves
     /// </summary>
-    internal class StructureLinkCurvesView : StructureLinkViewModelBase
+    internal class StructureLinkCurvesView : StructureLinkViewModelBase, IColorView
     {
         public LinkedPolyLineSimpleView lineView;
         public Geometry.LineSegment[] lineSegments;
@@ -391,6 +396,11 @@ namespace WebAnnotation.ViewModel
             get => lineView.Color;
             set => lineView.Color = value;
         }
+
+        Microsoft.Xna.Framework.Color IColorView.Color { get => color; set => color = value; }
+
+        /// <summary>Lets Del's fade-in scale the link's alpha.</summary>
+        float IColorView.Alpha { get => alpha; set => alpha = value; }
 
 
         public static Microsoft.Xna.Framework.Color DefaultColor = new(255,

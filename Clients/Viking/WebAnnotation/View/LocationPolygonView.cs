@@ -27,10 +27,12 @@ namespace WebAnnotation.View
     /// <summary>
     /// On-section polygon. Holes still Contains() for REMOVEHOLE, but DistanceFromCenterNormalized is 1.01 so selection prefers the annotation inside the hole.
     /// </summary>
-    internal class LocationPolygonView : LocationCanvasView, ILabelView, ICanvasViewContainer, Viking.Common.IHelpStrings, IColorView
+    internal class LocationPolygonView : LocationCanvasView, ILabelView, ICanvasViewContainer, Viking.Common.IHelpStrings, IColorView, IOverlappedLinkHost
     {
         private StructureLabelsBase? curveLabels;
         private OverlappedLinkCircleView? OverlappedLinkView;
+
+        OverlappedLinkCircleView? IOverlappedLinkHost.OverlappedLinkView => OverlappedLinkView;
 
         /// <summary>
         /// Guards <see cref="labelLayout"/>, <see cref="overlappedLinks"/> and the label and marker views built from them:

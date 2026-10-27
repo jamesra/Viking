@@ -285,7 +285,7 @@ namespace WebAnnotation.View
     }
 
     /// <summary>On-section circle. OverlappedLinkCircleView children win hit-test over this parent.</summary>
-    internal class LocationCircleView : LocationCircleViewBase, ICanvasViewContainer, ISelectable, IColorView, ILabelView
+    internal class LocationCircleView : LocationCircleViewBase, ICanvasViewContainer, ISelectable, IColorView, ILabelView, IOverlappedLinkHost
     {
         protected readonly Circle _VolumeCircle;
         protected readonly Circle _MosaicCircle;
@@ -324,6 +324,8 @@ namespace WebAnnotation.View
         public CircleView circleView;
 
         public OverlappedLinkCircleView OverlappedLinkView;
+
+        OverlappedLinkCircleView? IOverlappedLinkHost.OverlappedLinkView => OverlappedLinkView;
         public StructureCircleLabels structureLabels;
         private static readonly float RadiusToResizeCircle = 7.0f / 8.0f;
         private static readonly float RadiusToPenResizeCircle = 1.0f / 8.0f;

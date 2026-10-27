@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using VikingXNA;
 using VikingXNAGraphics;
+using WebAnnotation.UI;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
@@ -14,6 +15,13 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
+    /// <summary>A location view that draws arrow markers for its links to overlapping locations on adjacent sections.</summary>
+    internal interface IOverlappedLinkHost
+    {
+        /// <summary>The markers, or null when the location has no overlapped links.</summary>
+        OverlappedLinkCircleView? OverlappedLinkView { get; }
+    }
+
     /// <summary>
     /// Draw overlapped links as a set of circles inscribed in a larger circle, or at the marker slots a run
     /// <see cref="LabelPlacement"/> chose
@@ -104,31 +112,40 @@ namespace WebAnnotation.View
             }
         }
 
-        public double Distance(Geometry.Vector2 Position) => linkViews.Min(c => c.Distance(Position));
+        /// <summary>Links Del hid in the active viewer, or null when there is none (tests, Jotunn).</summary>
+        private static TemporarilyHiddenAnnotations? Hidden => AnnotationOverlay.CurrentOverlay?.HiddenAnnotations;
 
-        public double Distance(Microsoft.SqlServer.Types.SqlGeometry shape) => linkViews.Min(c => c.Distance(shape));
+        /// <summary>The markers that can be hit: a marker whose link Del hid is not there for the mouse.</summary>
+        private IEnumerable<OverlappedLocationLinkView> PickableLinkViews
+        {
+            get
+            {
+                TemporarilyHiddenAnnotations? hidden = Hidden;
+                return hidden is null || hidden.IsEmpty ? linkViews : linkViews.Where(l => !hidden.IsHidden(l));
+            }
+        }
 
-        public double DistanceFromCenterNormalized(Geometry.Vector2 Position) => linkViews.Min(c => c.DistanceFromCenterNormalized(Position));
+        public double Distance(Geometry.Vector2 Position) => PickableLinkViews.Select(c => c.Distance(Position)).DefaultIfEmpty(double.MaxValue).Min();
 
-        public bool Contains(Geometry.Vector2 Position) => linkViews.Any(c => c.Contains(Position));
+        public double Distance(Microsoft.SqlServer.Types.SqlGeometry shape) => PickableLinkViews.Select(c => c.Distance(shape)).DefaultIfEmpty(double.MaxValue).Min();
 
-        public bool Intersects(LineSegment line) => linkViews.Any(c => c.Intersects(line));
+        public double DistanceFromCenterNormalized(Geometry.Vector2 Position) => PickableLinkViews.Select(c => c.DistanceFromCenterNormalized(Position)).DefaultIfEmpty(double.MaxValue).Min();
+
+        public bool Contains(Geometry.Vector2 Position) => PickableLinkViews.Any(c => c.Contains(Position));
+
+        public bool Intersects(LineSegment line) => PickableLinkViews.Any(c => c.Intersects(line));
 
         public bool IsVisible(Scene scene) => linkViews.Any(c => c.IsVisible(scene));
 
         public bool IsLabelVisible(Scene scene) => linkViews.Any(l => l.IsLabelVisible(scene));
 
-        /// <summary>Child overlap arrow if the point is inside one; otherwise null so the parent circle keeps the hit.</summary>
-        public ICanvasView GetAnnotationAtPosition(Geometry.Vector2 position)
-        {
-            ICanvasView annotation = linkViews.FirstOrDefault(l => l.Contains(position));
-            if (annotation is null)
-            {
-                return null;
-            }
+        /// <summary>
+        /// Child overlap arrow if the point is inside one Del has not hidden; otherwise null so the parent circle keeps the hit.
+        /// </summary>
+        public ICanvasView GetAnnotationAtPosition(Geometry.Vector2 position) => PickableLinkViews.FirstOrDefault(l => l.Contains(position));
 
-            return annotation;
-        }
+        /// <summary>Every marker under <paramref name="position"/>, hidden or not, so Del and Insert can pick one by its link.</summary>
+        public IEnumerable<OverlappedLocationLinkView> LinkViewsAt(Geometry.Vector2 position) => linkViews.Where(l => l.Contains(position));
 
         public int VisualHeight => 0;
 
@@ -271,19 +288,32 @@ namespace WebAnnotation.View
                           OverlappedLinkCircleView[] listToDraw)
         {
             OverlappedLocationLinkView[] linkViewArray = [.. listToDraw.SelectMany(l => l.linkViews)];
-            OverlappedLocationLinkView.Draw(device, scene, basicEffect, overlayEffect, linkViewArray);
+            TemporarilyHiddenAnnotations? hidden = Hidden;
+            if (hidden is null)
+            {
+                OverlappedLocationLinkView.Draw(device, scene, basicEffect, overlayEffect, linkViewArray);
+                return;
+            }
+
+            // A marker Del hid is skipped, and fades back in like a link line
+            List<OverlappedLocationLinkView> visible = hidden.VisibleToDraw(linkViewArray);
+            using (hidden.ApplyFade(visible))
+            {
+                OverlappedLocationLinkView.Draw(device, scene, basicEffect, overlayEffect, [.. visible]);
+            }
         }
 
         public void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
                               VikingXNA.Scene scene)
         {
-            foreach (ILabelView ov in linkViews.Cast<ILabelView>().Where(ov => ov.IsLabelVisible(scene)))
+            TemporarilyHiddenAnnotations? hidden = Hidden;
+            foreach (OverlappedLocationLinkView ov in linkViews.Where(ov => ov.IsLabelVisible(scene)))
             {
-                ov.DrawLabel(spriteBatch, font, scene);
+                float fade = hidden?.FadeIn(ov) ?? 1f;
+                if (fade > 0f)
+                    ov.DrawLabel(spriteBatch, font, scene, fade);
             }
-
-            return;
         }
     }
 }

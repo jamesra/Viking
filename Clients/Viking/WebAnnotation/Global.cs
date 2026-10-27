@@ -461,6 +461,34 @@ namespace WebAnnotation
                 }
             }
 
+            /// <summary>Shortest accepted <see cref="HideAnnotationSeconds"/>.</summary>
+            public const int MIN_HIDE_ANNOTATION_SECONDS = 1;
+
+            /// <summary>Longest accepted <see cref="HideAnnotationSeconds"/>.</summary>
+            public const int MAX_HIDE_ANNOTATION_SECONDS = 600;
+
+            /// <summary>Starting <see cref="HideAnnotationSeconds"/>. Must match the DefaultSettingValue in Settings.LocationLinks.cs.</summary>
+            public const int DEFAULT_HIDE_ANNOTATION_SECONDS = 30;
+
+            /// <summary>
+            /// Seconds an annotation hidden with the Del key stays hidden, clamped to the MIN/MAX_HIDE_ANNOTATION_SECONDS range.
+            /// </summary>
+            public static int HideAnnotationSeconds
+            {
+                get => MathUtils.Clamp(
+                    Properties.Settings.Default.HideAnnotationSeconds,
+                    MIN_HIDE_ANNOTATION_SECONDS,
+                    MAX_HIDE_ANNOTATION_SECONDS);
+                set
+                {
+                    Properties.Settings.Default.HideAnnotationSeconds = MathUtils.Clamp(
+                        value,
+                        MIN_HIDE_ANNOTATION_SECONDS,
+                        MAX_HIDE_ANNOTATION_SECONDS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
             /// <summary>Faintest accepted <see cref="LocationLinkVisibilityPercent"/>.</summary>
             public const int MIN_LOCATION_LINK_VISIBILITY_PERCENT = 10;
 
@@ -1206,6 +1234,7 @@ namespace WebAnnotation
                 Properties.Settings.Default.AdjacentLocationRadiusScalar = DEFAULT_ADJACENT_LOCATION_RADIUS_SCALAR;
                 Properties.Settings.Default.LocationLinkWaistPixels = DEFAULT_LOCATION_LINK_WAIST_PIXELS;
                 Properties.Settings.Default.LocationLinkDrawUnderMarkers = false;
+                Properties.Settings.Default.HideAnnotationSeconds = DEFAULT_HIDE_ANNOTATION_SECONDS;
                 Properties.Settings.Default.LocationLinkVisibilityPercent = DEFAULT_LOCATION_LINK_VISIBILITY_PERCENT;
                 Properties.Settings.Default.LocationLinkLabels = true;
                 Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = (uint)DEFAULT_NUM_CLOSED_CURVE_INTERPOLATION_POINTS;

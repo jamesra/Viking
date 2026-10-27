@@ -227,13 +227,14 @@ namespace WebAnnotation.ViewModel
 
         /// <summary>
         /// The opacity a link of stored alpha <paramref name="linkAlpha"/> is drawn with. <paramref name="visibility"/> is the
-        /// Link visibility preference (0.1 to 1), or 1 for a hovered link. Links are stored fully opaque.
+        /// Link visibility preference (0.1 to 1), or 1 for a hovered link. Links are stored fully opaque; Del's fade-in
+        /// scales the stored alpha, and the drawn opacity follows it.
         /// </summary>
         internal static float DrawnAlpha(float linkAlpha, float visibility) => MathHelper.Clamp(linkAlpha * visibility, 0f, 1f);
 
         /// <summary>
         /// Opacity of the end labels for a link of stored alpha <paramref name="linkAlpha"/>. Labels stay readable at low
-        /// visibility: fully opaque from 50% up, and never below half.
+        /// visibility: fully opaque from 50% up, and never below half, but they fade in with the link after Del hid it.
         /// </summary>
         internal static float LabelAlpha(float linkAlpha, float visibility) => MathHelper.Clamp(linkAlpha * Math.Min(1f, 0.5f + visibility), 0f, 1f);
 

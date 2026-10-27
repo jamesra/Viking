@@ -54,9 +54,12 @@ namespace WebAnnotation.View
             if (menu is null)
                 return null;
 
-            if (Obj is LocationLinkView link)
+            // Any view of a link: a line, or a location's arrow marker for an overlapping location on an adjacent section
+            if (Obj is IViewLocationLink link)
             {
-                menu.Items.Add(new ToolStripSeparator());
+                if (menu.Items.Count > 0)
+                    menu.Items.Add(new ToolStripSeparator());
+
                 ToolStripMenuItem menuDelete = new("Delete Link")
                 {
                     Tag = link.Key
