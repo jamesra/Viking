@@ -38,6 +38,7 @@ gained from about 2026-10-20 on. Earlier changes are not listed.
 * Deleting two linked locations before the changes are saved no longer makes the whole save fail on the server.
 * Section corrections: near the edge of an annotated area, where the correction lattice has only some of its points, the image is now shifted by the same amount the correction service uses for annotations there. Before, Viking worked out the shift its own way and could disagree with the service by up to a lattice spacing.
 * Fix: dragging a polygon vertex could move a different vertex, and **Ctrl**-clicking a vertex to remove it could remove a different one. Near the polygon's first vertex, Viking picked that vertex instead of the one under the cursor; it now always picks the nearest vertex, including vertices of holes.
+* Fix: with **Default Line Width** in **Annotation Preferences** set below 2, **Ctrl**-clicking a polygon vertex toward the outside of the polygon did nothing instead of removing the vertex.
 
 <!--
 Developer notes for 1.2.111: the Del/Insert hiding, Visuals section, pen-on-overlay fix and this change log are ports of
