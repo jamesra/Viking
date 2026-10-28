@@ -537,6 +537,8 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// Upsert by (SourceId, TargetId): updates Bidirectional and Tags on an existing link, inserts a missing one. Returns an empty response.
+        /// All or nothing: a row linking a structure to itself refuses the whole request with InvalidArgument before anything is read or saved.
+        /// When a pair appears more than once, its last row wins, as applying the rows in order would leave it.
         /// </summary>
         public override async Task<UpdateStructureLinksResponse> UpdateLinks(UpdateStructureLinksRequest request, ServerCallContext context)
         {
@@ -545,36 +547,52 @@ namespace gRPCAnnotationService
                 var ct = context.CancellationToken;
                 var username = AnnotationRpc.CallerName(context);
 
+                var requested = new Dictionary<(long Source, long Target), ProtoStructureLink>();
                 foreach (var link in request.Objs)
                 {
-                    var existing = await _context.StructureLinks.FirstOrDefaultAsync(
-                        l => l.SourceId == link.SourceId && l.TargetId == link.TargetId, ct);
+                    if (link.SourceId == link.TargetId)
+                        throw new RpcException(new Status(StatusCode.InvalidArgument, "A structure cannot link to itself"));
+                    requested[(link.SourceId, link.TargetId)] = link;
+                }
 
-                    if (existing == null)
+                // One query per chunk of pairs; sources x targets can over-fetch, so match each row to its pair.
+                foreach (var pairs in requested.Keys.ToArray().Chunk(1000))
+                {
+                    var sources = pairs.Select(p => p.Source).Distinct().ToArray();
+                    var targets = pairs.Select(p => p.Target).Distinct().ToArray();
+                    var existingRows = await _context.StructureLinks
+                        .Where(l => sources.Contains(l.SourceId) && targets.Contains(l.TargetId))
+                        .ToListAsync(ct);
+
+                    foreach (var existing in existingRows)
                     {
-                        await _context.StructureLinks.AddAsync(new EfStructureLink
-                        {
-                            SourceId = link.SourceId,
-                            TargetId = link.TargetId,
-                            Bidirectional = link.Bidirectional,
-                            Tags = link.Tags,
-                            Username = username,
-                            Created = DateTime.UtcNow,
-                            LastModified = DateTime.UtcNow
-                        }, ct);
-                        continue;
+                        if (!requested.Remove((existing.SourceId, existing.TargetId), out var link))
+                            continue;
+                        existing.Bidirectional = link.Bidirectional;
+                        existing.Tags = link.Tags;
+                        existing.Username = username;
+                        existing.LastModified = DateTime.UtcNow;
                     }
+                }
 
-                    existing.Bidirectional = link.Bidirectional;
-                    existing.Tags = link.Tags;
-                    existing.Username = username;
-                    existing.LastModified = DateTime.UtcNow;
-                    _context.StructureLinks.Update(existing);
+                foreach (var link in requested.Values)
+                {
+                    await _context.StructureLinks.AddAsync(new EfStructureLink
+                    {
+                        SourceId = link.SourceId,
+                        TargetId = link.TargetId,
+                        Bidirectional = link.Bidirectional,
+                        Tags = link.Tags,
+                        Username = username,
+                        Created = DateTime.UtcNow,
+                        LastModified = DateTime.UtcNow
+                    }, ct);
                 }
 
                 await _context.SaveChangesAsync(ct);
                 return new UpdateStructureLinksResponse();
             }
+            catch (RpcException) { throw; }
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(UpdateLinks), e, context); }
         }
 
