@@ -140,6 +140,12 @@
 /processorParam:TextureFormat=Color
 /build:DownArrowV2.png
 
+#begin LabelOutline.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:LabelOutline.fx
+
 #begin MergeHSVImages.fx
 /importer:EffectImporter
 /processor:EffectProcessor

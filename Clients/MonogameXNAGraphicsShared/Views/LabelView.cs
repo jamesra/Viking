@@ -300,6 +300,11 @@ namespace VikingXNAGraphics
         private bool _TextureInvalidated = true;
         private CancellationTokenSource _TextureGenerationCts;
 
+        // The same label as a LabelOutlineMap, for LabelOutlineEffect. Made on first use and kept until the label changes.
+        private RenderTarget2D _OutlineMap;
+        private bool _OutlineMapGenerating = false;
+        private CancellationTokenSource _OutlineMapCts;
+
         /// <summary>
         /// True if the label should change size as the user zooms in and out.  Used to keep the label proportional to other objects rendered in a scene.
         /// False if the label is a constant size regarless of the scene.  Used for informational labels that aren't attached to objects in the scene.
@@ -880,6 +885,145 @@ namespace VikingXNAGraphics
             _TextureGenerating = false;
             _LabelTexture?.Dispose();
             _LabelTexture = null;
+
+            _OutlineMapCts?.Cancel();
+            _OutlineMapCts?.Dispose();
+            _OutlineMapCts = null;
+            _OutlineMapGenerating = false;
+            _OutlineMap?.Dispose();
+            _OutlineMap = null;
+        }
+
+        /// <summary>
+        /// The label as a <see cref="LabelOutlineMap"/> picture (padded by <see cref="LabelOutlineMap.DefaultRange"/> pixels on every side),
+        /// or null while it is made, which starts here. The picture is made on the GPU thread like the plain label texture.
+        /// </summary>
+        private Texture2D GetOrCreateOutlineMap(GraphicsDevice device, SpriteFont font)
+        {
+            if (_OutlineMap is { IsDisposed: false })
+                return _OutlineMap;
+
+            _OutlineMap = null;
+            if (_OutlineMapGenerating)
+                return null;
+
+            _OutlineMapCts?.Cancel();
+            _OutlineMapCts?.Dispose();
+            _OutlineMapCts = new CancellationTokenSource();
+            CancellationToken token = _OutlineMapCts.Token;
+            _OutlineMapGenerating = true;
+            GpuSynchronizationManager.RunTask(() =>
+            {
+                RenderTarget2D map = token.IsCancellationRequested ? null : CreateOutlineMapForLabel(device, font);
+                if (map is not null && token.IsCancellationRequested)
+                {
+                    map.Dispose();
+                    map = null;
+                }
+
+                if (map is not null)
+                    _OutlineMap = map;
+
+                _OutlineMapGenerating = false;
+            }, token);
+
+            return null;
+        }
+
+        /// <summary>
+        /// Renders the label's text, measures how far every pixel lies from it on the CPU (<see cref="LabelOutlineMap.Build"/>) and returns the
+        /// result as a mipmapped render target, so it can be drawn at any size.
+        /// </summary>
+        private RenderTarget2D CreateOutlineMapForLabel(GraphicsDevice device, SpriteFont font)
+        {
+            if (string.IsNullOrEmpty(this.Text) || font == null)
+                return null;
+
+            if (!_IsMeasured)
+                MeasureLabel();
+
+            if (_Rows == null || _Rows.Length == 0)
+                return null;
+
+            float fontScale = (float)ScaleFontSizeToVolume(font, this.FontSize);
+            float maxWidth = _RowMeasurements.Max(r => r.X) * fontScale;
+            float totalHeight = _RowMeasurements.Sum(r => r.Y) * fontScale;
+            if (maxWidth <= 0 || totalHeight <= 0)
+                return null;
+
+            int pad = LabelOutlineMap.DefaultRange;
+            int width = (int)Math.Ceiling(maxWidth) + 2 * pad;
+            int height = (int)Math.Ceiling(totalHeight) + 2 * pad;
+
+            RenderTargetBinding[] oldRenderTargets = device.GetRenderTargets();
+            Color[] pixels = new Color[width * height];
+            using (RenderTarget2D text = new(device, width, height, mipMap: false, preferredFormat: SurfaceFormat.Color, preferredDepthFormat: DepthFormat.None))
+            {
+                device.SetRenderTarget(text);
+                device.Clear(Color.Transparent);
+                using (SpriteBatch batch = new(device))
+                {
+                    batch.Begin();
+                    float yPos = pad;
+                    for (int iRow = 0; iRow < _Rows.Length; iRow++)
+                    {
+                        batch.DrawString(font, _Rows[iRow], new Vector2(pad, yPos), Color.White, 0f, Vector2.Zero, fontScale, SpriteEffects.None, 0);
+                        yPos += _RowMeasurements[iRow].Y * fontScale;
+                    }
+
+                    batch.End();
+                }
+
+                device.SetRenderTargets(oldRenderTargets);
+                text.GetData(pixels);
+            }
+
+            byte[] coverage = new byte[pixels.Length];
+            for (int i = 0; i < pixels.Length; i++)
+                coverage[i] = pixels[i].A;
+
+            byte[] packed = LabelOutlineMap.Build(coverage, width, height, pad);
+            using Texture2D source = new(device, width, height, false, SurfaceFormat.Color);
+            source.SetData(packed);
+
+            // Drawing it into a mipmapped target is what generates the smaller levels.
+            RenderTarget2D map = new(device, width, height, mipMap: true, preferredFormat: SurfaceFormat.Color, preferredDepthFormat: DepthFormat.None);
+            device.SetRenderTarget(map);
+            device.Clear(Color.Transparent);
+            using (SpriteBatch batch = new(device))
+            {
+                batch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.PointClamp);
+                batch.Draw(source, Vector2.Zero, Color.White);
+                batch.End();
+            }
+
+            device.SetRenderTargets(oldRenderTargets);
+            return map;
+        }
+
+        /// <summary>
+        /// Draws this label with <see cref="LabelOutlineEffect"/>: the text in <see cref="Color"/>, a border and an optional shadow, centred on
+        /// <paramref name="screenPosition"/>. The caller has begun <paramref name="spriteBatch"/> with the effect and called
+        /// <see cref="LabelOutlineEffect.Apply"/>. Returns false, drawing nothing, while the label's picture is still being made (it is
+        /// started here and is ready within a frame or two), so the caller can skip it or draw it another way outside the effect's batch.
+        /// </summary>
+        public bool DrawWithOutlineMap(SpriteBatch spriteBatch, SpriteFont font, GraphicsDevice device, Vector2 screenPosition, float drawScale = 1.0f)
+        {
+            if (string.IsNullOrEmpty(this.Text) || font == null)
+                return true;
+
+            this.font = font;
+            Texture2D map = GetOrCreateOutlineMap(device, font);
+            if (map is null)
+                return false;
+
+            float width = map.Width * drawScale;
+            float height = map.Height * drawScale;
+            Microsoft.Xna.Framework.Rectangle destination = new(
+                (int)Math.Round(screenPosition.X - width / 2f), (int)Math.Round(screenPosition.Y - height / 2f),
+                (int)Math.Round(width), (int)Math.Round(height));
+            spriteBatch.Draw(map, destination, this._Color);
+            return true;
         }
 
         /// <summary>

@@ -282,6 +282,7 @@ public class ViewerControl : GraphicsDeviceControl
         DeviceEffectsStore<RoundCurve.CurveManagerHSV>.GetOrCreateForDevice(this.Device, this.Content);
         DeviceEffectsStore<PolygonOverlayEffect>.GetOrCreateForDevice(this.Device, this.Content);
         DeviceEffectsStore<OverlayShaderEffect>.GetOrCreateForDevice(this.Device, this.Content);
+        DeviceEffectsStore<LabelOutlineEffect>.GetOrCreateForDevice(this.Device, this.Content);
 
         // Font store will be recreated on demand
         DeviceFontStore.GetOrCreateForDevice(this.Device, this.Content);

@@ -736,10 +736,49 @@ namespace VikingXNAGraphics
             bool batchBegun = false;
             try
             {
-                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
-                batchBegun = true;
+                LabelOutlineEffect outlineEffect = DeviceEffectsStore<LabelOutlineEffect>.TryGet(spriteBatch.GraphicsDevice);
+                _drawContext.UseOutlineMap = outlineEffect?.Effect is not null;
+                if (_drawContext.UseOutlineMap)
+                {
+                    // Every border first, then every text, so the border of one digit never covers the text of the next.
+                    Color outlineColor = LabelView.OutlineColors(Color.Gray, SharedDigitTextureCache.OutlineStyle).Outline;
+                    outlineEffect.Apply(outlineColor, LabelOutlineEffect.Layer.BorderOnly);
+                    spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, null, null, null, outlineEffect.Effect);
+                    batchBegun = true;
+                    DrawNumbers();
+                    spriteBatch.End();
+                    batchBegun = false;
 
-                // Draw all section numbers visible given current PID position (bottom to top, higher Z at top)
+                    outlineEffect.Apply(outlineColor, LabelOutlineEffect.Layer.TextOnly);
+                    spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, null, null, null, outlineEffect.Effect);
+                    batchBegun = true;
+                    DrawNumbers();
+                }
+                else
+                {
+                    spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend);
+                    batchBegun = true;
+                    DrawNumbers();
+                }
+            }
+            finally
+            {
+                if (batchBegun)
+                    spriteBatch.End();
+
+                if (originalBlendState != null)
+                    spriteBatch.GraphicsDevice.BlendState = originalBlendState;
+                if (originalDepthState != null)
+                    spriteBatch.GraphicsDevice.DepthStencilState = originalDepthState;
+                if (originalRasterizerState != null)
+                    spriteBatch.GraphicsDevice.RasterizerState = originalRasterizerState;
+                if (originalSamplerState != null)
+                    spriteBatch.GraphicsDevice.SamplerStates[0] = originalSamplerState;
+            }
+
+            // Draw all section numbers visible given current PID position (bottom to top, higher Z at top)
+            void DrawNumbers()
+            {
                 for (int sectionNumber = sectionMin; sectionNumber <= sectionMax; sectionNumber++)
                 {
                     if (sectionNumber < MinSectionNumber || sectionNumber > MaxSectionNumber)
@@ -765,20 +804,6 @@ namespace VikingXNAGraphics
 
                     NumberDisplayView.Draw(_drawContext, sectionNumber, new Vector2((float)xPos, (float)yPos), color, drawScale);
                 }
-            }
-            finally
-            {
-                if (batchBegun)
-                    spriteBatch.End();
-
-                if (originalBlendState != null)
-                    spriteBatch.GraphicsDevice.BlendState = originalBlendState;
-                if (originalDepthState != null)
-                    spriteBatch.GraphicsDevice.DepthStencilState = originalDepthState;
-                if (originalRasterizerState != null)
-                    spriteBatch.GraphicsDevice.RasterizerState = originalRasterizerState;
-                if (originalSamplerState != null)
-                    spriteBatch.GraphicsDevice.SamplerStates[0] = originalSamplerState;
             }
         }
 
@@ -835,9 +860,15 @@ namespace VikingXNAGraphics
                 _device = device;
             }
 
+            /// <summary>True while the batch was begun with <see cref="LabelOutlineEffect"/>: digits are then drawn from their outline maps.</summary>
+            public bool UseOutlineMap { get; set; }
+
             public void DrawDigit(int digitIndex, Vector2 centerPosition, float drawScale, Color color)
             {
-                _cache.DrawDigit(SpriteBatch, _device, Font, digitIndex, centerPosition, drawScale, color);
+                if (UseOutlineMap)
+                    _cache.DrawDigitWithOutlineMap(SpriteBatch, _device, Font, digitIndex, centerPosition, drawScale, color);
+                else
+                    _cache.DrawDigit(SpriteBatch, _device, Font, digitIndex, centerPosition, drawScale, color);
             }
 
             public float GetDigitWidth(int digitIndex) => _cache.GetDigitWidth(digitIndex);

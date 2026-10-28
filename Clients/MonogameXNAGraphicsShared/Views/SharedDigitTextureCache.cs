@@ -18,6 +18,9 @@ namespace VikingXNAGraphics
         /// </summary>
         public const float DigitTextureResolution = 128f;
 
+        /// <summary>How the digits are outlined whatever the label outline preference says: light digits with a dark border, readable on any image.</summary>
+        public const LabelOutlineStyle OutlineStyle = LabelOutlineStyle.WhiteTextBlackOutline;
+
         private readonly LabelView[] _digitLabels = new LabelView[10];
         private readonly float[] _digitWidths = new float[10];
         private float _digitHeight;
@@ -59,7 +62,7 @@ namespace VikingXNAGraphics
                     )
                     {
                         // Light digits over any image need a dark border; the shared LabelView outline draws it.
-                        OutlineStyleOverride = LabelOutlineStyle.WhiteTextBlackOutline
+                        OutlineStyleOverride = OutlineStyle
                     };
                 }
                 else
@@ -96,6 +99,22 @@ namespace VikingXNAGraphics
             label.Position = new Geometry.Vector2(centerPosition.X, centerPosition.Y);
             label.Color = color;
             label.DrawWithTexture(spriteBatch, font, device, centerPosition, drawScale);
+        }
+
+        /// <summary>
+        /// Draws the digit with <see cref="LabelOutlineEffect"/>; the caller has begun the batch with the effect. False while the digit's
+        /// picture is still being made, when nothing is drawn.
+        /// </summary>
+        public bool DrawDigitWithOutlineMap(SpriteBatch spriteBatch, GraphicsDevice device, SpriteFont font, int digitIndex, Vector2 centerPosition, float drawScale, Color color)
+        {
+            if (digitIndex < 0 || digitIndex > 9 || !_initialized)
+                return true;
+            LabelView label = _digitLabels[digitIndex];
+            if (label == null)
+                return true;
+            label.font = font;
+            label.Color = color;
+            return label.DrawWithOutlineMap(spriteBatch, font, device, centerPosition, drawScale);
         }
 
         /// <summary>
