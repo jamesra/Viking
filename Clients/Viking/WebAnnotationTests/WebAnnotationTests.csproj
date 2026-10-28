@@ -145,6 +145,7 @@
     <Compile Include="GpuDeviceRemovedDiagnosticsTests.cs" />
     <Compile Include="PidControllerTests.cs" />
     <Compile Include="LocationParentFetchTests.cs" />
+    <Compile Include="StructureTypeIDsToStructureTypeObjsConverterTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
