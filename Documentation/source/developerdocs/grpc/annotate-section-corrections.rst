@@ -58,7 +58,7 @@ Calls
    * - ``RebuildVolume``
      - Starts a rebuild in the background. Only accepted from the service host itself (the container's ``correction-menu``).
    * - ``ListCorrectionSets``
-     - Every published ``CorrectionSet`` (or one volume's): its id, ``built_utc``, ``pitch_nm``, ``kernel_radius_nm`` and the sections with a map.
+     - Every published ``CorrectionSet`` (or one volume's): its id, ``built_utc``, ``pitch_nm``, ``kernel_radius_nm``, the sections with a map, and ``damaged_z``, the damaged sections the field was built with (from 1.6.0, builder 3; see `Damaged sections`_).
    * - ``GetSectionCorrection``
      - Sparse lattice for one Z. Each ``LatticeNode`` names its cell as a ``GridCell`` ``node``; cell ``(row, col)`` sits at ``(col * pitch_nm, row * pitch_nm)``. Add its ``offset`` to a volume point.
    * - ``CorrectPoints``
@@ -67,6 +67,18 @@ Calls
      - Loads the locations of ``structure_ids`` (and child structures when ``include_children`` is set), maps them through the StosGroup, then applies ``correction``. Each ``CorrectedLocation`` carries the corrected ``position`` and the ``offset`` from the uncorrected one. The response carries an ``AnswerStamp``.
    * - ``GetAnswerStamp``
      - Takes the same request as ``CorrectStructures`` and returns the stamp its answer would carry now, from SQL aggregates and the set catalog alone (no volume load, no fit): well under a second.
+
+Damaged sections
+================
+
+A volume's damaged sections are its blocks' ``NonStosSectionNumbers``, the sections the slice-to-volume registration was built without. The builder reads them from the nornir files next to the VikingXML: ``<VikingXML folder>/VolumeData.xml`` names each block (``Block_Link Path``), and ``<folder>/<block>/VolumeData.xml`` holds the list.
+
+The field is built in two passes, so that a tear or fold cannot pull good sections:
+
+1. The main fit uses no annotation on a damaged section. A process that crosses one is linked directly between the sections either side, and skipped sections do not count toward the gap limit.
+2. Each damaged section's own shift is then fitted from the annotations on it, against the sections either side as already corrected and held fixed. It is published only when it lowers those triples' median second difference.
+
+If the volume files cannot be read, every section is built alike, as before builder 3, and ``damaged_z`` is empty.
 
 Caching
 =======

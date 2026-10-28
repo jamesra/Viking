@@ -36,7 +36,9 @@ namespace AnnotationVizLibTests
                 return new Vector2(s.A + s.Bx * p.X / Extent + s.By * p.Y / Extent, s.Ca + s.Cbx * p.X / Extent + s.Cby * p.Y / Extent);
             }
 
-            public static Synthetic Build(int seed, double registrationSdNm, int sections = 40, int processes = 700)
+            /// <param name="damage">Extra displacement of an annotation at (section, true position), e.g. a tear on one section.</param>
+            public static Synthetic Build(int seed, double registrationSdNm, int sections = 40, int processes = 700,
+                Func<int, Vector2, Vector2> damage = null)
             {
                 Random rng = new(seed);
                 double Gauss() => Math.Sqrt(-2 * Math.Log(1 - rng.NextDouble())) * Math.Cos(2 * Math.PI * rng.NextDouble());
@@ -57,7 +59,7 @@ namespace AnnotationVizLibTests
                     for (int z = start; z <= end; z++)
                     {
                         Vector2 p = new(x0 + vx * z + amp * Math.Sin(phase + z * 0.6) + 15 * Gauss(), y0 + vy * z + amp * Math.Cos(phase + z * 0.6) + 15 * Gauss());
-                        p += s.TrueShift(z, p);
+                        p += s.TrueShift(z, p) + (damage?.Invoke(z, p) ?? Vector2.Zero);
                         g.AddNode(new MorphologyNode(id, Point(id, sid, p, z), g));
                         id++;
                     }
@@ -140,6 +142,93 @@ namespace AnnotationVizLibTests
             double corrected = result.SelectionField is null ? raw : JointRegistrationSolver.HeldOutMedian(result.SelectionField, held);
             Console.WriteLine($"identity {result.Identity}, held-out raw {raw:F1}, corrected {corrected:F1}");
             Assert.IsTrue(result.Identity || corrected <= 1.02 * raw, $"no registration error: corrected {corrected:F1} vs raw {raw:F1}");
+        }
+
+        /// <summary>One straight process, one annotation per section from <paramref name="firstSection"/> to <paramref name="lastSection"/>.</summary>
+        static MorphologyGraph Straight(ulong sid, int firstSection, int lastSection)
+        {
+            MorphologyGraph g = new(sid, TestScale);
+            ulong id = sid * 1000;
+            for (int z = firstSection; z <= lastSection; z++)
+                g.AddNode(new MorphologyNode(id + (ulong)z, Point(id + (ulong)z, sid, new Vector2(1000 + 10 * z, 2000), z), g));
+            for (int z = firstSection; z < lastSection; z++)
+                g.AddEdge(new MorphologyEdge(g, id + (ulong)z, id + (ulong)z + 1));
+            return g;
+        }
+
+        [TestMethod]
+        public void DamagedSection_IsSkippedByTheMainTriples_AndCentresItsOwn()
+        {
+            List<MorphologyGraph> cells = [Straight(7, 1, 6)];
+
+            List<ProcessTriple> main = JointRegistrationSolver.CollectTriples(cells, 2, [3]);
+            CollectionAssert.AreEqual(new[] { (1, 2, 4), (2, 4, 5), (4, 5, 6) }, main.Select(t => (t.ZA, t.ZB, t.ZC)).ToArray(),
+                "no main triple has a point on the damaged section; the sections either side are linked directly");
+
+            List<ProcessTriple> own = JointRegistrationSolver.CollectDamagedTriples(cells, [3]);
+            CollectionAssert.AreEqual(new[] { (2, 3, 4) }, own.Select(t => (t.ZA, t.ZB, t.ZC)).ToArray());
+            Assert.AreEqual(0.5, own[0].Alpha, 1e-12);
+        }
+
+        [TestMethod]
+        public void DamagedRun_IsBridged_AndSkippedSectionsDoNotCountTowardTheGap()
+        {
+            List<MorphologyGraph> cells = [Straight(8, 1, 7)];
+
+            List<ProcessTriple> main = JointRegistrationSolver.CollectTriples(cells, 2, [3, 4]);
+            CollectionAssert.AreEqual(new[] { (1, 2, 5), (2, 5, 6), (5, 6, 7) }, main.Select(t => (t.ZA, t.ZB, t.ZC)).ToArray());
+
+            List<ProcessTriple> own = JointRegistrationSolver.CollectDamagedTriples(cells, [3, 4]);
+            CollectionAssert.AreEqual(new[] { (2, 3, 5), (2, 4, 5) }, own.Select(t => (t.ZA, t.ZB, t.ZC)).ToArray(),
+                "each damaged section is fitted against the nearest undamaged sections, never against another damaged one");
+        }
+
+        [TestMethod]
+        public void NoDamagedList_TriplesAreUnchanged()
+        {
+            List<MorphologyGraph> cells = [Straight(9, 1, 6)];
+            CollectionAssert.AreEqual(
+                new[] { (1, 2, 3), (2, 3, 4), (3, 4, 5), (4, 5, 6) },
+                JointRegistrationSolver.CollectTriples(cells).Select(t => (t.ZA, t.ZB, t.ZC)).ToArray());
+            Assert.AreEqual(0, JointRegistrationSolver.CollectDamagedTriples(cells, []).Count);
+        }
+
+        /// <summary>
+        /// Section 20 is torn: on its right half every annotation is displaced 1.5 µm on top of the registration error.
+        /// Told it is damaged, the solver must leave its neighbours as smooth as an undamaged volume would, and must still
+        /// shift section 20 toward its neighbours.
+        /// </summary>
+        [TestMethod]
+        public void TornSection_DoesNotPullItsNeighbours_AndGetsItsOwnShift()
+        {
+            const int Torn = 20;
+            static Vector2 Tear(int z, Vector2 p) => z == Torn && p.X > Synthetic.Extent / 2 ? new Vector2(1500, -900) : Vector2.Zero;
+            Synthetic s = Synthetic.Build(seed: 13, registrationSdNm: 150, damage: Tear);
+
+            JointRegistrationResult told = JointRegistrationSolver.Solve(s.Cells,
+                new JointRegistrationOptions { DamagedSections = [Torn] }, msg => Console.WriteLine($"told: {msg}"));
+            JointRegistrationResult blind = JointRegistrationSolver.Solve(s.Cells, null, msg => Console.WriteLine($"blind: {msg}"));
+
+            // Smoothness of the torn section's neighbours: triples centred on 18, 19, 21 and 22 that bridge the tear.
+            List<ProcessTriple> neighbours = [.. JointRegistrationSolver.CollectTriples(s.Cells, 2, [Torn])
+                .Where(t => t.ZB is Torn - 2 or Torn - 1 or Torn + 1 or Torn + 2)];
+            double raw = Median(neighbours.Select(t => t.SecondDifference.Magnitude));
+            double toldNeighbours = JointRegistrationSolver.HeldOutMedian(told.Field, neighbours);
+            double blindNeighbours = JointRegistrationSolver.HeldOutMedian(blind.Field, neighbours);
+
+            // The torn section against its neighbours.
+            List<ProcessTriple> centred = JointRegistrationSolver.CollectDamagedTriples(s.Cells, [Torn]);
+            double tornRaw = Median(centred.Select(t => t.SecondDifference.Magnitude));
+            double toldTorn = JointRegistrationSolver.HeldOutMedian(told.Field, centred);
+            double blindTorn = JointRegistrationSolver.HeldOutMedian(blind.Field, centred);
+            Console.WriteLine($"neighbours: raw {raw:F1}, told {toldNeighbours:F1}, blind {blindNeighbours:F1} nm; " +
+                              $"torn section: raw {tornRaw:F1}, told {toldTorn:F1}, blind {blindTorn:F1} nm");
+
+            CollectionAssert.AreEqual(new[] { Torn }, told.DamagedSections.ToArray());
+            Assert.IsTrue(told.DamagedTriples > 100, $"{told.DamagedTriples} triples centred on the torn section");
+            Assert.IsTrue(toldNeighbours <= blindNeighbours, $"told {toldNeighbours:F1} must not leave the neighbours rougher than blind {blindNeighbours:F1}");
+            Assert.IsTrue(toldNeighbours < 0.6 * raw, $"told {toldNeighbours:F1} should still correct the neighbours (raw {raw:F1})");
+            Assert.IsTrue(toldTorn < 0.5 * tornRaw, $"the torn section's own shift {toldTorn:F1} should at least halve its misfit {tornRaw:F1}");
         }
 
         static double Correlation(IReadOnlyList<double> a, IReadOnlyList<double> b)

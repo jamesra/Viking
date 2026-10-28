@@ -61,8 +61,12 @@ namespace Viking.SectionCorrectionBuilder
         /// Version of the build algorithm stamped into manifests. Bump it whenever a change to the fit or pooling code
         /// would alter published values, so existing sets are rebuilt.
         /// </summary>
-        /// <remarks>2: process triples no longer use a branch node as A, B or C (JointRegistrationSolver.IsBranchTriple).</remarks>
-        public const int BuilderVersion = 2;
+        /// <remarks>
+        /// 2: process triples no longer use a branch node as A, B or C (JointRegistrationSolver.IsBranchTriple).
+        /// 3: damaged sections (the blocks' NonStosSectionNumbers) correct no other section; each gets its own shift
+        /// fitted against the corrected sections either side.
+        /// </remarks>
+        public const int BuilderVersion = 3;
 
         /// <summary>Provenance method of sets built by <see cref="JointRegistrationSolver"/>.</summary>
         const string JointMethod = "joint-second-difference-v1";
@@ -147,6 +151,10 @@ namespace Viking.SectionCorrectionBuilder
             Volume volume = await Volume.CreateAsync(volumeUrl, cache, null, cancellationToken).ConfigureAwait(false);
             await volume.Initialize(cancellationToken).ConfigureAwait(false);
 
+            // Null when the volume files cannot be read: then every section is treated alike, as before builder 3.
+            SortedSet<int> damaged = await DamagedSectionList.LoadAsync(volumeUrl, msg => Log(options, msg), cancellationToken)
+                .ConfigureAwait(false);
+
             List<string> groups = ParseGroups(options.StosGroups, volume);
             if (string.IsNullOrWhiteSpace(options.StosGroups) &&
                 (string.IsNullOrWhiteSpace(volume.DefaultVolumeTransform) || volume.DefaultVolumeTransform == "None"))
@@ -167,7 +175,7 @@ namespace Viking.SectionCorrectionBuilder
             foreach (string group in groups)
             {
                 CorrectionPublishResult result = await PublishGroupAsync(
-                    options, volume, scale, group, source, () => LoadAsync(group), cancellationToken).ConfigureAwait(false);
+                    options, volume, scale, group, source, () => LoadAsync(group), cancellationToken, damaged).ConfigureAwait(false);
                 if (result.ExitCode != 0)
                     return result.ExitCode;
             }
@@ -182,10 +190,13 @@ namespace Viking.SectionCorrectionBuilder
             string stosGroup,
             ISectionFingerprintSource source,
             Func<Task<SqlMorphologyLoader.LoadResult>> loadMorphology,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            IReadOnlyCollection<int> damagedSections = null)
         {
             string dest = Path.Combine(options.OutputDirectory, stosGroup);
             int minLocations = options.MinLocations < 1 ? 3 : options.MinLocations;
+            JointRegistrationOptions joint = (options.Joint ?? new JointRegistrationOptions()).Clone();
+            joint.DamagedSections = damagedSections ?? [];
 
             // Read before any row, so an edit made while this build runs is seen as a change by the next one.
             Dictionary<long, SectionFingerprintDto> current = StosFingerprint.Apply(
@@ -207,7 +218,7 @@ namespace Viking.SectionCorrectionBuilder
                 try
                 {
                     CorrectionManifestDto manifest = PublishedCorrectionSet.LoadManifest(dest);
-                    reason = RebuildReason(manifest, minLocations, options.Joint ?? new JointRegistrationOptions());
+                    reason = RebuildReason(manifest, minLocations, joint, damagedSections);
                     if (reason is null)
                     {
                         SortedSet<long> dirty = SectionFingerprintDiff.DirtySections(manifest.SectionFingerprints, current);
@@ -231,7 +242,8 @@ namespace Viking.SectionCorrectionBuilder
             }
 
             Log(options, $"{stosGroup}: rebuilding ({reason})");
-            return await PublishAsync(options, volume, scale, stosGroup, dest, current, watermark, minLocations, loadMorphology)
+            return await PublishAsync(options, volume, scale, stosGroup, dest, current, watermark, minLocations, loadMorphology, joint,
+                    damagedSections)
                 .ConfigureAwait(false);
         }
 
@@ -239,7 +251,10 @@ namespace Viking.SectionCorrectionBuilder
         /// Why the published set must be rebuilt even if no annotation changed, or null when its fingerprints decide.
         /// Anything that changes what the build computes from the same rows invalidates the set.
         /// </summary>
-        internal static string RebuildReason(CorrectionManifestDto manifest, int minLocations, JointRegistrationOptions joint)
+        /// <param name="damagedSections">The volume's damaged sections now; null when they could not be read, which keeps
+        /// the published set rather than rebuilding it without them.</param>
+        internal static string RebuildReason(CorrectionManifestDto manifest, int minLocations, JointRegistrationOptions joint,
+            IReadOnlyCollection<int> damagedSections = null)
         {
             if (manifest.BuilderVersion != BuilderVersion)
                 return $"builder version {manifest.BuilderVersion} -> {BuilderVersion}";
@@ -256,6 +271,8 @@ namespace Viking.SectionCorrectionBuilder
                 return $"min locations {p.MinLocations} -> {minLocations}";
             if (p.PitchNm != joint.PitchNm || p.KernelRadiusNm != joint.KernelRadiusNm)
                 return "lattice parameters changed";
+            if (damagedSections is not null && !new HashSet<int>(damagedSections).SetEquals(p.DamagedSections ?? []))
+                return "damaged sections changed";
 
             return null;
         }
@@ -296,7 +313,9 @@ namespace Viking.SectionCorrectionBuilder
             Dictionary<long, SectionFingerprintDto> fingerprints,
             DateTime watermark,
             int minLocations,
-            Func<Task<SqlMorphologyLoader.LoadResult>> loadMorphology)
+            Func<Task<SqlMorphologyLoader.LoadResult>> loadMorphology,
+            JointRegistrationOptions jointOptions,
+            IReadOnlyCollection<int> damagedSections)
         {
             Log(options, $"{stosGroup}: mapping mosaic → volume and solving the joint registration field");
             SqlMorphologyLoader.LoadResult load = await loadMorphology().ConfigureAwait(false);
@@ -304,7 +323,6 @@ namespace Viking.SectionCorrectionBuilder
             // Joint fit over every section (JointRegistrationSolver). The former per-section leave-one-out residual
             // field measured each section against uncorrected neighbours and made held-out structures less smooth.
             MorphologyGraph.ResidualWindowOptions window = MorphologyGraph.ResidualWindowOptions.Default;
-            JointRegistrationOptions jointOptions = options.Joint ?? new JointRegistrationOptions();
             JointRegistrationResult joint = JointRegistrationSolver.Solve(load.Cells, jointOptions, msg => Log(options, $"{stosGroup}: {msg}"));
             NeighborResidualField field = joint.Field;
             Log(options, $"{stosGroup}: {load.Cells.Count} structures, {joint.Triples} process triples, spatial {joint.ChosenSpatial} ridge {joint.ChosenRidge}, " +
@@ -316,6 +334,7 @@ namespace Viking.SectionCorrectionBuilder
             PublishedCorrectionSet published = FromResidualField(
                 stosGroup, watermark, field, window, options.PublicVolumeUrl ?? "", joint, jointOptions, minLocations);
             published.Manifest.SectionFingerprints = fingerprints;
+            published.Manifest.Provenance.DamagedSections = damagedSections is null ? null : [.. damagedSections.OrderBy(z => z)];
             Dictionary<long, SectionVectorField> sections = published.Sections as Dictionary<long, SectionVectorField>
                 ?? new Dictionary<long, SectionVectorField>(published.Sections);
 
@@ -419,7 +438,10 @@ namespace Viking.SectionCorrectionBuilder
                         Triples = joint.Triples,
                         HeldOutTriples = joint.HeldOutTriples,
                         HeldOutRawMedianNm = Measured(joint.HeldOutRawMedianNm),
-                        HeldOutCorrectedMedianNm = Measured(joint.HeldOutCorrectedMedianNm)
+                        HeldOutCorrectedMedianNm = Measured(joint.HeldOutCorrectedMedianNm),
+                        DamagedTriples = joint.DamagedTriples,
+                        DamagedRawMedianNm = Measured(joint.DamagedRawMedianNm),
+                        DamagedCorrectedMedianNm = Measured(joint.DamagedCorrectedMedianNm)
                     }
                 }
             };

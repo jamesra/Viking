@@ -67,6 +67,30 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
 
 ## Algorithmic decisions
 
+- **2026-10-27 Damaged sections correct no other section (builder 3).**
+  - **What is damaged:** each block's `NonStosSectionNumbers` (in `VolumeData.xml` next to the VikingXML) lists the
+    sections the slice-to-volume registration was built without: torn, folded or otherwise damaged.
+  - **Why:** the joint fit solves every section's shift from triples of consecutive annotations along a process. A
+    tear or fold on a section displaces its annotations locally, so as the end of its neighbours' triples it made
+    good sections read as misregistered.
+  - **Pass 1:** the main fit uses no annotation on a damaged section. Processes are bridged across it, as the stos
+    skips it, and skipped sections do not count toward the gap limit.
+  - **Pass 2:** each damaged section's own shift is fitted from triples centred on it, against the pass-1-corrected
+    sections either side held fixed (no unknowns there). It is kept only if it lowers those triples' median second
+    difference.
+  - **Measured:** on a synthetic 40-section volume (150 nm registration error per section, 700 processes) with
+    section 20 torn (its right half displaced (1.5, −0.9) µm), the neighbours' triples (sections 18–22, bridging the
+    tear) have a median second difference of 20.6 nm told versus 27.0 nm blind (raw 406). The torn section's own
+    triples are 40.5 nm told versus 34.9 nm blind (raw 439): blind fits the tear a little better by bending the
+    neighbours toward it.
+  - **Rejected:** the single fit with damaged sections included (the cost above), and dropping damaged sections
+    altogether (they still need correcting).
+  - The smooth lattice still cannot follow a tear's edge, so a damaged section stays rougher than the rest; whether
+    a per-location fit should run there is the open CurveFit question below.
+  - Where: `AnnotationVizLib/Graph/Morphology/JointRegistrationField.cs` (`CollectTriples`, `CollectDamagedTriples`,
+    `Solve`), `Servers/SectionCorrectionBuilder/DamagedSectionList.cs`; test
+    `JointRegistrationTests.TornSection_DoesNotPullItsNeighbours_AndGetsItsOwnShift`.
+
 - **2026-10-27 Del hides what a click would pick; the item fades back in before it can be clicked.**
   - **Why:** a large annotation on the current section covers the adjacent-section annotation the user wants to drag
     onto this section. Del must hide whatever a click there would pick, in the same order hover uses: this section

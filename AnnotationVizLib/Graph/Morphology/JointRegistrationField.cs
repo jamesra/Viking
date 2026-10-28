@@ -55,6 +55,17 @@ namespace AnnotationVizLib
 
         /// <summary>Published IDW reach for samples outside the bilinear support.</summary>
         public double KernelRadiusNm => 2.0 * PitchNm;
+
+        /// <summary>
+        /// Damaged sections (the volume block's <c>NonStosSectionNumbers</c>: torn, folded or otherwise left out of
+        /// slice-to-volume registration). A damaged section never corrects another section: the main fit uses no
+        /// annotation on it and bridges the sections either side. Each damaged section's own shift is fitted
+        /// afterwards from its annotations against the corrected sections either side. Empty: no section is damaged.
+        /// </summary>
+        public IReadOnlyCollection<int> DamagedSections { get; set; } = [];
+
+        /// <summary>A copy that can be given a volume's own <see cref="DamagedSections"/> without changing this one.</summary>
+        public JointRegistrationOptions Clone() => (JointRegistrationOptions)MemberwiseClone();
     }
 
     /// <summary>Score of one (spatial weight, ridge) candidate on the held-out structures.</summary>
@@ -78,6 +89,20 @@ namespace AnnotationVizLib
         public double HeldOutRawMedianNm { get; set; }
         public double HeldOutCorrectedMedianNm { get; set; }
         public IReadOnlyList<RidgeScore> Scores { get; set; }
+
+        /// <summary>Damaged sections the fit was told about (<see cref="JointRegistrationOptions.DamagedSections"/>), ascending.</summary>
+        public IReadOnlyList<int> DamagedSections { get; set; } = [];
+
+        /// <summary>Triples centred on a damaged section, which fit the damaged sections' own shifts.</summary>
+        public int DamagedTriples { get; set; }
+
+        /// <summary>
+        /// Median second difference of the damaged-section triples, against the corrected sections either side, before
+        /// and after the damaged sections' own shifts (NaN when there were none). The damaged shifts are published only
+        /// when they lower it.
+        /// </summary>
+        public double DamagedRawMedianNm { get; set; } = double.NaN;
+        public double DamagedCorrectedMedianNm { get; set; } = double.NaN;
 
         /// <summary>
         /// The fit with the chosen ridge on the non-held-out structures only (null when no selection ran). Scoring it
@@ -123,33 +148,108 @@ namespace AnnotationVizLib
     /// </summary>
     public static class JointRegistrationSolver
     {
-        public static List<ProcessTriple> CollectTriples(IEnumerable<MorphologyGraph> cells, int maxSectionGap = 2)
+        /// <summary>
+        /// Triples of consecutive annotations along each unbranched process, none of them on a damaged section. A damaged
+        /// section is skipped as the slice-to-volume registration skips it: the annotations either side form the triple,
+        /// and the sections skipped do not count toward <paramref name="maxSectionGap"/>.
+        /// </summary>
+        public static List<ProcessTriple> CollectTriples(IEnumerable<MorphologyGraph> cells, int maxSectionGap = 2,
+            IReadOnlyCollection<int> damagedSections = null)
         {
+            ISet<int> damaged = AsSet(damagedSections);
             List<ProcessTriple> triples = [];
+            foreach ((MorphologyGraph cell, MorphologyNode[] nodes) in ProcessChains(cells))
+            {
+                MorphologyNode[] kept = damaged.Count == 0 ? nodes : [.. nodes.Where(n => !damaged.Contains(SectionOf(n)))];
+                for (int i = 1; i + 1 < kept.Length; i++)
+                {
+                    if (TryTriple(cell, kept[i - 1], kept[i], kept[i + 1], maxSectionGap, damaged, out ProcessTriple t))
+                        triples.Add(t);
+                }
+            }
+            return triples;
+        }
+
+        /// <summary>
+        /// Triples centred on an annotation on a damaged section, with A and C the nearest annotations of the process
+        /// below and above it on undamaged sections. They fit the damaged sections' own shifts after the main fit.
+        /// </summary>
+        public static List<ProcessTriple> CollectDamagedTriples(IEnumerable<MorphologyGraph> cells, IReadOnlyCollection<int> damagedSections,
+            int maxSectionGap = 2)
+        {
+            ISet<int> damaged = AsSet(damagedSections);
+            List<ProcessTriple> triples = [];
+            if (damaged.Count == 0)
+                return triples;
+            foreach ((MorphologyGraph cell, MorphologyNode[] nodes) in ProcessChains(cells))
+            {
+                for (int i = 1; i + 1 < nodes.Length; i++)
+                {
+                    if (!damaged.Contains(SectionOf(nodes[i])))
+                        continue;
+                    int below = i - 1, above = i + 1;
+                    while (below >= 0 && damaged.Contains(SectionOf(nodes[below])))
+                        below--;
+                    while (above < nodes.Length && damaged.Contains(SectionOf(nodes[above])))
+                        above++;
+                    if (below < 0 || above >= nodes.Length)
+                        continue;
+                    if (TryTriple(cell, nodes[below], nodes[i], nodes[above], maxSectionGap, damaged, out ProcessTriple t))
+                        triples.Add(t);
+                }
+            }
+            return triples;
+        }
+
+        static IEnumerable<(MorphologyGraph Cell, MorphologyNode[] Nodes)> ProcessChains(IEnumerable<MorphologyGraph> cells)
+        {
             foreach (MorphologyGraph cell in cells)
             {
                 if (cell is null || cell.StructureID == 0)
                     continue;
                 foreach (ulong[] process in cell.Processes())
                 {
-                    if (process.Length < 3)
-                        continue;
-                    MorphologyNode[] nodes = [.. process.Select(id => cell.Nodes[id])];
-                    for (int i = 1; i + 1 < nodes.Length; i++)
-                    {
-                        MorphologyNode a = nodes[i - 1], b = nodes[i], c = nodes[i + 1];
-                        if (IsBranchTriple(cell, a, b, c))
-                            continue;
-                        int za = (int)Math.Round(a.UnscaledZ), zb = (int)Math.Round(b.UnscaledZ), zc = (int)Math.Round(c.UnscaledZ);
-                        if (zb - za <= 0 || zb - za > maxSectionGap || zc - zb <= 0 || zc - zb > maxSectionGap)
-                            continue;
-                        double alpha = (b.Z - a.Z) / (c.Z - a.Z);
-                        triples.Add(new ProcessTriple(cell.StructureID, za, a.Center.XY(), zb, b.Center.XY(), zc, c.Center.XY(), alpha));
-                    }
+                    if (process.Length >= 3)
+                        yield return (cell, [.. process.Select(id => cell.Nodes[id])]);
                 }
             }
-            return triples;
         }
+
+        static bool TryTriple(MorphologyGraph cell, MorphologyNode a, MorphologyNode b, MorphologyNode c, int maxSectionGap, ISet<int> damaged,
+            out ProcessTriple triple)
+        {
+            triple = default;
+            if (IsBranchTriple(cell, a, b, c))
+                return false;
+            int za = SectionOf(a), zb = SectionOf(b), zc = SectionOf(c);
+            if (!WithinGap(za, zb, maxSectionGap, damaged) || !WithinGap(zb, zc, maxSectionGap, damaged))
+                return false;
+            double alpha = (b.Z - a.Z) / (c.Z - a.Z);
+            triple = new ProcessTriple(cell.StructureID, za, a.Center.XY(), zb, b.Center.XY(), zc, c.Center.XY(), alpha);
+            return true;
+        }
+
+        /// <summary>True when <paramref name="z1"/> is above <paramref name="z0"/> by at most <paramref name="maxSectionGap"/> undamaged sections.</summary>
+        static bool WithinGap(int z0, int z1, int maxSectionGap, ISet<int> damaged)
+        {
+            if (z1 <= z0)
+                return false;
+            int skipped = 0;
+            if (damaged.Count > 0)
+            {
+                for (int z = z0 + 1; z < z1; z++)
+                {
+                    if (damaged.Contains(z))
+                        skipped++;
+                }
+            }
+            return z1 - z0 - skipped <= maxSectionGap;
+        }
+
+        static int SectionOf(MorphologyNode node) => (int)Math.Round(node.UnscaledZ);
+
+        static ISet<int> AsSet(IReadOnlyCollection<int> sections) =>
+            sections is null || sections.Count == 0 ? new HashSet<int>() : sections as ISet<int> ?? new HashSet<int>(sections);
 
         /// <summary>
         /// True when any point of the triple is a branch. <see cref="MorphologyGraph.Processes"/> ends each chain on
@@ -179,8 +279,61 @@ namespace AnnotationVizLib
         /// <summary>True for structures held out of the ridge-selection fit.</summary>
         public static bool IsHeldOut(ulong structureId, int percent) => (structureId * 2654435761UL) % 100UL < (ulong)percent;
 
+        /// <summary>
+        /// The field for <paramref name="cells"/>. Damaged sections (<see cref="JointRegistrationOptions.DamagedSections"/>)
+        /// are solved in a second pass so a tear or fold on one cannot pull its neighbours: the main fit runs on triples
+        /// with no point on a damaged section; then each damaged section's shift is fitted from triples centred on it,
+        /// with A and C corrected by the main fit and held fixed. The damaged shifts are kept only when they lower those
+        /// triples' median second difference.
+        /// </summary>
         public static JointRegistrationResult Solve(IReadOnlyList<MorphologyGraph> cells, JointRegistrationOptions options = null, Action<string> log = null)
-            => Solve(CollectTriples(cells, (options ?? new JointRegistrationOptions()).MaxSectionGap), options, log);
+        {
+            options ??= new JointRegistrationOptions();
+            log ??= _ => { };
+            IReadOnlyCollection<int> damaged = options.DamagedSections ?? [];
+            JointRegistrationResult result = Solve(CollectTriples(cells, options.MaxSectionGap, damaged), options, log);
+            result.DamagedSections = [.. damaged.OrderBy(z => z)];
+            if (damaged.Count == 0)
+                return result;
+
+            List<ProcessTriple> damagedTriples = [.. CollectDamagedTriples(cells, damaged, options.MaxSectionGap)
+                .Select(t => Corrected(t, result.Field))
+                .Where(t => t.SecondDifference.Magnitude <= options.MaxSecondDifferenceNm)];
+            result.DamagedTriples = damagedTriples.Count;
+            if (damagedTriples.Count == 0)
+            {
+                log($"joint registration: {damaged.Count} damaged sections, no triples centred on them");
+                return result;
+            }
+
+            ISet<int> damagedSet = AsSet(damaged);
+            NeighborResidualField own = Fit(damagedTriples, result.ChosenSpatial, result.ChosenRidge, int.MinValue, options, log,
+                isFixed: z => !damagedSet.Contains(z));
+            double before = Median([.. damagedTriples.Select(t => t.SecondDifference.Magnitude)]);
+            double after = HeldOutMedian(own, damagedTriples);
+            result.DamagedRawMedianNm = before;
+            result.DamagedCorrectedMedianNm = after;
+            log($"joint registration: {damaged.Count} damaged sections, {damagedTriples.Count} triples centred on them: " +
+                $"median second difference {before:F1} -> {after:F1} nm against the corrected sections either side");
+            if (!(after < before))
+            {
+                log("joint registration: the damaged-section shifts do not help; damaged sections get no shift");
+                return result;
+            }
+
+            result.Field = NeighborResidualField.FromLattice(
+                [.. result.Field.EnumerateNodes(), .. own.EnumerateNodes().Where(n => damagedSet.Contains(n.Z))],
+                options.PitchNm, options.KernelRadiusNm);
+            return result;
+        }
+
+        /// <summary><paramref name="t"/> with A and C moved by <paramref name="field"/>, B unchanged.</summary>
+        static ProcessTriple Corrected(ProcessTriple t, NeighborResidualField field) => new(
+            t.StructureID,
+            t.ZA, t.A + (field.Sample(t.A, t.ZA) ?? Vector2.Zero),
+            t.ZB, t.B,
+            t.ZC, t.C + (field.Sample(t.C, t.ZC) ?? Vector2.Zero),
+            t.Alpha);
 
         public static JointRegistrationResult Solve(IReadOnlyList<ProcessTriple> allTriples, JointRegistrationOptions options = null, Action<string> log = null)
         {
@@ -294,8 +447,12 @@ namespace AnnotationVizLib
             return v.Length % 2 == 1 ? v[v.Length / 2] : 0.5 * (v[v.Length / 2 - 1] + v[v.Length / 2]);
         }
 
-        /// <summary>One robust least-squares fit; returns the published lattice as a field.</summary>
-        public static NeighborResidualField Fit(IReadOnlyList<ProcessTriple> triples, double spatial, double ridge, int pin, JointRegistrationOptions options, Action<string> log = null)
+        /// <summary>
+        /// One robust least-squares fit; returns the published lattice as a field. A triple point on a section
+        /// <paramref name="isFixed"/> accepts adds no unknowns: its position is taken as already corrected.
+        /// </summary>
+        public static NeighborResidualField Fit(IReadOnlyList<ProcessTriple> triples, double spatial, double ridge, int pin, JointRegistrationOptions options,
+            Action<string> log = null, Func<int, bool> isFixed = null)
         {
             double P = options.PitchNm;
             Dictionary<(int Z, int Gx, int Gy), int> index = [];
@@ -329,12 +486,29 @@ namespace AnnotationVizLib
                 cols[o + 3] = Col(z, gx + 1, gy + 1); coef[o + 3] = scale * tx * ty;
             }
 
+            // A fixed point keeps valid column indices (B's) with zero coefficients, so every row still has 12 entries.
+            void FixedCorners(int row, int slot)
+            {
+                int o = row * 12 + slot * 4, b = row * 12 + 4;
+                for (int j = 0; j < 4; j++)
+                {
+                    cols[o + j] = cols[b + j];
+                    coef[o + j] = 0;
+                }
+            }
+
             for (int r = 0; r < R; r++)
             {
                 ProcessTriple t = triples[r];
-                Corners(r, 0, t.ZA, t.A, -(1 - t.Alpha));
                 Corners(r, 1, t.ZB, t.B, 1.0);
-                Corners(r, 2, t.ZC, t.C, -t.Alpha);
+                if (isFixed?.Invoke(t.ZA) == true)
+                    FixedCorners(r, 0);
+                else
+                    Corners(r, 0, t.ZA, t.A, -(1 - t.Alpha));
+                if (isFixed?.Invoke(t.ZC) == true)
+                    FixedCorners(r, 2);
+                else
+                    Corners(r, 2, t.ZC, t.C, -t.Alpha);
                 Vector2 d = t.SecondDifference;
                 bx[r] = -d.X;
                 by[r] = -d.Y;

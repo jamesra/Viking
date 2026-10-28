@@ -65,6 +65,15 @@ namespace Viking.SectionCorrection
         [JsonPropertyName("joint")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public JointFitDto Joint { get; set; }
+
+        /// <summary>
+        /// Damaged sections the field was built with, ascending: the volume blocks' <c>NonStosSectionNumbers</c>. They
+        /// correct no other section, and each gets its own shift fitted against the sections either side. Empty: none
+        /// listed. Absent: the list could not be read (or the set predates it), and every section was treated alike.
+        /// </summary>
+        [JsonPropertyName("damaged_sections")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<int> DamagedSections { get; set; }
     }
 
     /// <summary>How the joint fit was chosen and how it scored on structures held out of the fit.</summary>
@@ -98,6 +107,20 @@ namespace Viking.SectionCorrection
         /// </summary>
         [JsonPropertyName("held_out_corrected_median_nm")]
         public double? HeldOutCorrectedMedianNm { get; set; }
+
+        /// <summary>Triples centred on a damaged section, which fitted the damaged sections' own shifts.</summary>
+        [JsonPropertyName("damaged_triples")]
+        public int DamagedTriples { get; set; }
+
+        /// <summary>
+        /// Median second difference of those triples against the corrected sections either side, before and after the
+        /// damaged sections' own shifts; null when there were none. The damaged shifts are published only when they lower it.
+        /// </summary>
+        [JsonPropertyName("damaged_raw_median_nm")]
+        public double? DamagedRawMedianNm { get; set; }
+
+        [JsonPropertyName("damaged_corrected_median_nm")]
+        public double? DamagedCorrectedMedianNm { get; set; }
     }
 
     public sealed class ResidualWindowDto

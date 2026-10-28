@@ -82,6 +82,7 @@ namespace Viking.GrpcSectionCorrectionService
                     KernelRadiusNm = set.Provenance?.KernelRadiusNm ?? 0
                 };
                 message.Z.AddRange(set.Sections.Keys.OrderBy(z => z));
+                message.DamagedZ.AddRange((set.Provenance?.DamagedSections ?? []).Select(z => (long)z));
                 response.Sets.Add(message);
             }
 
