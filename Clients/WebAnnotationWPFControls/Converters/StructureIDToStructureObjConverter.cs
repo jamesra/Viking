@@ -6,170 +6,78 @@ using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
 using System.Windows.Data;
-using WebAnnotation.WPF.MockData;
 using WebAnnotationModel;
-using WebAnnotationModel.Objects;
 
 namespace WebAnnotation.WPF.Converters
 {
     /// <summary>
-    /// Converts a collection of IDs into StructureObj
+    /// Converts structure type IDs (a scalar ID, or a collection of IDs) into structure type objects from the store.
+    /// Structure types, collections of them and any other collection pass through unchanged, so the structure type
+    /// forms can bind it to IDs and to already resolved types alike.
     /// </summary>
     public class StructureTypeIDsToStructureTypeObjsConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            /* if ((value is long || value is int || value is ulong || value is uint || 
-                  value is string || value is StringCollection || value is IEnumerable<long> ||
-                  value is IEnumerable<int> || value is IStructureType || value is IEnumerable<IStructureType> || value is MockData.MockStructureTypes) == false)
-                 throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter expects a StructureID, but got {0}", value.ToString()));
-                 */
-
             if (value is null)
                 return null;
 
             if (value.GetType() == targetType)
                 return value;
 
-            List<long> IDs = [];
-            if (value is IStructureTypeReadOnly s)
-            {
-                return s;
-            }
-            else if (value is IEnumerable<IStructureTypeReadOnly>)
-            {
-                return value as IEnumerable<IStructureTypeReadOnly>;
-            }
-            else if (value is IEnumerable<MockStructureType>)
-            {
-                return value as IEnumerable<MockStructureType>;
-            }
-            else if (value is MockStructureTypes)
-            {
-                return value as MockStructureTypes;
-            }
-            else if (value is MockStructureType)
-            {
-                return value as MockStructureType;
-            }
-            else if (value is StringCollection)
-            {
-                StringCollection collection = value as StringCollection;
-
-                foreach (string val in collection)
-                {
-                    long ID;
-                    try
-                    {
-                        ID = System.Convert.ToInt64(val);
-                        IDs.Add(ID);
-                    }
-                    catch (ArgumentException)
-                    {
-                        return string.Format("Invalid structure ID: {0}", value.ToString());
-                    }
-                }
-
+            List<long> IDs = ToStructureTypeIDs(value);
+            if (IDs is not null)
                 return Store.StructureTypes.GetObjectsByIDs(IDs, true);
-            }
-            else if (value is IEnumerable<long>)
-            {
-                IEnumerable<long> values = value as IEnumerable<long>;
-                return Store.StructureTypes.GetObjectsByIDs([.. values], true);
-            }
-            else if (value is IEnumerable<ulong>)
-            {
-                IEnumerable<ulong> values = value as IEnumerable<ulong>;
-                return Store.StructureTypes.GetObjectsByIDs([.. values.Select(i => (long)i)], true);
-            }
-            else if (value is IEnumerable<int>)
-            {
-                return Store.StructureTypes.GetObjectsByIDs([.. ((IEnumerable<int>)IDs).Select(i => (long)i)], true);
-            }
-            else if (value is IEnumerable<IStructureTypeReadOnly>)
-            {
-                return value;
-            }
-            else if (value is IEnumerable)
-            {
-                return value;
-                /*
-                try
-                {
-                    List<IStructureType> listTypes = new List<IStructureType>();
-                    foreach(object item in (IEnumerable)value)
-                    {
-                        IStructureType obj = item as IStructureType;
-                        if (obj != null)
-                            listTypes.Add(obj);
-                    }
 
-                    return listTypes;
-                }
-                catch
-                { 
-                    throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter Convert got unknown IEnumerable {0}", value.ToString()));
-                }*/
-            }
-            else if (value is StructureTypeObj)
-            {
+            if (value is IStructureTypeReadOnly or IEnumerable)
                 return value;
-            }
-            else
-            {
-                long ID;
-                try
-                {
-                    ID = System.Convert.ToInt64(value);
-                }
-                catch (ArgumentException e)
-                {
-                    throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter Convert expects a StructureID, but got {0}\n{1}", value.ToString(), e));
-                }
 
-                try
-                {
-                    return Store.StructureTypes.GetObjectByID(ID, true);
-                }
-                catch (ArgumentException)
-                {
-                    return string.Format("Invalid structure ID: {0}", value.ToString());
-                }
+            long ID;
+            try
+            {
+                ID = System.Convert.ToInt64(value);
+            }
+            catch (ArgumentException e)
+            {
+                throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter Convert expects a StructureID, but got {0}\n{1}", value.ToString(), e));
+            }
+
+            try
+            {
+                return Store.StructureTypes.GetObjectByID(ID, true);
+            }
+            catch (ArgumentException)
+            {
+                return string.Format("Invalid structure ID: {0}", value.ToString());
             }
         }
 
+        /// <summary>
+        /// Reads a collection of structure type IDs: strings (parsed in the current culture), <c>long</c>,
+        /// <c>ulong</c> (reinterpreted, as the store keys are <c>long</c>) or <c>int</c>. Checked in that order, so a
+        /// <c>ulong[]</c>, which the runtime also reports as <c>IEnumerable&lt;long&gt;</c>, is read as longs.
+        /// </summary>
+        /// <returns>The IDs, or null when <paramref name="value"/> is not one of those collections.</returns>
+        /// <exception cref="FormatException">A string in a <see cref="StringCollection"/> is not an integer.</exception>
+        internal static List<long> ToStructureTypeIDs(object value) => value switch
+        {
+            StringCollection strings => [.. strings.Cast<string>().Select(s => System.Convert.ToInt64(s))],
+            IEnumerable<long> ids => [.. ids],
+            IEnumerable<ulong> ids => [.. ids.Select(i => (long)i)],
+            IEnumerable<int> ids => [.. ids.Select(i => (long)i)],
+            _ => null
+        };
+
+        /// <summary>
+        /// Returns the ID of a single structure type. Throws <see cref="NotImplementedException"/> for anything else,
+        /// including a collection of structure types.
+        /// </summary>
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is IStructureTypeReadOnly == false || value is IEnumerable<IStructureTypeReadOnly>)
-                throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter ConvertBack back expects a StructureObj, but got {0}", value.ToString()));
-
-            if (value is IStructureTypeReadOnly t)
-            {
+            if (value is IStructureTypeReadOnly t && value is not IEnumerable<IStructureTypeReadOnly>)
                 return t.ID;
-            }
-            else if (value is IEnumerable<StructureTypeObj>)
-            {
-                IEnumerable<StructureTypeObj> values = (IEnumerable<StructureTypeObj>)value;
-                List<ulong> IDs = [];
-                foreach (var obj in values)
-                {
-                    IDs.Add((ulong)obj.ID);
-                }
 
-                return IDs;
-            }
-            else if (value is IEnumerable<IStructureTypeReadOnly> values)
-            {
-                List<ulong> IDs = [];
-                foreach (var obj in values)
-                {
-                    IDs.Add((ulong)obj.ID);
-                }
-
-                return IDs;
-            }
-
-            throw new NotImplementedException($"StructureIDToStructureObjConverter ConvertBack expects a StructureObj, but got {value}");
+            throw new NotImplementedException(string.Format("StructureIDToStructureObjConverter ConvertBack back expects a StructureObj, but got {0}", value.ToString()));
         }
     }
 }

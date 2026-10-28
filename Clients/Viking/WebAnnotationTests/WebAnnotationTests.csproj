@@ -152,6 +152,7 @@
     <Compile Include="PidControllerTests.cs" />
     <Compile Include="LocationParentFetchTests.cs" />
     <Compile Include="IntToBrushConverterTests.cs" />
+    <Compile Include="StructureTypeIDsToStructureTypeObjsConverterTests.cs" />
     <Compile Include="TokenErrorHelperTests.cs" />
     <Compile Include="SectionReferenceSettingsTests.cs" />
     <Compile Include="TranslateCurveLocationCommandTests.cs" />
