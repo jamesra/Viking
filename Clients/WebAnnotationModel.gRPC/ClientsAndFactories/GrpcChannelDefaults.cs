@@ -21,7 +21,10 @@ namespace WebAnnotationModel.gRPC
 
         private const string ServicePackage = "Viking.AnnotationServiceTypes.gRPC.V1.";
 
-        /// <summary>Read-only methods, by service, that are safe to repeat after a connection failure.</summary>
+        /// <summary>
+        /// Read-only methods, by service, that are safe to repeat after a connection failure. Every RPC of the annotation services
+        /// is either listed here or is a mutation; <c>GrpcChannelDefaultsTests</c> fails when a new RPC is neither.
+        /// </summary>
         private static readonly (string Service, string[] Methods)[] ReadMethods =
         {
             ("AnnotateLocations", new[]
@@ -36,8 +39,10 @@ namespace WebAnnotationModel.gRPC
                 "GetStructures", "GetStructuresForSection", "GetStructuresInMosaicRegion", "GetStructuresInVolumeRegion",
                 "GetStructureByID", "GetStructuresByID", "GetLinkedStructures", "GetNetworkedStructures",
                 "GetChildStructuresInNetwork", "GetStructureLinksInNetwork", "NumberOfLocations", "GetUnfinishedLocations",
-                "GetUnfinishedLocationsWithPosition", "GetStructuresOfType",
+                "GetUnfinishedLocationsWithPosition", "GetStructuresOfType", "GetStructureChangeLog", "GetChildStructures",
             }),
+            ("AnnotateStructureTypes", new[] { "GetStructureTypes", "GetStructureTypeByID", "GetStructureTypesByIDs" }),
+            ("AnnotateMetaData", new[] { "Scale" }),
             ("PermittedStructureLinks", new[] { "GetPermittedStructureLinks" }),
         };
 

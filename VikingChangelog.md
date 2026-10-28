@@ -29,6 +29,7 @@ gained from about 2026-10-20 on. Earlier changes are not listed.
 * Auto-segmentation answers sooner: the circle under the cursor goes first, image tiles are sent to the server ahead of time, and several requests run at once.
 * The segmentation server picker shows each server's model and load, refreshed every second; servers that are offline are grayed out and cannot be picked.
 * Viking waits longer for a busy segmentation server and no longer loses its connection to it while it is busy or idle.
+* If the connection to the annotation server drops or the server restarts while Viking is loading structure types, the volume scale or a structure's child structures, Viking tries again instead of failing, as it already did for locations and structures.
 * A new structure's first location shows its marker on the next section straight away, and a marker on an adjacent section that could not be drawn is tried again.
 * Status bar tooltips show above the status bar, so they no longer flash.
 * Opening Viking from a link to a location jumps there once; zooming afterwards no longer resets the view.
