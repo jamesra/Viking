@@ -8,9 +8,9 @@ namespace Viking.SectionCorrectionClient
     /// round trip per camera position.
     /// </summary>
     /// <remarks>
-    /// A port of the service's <c>SectionVectorField.Sample</c>; <c>CorrectPoints</c> in Neighbor mode returns exactly
-    /// what <see cref="Sample"/> returns here, so the two must stay in step (including the half-pitch centre used by
-    /// the weighted fallback). Instances are immutable and safe to share between threads.
+    /// Samples with the service's own function (<see cref="Geometry.LatticeInterpolation"/>, which <c>SectionVectorField</c>
+    /// uses), so <c>CorrectPoints</c> returns exactly what <see cref="Sample"/> returns here. Instances are immutable and
+    /// safe to share between threads.
     /// </remarks>
     public sealed class SectionLatticeField
     {
@@ -19,9 +19,6 @@ namespace Viking.SectionCorrectionClient
 
         /// <summary>Kernel radius the service uses when a set does not state one.</summary>
         public const double DefaultKernelRadiusNm = 8000.0;
-
-        const double WeightEpsilon = 0.001;
-        const double DistanceEpsilonSquared = 1.0;
 
         readonly Dictionary<(int Gx, int Gy), (double Dx, double Dy)> _nodes;
 
@@ -97,8 +94,8 @@ namespace Viking.SectionCorrectionClient
         }
 
         /// <summary>
-        /// Offset at a point in volume space. Bilinear when the four surrounding nodes exist, otherwise inverse-distance
-        /// weighted over the nodes within the kernel radius.
+        /// Offset at a point in volume space, sampled with <see cref="Geometry.LatticeInterpolation.Sample"/>, the function
+        /// the correction service's <c>CorrectPoints</c> uses, so the two agree to the last bit.
         /// </summary>
         /// <param name="xNm">Volume X in nanometres.</param>
         /// <param name="yNm">Volume Y in nanometres.</param>
@@ -108,56 +105,16 @@ namespace Viking.SectionCorrectionClient
         /// </returns>
         public (double Dx, double Dy, bool Trusted) Sample(double xNm, double yNm)
         {
-            double fx = xNm / PitchNm;
-            double fy = yNm / PitchNm;
-            int gx0 = (int)Math.Floor(fx);
-            int gy0 = (int)Math.Floor(fy);
-            double tx = fx - gx0;
-            double ty = fy - gy0;
+            (global::Geometry.Vector2 offset, bool trusted) = global::Geometry.LatticeInterpolation.Sample(
+                new global::Geometry.Vector2(xNm, yNm), PitchNm, KernelRadiusNm, TryGetOffset);
+            return (offset.X, offset.Y, trusted);
+        }
 
-            if (_nodes.TryGetValue((gx0, gy0), out var n00) &&
-                _nodes.TryGetValue((gx0 + 1, gy0), out var n10) &&
-                _nodes.TryGetValue((gx0, gy0 + 1), out var n01) &&
-                _nodes.TryGetValue((gx0 + 1, gy0 + 1), out var n11))
-            {
-                double ax = n00.Dx * (1 - tx) + n10.Dx * tx;
-                double ay = n00.Dy * (1 - tx) + n10.Dy * tx;
-                double bx = n01.Dx * (1 - tx) + n11.Dx * tx;
-                double by = n01.Dy * (1 - tx) + n11.Dy * tx;
-                return (ax * (1 - ty) + bx * ty, ay * (1 - ty) + by * ty, true);
-            }
-
-            int reach = (int)Math.Ceiling(KernelRadiusNm / PitchNm) + 1;
-            double r2 = KernelRadiusNm * KernelRadiusNm;
-            double weightSum = 0;
-            double sumX = 0;
-            double sumY = 0;
-            for (int ox = -reach; ox <= reach; ox++)
-            {
-                for (int oy = -reach; oy <= reach; oy++)
-                {
-                    int gx = gx0 + ox;
-                    int gy = gy0 + oy;
-                    if (!_nodes.TryGetValue((gx, gy), out var n))
-                        continue;
-
-                    double cx = (gx + 0.5) * PitchNm;
-                    double cy = (gy + 0.5) * PitchNm;
-                    double d2 = (xNm - cx) * (xNm - cx) + (yNm - cy) * (yNm - cy);
-                    if (d2 > r2)
-                        continue;
-
-                    double w = 1.0 / (d2 + DistanceEpsilonSquared);
-                    sumX += n.Dx * w;
-                    sumY += n.Dy * w;
-                    weightSum += w;
-                }
-            }
-
-            if (weightSum <= WeightEpsilon)
-                return (0, 0, false);
-
-            return (sumX / weightSum, sumY / weightSum, true);
+        bool TryGetOffset(int gx, int gy, out global::Geometry.Vector2 offset)
+        {
+            bool found = _nodes.TryGetValue((gx, gy), out (double Dx, double Dy) node);
+            offset = found ? new global::Geometry.Vector2(node.Dx, node.Dy) : global::Geometry.Vector2.Zero;
+            return found;
         }
     }
 }

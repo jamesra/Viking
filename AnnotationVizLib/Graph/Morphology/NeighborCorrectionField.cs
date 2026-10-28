@@ -246,15 +246,12 @@ namespace AnnotationVizLib
         /// Always returns an offset. <c>trusted</c> is true inside compact support (occupied 2×2 cell or IDW within the kernel).
         /// Outside support the offset is identity (0, 0).
         /// </summary>
+        /// <remarks>
+        /// <see cref="LatticeInterpolation.Sample"/>, shared with the service's <c>SectionVectorField</c> and the clients'
+        /// <c>SectionLatticeField</c>. A node counts only when at least one annotation voted for it.
+        /// </remarks>
         public (Vector2 Offset, bool Trusted) SampleAlways(Vector2 xy, int sectionZ)
         {
-            double fx = xy.X / _pitchNm;
-            double fy = xy.Y / _pitchNm;
-            int gx0 = (int)Math.Floor(fx);
-            int gy0 = (int)Math.Floor(fy);
-            double tx = fx - gx0;
-            double ty = fy - gy0;
-
             bool TryGet(int gx, int gy, out Vector2 t)
             {
                 var key = (sectionZ, gx, gy);
@@ -266,63 +263,7 @@ namespace AnnotationVizLib
                 return false;
             }
 
-            if (TryGet(gx0, gy0, out Vector2 t00) &&
-                TryGet(gx0 + 1, gy0, out Vector2 t10) &&
-                TryGet(gx0, gy0 + 1, out Vector2 t01) &&
-                TryGet(gx0 + 1, gy0 + 1, out Vector2 t11))
-            {
-                Vector2 a = t00 * (1 - tx) + t10 * tx;
-                Vector2 b = t01 * (1 - tx) + t11 * tx;
-                return (a * (1 - ty) + b * ty, true);
-            }
-
-            // Some corners published: bilinear over those present, weights renormalized.
-            {
-                double ws = 0;
-                Vector2 acc = Vector2.Zero;
-                if (TryGet(gx0, gy0, out Vector2 c00)) { double q = (1 - tx) * (1 - ty); acc += c00 * q; ws += q; }
-                if (TryGet(gx0 + 1, gy0, out Vector2 c10)) { double q = tx * (1 - ty); acc += c10 * q; ws += q; }
-                if (TryGet(gx0, gy0 + 1, out Vector2 c01)) { double q = (1 - tx) * ty; acc += c01 * q; ws += q; }
-                if (TryGet(gx0 + 1, gy0 + 1, out Vector2 c11)) { double q = tx * ty; acc += c11 * q; ws += q; }
-                if (ws > 1e-6)
-                    return (acc * (1.0 / ws), true);
-            }
-
-            int reach = (int)Math.Ceiling(_kernelRadiusNm / _pitchNm) + 1;
-            double weightSum = 0;
-            Vector2 weighted = Vector2.Zero;
-            int annotations = 0;
-            const double eps2 = 1.0;
-            double r2 = _kernelRadiusNm * _kernelRadiusNm;
-
-            for (int dx = -reach; dx <= reach; dx++)
-            {
-                for (int dy = -reach; dy <= reach; dy++)
-                {
-                    int gx = gx0 + dx;
-                    int gy = gy0 + dy;
-                    if (!TryGet(gx, gy, out Vector2 t))
-                        continue;
-
-                    // Node (gx, gy) sits at (gx * pitch, gy * pitch): the same position the bilinear branch uses.
-                    double cx = gx * _pitchNm;
-                    double cy = gy * _pitchNm;
-                    double d2 = (xy.X - cx) * (xy.X - cx) + (xy.Y - cy) * (xy.Y - cy);
-                    if (d2 > r2)
-                        continue;
-
-                    double w = 1.0 / (d2 + eps2);
-                    weighted += t * w;
-                    weightSum += w;
-                    if (_annotationVotes.TryGetValue((sectionZ, gx, gy), out int n))
-                        annotations = Math.Max(annotations, n);
-                }
-            }
-
-            if (weightSum <= Tolerance.Epsilon || annotations < 1)
-                return (Vector2.Zero, false);
-
-            return (weighted * (1.0 / weightSum), true);
+            return LatticeInterpolation.Sample(xy, _pitchNm, _kernelRadiusNm, TryGet);
         }
 
         /// <summary>

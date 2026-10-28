@@ -67,6 +67,19 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
 
 ## Algorithmic decisions
 
+- **2026-10-28 Correction lattices are sampled by one shared function** (ported from VikingLegacy cdaf80de).
+  - **Why:** the client's `SectionLatticeField` was an older port of the service's sampler. Where a cell had only some
+    corners, it went straight to inverse-distance weighting, and it placed fallback nodes at cell centres,
+    (g + ½)·pitch. The service (`SectionVectorField`, `NeighborResidualField`) interpolates over the present corners
+    and places nodes at g·pitch. So Viking's image shift and `CorrectPoints` disagreed near the edges of annotated
+    areas.
+  - **Now:** all three call `LatticeInterpolation.Sample`.
+  - **Checked:** the service's answers are unchanged, bit for bit: the old `SectionVectorField.Sample` against the
+    shared function on 100,000 random points over 200 random sparse lattices.
+  - **Note:** with the 0.001 weight threshold, the inverse-distance branch only has support within about 31 nm of a
+    node. In practice a point is trusted only in a cell with at least one published corner.
+  - Where: `Geometry.Core/Algorithms/LatticeInterpolation.cs`.
+
 - **2026-10-28 CurveFit returns for damaged sections only (service 1.7.0).** In the default mode, `CorrectStructures`
   applies the field, then the leave-one-out Catmull-Rom fit to locations on damaged sections only.
   - **The fit:** only locations on undamaged sections are fitting points. The window reaches out to seven of them on

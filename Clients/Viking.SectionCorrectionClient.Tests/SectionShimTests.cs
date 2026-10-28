@@ -53,12 +53,24 @@ namespace Viking.SectionCorrectionClient.Tests
         }
 
         [TestMethod]
-        public void OutsideTheNodes_FallsBackToWeightedNodesWithinTheKernel()
+        public void ACellWithSomeCornersPublished_InterpolatesOverThoseCorners()
+        {
+            var field = new SectionLatticeField(1000, 4000, [(0, 0, 10, 0), (1, 0, 20, 0)]);
+
+            // Weights 0.75 * 0.5 and 0.25 * 0.5, rescaled to sum to one, as the service does
+            // (SectionVectorField, NeighborResidualField). The client used to skip to the weighted fallback.
+            (double dx, double dy, bool trusted) = field.Sample(250, 500);
+
+            Assert.IsTrue(trusted);
+            Assert.AreEqual(12.5, dx, 1e-9);
+            Assert.AreEqual(0, dy, 1e-9);
+        }
+
+        [TestMethod]
+        public void ACellWithOneCornerPublished_TakesThatCornersOffset()
         {
             var field = new SectionLatticeField(2000, 8000, [(0, 0, 8, 4)]);
 
-            // Weights are 1 / (d^2 + 1) and the service trusts a point only above 0.001, so only a point within a
-            // few tens of nanometres of a node centre (here (1000, 1000)) has support when its cell is not surrounded.
             (double dx, double dy, bool trusted) = field.Sample(1000, 1000);
 
             Assert.IsTrue(trusted);

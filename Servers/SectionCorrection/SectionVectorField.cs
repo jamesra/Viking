@@ -38,70 +38,18 @@ namespace Viking.SectionCorrection
         public bool TryGet(int gx, int gy, out LatticeNode node) => _nodes.TryGetValue((gx, gy), out node);
 
         /// <summary>
-        /// Always returns an offset. Trusted is true inside compact support.
+        /// Always returns an offset. Trusted is true inside compact support. <see cref="LatticeInterpolation.Sample"/>, the
+        /// function the clients' <c>SectionLatticeField</c> uses too, so a client sampling a downloaded lattice gets what
+        /// <c>CorrectPoints</c> returns.
         /// </summary>
-        public (Vector2 Offset, bool Trusted) Sample(Vector2 xy)
+        public (Vector2 Offset, bool Trusted) Sample(Vector2 xy) =>
+            LatticeInterpolation.Sample(xy, PitchNm, KernelRadiusNm, TryGetOffset);
+
+        bool TryGetOffset(int gx, int gy, out Vector2 offset)
         {
-            double fx = xy.X / PitchNm;
-            double fy = xy.Y / PitchNm;
-            int gx0 = (int)Math.Floor(fx);
-            int gy0 = (int)Math.Floor(fy);
-            double tx = fx - gx0;
-            double ty = fy - gy0;
-
-            if (TryGet(gx0, gy0, out LatticeNode n00) &&
-                TryGet(gx0 + 1, gy0, out LatticeNode n10) &&
-                TryGet(gx0, gy0 + 1, out LatticeNode n01) &&
-                TryGet(gx0 + 1, gy0 + 1, out LatticeNode n11))
-            {
-                Vector2 a = n00.Offset * (1 - tx) + n10.Offset * tx;
-                Vector2 b = n01.Offset * (1 - tx) + n11.Offset * tx;
-                return (a * (1 - ty) + b * ty, true);
-            }
-
-            // Some corners published: bilinear over those present, weights renormalized
-            // (same as NeighborResidualField.SampleAlways).
-            {
-                double ws = 0;
-                Vector2 acc = Vector2.Zero;
-                if (TryGet(gx0, gy0, out LatticeNode c00)) { double q = (1 - tx) * (1 - ty); acc += c00.Offset * q; ws += q; }
-                if (TryGet(gx0 + 1, gy0, out LatticeNode c10)) { double q = tx * (1 - ty); acc += c10.Offset * q; ws += q; }
-                if (TryGet(gx0, gy0 + 1, out LatticeNode c01)) { double q = (1 - tx) * ty; acc += c01.Offset * q; ws += q; }
-                if (TryGet(gx0 + 1, gy0 + 1, out LatticeNode c11)) { double q = tx * ty; acc += c11.Offset * q; ws += q; }
-                if (ws > 1e-6)
-                    return (acc * (1.0 / ws), true);
-            }
-
-            int reach = (int)Math.Ceiling(KernelRadiusNm / PitchNm) + 1;
-            double weightSum = 0;
-            Vector2 weighted = Vector2.Zero;
-            const double eps2 = 1.0;
-            double r2 = KernelRadiusNm * KernelRadiusNm;
-
-            for (int dx = -reach; dx <= reach; dx++)
-            {
-                for (int dy = -reach; dy <= reach; dy++)
-                {
-                    if (!TryGet(gx0 + dx, gy0 + dy, out LatticeNode n))
-                        continue;
-
-                    // Node world XY is (gx * PitchNm, gy * PitchNm), as in the bilinear branch above.
-                    double cx = n.Gx * PitchNm;
-                    double cy = n.Gy * PitchNm;
-                    double d2 = (xy.X - cx) * (xy.X - cx) + (xy.Y - cy) * (xy.Y - cy);
-                    if (d2 > r2)
-                        continue;
-
-                    double w = 1.0 / (d2 + eps2);
-                    weighted += n.Offset * w;
-                    weightSum += w;
-                }
-            }
-
-            if (weightSum <= Tolerance.Epsilon)
-                return (Vector2.Zero, false);
-
-            return (weighted * (1.0 / weightSum), true);
+            bool found = _nodes.TryGetValue((gx, gy), out LatticeNode node);
+            offset = found ? node.Offset : Vector2.Zero;
+            return found;
         }
 
         public IEnumerable<(Vector2 Origin, Vector2 Offset)> EnumerateTrustedDisplaySamples(double displayPitchNm)
