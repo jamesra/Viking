@@ -76,6 +76,12 @@
   <ItemGroup>
     <Content Include="app.config" />
   </ItemGroup>
+  <!-- The user changelog ships beside Viking.exe: Help > Change Log shows it, and so does the first start of each version -->
+  <ItemGroup>
+    <None Include="..\..\..\VikingChangelog.md" Link="VikingChangelog.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
   <ItemGroup>
     <None Remove="Modules\**\System.Memory.dll" />
     <None Remove="System.Memory.4.6.3\**" />
