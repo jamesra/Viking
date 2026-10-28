@@ -11,7 +11,7 @@ Notes for whoever updates this file. Comments like this one are not shown in Vik
   changes, rename the unreleased heading to the new version; when a version ships, replace "not yet released" with the date
   and channel, for example "2026-10-26 (Viking Test, unsigned)".
 
-Committed application version: 1.2.130.0.
+Committed application version: 1.2.131.0.
 1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109;
 their changes are listed under 1.2.109. Builds 1.2.128 and 1.2.129 are listed under 1.2.130 (1.2.129 went out as Viking Test
 on 2026-10-27). The pen and link fixes of builds 1.2.123 to 1.2.126 are listed under 1.2.127.
@@ -20,6 +20,10 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. Older 1.1.x notes live in
 Documentation/source/Client/versionhistory.rst.
 -->
+
+## 1.2.131 — not yet released
+
+* Change Log: **Page Up** and **Page Down** jump to the previous or next version, with its heading at the top of the window.
 
 ## 1.2.130 — 2026-10-27 (Viking Test, unsigned)
 

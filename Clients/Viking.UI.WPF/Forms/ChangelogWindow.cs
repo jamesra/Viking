@@ -5,6 +5,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Input;
 using System.Windows.Media;
 using Viking.UI.WPF.Services;
 
@@ -13,10 +14,19 @@ namespace Viking.UI.WPF.Forms
     /// <summary>
     /// Shows the user changelog (<c>VikingChangelog.md</c>, installed beside Viking.exe) as a formatted, scrollable document:
     /// a heading per version and its bulleted changes. Opened from Help > Change Log, and once when a new version first starts.
+    /// Page Up and Page Down move to the previous or next version's heading.
     /// </summary>
     public sealed class ChangelogWindow : Window
     {
         private static ChangelogWindow _open;
+
+        /// <summary>Space left above a heading that Page Up or Page Down brings to the top.</summary>
+        private const double HeadingTopGap = 4;
+
+        private readonly FlowDocumentScrollViewer _viewer;
+
+        /// <summary>The version headings (##), in document order.</summary>
+        private readonly List<Paragraph> _versionHeadings = [];
 
         private ChangelogWindow(IReadOnlyList<ChangelogBlock> blocks, string title, string intro)
         {
@@ -29,10 +39,12 @@ namespace Viking.UI.WPF.Forms
 
             FlowDocumentScrollViewer viewer = new()
             {
-                Document = BuildDocument(blocks, intro),
+                Document = BuildDocument(blocks, intro, _versionHeadings),
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 IsToolBarVisible = false,
             };
+            _viewer = viewer;
+            PreviewKeyDown += OnPreviewKeyDown;
 
             Button close = new()
             {
@@ -85,7 +97,66 @@ namespace Viking.UI.WPF.Forms
             _open.Show();
         }
 
-        private static FlowDocument BuildDocument(IReadOnlyList<ChangelogBlock> blocks, string intro)
+        private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key is Key.PageDown or Key.PageUp && Keyboard.Modifiers == ModifierKeys.None)
+                e.Handled = ScrollToVersion(next: e.Key == Key.PageDown);
+        }
+
+        /// <summary>
+        /// Scrolls so the next (or previous) version heading is at the top of the view. Past the last heading Page Down goes
+        /// to the end; before the first, Page Up goes to the start.
+        /// </summary>
+        /// <returns>False when the document's scroll viewer is not built yet, so the key keeps its usual meaning.</returns>
+        internal bool ScrollToVersion(bool next)
+        {
+            ScrollViewer scroll = FindScrollViewer(_viewer);
+            if (scroll is null)
+                return false;
+
+            double current = scroll.VerticalOffset;
+            double? target = null;
+            foreach (Paragraph heading in _versionHeadings)
+            {
+                // Relative to the visible top, so the document offset is that plus the current scroll
+                double top = current + heading.ContentStart.GetCharacterRect(LogicalDirection.Forward).Top - HeadingTopGap;
+                if (next && top > current + 1)
+                {
+                    target = top;
+                    break;
+                }
+
+                if (!next && top < current - 1)
+                    target = top;
+            }
+
+            if (target is double offset)
+                scroll.ScrollToVerticalOffset(Math.Max(0, offset));
+            else if (next)
+                scroll.ScrollToEnd();
+            else
+                scroll.ScrollToHome();
+
+            return true;
+        }
+
+        private static ScrollViewer FindScrollViewer(DependencyObject root)
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(root, i);
+                if (child is ScrollViewer scroll)
+                    return scroll;
+
+                if (FindScrollViewer(child) is ScrollViewer found)
+                    return found;
+            }
+
+            return null;
+        }
+
+        /// <param name="versionHeadings">Receives the version (##) headings, in order, for Page Up and Page Down.</param>
+        private static FlowDocument BuildDocument(IReadOnlyList<ChangelogBlock> blocks, string intro, List<Paragraph> versionHeadings)
         {
             FlowDocument document = new()
             {
@@ -118,6 +189,8 @@ namespace Viking.UI.WPF.Forms
                         };
                         AddSpans(heading.Inlines, block.Spans);
                         document.Blocks.Add(heading);
+                        if (block.Level == 2)
+                            versionHeadings.Add(heading);
                         break;
 
                     case ChangelogBlockKind.Paragraph:
