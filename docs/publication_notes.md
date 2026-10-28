@@ -95,8 +95,9 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   - **Rejected:**
     - Linear interpolation: lower mean and more losses.
     - The fit everywhere (2026-10-27 entry).
-  - **Limit:** clients that sample the field themselves (`GetSectionCorrection`, `CorrectPoints`, so Viking and Jotunn
-    today) do not get the fit.
+  - **Scope:** the fit corrects annotation positions, for consumers that measure annotations (`CorrectStructures`,
+    e.g. SBFSEM-tools). Viking and Jotunn shift the image by the field (`GetSectionCorrection`, `CorrectPoints`) and do
+    not move annotations, so a per-location fit has no role there; no client change is needed.
   - Where: `CorrectionServiceCore.CorrectStructuresAsync`, `MorphologyGraph.CurveFitOptions.DamagedSections`,
     `EvaluateLeaveOneOutCentroid(windowCountsControls)`; tests in `JointRegistrationTests` (`DamagedOnlyFit_*`).
 
