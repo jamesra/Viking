@@ -131,9 +131,11 @@ export AppSettings__ODataURL="https://custom.server.com/OData"
 ```
 
 ## Output Files
-Generated files are saved to the `Output/` directory in the application root.
+Each export is written to a file with a unique name in the `Output/` directory in the application root,
+streamed to the caller, and deleted when the response ends (also when the client aborts the download).
+`Output/` is not served over HTTP; the caller gets the file only as the response.
 
-### File Naming Conventions
+### Download File Names
 - **Network exports**: `nw-{IDs}_hops_{N} {timestamp}.{ext}`
 - **Morphology exports**: `morph-{IDs} {timestamp}.{ext}`
 - **Motif exports**: `motifs{N}{timestamp}.{ext}`
@@ -148,11 +150,12 @@ DataExport/
 │   ├── MorphologyController.cs
 │   └── MotifController.cs
 ├── Utils/               # Utility classes
+│   ├── ExportFile.cs
 │   └── RequestVariables.cs
 ├── Resources/           # Color maps and resources
 ├── Scripts/             # Client-side JavaScript
 ├── Content/             # Static content
-├── Output/              # Generated export files
+├── Output/              # Exports while they are streamed
 ├── GlobalUsings.cs      # Global using directives
 ├── Program.cs           # Application entry point
 └── appsettings.json     # Configuration
@@ -176,12 +179,12 @@ public async Task<IActionResult> GetCustomFormat()
 {
     ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query);
     string outputFilename = GetOutputFilename(requestIDs, "custom");
-    string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
     NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
-    // Implement your custom export logic here
-    
-    return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
+    CustomView view = CustomView.ToCustom(neuronGraph); // your export logic; SaveCustom(path) writes the file
+
+    // Saves to a unique file under Output/, streams it as outputFilename, and deletes it afterwards.
+    return ExportFile.Send(HttpContext, _env.ContentRootPath, outputFilename, "text/plain", view.SaveCustom);
 }
 ```
 

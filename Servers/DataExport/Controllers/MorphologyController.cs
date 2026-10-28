@@ -107,16 +107,6 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
         return $"morph-{idList} {date}.{ext}";
     }
 
-    private string GetAndCreateOutputDirectory()
-    {
-        string outputDir = Path.Combine(_env.ContentRootPath, "Output");
-        if (!Directory.Exists(outputDir))
-        {
-            Directory.CreateDirectory(outputDir);
-        }
-        return outputDir;
-    }
-
     /// <summary>
     /// Exports morphology data in TLP (Tulip) format via POST request.
     /// </summary>
@@ -132,8 +122,6 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
     {
         ICollection<long> requestIDs = await RequestVariables.GetIDsFromRequestAsync(Request, GetODataUrl(), HttpContext.RequestAborted);
         string outputFile = GetOutputFilename(requestIDs, "tlp");
-        string userOutputDirectory = GetAndCreateOutputDirectory();
-        string userOutputFileFullPath = Path.Combine(userOutputDirectory, outputFile);
 
         StructureMorphologyColorMap colorMap = new(GetStructureTypeColorMap(),
                                                                                GetStructureColorMap(),
@@ -146,9 +134,7 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
             structure_graph.ToStickFigure();
         }
         MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, (UnitsAndScale.Scale)structure_graph.scale, colorMap, GetAnnotationUrlForLinks());
-        TlpGraph.SaveTLP(userOutputFileFullPath);
-
-        return PhysicalFile(userOutputFileFullPath, "text/plain", outputFile);
+        return ExportFile.Send(HttpContext, _env.ContentRootPath, outputFile, "text/plain", TlpGraph.SaveTLP);
     }
 
     /// <summary>
@@ -166,8 +152,6 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
     {
         ICollection<long> requestIDs = await RequestVariables.GetIDsFromRequestAsync(Request, GetODataUrl(), HttpContext.RequestAborted);
         string outputFile = GetOutputFilename(requestIDs, "json");
-        string userOutputDirectory = GetAndCreateOutputDirectory();
-        string userOutputFileFullPath = Path.Combine(userOutputDirectory, outputFile);
 
         UnitsAndScale.Scale scale = await GetOrFetchScaleAsync();
         MorphologyGraph structure_graph = await GetGraphAsync(requestIDs, scale);
@@ -176,9 +160,7 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
             structure_graph.ToStickFigure();
         }
         MorphologyJSONView JSONGraph = MorphologyJSONView.ToJSON(structure_graph);
-        JSONGraph.SaveJSON(userOutputFileFullPath);
-
-        return PhysicalFile(userOutputFileFullPath, "application/json", outputFile);
+        return ExportFile.Send(HttpContext, _env.ContentRootPath, outputFile, "application/json", JSONGraph.SaveJSON);
     }
 
     /*
@@ -216,8 +198,6 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
         string outputFile = GetOutputFilename(requestIDs, "tlp");
-        string userOutputDirectory = GetAndCreateOutputDirectory();
-        string userOutputFileFullPath = Path.Combine(userOutputDirectory, outputFile);
 
         StructureMorphologyColorMap colorMap = new(GetStructureTypeColorMap(),
                                                                                GetStructureColorMap(),
@@ -230,9 +210,7 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
             structure_graph.ToStickFigure();
         }
         MorphologyTLPView TlpGraph = MorphologyTLPView.ToTLP(structure_graph, (UnitsAndScale.Scale)structure_graph.scale, colorMap, GetAnnotationUrlForLinks());
-        TlpGraph.SaveTLP(userOutputFileFullPath);
-
-        return PhysicalFile(userOutputFileFullPath, "text/plain", outputFile);
+        return ExportFile.Send(HttpContext, _env.ContentRootPath, outputFile, "text/plain", TlpGraph.SaveTLP);
     }
 
     /// <summary>
@@ -246,8 +224,6 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
         string outputFile = GetOutputFilename(requestIDs, "json");
-        string userOutputDirectory = GetAndCreateOutputDirectory();
-        string userOutputFileFullPath = Path.Combine(userOutputDirectory, outputFile);
 
         UnitsAndScale.Scale scale = await GetOrFetchScaleAsync();
         MorphologyGraph structure_graph = await GetGraphAsync(requestIDs, scale);
@@ -257,9 +233,7 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
         }
 
         MorphologyJSONView JSONGraph = MorphologyJSONView.ToJSON(structure_graph);
-        JSONGraph.SaveJSON(userOutputFileFullPath);
-
-        return PhysicalFile(userOutputFileFullPath, "application/json", outputFile);
+        return ExportFile.Send(HttpContext, _env.ContentRootPath, outputFile, "application/json", JSONGraph.SaveJSON);
     }
 
     /*

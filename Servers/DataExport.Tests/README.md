@@ -196,7 +196,7 @@ These files are copied to the output directory during build (see `DataExport.Tes
 **Solution**:
 - Ensure the test process has write permissions to the output directory
 - Close any files opened by previous test runs
-- The `Output/` directory is created automatically by the controllers
+- The `Output/` directory is created automatically by `ExportFile.Send`
 
 ## Best Practices
 
@@ -204,8 +204,7 @@ These files are copied to the output directory during build (see `DataExport.Tes
 2. **Use Placeholder URLs in Shared Configs** - Set ODataURL to "https://example.com" or "CHANGEME" to skip integration tests by default
 3. **Run Unit Tests in CI/CD** - These always run regardless of configuration
 4. **Enable Integration Tests in Local Development** - Set a real OData URL in your local `appsettings.json`
-5. **Clean Output Directory Periodically** - Integration tests generate files in `Output/` directory
-6. **Use Test Filters** - Separate unit and integration test execution with `--filter` parameter
+5. **Use Test Filters** - Separate unit and integration test execution with `--filter` parameter
 
 ## Additional Notes
 

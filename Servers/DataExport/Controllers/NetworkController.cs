@@ -62,16 +62,6 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
         return $"nw-{idList}_hops_{GetNumHops()} {date}.{ext}";
     }
 
-    private string GetAndCreateOutputDirectory()
-    {
-        string outputDir = Path.Combine(_env.ContentRootPath, "Output");
-        if (!Directory.Exists(outputDir))
-        {
-            Directory.CreateDirectory(outputDir);
-        }
-        return outputDir;
-    }
-
     /// <summary>
     /// Exports network data in DOT format via POST request.
     /// </summary>
@@ -87,12 +77,10 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
     {
         ICollection<long> requestIDs = await RequestVariables.GetIDsFromRequestAsync(Request, GetODataUrl(), HttpContext.RequestAborted);
         string outputFilename = GetOutputFilename(requestIDs, "dot");
-        string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
         NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
         NeuronDOTView DotGraph = NeuronDOTView.ToDOT(neuronGraph, false);
-        DotGraph.SaveDOT(outputFileFullPath);
-        return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
+        return ExportFile.Send(HttpContext, _env.ContentRootPath, outputFilename, "text/plain", DotGraph.SaveDOT);
     }
 
     /// <summary>
@@ -110,12 +98,10 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
     {
         ICollection<long> requestIDs = await RequestVariables.GetIDsFromRequestAsync(Request, GetODataUrl(), HttpContext.RequestAborted);
         string outputFilename = GetOutputFilename(requestIDs, "tlp");
-        string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
         NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
         NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, GetAnnotationUrlForLinks());
-        TlpGraph.SaveTLP(outputFileFullPath);
-        return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
+        return ExportFile.Send(HttpContext, _env.ContentRootPath, outputFilename, "text/plain", TlpGraph.SaveTLP);
     }
 
     /// <summary>
@@ -133,12 +119,10 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
     {
         ICollection<long> requestIDs = await RequestVariables.GetIDsFromRequestAsync(Request, GetODataUrl(), HttpContext.RequestAborted);
         string outputFilename = GetOutputFilename(requestIDs, "graphml");
-        string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
         NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
         NeuronGMLView GmlGraph = NeuronGMLView.ToGML(neuronGraph, GetAnnotationUrlForLinks());
-        GmlGraph.SaveGML(outputFileFullPath);
-        return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
+        return ExportFile.Send(HttpContext, _env.ContentRootPath, outputFilename, "text/plain", GmlGraph.SaveGML);
     }
 
     /// <summary>
@@ -156,12 +140,10 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
     {
         ICollection<long> requestIDs = await RequestVariables.GetIDsFromRequestAsync(Request, GetODataUrl(), HttpContext.RequestAborted);
         string outputFilename = GetOutputFilename(requestIDs, "json");
-        string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
         NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
         NeuronJSONView JsonGraph = NeuronJSONView.ToJSON(neuronGraph);
-        JsonGraph.SaveJSON(outputFileFullPath);
-        return PhysicalFile(outputFileFullPath, "application/json", outputFilename);
+        return ExportFile.Send(HttpContext, _env.ContentRootPath, outputFilename, "application/json", JsonGraph.SaveJSON);
     }
 
     /// <summary>
@@ -175,12 +157,10 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
         string outputFilename = GetOutputFilename(requestIDs, "dot");
-        string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
         NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
         NeuronDOTView DotGraph = NeuronDOTView.ToDOT(neuronGraph, false);
-        DotGraph.SaveDOT(outputFileFullPath);
-        return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
+        return ExportFile.Send(HttpContext, _env.ContentRootPath, outputFilename, "text/plain", DotGraph.SaveDOT);
     }
 
     /// <summary>
@@ -194,13 +174,11 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
         string outputFilename = GetOutputFilename(requestIDs, "tlp");
-        string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
         NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
         // OData spatial data append here if needed
         NeuronTLPView TlpGraph = NeuronTLPView.ToTLP(neuronGraph, GetAnnotationUrlForLinks());
-        TlpGraph.SaveTLP(outputFileFullPath);
-        return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
+        return ExportFile.Send(HttpContext, _env.ContentRootPath, outputFilename, "text/plain", TlpGraph.SaveTLP);
     }
 
     /// <summary>
@@ -214,12 +192,10 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
         string outputFilename = GetOutputFilename(requestIDs, "graphml");
-        string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
         NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
         NeuronGMLView GmlGraph = NeuronGMLView.ToGML(neuronGraph, GetAnnotationUrlForLinks());
-        GmlGraph.SaveGML(outputFileFullPath);
-        return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
+        return ExportFile.Send(HttpContext, _env.ContentRootPath, outputFilename, "text/plain", GmlGraph.SaveGML);
     }
 
     /// <summary>
@@ -233,13 +209,11 @@ public class NetworkController(IWebHostEnvironment env, IConfiguration configura
     {
         ICollection<long> requestIDs = RequestVariables.GetIDsFromQueryData(Request.Query, GetODataUrl());
         string outputFilename = GetOutputFilename(requestIDs, "json");
-        string outputFileFullPath = Path.Combine(GetAndCreateOutputDirectory(), outputFilename);
 
         NeuronGraph neuronGraph = await GetGraphAsync(requestIDs);
         // OData spatial data append here if needed
         NeuronJSONView JsonGraph = NeuronJSONView.ToJSON(neuronGraph);
-        JsonGraph.SaveJSON(outputFileFullPath);
-        return PhysicalFile(outputFileFullPath, "text/plain", outputFilename);
+        return ExportFile.Send(HttpContext, _env.ContentRootPath, outputFilename, "text/plain", JsonGraph.SaveJSON);
     }
 
     private async Task<NeuronGraph> GetGraphAsync(ICollection<long> requestIDs)

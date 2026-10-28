@@ -64,16 +64,6 @@ public class MotifController(IWebHostEnvironment env, IConfiguration configurati
 
     private static string GetOutputFilename(string ext) => $"{DefaultOutputFile}{NextFilenameID}{OutputNameGenerator.GetFileFriendlyDateString()}.{ext}";
 
-    private string GetAndCreateOutputDirectory()
-    {
-        string outputDir = Path.Combine(_env.ContentRootPath, "Output");
-        if (!Directory.Exists(outputDir))
-        {
-            Directory.CreateDirectory(outputDir);
-        }
-        return outputDir;
-    }
-
     /// <summary>
     /// Exports motif graph data in DOT format.
     /// </summary>
@@ -83,16 +73,12 @@ public class MotifController(IWebHostEnvironment env, IConfiguration configurati
     [HttpGet("GetDot/dot")]
     public async Task<IActionResult> GetDot()
     {
-        string userDotDirectory = GetAndCreateOutputDirectory();
         string outputFilename = GetOutputFilename("dot");
-        string userDotFileFullPath = Path.Combine(userDotDirectory, outputFilename);
 
         MotifGraph motifGraph = await GetMotifGraphAsync();
         motifGraph.AddEdgeStatistics();
         MotifDOTView DotGraph = MotifDOTView.ToDOT(motifGraph);
-        DotGraph.SaveDOT(userDotFileFullPath);
-
-        return PhysicalFile(userDotFileFullPath, "text/plain", outputFilename);
+        return ExportFile.Send(HttpContext, _env.ContentRootPath, outputFilename, "text/plain", DotGraph.SaveDOT);
     }
 
     /// <summary>
@@ -104,16 +90,12 @@ public class MotifController(IWebHostEnvironment env, IConfiguration configurati
     [HttpGet("GetTLP/tlp")]
     public async Task<IActionResult> GetTLP()
     {
-        string userDotDirectory = GetAndCreateOutputDirectory();
         string outputFilename = GetOutputFilename("tlp");
-        string userDotFileFullPath = Path.Combine(userDotDirectory, outputFilename);
 
         MotifGraph motifGraph = await GetMotifGraphAsync();
         motifGraph.AddEdgeStatistics();
         MotifTLPView TlpGraph = MotifTLPView.ToTLP(motifGraph, GetAnnotationUrlForLinks());
-        TlpGraph.SaveTLP(userDotFileFullPath);
-
-        return PhysicalFile(userDotFileFullPath, "text/plain", outputFilename);
+        return ExportFile.Send(HttpContext, _env.ContentRootPath, outputFilename, "text/plain", TlpGraph.SaveTLP);
     }
 
     /// <summary>
@@ -125,16 +107,12 @@ public class MotifController(IWebHostEnvironment env, IConfiguration configurati
     [HttpGet("GetJSON/json")]
     public async Task<IActionResult> GetJSON()
     {
-        string userDotDirectory = GetAndCreateOutputDirectory();
         string outputFilename = GetOutputFilename("json");
-        string userJSONFullPath = Path.Combine(userDotDirectory, outputFilename);
 
         MotifGraph motifGraph = await GetMotifGraphAsync();
         motifGraph.AddEdgeStatistics();
         MotifJSONView JsonGraph = MotifJSONView.ToJSON(motifGraph);
-        JsonGraph.SaveJSON(userJSONFullPath);
-
-        return PhysicalFile(userJSONFullPath, "text/plain", outputFilename);
+        return ExportFile.Send(HttpContext, _env.ContentRootPath, outputFilename, "text/plain", JsonGraph.SaveJSON);
     }
 
     private async Task<MotifGraph> GetMotifGraphAsync() => await ODataMotifFactory.FromODataAsync(GetODataUrl());
