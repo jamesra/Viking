@@ -1,6 +1,8 @@
 using Geometry;
 using Geometry.Transforms;
+using Microsoft.SqlServer.Types;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SqlGeometryUtils;
 using System.Collections.Generic;
 using System.Linq;
 using Viking.AnnotationServiceTypes.Interfaces;
@@ -101,6 +103,25 @@ namespace WebAnnotationTests.Actions
             Assert.AreEqual(1, choices.Count);
             Assert.AreEqual(0, choices[0].NewMosaicPolygon.InteriorRings.Count, "the hole is now part of the outline");
             CollectionAssert.IsSubsetOf(new[] { new Vector2(200, 0), new Vector2(200, 200) }, choices[0].NewMosaicPolygon.ExteriorRing);
+        }
+
+        /// <summary>
+        /// A piece whose hole touches itself at a vertex, as SQL Server can return from the cut, is not a <see cref="Polygon"/>.
+        /// It is skipped instead of crashing the stroke ("Duplicate point found in exterior ring").
+        /// </summary>
+        [TestMethod]
+        public void APieceWithAPinchedHoleIsSkipped()
+        {
+            SqlGeometry pinched = SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars(
+                "POLYGON((0 0, 100 0, 100 100, 0 100, 0 0), (20 20, 50 50, 80 20, 80 80, 50 50, 20 80, 20 20))"), 0);
+            Assert.ThrowsException<System.ArgumentException>(() => pinched.ToPolygon(), "the precondition: Polygon rejects the pinched hole");
+
+            Assert.IsFalse(PenRegionCut.TryConvertPiece(pinched, out Polygon piece));
+            Assert.IsNull(piece);
+
+            SqlGeometry square = SqlGeometry.STGeomFromText(new System.Data.SqlTypes.SqlChars("POLYGON((0 0, 100 0, 100 100, 0 100, 0 0))"), 0);
+            Assert.IsTrue(PenRegionCut.TryConvertPiece(square, out Polygon converted));
+            Assert.AreEqual(5, converted.ExteriorRing.Length);
         }
 
         [TestMethod]

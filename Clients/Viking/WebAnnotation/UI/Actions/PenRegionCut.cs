@@ -119,7 +119,8 @@ namespace WebAnnotation.UI.Actions
                 if (part.STArea().Value < MinPieceArea)
                     continue;
 
-                if (TryFit(part.ToPolygon(), storedRings, tags, transform, tolerance, interpolations, out Polygon volume, out Polygon mosaic))
+                if (TryConvertPiece(part, out Polygon piece) &&
+                    TryFit(piece, storedRings, tags, transform, tolerance, interpolations, out Polygon volume, out Polygon mosaic))
                     pieces.Add((volume, mosaic, part.STArea().Value));
             }
 
@@ -133,6 +134,26 @@ namespace WebAnnotation.UI.Actions
 
             Trace.WriteLine($"Pen region cut of location {location.ID}: {(startsInside ? "adds" : "removes")} the enclosed region, {output.Count} choice(s).");
             return output;
+        }
+
+        /// <summary>
+        /// Converts one piece of the boolean to a <see cref="Polygon"/>, or returns false for a piece it cannot represent. SQL
+        /// Server can return a ring that touches itself at a vertex (a hole pinched where the stroke meets it), which
+        /// <see cref="Polygon"/> rejects as a duplicate point. Such a piece is not offered, like a piece that cannot be fitted.
+        /// </summary>
+        internal static bool TryConvertPiece(SqlGeometry part, out Polygon piece)
+        {
+            try
+            {
+                piece = part.ToPolygon();
+                return true;
+            }
+            catch (ArgumentException e)
+            {
+                Trace.WriteLine($"Pen region cut: a piece is not a valid polygon: {e.Message}");
+                piece = null;
+                return false;
+            }
         }
 
         /// <summary>Fits one piece of the boolean, ring by ring, and builds it in volume and section space.</summary>
