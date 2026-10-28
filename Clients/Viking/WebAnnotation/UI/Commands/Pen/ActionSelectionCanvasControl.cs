@@ -181,6 +181,7 @@ namespace WebAnnotation.UI.Commands
         /// <summary>
         /// Fills the F1 bar from the choice captions. Newlines in a button label become spaces so the combo stays one line per choice.
         /// Always lists Cancel and Escape so hidden action buttons do not hide how to leave the command.
+        /// A stroke that splits a hole adds a line saying what a click on the hole and on the polygon fills.
         /// </summary>
         private void PublishChoiceHelp(IEnumerable<IAction> actions)
         {
@@ -188,6 +189,8 @@ namespace WebAnnotation.UI.Commands
             _choiceHelp.Add(Global.ShowPenActionButtons
                 ? "Click a button to choose"
                 : "Click a shape preview to choose");
+            if (actions.Any(a => a is Change2DContourAction { FilledHolePart: not null }))
+                _choiceHelp.Add("Click a part of the hole to fill it; click the polygon to fill the smaller part");
             foreach (IAction action in actions)
             {
                 string line = LabelFor(action).Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
@@ -284,7 +287,7 @@ namespace WebAnnotation.UI.Commands
         /// <summary>
         /// Short name for a pen-stroke choice. Structure creates use the structure type name so each favorite is distinct.
         /// </summary>
-        private static string LabelFor(IAction action)
+        internal static string LabelFor(IAction action)
         {
             switch (action)
             {
@@ -296,6 +299,8 @@ namespace WebAnnotation.UI.Commands
                     return "Linked location";
                 case CutHoleAction:
                     return "Cut hole";
+                case Change2DContourAction { FilledHolePart: not null } fillHole:
+                    return fillHole.FillsSmallerHolePart ? "Fill smaller part of hole" : "Fill larger part of hole";
                 case Change2DContourAction:
                     return "Replace boundary";
                 case Change1DContourAction:
@@ -718,7 +723,10 @@ namespace WebAnnotation.UI.Commands
 
                 // What a click on the drawing of the choice selects; link choices are chosen from their button only.
                 if (a is Change2DContourAction change2D)
-                    actionSelectors.Add(ClickableGeometryWrapper.CreateSimple(change2D.NewSmoothedVolumePolygon, a.Execute));
+                {
+                    foreach (IShape2D region in change2D.ClickRegions)
+                        actionSelectors.Add(ClickableGeometryWrapper.CreateSimple(region, a.Execute));
+                }
                 else if (a is Change1DContourAction change1D)
                     actionSelectors.Add(ClickableGeometryWrapper.CreateSimple(change1D.NewSmoothVolumePolyline, a.Execute));
                 else if (a is CutHoleAction cutHole)

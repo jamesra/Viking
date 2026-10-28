@@ -485,17 +485,34 @@ namespace WebAnnotation.UI.Commands
         }
 
         /// <summary>
-        /// The walked piece that is kept: the larger one for a growth, the counterclockwise one for a shrink unless Ctrl swaps it.
+        /// The walked piece that is kept: the larger one for a growth, the counterclockwise one for an outline shrink unless Ctrl
+        /// swaps it. For a stroke that splits a hole it is the part that stays a hole, so the other part is filled: the smaller
+        /// part is filled unless Ctrl fills the larger one (<see cref="HolePartKept"/>), as in the pen choices.
         /// Null when there is no cut.
         /// </summary>
         private Polygon ChosenPiece() => CutAction switch
         {
             RetraceCommandAction.GROW_EXTERIOR_RING or RetraceCommandAction.GROW_INTERNAL_RING =>
                 CounterClockwiseCutPolygon.Area > ClockwiseCutPolygon.Area ? CounterClockwiseCutPolygon : ClockwiseCutPolygon,
-            RetraceCommandAction.SHRINK_EXTERIOR_RING or RetraceCommandAction.SHRINK_INTERNAL_RING =>
+            RetraceCommandAction.SHRINK_EXTERIOR_RING =>
                 SwitchSide ? ClockwiseCutPolygon : CounterClockwiseCutPolygon,
+            RetraceCommandAction.SHRINK_INTERNAL_RING =>
+                HolePartKept(ClockwiseCutPolygon, CounterClockwiseCutPolygon, SwitchSide),
             _ => null,
         };
+
+        /// <summary>
+        /// For a stroke that splits a hole: the part that stays the hole. By default the larger part stays, so the smaller part
+        /// is filled; <paramref name="fillLarger"/> (Ctrl) keeps the smaller part as the hole and fills the larger.
+        /// Static so the rule can be tested without a viewer.
+        /// </summary>
+        internal static Polygon HolePartKept(Polygon clockwise, Polygon counterClockwise, bool fillLarger)
+        {
+            bool clockwiseIsSmaller = clockwise.Area <= counterClockwise.Area;
+            Polygon smaller = clockwiseIsSmaller ? clockwise : counterClockwise;
+            Polygon larger = clockwiseIsSmaller ? counterClockwise : clockwise;
+            return fillLarger ? smaller : larger;
+        }
 
         private Polygon OtherPiece(Polygon piece) =>
             piece is null ? null : ReferenceEquals(piece, ClockwiseCutPolygon) ? CounterClockwiseCutPolygon : ClockwiseCutPolygon;
@@ -552,6 +569,14 @@ namespace WebAnnotation.UI.Commands
                 _viewSmall = null;
                 _viewAction = RetraceCommandAction.NONE;
                 return;
+            }
+
+            if (CutAction == RetraceCommandAction.SHRINK_INTERNAL_RING)
+            {
+                // Green is the part of the hole that will be filled, magenta the part that stays a hole.
+                bool counterClockwiseStaysHole = ReferenceEquals(ChosenPiece(), CounterClockwiseCutPolygon);
+                CCW_Color = counterClockwiseStaysHole ? dropped : kept;
+                CW_Color = counterClockwiseStaysHole ? kept : dropped;
             }
 
             bool ccwSmaller = CounterClockwiseCutPolygon.Area <= ClockwiseCutPolygon.Area;

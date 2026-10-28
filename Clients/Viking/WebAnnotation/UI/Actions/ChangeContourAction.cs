@@ -53,6 +53,33 @@ namespace WebAnnotation.UI.Actions
         /// <summary>Pen path that cut <see cref="PreviewOriginal"/>. Used to keep the cap flood on the near side of the cut.</summary>
         internal IReadOnlyList<Vector2> PreviewPath;
 
+        /// <summary>
+        /// For a choice made by a stroke that splits a hole in two (<see cref="RetraceCommandAction.SHRINK_INTERNAL_RING"/>):
+        /// the part of the hole, as drawn in volume space, that this choice fills. The choice previews only this part and a
+        /// click on it picks the choice, so what the user clicks becomes part of the polygon. Null for every other choice, which
+        /// previews and is clicked on its whole new shape. Set by <see cref="PolygonCut.AttachHoleFillParts"/>.
+        /// </summary>
+        internal Polygon? FilledHolePart;
+
+        /// <summary>True for the hole-split choice that fills the smaller part of the hole. Its button says so.</summary>
+        internal bool FillsSmallerHolePart;
+
+        /// <summary>
+        /// The location as drawn, set on the hole-split choice that fills the smaller part, so a click on the polygon outside
+        /// the hole picks that choice. Null otherwise.
+        /// </summary>
+        internal Polygon? ClickOutsideHole;
+
+        /// <summary>
+        /// Where a click on the choice canvas picks this choice (<see cref="WebAnnotation.UI.Commands.ActionSelectionCanvasControl"/>):
+        /// the part of the hole it fills plus, for the smaller part, the polygon itself; otherwise the whole new shape.
+        /// The regions of the two hole-split choices do not overlap, so which one a click picks does not depend on their order.
+        /// </summary>
+        internal IReadOnlyList<IShape2D> ClickRegions =>
+            FilledHolePart is null ? [NewSmoothedVolumePolygon]
+            : ClickOutsideHole is null ? [FilledHolePart]
+            : [FilledHolePart, ClickOutsideHole];
+
         public LocationAction Type => LocationAction.CHANGEBOUNDARY;
 
         public RetraceCommandAction RetraceType { get; } = RetraceCommandAction.NONE;

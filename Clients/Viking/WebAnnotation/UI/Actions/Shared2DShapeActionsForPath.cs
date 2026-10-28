@@ -19,11 +19,6 @@ namespace WebAnnotation.UI.Actions
         /// <param name="tolerance">Largest distance, in volume pixels, between the saved curve and the pen stroke.</param>
         public static List<Change2DContourAction> GetRetraceActionForPath(long locID, Polygon OriginalVolumePolygon, IReadOnlyList<Vector2> path, InteractionLogEvent StartEntry, InteractionLogEvent NextEntry, double tolerance)
         {
-            /// <summary>
-            /// Which polygon is being cut? This can be either the exterior ring or an interior ring
-            /// </summary>
-            PolygonIndex? PolyBeingCut;
-
             List<Change2DContourAction> output = [];
 
             if (StartEntry.Index == 0)
@@ -76,6 +71,35 @@ namespace WebAnnotation.UI.Actions
             // Cuts near or past the edge of the registration grid have vertices a discrete grid cannot map; the RBF fallback extrapolates them.
             IVolumeToSectionTransform Transform = AnnotationOverlay.ActiveSectionToVolumeTransform.WithContinuousFallback();
 
+            // The walk follows the smoothed display ring, so it carries every interpolated sample. These pieces decide the
+            // choices and draw their previews; drop samples that sit on the chord between neighbors so they mesh quickly.
+            // The choice fill still draws from the cached cell, not from this reduced ring.
+            double downsample = AnnotationOverlay.ActiveDownsample;
+            double reduceTolerance = downsample < 2 ? 4 : downsample * 4;
+
+            return BuildRetraceActions(locObj, Transform, OriginalVolumePolygon, subpath, FirstIntersection, StartEntry.Interaction == AnnotationRegionInteraction.ENTER, tolerance, reduceTolerance);
+        }
+
+        /// <summary>
+        /// The choices for a stroke that crosses one ring of the location twice, once <see cref="GetRetraceActionForPath"/> has
+        /// found the crossings, the location and the transform. Split out so the choices can be built without the store or the overlay.
+        /// </summary>
+        /// <param name="OriginalVolumePolygon">The location's outline as drawn (smoothed), which the pen crossed.</param>
+        /// <param name="subpath">The stretch of the stroke around the two crossings, in volume space.</param>
+        /// <param name="FirstIntersection">The ring segment the stroke crosses first; it names the ring being retraced.</param>
+        /// <param name="enterIsFirstInteraction">True when the stroke entered the location before leaving it (<see cref="GetRetraceCommandAction"/>).</param>
+        /// <param name="tolerance">Largest distance, in volume pixels, between the saved curve and the pen stroke.</param>
+        /// <param name="reduceTolerance">Chord tolerance, in volume pixels, for thinning the walked pieces.</param>
+        internal static List<Change2DContourAction> BuildRetraceActions(LocationObj locObj, IVolumeToSectionTransform Transform, Polygon OriginalVolumePolygon, Vector2[] subpath, PolygonIndex FirstIntersection, bool enterIsFirstInteraction, double tolerance, double reduceTolerance)
+        {
+            long locID = locObj.ID;
+            List<Change2DContourAction> output = [];
+
+            /// <summary>
+            /// Which polygon is being cut? This can be either the exterior ring or an interior ring
+            /// </summary>
+            PolygonIndex? PolyBeingCut;
+
             Polygon PolyToCut = OriginalVolumePolygon.Clone() as Polygon;
             if (FirstIntersection.IsInner)
             {
@@ -114,12 +138,6 @@ namespace WebAnnotation.UI.Actions
 
             PolyBeingCut = FirstIntersection;
 
-            // The walk follows the smoothed display ring, so it carries every interpolated sample. These pieces decide the
-            // choices and draw their previews; drop samples that sit on the chord between neighbors so they mesh quickly.
-            // The choice fill still draws from the cached cell, not from this reduced ring.
-            double downsample = AnnotationOverlay.ActiveDownsample;
-            double reduceTolerance = downsample < 2 ? 4 : downsample * 4;
-
             // Each side is cut on its own: a self-intersecting source ring only spoils the side that carries the fold,
             // and the broken side is never offered or rendered.
             Polygon clockwise_poly = TryCutSide(PolyToCut, RotationDirection.Clockwise, subpath, reduceTolerance, out string clockwiseProblem);
@@ -137,7 +155,7 @@ namespace WebAnnotation.UI.Actions
                 Trace.WriteLine($"Pen retrace of location {locID}: one side of the cut is invalid and is not offered ({(clockwise_poly is null ? "clockwise" : "counterclockwise")}: {(clockwise_poly is null ? clockwiseProblem : counterClockwiseProblem)}).");
             }
 
-            RetraceCommandAction cutType = GetRetraceCommandAction(FirstIntersection.IsInner, StartEntry.Interaction == AnnotationRegionInteraction.ENTER);
+            RetraceCommandAction cutType = GetRetraceCommandAction(FirstIntersection.IsInner, enterIsFirstInteraction);
 
 
 
@@ -237,21 +255,35 @@ namespace WebAnnotation.UI.Actions
                         if ((counter_clockwise_poly is not null && mosaic_counter_clockwise_poly is null) || (clockwise_poly is not null && mosaic_clockwise_poly is null))
                             return output;
 
+                        // The stroke splits the hole in two. Each choice keeps one part as the hole and fills the other, and is
+                        // drawn, named and clicked by the part it fills: what the user clicks becomes part of the polygon.
+                        Change2DContourAction? fillsClockwisePart = null;
+                        Change2DContourAction? fillsCounterClockwisePart = null;
                         if (mosaic_counter_clockwise_poly is not null)
                         {
-                            //Counterclockwise action
                             input_poly_clone = WithReplacedHole(locObj.MosaicShape.ToPolygon(), PolyBeingCut.Value.InnerShapeIndex.Value, mosaic_counter_clockwise_poly, locID);
                             if (input_poly_clone is not null)
-                                output.Add(new Change2DContourAction(locObj, cutType, input_poly_clone, transform: Transform));
+                                fillsClockwisePart = new Change2DContourAction(locObj, cutType, input_poly_clone, transform: Transform);
                         }
 
                         if (mosaic_clockwise_poly is not null)
                         {
-                            //Clockwise action
                             input_poly_clone = WithReplacedHole(locObj.MosaicShape.ToPolygon(), PolyBeingCut.Value.InnerShapeIndex.Value, mosaic_clockwise_poly, locID);
                             if (input_poly_clone is not null)
-                                output.Add(new Change2DContourAction(locObj, cutType, input_poly_clone, ClockwiseContour: true, transform: Transform));
+                                fillsCounterClockwisePart = new Change2DContourAction(locObj, cutType, input_poly_clone, ClockwiseContour: true, transform: Transform);
                         }
+
+                        // The parts are previewed and clicked as walked, without the chord reduction: reducing a thin sliver at
+                        // the choice tolerance left it with no area to click. A side that failed above is not walked again.
+                        Polygon? drawnClockwisePart = clockwise_poly is null ? null : TryCutSide(PolyToCut, RotationDirection.Clockwise, subpath, 0, out _);
+                        Polygon? drawnCounterClockwisePart = counter_clockwise_poly is null ? null : TryCutSide(PolyToCut, RotationDirection.Counterclockwise, subpath, 0, out _);
+                        AttachHoleFillParts(fillsClockwisePart, drawnClockwisePart ?? clockwise_poly, fillsCounterClockwisePart, drawnCounterClockwisePart ?? counter_clockwise_poly, OriginalVolumePolygon);
+
+                        // The choice that fills the smaller part, which a click on the polygon itself picks, is listed first.
+                        Change2DContourAction?[] ordered = fillsCounterClockwisePart is { FillsSmallerHolePart: true }
+                            ? [fillsCounterClockwisePart, fillsClockwisePart]
+                            : [fillsClockwisePart, fillsCounterClockwisePart];
+                        output.AddRange(ordered.OfType<Change2DContourAction>());
 
                         return output;
                 }
@@ -277,6 +309,35 @@ namespace WebAnnotation.UI.Actions
                 Trace.WriteLine($"Pen retrace of location {locID}: the new hole {hole} is not valid inside the polygon ({e.Message}); that choice is not offered.");
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Gives each choice of a hole split the part of the hole it fills, as drawn (<see cref="Change2DContourAction.FilledHolePart"/>),
+        /// so its preview shows that part and a click there picks it. The choice that fills the smaller part also takes clicks
+        /// on the polygon outside the hole (<see cref="Change2DContourAction.ClickOutsideHole"/>). When one side of the cut is
+        /// not a valid polygon its part is unknown; that choice then keeps the whole new shape as its preview and click area.
+        /// </summary>
+        /// <param name="fillsClockwisePart">The choice that keeps the counterclockwise part as the hole, or null.</param>
+        /// <param name="clockwisePart">The clockwise part of the hole as walked on the drawn ring, or null.</param>
+        /// <param name="fillsCounterClockwisePart">The choice that keeps the clockwise part as the hole, or null.</param>
+        /// <param name="counterClockwisePart">The counterclockwise part of the hole as walked on the drawn ring, or null.</param>
+        /// <param name="drawnPolygon">The location as drawn, with the hole before the cut.</param>
+        internal static void AttachHoleFillParts(Change2DContourAction? fillsClockwisePart, Polygon? clockwisePart, Change2DContourAction? fillsCounterClockwisePart, Polygon? counterClockwisePart, Polygon drawnPolygon)
+        {
+            if (fillsClockwisePart is not null)
+                fillsClockwisePart.FilledHolePart = clockwisePart;
+            if (fillsCounterClockwisePart is not null)
+                fillsCounterClockwisePart.FilledHolePart = counterClockwisePart;
+
+            if (clockwisePart is null || counterClockwisePart is null)
+                return;
+
+            Change2DContourAction? fillsSmaller = clockwisePart.Area <= counterClockwisePart.Area ? fillsClockwisePart : fillsCounterClockwisePart;
+            if (fillsSmaller is null)
+                return;
+
+            fillsSmaller.FillsSmallerHolePart = true;
+            fillsSmaller.ClickOutsideHole = drawnPolygon;
         }
 
         /// <summary>
