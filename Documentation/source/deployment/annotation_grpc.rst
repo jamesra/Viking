@@ -48,10 +48,12 @@ environment; ASP.NET Core reads ``Section__Key`` as ``Section:Key``:
 One deployment per annotation database
 ======================================
 
-``Servers/GrpcAnnotationService/scripts/Deploy-AnnotationGrpc.ps1`` prepares compose project
+``Servers/GrpcAnnotationService/scripts/Deploy-AnnotationGrpc.ps1`` deploys compose project
 ``viking-annotation-<database>`` with its own env file and port pair (``GRPC_ANNOTATION_ENV_FILE``,
-``GRPC_ANNOTATION_HTTP_PORT``, ``GRPC_ANNOTATION_HTTPS_PORT``) and checks it with
-``docker compose config --quiet``; it does not start containers yet. ``-WhatIf`` previews,
+``GRPC_ANNOTATION_HTTP_PORT``, ``GRPC_ANNOTATION_HTTPS_PORT``): it checks it with
+``docker compose config --quiet``, runs ``docker compose up -d --build grpc-annotation-service``,
+waits up to 120 s for the HTTPS port to answer and prints the endpoint (``https://localhost:<port + 1>/``).
+A running project keeps its ports on a re-run. ``-WhatIf`` previews without starting anything,
 ``-Status`` lists projects, ``-Remove`` runs ``down``. Each extra database needs its own hostname and
 proxy upstream if it is reached through the proxy.
 

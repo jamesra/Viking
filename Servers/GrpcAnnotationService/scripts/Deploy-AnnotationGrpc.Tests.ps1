@@ -1,15 +1,18 @@
 <#
 .SYNOPSIS
-    Pester tests for the pure helpers of Deploy-AnnotationGrpc.ps1.
+    Pester tests for Deploy-AnnotationGrpc.ps1: its helpers, and the start step with docker faked.
 
 .DESCRIPTION
-    Loads only the function definitions Get-ProjectName, Find-FreePortPair, Get-UnfilledKeys and
-    Get-ComposeVariables from the script through the PowerShell AST, so the script's main body
-    (parameter binding, docker, env files) never runs. No docker, no network, no sockets: the
-    port helper is given its in-use list as an argument.
+    Loads the helper function definitions from the script through the PowerShell AST, so the
+    helper tests never run the script's main body. The port helper is given its in-use list as an
+    argument; the TLS probe is tested only against loopback listeners these tests open.
 
     The script-level settings the helpers read ($projectPrefix, $firstPort, $reservedPorts) are
     re-read from the script's own assignments, so a changed setting is tested, not a copy of it.
+
+    The whole-script tests replace docker with a function named docker that records its
+    arguments, so no real docker command runs: -WhatIf must skip `up`, a real run must call
+    `up -d --build grpc-annotation-service`, and a running project must keep its port.
 
     Written for Pester 3.4 (the version shipped with Windows PowerShell); the same syntax runs on
     PowerShell 7 with that module.
@@ -27,14 +30,16 @@ $errors = $null
 $ast = [System.Management.Automation.Language.Parser]::ParseFile($scriptPath, [ref]$tokens, [ref]$errors)
 if ($errors.Count -gt 0) { throw "Cannot parse ${scriptPath}: $($errors[0].Message)" }
 
-$helperNames = 'Get-ProjectName', 'Find-FreePortPair', 'Get-UnfilledKeys', 'Get-ComposeVariables'
+$helperNames = 'Get-ProjectName', 'Find-FreePortPair', 'Get-UnfilledKeys', 'Get-ComposeVariables',
+               'Invoke-ComposeService', 'Get-PublishedHttpPort', 'Test-TlsHandshake', 'Wait-ServiceReady',
+               'Start-ComposeProject'
 $helperSource = $ast.FindAll({
         param($node)
         $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $helperNames -contains $node.Name
     }, $true) | ForEach-Object { $_.Extent.Text }
 
 # Top-level assignments of the settings the helpers read, evaluated without running anything else.
-$settingNames = 'projectPrefix', 'firstPort', 'reservedPorts'
+$settingNames = 'projectPrefix', 'firstPort', 'reservedPorts', 'serviceName'
 $settingSource = $ast.EndBlock.Statements |
     Where-Object {
         $_ -is [System.Management.Automation.Language.AssignmentStatementAst] -and
@@ -43,9 +48,9 @@ $settingSource = $ast.EndBlock.Statements |
     } | ForEach-Object { $_.Extent.Text }
 
 Describe 'Deploy-AnnotationGrpc helper loading' {
-    It 'finds all four helpers and all three settings in the script' {
-        @($helperSource).Count | Should Be 4
-        @($settingSource).Count | Should Be 3
+    It 'finds all nine helpers and all four settings in the script' {
+        @($helperSource).Count | Should Be 9
+        @($settingSource).Count | Should Be 4
     }
 }
 
@@ -149,5 +154,195 @@ Describe 'Deploy-AnnotationGrpc helpers' {
             $v.Contains('GRPC_ANNOTATION_CORRECTIONS_PATH') | Should Be $false
             @($v.Keys | Where-Object { $_ -like 'ANNOTATION_SQL_*' }).Count | Should Be 0
         }
+    }
+
+    Context 'Get-PublishedHttpPort' {
+        It 'returns the host port mapped to 80/tcp' {
+            Get-PublishedHttpPort '0.0.0.0:5011->443/tcp, [::]:5011->443/tcp, 0.0.0.0:5010->80/tcp, [::]:5010->80/tcp' | Should Be 5010
+        }
+        It 'returns $null when 80/tcp is not published' {
+            Get-PublishedHttpPort '0.0.0.0:5011->443/tcp' | Should Be $null
+            Get-PublishedHttpPort '' | Should Be $null
+        }
+        It 'does not take a container port that only ends in 80' {
+            Get-PublishedHttpPort '0.0.0.0:6080->8080/tcp, 0.0.0.0:6180->180/tcp' | Should Be $null
+        }
+    }
+
+    Context 'Wait-ServiceReady' {
+        Mock Start-Sleep {}
+
+        It 'returns $true without sleeping when the first probe answers' {
+            Mock Test-TlsHandshake { $true }
+            Wait-ServiceReady 5011 10 2 | Should Be $true
+            Assert-MockCalled Test-TlsHandshake -Exactly 1 -Scope It -ParameterFilter { $Port -eq 5011 }
+            Assert-MockCalled Start-Sleep -Exactly 0 -Scope It
+        }
+        It 'keeps probing until the port answers' {
+            $state = @{ n = 0 }
+            Mock Test-TlsHandshake { $state.n++; $state.n -ge 3 }
+            Wait-ServiceReady 5011 10 2 | Should Be $true
+            Assert-MockCalled Test-TlsHandshake -Exactly 3 -Scope It
+            Assert-MockCalled Start-Sleep -Exactly 2 -Scope It -ParameterFilter { $Seconds -eq 2 }
+        }
+        It 'gives up after ceiling(timeout / interval) probes' {
+            Mock Test-TlsHandshake { $false }
+            Wait-ServiceReady 5011 10 3 | Should Be $false
+            Assert-MockCalled Test-TlsHandshake -Exactly 4 -Scope It
+            Assert-MockCalled Start-Sleep -Exactly 3 -Scope It
+        }
+        It 'probes at least once when the timeout is shorter than the interval' {
+            Mock Test-TlsHandshake { $false }
+            Wait-ServiceReady 5011 0 2 | Should Be $false
+            Assert-MockCalled Test-TlsHandshake -Exactly 1 -Scope It
+        }
+    }
+
+    Context 'Test-TlsHandshake' {
+        It 'returns $false for a port that accepts TCP but never answers TLS (as Docker does before the service listens)' {
+            $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
+            $listener.Start()
+            try {
+                Test-TlsHandshake $listener.LocalEndpoint.Port 500 | Should Be $false
+                # The probe connected to this port (the connection waits in the backlog).
+                $listener.Pending() | Should Be $true
+            }
+            finally { $listener.Stop() }
+        }
+        It 'returns $false for a closed port' {
+            $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
+            $listener.Start()
+            $port = $listener.LocalEndpoint.Port
+            $listener.Stop()
+            Test-TlsHandshake $port 500 | Should Be $false
+        }
+    }
+
+    Context 'Invoke-ComposeService' {
+        # Join-Path needs an existing drive, not an existing folder.
+        $repoRoot = 'C:\repo'
+        $calls = New-Object System.Collections.ArrayList
+        $fake = @{ exit = 0 }
+        function docker { [void]$calls.Add(@{ args = @($args); port = $env:GRPC_ANNOTATION_HTTP_PORT }); $global:LASTEXITCODE = $fake.exit }
+
+        It 'runs docker compose for the project and stack file with the arguments in order' {
+            $calls.Clear(); $fake.exit = 0
+            Invoke-ComposeService 'viking-annotation-rc3' @{} @('up', '-d', '--build', 'grpc-annotation-service')
+            $calls.Count | Should Be 1
+            $calls[0].args -join ' ' | Should BeExactly 'compose --project-name viking-annotation-rc3 -f C:\repo\Servers\GrpcAnnotationService\docker-compose.yml up -d --build grpc-annotation-service'
+        }
+        It 'sets the variables only for the call and restores the previous values' {
+            $calls.Clear(); $fake.exit = 0
+            $old = $env:GRPC_ANNOTATION_HTTP_PORT
+            $env:GRPC_ANNOTATION_HTTP_PORT = 'before'
+            try {
+                Invoke-ComposeService 'p' @{ GRPC_ANNOTATION_HTTP_PORT = '6010' } @('config', '--quiet')
+                $calls[0].port | Should BeExactly '6010'
+                $env:GRPC_ANNOTATION_HTTP_PORT | Should BeExactly 'before'
+            }
+            finally { $env:GRPC_ANNOTATION_HTTP_PORT = $old }
+        }
+        It 'throws naming the subcommand on a non-zero exit, and still restores the variables' {
+            $calls.Clear(); $fake.exit = 3
+            $old = $env:GRPC_ANNOTATION_HTTP_PORT
+            $env:GRPC_ANNOTATION_HTTP_PORT = 'before'
+            try {
+                { Invoke-ComposeService 'p' @{ GRPC_ANNOTATION_HTTP_PORT = '6010' } @('up', '-d') } |
+                    Should Throw 'docker compose up failed for p (exit 3).'
+                $env:GRPC_ANNOTATION_HTTP_PORT | Should BeExactly 'before'
+            }
+            finally { $env:GRPC_ANNOTATION_HTTP_PORT = $old; $global:LASTEXITCODE = 0 }
+        }
+    }
+
+    Context 'Start-ComposeProject' {
+        $order = New-Object System.Collections.ArrayList
+        Mock Invoke-ComposeService { [void]$order.Add('compose ' + ($Arguments -join ' ')) }
+
+        It 'runs up -d --build, then waits on the HTTPS port (HTTP port + 1) and prints that endpoint' {
+            $order.Clear()
+            Mock Wait-ServiceReady { [void]$order.Add('wait'); $true }
+            $out = Start-ComposeProject 'viking-annotation-rc3' @{ A = '1' } 5010 30 6>&1 | Out-String
+            @($order) -join ';' | Should BeExactly 'compose up -d --build grpc-annotation-service;wait'
+            Assert-MockCalled Invoke-ComposeService -Exactly 1 -Scope It -ParameterFilter { $ProjectName -eq 'viking-annotation-rc3' -and $Variables['A'] -eq '1' }
+            Assert-MockCalled Wait-ServiceReady -Exactly 1 -Scope It -ParameterFilter { $Port -eq 5011 -and $TimeoutSeconds -eq 30 }
+            $out | Should Match ([regex]::Escape('Viking endpoint: https://localhost:5011/'))
+        }
+        It 'throws with the endpoint and a logs hint when the port does not answer in time' {
+            Mock Wait-ServiceReady { $false }
+            { Start-ComposeProject 'viking-annotation-rc3' @{} 5010 30 6>$null } |
+                Should Throw 'viking-annotation-rc3 did not answer on https://localhost:5011/ within 30 s. Check: docker compose --project-name viking-annotation-rc3 logs grpc-annotation-service'
+        }
+        It 'does not wait when up fails' {
+            Mock Invoke-ComposeService { throw 'docker compose up failed' }
+            Mock Wait-ServiceReady { $true }
+            { Start-ComposeProject 'p' @{} 5010 30 6>$null } | Should Throw 'docker compose up failed'
+            Assert-MockCalled Wait-ServiceReady -Exactly 0 -Scope It
+        }
+    }
+}
+
+Describe 'Deploy-AnnotationGrpc start step (docker faked)' {
+    $calls = New-Object System.Collections.ArrayList
+    $fake = @{ ps = '' }
+    # Shadows docker.exe for the script: records every call and never runs a real docker command.
+    # `up` always fails, so a run that reaches it stops before waiting on a port.
+    function docker {
+        $a = @($args)
+        [void]$calls.Add(@{ args = $a; port = $env:GRPC_ANNOTATION_HTTP_PORT })
+        $global:LASTEXITCODE = 0
+        if ($a[0] -eq 'ps') { return $fake.ps }
+        if ($a -contains 'up') { $global:LASTEXITCODE = 1 }
+    }
+    $envPath = Join-Path $TestDrive 'Pester.env'
+    Set-Content -LiteralPath $envPath -Value 'ConnectionStrings__AnnotationConnection=Server=s;Database=Pester;Password=x'
+    $composeCalls = { @($calls | Where-Object { $_.args[0] -eq 'compose' } | ForEach-Object { $_.args[5..($_.args.Count - 1)] -join ' ' }) }
+
+    It '-WhatIf checks the configuration and skips up' {
+        $calls.Clear(); $fake.ps = ''
+        & $scriptPath -Database Pester -EnvFile $envPath -WhatIf 6>$null
+        $c = @(& $composeCalls)
+        $c.Count | Should Be 1
+        $c[0] | Should BeExactly 'config --quiet grpc-annotation-service'
+    }
+    It 'a real run starts grpc-annotation-service with up -d --build, after the config check' {
+        $calls.Clear(); $fake.ps = ''
+        # Guard: never reach a real docker up.
+        (Get-Command docker).CommandType | Should Be 'Function'
+        { & $scriptPath -Database Pester -EnvFile $envPath 6>$null } | Should Throw 'docker compose up failed for viking-annotation-pester (exit 1).'
+        $c = @(& $composeCalls)
+        $c.Count | Should Be 2
+        $c[0] | Should BeExactly 'config --quiet grpc-annotation-service'
+        $c[1] | Should BeExactly 'up -d --build grpc-annotation-service'
+        $global:LASTEXITCODE = 0
+    }
+    It 'a running project keeps the port pair it publishes' {
+        $calls.Clear(); $fake.ps = '0.0.0.0:6010->80/tcp, 0.0.0.0:6011->443/tcp'
+        & $scriptPath -Database Pester -EnvFile $envPath -WhatIf 6>$null
+        $ps = @($calls | Where-Object { $_.args[0] -eq 'ps' })
+        $ps.Count | Should Be 1
+        ($ps[0].args -join ' ') | Should Match 'label=com\.docker\.compose\.project=viking-annotation-pester'
+        @($calls | Where-Object { $_.args[0] -eq 'compose' })[0].port | Should BeExactly '6010'
+    }
+    It '-Port may name the pair the running project already listens on' {
+        # Two loopback listeners on a consecutive pair stand in for the running project's ports.
+        $listeners = $null
+        for ($p = 42010; $p -lt 42100 -and -not $listeners; $p += 2) {
+            try {
+                $a = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $p); $a.Start()
+                try { $b = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $p + 1); $b.Start(); $listeners = @($a, $b) }
+                catch { $a.Stop() }
+            }
+            catch { }
+        }
+        $port = $listeners[0].LocalEndpoint.Port
+        try {
+            $calls.Clear(); $fake.ps = "0.0.0.0:$port->80/tcp"
+            & $scriptPath -Database Pester -EnvFile $envPath -Port $port -WhatIf 6>$null
+            @($calls | Where-Object { $_.args[0] -eq 'compose' })[0].port | Should BeExactly ([string]$port)
+            $fake.ps = ''
+            { & $scriptPath -Database Pester -EnvFile $envPath -Port $port -WhatIf 6>$null } | Should Throw 'already in use'
+        }
+        finally { $listeners | ForEach-Object { $_.Stop() } }
     }
 }
