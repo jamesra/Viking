@@ -776,7 +776,7 @@
                                      FontSize="10"
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
-                                     Text="How close polygon edges must be to the pen stroke. Smaller numbers are more accurate but require more points, negatively impacting performance."/>
+                                     Text="How far, in volume pixels, a pen outline may drift from the stroke, whatever the zoom. Pen strokes never use more than 2, so a stroke drawn zoomed out stays on the membrane. Smaller numbers follow the stroke more closely with more points."/>
                         </Grid>
 
                         <!-- Circle Annotations -->

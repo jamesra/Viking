@@ -152,9 +152,17 @@ namespace Viking.UI
         private bool MustCheckResumeDistance = false;
 
 
+        /// <summary>
+        /// Largest distance, in volume pixels, the simplified path may drift from the stroke, whatever the zoom. A cell
+        /// membrane is only a few volume pixels thick, so a tolerance that grew with the downsample let a stroke drawn zoomed
+        /// out bulge off the membrane by more than its width.
+        /// </summary>
+        public const double MaxSimplifiedPathToleranceInVolumePixels = 2.0;
+
         private double _SimplifiedPathToleranceInPixels = 1.0;
         /// <summary>
-        /// How far can the simplified path drift from actual path in pixels?
+        /// How far the simplified path may drift from the stroke, in volume pixels, before the
+        /// <see cref="MaxSimplifiedPathToleranceInVolumePixels"/> cap (see <see cref="SimplifiedPathTolerance"/>).
         /// </summary>
         public double SimplifiedPathToleranceInPixels
         {
@@ -169,7 +177,10 @@ namespace Viking.UI
             }
         }
 
-        private void UpdatePathTolerance() => path.SimplifiedPathTolerance = _SimplifiedPathToleranceInPixels * (Parent.Camera.Downsample < 1 ? 1 : Parent.Camera.Downsample);
+        /// <summary>The tolerance the path is simplified with, in volume pixels.</summary>
+        public double SimplifiedPathTolerance => path.SimplifiedPathTolerance;
+
+        private void UpdatePathTolerance() => path.SimplifiedPathTolerance = Math.Min(_SimplifiedPathToleranceInPixels, MaxSimplifiedPathToleranceInVolumePixels);
 
         /// <summary>
         /// The user has stopped drawing

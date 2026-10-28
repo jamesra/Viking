@@ -51,9 +51,9 @@ namespace WebAnnotation.UI.ActionViews
                 return;
             }
 
-            SolidPolygonView view = new(model.NewVolumePolygon, color.SetAlpha(0.5f));
+            SolidPolygonView view = new(model.NewSmoothedVolumePolygon, color.SetAlpha(0.5f));
             Passive = view;
-            Active = new SolidPolygonView(model.NewVolumePolygon, color.SetAlpha(0.75f));
+            Active = new SolidPolygonView(model.NewSmoothedVolumePolygon, color.SetAlpha(0.75f));
         }
 
         public Color GetShapeColor(RetraceCommandAction action)

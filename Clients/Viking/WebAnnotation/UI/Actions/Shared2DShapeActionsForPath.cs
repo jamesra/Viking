@@ -15,7 +15,9 @@ namespace WebAnnotation.UI.Actions
     /// </summary>
     internal static class PolygonCut
     {
-        public static List<Change2DContourAction> GetRetraceActionForPath(long locID, Polygon OriginalVolumePolygon, IReadOnlyList<Vector2> path, InteractionLogEvent StartEntry, InteractionLogEvent NextEntry)
+        /// <param name="OriginalVolumePolygon">The location's outline as drawn (smoothed), which the pen crossed.</param>
+        /// <param name="tolerance">Largest distance, in volume pixels, between the saved curve and the pen stroke.</param>
+        public static List<Change2DContourAction> GetRetraceActionForPath(long locID, Polygon OriginalVolumePolygon, IReadOnlyList<Vector2> path, InteractionLogEvent StartEntry, InteractionLogEvent NextEntry, double tolerance)
         {
             /// <summary>
             /// Which polygon is being cut? This can be either the exterior ring or an interior ring
@@ -112,8 +114,8 @@ namespace WebAnnotation.UI.Actions
 
             PolyBeingCut = FirstIntersection;
 
-            // The walk follows the smoothed display ring, so it carries every interpolated sample.
-            // Drop samples that sit on the chord between neighbors before this piece is saved.
+            // The walk follows the smoothed display ring, so it carries every interpolated sample. These pieces decide the
+            // choices and draw their previews; drop samples that sit on the chord between neighbors so they mesh quickly.
             // The choice fill still draws from the cached cell, not from this reduced ring.
             double downsample = AnnotationOverlay.ActiveDownsample;
             double reduceTolerance = downsample < 2 ? 4 : downsample * 4;
@@ -139,8 +141,37 @@ namespace WebAnnotation.UI.Actions
 
 
 
-            Polygon mosaic_clockwise_poly = clockwise_poly is null ? null : Transform.TryMapShapeVolumeToSection(clockwise_poly);
-            Polygon mosaic_counter_clockwise_poly = counter_clockwise_poly is null ? null : Transform.TryMapShapeVolumeToSection(counter_clockwise_poly);
+            // What is saved keeps the location's stored control points and adds only the pen stretch. Saving the walked piece
+            // instead turned the drawn curve into control points and curved it again, moving the whole outline at every edit.
+            Polygon saved_clockwise_poly = clockwise_poly;
+            Polygon saved_counter_clockwise_poly = counter_clockwise_poly;
+            Polygon mosaic_clockwise_poly = null;
+            Polygon mosaic_counter_clockwise_poly = null;
+            if (ControlPointCut.TrySplice(locObj.MosaicShape.ToPolygon(), Transform, FirstIntersection, subpath, tolerance, out ControlPointCut.Piece afterFirst, out ControlPointCut.Piece afterSecond))
+            {
+                ControlPointCut.PairWithWalk(afterFirst, afterSecond, clockwise_poly, counter_clockwise_poly, out ControlPointCut.Piece splicedClockwise, out ControlPointCut.Piece splicedCounterClockwise);
+                if (clockwise_poly is not null && splicedClockwise is not null)
+                {
+                    saved_clockwise_poly = splicedClockwise.Volume;
+                    mosaic_clockwise_poly = splicedClockwise.Mosaic;
+                }
+
+                if (counter_clockwise_poly is not null && splicedCounterClockwise is not null)
+                {
+                    saved_counter_clockwise_poly = splicedCounterClockwise.Volume;
+                    mosaic_counter_clockwise_poly = splicedCounterClockwise.Mosaic;
+                }
+            }
+            else
+            {
+                Trace.WriteLine($"Pen retrace of location {locID}: the stroke could not be spliced into the stored control points; saving the walked outline.");
+            }
+
+            // A side the splice could not build falls back to the walked piece
+            if (mosaic_clockwise_poly is null && clockwise_poly is not null)
+                mosaic_clockwise_poly = Transform.TryMapShapeVolumeToSection(clockwise_poly);
+            if (mosaic_counter_clockwise_poly is null && counter_clockwise_poly is not null)
+                mosaic_counter_clockwise_poly = Transform.TryMapShapeVolumeToSection(counter_clockwise_poly);
 
 
 
@@ -161,7 +192,7 @@ namespace WebAnnotation.UI.Actions
                     case RetraceCommandAction.GROW_EXTERIOR_RING:
                         if (TryChooseGrownSide(PolyToCut, clockwise_poly, counter_clockwise_poly, out UseCCW) == false)
                             return Rejected(output, locID, "the only valid side of the cut does not enlarge the outline");
-                        Polygon outputVolumePoly = UseCCW ? counter_clockwise_poly : clockwise_poly;
+                        Polygon outputVolumePoly = UseCCW ? saved_counter_clockwise_poly : saved_clockwise_poly;
                         Polygon outputMosaicPoly = UseCCW ? mosaic_counter_clockwise_poly : mosaic_clockwise_poly;
                         Polygon growthLobe = UseCCW ? clockwise_poly : counter_clockwise_poly;
                         // Only the kept piece is saved, so an unmappable discarded lobe must not block the cut.
@@ -177,8 +208,8 @@ namespace WebAnnotation.UI.Actions
                         // A side that is invalid (null) is simply not offered.
                         if ((counter_clockwise_poly is not null && mosaic_counter_clockwise_poly is null) || (clockwise_poly is not null && mosaic_clockwise_poly is null))
                             return Rejected(output, locID, "a cut piece has a vertex outside the section's mapped area");
-                        counter_clockwise_action = counter_clockwise_poly is null ? null : new Change2DContourAction(locObj, cutType, mosaic_counter_clockwise_poly, counter_clockwise_poly, transform: Transform);
-                        clockwise_action = clockwise_poly is null ? null : new Change2DContourAction(locObj, cutType, mosaic_clockwise_poly, clockwise_poly, true, Transform);
+                        counter_clockwise_action = counter_clockwise_poly is null ? null : new Change2DContourAction(locObj, cutType, mosaic_counter_clockwise_poly, saved_counter_clockwise_poly, transform: Transform);
+                        clockwise_action = clockwise_poly is null ? null : new Change2DContourAction(locObj, cutType, mosaic_clockwise_poly, saved_clockwise_poly, true, Transform);
                         if (counter_clockwise_action is not null && clockwise_action is not null)
                         {
                             AttachShrinkPreview(counter_clockwise_action, clockwise_action, OriginalVolumePolygon, subpath, counter_clockwise_poly, clockwise_poly);
@@ -408,7 +439,20 @@ namespace WebAnnotation.UI.Actions
 
                         IVolumeToSectionTransform transform = WebAnnotation.AnnotationOverlay.ActiveSectionToVolumeTransform;
 
-                        Change2DContourAction action = new(origin_ID, RetraceCommandAction.REPLACE_INTERIOR_RING, volume_shape_copy, transform: transform);
+                        // The stored shape keeps its own points; only the new hole is mapped to the section
+                        Polygon mosaic_shape_copy = origin_loc.MosaicShape.ToPolygon();
+                        foreach (int iInnerPoly in IntersectedInteriorPolygons)
+                        {
+                            mosaic_shape_copy.RemoveInteriorRing(iInnerPoly);
+                        }
+
+                        Polygon mosaic_hole = transform.TryMapShapeVolumeToSection(closedpath);
+                        if (mosaic_hole is null)
+                            return actions;
+
+                        mosaic_shape_copy.AddInteriorRing(mosaic_hole);
+
+                        Change2DContourAction action = new(origin_ID, RetraceCommandAction.REPLACE_INTERIOR_RING, mosaic_shape_copy, volume_shape_copy, transform: transform);
                         actions.Add(action);
                     }
                     else
@@ -440,30 +484,42 @@ namespace WebAnnotation.UI.Actions
             {
                 Polygon newShape = new(path.SimplifiedFirstLoop);
 
-                //Check to see if we should migrate interior holes that are inside the new shape from the old shape.
-                if (origin_loc.TypeCode.AllowsInteriorHoles())
-                {
-                    if (smooth_volume_shape is Polygon old_volume_poly)
-                    {
-                        foreach (Polygon interiorPoly in old_volume_poly.InteriorPolygons)
-                        {
-                            try
-                            {
-                                newShape.AddInteriorRing(interiorPoly);
-                            }
-                            catch (ArgumentException e)
-                            {
-                                Trace.WriteLine("Could not add old interior ring to reshaped polygon {0}", string.Format(e.Message));
-                                continue;
-                            }
-                        }
-                    }
-                }
-
                 IVolumeToSectionTransform Transform = WebAnnotation.AnnotationOverlay.ActiveSectionToVolumeTransform;
                 Polygon mosaic_shape = Transform.TryMapShapeVolumeToSection(newShape);
                 if (mosaic_shape is null)
                     return actions;
+
+                //Check to see if we should migrate interior holes that are inside the new shape from the old shape.
+                //The stored holes are moved as they are; the drawn (smoothed) holes would be curved again once saved.
+                if (origin_loc.TypeCode.AllowsInteriorHoles() && smooth_volume_shape is Polygon)
+                {
+                    foreach (Vector2[] mosaicHole in origin_loc.MosaicShape.ToPolygon().InteriorRings)
+                    {
+                        if (Transform.TrySectionToVolume(mosaicHole, out Vector2[] volumeHole).Any(mapped => !mapped))
+                            continue;
+
+                        try
+                        {
+                            mosaic_shape.AddInteriorRing(mosaicHole);
+                        }
+                        catch (ArgumentException e)
+                        {
+                            Trace.WriteLine("Could not add old interior ring to reshaped polygon {0}", string.Format(e.Message));
+                            continue;
+                        }
+
+                        try
+                        {
+                            newShape.AddInteriorRing(volumeHole);
+                        }
+                        catch (ArgumentException e)
+                        {
+                            // Keep the two spaces in step: the hole goes from both or neither
+                            mosaic_shape.RemoveInteriorRing(mosaic_shape.InteriorRings.Count - 1);
+                            Trace.WriteLine("Could not add old interior ring to reshaped polygon {0}", string.Format(e.Message));
+                        }
+                    }
+                }
 
                 Change2DContourAction action = new(origin_loc, RetraceCommandAction.REPLACE_EXTERIOR_RING, mosaic_shape, newShape, transform: Transform);
                 actions.Add(action);
@@ -490,6 +546,17 @@ namespace WebAnnotation.UI.Actions
             InteractionLogEvent[] shapeEntryExitEntries = [.. shapeEntries.Where(entry => entry.Interaction == AnnotationRegionInteraction.ENTER || entry.Interaction == AnnotationRegionInteraction.EXIT)];
 
             throw new NotImplementedException();
+        }
+
+        /// <summary>The region cut choices (<see cref="PenRegionCut"/>) for a stroke over the location.</summary>
+        private static List<Change2DContourAction> RegionCutActions(long locID, Path path)
+        {
+            // The view can outlive its store entry (deleted or replaced by a poll)
+            if (!Store.Locations.TryGetObjectByID(locID, out LocationObj location) || location is null)
+                return [];
+
+            IVolumeToSectionTransform transform = AnnotationOverlay.ActiveSectionToVolumeTransform.WithContinuousFallback();
+            return PenRegionCut.GetActions(location, transform, path.Points, path.SimplifiedPathTolerance);
         }
 
         public static List<IAction> GetPenActionsForLocationShape2DAnnotation(long locID, ICanvasView shapeView, Polygon smooth_volume_polygon, Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
@@ -529,7 +596,18 @@ namespace WebAnnotation.UI.Actions
                         StartEntry = NextEntry;
                     }
                     */
-                    output.AddRange(PolygonCut.GetRetraceActionForPath(locID, smooth_volume_polygon, path.Points, shapeEntryExitEntries[shapeEntryExitEntries.Length - 2], shapeEntryExitEntries[shapeEntryExitEntries.Length - 1]));
+                    // A stroke that crosses the outline more than twice, such as one cutting a bridge out of a cell, encloses a
+                    // region to remove or add. Two crossings are a retrace of the outline between them.
+                    int crossings = shapeEntryExitEntries.Count(e => e.Index > 0);
+                    if (crossings > 2)
+                        output.AddRange(RegionCutActions(locID, path));
+
+                    if (output.Count == 0)
+                        output.AddRange(PolygonCut.GetRetraceActionForPath(locID, smooth_volume_polygon, path.Points, shapeEntryExitEntries[shapeEntryExitEntries.Length - 2], shapeEntryExitEntries[shapeEntryExitEntries.Length - 1], path.SimplifiedPathTolerance));
+
+                    // Two crossings on different rings (from the outline into a hole) are not a retrace, but they do enclose a region
+                    if (output.Count == 0 && crossings == 2)
+                        output.AddRange(RegionCutActions(locID, path));
                 }
             }
             else if (path.HasSelfIntersection)
