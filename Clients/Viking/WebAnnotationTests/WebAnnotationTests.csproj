@@ -146,6 +146,7 @@
     <Compile Include="PidControllerTests.cs" />
     <Compile Include="LocationParentFetchTests.cs" />
     <Compile Include="StructureTypeIDsToStructureTypeObjsConverterTests.cs" />
+    <Compile Include="PenLocationLinksTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

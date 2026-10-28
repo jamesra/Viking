@@ -44,6 +44,7 @@ gained from about 2026-10-20 on. Earlier changes are not listed.
 * Fix: with **Default Line Width** in **Annotation Preferences** set below 2, **Ctrl**-clicking a polygon vertex toward the outside of the polygon did nothing instead of removing the vertex.
 * Fix: a pen cut through a polygon with a hole near its outline could fail with an error. The cut now goes ahead; that hole keeps its smoothed outline.
 * Outlines drawn with the pen and auto-segmented outlines follow the drawn or segmented shape more closely once they are turned into a curve: the curve now stays within the simplify tolerance of it everywhere (for pen strokes, **Pen Simplify Threshold** in Annotation Preferences). Before, between two of the curve's points it could stray up to about one and a half times that distance.
+* While you draw a stroke with the pen, and while its choice buttons are shown, location links are hidden: the up and down link markers inside locations, the link lines between sections and their labels. They no longer cover what you are tracing, and a stroke across a marker is treated as a stroke across the location under it. Links come back when the stroke ends or a choice is made. They stay visible while the pen is idle and while you make a link (**Shift** + pen on a polygon away from its centre, then drag to the other annotation). A stroke from an annotation onto a location on the adjacent section still offers to link the two.
 
 <!--
 Developer notes for 1.2.111: the Del/Insert hiding, Visuals section, pen-on-overlay fix and this change log are ports of

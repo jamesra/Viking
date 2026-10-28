@@ -3103,7 +3103,8 @@ break;
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, StartingStencilValue);
 
             //Get all the lines to draw first so the text and geometric shapes are over top of them
-            List<LocationLinkView> linksToDraw = hiddenAnnotations.VisibleToDraw(HiddenStructures.ExcludeLocationLinks(
+            // A pen stroke and its choice buttons draw no location links or link labels; the markers check the same predicate.
+            List<LocationLinkView> linksToDraw = PenLocationLinks.HidesLocationLinks(_Parent.CurrentCommand) ? [] : hiddenAnnotations.VisibleToDraw(HiddenStructures.ExcludeLocationLinks(
                 currentSectionAnnotations.NonOverlappedLocationLinksInRegion(scene.VisibleWorldBounds),
                 hiddenStructures,
                 locationId => Store.Locations.TryGetObjectByID(locationId, out LocationObj linkEnd) ? linkEnd?.ParentID : null));
