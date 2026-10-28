@@ -1363,57 +1363,58 @@ namespace Geometry
         public bool IsConvex() => this.VertexConcavity(out double[] angles).All(c => c != Concavity.Concave);
 
         /// <summary>
-        /// Returns the Polygon vertex closest to the point.  May return interior verticies
+        /// Returns the polygon vertex closest to the point, searching the exterior ring and every interior ring.
         /// </summary>
-        /// <param name="WorldPosition"></param> 
-        /// <param name="nearestVertex">Index of the nearest vertex</param>
-        /// <returns></returns>
+        /// <param name="WorldPosition">Point to measure from, in the polygon's coordinate space.</param>
+        /// <param name="nearestVertex">Index of the nearest vertex; <see cref="PolygonIndex.IsInner"/> is set when it lies on an interior ring.</param>
+        /// <returns>Euclidean distance from <paramref name="WorldPosition"/> to the nearest vertex.</returns>
         public double NearestVertex(in Vector2 WorldPosition, out PolygonIndex nearestVertex)
         {
             nearestVertex = new PolygonIndex(0, 0, ExteriorRing.Length - 1);
-            double nearestVertexDistance = Vector2.Distance(WorldPosition, ExteriorRing[0]);
+            //Compare squared distances throughout; the search box half-width is the linear distance.
+            double nearestDistanceSquared = Vector2.DistanceSquared(WorldPosition, ExteriorRing[0]);
             bool CloserVertexFound = false;
 
             do
             {
                 CloserVertexFound = false;
-                Rectangle bbox = new(WorldPosition, nearestVertexDistance);
+                Rectangle bbox = new(WorldPosition, Math.Sqrt(nearestDistanceSquared));
                 //Try to find a nearer segment than our initial point, if we do, then repeat the search
                 foreach (PolygonIndex index in SegmentRTree.IntersectionGenerator(bbox))
                 {
                     var seg = index.Segment(this);
                     double measured_distance = Vector2.DistanceSquared(seg.A, WorldPosition);
-                    if (measured_distance < nearestVertexDistance)
+                    if (measured_distance < nearestDistanceSquared)
                     {
-                        nearestVertexDistance = measured_distance;
+                        nearestDistanceSquared = measured_distance;
                         nearestVertex = index;
                         CloserVertexFound = true;
 
                         //If it is a perfect match then stop searching
                         if (seg.A == WorldPosition)
                         {
-                            return measured_distance;
+                            return Math.Sqrt(measured_distance);
                         }
                     }
 
                     measured_distance = Vector2.DistanceSquared(seg.B, WorldPosition);
-                    if (measured_distance < nearestVertexDistance)
+                    if (measured_distance < nearestDistanceSquared)
                     {
-                        nearestVertexDistance = measured_distance;
+                        nearestDistanceSquared = measured_distance;
                         nearestVertex = index.Next;
                         CloserVertexFound = true;
 
                         //If it is a perfect match then stop searching
                         if (seg.B == WorldPosition)
                         {
-                            return measured_distance;
+                            return Math.Sqrt(measured_distance);
                         }
                     }
                 }
             }
             while (CloserVertexFound);
 
-            return nearestVertexDistance;
+            return Math.Sqrt(nearestDistanceSquared);
             /*
             for (int iRing = 0; iRing < InteriorPolygons.Count; iRing++)
             {
