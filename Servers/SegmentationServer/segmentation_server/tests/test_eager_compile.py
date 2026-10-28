@@ -114,6 +114,8 @@ def _patch_builders(monkeypatch, build, features=None):
     monkeypatch.setattr(
         SegmentationModel, "_encoder_features", lambda self, model: features(model)
     )
+    # The bf16-weights check also reads the decoder; the same stand-in keeps it in step with the encoder maps.
+    monkeypatch.setattr(SegmentationModel, "_decoder_logits", lambda self, model: features(model))
 
 
 def _png_bytes() -> bytes:
@@ -344,7 +346,8 @@ def test_the_parity_check_reads_the_eager_model_under_the_gpu_lock(monkeypatch) 
     SegmentationModel.__init__(model, compile_image_encoder=True)
     model._compile_thread.join(2)
 
-    assert seen == [True]
+    # Every read of the eager model (the parity check, and the bf16-weights check at startup) holds the lock.
+    assert seen and all(seen)
 
 def _plain_model(monkeypatch, pressure: bool):
     """A SegmentationModel with a CUDA-looking device and a controllable pressure check."""
@@ -574,3 +577,67 @@ def test_different_window_pixels_are_different_ram_entries(monkeypatch) -> None:
     model.predict_ephemeral(rng.integers(0, 255, (16, 16, 3), dtype=np.uint8), [(1, 1)], [1], False, (16, 16))
 
     assert model.encoded == 2
+
+
+def _bf16_aware_features(model) -> list:
+    """Feature maps that stay put through the bf16 conversion (``model.to`` called) or, with ``drift``, move."""
+    drifted = model.to.called and getattr(model, "drift", False)
+    return [np.full((2, 3, 3), 2.0 if drifted else 1.0, dtype=np.float32)]
+
+
+@_NEEDS_CUDA
+def test_bf16_weights_are_served_when_outputs_match_and_the_disk_cache_keys_them_apart(monkeypatch) -> None:
+    monkeypatch.delenv("SEGMENTATION_BF16_WEIGHTS", raising=False)
+    models: list[MagicMock] = []
+    stores: list[tuple] = []
+
+    def build(*_args, **_kwargs):
+        models.append(MagicMock(drift=False))
+        return models[-1]
+
+    _patch_builders(monkeypatch, build, _bf16_aware_features)
+    monkeypatch.setattr(svc, "open_embedding_store", lambda *args: stores.append(args) or None)
+    model = SegmentationModel(compile_image_encoder=False)
+
+    assert model.weights_dtype == "bf16"
+    assert model.sam2_model is models[0]
+    models[0].to.assert_called_once_with(svc.torch.bfloat16)
+    assert len(models) == 1
+    assert stores[0][1].endswith("|weights=bf16")
+
+
+@_NEEDS_CUDA
+def test_bf16_weights_that_change_the_outputs_are_replaced_by_fp32_weights(monkeypatch) -> None:
+    monkeypatch.delenv("SEGMENTATION_BF16_WEIGHTS", raising=False)
+    models: list[MagicMock] = []
+    stores: list[tuple] = []
+
+    def build(*_args, **_kwargs):
+        models.append(MagicMock(drift=True))
+        return models[-1]
+
+    _patch_builders(monkeypatch, build, _bf16_aware_features)
+    monkeypatch.setattr(svc, "open_embedding_store", lambda *args: stores.append(args) or None)
+    model = SegmentationModel(compile_image_encoder=False)
+
+    assert model.weights_dtype == "fp32"
+    assert len(models) == 2
+    assert model.sam2_model is models[1]
+    models[1].to.assert_not_called()
+    assert "|weights=" not in stores[0][1]
+
+
+@_NEEDS_CUDA
+def test_bf16_weights_stay_off_when_the_environment_says_so(monkeypatch) -> None:
+    monkeypatch.setenv("SEGMENTATION_BF16_WEIGHTS", "0")
+    models: list[MagicMock] = []
+
+    def build(*_args, **_kwargs):
+        models.append(MagicMock())
+        return models[-1]
+
+    _patch_builders(monkeypatch, build, _bf16_aware_features)
+    model = SegmentationModel(compile_image_encoder=False)
+
+    assert model.weights_dtype == "fp32"
+    models[0].to.assert_not_called()

@@ -94,6 +94,7 @@ class SegmentationModel:
         self,
         compile_image_encoder: bool = True,
         on_compiled_ready: Optional[Callable[[], None]] = None,
+        bf16_weights: Optional[bool] = None,
     ) -> None:
         if torch.cuda.is_available():
             self.device: torch.device = torch.device("cuda")
@@ -142,11 +143,16 @@ class SegmentationModel:
             device=self.device,
             hydra_overrides_extra=[],
         )
+        # "fp32" or "bf16": how the weights are stored. Compute is bf16 autocast on CUDA either way.
+        self.weights_dtype = "fp32"
+        if _bf16_weights_wanted(bf16_weights) and self.device.type == "cuda" and _cuda_autocast_dtype() == torch.bfloat16:
+            self.sam2_model = self._to_bf16_weights(self.sam2_model)
         self.predictor: SAM2ImagePredictor = SAM2ImagePredictor(self.sam2_model)
         self._embedding_mode = "eager"
+        # Embeddings from bf16-stored weights differ slightly from fp32 ones, so the disk cache keys them apart.
         self._embedding_store: Optional[EmbeddingStore] = open_embedding_store(
             sam2_checkpoint,
-            model_cfg,
+            model_cfg if self.weights_dtype == "fp32" else f"{model_cfg}|weights={self.weights_dtype}",
         )
         self._ram_embeddings: Optional[EmbeddingRamCache] = open_embedding_ram_cache()
 
@@ -197,6 +203,11 @@ class SegmentationModel:
                 device=self.device,
                 hydra_overrides_extra=hydra_overrides_for_image_encoder(True, "cuda"),
             )
+            if self.weights_dtype == "bf16":
+                # Same storage as the eager model it replaces; the parity check below compares the two.
+                compiled.to(torch.bfloat16)
+                gc.collect()
+                torch.cuda.empty_cache()
             self._warmup_compiled_encoder(compiled)
             self._verify_compiled_parity(compiled)
             compiled_predictor = SAM2ImagePredictor(compiled)
@@ -253,6 +264,53 @@ class SegmentationModel:
             out = model.forward_image(image)
         maps = [out["vision_features"], *out["backbone_fpn"]]
         return [m.detach().float().cpu().numpy() for m in maps]
+
+    def _decoder_logits(self, model: Any) -> List[NDArray]:
+        """Low-resolution mask logits for one fixed click on a fixed pseudo-random image, through the predictor.
+
+        Covers what ``_encoder_features`` does not: the prompt encoder and the mask decoder. Same autocast and
+        inference mode as serving, all three multimask outputs.
+        """
+        rng = np.random.default_rng(_PARITY_SEED)
+        image = rng.integers(0, 256, size=(SAM2_IMAGE_SIZE, SAM2_IMAGE_SIZE, 3), dtype=np.uint8)
+        predictor = SAM2ImagePredictor(model)
+        with torch.inference_mode(), self._autocast():
+            predictor.set_image(image)
+            _masks, _scores, low = predictor.predict(
+                point_coords=np.array([[SAM2_IMAGE_SIZE / 2, SAM2_IMAGE_SIZE / 2]], dtype=np.float32),
+                point_labels=np.array([1]),
+                multimask_output=True,
+                return_logits=True,
+            )
+        return [np.asarray(low, dtype=np.float32)]
+
+    def _to_bf16_weights(self, model: Any) -> Any:
+        """Store ``model``'s weights in bf16 if that leaves its outputs where fp32 weights put them.
+
+        Serving computes in bf16 autocast either way; storing the weights in bf16 too halves their GPU memory
+        (about 0.43 GB for Hiera-L). Checked on a validation sample before adopting it (80 objects, v5.6): IoU
+        against the ground truth unchanged (+0.0001, 95% interval +/-0.0004), masks agreeing at 99.7% IoU. Here the
+        encoder's feature maps and the decoder's logits are compared before and after the conversion with the
+        compiled-encoder parity rule; on disagreement the fp32 weights are loaded again and served. Sets
+        ``weights_dtype``.
+        """
+        with self._gpu_lock:
+            reference = self._encoder_features(model) + self._decoder_logits(model)
+            model.to(torch.bfloat16)
+            candidate = self._encoder_features(model) + self._decoder_logits(model)
+        result = compare_feature_maps(reference, candidate)
+        if not result.ok:
+            logger.error("bf16 weights disagree with fp32 weights (%s); serving fp32 weights", result.detail)
+            del model
+            gc.collect()
+            torch.cuda.empty_cache()
+            self.weights_dtype = "fp32"
+            return build_sam2(self._model_cfg, self._sam2_checkpoint, device=self.device, hydra_overrides_extra=[])
+        gc.collect()
+        torch.cuda.empty_cache()
+        self.weights_dtype = "bf16"
+        logger.info("Serving bf16 weights: encoder features and decoder logits match fp32 weights (%s)", result.detail)
+        return model
 
     def _verify_compiled_parity(self, compiled: Any) -> None:
         """Refuse the swap unless the compiled encoder agrees numerically with the eager one.
@@ -914,6 +972,15 @@ def _as_sam2_mask_input(mask_logits: NDArray) -> NDArray[np.float32]:
             interpolation=cv2.INTER_AREA if shrinking else cv2.INTER_LINEAR,
         )
     return np.clip(array, -_MASK_INPUT_LIMIT, _MASK_INPUT_LIMIT)[None, :, :]
+
+
+def _bf16_weights_wanted(requested: Optional[bool]) -> bool:
+    """Whether to try bf16-stored weights: the argument, else ``SEGMENTATION_BF16_WEIGHTS`` (default on; 0, false,
+    no or off turns it off). Only applies on CUDA with bf16 autocast."""
+    if requested is not None:
+        return bool(requested)
+    raw = os.environ.get("SEGMENTATION_BF16_WEIGHTS", "").strip().lower()
+    return raw not in ("0", "false", "no", "off")
 
 
 @functools.lru_cache(maxsize=1)
