@@ -4,58 +4,12 @@ using System.Windows.Forms;
 namespace Viking.UI
 {
     /// <summary>
-    /// Snapshot of a pen (stylus) at one instant: position, pressure, and which parts of the pen are active.
-    /// Implemented by <see cref="PenEventArgs"/>; consumers of <see cref="IPenEvents"/> receive it per event.
-    /// </summary>
-    public interface IPenState
-    {
-        /// <summary>
-        /// Screen X coordinate
-        /// </summary>
-        int X { get; }
-
-        /// <summary>
-        /// Screen Y coordinate
-        /// </summary>
-        int Y { get; }
-
-        /// <summary>
-        /// How hard is the pen pushing on the surface? 0 if not supported.
-        /// </summary>
-        double NormalizedPressure { get; }
-
-        /// <summary>
-        /// Is the pen eraser active/touching
-        /// </summary>
-        bool Erase { get; }
-
-        /// <summary>
-        /// Is the pen upside down?
-        /// </summary>
-        bool Inverted { get; }
-
-        /// <summary>
-        /// Is the button on the pen barrel pressed?
-        /// </summary>
-        bool Barrel { get; }
-
-        /// <summary>
-        /// Is the pen touching the surface
-        /// </summary>
-        bool InContact { get; }
-
-        /// <summary>
-        /// Is the pen within range of the surface (not necessarily touching)
-        /// </summary>
-        bool InRange { get; }
-    }
-
-    /// <summary>
-    /// Event data for <see cref="IPenEvents"/>, built by <see cref="PenEventManager"/> from the raw Windows pointer
-    /// message. The flag properties are derived from <see cref="Pen"/> on each read, so the instance is a
+    /// Event data for <see cref="IPenEvents"/>: a snapshot of the pen (stylus) at one instant, with its position,
+    /// pressure, and which parts of the pen are active. Built by <see cref="PenEventManager"/> from the raw Windows
+    /// pointer message. The flag properties are derived from <see cref="Pen"/> on each read, so the instance is a
     /// snapshot and never changes after it is raised.
     /// </summary>
-    public class PenEventArgs : EventArgs, IPenState
+    public class PenEventArgs : EventArgs
     {
         /// <summary>
         /// Pen position in client coordinates of the control that hosts the <see cref="PenEventManager"/>.
@@ -88,16 +42,16 @@ namespace Viking.UI
             }
         }
 
-        /// <inheritdoc/>
+        /// <summary>Is the pen eraser active/touching?</summary>
         public bool Erase => (Pen.flags & PenFlags.Eraser) > 0;
-        /// <inheritdoc/>
+        /// <summary>Is the pen upside down?</summary>
         public bool Inverted => (Pen.flags & PenFlags.Inverted) > 0;
-        /// <inheritdoc/>
+        /// <summary>Is the button on the pen barrel pressed?</summary>
         public bool Barrel => (Pen.flags & PenFlags.Barrel) > 0;
 
-        /// <inheritdoc/>
+        /// <summary>Is the pen touching the surface?</summary>
         public bool InContact => (Pen.pointerInfo.pointerFlags & PointerFlags.InContact) > 0;
-        /// <inheritdoc/>
+        /// <summary>Is the pen within range of the surface (not necessarily touching)?</summary>
         public bool InRange => (Pen.pointerInfo.pointerFlags & PointerFlags.InRange) > 0;
     }
 

@@ -13,14 +13,12 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace VikingXNAGraphics
 {
-    public interface IMeshModel<VERTEXTYPE>
-         where VERTEXTYPE : struct, IVertexType
-    {
-        VERTEXTYPE[] Vertices { get; }
-        int[] Edges { get; }
-    }
-
-    public class MeshModel<VERTEXTYPE> : IMeshModel<VERTEXTYPE>, IViewPosition3D
+    /// <summary>
+    /// A vertex array and an index array (<see cref="Edges"/>) with a model matrix, drawn as <see cref="Primitive"/>.
+    /// GPU buffers are built lazily and rebuilt after <see cref="Vertices"/> or <see cref="Edges"/> is replaced.
+    /// </summary>
+    /// <typeparam name="VERTEXTYPE">Vertex layout; normal and color support are read from its declaration.</typeparam>
+    public class MeshModel<VERTEXTYPE> : IViewPosition3D
         where VERTEXTYPE : struct, IVertexType
     {
         Matrix _modelMatrix = Matrix.Identity;
