@@ -97,6 +97,48 @@ namespace ConnectomeDataModelCoreTests
             Assert.Equal("original", stored.Username);
         }
 
+        /// <summary>A self-intersecting ring: invalid, so NTS's topological equality reports it unequal even to itself.</summary>
+        private const string Bowtie = "POLYGON ((0 0, 10 10, 10 0, 0 10, 0 0))";
+
+        [Fact]
+        public void ApplyUpdate_IdenticalInvalidMosaicShape_KeepsAuthor()
+        {
+            var stored = Stored(Bowtie);
+
+            LocationService.ApplyUpdate(Proto(Bowtie), stored, "reviewer");
+
+            Assert.Equal("original", stored.Username);
+        }
+
+        [Theory]
+        [InlineData("POLYGON ((0 0, 12 12, 12 0, 0 12, 0 0))")]
+        [InlineData("POLYGON ((10 10, 10 0, 0 10, 0 0, 10 10))")]
+        [InlineData(Square)]
+        public void ApplyUpdate_InvalidMosaicShapeEdited_StampsCaller(string editedShape)
+        {
+            // Only an identical copy of an invalid shape is unchanged: a moved bowtie, the same bowtie
+            // listed from another vertex (topological equality cannot judge it), or a repair to a valid square.
+            var stored = Stored(Bowtie);
+
+            LocationService.ApplyUpdate(Proto(editedShape), stored, "reviewer");
+
+            Assert.Equal("reviewer", stored.Username);
+        }
+
+        [Fact]
+        public void ApplyUpdate_StoredShapeNtsCannotCompare_StampsCaller()
+        {
+            // Two triangles meeting at a vertex in one ring, set on the row directly because the proto shapes
+            // refuse the repeated vertex: NTS's relate throws "side location conflict" against the
+            // square, whose envelope is the same. A shape that cannot be compared counts as changed.
+            var stored = Stored();
+            stored.MosaicShape = new NetTopologySuite.IO.WKTReader().Read("POLYGON ((0 0, 10 0, 10 10, 0 0, 0 10, 10 10, 0 0))");
+
+            LocationService.ApplyUpdate(Proto(), stored, "reviewer");
+
+            Assert.Equal("reviewer", stored.Username);
+        }
+
         [Theory]
         [InlineData("Section")]
         [InlineData("Terminal")]

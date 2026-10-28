@@ -952,9 +952,10 @@ namespace gRPCAnnotationService
             => !string.Equals(string.IsNullOrEmpty(stored) ? null : stored, string.IsNullOrEmpty(incoming) ? null : incoming, StringComparison.Ordinal);
 
         /// <summary>
-        /// Topological equality like SQL STEquals; falls back to exact comparison when NTS rejects an invalid geometry.
-        /// Points (and a circle's rim point, whose stored copy SQL derives from the curve's area) match within
-        /// <see cref="PointTolerance"/>.
+        /// An identical shape never differs; otherwise topological equality like SQL STEquals decides. Identity is
+        /// tested first because NTS reports an invalid geometry (a self-intersecting ring) unequal even to itself,
+        /// and a shape NTS cannot compare at all counts as changed. Points (and a circle's rim point, whose stored
+        /// copy SQL derives from the curve's area) match within <see cref="PointTolerance"/>.
         /// </summary>
         private static bool ShapesDiffer(NetTopologySuite.Geometries.Geometry stored, NetTopologySuite.Geometries.Geometry incoming)
         {
@@ -964,13 +965,16 @@ namespace gRPCAnnotationService
             if (stored is NetTopologySuite.Geometries.Point a && incoming is NetTopologySuite.Geometries.Point b)
                 return a.Distance(b) > PointTolerance;
 
+            if (stored.EqualsExact(incoming))
+                return false;
+
             try
             {
                 return !stored.EqualsTopologically(incoming);
             }
             catch (Exception)
             {
-                return !stored.EqualsExact(incoming);
+                return true;
             }
         }
 
