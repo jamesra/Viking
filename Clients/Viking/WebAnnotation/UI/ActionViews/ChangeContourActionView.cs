@@ -40,9 +40,20 @@ namespace WebAnnotation.UI.ActionViews
             };
         }
 
+        /// <summary>
+        /// Builds the passive and active (button hover) previews. A hole-split choice shows only the part of the hole it fills,
+        /// which is also where a click picks it; other choices show their whole new shape.
+        /// </summary>
         public void CreateDefaultVisuals()
         {
             Color color = GetShapeColor(model.RetraceType);
+            if (model.FilledHolePart is not null)
+            {
+                Passive = new SolidPolygonView(model.FilledHolePart, color.SetAlpha(0.5f));
+                Active = new SolidPolygonView(model.FilledHolePart, color.SetAlpha(0.75f));
+                return;
+            }
+
             if (model.PreviewOriginal is not null && (model.PreviewExcludedPatch is not null || model.PreviewAddedPatch is not null))
             {
                 // The far side of the cell is the cached triangulation. Only the local patch is meshed again.
