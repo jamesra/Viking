@@ -8,9 +8,16 @@
 -- Passes only if it prints "MergeStructures tests passed.". An assertion failure raises an error
 -- (sqlcmd -b exits non-zero). It tests whichever MergeStructures the database holds: the
 -- minimal-schema copy, or the dbo/Stored Procedures one after a .sqlproj publish.
+--
+-- It refuses to run in any database but AnnotationTest: the IDENTITY_INSERT rows below move the
+-- Structure and StructureType identity seeds to 9e17, and a ROLLBACK does not move them back.
 
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
+
+IF DB_NAME() <> N'AnnotationTest'
+    THROW 50000, N'MergeStructures.tests.sql runs only in the throwaway AnnotationTest database.', 1;
+
 BEGIN TRAN;
 
 DECLARE @Base bigint = 900000000000001000;
