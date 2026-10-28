@@ -840,7 +840,13 @@ namespace AnnotationVizLib
 
             if (szz <= Tolerance.Epsilon)
             {
-                int nearest = controlIdx.MinBy(j => Math.Abs(z[j] - queryZ));
+                // First control nearest in Z (MinBy is not in net48)
+                int nearest = controlIdx[0];
+                foreach (int j in controlIdx)
+                {
+                    if (Math.Abs(z[j] - queryZ) < Math.Abs(z[nearest] - queryZ))
+                        nearest = j;
+                }
                 return centroids[nearest];
             }
 
@@ -864,7 +870,7 @@ namespace AnnotationVizLib
             // A process tip has controls on one side only.  Clamping to the nearest control predicted the tip on its
             // neighbour's centroid, so every tip of a slanted process read as misregistered by one section's worth
             // of slope (and curvefit pulled tips onto their neighbours).  Extend the controls' trend instead.
-            if (queryZ < z[controlIdx[0]] || queryZ > z[controlIdx[^1]])
+            if (queryZ < z[controlIdx[0]] || queryZ > z[controlIdx[controlIdx.Count - 1]])
                 return ExtrapolateLinearAtZ(centroids, z, controlIdx, queryZ);
 
             int seg = 0;
