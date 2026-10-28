@@ -399,7 +399,7 @@ namespace WebAnnotation
                                                                            }
                                                                            catch (ArgumentException e)
                                                                            {
-                                                                               MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                                               ShowPolygonSaveError(Parent, e);
                                                                            }
                                                                            catch (System.ServiceModel.FaultException e)
                                                                            {
@@ -422,7 +422,7 @@ namespace WebAnnotation
                                                           }
                                                           catch (ArgumentException e)
                                                           {
-                                                              MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                              ShowPolygonSaveError(Parent, e);
                                                           }
                                                           catch (System.ServiceModel.FaultException e)
                                                           {
@@ -443,7 +443,7 @@ namespace WebAnnotation
                                                           }
                                                           catch (ArgumentException e)
                                                           {
-                                                              MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                              ShowPolygonSaveError(Parent, e);
                                                           }
                                                           catch (System.ServiceModel.FaultException e)
                                                           {
@@ -472,7 +472,7 @@ namespace WebAnnotation
                                                                     }
                                                                     catch (ArgumentException e)
                                                                     {
-                                                                        MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                                        ShowPolygonSaveError(Parent, e);
                                                                     }
 
                                                                     if (AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
@@ -495,7 +495,7 @@ namespace WebAnnotation
                                 }
                                 catch (ArgumentException e)
                                 {
-                                    MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                    ShowPolygonSaveError(Parent, e);
                                 }
 
                                 if (AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
@@ -546,7 +546,7 @@ namespace WebAnnotation
                             }
                             catch (ArgumentException e)
                             {
-                                MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                ShowPolygonSaveError(Parent, e);
                             }
                         }
 
@@ -595,7 +595,7 @@ namespace WebAnnotation
                                         }
                                         catch (ArgumentException e)
                                         {
-                                            MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                            ShowPolygonSaveError(Parent, e);
                                         }
                                     },
                                     channelManager,
@@ -628,7 +628,7 @@ namespace WebAnnotation
                                                                      }
                                                                      catch (ArgumentException e)
                                                                      {
-                                                                         MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                                         ShowPolygonSaveError(Parent, e);
                                                                      }
 
 
@@ -645,6 +645,17 @@ namespace WebAnnotation
                     return null;
             }
         }
+
+        /// <summary>
+        /// Shows the error box for a polygon edit rejected with an <see cref="ArgumentException"/>, such as an invalid shape from
+        /// SetShapeFromGeometryInSection or RetraceAndReplacePathCommand.ApplyCut. Called by the polygon edit callbacks in
+        /// <see cref="CreateCommandForPolygon"/>; each caller decides what happens after the box closes.
+        /// The WPF windows show the same box through Extensions.TrySetShapeFromGeometryInSectionShowErrorDialog.
+        /// </summary>
+        /// <param name="parent">The section viewer that owns the box.</param>
+        /// <param name="e">The rejection; its message is the box text.</param>
+        private static void ShowPolygonSaveError(IWin32Window parent, ArgumentException e) =>
+            MessageBox.Show(parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
         /// <summary>
         /// Queues a circle on the open section, linked to <paramref name="source"/>.
