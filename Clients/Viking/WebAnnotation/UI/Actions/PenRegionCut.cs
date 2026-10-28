@@ -51,7 +51,9 @@ namespace WebAnnotation.UI.Actions
             if (location is null || penPath is null || penPath.Count < 3)
                 return output;
 
-            Polygon stored = location.MosaicShape.ToPolygon();
+            if (!TryConvertStoredShape(location.MosaicShape, out Polygon stored))
+                return Rejected(output, location.ID, "the stored shape is not a valid polygon");
+
             List<Vector2[]> storedRings = [stored.ExteriorRing, .. stored.InteriorRings];
             uint interpolations = Global.AnnotationSettings.NumClosedCurveInterpolationPointsForDisplay;
 
@@ -141,17 +143,30 @@ namespace WebAnnotation.UI.Actions
         /// Server can return a ring that touches itself at a vertex (a hole pinched where the stroke meets it), which
         /// <see cref="Polygon"/> rejects as a duplicate point. Such a piece is not offered, like a piece that cannot be fitted.
         /// </summary>
-        internal static bool TryConvertPiece(SqlGeometry part, out Polygon piece)
+        internal static bool TryConvertPiece(SqlGeometry part, out Polygon piece) =>
+            TryConvert(() => part.ToPolygon(), "a piece", out piece);
+
+        /// <summary>
+        /// Converts the location's stored shape to a <see cref="Polygon"/>, or returns false when it cannot be one, and the
+        /// location then gets no region cut. The stored shape is an <see cref="IShape2D"/> that round-trips through
+        /// <see cref="SqlGeometry"/>: a closed curve's is a closed polyline, which is not a polygon. (A stored hole that touches
+        /// itself, the case the WCF client guards here, is already refused when the location is loaded.)
+        /// </summary>
+        internal static bool TryConvertStoredShape(IShape2D shape, out Polygon stored) =>
+            TryConvert(() => shape.ToPolygon(), "the stored shape", out stored);
+
+        /// <summary>Runs <paramref name="convert"/>, tracing and returning false when it rejects the shape.</summary>
+        private static bool TryConvert(Func<Polygon> convert, string what, out Polygon polygon)
         {
             try
             {
-                piece = part.ToPolygon();
+                polygon = convert();
                 return true;
             }
             catch (ArgumentException e)
             {
-                Trace.WriteLine($"Pen region cut: a piece is not a valid polygon: {e.Message}");
-                piece = null;
+                Trace.WriteLine($"Pen region cut: {what} is not a valid polygon: {e.Message}");
+                polygon = null;
                 return false;
             }
         }

@@ -124,6 +124,24 @@ namespace WebAnnotationTests.Actions
             Assert.AreEqual(5, converted.ExteriorRing.Length);
         }
 
+        /// <summary>
+        /// A location whose stored shape cannot be made a <see cref="Polygon"/> gets no region cut, and the stroke does not crash.
+        /// Legacy's case, a stored hole that touches itself, cannot occur here: the stored shape is an <see cref="IShape2D"/>, and
+        /// such a polygon is refused when it is loaded (the precondition). The stored shape still goes through a conversion that
+        /// can fail, as a closed curve's does: it is a closed polyline, and turning it into a polygon used to throw.
+        /// </summary>
+        [TestMethod]
+        public void ALocationWhoseStoredShapeIsNotAPolygonOffersNothing()
+        {
+            Assert.ThrowsException<System.ArgumentException>(() => PolygonLocation("POLYGON((0 0, 100 0, 100 100, 0 100, 0 0), (20 20, 50 50, 80 20, 80 80, 50 50, 20 80, 20 20))"),
+                "the precondition: a stored hole that touches itself cannot be held as a location's shape");
+
+            LocationObj curve = TestModel.Location(7, 0, LocationType.CLOSEDCURVE, "LINESTRING(0 0, 100 0, 100 100, 0 100, 0 0)");
+            List<Vector2> stroke = Stroke(new(-10, 40), new(30, 40), new(30, 60), new(-10, 60));
+
+            Assert.AreEqual(0, PenRegionCut.GetActions(curve, Identity(), stroke, Tolerance).Count);
+        }
+
         [TestMethod]
         public void AStrokeEndingOnTheOtherSideOffersNothing()
         {
