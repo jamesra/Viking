@@ -21,7 +21,7 @@ version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. 
 Documentation/source/Client/versionhistory.rst.
 -->
 
-## 1.2.134 — not yet released
+## 1.2.134 — 2026-10-28 (Viking Test, unsigned)
 
 * Fix: a pen stroke that cuts across a polygon near one of its holes could crash Viking ("Duplicate point found in exterior ring") when the cut left a hole touching itself at one point, or when the polygon already had such a hole. That piece is no longer offered as a choice (the other pieces still are), and a polygon with such a hole gets no cut-out choice instead of a crash.
 * Fix: a moved annotation could stay drawn at its old place, and snap back there after every later move, although the move was saved (the next drag started from where it was dropped). Moved and reshaped annotations now always redraw where they are.
