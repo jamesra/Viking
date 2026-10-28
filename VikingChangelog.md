@@ -21,7 +21,7 @@ version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. 
 Documentation/source/Client/versionhistory.rst.
 -->
 
-## 1.2.131 — not yet released
+## 1.2.131 — 2026-10-28 (Viking Test, unsigned)
 
 * Change Log: **Page Up** and **Page Down** jump to the previous or next version, with its heading at the top of the window.
 * Fix: **Select Segmentation Service** now checks each server at the same address and port that segmentation then connects to. A server entered without a port, or with a scheme other than `http://` or `https://`, could be shown as available when segmentation could not use it. Segmentation also connects to a server entered as an IPv6 address, which failed before.
