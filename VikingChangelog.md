@@ -24,6 +24,7 @@ Documentation/source/Client/versionhistory.rst.
 ## 1.2.132 — not yet released
 
 * Fix: dragging a polygon vertex could move a different vertex, and **Ctrl**-clicking a vertex to remove it could remove a different one. Near the polygon's first vertex, Viking picked that vertex instead of the one under the cursor; it now always picks the nearest vertex, including vertices of holes.
+* Fix: with **Default Line Width** in **Annotation Preferences** set below 2, **Ctrl**-clicking a polygon vertex toward the outside of the polygon did nothing instead of removing the vertex.
 
 ## 1.2.131 — 2026-10-28 (Viking Test, unsigned)
 

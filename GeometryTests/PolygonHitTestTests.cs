@@ -310,7 +310,7 @@ namespace GeometryTests
 
         /// <summary>
         /// Polygon, query and pick radius. The polygon is at least 10 across and the radius at least 6, the range the
-        /// callers use, so the bounding-box prefilter is not the subject (see the ignored tests).
+        /// callers use, so the bounding-box prefilter is not the subject (see <see cref="ClickOnAVertexHitsWithSmallPickSizes"/>).
         /// </summary>
         private static Gen<Tuple<Polygon, Vector2, double>> HitCases() =>
             from shape in Gen.OneOf(CoreArbitraries.ConvexPolygon(), CoreArbitraries.HoledPolygon())
@@ -327,28 +327,71 @@ namespace GeometryTests
 
         #endregion
 
-        #region Known defects
+        #region Pick sizes under two pixels
 
         /// <summary>
-        /// Defect: the prefilter pads the bounding box with <c>BoundingBox + padding</c>, and <c>Rectangle + double</c>
-        /// scales the box about its centre by that factor instead of growing each edge by it. A radius under 1 shrinks
-        /// the box (0.5 halves each side), so a click exactly on an extreme vertex is rejected before any vertex is
-        /// tested; a radius near 1 on a small polygon leaves the box without its pick margin.
+        /// Regression: the bounding-box prefilter scaled the box about its centre by the pick radius instead of padding
+        /// each edge by it, so a radius under 1 shrank the box (0.5 halved each side) and a click exactly on an extreme
+        /// vertex was rejected before any vertex was tested.
         /// </summary>
         [TestMethod]
-        [Ignore("Defect: PaddedBoundingBoxCovers scales the box by the radius (Rectangle + double) instead of padding it; radius 0.5 shrinks it to half size. Un-ignore when fixed.")]
         public void VertexOnTheBoundingBoxCornerHitsWithSubPixelRadius()
         {
             Assert.IsTrue(Square().PointIntersectsAnyPolygonVertex(new Vector2(100, 100), 0.5, out Polygon hit));
             Assert.IsNotNull(hit);
         }
 
+        /// <summary>
+        /// A click exactly one radius beyond the bounding box, level with a corner, lies on the padded box's edge; the
+        /// prefilter keeps it so the closed pick disk can still reach the corner.
+        /// </summary>
         [TestMethod]
-        [Ignore("Defect: PaddedBoundingBoxCovers scales the box by lineWidth/2 (Rectangle + double) instead of padding it; lineWidth 1 shrinks it to half size. Un-ignore when fixed.")]
+        public void VertexOnThePaddedBoundingBoxEdgeHits()
+        {
+            Assert.IsTrue(Square().PointIntersectsAnyPolygonVertex(new Vector2(106, 100), 6, out Polygon hit));
+            Assert.IsNotNull(hit);
+        }
+
+        /// <summary>
+        /// Regression: as <see cref="VertexOnTheBoundingBoxCornerHitsWithSubPixelRadius"/> for the outline. Removing a
+        /// control point passes the closed line width (a preference from 1 up), so a width under 2 shrank the box and a
+        /// point near the outline could not be removed.
+        /// </summary>
+        [TestMethod]
         public void SegmentOnTheBoundingBoxEdgeHitsWithSubPixelHalfWidth()
         {
             Assert.IsTrue(Square().PointIntersectsAnyPolygonSegment(new Vector2(100, 50), 1, out Polygon hit));
             Assert.IsNotNull(hit);
+        }
+
+        /// <summary>
+        /// A click exactly on any vertex of any ring hits both the control-point pick and the outline pick for every
+        /// pick size from a quarter pixel to four pixels, on polygons of every size at volume-scale offsets.
+        /// </summary>
+        [TestMethod]
+        public void ClickOnAVertexHitsWithSmallPickSizes()
+        {
+            Gen<Tuple<Polygon, Vector2, double>> cases =
+                from shape in Gen.OneOf(CoreArbitraries.ConvexPolygon(), CoreArbitraries.HoledPolygon())
+                from scale in Gen.Elements(0.1, 1.0, 10.0, 100.0)
+                from ox in Gen.Choose(-500000, 500000)
+                from oy in Gen.Choose(-500000, 500000)
+                let poly = shape.Scale(scale, Vector2.Zero).Translate(new Vector2(ox, oy))
+                let vertices = poly.ExteriorRing.Concat(poly.InteriorRings.SelectMany(r => r)).ToArray()
+                from iVertex in Gen.Choose(0, vertices.Length - 1)
+                from size in Gen.Choose(25, 400)
+                select Tuple.Create(poly, vertices[iVertex], size / 100.0);
+
+            CoreCheck.Run(
+                Prop.ForAll(Arb.From(cases), c =>
+                {
+                    (Polygon poly, Vector2 vertex, double size) = (c.Item1, c.Item2, c.Item3);
+                    bool vertexHit = poly.PointIntersectsAnyPolygonVertex(vertex, size, out Polygon vertexRing);
+                    bool segmentHit = poly.PointIntersectsAnyPolygonSegment(vertex, size, out Polygon segmentRing);
+                    return (vertexHit && vertexRing is not null).Label($"vertex pick, radius {size}")
+                        .And((segmentHit && segmentRing is not null).Label($"outline pick, line width {size}"));
+                }),
+                nameof(ClickOnAVertexHitsWithSmallPickSizes));
         }
 
         #endregion

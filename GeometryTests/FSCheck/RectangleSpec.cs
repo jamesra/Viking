@@ -326,6 +326,29 @@ namespace GeometryTests
                     Rectangle.Pad(r, 1).Covers(r) && Rectangle.Pad(r, 1).Contains(r.Center)),
                 nameof(PadCoversOriginal));
 
+        /// <summary>
+        /// <see cref="Rectangle.Pad"/> moves every edge outward by the amount, so the size grows by twice the amount; a
+        /// scale about the centre would multiply the size instead.
+        /// </summary>
+        [TestMethod]
+        public void PadMovesEachEdgeOutwardByTheAmount() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbRectangle(), Arb.From(Gen.Choose(0, 20000).Select(i => i / 100.0)), (r, pad) =>
+                {
+                    Rectangle padded = Rectangle.Pad(r, pad);
+                    return padded.Left == r.Left - pad && padded.Right == r.Right + pad &&
+                           padded.Bottom == r.Bottom - pad && padded.Top == r.Top + pad;
+                }),
+                nameof(PadMovesEachEdgeOutwardByTheAmount));
+
+        /// <summary>A half-pixel pad on a 100-pixel square gives 101 pixels a side, not the 50 a scale by 0.5 gives.</summary>
+        [TestMethod]
+        public void PadByLessThanOneGrowsTheRectangle()
+        {
+            Rectangle padded = Rectangle.Pad(new Rectangle(0, 100, 0, 100), 0.5);
+            Assert.AreEqual(new Rectangle(-0.5, 100.5, -0.5, 100.5), padded);
+        }
+
         [TestMethod]
         public void ScaleAboutCenterIsInvertible() =>
             CoreCheck.Run(

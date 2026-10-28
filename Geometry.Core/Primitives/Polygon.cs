@@ -2355,11 +2355,11 @@ namespace Geometry
             return false;
         }
 
-        bool PaddedBoundingBoxCovers(double padding, Vector2 position)
-        {
-            Rectangle padded = BoundingBox + padding;
-            return padded.Covers(position);
-        }
+        /// <summary>
+        /// Cheap prefilter for the hit tests: true if <paramref name="position"/> lies in the bounding box grown by
+        /// <paramref name="padding"/> on every edge.
+        /// </summary>
+        bool PaddedBoundingBoxCovers(double padding, Vector2 position) => Rectangle.Pad(BoundingBox, padding).Covers(position);
 
         /// <summary>
         /// Ring vertex indices of segments that meet <paramref name="line"/>, keyed by distance from <paramref name="line"/>.A.

@@ -570,9 +570,6 @@ namespace Geometry
 
         public static bool operator !=(in Rectangle A, in Rectangle B) => !(A == B);
 
-        /// <summary>Expands each edge of <paramref name="A"/> outward by <paramref name="scalar"/>.</summary>
-        public static Rectangle operator +(in Rectangle A, double scalar) => Rectangle.Scale(A, scalar);
-
         /// <summary>Bounding box of the rectangle and the point.</summary>
         public static Rectangle operator +(in Rectangle A, in Vector2 p) => Rectangle.Union(A, p);
 
@@ -587,11 +584,12 @@ namespace Geometry
         public static Rectangle operator /(in Rectangle A, in double scalar) => Rectangle.Scale(A, 1.0 / scalar);
 
         /// <summary>
-        /// Pad the requested amount onto the bounding box
+        /// Moves every edge of <paramref name="rect"/> outward by <paramref name="radius"/>, so width and height each grow
+        /// by twice <paramref name="radius"/>. Use <see cref="Scale"/> (or <c>*</c>) to multiply the size about the centre.
         /// </summary>
-        /// <param name="rect"></param>
-        /// <param name="radius"></param>
-        /// <returns></returns>
+        /// <param name="rect">Rectangle to grow.</param>
+        /// <param name="radius">Distance to move each edge outward, in the rectangle's units.</param>
+        /// <returns>The padded rectangle.</returns>
         public static Rectangle Pad(in Rectangle rect, in double radius) => new Rectangle(rect.Left - radius, rect.Right + radius, rect.Bottom - radius, rect.Top + radius);
 
         public static Rectangle Scale(in Rectangle rect, in double scalar)
