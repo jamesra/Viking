@@ -462,6 +462,12 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(CreateLocation), e, context); }
         }
 
+        /// <summary>
+        /// Applies a batch of creates, updates and deletes in one transaction, all or nothing; a row whose
+        /// location is missing reports Success false without failing the batch. A delete removes the
+        /// location's links and logs each link and the location once, even when the batch deletes both ends
+        /// of a link or the same ID twice.
+        /// </summary>
         public override async Task<UpdateLocationsResponse> Update(UpdateLocationsRequest request, ServerCallContext context)
         {
             try
@@ -520,9 +526,9 @@ namespace gRPCAnnotationService
                             // Record the delete so incremental GetLocationChanges* calls can
                             // tell clients to drop the ID. (A FOR DELETE trigger cannot be used:
                             // EF Core DELETE statements include OUTPUT, which SQL Server rejects
-                            // when the target table has triggers.)
-                            var alreadyLogged = await _context.DeletedLocations
-                                .AnyAsync(d => d.Id == toDelete.Id, ct);
+                            // when the target table has triggers.) Find also sees a row this batch
+                            // queued for the same ID, which the database cannot.
+                            var alreadyLogged = await _context.DeletedLocations.FindAsync(new object[] { toDelete.Id }, ct) != null;
                             if (!alreadyLogged)
                             {
                                 await _context.DeletedLocations.AddAsync(new DeletedLocation
@@ -778,13 +784,17 @@ namespace gRPCAnnotationService
             }
         }
 
+        /// <summary>
+        /// Queues the link unless it is stored or already queued in this context (a peer listed twice in
+        /// Location.Links). Refuses a self-link with InvalidArgument.
+        /// </summary>
         private async Task AddLinkIfMissing(long source, long target, string username, CancellationToken ct)
         {
             if (source == target)
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "A location cannot link to itself"));
 
             var (a, b) = Ordered(source, target);
-            var exists = await _context.LocationLinks.AnyAsync(l => l.A == a && l.B == b, ct);
+            var exists = await _context.LocationLinks.FindAsync(new object[] { a, b }, ct) != null;
             if (exists)
                 return;
 
@@ -848,11 +858,14 @@ namespace gRPCAnnotationService
                 .ToListAsync(ct);
         }
 
+        /// <summary>
+        /// Queues a DeletedLocationLink row with both endpoints' sections, unless one is stored or already
+        /// queued in this context (an Update batch deleting both ends of a link reaches it twice).
+        /// </summary>
         private async Task LogDeletedLocationLinkAsync(long a, long b, CancellationToken ct)
         {
             var (orderedA, orderedB) = Ordered(a, b);
-            var alreadyLogged = await _context.DeletedLocationLinks
-                .AnyAsync(d => d.A == orderedA && d.B == orderedB, ct);
+            var alreadyLogged = await _context.DeletedLocationLinks.FindAsync(new object[] { orderedA, orderedB }, ct) != null;
             if (alreadyLogged)
                 return;
 
