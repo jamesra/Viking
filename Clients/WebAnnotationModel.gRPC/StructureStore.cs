@@ -50,6 +50,11 @@ namespace WebAnnotationModel.gRPC
             return await client.GetUnfinishedLocations(structureID).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Unfinished branch tips of the structure, loaded from the server, with mosaic position and radius.
+        /// A tip the server sends without a position is placed at (0, 0) on its section.
+        /// </summary>
+        /// <returns>One entry per tip; Z is the section number.</returns>
         public async Task<WebAnnotationModel.LocationPositionOnly[]> GetUnfinishedBranchesWithPosition(long structureID)
         {
             var client = StructureClientFactory.GetOrCreate();
@@ -95,6 +100,10 @@ namespace WebAnnotationModel.gRPC
             return changes.ObjectsInStore;
         }
 
+        /// <summary>
+        /// Asks the server how many locations the structure has and, when there are none, deletes the structure on the server.
+        /// Does not touch the local cache. Server errors propagate, including a failed delete.
+        /// </summary>
         public async Task TryRemoveIfOrphan(long ID)
         {
             var client = StructureClientFactory.GetOrCreate();
@@ -131,6 +140,11 @@ namespace WebAnnotationModel.gRPC
             }
         }
 
+        /// <summary>
+        /// Creates the structure and its first location on the server in one call, then adds the structure to this store and
+        /// the location to the location store, each with its added notification.
+        /// </summary>
+        /// <returns>The cached structure and location; <c>Location</c> is null when the server returned none.</returns>
         public async Task<(StructureObj Structure, LocationObj Location)> Create(StructureObj newStruct, LocationObj newLocation)
         {
             var client = StructureClientFactory.GetOrCreate();
@@ -190,6 +204,11 @@ namespace WebAnnotationModel.gRPC
             */
         }
 
+        /// <summary>
+        /// Marks the structure <c>DBACTION.DELETE</c> and drops it from the cache through the base implementation.
+        /// The server delete is sent by the next <c>Save</c>.
+        /// </summary>
+        /// <returns>False when the structure was not cached.</returns>
         public override Task<bool> Remove(StructureObj obj)
         {
             // Match LocationStore / StoreBaseWithKey: mark DELETE, drop from the local index,
@@ -197,6 +216,11 @@ namespace WebAnnotationModel.gRPC
             return base.Remove(obj);
         }
 
+        /// <summary>
+        /// Loads the child structures of <paramref name="ID"/> from the server and merges them into the cache (notifications,
+        /// missing parents fetched, embedded structure links hydrated).
+        /// </summary>
+        /// <returns>The cached instances for the structures the server returned.</returns>
         public async Task<ICollection<StructureObj>> GetChildStructures(long ID)
         {
             var client = StructureClientFactory.GetOrCreate();
@@ -205,6 +229,12 @@ namespace WebAnnotationModel.gRPC
             return changes.ObjectsInStore;
         }
 
+        /// <summary>
+        /// Merges structure <paramref name="MergeID"/> into <paramref name="KeepID"/> on the server, reloads the cached locations
+        /// of the merged structure (they now belong to the kept one), forgets the merged structure locally and
+        /// refreshes the kept structure from the server.
+        /// </summary>
+        /// <returns>The kept structure ID reported by the server.</returns>
         public async Task<long> Merge(long KeepID, long MergeID)
         {
             var client = StructureClientFactory.GetOrCreate();
@@ -222,6 +252,11 @@ namespace WebAnnotationModel.gRPC
             return keptId;
         }
 
+        /// <summary>
+        /// Splits the structure at the link between the two locations on the server, reloads the locations of both resulting
+        /// structures from the server and forgets the cached link between the two locations.
+        /// </summary>
+        /// <returns>The ID of the new structure that holds the split side.</returns>
         public async Task<long> SplitStructureAtLocationLink(long KeepLocID, long SplitLocID)
         {
             var client = StructureClientFactory.GetOrCreate();
@@ -242,6 +277,11 @@ namespace WebAnnotationModel.gRPC
             return splitStructureID;
         }
 
+        /// <summary>
+        /// Loads every structure of the given type from the server and merges them into the cache (notifications, missing
+        /// parents fetched, embedded structure links hydrated).
+        /// </summary>
+        /// <returns>The cached instances for the structures the server returned.</returns>
         public async Task<ICollection<StructureObj>> GetStructuresOfType(long StructureTypeID)
         {
             var client = StructureClientFactory.GetOrCreate();
@@ -270,6 +310,12 @@ namespace WebAnnotationModel.gRPC
             return Task.FromResult<ICollection<StructureObj>>(structures);
         }
 
+        /// <summary>
+        /// Asks the server for the structures of a section region, incrementally when <paramref name="LastQueryUtc"/> is set,
+        /// and merges the result and any deleted IDs into the cache. Server counterpart of
+        /// <see cref="GetLocalObjectsInRegion"/>.
+        /// </summary>
+        /// <returns>The cached instances for the returned structures and the server query time, for the next incremental query.</returns>
         public async Task<(ICollection<StructureObj> Objects, DateTime QueryCompletedTime)> GetServerObjectsInRegion(long SectionNumber, Rectangle bounds, double MinRadius, DateTime? LastQueryUtc)
         {
             var client = StructureClientFactory.GetOrCreate();

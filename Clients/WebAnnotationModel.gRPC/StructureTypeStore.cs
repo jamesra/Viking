@@ -38,6 +38,10 @@ namespace WebAnnotationModel.gRPC
         }
 
 
+        /// <summary>
+        /// Creates the structure type on the server and adds the server copy to the cache.
+        /// </summary>
+        /// <returns>The cached type; null when <paramref name="token"/> was already cancelled or the server returned nothing.</returns>
         public async Task<StructureTypeObj> Create(StructureTypeObj new_type, CancellationToken token = default)
         {
             var client = ClientFactory.GetOrCreate();

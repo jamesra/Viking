@@ -35,6 +35,11 @@ namespace WebAnnotationModel.gRPC
 
         protected override Task Init() => Task.CompletedTask;
         
+        /// <summary>
+        /// Loads the links of one structure from the server and merges them into the cache with collection notifications.
+        /// Casts the client to <see cref="StructureLinksClient"/>, so a factory returning another client type fails.
+        /// </summary>
+        /// <returns>The cached links for the links the server returned.</returns>
         public async Task<StructureLinkObj[]> GetLinks(long structureId)
         {
             var client = (StructureLinksClient)ClientFactory.GetOrCreate();
@@ -45,6 +50,11 @@ namespace WebAnnotationModel.gRPC
             return changes.ObjectsInStore.ToArray();
         }
 
+        /// <summary>
+        /// Merges links embedded in structure payloads into the cache with collection notifications. Null entries are skipped.
+        /// Only adds and updates; never removes. <paramref name="queryTime"/> defaults to the current UTC time.
+        /// Throws <see cref="OperationCanceledException"/> if <paramref name="token"/> is already cancelled and links were supplied.
+        /// </summary>
         public async Task MergeServerLinksAsync(IEnumerable<IStructureLink> links, DateTime? queryTime = null, CancellationToken token = default)
         {
             var arr = links?.Where(l => l != null).ToArray() ?? Array.Empty<IStructureLink>();

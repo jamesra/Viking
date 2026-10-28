@@ -54,6 +54,10 @@ namespace WebAnnotationModel.gRPC
         private readonly IServerAnnotationsClientFactory<ILocationsClient> _locationClientFactory;
 
 
+        /// <summary>
+        /// Cached locations whose <c>ParentID</c> is <paramref name="StructureID"/>; scans every cached location and makes no server call.
+        /// </summary>
+        /// <returns>A new array; empty when none are cached.</returns>
         public LocationObj[] GetLocalObjectsForStructure(long StructureID)
         {
             return IDToObject.Values.Where(l => l.ParentID.HasValue && l.ParentID.Value == StructureID).ToArray();
@@ -274,6 +278,12 @@ namespace WebAnnotationModel.gRPC
             TryAddToSectionIndex(loc);
         } 
 
+        /// <summary>
+        /// Asks the server for the most recently modified location and returns the cached instance for its ID,
+        /// converting and adding the server copy (with an added notification) only when it is not cached yet.
+        /// A cached instance is returned as is, not refreshed from the server copy. The result is dereferenced without
+        /// a null check, so an empty server reply throws <see cref="NullReferenceException"/>.
+        /// </summary>
         public async Task<LocationObj> GetLastModifiedLocation()
         {
             var client = _locationClientFactory.GetOrCreate();
@@ -309,6 +319,11 @@ namespace WebAnnotationModel.gRPC
             return created_location;
         }
 
+        /// <summary>
+        /// Marks <paramref name="obj"/> as <c>DBACTION.DELETE</c>, drops it from the cache and raises the delete notification.
+        /// The server delete is sent by the next <c>Save</c>, which picks the object up through the <c>DBAction</c> change.
+        /// </summary>
+        /// <returns>An already completed task holding <c>true</c>, also when <paramref name="obj"/> was not cached.</returns>
         public override Task<bool> Remove(LocationObj obj)
         {
             obj.DBAction = DBACTION.DELETE;
@@ -321,12 +336,22 @@ namespace WebAnnotationModel.gRPC
 
         #region Add/Update/Remove
 
+        /// <summary>
+        /// Fetches the parent structure from the server when <c>ParentID</c> is set and not yet in the structure store,
+        /// then adds the location through the base implementation (added notification; queued for <c>Save</c> when its <c>DBAction</c> is not NONE).
+        /// </summary>
+        /// <returns>The instance now in the store; null when the store did not take it.</returns>
         public override async Task<LocationObj> Add(LocationObj obj)
         {
             await EnsureParentsFromLocationObjs(new[] { obj }, CancellationToken.None).ConfigureAwait(false);
             return await base.Add(obj).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Batch form of <see cref="Add(LocationObj)"/>: one by-ID structure fetch covers every missing parent, then the
+        /// locations are added together with one notification.
+        /// </summary>
+        /// <returns>The instances now in the store.</returns>
         public override async Task<ICollection<LocationObj>> Add(ICollection<LocationObj> objs)
         {
             await EnsureParentsFromLocationObjs(objs, CancellationToken.None).ConfigureAwait(false);
@@ -356,6 +381,12 @@ namespace WebAnnotationModel.gRPC
             return InternalDelete(IDs);
         }
 
+        /// <summary>
+        /// Loads every location of a structure from the server, fetching missing parent structures first, merges them into the
+        /// cache with collection notifications and hydrates location links from the embedded peer IDs, using the local clock
+        /// as the query time. Always goes to the server: <paramref name="targets"/> is not read.
+        /// </summary>
+        /// <returns>The cached instances for the locations the server returned.</returns>
         public async Task<ICollection<LocationObj>> GetStructureLocations(long structureID, QueryTargets targets)
         {
             var client = _locationClientFactory.GetOrCreate();
@@ -371,6 +402,10 @@ namespace WebAnnotationModel.gRPC
 
         #endregion
         
+        /// <summary>
+        /// Not available over gRPC: the server RPC is unimplemented, so this traces a message and returns an empty list
+        /// instead of throwing, which lets the property page open.
+        /// </summary>
         public List<LocationObj> GetStructureLocationChangeLog(long structureid)
         {
             // Server RPC is Unimplemented until audit tables are mapped in the EF model.
@@ -381,6 +416,9 @@ namespace WebAnnotationModel.gRPC
             return new List<LocationObj>();
         }
 
+        /// <summary>
+        /// Whether <paramref name="bounds"/> covers the location position. Geometry only; does not check the cache.
+        /// </summary>
         public bool Contains(LocationObj o, Geometry.Rectangle bounds)
         {
             return bounds.Covers(o.Position);

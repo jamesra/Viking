@@ -34,6 +34,11 @@ namespace WebAnnotationModel.gRPC
 
         protected override Task Init() => Task.CompletedTask;
 
+        /// <summary>
+        /// Creates the link between locations <paramref name="A"/> and <paramref name="B"/> on the server, then adds the
+        /// server copy to the cache.
+        /// </summary>
+        /// <returns>The cached link.</returns>
         public async Task<LocationLinkObj> CreateLink(long A, long B)
         {
             var newLink = new LocationLinkObj(A, B);
@@ -42,6 +47,10 @@ namespace WebAnnotationModel.gRPC
             return await Add(ServerObjConverter.Convert(serverResult)).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Deletes the link on the server first, then removes it from the cache.
+        /// </summary>
+        /// <returns>True when the link was in the cache; the server delete has been sent either way.</returns>
         public async Task<bool> DeleteLink(long A, long B)
         {
             var key = new LocationLinkKey(A, B);
@@ -104,6 +113,11 @@ namespace WebAnnotationModel.gRPC
             await CallOnCollectionChanged(changes).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Merges links embedded in location payloads into the cache with collection notifications. Null entries are skipped.
+        /// Only adds and updates; never removes. <paramref name="queryTime"/> defaults to the current UTC time.
+        /// Throws <see cref="OperationCanceledException"/> if <paramref name="token"/> is already cancelled and links were supplied.
+        /// </summary>
         public async Task MergeServerLinksAsync(IEnumerable<ILocationLink> links, DateTime? queryTime = null, CancellationToken token = default)
         {
             var arr = links?.Where(l => l != null).ToArray() ?? Array.Empty<ILocationLink>();

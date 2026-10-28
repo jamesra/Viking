@@ -38,6 +38,14 @@ namespace WebAnnotationModel.gRPC
                 _locations, clientFactory, serverObjProcessor, serverDeletesProcessor, geometryConverter);
         }
 
+        /// <summary>
+        /// Loads the locations in the region through the 2000x2000 cells. Without <see cref="QueryTargets.Server"/> in
+        /// <paramref name="queryTargets"/> it only reads the cells and changes no section state. With it, the section is marked
+        /// in use and, when the section already has a watermark, one incremental location-link sync fetches deleted links
+        /// (a failure is traced and the locations still returned; cancellation is rethrown). A section without a watermark
+        /// instead has it seeded from the oldest cell query time. <paramref name="foundObjectsCallback"/> is passed to the cell loader.
+        /// </summary>
+        /// <returns>The locations found in the region.</returns>
         public async Task<List<LocationObj>> GetObjectsInRegionAsync(
             Rectangle VolumeBounds,
             double screenPixelSizeInVolume,
