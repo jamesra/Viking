@@ -21,7 +21,7 @@ version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. 
 Documentation/source/Client/versionhistory.rst.
 -->
 
-## 1.2.130 — not yet released
+## 1.2.130 — 2026-10-27 (Viking Test, unsigned)
 
 * Auto segmentation no longer stops returning proposed polygons while the segmentation server is busy. Viking checked its connection to the server every 30 seconds, more often than the server allows while it is quiet, so a server busy for a couple of minutes closed the connection ("Too many pings") and every request on it failed. Viking now checks every 6 minutes, and only while a request is in progress; an idle connection is no longer checked at all, so the server never closes it for that, and the next request reconnects if anything else dropped it.
 * Location links (the hourglass between two linked locations on different sections) are easier to see next to the locations they join and stay out of the way in between. Each end is drawn strongly, with a contrasting shadow around it (black around a light link, white around a dark one), and fades to nothing toward the middle; the invisible middle cannot be clicked. Move the mouse over a link and the whole link fades in fully over a third of a second, with its labels, and can be followed all the way along; it fades back when the mouse leaves. The thin border added in 1.2.120 now really is black or white; before, it took on the brightness of the image under it and barely showed.
@@ -43,7 +43,9 @@ Documentation/source/Client/versionhistory.rst.
 * Pen outlines keep their points. Cutting or extending a polygon, closed curve or hole with the pen used to refit the whole outline each time, so membranes bulged outward and parts you had not touched drifted a little with every edit. Now only the stretch you drew is spliced in, and the control points elsewhere stay exactly where they were. The pen's fitting tolerance is capped at 2 volume pixels (it was 3 times the downsample). A stroke that crosses the outline more than twice, or crosses into a hole, cuts out the region it encloses, or adds it when the stroke ends inside, for example to cut a bridge out of a cell; each resulting piece is offered as a choice. Reshaping keeps the polygon's holes, and a hole you replace is now saved in the right coordinates.
 * **Help > Change Log** shows this list of what changed in each version of Viking. It also opens by itself the first time a new version starts.
 * Section corrections: near the edge of an annotated area, where the correction lattice has only some of its points, the image is now shifted by the same amount the correction service uses for annotations there. Before, Viking worked out the shift its own way and could disagree with the service by up to a lattice spacing.
-
+* Paint segmentation: **Ctrl+Z** undoes the last completed brush stroke, one stroke at a time.
+* The section numbers in the strip at the edge of the view are drawn as white digits with a soft black outline, so they stay readable over light and dark images, whatever the label outline preference.
+* Auto-segment sends a circle to the segmentation server as its shape alone, without the four foreground clicks near its rim. On a circle drawn larger than the cell those clicks could land outside it and pull in the background.
 
 ## 1.2.127 — 2026-10-26 (Viking Test, unsigned)
 
