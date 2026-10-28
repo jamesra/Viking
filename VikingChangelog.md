@@ -24,6 +24,8 @@ Documentation/source/Client/versionhistory.rst.
 ## 1.2.134 — not yet released
 
 * Fix: a pen stroke that cuts across a polygon near one of its holes could crash Viking ("Duplicate point found in exterior ring") when the cut left a hole touching itself at one point, or when the polygon already had such a hole. That piece is no longer offered as a choice (the other pieces still are), and a polygon with such a hole gets no cut-out choice instead of a crash.
+* Fix: a moved annotation could stay drawn at its old place, and snap back there after every later move, although the move was saved (the next drag started from where it was dropped). Moved and reshaped annotations now always redraw where they are.
+<!-- SectionAnnotationsView keyed views, "known" IDs and subscriptions by location ID. When the store held a new LocationObj for an ID (section evicted and reloaded while a region load still held the old object), the view kept the old object and the new one was never subscribed. LocationViewIndex now builds each view from the store's current object and subscribes per object; a geometry change rebuilds whatever view is present; a failed add leaves nothing half registered. -->
 
 ## 1.2.133 — 2026-10-28 (Viking Test, unsigned)
 
