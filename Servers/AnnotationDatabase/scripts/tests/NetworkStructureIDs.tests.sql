@@ -9,9 +9,19 @@
 -- error (sqlcmd -b exits non-zero). -t 120 turns a hop loop that never ends (the bug the early exit
 -- fixed: @Hops is request input up to Int32.MaxValue) into "Timeout expired" instead of a hang;
 -- sqlcmd 18 still exits 0 on a timeout, so check for the passed line, not only the exit code.
+--
+-- It refuses to run in any database but AnnotationTest: the IDENTITY_INSERT rows below move the
+-- Structure and StructureType identity seeds to about 9e17, and a ROLLBACK does not move them back.
+-- The guard sits in its own batch (GO) so a database without dbo.integer_list is refused by the
+-- guard, not by a compile error in the batch that follows.
 
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
+
+IF DB_NAME() <> N'AnnotationTest'
+    THROW 50000, N'NetworkStructureIDs.tests.sql runs only in the throwaway AnnotationTest database.', 1;
+GO
+
 BEGIN TRAN;
 
 DECLARE @Base bigint = 900000000000000000;
