@@ -224,11 +224,12 @@ namespace WebAnnotation.UI.Actions
                     case RetraceCommandAction.GROW_INTERNAL_RING:
                         if (TryChooseGrownSide(PolyToCut, clockwise_poly, counter_clockwise_poly, out UseCCW) == false)
                             return Rejected(output, locID, "the only valid side of the cut does not enlarge the hole");
-                        Polygon mosaic_shape_clone = locObj.MosaicShape.ToPolygon();
                         inner_ring_replacement = UseCCW ? mosaic_counter_clockwise_poly : mosaic_clockwise_poly;
                         if (inner_ring_replacement is null)
                             return output;
-                        mosaic_shape_clone.ReplaceInteriorRing(PolyBeingCut.Value.InnerShapeIndex.Value, inner_ring_replacement);
+                        Polygon mosaic_shape_clone = WithReplacedHole(locObj.MosaicShape.ToPolygon(), PolyBeingCut.Value.InnerShapeIndex.Value, inner_ring_replacement, locID);
+                        if (mosaic_shape_clone is null)
+                            return output;
                         grow_action = new Change2DContourAction(locObj, cutType, mosaic_shape_clone, transform: Transform);
                         output.Add(grow_action);
                         break;
@@ -239,17 +240,17 @@ namespace WebAnnotation.UI.Actions
                         if (mosaic_counter_clockwise_poly is not null)
                         {
                             //Counterclockwise action
-                            input_poly_clone = locObj.MosaicShape.ToPolygon(); //(Polygon)OriginalVolumePolygon.Clone();
-                            input_poly_clone.ReplaceInteriorRing(PolyBeingCut.Value.InnerShapeIndex.Value, mosaic_counter_clockwise_poly);
-                            output.Add(new Change2DContourAction(locObj, cutType, input_poly_clone, transform: Transform));
+                            input_poly_clone = WithReplacedHole(locObj.MosaicShape.ToPolygon(), PolyBeingCut.Value.InnerShapeIndex.Value, mosaic_counter_clockwise_poly, locID);
+                            if (input_poly_clone is not null)
+                                output.Add(new Change2DContourAction(locObj, cutType, input_poly_clone, transform: Transform));
                         }
 
                         if (mosaic_clockwise_poly is not null)
                         {
                             //Clockwise action
-                            input_poly_clone = locObj.MosaicShape.ToPolygon(); //(Polygon)OriginalVolumePolygon.Clone();
-                            input_poly_clone.ReplaceInteriorRing(PolyBeingCut.Value.InnerShapeIndex.Value, mosaic_clockwise_poly);
-                            output.Add(new Change2DContourAction(locObj, cutType, input_poly_clone, ClockwiseContour: true, transform: Transform));
+                            input_poly_clone = WithReplacedHole(locObj.MosaicShape.ToPolygon(), PolyBeingCut.Value.InnerShapeIndex.Value, mosaic_clockwise_poly, locID);
+                            if (input_poly_clone is not null)
+                                output.Add(new Change2DContourAction(locObj, cutType, input_poly_clone, ClockwiseContour: true, transform: Transform));
                         }
 
                         return output;
@@ -257,6 +258,25 @@ namespace WebAnnotation.UI.Actions
             }
 
             return output;
+        }
+
+        /// <summary>
+        /// <paramref name="shape"/> with hole <paramref name="hole"/> replaced by <paramref name="replacement"/>, or null when
+        /// the new hole would cross the outline or another hole (the stroke left the hole's surroundings). That choice is then
+        /// not offered; with none left, the stroke goes to the region cut, which can merge the hole with what it reached.
+        /// </summary>
+        internal static Polygon WithReplacedHole(Polygon shape, int hole, Polygon replacement, long locID)
+        {
+            try
+            {
+                shape.ReplaceInteriorRing(hole, replacement);
+                return shape;
+            }
+            catch (ArgumentException e)
+            {
+                Trace.WriteLine($"Pen retrace of location {locID}: the new hole {hole} is not valid inside the polygon ({e.Message}); that choice is not offered.");
+                return null;
+            }
         }
 
         /// <summary>

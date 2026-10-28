@@ -280,11 +280,11 @@ namespace WebAnnotation.UI.Commands
             using WebAnnotation.View.PolygonViewTimingLog.PenStepTimer timer = WebAnnotation.View.PolygonViewTimingLog.Measure("finish-cut", $"verts={OriginalVolumePolygon.TotalVertices}");
             Polygon keptPiece = ChosenPiece();
             Polygon? discardedPiece = KeepBothPieces ? OtherPiece(keptPiece) : null;
-            OutputVolumePolygon = GenerateOutputVolumePolygon();
             Polygon? discardedVolume = KeepBothPieces ? DiscardedVolumePolygon() : null;
 
             try
             {
+                OutputVolumePolygon = GenerateOutputVolumePolygon();
                 if (!TrySpliceOutput(keptPiece, discardedPiece))
                 {
                     // The stroke could not be spliced into the stored points; save the walked pieces as they are
@@ -292,9 +292,10 @@ namespace WebAnnotation.UI.Commands
                     SplitOffMosaicPolygon = discardedVolume is null ? null : mapping.TryMapShapeVolumeToSection(discardedVolume);
                 }
             }
-            catch (ArgumentOutOfRangeException)
+            catch (ArgumentException e)
             {
-                Console.WriteLine("TranslateLocationCommand: Could not map polygon to section on Execute", "Command");
+                // Out of the mapping, or a new hole that crosses the outline or another hole: nothing is applied
+                System.Diagnostics.Trace.WriteLine($"RetraceAndReplacePathCommand: cut not applied: {e.Message}", "Command");
                 return;
             }
 
@@ -335,9 +336,18 @@ namespace WebAnnotation.UI.Commands
             {
                 int hole = PolyBeingCut.Value.InnerShapeIndex.Value;
                 Polygon volume = (Polygon)OriginalVolumePolygon.Clone();
-                volume.ReplaceInteriorRing(hole, kept.Volume);
                 Polygon mosaic = (Polygon)OriginalMosaicPolygon.Clone();
-                mosaic.ReplaceInteriorRing(hole, kept.Mosaic);
+                try
+                {
+                    volume.ReplaceInteriorRing(hole, kept.Volume);
+                    mosaic.ReplaceInteriorRing(hole, kept.Mosaic);
+                }
+                catch (ArgumentException)
+                {
+                    // The spliced hole crosses the outline or another hole; the walked one is tried instead
+                    return false;
+                }
+
                 OutputVolumePolygon = volume;
                 OutputMosaicPolygon = mosaic;
                 SplitOffMosaicPolygon = null;
