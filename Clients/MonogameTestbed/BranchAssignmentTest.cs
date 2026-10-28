@@ -33,9 +33,7 @@ namespace MonogameTestbed
         readonly LineView[] lineViews = null;
         List<LineView> polyRingViews = null;
 
-        readonly BajajGeneratorMesh FirstPassTriangulation = null;
         readonly MeshView<VertexPositionColor> meshView = null;
-        readonly MeshModel<VertexPositionColor> meshViewModel = null;
 
         List<LineSetView> RegionPolygonViews;
 
@@ -472,8 +470,6 @@ namespace MonogameTestbed
 
         ];
         Scene scene;
-        readonly Polygon A;
-        readonly Polygon B;
         readonly PointSetViewCollection Points_A = new(Color.Blue, Color.BlueViolet, Color.PowderBlue);
         readonly PointSetViewCollection Points_B = new(Color.Red, Color.Pink, Color.Plum);
         PolyBranchAssignmentView wrapView = null;

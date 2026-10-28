@@ -27,7 +27,7 @@ namespace Geometry
 
         public bool Equals(Ray3D other) => Origin.Equals(other.Origin) && Direction.Equals(other.Direction);
 
-        public override bool Equals(object obj) => obj is Ray3D other && Equals(other);
+        public override bool Equals(object? obj) => obj is Ray3D other && Equals(other);
 
         public override int GetHashCode() => Origin.GetHashCode() ^ Direction.GetHashCode();
 

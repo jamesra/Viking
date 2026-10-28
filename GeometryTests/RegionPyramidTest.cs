@@ -19,17 +19,11 @@ namespace GeometryTests
             //
         }
 
-        private TestContext testContextInstance;
-
         /// <summary>
         ///Gets or sets the test context which provides
         ///information about and functionality for the current test run.
         ///</summary>
-        public TestContext TestContext
-        {
-            get => testContextInstance;
-            set => testContextInstance = value;
-        }
+        public TestContext TestContext { get; set; }
 
         #region Additional test attributes
         //
@@ -214,17 +208,11 @@ namespace GeometryTests
             //
         }
 
-        private TestContext testContextInstance;
-
         /// <summary>
         ///Gets or sets the test context which provides
         ///information about and functionality for the current test run.
         ///</summary>
-        public TestContext TestContext
-        {
-            get => testContextInstance;
-            set => testContextInstance = value;
-        }
+        public TestContext TestContext { get; set; }
 
         #region Additional test attributes
         //
@@ -257,8 +245,6 @@ namespace GeometryTests
             Rectangle cellRectangle = new(0, cellDimensions.Width, 0, cellDimensions.Height);
             Rectangle ScreenBounds = new(0, 64, 0, 128); //A 64x128 pixel screen
 
-            double OneToOnePixelMappingRadius = 1.0;
-            double OneToTwoPixelMappingRadius = 2.0;
             double LevelForOneToOnePixelMappingRadius = 3.0;
             double LevelForOneToTwoPixelMappingRadius = LevelForOneToOnePixelMappingRadius - 1;
 

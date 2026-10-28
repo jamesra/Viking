@@ -92,7 +92,7 @@ namespace Geometry
 
 
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             //       
             // See the full list of guidelines at
@@ -110,8 +110,11 @@ namespace Geometry
         }
 
         // override object.Equals
-        public bool Equals(IShapeIndex other)
+        public bool Equals(IShapeIndex? other)
         {
+            if (other is null)
+                return false;
+
             if (other.ShapeType != ShapeType2D.Polygon)
                 return false;
 

@@ -20,7 +20,6 @@ namespace MonogameTestbed
 {
     class PointPlacementTestTemplate : IGraphicsTest
     {
-        readonly VikingXNAGraphics.MeshView<VertexPositionNormalColor> meshView;
         Scene scene;
         readonly List<Circle> Points_A = [];
         CircleView[] Views_A = [];

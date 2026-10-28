@@ -362,7 +362,7 @@ namespace Geometry
             //Debug.Assert(!double.IsNaN(this._minVals[(int)Axis.X]));
             CalcHashcode();
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is Box other)
                 return this == other;
@@ -443,7 +443,7 @@ namespace Geometry
 
         IBox3D IBox3D.Translate(in IPoint3D offset) => Translate(new Vector3(offset.X, offset.Y, offset.Z));
 
-        public bool Equals(IBox3D other)
+        public bool Equals(IBox3D? other)
         {
             if (other is null)
                 return false;

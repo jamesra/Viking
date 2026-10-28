@@ -3299,7 +3299,7 @@ namespace Geometry
         }
 
 
-        public bool Equals(IShape2D other)
+        public bool Equals(IShape2D? other)
         {
             if (other is null)
                 return false;
@@ -3319,7 +3319,7 @@ namespace Geometry
             return false;
         }
 
-        public bool Equals(IPolygon2D other)
+        public bool Equals(IPolygon2D? other)
         {
             if (other is null)
                 return false;
@@ -3361,7 +3361,7 @@ namespace Geometry
         /// Same vertices in the same order, ring by ring. Reads the rings directly: the <see cref="ExteriorRing"/>
         /// property returns a copy, so indexing it in the loop copied the ring once per vertex.
         /// </summary>
-        public bool Equals(Polygon other)
+        public bool Equals(Polygon? other)
         {
             if (other is null)
                 return false;
@@ -3390,7 +3390,7 @@ namespace Geometry
             return true;
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is Polygon poly)
                 return Equals(poly);

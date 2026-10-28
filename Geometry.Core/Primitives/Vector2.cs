@@ -216,18 +216,18 @@ namespace Geometry
             return ((XDelta * XDelta) + (YDelta * YDelta)) <= Tolerance.EpsilonSquared;
         }
 
-        readonly bool IEquatable<IShape2D>.Equals(IShape2D other)
+        readonly bool IEquatable<IShape2D>.Equals(IShape2D? other)
         {
             if (other is null)
                 return false;
 
-            IPoint2D p = other as IPoint2D;
+            IPoint2D? p = other as IPoint2D;
             return ((IEquatable<IPoint2D>)this).Equals(p);
         }
 
         readonly bool IEquatable<Vector2>.Equals(Vector2 B) => Vector2.Equals(this, B);
 
-        readonly bool IEquatable<IPoint2D>.Equals(IPoint2D B)
+        readonly bool IEquatable<IPoint2D>.Equals(IPoint2D? B)
         {
             if (B is null)
                 return false;
@@ -246,7 +246,7 @@ namespace Geometry
             //return DistanceSquared((IPoint2D)this, B) <= Tolerance.EpsilonSquared;
         }
 
-        public override readonly bool Equals(object obj)
+        public override readonly bool Equals(object? obj)
         {
             if (obj is null)
                 return false;

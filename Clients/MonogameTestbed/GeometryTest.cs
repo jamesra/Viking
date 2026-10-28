@@ -17,8 +17,6 @@ namespace MonogameTestbed
         public string Title => this.GetType().Name;
 
         readonly List<IShape2D> shapes = [];
-        readonly LineView lineView;
-        readonly CircleView circleView;
 
         List<IColorView> ShapeViews = [];
         List<IColorView> GroundTruth = [];

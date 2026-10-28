@@ -47,7 +47,7 @@ namespace Geometry
         public readonly T A = a;
         public readonly T B = b;
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is Combo<T> other)
                 return other.iA == this.iA && other.iB == this.iB;

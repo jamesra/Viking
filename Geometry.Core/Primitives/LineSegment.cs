@@ -91,7 +91,7 @@ namespace Geometry
 
         public override int GetHashCode() => GeometryHashCode.LineSegmentUndirected(A, B);
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is LineSegment otherGS)
                 return Equals(otherGS);
@@ -109,7 +109,7 @@ namespace Geometry
         public bool EquivalentUndirected(in LineSegment other) =>
             (A.Equals(other.A) && B.Equals(other.B)) || (A.Equals(other.B) && B.Equals(other.A));
 
-        public bool Equals(ILineSegment2D other)
+        public bool Equals(ILineSegment2D? other)
         {
             if (other is null)
                 return false;
@@ -117,7 +117,7 @@ namespace Geometry
             return A.Equals(other.A) && B.Equals(other.B);
         }
 
-        public bool Equals(IPolyLine2D other)
+        public bool Equals(IPolyLine2D? other)
         {
             if (other is null || other.Points.Count != 2)
                 return false;
@@ -125,7 +125,7 @@ namespace Geometry
             return A.Equals(other.Points[0]) && B.Equals(other.Points[1]);
         }
 
-        public bool Equals(IShape2D other)
+        public bool Equals(IShape2D? other)
         {
             if (other is ILineSegment2D otherLine)
                 return Equals(otherLine);

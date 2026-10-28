@@ -93,7 +93,7 @@ namespace Geometry
             //    throw new ArgumentException("This is not a triangle, it is a line");
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is Triangle otherTri)
                 return this == otherTri;
@@ -103,7 +103,7 @@ namespace Geometry
             return false;
         }
 
-        public bool Equals(IShape2D obj)
+        public bool Equals(IShape2D? obj)
         {
             if (obj is ITriangle2D otherTri)
             {
@@ -119,7 +119,7 @@ namespace Geometry
             return false;
         }
 
-        public bool Equals(ITriangle2D other)
+        public bool Equals(ITriangle2D? other)
         {
             if (other is null) return false;
 

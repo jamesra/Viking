@@ -172,7 +172,7 @@ namespace Geometry
         /// Ordered child-wise equality with another collection; false for null or any non-collection shape.
         /// Reached through <c>EqualityComparer&lt;IShape2D&gt;.Default</c> (list lookups) as well as direct calls.
         /// </summary>
-        public bool Equals(IShape2D other)
+        public bool Equals(IShape2D? other)
         {
             if (other is IShapeCollection2D otherColl)
                 return Equals(otherColl);
@@ -180,8 +180,11 @@ namespace Geometry
             return false;
         }
 
-        public bool Equals(IShapeCollection2D other)
+        public bool Equals(IShapeCollection2D? other)
         {
+            if (other is null)
+                return false;
+
             if (this._shapes.Count != other.Geometries.Count)
                 return false;
 

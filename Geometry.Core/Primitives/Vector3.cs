@@ -184,7 +184,7 @@ namespace Geometry
 
         public override readonly int GetHashCode() => GeometryHashCode.Point3D(X, Y, Z);
 
-        public readonly bool Equals(IPoint3D other)
+        public readonly bool Equals(IPoint3D? other)
         {
             if (other is null)
                 return false;
@@ -192,7 +192,7 @@ namespace Geometry
             return Distance(this, other) <= Tolerance.EpsilonSquared;
         }
 
-        public override readonly bool Equals(object obj)
+        public override readonly bool Equals(object? obj)
         {
             if (obj is Vector3 other)
                 return Equals(other);

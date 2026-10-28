@@ -309,16 +309,16 @@ namespace Geometry
 
         public IShape2D Translate(in IPoint2D offset) => new Line(Origin + offset.ToVector2(), Direction);
 
-        public bool Equals(IShape2D other) => other is ILine2D line && Equals(line);
+        public bool Equals(IShape2D? other) => other is ILine2D line && Equals(line);
 
-        public bool Equals(ILine2D other)
+        public bool Equals(ILine2D? other)
         {
             if (other is null)
                 return false;
             return Origin.Equals(other.Origin) && Direction.Equals(other.Direction);
         }
 
-        public override bool Equals(object obj) => obj is Line line && this == line;
+        public override bool Equals(object? obj) => obj is Line line && this == line;
 
         public override int GetHashCode() => GeometryHashCode.Combine(Origin.GetHashCode(), Direction.GetHashCode());
 

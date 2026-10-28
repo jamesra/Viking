@@ -1,5 +1,4 @@
 using AnnotationVizLib;
-using AnnotationVizLib;
 using Geometry;
 using Rectangle = Geometry.Rectangle;
 using Microsoft.Xna.Framework;

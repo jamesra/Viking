@@ -112,7 +112,7 @@ namespace Geometry
 
         public bool Equals(VectorN B) => (DistanceSquared(this, B) <= Tolerance.EpsilonSquared);
 
-        public bool Equals(IPointN B)
+        public bool Equals(IPointN? B)
         {
             if (B is null)
                 return false;
@@ -120,7 +120,7 @@ namespace Geometry
             return (DistanceSquared(this, B) <= Tolerance.EpsilonSquared);
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is VectorN otherGVN)
                 return Equals(otherGVN);
@@ -200,12 +200,12 @@ namespace Geometry
             return 0;
         }
 
-        public bool Equals(IShape2D other)
+        public bool Equals(IShape2D? other)
         {
             if (other is null)
                 return false;
 
-            IPointN p = other as IPointN;
+            IPointN? p = other as IPointN;
             return ((IEquatable<IPointN>)this).Equals(p);
 
         }

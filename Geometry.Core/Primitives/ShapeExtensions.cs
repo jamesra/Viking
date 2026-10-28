@@ -23,7 +23,7 @@ namespace Geometry
         public readonly T B = b;
         public readonly IShape2D Intersection = intersection;
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is null)
                 return false;

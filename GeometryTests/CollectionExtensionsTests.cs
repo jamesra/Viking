@@ -241,7 +241,7 @@ namespace GeometryTests
 
                     int probeKey = p.Keys.Length > 0 ? p.Keys[0] : 0;
                     SortedSet<int> fromHelper = dict.GetSetOrEmpty(probeKey);
-                    bool found = dict.TryGetValue(probeKey, out SortedSet<int>? fromDict);
+                    bool found = dict.TryGetValue(probeKey, out SortedSet<int> fromDict);
                     if (!found)
                         return fromHelper.Count == 0;
 

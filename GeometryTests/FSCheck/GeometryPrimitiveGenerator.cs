@@ -552,7 +552,7 @@ namespace GeometryTests.FSCheck
                     {
                         output.AddInteriorRing(inner);
                     }
-                    catch (ArgumentException e)
+                    catch (ArgumentException)
                     {
                         Trace.WriteLine("Exception adding interior ring to generated polygon");
                     }
@@ -1015,7 +1015,7 @@ namespace GeometryTests.FSCheck
                     if (copy.Area <= Geometry.Global.Epsilon)
                         continue;
                 }
-                catch (ArgumentException e)
+                catch (ArgumentException)
                 {
                     //Trace.WriteLine(string.Format("Could not remove {0} from {1}", i, copy));
                     continue;

@@ -1088,7 +1088,6 @@ namespace MonogameTestbed
         {
             VikingXNA.Scene scene = window.Scene;
             Matrix ViewProjMatrix = scene.ViewProj;
-            string TechniqueName = "AnimatedLinear";
             float time = DateTime.Now.Millisecond / 1000.0f;
 
             double totalLabelLength = (double)(leftLagrangeCurveLabel.Text.Length + rightLagrangeCurveLabel.Text.Length);
@@ -1181,7 +1180,6 @@ namespace MonogameTestbed
         {
             VikingXNA.Scene scene = window.Scene;
             Matrix ViewProjMatrix = scene.ViewProj;
-            string TechniqueName = "AnimatedLinear";
             float time = DateTime.Now.Millisecond / 1000.0f;
 
             curveLabel.Alignment = RoundCurve.HorizontalAlignment.Left;

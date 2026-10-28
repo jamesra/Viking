@@ -208,7 +208,6 @@ namespace GeometryTests.FSCheck
         readonly double InterpolationFraction = fraction;
         readonly Axis Axis = axis;
         readonly Axis OffAxis = axis == Axis.X ? Axis.Y : Axis.X;
-        Vector2 ExpectedIntersection;
         LineSegment TestSegment;
 
         public override bool Pre(LinearPolylineModel model)

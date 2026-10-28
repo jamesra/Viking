@@ -121,7 +121,6 @@ namespace MonogameTestbed
         }
 
 
-        readonly AnnotationVizLib.MorphologyGraph graph;
         private static void PopulateFromOData()
         {
 

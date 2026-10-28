@@ -647,7 +647,7 @@ namespace Geometry
         /// </summary>
         public override int GetHashCode() => 0;
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is Polyline other)
                 return Equals(other);
@@ -658,7 +658,7 @@ namespace Geometry
             return base.Equals(obj);
         }
 
-        public bool Equals(Polyline other)
+        public bool Equals(Polyline? other)
         {
             if (object.ReferenceEquals(this, other))
                 return true;
@@ -678,7 +678,7 @@ namespace Geometry
             return true;
         }
 
-        public bool Equals(IShape2D other)
+        public bool Equals(IShape2D? other)
         {
             if (other is IPolyLine2D otherPolyline)
                 return Equals(otherPolyline);
@@ -688,8 +688,11 @@ namespace Geometry
             return false;
         }
 
-        public bool Equals(ILineSegment2D other)
+        public bool Equals(ILineSegment2D? other)
         {
+            if (other is null)
+                return false;
+
             if (this.PointCount != 2)
                 return false;
 
@@ -697,8 +700,11 @@ namespace Geometry
                    (Points[1].Equals(other.A) && Points[0].Equals(other.B));
         }
 
-        public bool Equals(IPolyLine2D other)
+        public bool Equals(IPolyLine2D? other)
         {
+            if (other is null)
+                return false;
+
             if (this.PointCount != other.Points.Count)
                 return false;
 

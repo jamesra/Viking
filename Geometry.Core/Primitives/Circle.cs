@@ -552,7 +552,7 @@ namespace Geometry
         }
 
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is Circle other)
                 return this == other;
@@ -563,7 +563,7 @@ namespace Geometry
             return false;
         }
 
-        public bool Equals(IShape2D other)
+        public bool Equals(IShape2D? other)
         {
             if (other is ICircle2D otherCircle)
                 return Equals(otherCircle);
@@ -571,7 +571,7 @@ namespace Geometry
             return false;
         }
 
-        public bool Equals(ICircle2D other) => this.Center.Equals(other.Center) && this.Radius.Equals(other.Radius);
+        public bool Equals(ICircle2D? other) => other is not null && this.Center.Equals(other.Center) && this.Radius.Equals(other.Radius);
 
 
         public override int GetHashCode() =>

@@ -373,7 +373,7 @@ namespace MorphologyMesh
 
                     UpdatedPoints.Add(avg);
                 }
-                catch (ArgumentException e)
+                catch (ArgumentException)
                 {
                     foreach (PolygonIndex pi in correspondingIndicies)
                     {

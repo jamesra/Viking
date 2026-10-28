@@ -343,7 +343,6 @@ namespace MonogameTestbed
         {
         }
 
-        private readonly int? ConstrainedEdgeStart;
 
 
         private bool FirstTriangulationDone = false;
@@ -688,7 +687,7 @@ namespace MonogameTestbed
                     meshView.Draw(window.GraphicsDevice, window.Scene, Microsoft.Xna.Framework.Graphics.CullMode.None);
                 }
             }
-            catch (System.ApplicationException e)
+            catch (System.ApplicationException)
             {
                 return;
             }

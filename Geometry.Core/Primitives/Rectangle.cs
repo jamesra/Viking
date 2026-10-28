@@ -523,7 +523,7 @@ namespace Geometry
 
         private static int CalcHashCode(in double left, in double bottom, in double right, in double top) => left.GetHashCode() ^ bottom.GetHashCode() ^ right.GetHashCode() ^ top.GetHashCode();
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is Rectangle other)
                 return Equals(other);
@@ -534,7 +534,7 @@ namespace Geometry
             return false;
         }
 
-        public bool Equals(IShape2D other)
+        public bool Equals(IShape2D? other)
         {
             if (other is IRectangle2D otherRect)
                 return Equals(otherRect);
@@ -542,8 +542,11 @@ namespace Geometry
             return false;
         }
 
-        public bool Equals(IRectangle2D other)
+        public bool Equals(IRectangle2D? other)
         {
+            if (other is null)
+                return false;
+
             return Left.Equals(other.Left) &&
                    Right.Equals(other.Right) &&
                    Top.Equals(other.Top) &&

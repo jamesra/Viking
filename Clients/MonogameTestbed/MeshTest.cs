@@ -21,7 +21,6 @@ namespace MonogameTestbed
         MeshView<VertexPositionColor> meshView;
         MeshView<VertexPositionNormalColor> meshViewWithLighting;
         Mesh3D tetraMesh;
-        Mesh3D cubeMesh;
 
         Scene3D Scene;
 

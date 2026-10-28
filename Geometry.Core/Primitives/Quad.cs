@@ -207,11 +207,11 @@ namespace Geometry
             return new Quad(BottomLeft + o, BottomRight + o, TopLeft + o, TopRight + o);
         }
 
-        public bool Equals(IShape2D other) => other is Quad quad && Equals(quad);
+        public bool Equals(IShape2D? other) => other is Quad quad && Equals(quad);
 
         public bool Equals(Quad other) => T0.Equals(other.T0) && T1.Equals(other.T1);
 
-        public override bool Equals(object obj) => obj is Quad quad && Equals(quad);
+        public override bool Equals(object? obj) => obj is Quad quad && Equals(quad);
 
         public override int GetHashCode() => GeometryHashCode.Combine(T0.GetHashCode(), T1.GetHashCode());
 

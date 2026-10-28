@@ -85,7 +85,6 @@ namespace MonogameTestbed
 
         public bool ShowMesh => iShownMesh.HasValue;
 
-        readonly MeshModel<VertexPositionColor> meshViewModel = null;
 
         //LineView[] lineViews = null;
 
@@ -2494,8 +2493,6 @@ namespace MonogameTestbed
         int? _displayShotIndex;
         int _pendingShotDelta;
         readonly TestInputContext Input = new();
-        readonly Polygon A;
-        readonly Polygon B;
         readonly PointSetViewCollection Points_A = new(Color.Blue, Color.BlueViolet, Color.PowderBlue);
         readonly PointSetViewCollection Points_B = new(Color.Red, Color.Pink, Color.Plum);
         readonly Camera3DManipulator Camera3DManipulator = new();
@@ -2507,7 +2504,6 @@ namespace MonogameTestbed
         bool _initialized = false;
         public bool Initialized => _initialized;
 
-        readonly AnnotationVizLib.MorphologyGraph Graph;
 
         enum ScreenshotPhase
         {

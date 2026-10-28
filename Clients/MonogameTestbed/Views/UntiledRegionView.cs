@@ -64,7 +64,6 @@ namespace MonogameTestbed
         /// </summary>
         public void UpdateSet(PointSet ps, int i)
         {
-            int[] originalIndices;
 
             Sets[i] = ps;
 
