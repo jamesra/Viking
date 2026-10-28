@@ -50,10 +50,8 @@ namespace WebAnnotation.ReviewFeed
             string? sectionTransform = sectionVm.DefaultPyramidTransform
                 ?? State.ViewerControl?.CurrentTransform;
 
-            ReviewChangeCardCrop.GetPaddedBounds(entry, out double left, out double bottom, out double spanX, out double spanY);
-            double right = left + spanX;
-            double top = bottom + spanY;
-            var bounds = new Geometry.Rectangle(left, right, bottom, top);
+            var crop = ReviewChangeCardCrop.For(entry);
+            Geometry.Rectangle bounds = crop.Bounds;
 
             SortedDictionary<TileUniqueKey, TileViewModel> tiles = await LoadTilesAsync(
                 volume,
@@ -94,9 +92,9 @@ namespace WebAnnotation.ReviewFeed
 
                         // Volume tiles are often warped — map texture UV corners into the card
                         // instead of stretching the AABB (that skews EM vs the volume mask).
-                        if (!TryDrawTileByUv(g, tileBmp, tile, left, bottom, spanX, spanY, size))
+                        if (!TryDrawTileByUv(g, tileBmp, tile, crop, size))
                         {
-                            DrawingRectangle dest = WorldRectToImageRect(tile.Bounds, left, bottom, spanX, spanY, size);
+                            DrawingRectangle dest = crop.WorldRectToImageRect(tile.Bounds, size);
                             if (dest.Width < 1 || dest.Height < 1)
                                 continue;
                             g.DrawImage(tileBmp, dest);
@@ -122,10 +120,7 @@ namespace WebAnnotation.ReviewFeed
             Graphics g,
             Bitmap tileBmp,
             TileViewModel tile,
-            double cropLeft,
-            double cropBottom,
-            double spanX,
-            double spanY,
+            ReviewChangeCardCrop crop,
             int size)
         {
             if (tile?.Verticies is null || tile.Verticies.Length < 3)
@@ -138,9 +133,9 @@ namespace WebAnnotation.ReviewFeed
                 return false;
             }
 
-            ReviewChangeCardCrop.WorldToImage(ul.X, ul.Y, cropLeft, cropBottom, spanX, spanY, size, out float x0, out float y0);
-            ReviewChangeCardCrop.WorldToImage(ur.X, ur.Y, cropLeft, cropBottom, spanX, spanY, size, out float x1, out float y1);
-            ReviewChangeCardCrop.WorldToImage(ll.X, ll.Y, cropLeft, cropBottom, spanX, spanY, size, out float x2, out float y2);
+            crop.WorldToImage(ul.X, ul.Y, size, out float x0, out float y0);
+            crop.WorldToImage(ur.X, ur.Y, size, out float x1, out float y1);
+            crop.WorldToImage(ll.X, ll.Y, size, out float x2, out float y2);
 
             // Degenerate parallelogram — fall back to AABB draw.
             if (Math.Abs((x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0)) < 1e-3f)
@@ -301,30 +296,6 @@ namespace WebAnnotation.ReviewFeed
             }
 
             return ordered[ordered.Length - 1];
-        }
-
-        static DrawingRectangle WorldRectToImageRect(
-            Geometry.Rectangle world,
-            double cropLeft,
-            double cropBottom,
-            double spanX,
-            double spanY,
-            int size)
-        {
-            ReviewChangeCardCrop.WorldToImage(
-                world.Left, world.Top, cropLeft, cropBottom, spanX, spanY, size, out float x0, out float yTop);
-            ReviewChangeCardCrop.WorldToImage(
-                world.Right, world.Bottom, cropLeft, cropBottom, spanX, spanY, size, out float x1, out float yBottom);
-
-            float left = Math.Min(x0, x1);
-            float top = Math.Min(yTop, yBottom);
-            float width = Math.Abs(x1 - x0);
-            float height = Math.Abs(yBottom - yTop);
-            return new DrawingRectangle(
-                (int)Math.Floor(left),
-                (int)Math.Floor(top),
-                Math.Max(1, (int)Math.Ceiling(width)),
-                Math.Max(1, (int)Math.Ceiling(height)));
         }
 
         static async Task<Bitmap> LoadTileBitmapAsync(

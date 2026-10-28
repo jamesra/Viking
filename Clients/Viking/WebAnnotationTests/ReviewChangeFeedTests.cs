@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using FsCheck;
 using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Viking.Common;
@@ -331,13 +332,138 @@ namespace WebAnnotationTests
         [TestMethod]
         public void CardCrop_WorldToImage_MatchesMaskAndEmMapping()
         {
-            ReviewChangeCardCrop.GetPaddedBounds(90, 190, 110, 210, out double left, out double bottom, out double spanX, out double spanY);
-            Assert.IsTrue(left < 90);
-            Assert.IsTrue(bottom < 190);
+            // 20x20 box: pad 0.15 * 20 = 3 per edge, so a 26-unit square centred on (100, 200).
+            var crop = ReviewChangeCardCrop.FromBounds(90, 190, 110, 210);
+            Assert.AreEqual(87.0, crop.Left);
+            Assert.AreEqual(187.0, crop.Bottom);
+            Assert.AreEqual(26.0, crop.Span);
+            Geometry.Rectangle bounds = crop.Bounds;
+            Assert.AreEqual(87.0, bounds.Left);
+            Assert.AreEqual(113.0, bounds.Right);
+            Assert.AreEqual(187.0, bounds.Bottom);
+            Assert.AreEqual(213.0, bounds.Top);
 
-            ReviewChangeCardCrop.WorldToImage(100, 200, left, bottom, spanX, spanY, 256, out float x, out float y);
-            Assert.IsTrue(x > 0 && x < 256);
-            Assert.IsTrue(y > 0 && y < 256);
+            // The box centre lands on the card centre; the window's top-left corner is pixel (0, 0).
+            crop.WorldToImage(100, 200, 256, out float x, out float y);
+            Assert.AreEqual(128f, x);
+            Assert.AreEqual(128f, y);
+            crop.WorldToImage(87, 213, 256, out x, out y);
+            Assert.AreEqual(0f, x);
+            Assert.AreEqual(0f, y);
+
+            // A tile 1/26 of the window inside its top-left corner covers pixels from (9.85, 9.85) to (19.69, 19.69).
+            System.Drawing.Rectangle tile = crop.WorldRectToImageRect(new Geometry.Rectangle(88, 89, 211, 212), 256);
+            Assert.AreEqual(new System.Drawing.Rectangle(9, 9, 10, 10), tile);
+        }
+
+        [TestMethod]
+        public void CardCrop_ForEntry_UsesTheEntryBoundingBox()
+        {
+            var crop = ReviewChangeCardCrop.For(Entry(1, DateTime.UtcNow));
+            Assert.AreEqual(87.0, crop.Left);
+            Assert.AreEqual(187.0, crop.Bottom);
+            Assert.AreEqual(26.0, crop.Span);
+            Assert.ThrowsException<ArgumentNullException>(() => ReviewChangeCardCrop.For(null!));
+        }
+
+        [TestMethod]
+        public void CardCrop_OnVolumeScaleBoxes_MatchesTheLooseDoubleMathBitForBit()
+        {
+            Prop.ForAll(
+                Arb.From(GenCropCase()),
+                c =>
+                {
+                    var (refLeft, refBottom, refSpan) = ReferencePaddedBounds(c.MinX, c.MinY, c.MaxX, c.MaxY);
+                    var crop = ReviewChangeCardCrop.FromBounds(c.MinX, c.MinY, c.MaxX, c.MaxY);
+                    crop.WorldToImage(c.WorldX, c.WorldY, c.Size, out float x, out float y);
+                    var (refX, refY) = ReferenceWorldToImage(c.WorldX, c.WorldY, refLeft, refBottom, refSpan, c.Size);
+                    return crop.Left.Equals(refLeft)
+                           && crop.Bottom.Equals(refBottom)
+                           && crop.Span.Equals(refSpan)
+                           && x.Equals(refX)
+                           && y.Equals(refY);
+                })
+                .QuickCheckThrowOnFailure();
+        }
+
+        [TestMethod]
+        public void CardCrop_TileRect_MatchesTheLooseDoubleMathBitForBit()
+        {
+            // The probe point is a tile corner; the opposite corner is the box's max corner, so tiles
+            // range from inside the window to larger than it and partly off the card.
+            Prop.ForAll(
+                Arb.From(GenCropCase()),
+                c =>
+                {
+                    var (refLeft, refBottom, refSpan) = ReferencePaddedBounds(c.MinX, c.MinY, c.MaxX, c.MaxY);
+                    var world = new Geometry.Rectangle(
+                        Math.Min(c.WorldX, c.MaxX), Math.Max(c.WorldX, c.MaxX),
+                        Math.Min(c.WorldY, c.MaxY), Math.Max(c.WorldY, c.MaxY));
+                    System.Drawing.Rectangle actual = ReviewChangeCardCrop.FromBounds(c.MinX, c.MinY, c.MaxX, c.MaxY)
+                        .WorldRectToImageRect(world, c.Size);
+                    return actual == ReferenceWorldRectToImageRect(world, refLeft, refBottom, refSpan, c.Size);
+                })
+                .QuickCheckThrowOnFailure();
+        }
+
+        /// <summary>One generated crop input: a box in volume-scale coordinates, a probe point near it, and a card size.</summary>
+        sealed record CropCase(double MinX, double MinY, double MaxX, double MaxY, double WorldX, double WorldY, int Size);
+
+        /// <summary>
+        /// Boxes anywhere in a +/-1e6 volume with sub-pixel fractions, extents from zero (a point:
+        /// the 1e-6 floor applies) up to 50,000 px, and probe points from one box width outside to inside.
+        /// </summary>
+        static Gen<CropCase> GenCropCase()
+        {
+            Gen<double> coordinate =
+                from whole in Gen.Choose(-1_000_000, 1_000_000)
+                from micro in Gen.Choose(0, 999_999)
+                select whole + micro / 1e6;
+            Gen<double> extent = Gen.Frequency(
+                Tuple.Create(1, Gen.Constant(0.0)),
+                Tuple.Create(6, from whole in Gen.Choose(0, 50_000)
+                                from milli in Gen.Choose(0, 999)
+                                select whole + milli / 1e3));
+            Gen<double> probeFraction = from n in Gen.Choose(-1000, 2000) select n / 1000.0;
+            return from minX in coordinate
+                   from minY in coordinate
+                   from width in extent
+                   from height in extent
+                   from fx in probeFraction
+                   from fy in probeFraction
+                   from size in Gen.Choose(1, 1024)
+                   select new CropCase(minX, minY, minX + width, minY + height, minX + fx * width, minY + fy * height, size);
+        }
+
+        /// <summary>
+        /// The crop window math as it stood when the window travelled as four loose doubles
+        /// (ReviewChangeCardCrop.GetPaddedBounds); the tests hold the current code to it bit for bit.
+        /// </summary>
+        static (double Left, double Bottom, double Span) ReferencePaddedBounds(double minX, double minY, double maxX, double maxY)
+        {
+            double width = Math.Max(maxX - minX, 1e-6);
+            double height = Math.Max(maxY - minY, 1e-6);
+            double pad = Math.Max(width, height) * 0.15;
+            double span = Math.Max(width, height) + 2 * pad;
+            double centerX = (minX + maxX) * 0.5;
+            double centerY = (minY + maxY) * 0.5;
+            return (centerX - span * 0.5, centerY - span * 0.5, span);
+        }
+
+        /// <summary>The old ReviewChangeCardCrop.WorldToImage formula (Y-up world to Y-down card pixels).</summary>
+        static (float X, float Y) ReferenceWorldToImage(double worldX, double worldY, double left, double bottom, double span, int size) =>
+            ((float)((worldX - left) / span * size), (float)(size - (worldY - bottom) / span * size));
+
+        /// <summary>The old ReviewChangeMosaicCropLoader.WorldRectToImageRect (AABB tile draw fallback).</summary>
+        static System.Drawing.Rectangle ReferenceWorldRectToImageRect(Geometry.Rectangle world, double left, double bottom, double span, int size)
+        {
+            var (x0, yTop) = ReferenceWorldToImage(world.Left, world.Top, left, bottom, span, size);
+            var (x1, yBottom) = ReferenceWorldToImage(world.Right, world.Bottom, left, bottom, span, size);
+            return new System.Drawing.Rectangle(
+                (int)Math.Floor(Math.Min(x0, x1)),
+                (int)Math.Floor(Math.Min(yTop, yBottom)),
+                Math.Max(1, (int)Math.Ceiling(Math.Abs(x1 - x0))),
+                Math.Max(1, (int)Math.Ceiling(Math.Abs(yBottom - yTop))));
         }
 
         [TestMethod]

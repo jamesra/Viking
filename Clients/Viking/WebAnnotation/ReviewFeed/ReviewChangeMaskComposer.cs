@@ -43,14 +43,14 @@ namespace WebAnnotation.ReviewFeed
                 return mask;
 
             // Same padded window as the EM tile stitcher.
-            ReviewChangeCardCrop.GetPaddedBounds(minX, minY, maxX, maxY, out double left, out double bottom, out double spanX, out double spanY);
+            var crop = ReviewChangeCardCrop.FromBounds(minX, minY, maxX, maxY);
 
             using var path = new GraphicsPath();
             var points = new PointF[shapeRing.Count];
             for (int i = 0; i < shapeRing.Count; i++)
             {
                 Vector2 p = shapeRing[i];
-                ReviewChangeCardCrop.WorldToImage(p.X, p.Y, left, bottom, spanX, spanY, size, out float x, out float y);
+                crop.WorldToImage(p.X, p.Y, size, out float x, out float y);
                 points[i] = new PointF(x, y);
             }
 
