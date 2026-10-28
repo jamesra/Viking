@@ -10,6 +10,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\SectionCorrectionServiceTypes.gRPC\SectionCorrectionServiceTypes.gRPC.csproj" />
+    <!-- LatticeInterpolation: the field sampling the correction service uses, so the shim matches its answers -->
+    <ProjectReference Include="..\..\Geometry.Core\Geometry.Core.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,3 +1,4 @@
+using Geometry;
 using System;
 using System.Collections.Generic;
 
@@ -8,9 +9,9 @@ namespace Viking.SectionCorrectionClient
     /// round trip per camera position.
     /// </summary>
     /// <remarks>
-    /// A port of the service's <c>SectionVectorField.Sample</c>; <c>CorrectPoints</c> in Neighbor mode returns exactly
-    /// what <see cref="Sample"/> returns here, so the two must stay in step (including the half-pitch centre used by
-    /// the weighted fallback). Instances are immutable and safe to share between threads.
+    /// <see cref="Sample"/> is <see cref="LatticeInterpolation.Sample"/>, the function the service's <c>SectionVectorField</c>
+    /// and <c>NeighborResidualField</c> sample with, so the shim gets the offset <c>CorrectPoints</c> in Neighbor mode would
+    /// return. Instances are immutable and safe to share between threads.
     /// </remarks>
     public sealed class SectionLatticeField
     {
@@ -20,10 +21,7 @@ namespace Viking.SectionCorrectionClient
         /// <summary>Kernel radius the service uses when a set does not state one.</summary>
         public const double DefaultKernelRadiusNm = 8000.0;
 
-        const double WeightEpsilon = 0.001;
-        const double DistanceEpsilonSquared = 1.0;
-
-        readonly Dictionary<(int Gx, int Gy), (double Dx, double Dy)> _nodes;
+        readonly Dictionary<(int Gx, int Gy), Vector2> _nodes;
 
         /// <param name="pitchNm">Lattice spacing; node (gx, gy) sits at (gx * pitch, gy * pitch). Non-positive means the default.</param>
         /// <param name="kernelRadiusNm">Reach of the weighted fallback outside fully surrounded cells. Non-positive means the default.</param>
@@ -32,11 +30,11 @@ namespace Viking.SectionCorrectionClient
         {
             PitchNm = pitchNm > 0 ? pitchNm : DefaultPitchNm;
             KernelRadiusNm = kernelRadiusNm > 0 ? kernelRadiusNm : DefaultKernelRadiusNm;
-            _nodes = new Dictionary<(int, int), (double, double)>();
+            _nodes = new Dictionary<(int, int), Vector2>();
             if (nodes == null)
                 return;
             foreach ((int gx, int gy, double dx, double dy) in nodes)
-                _nodes[(gx, gy)] = (dx, dy);
+                _nodes[(gx, gy)] = new Vector2(dx, dy);
         }
 
         /// <summary>Lattice spacing in nanometres.</summary>
@@ -97,8 +95,9 @@ namespace Viking.SectionCorrectionClient
         }
 
         /// <summary>
-        /// Offset at a point in volume space. Bilinear when the four surrounding nodes exist, otherwise inverse-distance
-        /// weighted over the nodes within the kernel radius.
+        /// Offset at a point in volume space (<see cref="LatticeInterpolation.Sample"/>): bilinear when the four surrounding
+        /// nodes exist, bilinear over the corners present when some do, otherwise inverse-distance weighted over the nodes
+        /// within the kernel radius.
         /// </summary>
         /// <param name="xNm">Volume X in nanometres.</param>
         /// <param name="yNm">Volume Y in nanometres.</param>
@@ -108,56 +107,10 @@ namespace Viking.SectionCorrectionClient
         /// </returns>
         public (double Dx, double Dy, bool Trusted) Sample(double xNm, double yNm)
         {
-            double fx = xNm / PitchNm;
-            double fy = yNm / PitchNm;
-            int gx0 = (int)Math.Floor(fx);
-            int gy0 = (int)Math.Floor(fy);
-            double tx = fx - gx0;
-            double ty = fy - gy0;
-
-            if (_nodes.TryGetValue((gx0, gy0), out var n00) &&
-                _nodes.TryGetValue((gx0 + 1, gy0), out var n10) &&
-                _nodes.TryGetValue((gx0, gy0 + 1), out var n01) &&
-                _nodes.TryGetValue((gx0 + 1, gy0 + 1), out var n11))
-            {
-                double ax = n00.Dx * (1 - tx) + n10.Dx * tx;
-                double ay = n00.Dy * (1 - tx) + n10.Dy * tx;
-                double bx = n01.Dx * (1 - tx) + n11.Dx * tx;
-                double by = n01.Dy * (1 - tx) + n11.Dy * tx;
-                return (ax * (1 - ty) + bx * ty, ay * (1 - ty) + by * ty, true);
-            }
-
-            int reach = (int)Math.Ceiling(KernelRadiusNm / PitchNm) + 1;
-            double r2 = KernelRadiusNm * KernelRadiusNm;
-            double weightSum = 0;
-            double sumX = 0;
-            double sumY = 0;
-            for (int ox = -reach; ox <= reach; ox++)
-            {
-                for (int oy = -reach; oy <= reach; oy++)
-                {
-                    int gx = gx0 + ox;
-                    int gy = gy0 + oy;
-                    if (!_nodes.TryGetValue((gx, gy), out var n))
-                        continue;
-
-                    double cx = (gx + 0.5) * PitchNm;
-                    double cy = (gy + 0.5) * PitchNm;
-                    double d2 = (xNm - cx) * (xNm - cx) + (yNm - cy) * (yNm - cy);
-                    if (d2 > r2)
-                        continue;
-
-                    double w = 1.0 / (d2 + DistanceEpsilonSquared);
-                    sumX += n.Dx * w;
-                    sumY += n.Dy * w;
-                    weightSum += w;
-                }
-            }
-
-            if (weightSum <= WeightEpsilon)
-                return (0, 0, false);
-
-            return (sumX / weightSum, sumY / weightSum, true);
+            (Vector2 offset, bool trusted) = LatticeInterpolation.Sample(new Vector2(xNm, yNm), PitchNm, KernelRadiusNm, TryGetNode);
+            return (offset.X, offset.Y, trusted);
         }
+
+        bool TryGetNode(int gx, int gy, out Vector2 offset) => _nodes.TryGetValue((gx, gy), out offset);
     }
 }

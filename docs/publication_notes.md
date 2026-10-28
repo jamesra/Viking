@@ -61,6 +61,13 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
 
 ## Algorithmic decisions
 
+- **2026-10-28 Correction lattices are sampled by one shared function.** Why: the client's `SectionLatticeField` was an
+  older port of the service's sampler. Where a cell had only some corners it went straight to inverse-distance weighting,
+  and it placed fallback nodes at cell centres, (g + ½)·pitch, while the service (`SectionVectorField`,
+  `NeighborResidualField`) interpolates over the present corners and places nodes at g·pitch. So the shim and
+  `CorrectPoints` disagreed near the edges of annotated areas. All three now call `LatticeInterpolation.Sample`. Note:
+  with the 0.001 weight threshold the inverse-distance branch only has support within ~31 nm of a node, so in practice a
+  point is trusted only in a cell with at least one published corner. Where: `Geometry.Core/Algorithms/LatticeInterpolation.cs`.
 - **2026-10-27 Pen tolerance is in volume pixels, capped at 2.** Why: it was Pen Simplify Threshold (3) × downsample, so a
   stroke drawn at downsample 4 could leave the stroke by 12 volume px and at 8 by 24, wider than a membrane (7–10 nm). With
   the cap the drawn curve stays within ~2 px of the fitted stroke at every zoom (measured, below). Trade-off: below the

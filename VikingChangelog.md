@@ -42,6 +42,8 @@ Documentation/source/Client/versionhistory.rst.
 * Pen cut: drawing a stroke across a location that has a link marker inside it no longer stops at the marker. The stroke over the marker used to count as leaving the location, so the cut or add was not offered (the log said the path crossed the outline once).
 * Pen outlines keep their points. Cutting or extending a polygon, closed curve or hole with the pen used to refit the whole outline each time, so membranes bulged outward and parts you had not touched drifted a little with every edit. Now only the stretch you drew is spliced in, and the control points elsewhere stay exactly where they were. The pen's fitting tolerance is capped at 2 volume pixels (it was 3 times the downsample). A stroke that crosses the outline more than twice, or crosses into a hole, cuts out the region it encloses, or adds it when the stroke ends inside, for example to cut a bridge out of a cell; each resulting piece is offered as a choice. Reshaping keeps the polygon's holes, and a hole you replace is now saved in the right coordinates.
 * **Help > Change Log** shows this list of what changed in each version of Viking. It also opens by itself the first time a new version starts.
+* Section corrections: near the edge of an annotated area, where the correction lattice has only some of its points, the image is now shifted by the same amount the correction service uses for annotations there. Before, Viking worked out the shift its own way and could disagree with the service by up to a lattice spacing.
+
 
 ## 1.2.127 — 2026-10-26 (Viking Test, unsigned)
 
