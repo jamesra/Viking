@@ -1,13 +1,13 @@
-﻿-- =============================================
--- Author:		<Author,,Name>
--- Create date: <Create Date, ,>
--- Description:	Selects the weighted average of
--- a structures center using annotation shape 
--- area as a weighting factor
--- =============================================
+﻿-- SelectStructureCenters3D: SelectStructureCenter3D for every structure that has locations.
+-- Parameters: none.
+-- Callers: none in the services.
+-- SET NOCOUNT ON: the table-variable inserts and deletes send no row-count messages; only the
+-- result sets reach the client.
 CREATE PROCEDURE SelectStructureCenters3D 
 AS
 BEGIN
+	SET NOCOUNT ON;
+
 	declare @TotalArea TABLE(
 		StructureID bigint NOT NULL PRIMARY KEY,
 		TotalArea float NOT NULL

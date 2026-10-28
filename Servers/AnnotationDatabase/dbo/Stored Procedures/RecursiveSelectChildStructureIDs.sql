@@ -1,9 +1,16 @@
-﻿
+﻿-- RecursiveSelectChildStructureIDs: IDs of every descendant (children, grandchildren, ...) of the
+-- given structures, found one generation per loop pass. The seed IDs themselves are not returned.
+-- Parameters: @IDs, the seed structure IDs.
+-- Callers: AnnotationContextProcedures.RecursiveSelectChildStructureIDsAsync (EF Core).
+-- SET NOCOUNT ON: the table-variable inserts and deletes send no row-count messages; only the
+-- result sets reach the client.
 		CREATE PROCEDURE [dbo].[RecursiveSelectChildStructureIDs]
 						-- Add the parameters for the stored procedure here
 						@IDs integer_list READONLY
 			AS
 			BEGIN 	 
+				SET NOCOUNT ON;
+
 				DECLARE @NumSeedStructures int
 				DECLARE @SeedStructures integer_list
 				DECLARE @ChildStructures integer_list 

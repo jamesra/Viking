@@ -1,15 +1,18 @@
-﻿-- =============================================
--- Author:		<Author,,Name>
--- Create date: <Create Date, ,>
--- Description:	Selects the weighted average of
--- a structures center using annotation shape 
--- area as a weighting factor
--- =============================================
+﻿-- SelectStructureCenter3D: the volume-space centre (X, Y, Z) of each given structure, the mean
+-- of its locations' VolumeX, VolumeY and Z weighted by each location's share of the structure's
+-- total MosaicShape length (lines) or area (polygons); points weigh 0. A structure whose total
+-- is 0 gets X = Y = Z = 0.
+-- Parameters: @IDs, the structure IDs.
+-- Callers: none in the services; Servers/SQL/InDevelopment scripts (INSERT ... EXECUTE).
+-- SET NOCOUNT ON: the table-variable inserts and deletes send no row-count messages; only the
+-- result sets reach the client.
 CREATE PROCEDURE SelectStructureCenter3D(
 	@IDs integer_list READONLY
 	)
 AS
 BEGIN
+	SET NOCOUNT ON;
+
 	declare @TotalArea TABLE(
 		StructureID bigint NOT NULL PRIMARY KEY,
 		TotalArea float NOT NULL
