@@ -46,19 +46,6 @@ namespace VikingXNAGraphics
         public float Luminance;
     }
 
-    public static class FloatExtensions
-    {
-        /// <summary>
-        /// Return the power of two less than or equal to the passed value
-        /// </summary>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        public static double FloorToPowerOfTwo(this double value)
-        {
-            return Math.Pow(Math.Floor(Math.Log(value, 2)), 2);
-        }
-    }
-
     public static class LineManagerExtensions
     {
         public static string ToString(this LineStyle style)
