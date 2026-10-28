@@ -91,6 +91,27 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual(7, id);
         }
 
+        /// <summary>
+        /// Holding Alt as well does not cancel Shift or Ctrl, and Ctrl+Shift takes the Shift branch
+        /// (outside the inner translate circle, Shift on the polygon links).
+        /// </summary>
+        [TestMethod]
+        [DataRow(Viking.Input.ModifierKeys.Control | Viking.Input.ModifierKeys.Alt, LocationAction.CUTHOLE, DisplayName = "Ctrl+Alt cuts a hole")]
+        [DataRow(Viking.Input.ModifierKeys.Shift | Viking.Input.ModifierKeys.Alt, LocationAction.CREATELINK, DisplayName = "Shift+Alt links")]
+        [DataRow(Viking.Input.ModifierKeys.Shift | Viking.Input.ModifierKeys.Control, LocationAction.CREATELINK, DisplayName = "Ctrl+Shift takes the Shift branch")]
+        [DataRow(Viking.Input.ModifierKeys.Alt, LocationAction.NONE, DisplayName = "Alt alone is unmodified")]
+        public void PolygonPenModeCombinedModifiers(Viking.Input.ModifierKeys modifiers, LocationAction expected)
+        {
+            Polygon polygon = BoxWithHole();
+            Vector2 onRing = new(5, 0);
+
+            LocationAction action = PolygonPenModeContact.Action(
+                polygon, new Circle(Vector2.Zero, 1), 7, 1, onRing, 1, modifiers, out long id);
+
+            Assert.AreEqual(expected, action);
+            Assert.AreEqual(7, id);
+        }
+
         [TestMethod]
         public void PolygonPenModeCtrlInHoleRemovesHole()
         {
