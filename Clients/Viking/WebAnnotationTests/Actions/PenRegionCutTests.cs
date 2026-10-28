@@ -135,6 +135,16 @@ namespace WebAnnotationTests.Actions
             Assert.AreEqual(5, converted.ExteriorRing.Length);
         }
 
+        /// <summary>A location whose stored hole touches itself gets no region cut, and the stroke does not crash.</summary>
+        [TestMethod]
+        public void ALocationWithAPinchedStoredHoleOffersNothing()
+        {
+            LocationObj location = PolygonLocation("POLYGON((0 0, 100 0, 100 100, 0 100, 0 0), (20 20, 50 50, 80 20, 80 80, 50 50, 20 80, 20 20))");
+            List<Vector2> stroke = Stroke(new(-10, 40), new(30, 40), new(30, 60), new(-10, 60));
+
+            Assert.AreEqual(0, PenRegionCut.GetActions(location, Identity(), stroke, Tolerance).Count);
+        }
+
         [TestMethod]
         public void AStrokeEndingOnTheOtherSideOffersNothing()
         {

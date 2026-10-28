@@ -50,7 +50,9 @@ namespace WebAnnotation.UI.Actions
             if (location is null || penPath is null || penPath.Count < 3)
                 return output;
 
-            Polygon stored = location.MosaicShape.ToPolygon();
+            if (!TryConvertPiece(location.MosaicShape, out Polygon stored))
+                return Rejected(output, location.ID, "the stored shape is not a valid polygon");
+
             List<Vector2[]> storedRings = [stored.ExteriorRing, .. stored.InteriorRings];
             uint interpolations = Global.AnnotationSettings.NumClosedCurveInterpolationPointsForDisplay;
 
@@ -136,9 +138,10 @@ namespace WebAnnotation.UI.Actions
         }
 
         /// <summary>
-        /// Converts one piece of the boolean to a <see cref="Polygon"/>, or returns false for a piece it cannot represent. SQL
-        /// Server can return a ring that touches itself at a vertex (a hole pinched where the stroke meets it), which
-        /// <see cref="Polygon"/> rejects as a duplicate point. Such a piece is not offered, like a piece that cannot be fitted.
+        /// Converts one piece of the boolean, or the location's stored shape, to a <see cref="Polygon"/>, or returns false for a
+        /// shape it cannot represent. SQL Server can hold a ring that touches itself at a vertex (a hole pinched where a stroke
+        /// met it), which <see cref="Polygon"/> rejects as a duplicate point. Such a piece is not offered, like a piece that
+        /// cannot be fitted, and such a stored shape gets no region cut.
         /// </summary>
         internal static bool TryConvertPiece(SqlGeometry part, out Polygon piece)
         {

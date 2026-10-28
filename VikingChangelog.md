@@ -23,7 +23,7 @@ Documentation/source/Client/versionhistory.rst.
 
 ## 1.2.134 — not yet released
 
-* Fix: a pen stroke that cuts across a polygon near one of its holes could crash Viking ("Duplicate point found in exterior ring") when the cut left a hole touching itself at one point. That piece is no longer offered as a choice; the other pieces still are.
+* Fix: a pen stroke that cuts across a polygon near one of its holes could crash Viking ("Duplicate point found in exterior ring") when the cut left a hole touching itself at one point, or when the polygon already had such a hole. That piece is no longer offered as a choice (the other pieces still are), and a polygon with such a hole gets no cut-out choice instead of a crash.
 
 ## 1.2.133 — 2026-10-28 (Viking Test, unsigned)
 
