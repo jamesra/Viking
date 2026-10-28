@@ -13,7 +13,7 @@ Viking reads the endpoint from the `Endpoint` attribute of the `VolumeToEndpoint
 
 ## Run the tests
 
-Tests without a server (stores, converters, `GrpcChannelManager`, 60 tests):
+Tests without a server (stores, converters, `GrpcChannelManager`):
 
 ```powershell
 dotnet test Clients\WebAnnotationModel.gRPC.Tests\WebAnnotationModel.gRPC.Tests.csproj --filter "FullyQualifiedName!~Tests.Tests.&FullyQualifiedName!~AnnotationStoresSmokeTests"
