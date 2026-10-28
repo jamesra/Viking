@@ -68,6 +68,22 @@ namespace WebAnnotationTests.Actions
             public override void WriteLine(string message) => sb.AppendLine(message);
         }
 
+        // ---- WithReplacedHole ----
+
+        /// <summary>
+        /// A grown hole that reaches past the outline is not a valid hole. It used to throw out of the pen's mouse-up; now
+        /// that choice is skipped, so the stroke can go to the region cut instead.
+        /// </summary>
+        [TestMethod]
+        public void AHoleThatCrossesTheOutlineIsNotOfferedInsteadOfThrowing()
+        {
+            Assert.IsNull(PolygonCut.WithReplacedHole(SquareWithHole, 0, new Polygon(Square(80, 120)), LocID));
+
+            Polygon grown = PolygonCut.WithReplacedHole(SquareWithHole, 0, new Polygon(Square(30, 70)), LocID);
+            Assert.IsNotNull(grown);
+            Assert.AreEqual(30, grown.InteriorPolygons[0].BoundingBox.Left, AreaTolerance);
+        }
+
         // ---- GetRetraceCommandAction ----
 
         /// <summary>
