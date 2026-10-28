@@ -1276,9 +1276,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                         return;
                     }
 
-                    IReadOnlyList<Vector2> foreground = startingPrompt.Points;
+                    // The circle goes as a shape; no clicks are sent. Its center is the one point the result must keep.
                     IReadOnlyList<SegmentationSeed> startingBoxes = [startingPrompt.Seed];
                     IReadOnlyList<Vector2> keepPoints = [startingPrompt.Center];
+                    IReadOnlyList<Vector2> foreground = keepPoints;
 
                     SegmentationBackgroundShapes backgroundShapes = CircleSegmentationPrompts.CreateOtherStructureBackgroundShapes(
                         visibleForPrompts, transform, [circle.ID], circle.ParentID);
@@ -1289,7 +1290,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     long requestTicket = NextRequestTicket();
                     Stopwatch segmentTimer = Stopwatch.StartNew();
                     var response = await localUploadSession.SegmentAsync(
-                        foreground,
+                        [],
                         [],
                         processToken,
                         startingBoxes,
@@ -2228,9 +2229,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                     return;
                 }
 
-                IReadOnlyList<Vector2> foreground = startingPrompt.Points;
+                // The circle goes as a shape; no clicks are sent. Its center is the one point the result must keep.
                 IReadOnlyList<SegmentationSeed> startingBoxes = [startingPrompt.Seed];
                 IReadOnlyList<Vector2> keepPoints = [startingPrompt.Center];
+                IReadOnlyList<Vector2> foreground = keepPoints;
 
                 List<LocationObj> visibleForPrompts = [.. CollectVisibleLocationObjs(viewBounds)];
                 SegmentationBackgroundShapes backgroundShapes = CircleSegmentationPrompts.CreateOtherStructureBackgroundShapes(
@@ -2241,7 +2243,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 Stopwatch proposalTimer = Stopwatch.StartNew();
                 long requestTicket = NextRequestTicket();
                 var response = await session.SegmentAsync(
-                    foreground,
+                    [],
                     [],
                     processToken,
                     startingBoxes,

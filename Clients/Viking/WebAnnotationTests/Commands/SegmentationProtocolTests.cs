@@ -94,7 +94,7 @@ namespace WebAnnotationTests.Commands
                     CircleSegmentationPrompts.CreateMosaicRadiusPoints(new Circle(new Vector2(100, 100), 10)), new StretchTransform()),
                 out CircleSegmentationPrompts.StartingPrompt prompt));
 
-            SegmentationViewportSession.StartMessage start = Start(2, prompt.Points, [prompt.Seed]);
+            SegmentationViewportSession.StartMessage start = Start(2, [], [prompt.Seed]);
             SegmentationServiceTypes.SegmentTilesRequest request = start.Request;
 
             ProtoShape shape = request.ForegroundFeature.Shapes.Single();
@@ -105,8 +105,7 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual(0u, request.MaskTileCount, "the circle is not rasterized");
             Assert.AreEqual(0, start.MaskTiles.Count);
             Assert.AreEqual(1, start.Messages().Count(), "only start");
-            Assert.AreEqual(4, request.ForegroundFeature.Points.Count, "the four axis clicks go with it");
-            Assert.AreEqual((300 + 19.0) / 2, request.ForegroundFeature.Points[0].X, 1e-9, "a click at 0.95 of the radius, in the grid frame");
+            Assert.AreEqual(0, request.ForegroundFeature.Points.Count, "the circle goes alone, with no clicks");
         }
 
         [TestMethod]

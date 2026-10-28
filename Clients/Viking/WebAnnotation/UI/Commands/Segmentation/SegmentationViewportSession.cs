@@ -579,7 +579,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             if ((foregroundPoints is null || foregroundPoints.Count == 0) &&
-                (backgroundPoints is null || backgroundPoints.Count == 0))
+                (backgroundPoints is null || backgroundPoints.Count == 0) &&
+                (foregroundBoxes is null || foregroundBoxes.Count == 0))
                 return null;
 
             if (!IsCameraWithinTileSubmission())

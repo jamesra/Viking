@@ -17,20 +17,13 @@ namespace WebAnnotation.UI.Commands.Segmentation
     internal static class CircleSegmentationPrompts
     {
         /// <summary>
-        /// Distance of the four axis points from the center, as a fraction of the radius. They sit
-        /// just inside the circle's edge, outside the inscribed square's edges (which are at 0.707),
-        /// so SAM2 is told how far the object reaches as well as that the square is inside it.
+        /// The prompt that starts a circle's segmentation, in volume space: the circle as a shape. There are no clicks, since a click
+        /// inside an oversized circle can land on the background and say the opposite of what the shape's softening says.
         /// </summary>
-        public const double StartingPointRadiusFraction = 0.95;
-
-        /// <summary>The box and clicks that start a circle's segmentation, in volume space.</summary>
-        internal readonly struct StartingPrompt(Rectangle box, IReadOnlyList<Vector2> points, Circle circle)
+        internal readonly struct StartingPrompt(Rectangle box, Circle circle)
         {
             /// <summary>The square inscribed in the circle, axis-aligned.</summary>
             public Rectangle Box { get; } = box;
-
-            /// <summary>Four foreground clicks: east, north, west, south of the center at <see cref="StartingPointRadiusFraction"/> of the radius.</summary>
-            public IReadOnlyList<Vector2> Points { get; } = points;
 
             /// <summary>The circle in volume space, averaged over the transformed radius points.</summary>
             public Circle Circle { get; } = circle;
@@ -68,11 +61,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// Builds the starting prompt in volume space for a mosaic circle. The circle is mapped with the five-point
         /// mean-scale rule (<c>.cursor/rules/circle-mapping-scale.mdc</c>): the center must map, and the radius is the
         /// mean scale of the rim points that map. Rim points that fail to map are left out of the average; one is enough.
-        /// The box and the four clicks are then built from the volume circle: the box is the axis-aligned square
-        /// inscribed in it, and the clicks lie exactly east, north, west and south of its center at
-        /// <see cref="StartingPointRadiusFraction"/> of its radius, so the prompt is aligned to the axes of the image
-        /// SAM2 sees whatever the transform does to the section. False when the center or every rim point fails to
-        /// map, or the radius is not positive.
+        /// The box is then built from the volume circle: the axis-aligned square inscribed in it, so the prompt is
+        /// aligned to the axes of the image SAM2 sees whatever the transform does to the section. False when the
+        /// center or every rim point fails to map, or the radius is not positive.
         /// </summary>
         public static bool TryCreateStartingPrompt(Circle mosaicCircle, IVolumeToSectionTransform transform, out StartingPrompt prompt)
         {
@@ -113,16 +104,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (seedBox is null)
                 return false;
 
-            double reach = radius * StartingPointRadiusFraction;
-            prompt = new StartingPrompt(
-                seedBox.Value,
-                [
-                    new Vector2(center.X + reach, center.Y),
-                    new Vector2(center.X, center.Y + reach),
-                    new Vector2(center.X - reach, center.Y),
-                    new Vector2(center.X, center.Y - reach),
-                ],
-                new Circle(center, radius));
+            prompt = new StartingPrompt(seedBox.Value, new Circle(center, radius));
             return true;
         }
 
