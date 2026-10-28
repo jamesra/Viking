@@ -1435,10 +1435,11 @@ namespace Geometry
         /// </summary>
         /// <param name="WorldPosition">Point we are measuring against</param>
         /// <param name="nearestVertex">The index of the first ("A") endpoint of the segment.</param>
-        /// <returns></returns>
+        /// <returns>Distance from <paramref name="WorldPosition"/> to the nearest segment.</returns>
         public double NearestSegment(in Vector2 WorldPosition, out PolygonIndex nearestVertex)
         {
-            //Start with a random bounding box, and check all intersections, shrinking the bounding box each time
+            //Seed with the distance to vertex 0, an upper bound for segment 0, so the first box holds segment 0 and every
+            //nearer segment; each segment, segment 0 included, is then measured and wins only when strictly nearer.
             double nearestPolyDistance = Vector2.Distance(WorldPosition, ExteriorRing[0]);
             nearestVertex = new PolygonIndex(0, 0, ExteriorRing.Length - 1);
             bool CloserSegmentFound = false;
@@ -1453,9 +1454,6 @@ namespace Geometry
                 //Try to find a nearer segment than our initial point, if we do, then repeat the search
                 foreach (PolygonIndex index in SegmentRTree.IntersectionGenerator(bbox))
                 {
-                    if (index == nearestVertex)
-                        continue; //No need to recheck the current winner
-
                     var seg = index.Segment(this);
                     double measured_distance = seg.DistanceToPoint(WorldPosition);
                     if (measured_distance < nearestPolyDistance)
