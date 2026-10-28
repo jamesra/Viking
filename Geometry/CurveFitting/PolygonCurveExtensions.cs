@@ -46,10 +46,34 @@ namespace Geometry
                 }
             }
 
+            //Smoothing bulges a ring past its control points, so a hole that runs close to the outline, or to another hole,
+            //can cross it once both are smoothed. Such a hole keeps its unsmoothed ring; if even that does not fit inside
+            //the smoothed outline, the whole polygon is returned unsmoothed.
             foreach (Polygon innerPoly in poly.InteriorPolygons)
-                smoothedPoly.AddInteriorRing(innerPoly.Smooth(numInterpolationPoints, minPointSpacing));
+            {
+                if (!TryAddInteriorRing(smoothedPoly, innerPoly.Smooth(numInterpolationPoints, minPointSpacing)) &&
+                    !TryAddInteriorRing(smoothedPoly, innerPoly))
+                    return poly;
+            }
 
             return smoothedPoly;
+        }
+
+        /// <summary>
+        /// Adds <paramref name="innerPoly"/> as a hole of <paramref name="poly"/>, or returns false and leaves
+        /// <paramref name="poly"/> unchanged when it crosses the outline or another hole.
+        /// </summary>
+        private static bool TryAddInteriorRing(Polygon poly, Polygon innerPoly)
+        {
+            try
+            {
+                poly.AddInteriorRing(innerPoly);
+                return true;
+            }
+            catch (ArgumentException)
+            {
+                return false;
+            }
         }
 
         /// <summary>

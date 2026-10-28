@@ -41,6 +41,56 @@ namespace GeometryTests
             }
         }
 
+        /// <summary>
+        /// A hole drawn close to a concave notch in the outline is valid, but once both rings are smoothed the curves bulge
+        /// past their control points and cross. Smooth must still return a valid polygon, keeping every hole, rather than
+        /// throw: it used to throw "Replacement inner polygon is not a valid addition" from a pen choice preview.
+        /// </summary>
+        [TestMethod]
+        public void SmoothKeepsAHoleWhoseSmoothedRingCrossesTheSmoothedOutline()
+        {
+            int crossingCases = 0;
+            foreach (double gap in new[] { 0.25, 0.5, 1, 2, 4 })
+            {
+                Polygon poly = new(new Vector2[]
+                {
+                    new(0, 0),
+                    new(100, 0),
+                    new(100, 100),
+                    new(55, 100),
+                    new(50, 60),
+                    new(45, 100),
+                    new(0, 100),
+                    new(0, 0)
+                });
+                poly.AddInteriorRing(new Polygon(new Vector2[]
+                {
+                    new(40, 60 - gap - 20),
+                    new(60, 60 - gap - 20),
+                    new(60, 60 - gap),
+                    new(40, 60 - gap),
+                    new(40, 60 - gap - 20)
+                }));
+
+                Polygon smoothedOutline = new Polygon(poly.ExteriorRing).Smooth(8);
+                try
+                {
+                    smoothedOutline.AddInteriorRing(poly.InteriorPolygons[0].Smooth(8));
+                }
+                catch (System.ArgumentException)
+                {
+                    crossingCases++;
+                }
+
+                Polygon smoothed = poly.Smooth(8);
+
+                Assert.AreEqual(1, smoothed.InteriorPolygons.Count, $"gap {gap}: the hole is kept");
+                Assert.IsTrue(smoothed.ExteriorRing.Length > poly.ExteriorRing.Length, $"gap {gap}: the outline is still smoothed");
+            }
+
+            Assert.IsTrue(crossingCases > 0, "at least one gap must make the smoothed rings cross, or the test proves nothing");
+        }
+
         [TestMethod]
         public void SmoothDropsControlPointsCloserThanMinimumSpacing()
         {
