@@ -9,16 +9,6 @@ using LocationLinkKey = Viking.AnnotationServiceTypes.LocationLinkKey;
 namespace WebAnnotation
 {
     /// <summary>
-    /// A view that can be marked as selected on the canvas. Implemented by <see cref="LocationCircleView"/>.
-    /// Set on the UI thread by selection commands; the view decides how a selected state is drawn.
-    /// </summary>
-    public interface ISelectable
-    {
-        /// <summary>True while the view is the user's current selection.</summary>
-        bool Selected { get; set; }
-    }
-
-    /// <summary>
     /// A location view that draws a text label using the shared <see cref="SpriteBatch"/>.
     /// <c>AnnotationOverlay</c> filters visible views with <see cref="IsLabelVisible"/>, then calls
     /// <see cref="DrawLabel"/> for all of them inside one batch it has already begun, so implementations
@@ -121,13 +111,6 @@ namespace WebAnnotation
     {
         /// <summary>The key of the StructureLink model the view represents.</summary>
         StructureLinkKey Key { get; }
-    }
-
-    /// <summary>An interface for views that represent a StructureType model.</summary>
-    public interface IViewStructureType
-    {
-        /// <summary>The ID of the StructureType model the view represents.</summary>
-        long ID { get; }
     }
 
     /// <summary>
