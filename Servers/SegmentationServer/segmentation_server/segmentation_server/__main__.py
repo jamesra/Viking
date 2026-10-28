@@ -12,8 +12,10 @@ from segmentation_server.compile_config import env_compile_image_encoder_enabled
 from segmentation_server.demo_site import DEFAULT_DEMO_PORT, demo_enabled, demo_plaintext, demo_port_for
 from segmentation_server.healthcheck import tls_port
 from segmentation_server.image_cache import (
+    DEFAULT_GPU_MAX_BYTES,
     DEFAULT_MAX_ENTRIES,
     DEFAULT_MAX_MEMORY_BYTES,
+    DEFAULT_TILE_IDLE_SECONDS,
     DEFAULT_TTL_SECONDS,
 )
 from segmentation_server.server import DEFAULT_TLS_PORT, PortBindError, TlsConfigurationError, serve
@@ -36,6 +38,8 @@ class CLIArgs:
     demo_port: int
     demo_bind: str | None = None
     demo_plaintext: bool = False
+    cache_gpu_max_bytes: int = DEFAULT_GPU_MAX_BYTES
+    cache_tile_idle_seconds: float = DEFAULT_TILE_IDLE_SECONDS
 
 
 async def main() -> None:
@@ -65,7 +69,25 @@ async def main() -> None:
         '--cache-max-memory-bytes',
         type=int,
         default=DEFAULT_MAX_MEMORY_BYTES,
-        help=f'Cap on cached encoded image bytes (default: {DEFAULT_MAX_MEMORY_BYTES})',
+        help=(
+            'Cap on the cache\'s host memory: encoded tiles plus embeddings moved off the GPU '
+            f'(default: {DEFAULT_MAX_MEMORY_BYTES}, 8 GiB)'
+        ),
+    )
+    parser.add_argument(
+        '--gpu-cache-max-bytes',
+        type=int,
+        default=DEFAULT_GPU_MAX_BYTES,
+        help=(
+            'Cap on cached embeddings kept on the GPU; past it the least recently used move to host memory '
+            f'(default: {DEFAULT_GPU_MAX_BYTES}, 512 MiB). Each pull back is logged, so thrashing shows.'
+        ),
+    )
+    parser.add_argument(
+        '--cache-idle-seconds',
+        type=float,
+        default=DEFAULT_TILE_IDLE_SECONDS,
+        help=f'Shared tiles unused this long leave the cache (default: {DEFAULT_TILE_IDLE_SECONDS}; 0 keeps them)',
     )
     parser.add_argument(
         '--cache-max-images',
@@ -143,6 +165,8 @@ async def main() -> None:
         demo_port=demo_port_for(args.demo_port, demo_plaintext(args.demo_plaintext)),
         demo_bind=args.demo_bind,
         demo_plaintext=demo_plaintext(args.demo_plaintext),
+        cache_gpu_max_bytes=args.gpu_cache_max_bytes,
+        cache_tile_idle_seconds=args.cache_idle_seconds,
     )
 
     if cli_args.generate_grpc:
@@ -155,13 +179,15 @@ async def main() -> None:
 
     logger.info(
         "Starting segmentation service (TLS gRPC) on port %s with %s gRPC workers and %s inference workers "
-        "(cache ttl=%ss, max_memory=%s bytes, max_images=%s, compile_image_encoder=%s, "
-        "demo_site=%s, demo_port=%s)",
+        "(cache ttl=%ss, host memory=%s bytes, GPU embeddings=%s bytes, tile idle=%ss, max_images=%s, "
+        "compile_image_encoder=%s, demo_site=%s, demo_port=%s)",
         cli_args.port,
         cli_args.workers,
         cli_args.inference_workers,
         cli_args.cache_ttl_seconds,
         cli_args.cache_max_memory_bytes,
+        cli_args.cache_gpu_max_bytes,
+        cli_args.cache_tile_idle_seconds,
         cli_args.cache_max_images,
         cli_args.compile_image_encoder,
         cli_args.demo_site,
@@ -179,6 +205,8 @@ async def main() -> None:
         demo_port=cli_args.demo_port,
         demo_bind=cli_args.demo_bind,
         demo_plaintext=cli_args.demo_plaintext,
+        cache_gpu_max_bytes=cli_args.cache_gpu_max_bytes,
+        cache_tile_idle_seconds=cli_args.cache_tile_idle_seconds,
     )
 
 

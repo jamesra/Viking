@@ -444,10 +444,18 @@ async def test_arbitrary_uploads_also_yield_to_gpu_pressure() -> None:
 
 
 def test_defaults_hold_thousands_of_entries() -> None:
-    from segmentation_server.image_cache import DEFAULT_MAX_ENTRIES, DEFAULT_MAX_MEMORY_BYTES
+    from segmentation_server.image_cache import (
+        DEFAULT_GPU_MAX_BYTES,
+        DEFAULT_MAX_ENTRIES,
+        DEFAULT_MAX_MEMORY_BYTES,
+        DEFAULT_TILE_IDLE_SECONDS,
+    )
 
     assert DEFAULT_MAX_ENTRIES >= 4096
-    assert DEFAULT_MAX_MEMORY_BYTES >= 16 * 1024**3
+    # Host memory holds the tiles and the embeddings moved off the GPU: about 800 tiles at 10 MiB each.
+    assert DEFAULT_MAX_MEMORY_BYTES == 8 * 1024**3
+    assert DEFAULT_GPU_MAX_BYTES == 512 * 1024**2
+    assert DEFAULT_TILE_IDLE_SECONDS == 3600
 
 
 class _Gen:

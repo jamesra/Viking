@@ -1,31 +1,69 @@
-"""In-memory image cache with two retention modes.
+"""In-memory image cache with two retention modes and two embedding tiers.
 
-Shared tiles (``upload_tile``, the only kind the gRPC service stores) are the same cell for every client, so they
-stay until the encoded-byte cap or a GPU-memory check says an embedding has to be dropped. Entries stored with
-``upload_image`` and no tile key (one caller, one image id) use LRU, a short TTL, and an entry cap; nothing in the
-service makes them since the whole-image RPCs were removed, and they remain for the cache's own tests.
+Shared tiles (``upload_tile``, the only kind the gRPC service stores) are the same cell for every client. Entries
+stored with ``upload_image`` and no tile key (one caller, one image id) use LRU, a short TTL, and an entry cap;
+nothing in the service makes them since the whole-image RPCs were removed, and they remain for the cache's own tests.
+
+Each entry's SAM2 embedding (about 10 MiB) lives in one of two tiers, given ``embedding_tiers``:
+
+* **GPU**: the embeddings the server uses now, capped at ``gpu_max_bytes`` of real tensor bytes (default 512 MiB).
+  Past the cap the least recently used idle embeddings move to host memory. A request that pins a tile whose
+  embedding is in host memory pulls it back first; each pull is logged with the pulls of the last minute, and a
+  burst of them is a warning, since it means the GPU tier is too small for the tiles in use (thrashing).
+* **CPU**: the host memory cap ``max_memory_bytes`` (default 8 GiB) counts the tiles' encoded bytes and the
+  embeddings moved there. Past it, the least recently used idle entries are dropped.
+
+A shared tile idle for ``tile_idle_seconds`` (default one hour) is dropped from both tiers. A dropped tile is not
+lost: the tile store keeps its pixels and the embedding store its embedding on disk, so it comes back without the
+encoder. The tiers replace the GPU free-memory check as the GPU's protection: on Windows (WSL) the driver spills
+to system memory instead of reporting the GPU full, so that check rarely fires.
 """
 
 from __future__ import annotations
 
 import asyncio
+import collections
 import contextlib
 import logging
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Protocol, Tuple
 
 from segmentation_server.cuda_errors import UnrecoverableGpuError
 from segmentation_server.tile_work import tile_work
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MAX_MEMORY_BYTES = 16 * 1024**3
+DEFAULT_MAX_MEMORY_BYTES = 8 * 1024**3
+"""Host memory for the cache: encoded tile bytes plus the embeddings moved off the GPU."""
+DEFAULT_GPU_MAX_BYTES = 512 * 1024**2
+"""GPU memory for cached embeddings (real tensor bytes)."""
+DEFAULT_TILE_IDLE_SECONDS = 3600
+"""A shared tile unused this long leaves the cache (0 keeps tiles until a cap needs room)."""
 DEFAULT_TTL_SECONDS = 300
-# A cached entry holds about 9 MiB of GPU embedding, so this count is not what protects the GPU:
-# gpu_under_pressure is. The count only bounds host bookkeeping for ad-hoc uploads.
+# A cached entry holds about 10 MiB of embedding, so this count is not what protects the GPU: the GPU tier's byte
+# cap is. The count only bounds host bookkeeping for ad-hoc uploads.
 DEFAULT_MAX_ENTRIES = 4096
+THRASH_WINDOW_SECONDS = 60.0
+THRASH_PULLS = 30
+"""Pulls from host memory within ``THRASH_WINDOW_SECONDS`` that are reported as thrashing."""
+
+
+class EmbeddingTiers(Protocol):
+    """Moves a predictor's embedding between the GPU and host memory (the SAM2 model implements it)."""
+
+    def gpu_bytes(self, predictor: Any) -> int:
+        """Bytes of the predictor's embedding on the device (0 when it has none there)."""
+
+    def export(self, predictor: Any) -> Tuple[Any, int]:
+        """A host copy of the embedding and its bytes; the predictor still holds its GPU copy."""
+
+    def drop_gpu(self, predictor: Any, host_copy: Any) -> None:
+        """Keep ``host_copy`` on the predictor and free its GPU embedding. Cheap: no device work."""
+
+    def restore(self, predictor: Any) -> int:
+        """Put the host copy back on the device; returns its bytes there."""
 
 # volume, section, channel, transform, space ("mosaic" or "volume"), downsample, row, col
 TileCacheKey = Tuple[str, int, str, str, str, int, int, int]
@@ -68,6 +106,10 @@ class CachedImage:
     tile_key: Optional[TileCacheKey] = None
     # Shared grid cell. Exempt from the arbitrary-upload entry cap and TTL.
     shared_tile: bool = False
+    # The embedding's tier: gpu_bytes while it is on the device, host_bytes once moved to host memory (offloaded).
+    gpu_bytes: int = 0
+    host_bytes: int = 0
+    offloaded: bool = False
 
 
 class ImageCache:
@@ -91,10 +133,13 @@ class ImageCache:
         gpu_under_pressure: Optional[Callable[[], bool]] = None,
         predictor_generation: Optional[Callable[[Any], Optional[str]]] = None,
         current_generation: Optional[Callable[[], Optional[str]]] = None,
+        embedding_tiers: Optional[EmbeddingTiers] = None,
+        gpu_max_bytes: int = DEFAULT_GPU_MAX_BYTES,
+        tile_idle_seconds: float = 0.0,
     ) -> None:
         """
         Args:
-            max_memory_bytes: Cap on sum of cached image_data lengths.
+            max_memory_bytes: Cap on host memory: cached image_data lengths plus the embeddings moved off the GPU.
             ttl_seconds: Evict arbitrary uploads unused for this many seconds.
                 Shared tiles are not expired by the TTL.
             max_entries: Cap on arbitrary uploads. Shared tiles do not count.
@@ -110,6 +155,11 @@ class ImageCache:
             current_generation: () -> the generation new embeddings are made with now.
                 Together these let :meth:`flush_stale` drop only entries made with an
                 encoder that has since been replaced.
+            embedding_tiers: Moves embeddings between the GPU and host memory. None keeps every
+                embedding on the GPU for its entry's lifetime (the cache's own tests).
+            gpu_max_bytes: Cap on embedding bytes kept on the GPU (with ``embedding_tiers``).
+            tile_idle_seconds: Shared tiles unused this long are dropped; 0 (the default here; the server passes
+                :data:`DEFAULT_TILE_IDLE_SECONDS`) keeps them until a cap needs room.
         """
         self._cache: Dict[int, CachedImage] = {}
         # Deleted/evicted while a request still holds a pin; predictor reset waits for check-in.
@@ -131,14 +181,28 @@ class ImageCache:
         self._gpu_under_pressure_fn = gpu_under_pressure
         self._predictor_generation_fn = predictor_generation
         self._current_generation_fn = current_generation
+        self._tiers = embedding_tiers
+        self._gpu_max_bytes = max(0, int(gpu_max_bytes))
+        self._tile_idle_seconds = max(0.0, float(tile_idle_seconds))
+        # Embedding bytes on the GPU and in host memory, over live and retiring entries.
+        self._gpu_bytes: int = 0
+        self._host_embedding_bytes: int = 0
+        self._pull_times: "collections.deque[float]" = collections.deque()
+        self._pulls_total = 0
+        self._offloads_total = 0
+        self._last_thrash_warning = 0.0
 
         logger.info(
-            "ImageCache initialized with max_memory=%s bytes (%.2f GB), "
-            "max_entries=%s, TTL=%ss",
+            "ImageCache initialized with host memory cap=%s bytes (%.2f GiB), GPU embedding cap=%s "
+            "(%.0f MiB, tiers %s), max_entries=%s, TTL=%ss, tile idle=%ss",
             max_memory_bytes,
             max_memory_bytes / (1024**3),
+            self._gpu_max_bytes,
+            self._gpu_max_bytes / (1024**2),
+            "on" if embedding_tiers is not None else "off",
             self._max_entries,
             ttl_seconds,
+            self._tile_idle_seconds,
         )
 
     def _create_predictor_in_executor(
@@ -276,7 +340,10 @@ class ImageCache:
                         self._release_predictor(predictor, threading.Lock())
                         continue
                     cached.predictor = predictor
+                    cached.gpu_bytes = self._embedding_gpu_bytes(predictor)
+                    self._gpu_bytes += cached.gpu_bytes
                     break
+            await self._rebalance()
 
         return image_id
 
@@ -405,7 +472,8 @@ class ImageCache:
         """Return (bytes, width, height, predictor, lock), pin for use, and refresh LRU.
 
         Caller must invoke :meth:`release_image` when finished so eviction/delete can
-        reset the predictor. Returns None if missing.
+        reset the predictor. Returns None if missing. An embedding in host memory is put back on the GPU first
+        (logged as a pull), so the predictor returned is ready.
         """
         async with self._lock:
             await self._cleanup_expired()
@@ -413,9 +481,16 @@ class ImageCache:
             if cached_image is None:
                 logger.info("Image not found: ID=%s", image_id)
                 return None
-
-            cached_image.last_access_time = self._time_fn()
+            now = self._time_fn()
+            idle_seconds = now - cached_image.last_access_time
+            cached_image.last_access_time = now
             cached_image.in_use += 1
+            offloaded = cached_image.offloaded
+        if offloaded:
+            if not await self._pull_back(image_id, cached_image, idle_seconds):
+                return None
+            await self._rebalance()
+        async with self._lock:
             logger.debug(
                 "Image retrieved: ID=%s, size=%s bytes, predictor=%s, in_use=%s",
                 image_id,
@@ -444,6 +519,7 @@ class ImageCache:
             if cached_image.in_use == 0 and image_id in self._retiring:
                 retiring = self._retiring.pop(image_id)
                 self._retiring_bytes -= retiring.size_bytes
+                self._forget_embedding(retiring)
                 self._release_predictor(retiring.predictor, retiring.predictor_lock)
                 logger.info("Image retired after last user: ID=%s", image_id)
 
@@ -451,8 +527,161 @@ class ImageCache:
         return sum(1 for cached in self._cache.values() if not cached.shared_tile)
 
     def _held_bytes(self) -> int:
-        """Bytes actually in memory: live entries plus entries retiring while a request holds them."""
-        return self._current_memory_bytes + self._retiring_bytes
+        """Host bytes actually in memory: the encoded bytes of live entries and of entries retiring while a request
+        holds them, plus the embeddings moved to host memory."""
+        return self._current_memory_bytes + self._retiring_bytes + self._host_embedding_bytes
+
+    # ---- embedding tiers -------------------------------------------------------------------------------------------
+
+    def _embedding_gpu_bytes(self, predictor: Any) -> int:
+        if self._tiers is None or predictor is None:
+            return 0
+        try:
+            return max(0, int(self._tiers.gpu_bytes(predictor)))
+        except Exception:
+            logger.exception("Embedding size check failed")
+            return 0
+
+    def _forget_embedding(self, cached: CachedImage) -> None:
+        """Take a dropped entry's embedding out of the tier totals. Caller holds `_lock`."""
+        self._gpu_bytes -= cached.gpu_bytes
+        self._host_embedding_bytes -= cached.host_bytes
+        cached.gpu_bytes = 0
+        cached.host_bytes = 0
+
+    def _describe(self, image_id: int, cached: CachedImage) -> str:
+        if cached.tile_key is None:
+            return f"ID={image_id}"
+        volume, section, _channel, _transform, _space, downsample, row, col = cached.tile_key
+        return f"ID={image_id} {volume} z={section} ds={downsample} row={row} col={col}"
+
+    def _tier_text(self) -> str:
+        return (
+            f"GPU {self._gpu_bytes / 1024**2:.0f}/{self._gpu_max_bytes / 1024**2:.0f} MiB, "
+            f"host {self._held_bytes() / 1024**2:.0f}/{self._max_memory_bytes / 1024**2:.0f} MiB"
+        )
+
+    async def _pull_back(self, image_id: int, cached: CachedImage, idle_seconds: float) -> bool:
+        """Put a pinned entry's embedding back on the GPU. On failure the pin is dropped, the entry deleted and False
+        returned, as if it had not been cached."""
+        tiers = self._tiers
+
+        def body() -> Optional[Tuple[int, float]]:
+            with cached.predictor_lock:
+                if not cached.offloaded:
+                    return None  # another request pulled it back first
+                started = time.perf_counter()
+                gpu_bytes = tiers.restore(cached.predictor)
+                return gpu_bytes, time.perf_counter() - started
+
+        try:
+            result = await asyncio.get_running_loop().run_in_executor(None, body)
+        except UnrecoverableGpuError:
+            raise
+        except Exception:
+            logger.exception("Embedding pull from host memory failed: %s", self._describe(image_id, cached))
+            async with self._lock:
+                await self._delete_image_internal(image_id)
+            await self.release_image(image_id)
+            return False
+        if result is None:
+            return True
+        gpu_bytes, seconds = result
+        async with self._lock:
+            self._host_embedding_bytes -= cached.host_bytes
+            cached.host_bytes = 0
+            cached.offloaded = False
+            cached.gpu_bytes = int(gpu_bytes)
+            self._gpu_bytes += cached.gpu_bytes
+            self._pulls_total += 1
+            now = time.monotonic()
+            self._pull_times.append(now)
+            while self._pull_times and now - self._pull_times[0] > THRASH_WINDOW_SECONDS:
+                self._pull_times.popleft()
+            recent = len(self._pull_times)
+            logger.info(
+                "Embedding pulled from host memory: %s, idle %.0f s, copy %.3f s; %s; %s pull(s) in the last %.0f s",
+                self._describe(image_id, cached),
+                idle_seconds,
+                seconds,
+                self._tier_text(),
+                recent,
+                THRASH_WINDOW_SECONDS,
+            )
+            if recent >= THRASH_PULLS and now - self._last_thrash_warning > THRASH_WINDOW_SECONDS:
+                self._last_thrash_warning = now
+                logger.warning(
+                    "GPU tile cache is thrashing: %s embeddings pulled from host memory in the last %.0f s. "
+                    "The %.0f MiB GPU cap holds fewer tiles than are in use; raise --gpu-cache-max-bytes.",
+                    recent,
+                    THRASH_WINDOW_SECONDS,
+                    self._gpu_max_bytes / 1024**2,
+                )
+        return True
+
+    async def _rebalance(self) -> None:
+        """Move least recently used idle embeddings to host memory until the GPU tier fits its cap, then drop least
+        recently used idle entries until host memory fits its cap.
+
+        An embedding is copied to host memory while its entry is pinned by this method, then freed on the GPU only if
+        no request pinned the entry during the copy (one that did keeps it on the GPU)."""
+        if self._tiers is not None:
+            while True:
+                async with self._lock:
+                    if self._gpu_bytes <= self._gpu_max_bytes:
+                        break
+                    idle = [
+                        (image_id, cached)
+                        for image_id, cached in self._cache.items()
+                        if cached.in_use == 0 and not cached.offloaded and cached.gpu_bytes > 0
+                    ]
+                    if not idle:
+                        break  # everything on the GPU is in use; the cap is exceeded until requests finish
+                    image_id, cached = min(idle, key=lambda item: item[1].last_access_time)
+                    cached.in_use += 1
+                if not await self._offload(image_id, cached):
+                    break
+        async with self._lock:
+            while self._host_bytes_exceeded():
+                if not await self._evict_oldest(shared_tile=True, reason="host memory cap"):
+                    break
+
+    async def _offload(self, image_id: int, cached: CachedImage) -> bool:
+        """Move one pinned entry's embedding to host memory, then drop this method's pin. False when the copy failed
+        (True also when a request pinned the entry meanwhile and it stayed on the GPU)."""
+        tiers = self._tiers
+
+        def body() -> Tuple[Any, int]:
+            with cached.predictor_lock:
+                return tiers.export(cached.predictor)
+
+        try:
+            host_copy, host_bytes = await asyncio.get_running_loop().run_in_executor(None, body)
+        except UnrecoverableGpuError:
+            await self.release_image(image_id)
+            raise
+        except Exception:
+            logger.exception("Embedding move to host memory failed: %s", self._describe(image_id, cached))
+            await self.release_image(image_id)
+            return False
+        async with self._lock:
+            if cached.in_use == 1 and image_id in self._cache:
+                with cached.predictor_lock:
+                    tiers.drop_gpu(cached.predictor, host_copy)
+                self._gpu_bytes -= cached.gpu_bytes
+                cached.gpu_bytes = 0
+                cached.offloaded = True
+                cached.host_bytes = int(host_bytes)
+                self._host_embedding_bytes += cached.host_bytes
+                self._offloads_total += 1
+                logger.info(
+                    "Embedding moved to host memory: %s, idle %.0f s; %s",
+                    self._describe(image_id, cached),
+                    self._time_fn() - cached.last_access_time,
+                    self._tier_text(),
+                )
+        await self.release_image(image_id)
+        return True
 
     def _host_bytes_exceeded(self, incoming_size_bytes: int = 0) -> bool:
         return self._held_bytes() + incoming_size_bytes > self._max_memory_bytes
@@ -515,6 +744,7 @@ class ImageCache:
                 cached_image.in_use,
             )
             return True
+        self._forget_embedding(cached_image)
         self._release_predictor(cached_image.predictor, cached_image.predictor_lock)
         return True
 
@@ -641,20 +871,24 @@ class ImageCache:
         return True
 
     async def _cleanup_expired(self) -> None:
-        """Drop idle entries unused longer than TTL. Caller must hold `_lock`."""
+        """Drop idle entries unused longer than their lifetime: the TTL for arbitrary uploads, ``tile_idle_seconds``
+        for shared tiles (when set). Caller must hold `_lock`."""
         current_time = self._time_fn()
-        expired_ids = [
-            image_id
-            for image_id, cached_image in self._cache.items()
-            if not cached_image.shared_tile
-            and cached_image.in_use == 0
-            and current_time - cached_image.last_access_time > self._ttl_seconds
-        ]
+
+        def expired(cached_image: CachedImage) -> bool:
+            if cached_image.in_use != 0:
+                return False
+            idle = current_time - cached_image.last_access_time
+            if cached_image.shared_tile:
+                return self._tile_idle_seconds > 0 and idle > self._tile_idle_seconds
+            return idle > self._ttl_seconds
+
+        expired_ids = [image_id for image_id, cached_image in self._cache.items() if expired(cached_image)]
         for image_id in expired_ids:
             cached_image = self._cache.get(image_id)
             age = current_time - cached_image.last_access_time if cached_image else 0
             await self._delete_image_internal(image_id)
-            logger.info("Image expired (TTL): ID=%s, age=%.1fs", image_id, age)
+            logger.info("Image expired (idle): ID=%s, idle %.1fs", image_id, age)
         if expired_ids:
             logger.info(
                 "Cleanup complete: removed %s expired images, total_cache=%s bytes (%.2f MB), count=%s",
@@ -683,4 +917,14 @@ class ImageCache:
                 ),
                 "ttl_seconds": self._ttl_seconds,
                 "max_entries": self._max_entries,
+                # The tiers: total_memory_bytes above is host memory (encoded tiles plus embeddings moved there).
+                "image_bytes": self._current_memory_bytes + self._retiring_bytes,
+                "gpu_embedding_bytes": self._gpu_bytes,
+                "gpu_max_bytes": self._gpu_max_bytes,
+                "host_embedding_bytes": self._host_embedding_bytes,
+                "gpu_resident_images": sum(1 for c in self._cache.values() if c.gpu_bytes > 0),
+                "host_resident_images": sum(1 for c in self._cache.values() if c.offloaded),
+                "embedding_pulls": self._pulls_total,
+                "embedding_moves": self._offloads_total,
+                "tile_idle_seconds": self._tile_idle_seconds,
             }

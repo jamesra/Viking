@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import functools
+import gc
 import hashlib
 import io
 import logging
@@ -49,6 +50,8 @@ DEFAULT_CHECKPOINT_NAME = "sam2.1_hiera_large.pt"
 _GENERATION_ATTR = "_viking_encoder_generation"
 # The pixel digest a tile predictor's embedding is filed under, so a later use can refresh the disk file without hashing the image.
 _DIGEST_ATTR = "_viking_pixel_digest"
+# A cached tile predictor's embedding while the image cache keeps it in host memory instead of on the GPU.
+_HOST_COPY_ATTR = "_viking_host_embedding"
 # SAM2's mask decoder works at 1/4 of its 1024 input, and its prompt encoder takes a mask prompt at that size.
 _SAM2_LOW_RES = 256
 # Logits handed to SAM2 as a mask prompt are kept within this magnitude.
@@ -562,6 +565,63 @@ class SegmentationModel:
         reserve = max(1024 ** 3, int(total_bytes * 0.10))
         return free_bytes < reserve
 
+    def release_replaced_encoder_memory(self) -> None:
+        """Hand the replaced eager model's GPU memory back to the driver.
+
+        The compiled model is a second full copy of the weights (about 0.9 GB in fp32). Once it is swapped in and the
+        eager embeddings are flushed, nothing refers to the eager copy, but PyTorch keeps its freed blocks reserved for
+        reuse, and nothing in this server allocates that much again, so the card stays that much fuller while it is
+        shared with training. Called once, after the post-compile cache flush.
+        """
+        if self.device.type != "cuda":
+            return
+        try:
+            before = torch.cuda.memory_reserved()
+            gc.collect()
+            torch.cuda.empty_cache()
+            logger.info(
+                "Released the replaced eager encoder's GPU memory: reserved %.0f -> %.0f MiB (allocated %.0f MiB)",
+                before / 2**20,
+                torch.cuda.memory_reserved() / 2**20,
+                torch.cuda.memory_allocated() / 2**20,
+            )
+        except Exception:
+            logger.exception("Releasing the eager encoder's GPU memory failed")
+
+    # ---- embedding tiers (image_cache.EmbeddingTiers) ------------------------------------------------------------
+
+    @staticmethod
+    def _tensor_bytes(tensors: Sequence[torch.Tensor]) -> int:
+        return int(sum(t.numel() * t.element_size() for t in tensors))
+
+    def gpu_bytes(self, predictor: Any) -> int:
+        """Bytes of the predictor's embedding where it lives now (its feature maps; 0 when it has none)."""
+        features = getattr(predictor, "_features", None)
+        if not features:
+            return 0
+        return self._tensor_bytes([features["image_embed"], *features["high_res_feats"]])
+
+    def export(self, predictor: Any) -> Tuple[dict, int]:
+        """A host copy of the predictor's embedding (the disk blob's layout) and its bytes. The GPU copy stays."""
+        payload = self._export_payload(predictor)
+        return payload, self._tensor_bytes([t for t in payload.values() if isinstance(t, torch.Tensor)])
+
+    def drop_gpu(self, predictor: Any, host_copy: dict) -> None:
+        """Keep ``host_copy`` on the predictor and free its device embedding (no device work: the allocator keeps the
+        blocks for the next embedding)."""
+        setattr(predictor, _HOST_COPY_ATTR, host_copy)
+        predictor._features = None
+        predictor._is_image_set = False
+
+    def restore(self, predictor: Any) -> int:
+        """Put the host copy back on the predictor's device; returns its bytes there."""
+        host_copy = getattr(predictor, _HOST_COPY_ATTR, None)
+        if host_copy is None:
+            raise ValueError("predictor has no embedding in host memory")
+        self._install_disk_features(predictor, host_copy)
+        setattr(predictor, _HOST_COPY_ATTR, None)
+        return self.gpu_bytes(predictor)
+
     def release_predictor(self, predictor: Any) -> None:
         """Drop per-image embeddings so GPU memory can be reclaimed.
 
@@ -571,6 +631,8 @@ class SegmentationModel:
         """
         if predictor is None:
             return
+        if getattr(predictor, _HOST_COPY_ATTR, None) is not None:
+            setattr(predictor, _HOST_COPY_ATTR, None)
         reset = getattr(predictor, "reset_predictor", None)
         if callable(reset):
             try:

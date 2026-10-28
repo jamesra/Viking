@@ -40,6 +40,15 @@ def _build_import_stubs() -> dict:
 
 _STUBS = _build_import_stubs()
 
+# The compile path and the embedding tiers only run on CUDA. Without torch the stubs above report a CUDA device; with
+# real torch the tests need a real GPU. On a CPU-only machine with torch (CI, or a container run without --gpus) the
+# service correctly falls back to the CPU, never starts the compile thread, and these tests would fail for that
+# reason alone, so they skip there instead.
+_NEEDS_CUDA = pytest.mark.skipif(
+    not _STUBS and not importlib.import_module("torch").cuda.is_available(),
+    reason="needs a CUDA GPU (or no torch installed, so the module's stubs stand in for one)",
+)
+
 
 @contextlib.contextmanager
 def _stubs_installed():
@@ -113,6 +122,7 @@ def _png_bytes() -> bytes:
     return encoded.tobytes()
 
 
+@_NEEDS_CUDA
 def test_init_returns_eager_before_compile_finishes(monkeypatch) -> None:
     gate = threading.Event()
     compiled_entered = threading.Event()
@@ -149,6 +159,7 @@ def test_init_returns_eager_before_compile_finishes(monkeypatch) -> None:
     assert ready.is_set()
 
 
+@_NEEDS_CUDA
 def test_compile_failure_keeps_eager_model(monkeypatch) -> None:
     def build(*_args, **kwargs):
         overrides = list(kwargs.get("hydra_overrides_extra") or [])
@@ -166,6 +177,7 @@ def test_compile_failure_keeps_eager_model(monkeypatch) -> None:
     assert model.sam2_model.overrides == []
 
 
+@_NEEDS_CUDA
 def test_cuda_enables_cudnn_benchmark(monkeypatch) -> None:
     torch = sys.modules["torch"]
     _patch_builders(monkeypatch, lambda *_args, **_kwargs: MagicMock())
@@ -188,6 +200,7 @@ def test_compile_disabled_does_not_start_background_thread(monkeypatch) -> None:
     assert builds == [[]]
 
 
+@_NEEDS_CUDA
 def test_late_callback_runs_once_after_ready(monkeypatch) -> None:
     def build(*_args, **kwargs):
         return MagicMock()
@@ -220,6 +233,7 @@ def test_non_cuda_does_not_compile(monkeypatch) -> None:
     assert model._compile_thread is None
     assert builds == [[]]
 
+@_NEEDS_CUDA
 def test_new_predictors_use_the_compiled_model_and_older_ones_keep_theirs(monkeypatch) -> None:
     built: list[MagicMock] = []
 
@@ -257,6 +271,7 @@ def test_new_predictors_use_the_compiled_model_and_older_ones_keep_theirs(monkey
     assert SegmentationModel.predictor_generation(before) == "eager"
 
 
+@_NEEDS_CUDA
 def test_a_compiled_encoder_that_disagrees_with_eager_is_never_swapped_in(monkeypatch) -> None:
     built: list[MagicMock] = []
 
@@ -282,6 +297,7 @@ def test_a_compiled_encoder_that_disagrees_with_eager_is_never_swapped_in(monkey
     assert not ready.is_set()
 
 
+@_NEEDS_CUDA
 def test_a_compiled_encoder_that_produces_nan_is_never_swapped_in(monkeypatch) -> None:
     def build(*_args, **kwargs):
         model = MagicMock()
@@ -300,6 +316,7 @@ def test_a_compiled_encoder_that_produces_nan_is_never_swapped_in(monkeypatch) -
     assert model.encoder_generation == "eager"
 
 
+@_NEEDS_CUDA
 def test_the_parity_check_reads_the_eager_model_under_the_gpu_lock(monkeypatch) -> None:
     seen: list[bool] = []
 
@@ -398,6 +415,7 @@ def _model_with_store(monkeypatch):
     return model
 
 
+@_NEEDS_CUDA
 def test_a_tile_and_an_offset_window_with_the_same_pixels_share_one_disk_embedding(monkeypatch) -> None:
     model = _model_with_store(monkeypatch)
     source = np.random.default_rng(1).integers(0, 255, (16, 16, 3), dtype=np.uint8)
@@ -417,6 +435,7 @@ def test_a_tile_and_an_offset_window_with_the_same_pixels_share_one_disk_embeddi
     assert model._embedding_store.touched == [(svc._image_digest(pixels), "compiled")]
 
 
+@_NEEDS_CUDA
 def test_the_decoded_image_is_not_decoded_again_when_the_caller_has_it(monkeypatch) -> None:
     model = _model_with_store(monkeypatch)
     calls: list[int] = []
@@ -433,6 +452,7 @@ def test_the_decoded_image_is_not_decoded_again_when_the_caller_has_it(monkeypat
     assert calls == [1]
 
 
+@_NEEDS_CUDA
 def test_an_uploaded_tile_does_not_wait_for_its_disk_write(monkeypatch) -> None:
     model = _model_with_store(monkeypatch)
     store = model._embedding_store

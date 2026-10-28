@@ -42,8 +42,10 @@ from segmentation_grpc import (
 from segmentation_server.cuda_errors import UnrecoverableGpuError
 from segmentation_server.image_cache import (
     CacheFullError,
+    DEFAULT_GPU_MAX_BYTES,
     DEFAULT_MAX_ENTRIES,
     DEFAULT_MAX_MEMORY_BYTES,
+    DEFAULT_TILE_IDLE_SECONDS,
     DEFAULT_TTL_SECONDS,
     ImageCache,
     PredictorCreationError,
@@ -555,11 +557,16 @@ class SegmentationServicer(SegmentationServiceServicer):
         tile_source: Optional[TileSource] = None,
         status_cache_seconds: float = 1.0,
         clock: Callable[[], float] = time.monotonic,
+        cache_gpu_max_bytes: int = DEFAULT_GPU_MAX_BYTES,
+        cache_tile_idle_seconds: float = DEFAULT_TILE_IDLE_SECONDS,
     ) -> None:
         """
         Args:
-            cache_max_memory_bytes: Image-byte cap for the cache (default 16 GiB).
-                Shared tiles are kept until this cap, or until the GPU needs room.
+            cache_max_memory_bytes: Host memory cap for the cache (default 8 GiB): encoded tiles plus the
+                embeddings moved off the GPU.
+            cache_gpu_max_bytes: GPU memory cap for cached embeddings (default 512 MiB); past it the least
+                recently used move to host memory.
+            cache_tile_idle_seconds: Shared tiles unused this long leave the cache (default one hour).
             cache_ttl_seconds: Unused-entry lifetime for the cache's non-tile entries (default 5 minutes).
                 Shared tiles are not expired by the TTL.
             cache_max_images: Max non-tile cache entries (default 4096). Shared tiles do not count.
@@ -612,6 +619,13 @@ class SegmentationServicer(SegmentationServiceServicer):
             gpu_under_pressure=self._gpu_under_pressure,
             predictor_generation=self._predictor_encoder_generation,
             current_generation=self._current_encoder_generation,
+            # The SAM2 model moves embeddings between the GPU and host memory; a test fake without those methods
+            # keeps them on its device.
+            embedding_tiers=self.model if all(
+                callable(getattr(self.model, name, None)) for name in ("gpu_bytes", "export", "drop_gpu", "restore")
+            ) else None,
+            gpu_max_bytes=cache_gpu_max_bytes,
+            tile_idle_seconds=cache_tile_idle_seconds,
         )
         self._max_requested_tiles = max_requested_tiles_from_env()
         self._tile_answer_timeout = tile_answer_timeout_seconds()
@@ -672,15 +686,22 @@ class SegmentationServicer(SegmentationServiceServicer):
         """
         if self._loop is None or self._loop.is_closed():
             logger.warning("Compiled encoder ready but no event loop; image cache not flushed")
+            self._release_replaced_encoder()
             return
         future = asyncio.run_coroutine_threadsafe(self.image_cache.flush_stale(), self._loop)
         future.add_done_callback(self._log_flush_result)
 
-    @staticmethod
-    def _log_flush_result(future: "futures.Future[int]") -> None:
+    def _log_flush_result(self, future: "futures.Future[int]") -> None:
         error = future.exception()
         if error is not None:
             logger.error("Flushing eager embeddings after the compile swap failed", exc_info=error)
+        # The flushed eager embeddings were the last holders of the eager model, so its memory can go back now.
+        self._release_replaced_encoder()
+
+    def _release_replaced_encoder(self) -> None:
+        release = getattr(self.model, "release_replaced_encoder_memory", None)
+        if callable(release):
+            release()
 
     def _schedule_process_exit(self, delay_seconds: float = 0.25) -> None:
         """Exit after the current RPC can send UNAVAILABLE. Docker then restarts us."""
@@ -856,7 +877,10 @@ class SegmentationServicer(SegmentationServiceServicer):
                 f"device={device}; "
                 f"compile={compile_status}; "
                 f"cache={cache_stats['total_images']} images, "
-                f"{cache_stats['total_memory_mb']:.1f} MiB"
+                f"{cache_stats['total_memory_mb']:.1f} MiB host, "
+                f"{cache_stats.get('gpu_embedding_bytes', 0) / 1024**2:.1f}"
+                f"/{cache_stats.get('gpu_max_bytes', 0) / 1024**2:.0f} MiB GPU embeddings; "
+                f"pulls from host={cache_stats.get('embedding_pulls', 0)}"
             ),
             in_flight_requests=in_flight,
             cached_images=int(cache_stats["total_images"]),
@@ -2083,6 +2107,8 @@ def create_server(
     cache_max_memory_bytes: int = DEFAULT_MAX_MEMORY_BYTES,
     cache_max_images: int = DEFAULT_MAX_ENTRIES,
     compile_image_encoder: bool = True,
+    cache_gpu_max_bytes: int = DEFAULT_GPU_MAX_BYTES,
+    cache_tile_idle_seconds: float = DEFAULT_TILE_IDLE_SECONDS,
 ) -> ServerParts:
     """Build the executors, the servicer and a grpc.aio server bound to the TLS port.
 
@@ -2120,6 +2146,8 @@ def create_server(
             cache_max_memory_bytes=cache_max_memory_bytes,
             cache_max_images=cache_max_images,
             compile_image_encoder=compile_image_encoder,
+            cache_gpu_max_bytes=cache_gpu_max_bytes,
+            cache_tile_idle_seconds=cache_tile_idle_seconds,
         )
         add_SegmentationServiceServicer_to_server(servicer, server)
 
@@ -2162,6 +2190,8 @@ async def serve(
     demo_port: int = 8443,
     demo_bind: Optional[str] = None,
     demo_plaintext: Optional[bool] = None,
+    cache_gpu_max_bytes: int = DEFAULT_GPU_MAX_BYTES,
+    cache_tile_idle_seconds: float = DEFAULT_TILE_IDLE_SECONDS,
 ) -> None:
     """Listen for gRPC over TLS on ``[::]:port``. There is no cleartext listener.
 
@@ -2207,6 +2237,8 @@ async def serve(
         cache_max_memory_bytes=cache_max_memory_bytes,
         cache_max_images=cache_max_images,
         compile_image_encoder=compile_image_encoder,
+        cache_gpu_max_bytes=cache_gpu_max_bytes,
+        cache_tile_idle_seconds=cache_tile_idle_seconds,
     )
     demo_listener = None
     try:
