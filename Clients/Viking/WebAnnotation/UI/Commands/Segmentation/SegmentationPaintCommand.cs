@@ -59,6 +59,18 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public override bool IsPenDrawing => true;
 
         private bool painting;
+
+        /// <summary>The paint before each completed stroke (and clear), for Ctrl+Z.</summary>
+        private readonly PaintUndoHistory undoHistory = new();
+
+        /// <summary>The pixels from before the stroke under way, kept until it ends; null when no stroke is under way.</summary>
+        private byte[]? strokeStartPixels;
+
+        /// <summary>The canvas <see cref="strokeStartPixels"/> belongs to.</summary>
+        private PaintCanvas? strokeStartCanvas;
+
+        /// <summary>True once the stroke under way has changed a pixel.</summary>
+        private bool strokeChanged;
         private PaintMode mode;
         private GVector2 lastStrokeWorld;
         private bool paintedSinceSubmit;
@@ -123,6 +135,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             "Pen: the barrel button works like Shift; the check button accepts, the red X cancels",
             "Sideways wheel or Shift + wheel: Brush size",
             "F5 or the blue arrow: Send the masks again (after a server error or timeout)",
+            "Ctrl + Z: Undo the last stroke",
             "Ctrl + Delete or the purple crossed square: Clear all paint",
             "Double-click the result or press Enter: Accept",
             "Escape or the red X: Cancel",
@@ -193,6 +206,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             EnsureCanvasCovers(world, world);
             mode = PaintBrush.ChooseMode(canvas, world, RadiusWorld, alternate);
+            strokeStartCanvas = canvas;
+            strokeStartPixels = PaintUndoHistory.Snapshot(canvas);
+            strokeChanged = false;
             painting = true;
             lastStrokeWorld = world;
             cursorWorld = world;
@@ -207,7 +223,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             EnsureCanvasCovers(lastStrokeWorld, world);
             if (PaintBrush.Apply(canvas, mode, lastStrokeWorld, world, RadiusWorld) > 0)
+            {
                 paintedSinceSubmit = true;
+                strokeChanged = true;
+            }
 
             lastStrokeWorld = world;
             cursorWorld = world;
@@ -256,9 +275,30 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
 
             painting = false;
+            if (strokeChanged && strokeStartCanvas is not null && strokeStartPixels is not null)
+                undoHistory.Push(strokeStartCanvas, strokeStartPixels);
+
+            strokeStartCanvas = null;
+            strokeStartPixels = null;
             if (paintedSinceSubmit)
                 submitDebouncer?.Restart();
 
+            Parent.Invalidate();
+        }
+
+        /// <summary>
+        /// Ctrl+Z: takes back the last completed stroke (or clear), then sends the masks again after the usual pause. Does nothing while a
+        /// stroke is under way or when there is nothing to undo.
+        /// </summary>
+        private void UndoLastStroke()
+        {
+            if (painting || IsFinished || !undoHistory.TryUndo(out PaintCanvas? restored) || restored is null)
+                return;
+
+            canvas = restored;
+            paintedSinceSubmit = true;
+            SegmentationDiag.Log($"Paint undo remaining={undoHistory.Count}");
+            submitDebouncer?.Restart();
             Parent.Invalidate();
         }
 
@@ -358,7 +398,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             painting = false;
             paintedSinceSubmit = false;
+            byte[] beforeClear = PaintUndoHistory.Snapshot(canvas);
             int cleared = canvas.Clear();
+            if (cleared > 0)
+                undoHistory.Push(canvas, beforeClear);
             SegmentationDiag.Log($"Paint clear pixels={cleared}");
             StopTilePrefetch();
             CancelRequestInFlight();
@@ -505,6 +548,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
             {
                 OnResubmitButton();
                 e.Handled = true;
+                return;
+            }
+
+            if (e.KeyCode == Keys.Z && e.Control && !e.Alt)
+            {
+                UndoLastStroke();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
                 return;
             }
 

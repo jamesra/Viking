@@ -347,6 +347,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 layout.Scale);
         }
 
+        /// <summary>Puts back <paramref name="pixels"/>, a copy of <see cref="Pixels"/> taken earlier; the whole raster is reported dirty.</summary>
+        public void RestorePixels(byte[] pixels)
+        {
+            if (pixels.Length != Pixels.Length)
+                throw new ArgumentException($"A snapshot of this canvas has {Pixels.Length} pixels.", nameof(pixels));
+
+            Array.Copy(pixels, Pixels, pixels.Length);
+            MarkDirty(0, 0);
+            MarkDirty(Width - 1, Height - 1);
+        }
+
         /// <summary>Removes all paint, foreground and background. Returns how many pixels were painted.</summary>
         public int Clear()
         {
