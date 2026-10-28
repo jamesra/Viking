@@ -1,13 +1,27 @@
 # Viking changelog
 
-Committed application version: **1.2.130.0**  
-(1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109; their changes are listed under 1.2.109. Builds 1.2.129 and 1.2.130 are not released yet; their changes are listed under 1.2.128. The pen and link fixes of builds 1.2.123 to 1.2.126 are listed under 1.2.127.)
+<!--
+Notes for whoever updates this file. Comments like this one are not shown in Viking.
 
-Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Documentation/source/Client/versionhistory.rst).
+- Viking installs this file beside Viking.exe and shows it from Help > Change Log, and once the first time each version starts.
+- One "## <version> — <date, or 'not yet released'>" heading per version, newest first, each followed by a bulleted list of
+  changes written for users: what they can see or do differently, new or changed hotkeys, menus and preferences. No
+  developer detail; put that in a comment.
+- Add a bullet in the same commit as each user-visible change. When the version in Clients/Viking/Viking/Viking.csproj
+  changes, rename the unreleased heading to the new version; when a version ships, replace "not yet released" with the date
+  and channel, for example "2026-10-26 (Viking Test, unsigned)".
 
-Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 → 1.2.60). Entries below are keyed to the version recorded in `Clients/Viking/Viking/Viking.csproj` when that work shipped.
+Committed application version: 1.2.130.0.
+1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109;
+their changes are listed under 1.2.109. Builds 1.2.128 and 1.2.129 are listed under 1.2.130 (1.2.129 went out as Viking Test
+on 2026-10-27). The pen and link fixes of builds 1.2.123 to 1.2.126 are listed under 1.2.127.
 
-## 1.2.128 — not yet released
+Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 to 1.2.60). Entries below are keyed to the
+version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. Older 1.1.x notes live in
+Documentation/source/Client/versionhistory.rst.
+-->
+
+## 1.2.130 — not yet released
 
 * Auto segmentation no longer stops returning proposed polygons while the segmentation server is busy. Viking checked its connection to the server every 30 seconds, more often than the server allows while it is quiet, so a server busy for a couple of minutes closed the connection ("Too many pings") and every request on it failed. Viking now checks every 6 minutes, and only while a request is in progress; an idle connection is no longer checked at all, so the server never closes it for that, and the next request reconnects if anything else dropped it.
 * Location links (the hourglass between two linked locations on different sections) are easier to see next to the locations they join and stay out of the way in between. Each end is drawn strongly, with a contrasting shadow around it (black around a light link, white around a dark one), and fades to nothing toward the middle; the invisible middle cannot be clicked. Move the mouse over a link and the whole link fades in fully over a third of a second, with its labels, and can be followed all the way along; it fades back when the mouse leaves. The thin border added in 1.2.120 now really is black or white; before, it took on the brightness of the image under it and barely showed.
@@ -27,6 +41,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 * Pen: touching the section number strip at the left edge while a pen command is drawing (the pen was only lifted between strokes) now goes to the command instead of jumping to another section in the middle of the outline. Tapping the strip when no pen command is drawing still changes section.
 * Pen cut: drawing a stroke across a location that has a link marker inside it no longer stops at the marker. The stroke over the marker used to count as leaving the location, so the cut or add was not offered (the log said the path crossed the outline once).
 * Pen outlines keep their points. Cutting or extending a polygon, closed curve or hole with the pen used to refit the whole outline each time, so membranes bulged outward and parts you had not touched drifted a little with every edit. Now only the stretch you drew is spliced in, and the control points elsewhere stay exactly where they were. The pen's fitting tolerance is capped at 2 volume pixels (it was 3 times the downsample). A stroke that crosses the outline more than twice, or crosses into a hole, cuts out the region it encloses, or adds it when the stroke ends inside, for example to cut a bridge out of a cell; each resulting piece is offered as a choice. Reshaping keeps the polygon's holes, and a hole you replace is now saved in the right coordinates.
+* **Help > Change Log** shows this list of what changed in each version of Viking. It also opens by itself the first time a new version starts.
 
 ## 1.2.127 — 2026-10-26 (Viking Test, unsigned)
 
@@ -195,7 +210,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.76 — 2026-09-29
 
-*(csproj jumped 1.2.68 → 1.2.70 → 1.2.74 → 1.2.76. These notes cover that span. 1.2.74 was the previous committed build.)*
+<!-- *(csproj jumped 1.2.68 → 1.2.70 → 1.2.74 → 1.2.76. These notes cover that span. 1.2.74 was the previous committed build.)* -->
 
 * F1 help follows the idle catalog, the annotation under the mouse or pen, and the active command. Pen choice buttons list their captions. Circle, polygon, and freehand lines match the pen and mouse actions, and the bar notes that **Auto polygonize circles in view** turns idle segmentation off.
 * **Resegment** preview outline is 8 screen pixels wide, four times the previous 2-pixel stroke.
@@ -221,7 +236,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.68 — 2026-09-22
 
-*(csproj jumped 1.2.65 → 1.2.68 in one bump.)*
+<!-- *(csproj jumped 1.2.65 → 1.2.68 in one bump.)* -->
 
 * Adopt **Geometry.Core** vectors across Viking so callers share `Vector2` without XNA `Grid*` types.
 * Open HTTPS segmentation channels with TLS.
@@ -237,7 +252,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.64 — 2026-09-19
 
-*(csproj jumped 1.2.62 → 1.2.64 in one bump.)*
+<!-- *(csproj jumped 1.2.62 → 1.2.64 in one bump.)* -->
 
 * Fix **`viking://` location jump** and instance reuse.
 * Port geometry readonly-struct optimizations; continue auto-polygonize work.
@@ -261,7 +276,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.62 — 2026-09-16
 
-*(csproj jumped 1.2.60 → 1.2.62 in one bump.)*
+<!-- *(csproj jumped 1.2.60 → 1.2.62 in one bump.)* -->
 
 * Optional **Auto polygonize circles** mode (Annotation Preferences and Annotation menu, off by default). After the view idles and FOV annotations have loaded, each circle inset 20% from the edges is sent to the segmentation service with all other annotations as background. Hollow result polylines stay on screen; double-click accepts, double-right-click dismisses. Encode/polygonize run off the UI thread; traces Douglas-Peucker simplified.
 * Annotation Preferences: **auto-polygonize min size** (default 1% of screen area) with a circle preview; the same slider is used for **Smallest Rendered Size**, **Segmentation Point Radius**, and **Polygon Point Radius**. Pixel-size maxima follow the property-page width instead of the old 10/15/50 px caps.
@@ -281,7 +296,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.60 — 2026-09-11
 
-*(csproj jumped 1.2.48 → 1.2.60 in one bump; includes 1.2.59-era work plus deep links.)*
+<!-- *(csproj jumped 1.2.48 → 1.2.60 in one bump; includes 1.2.59-era work plus deep links.)* -->
 
 * Bidirectional **SBFSEM-tools** deep links: `viking://open` with a one-use Identity launch code (volume-scoped token, auto-open volume, go to location); **Open in SBFSEM-tools** bounces through Identity so the browser can SSO without putting tokens in the URL.
 * Tile HTTP **429** responses honor `Retry-After` instead of tight-looping the image server.
@@ -325,13 +340,13 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.43 — 2026-02-03
 
-*(csproj jumped 1.2.39 → 1.2.43.)*
+<!-- *(csproj jumped 1.2.39 → 1.2.43.)* -->
 
 * **Section number overlay** view: working overlay, preferences/converter wiring, race fixes, mouse-cursor tweak; PID parameters for overlay animation.
 
 ## 1.2.39 — 2026-01-26
 
-*(csproj jumped 1.2.28 → 1.2.39.)*
+<!-- *(csproj jumped 1.2.28 → 1.2.39.)* -->
 
 * Line-ending normalization for git.
 * Opacity honored for newly loaded annotations.
@@ -341,7 +356,7 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 
 ## 1.2.28 — 2026-01-22
 
-*(csproj jumped 1.2.2 → 1.2.28.)*
+<!-- *(csproj jumped 1.2.2 → 1.2.28.)* -->
 
 * IDE / Intellisense and compiler cleanups.
 * Async method suggestion follow-ups; dead code removal.
@@ -363,8 +378,10 @@ First 1.2 line on .NET Framework 4.8 / 64-bit (XNA removed). Highlights from tha
 * Linked-location polygon medial axis in the correct coordinate space; volume name saved in recent volumes; cancellation of blank segmentation screen captures.
 * Random annotation color menu; polygon control-point view refactor.
 
-See git history on `Legacy` for commit-level detail.
+<!-- See git history on Legacy for commit-level detail. -->
 
 ## 1.1.x (through 1.1.280, 2019-04-23)
 
-See [versionhistory.rst](Documentation/source/Client/versionhistory.rst). Last 1.1 release notes: Find Volumes URL fix (1.1.280).
+<!-- Notes for 1.1.x: Documentation/source/Client/versionhistory.rst -->
+
+* Last 1.1 release: the Find Volumes link works again (1.1.280).

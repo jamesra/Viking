@@ -33,6 +33,7 @@ namespace Viking
             this.menuViewer = new System.Windows.Forms.MenuStrip();
             this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.versionInfoToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.changeLogToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.vikingHomepageToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.CacheCleaningTimer = new System.Windows.Forms.Timer(this.components);
             this.TabsModules = new Viking.UI.BaseClasses.ModuleTabControl();
@@ -55,6 +56,7 @@ namespace Viking
             this.helpToolStripMenuItem.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
             this.helpToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.versionInfoToolStripMenuItem,
+            this.changeLogToolStripMenuItem,
             this.vikingHomepageToolStripMenuItem});
             this.helpToolStripMenuItem.Name = "helpToolStripMenuItem";
             this.helpToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
@@ -66,6 +68,13 @@ namespace Viking
             this.versionInfoToolStripMenuItem.Size = new System.Drawing.Size(169, 22);
             this.versionInfoToolStripMenuItem.Text = "Version Info";
             this.versionInfoToolStripMenuItem.Click += new System.EventHandler(this.versionInfoToolStripMenuItem_Click);
+            // 
+            // changeLogToolStripMenuItem
+            // 
+            this.changeLogToolStripMenuItem.Name = "changeLogToolStripMenuItem";
+            this.changeLogToolStripMenuItem.Size = new System.Drawing.Size(169, 22);
+            this.changeLogToolStripMenuItem.Text = "Change Log";
+            this.changeLogToolStripMenuItem.Click += new System.EventHandler(this.changeLogToolStripMenuItem_Click);
             // 
             // vikingHomepageToolStripMenuItem
             // 
@@ -122,6 +131,7 @@ namespace Viking
             this.Text = "Per aspera ad astra";
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.VikingMain_FormClosed);
             this.Load += new System.EventHandler(this.VikingMain_Load);
+            this.Shown += new System.EventHandler(this.VikingMain_Shown);
             this.menuViewer.ResumeLayout(false);
             this.menuViewer.PerformLayout();
             this.ResumeLayout(false);
@@ -138,6 +148,7 @@ namespace Viking
         private System.Windows.Forms.ToolStripMenuItem helpToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem vikingHomepageToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem versionInfoToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem changeLogToolStripMenuItem;
     }
 }
 

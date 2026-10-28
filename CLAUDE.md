@@ -7,6 +7,7 @@ Rules and skills are authored for Cursor in `.cursor/` and imported here by refe
 @.cursor/rules/commenting-code.mdc
 @.cursor/rules/commenting-to-build.mdc
 @.cursor/rules/grpc-protos-folder.mdc
+@.cursor/rules/user-changelog.mdc
 
 ## Conditional rules (read the file when the situation matches)
 Rules with `globs:` (`circle-mapping-scale`, `coordinate-precision`, `docker-config-and-builds-location`) also load

@@ -240,6 +240,11 @@ namespace Viking
             WebBrowser.Start();
         }
 
+        private void changeLogToolStripMenuItem_Click(object sender, EventArgs e) => ChangelogStartup.Show();
+
+        /// <summary>Shows the change log the first time this version starts, once the main window is up.</summary>
+        private void VikingMain_Shown(object sender, EventArgs e) => ChangelogStartup.ShowIfFirstRunOfVersion();
+
         private void versionInfoToolStripMenuItem_Click(object sender, EventArgs e)
         {
             using AboutBox aboutBox = new();
