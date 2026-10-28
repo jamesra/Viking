@@ -156,6 +156,7 @@
     <Compile Include="TokenErrorHelperTests.cs" />
     <Compile Include="SectionReferenceSettingsTests.cs" />
     <Compile Include="TranslateCurveLocationCommandTests.cs" />
+    <Compile Include="PenLocationLinksTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

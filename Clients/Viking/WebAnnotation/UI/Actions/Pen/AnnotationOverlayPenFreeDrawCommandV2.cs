@@ -74,10 +74,11 @@ namespace WebAnnotation.UI.Commands
         }
 
         /// <summary>
-        /// Creates the logger over a hit-test filter so annotations that are hidden during the stroke are never logged.
+        /// Creates the logger over hit-test filters so annotations that are hidden during the stroke are never logged: the
+        /// retraced cell's children and the location links this command hides (<see cref="PenLocationLinks"/>).
         /// </summary>
         private PathInteractionLogger CreateInteractionsLogger() =>
-            new(base.PenInput.path, new HiddenStructureHitTestFilter(AnnotationOverlay.CurrentOverlay, () => _HiddenStructureIDs));
+            new(base.PenInput.path, new HiddenStructureHitTestFilter(new LocationLinkHitTestFilter(AnnotationOverlay.CurrentOverlay), () => _HiddenStructureIDs));
 
         public override uint NumCurveInterpolations => throw new NotImplementedException();
 

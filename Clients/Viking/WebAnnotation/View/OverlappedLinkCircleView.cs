@@ -113,11 +113,18 @@ namespace WebAnnotation.View
         /// <summary>Links Del hid in the active viewer, or null when there is none (tests).</summary>
         private static TemporarilyHiddenAnnotations? Hidden => AnnotationOverlay.CurrentOverlay?.HiddenAnnotations;
 
-        /// <summary>The markers that can be hit: a marker whose link Del hid is not there for the mouse.</summary>
+        /// <summary>
+        /// The markers that can be hit: a marker whose link Del hid is not there for the mouse, and none are while a pen
+        /// command hides location links (<see cref="PenLocationLinks.Hidden"/>), so the stroke log and the pen cut see the
+        /// location instead of a marker inside it.
+        /// </summary>
         private IEnumerable<OverlappedLocationLinkView> PickableLinkViews
         {
             get
             {
+                if (PenLocationLinks.Hidden)
+                    return [];
+
                 TemporarilyHiddenAnnotations? hidden = Hidden;
                 return hidden is null || hidden.IsEmpty ? linkViews : linkViews.Where(l => !hidden.IsHidden(l));
             }
@@ -275,12 +282,19 @@ namespace WebAnnotation.View
             return listCircles;
         }
 
+        /// <summary>
+        /// Draws the markers of <paramref name="listToDraw"/>, skipping those Del hid and all of them while a pen command
+        /// hides location links (<see cref="PenLocationLinks.Hidden"/>). Called by the circle, polygon and closed curve views.
+        /// </summary>
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
                           BasicEffect basicEffect,
                           OverlayShaderEffect overlayEffect,
                           OverlappedLinkCircleView[] listToDraw)
         {
+            if (PenLocationLinks.Hidden)
+                return;
+
             OverlappedLocationLinkView[] linkViewArray = [.. listToDraw.SelectMany(l => l.linkViews)];
             TemporarilyHiddenAnnotations? hidden = Hidden;
             if (hidden is null)
@@ -297,10 +311,14 @@ namespace WebAnnotation.View
             }
         }
 
+        /// <summary>Labels the markers drawn this frame: none while a pen command hides location links.</summary>
         public void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
                               VikingXNA.Scene scene)
         {
+            if (PenLocationLinks.Hidden)
+                return;
+
             TemporarilyHiddenAnnotations? hidden = Hidden;
             foreach (OverlappedLocationLinkView ov in linkViews.Where(ov => ov.IsLabelVisible(scene)))
             {
