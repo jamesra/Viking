@@ -408,16 +408,26 @@ namespace AnnotationVizLib
         {
             public static CurveFitOptions Default => new(DefaultCurveFitHalfWindow, null, null);
 
-            public CurveFitOptions(int halfWindow, double? maxOffsetNm, ISet<ulong> onlyLocationIds)
+            public CurveFitOptions(int halfWindow, double? maxOffsetNm, ISet<ulong> onlyLocationIds, ISet<int> damagedSections = null)
             {
                 HalfWindow = halfWindow < 1 ? 1 : halfWindow;
                 MaxOffsetNm = maxOffsetNm is > 0 ? maxOffsetNm : null;
                 OnlyLocationIds = onlyLocationIds;
+                DamagedSections = damagedSections is { Count: > 0 } ? damagedSections : null;
             }
 
             public int HalfWindow { get; }
             public double? MaxOffsetNm { get; }
             public ISet<ulong> OnlyLocationIds { get; }
+
+            /// <summary>
+            /// When set, the fit corrects damaged sections only: it moves only locations on these sections, and fits through
+            /// locations on the other sections only, so a damaged section never pulls another (a run of damaged sections is
+            /// bridged). This is the one use the section-correction service keeps: on 48 cells across RC2, RPC1, RPC2 and
+            /// InferiorMonkey it raised the mean overlap of links touching a damaged section from 0.649 to 0.728, where the
+            /// fit everywhere did not help (docs/publication_notes.md, 2026-10-27/28).
+            /// </summary>
+            public ISet<int> DamagedSections { get; }
         }
 
         /// <summary>
@@ -522,6 +532,12 @@ namespace AnnotationVizLib
             Vector2[] centroids = [.. nodes.Select(n => n.Center.XY())];
             double[] z = [.. nodes.Select(n => n.Z)];
             bool[] isControl = CurveFitControlMask(nodes, graph);
+            ISet<int> damaged = options.DamagedSections;
+            if (damaged is not null)
+            {
+                for (int j = 0; j < nodes.Length; j++)
+                    isControl[j] &= !damaged.Contains((int)Math.Round(nodes[j].UnscaledZ));
+            }
 
             List<(int Index, double Residual)> movable = [];
             for (int i = 0; i < nodes.Length; i++)
@@ -531,8 +547,10 @@ namespace AnnotationVizLib
                     continue;
                 if (options.OnlyLocationIds is not null && !options.OnlyLocationIds.Contains(node.Key))
                     continue;
+                if (damaged is not null && !damaged.Contains((int)Math.Round(node.UnscaledZ)))
+                    continue;
 
-                Vector2 fitted = EvaluateLeaveOneOutCentroid(centroids, z, i, options.HalfWindow, isControl);
+                Vector2 fitted = EvaluateLeaveOneOutCentroid(centroids, z, i, options.HalfWindow, isControl, windowCountsControls: damaged is not null);
                 double residual = Vector2.Distance(centroids[i], fitted);
                 movable.Add((i, residual));
             }
@@ -545,7 +563,7 @@ namespace AnnotationVizLib
             foreach ((int i, _) in movable)
             {
                 MorphologyNode node = nodes[i];
-                Vector2 fitted = EvaluateLeaveOneOutCentroid(centroids, z, i, options.HalfWindow, isControl);
+                Vector2 fitted = EvaluateLeaveOneOutCentroid(centroids, z, i, options.HalfWindow, isControl, windowCountsControls: damaged is not null);
                 Vector2 offset = fitted - centroids[i];
                 offset = ClampProcessOffset(node, offset, options.MaxOffsetNm);
                 if (offset.Magnitude <= Tolerance.Epsilon)
@@ -649,13 +667,34 @@ namespace AnnotationVizLib
         /// on each side, excluding the node itself so its jitter does not enter the fit.
         /// Used by <see cref="CurveFitProcesses"/>; always returns a prediction (may copy a lone neighbor).
         /// </summary>
+        /// <param name="windowCountsControls">
+        /// When true the window reaches out to <paramref name="halfWindow"/> fitting points on each side, however many
+        /// non-fitting points lie between, so a location inside a run of damaged sections still has a curve to fit.
+        /// </param>
         internal static Vector2 EvaluateLeaveOneOutCentroid(Vector2[] centroids, double[] z, int i, int halfWindow,
-            bool[] isControl = null)
+            bool[] isControl = null, bool windowCountsControls = false)
         {
             List<int> controlIdx = [];
             bool skipped = false;
             int lo = Math.Max(0, i - halfWindow);
             int hi = Math.Min(centroids.Length - 1, i + halfWindow);
+            if (windowCountsControls && isControl is not null)
+            {
+                lo = i;
+                for (int found = 0; lo > 0 && found < halfWindow;)
+                {
+                    lo--;
+                    if (isControl[lo])
+                        found++;
+                }
+                hi = i;
+                for (int found = 0; hi < centroids.Length - 1 && found < halfWindow;)
+                {
+                    hi++;
+                    if (isControl[hi])
+                        found++;
+                }
+            }
             for (int j = lo; j <= hi; j++)
             {
                 if (j == i)

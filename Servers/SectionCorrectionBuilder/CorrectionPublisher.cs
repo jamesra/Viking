@@ -152,8 +152,8 @@ namespace Viking.SectionCorrectionBuilder
             await volume.Initialize(cancellationToken).ConfigureAwait(false);
 
             // Null when the volume files cannot be read: then every section is treated alike, as before builder 3.
-            SortedSet<int> damaged = await DamagedSectionList.LoadAsync(volumeUrl, msg => Log(options, msg), cancellationToken)
-                .ConfigureAwait(false);
+            SortedSet<int> damaged = await DamagedSectionList.LoadAsync(volumeUrl, msg => Log(options, msg), cancellationToken,
+                volumeName: volume.Name).ConfigureAwait(false);
 
             List<string> groups = ParseGroups(options.StosGroups, volume);
             if (string.IsNullOrWhiteSpace(options.StosGroups) &&

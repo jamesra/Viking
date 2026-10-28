@@ -196,7 +196,9 @@ namespace Viking.GrpcSectionCorrectionService
         /// <summary>
         /// Loads the structures (plus children when asked) mapped through the StosGroup, then applies
         /// <paramref name="mode"/>: the published field if it includes Neighbor, then curvefit if it includes CurveFit
-        /// (dropped in 1.5.0, restored in 1.5.2; see docs/publication_notes.md, 2026-10-27).
+        /// (dropped in 1.5.0, restored in 1.5.2 for measurement; see docs/publication_notes.md, 2026-10-27). With the field
+        /// alone (Neighbor, the default), locations on the set's damaged sections are then fitted along their processes
+        /// through undamaged sections (1.7.0).
         /// </summary>
         public async Task<StructuresAnswer> CorrectStructuresAsync(
             string volumeName,
@@ -241,6 +243,7 @@ namespace Viking.GrpcSectionCorrectionService
 
             PublishedCorrectionSet published = SampledSet(volumeName, stosGroup, mode);
             NeighborResidualField field = published is null ? null : ToNeighborField(published);
+            ISet<int> damaged = published?.Provenance?.DamagedSections is { Count: > 0 } list ? new HashSet<int>(list) : null;
 
             List<CorrectedLocationData> locations = [];
             foreach (MorphologyGraph cell in loaded.Cells)
@@ -252,8 +255,17 @@ namespace Viking.GrpcSectionCorrectionService
                 if (mode.HasFlag(FitMode.Neighbor))
                     MorphologyGraph.ApplyResidualField(cell, field);
                 if (mode.HasFlag(FitMode.CurveFit))
+                {
                     MorphologyGraph.CurveFitProcesses(cell, new MorphologyGraph.CurveFitOptions(
                         MorphologyGraph.DefaultCurveFitHalfWindow, null, null));
+                }
+                else if (mode.HasFlag(FitMode.Neighbor) && damaged is not null)
+                {
+                    // The field is smooth and cannot follow a tear or fold, so on damaged sections the fit finishes the
+                    // job (1.7.0): there it raised linked-outline overlap from 0.649 to 0.728 on 48 cells.
+                    MorphologyGraph.CurveFitProcesses(cell, new MorphologyGraph.CurveFitOptions(
+                        MorphologyGraph.DefaultCurveFitHalfWindow, null, null, damaged));
+                }
 
                 foreach (MorphologyNode node in cell.Nodes.Values)
                 {

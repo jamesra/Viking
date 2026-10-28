@@ -183,6 +183,45 @@ namespace AnnotationVizLibTests
                 "each damaged section is fitted against the nearest undamaged sections, never against another damaged one");
         }
 
+        static double XOn(MorphologyGraph g, int section) => g.Nodes.Values.Single(nd => (int)Math.Round(nd.UnscaledZ) == section).Center.X;
+
+        static void Displace(MorphologyGraph g, int section, double dx)
+        {
+            MorphologyNode nd = g.Nodes.Values.Single(n => (int)Math.Round(n.UnscaledZ) == section);
+            nd.Geometry = SqlGeometryUtils.Extensions.Translate(nd.Geometry, new Vector2(dx, 0));
+        }
+
+        [TestMethod]
+        public void DamagedOnlyFit_MovesTheDamagedLocation_AndNothingElse()
+        {
+            MorphologyGraph g = Straight(11, 1, 9);
+            Displace(g, 5, 500);
+            Dictionary<int, double> before = Enumerable.Range(1, 9).ToDictionary(z => z, z => XOn(g, z));
+
+            MorphologyGraph.CurveFitProcesses(g, new MorphologyGraph.CurveFitOptions(MorphologyGraph.DefaultCurveFitHalfWindow, null, null, new HashSet<int> { 5 }));
+
+            Assert.AreEqual(1000 + 10 * 5, XOn(g, 5), 5, "the damaged location is put back on its process");
+            foreach (int z in Enumerable.Range(1, 9).Where(z => z != 5))
+                Assert.AreEqual(before[z], XOn(g, z), 1e-9, $"section {z} is not damaged and must not move");
+        }
+
+        [TestMethod]
+        public void DamagedOnlyFit_BridgesARunOfDamagedSections()
+        {
+            // Seven damaged sections in a row: the plain ±7 window around the middle one holds only three undamaged
+            // locations per side, and none of the damaged ones may be a fitting point. Each is displaced its own way, as
+            // damage is; a shift shared by a whole section is the field's job (its damaged-section pass), not the fit's.
+            MorphologyGraph g = Straight(12, 1, 23);
+            HashSet<int> damaged = [.. Enumerable.Range(9, 7)];
+            foreach (int z in damaged)
+                Displace(g, z, z % 2 == 0 ? 400 : -400);
+
+            MorphologyGraph.CurveFitProcesses(g, new MorphologyGraph.CurveFitOptions(MorphologyGraph.DefaultCurveFitHalfWindow, null, null, damaged));
+
+            foreach (int z in damaged)
+                Assert.AreEqual(1000 + 10 * z, XOn(g, z), 5, $"damaged section {z} is fitted through the undamaged sections either side");
+        }
+
         [TestMethod]
         public void NoDamagedList_TriplesAreUnchanged()
         {

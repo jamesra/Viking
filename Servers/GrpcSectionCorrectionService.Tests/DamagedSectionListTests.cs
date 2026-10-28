@@ -54,6 +54,18 @@ namespace GrpcSectionCorrectionService.Tests
         }
 
         [TestMethod]
+        public async Task NoVolumeFilesBesideTheVikingXml_TriesTheFolderNamedForTheVolume()
+        {
+            // RC1: the VikingXML is under RABBIT/, the nornir files under RC1/.
+            SortedSet<int> damaged = await DamagedSectionList.LoadAsync(
+                "http://rogue1/RABBIT/rogue1.vikingxml", null, CancellationToken.None,
+                Files(new() { ["http://rogue1/RC1/VolumeData.xml"] = Root, ["http://rogue1/RC1/TEM/VolumeData.xml"] = Block }),
+                volumeName: "RC1");
+
+            CollectionAssert.AreEqual(new[] { 5, 11, 792, 817 }, damaged?.ToArray());
+        }
+
+        [TestMethod]
         public async Task MissingOrBrokenVolumeFiles_AreUnknownNotEmpty()
         {
             Assert.IsNull(await DamagedSectionList.LoadAsync("http://storage/X/v.VikingXML", null, CancellationToken.None, Files([])));

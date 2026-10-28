@@ -27,7 +27,7 @@ The protocol is versioned by package name. V2 (``section_correction_v2.proto``, 
    * - Value
      - Meaning
    * - ``CORRECTION_MODE_NEIGHBOR`` (0, the default)
-     - Sample the published residual field.
+     - Sample the published residual field. From 1.7.0, ``CorrectStructures`` then fits each location on a damaged section (the set's ``damaged_z``) along its process, through the locations on undamaged sections; see `Damaged sections`_. ``GetSectionCorrection`` and ``CorrectPoints`` are the field alone.
    * - ``CORRECTION_MODE_NONE`` (1)
      - Do not move points: the StosGroup mapping alone.
 
@@ -78,7 +78,9 @@ The field is built in two passes, so that a tear or fold cannot pull good sectio
 1. The main fit uses no annotation on a damaged section. A process that crosses one is linked directly between the sections either side, and skipped sections do not count toward the gap limit.
 2. Each damaged section's own shift is then fitted from the annotations on it, against the sections either side as already corrected and held fixed. It is published only when it lowers those triples' median second difference.
 
-If the volume files cannot be read, every section is built alike, as before builder 3, and ``damaged_z`` is empty.
+If ``<VikingXML folder>/VolumeData.xml`` does not exist, the builder looks in ``<parent folder>/<volume name>/``: RC1's VikingXML is under ``RABBIT/`` and its volume files are under ``RC1/``. If the volume files cannot be read, every section is built alike, as before builder 3, and ``damaged_z`` is empty.
+
+The field is smooth, so it cannot follow a tear or fold. From service 1.7.0, ``CorrectStructures`` in the default mode finishes the job on damaged sections. It runs the leave-one-out Catmull-Rom fit on locations on damaged sections only, using only locations on undamaged sections as fitting points. The window reaches out to seven of those on each side, so a run of damaged sections is bridged. The guards against lengthening a location's links and against overlapping its own section's neighbours still apply. Locations on undamaged sections get the field alone. On 48 cells the fit raised the mean overlap of links touching a damaged section from 0.649 to 0.728 (``docs/publication_notes.md``). Clients that sample the field themselves (``GetSectionCorrection``, ``CorrectPoints``) do not get this step.
 
 Caching
 =======

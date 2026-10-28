@@ -67,6 +67,39 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
 
 ## Algorithmic decisions
 
+- **2026-10-28 CurveFit returns for damaged sections only (service 1.7.0).** In the default mode, `CorrectStructures`
+  applies the field, then the leave-one-out Catmull-Rom fit to locations on damaged sections only.
+  - **The fit:** only locations on undamaged sections are fitting points. The window reaches out to seven of them on
+    each side, so a run of damaged sections is bridged.
+  - **The guards stay:** a move may not lengthen a location's links or create an overlap on its own section. A shift
+    shared by a whole run is the field's job (pass 2), not the fit's.
+  - **Why:** the field is smooth (4 µm lattice), so it cannot follow a tear or fold. The fit moves each location on its
+    own. Its weakness, reading a change of shape as misregistration (c1178, c16137), still applies. On a damaged
+    section the real misplacement is larger than that, so the trade reverses.
+  - **Measured** 2026-10-28 by `DamagedSectionCorrectionAssessment`, against the builder-3 field. It used the 12 cells
+    with the most locations on damaged sections in each of RC2, RPC1, RPC2 and InferiorMonkey: 48 cells, 8,775 links
+    touching a damaged section. Overlap is shared area ÷ smaller area, and no variant optimises it.
+
+    | Variant (moves damaged-section locations only) | Mean overlap | Pairs gaining / losing > 0.1 vs field | Cells better / worse |
+    |---|---|---|---|
+    | Field alone | 0.649 | — | — |
+    | Fit, through undamaged locations only (shipped) | 0.728 | 2,449 / 839 | 43 / 5 |
+    | Fit, damaged locations also fitting points | 0.728 | 2,448 / 833 | 43 / 5 |
+    | Linear between nearest undamaged neighbours | 0.719 | 2,426 / 970 | 39 / 7 |
+
+    - Without the largest cell (RC2 c1, 1,504 pairs): 0.613 field, 0.695 shipped fit.
+    - The 5 worse cells are small InferiorMonkey cells (13–28 pairs, mean −0.005 to −0.06).
+    - This agrees with SBFSEMpy's 1.4.0 split of their 11 cells: 194 pairs touching a damaged section, 0.699 → 0.763.
+  - **The bar, set before the data:** beat the field on mean overlap, more pairs gaining than losing over at least 50
+    pairs, and not carried by one cell. It passed.
+  - **Rejected:**
+    - Linear interpolation: lower mean and more losses.
+    - The fit everywhere (2026-10-27 entry).
+  - **Limit:** clients that sample the field themselves (`GetSectionCorrection`, `CorrectPoints`, so Viking and Jotunn
+    today) do not get the fit.
+  - Where: `CorrectionServiceCore.CorrectStructuresAsync`, `MorphologyGraph.CurveFitOptions.DamagedSections`,
+    `EvaluateLeaveOneOutCentroid(windowCountsControls)`; tests in `JointRegistrationTests` (`DamagedOnlyFit_*`).
+
 - **2026-10-27 Damaged sections correct no other section (builder 3).**
   - **What is damaged:** each block's `NonStosSectionNumbers` (in `VolumeData.xml` next to the VikingXML) lists the
     sections the slice-to-volume registration was built without: torn, folded or otherwise damaged.

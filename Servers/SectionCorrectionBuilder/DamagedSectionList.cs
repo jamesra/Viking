@@ -27,28 +27,50 @@ namespace Viking.SectionCorrectionBuilder
         /// The damaged sections of the volume whose VikingXML is <paramref name="volumeUrl"/>: empty when its blocks list
         /// none, null when the volume files could not be read (the caller then cannot tell "none" from "unknown").
         /// </summary>
+        /// <param name="volumeName">
+        /// The VikingXML's volume name. When the VikingXML folder has no VolumeData.xml, the volume's files are looked for
+        /// in <c>&lt;parent of that folder&gt;/&lt;volumeName&gt;/</c>: RC1's VikingXML is under <c>RABBIT/</c> and its
+        /// nornir files under <c>RC1/</c>.
+        /// </param>
         public static async Task<SortedSet<int>> LoadAsync(string volumeUrl, Action<string> log, CancellationToken cancellationToken,
-            FetchText fetch = null)
+            FetchText fetch = null, string volumeName = null)
         {
             fetch ??= FetchAsync;
             string folder = FolderOf(volumeUrl);
             if (folder is null)
                 return null;
 
-            string root;
-            try
+            List<string> candidates = [folder];
+            if (!string.IsNullOrWhiteSpace(volumeName) && FolderOf(folder) is string parent)
             {
-                root = await fetch(Combine(folder, "VolumeData.xml"), cancellationToken).ConfigureAwait(false);
+                string named = Combine(parent, volumeName.Trim());
+                if (!string.Equals(named, folder, StringComparison.OrdinalIgnoreCase))
+                    candidates.Add(named);
             }
-            catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
+
+            string root = null;
+            foreach (string candidate in candidates)
             {
-                log?.Invoke($"Damaged sections: could not read {Combine(folder, "VolumeData.xml")} ({ex.Message}); building without them.");
-                return null;
+                try
+                {
+                    root = await fetch(Combine(candidate, "VolumeData.xml"), cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
+                {
+                    log?.Invoke($"Damaged sections: could not read {Combine(candidate, "VolumeData.xml")} ({ex.Message}); building without them.");
+                    return null;
+                }
+
+                if (root is not null)
+                {
+                    folder = candidate;
+                    break;
+                }
             }
 
             if (root is null)
             {
-                log?.Invoke($"Damaged sections: no {Combine(folder, "VolumeData.xml")}; building without them.");
+                log?.Invoke($"Damaged sections: no VolumeData.xml in {string.Join(" or ", candidates)}; building without them.");
                 return null;
             }
 
