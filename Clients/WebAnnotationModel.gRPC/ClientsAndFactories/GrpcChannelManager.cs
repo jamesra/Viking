@@ -114,10 +114,14 @@ namespace WebAnnotationModel.gRPC
         private static bool IsHttps(Uri endpoint)
             => string.Equals(endpoint.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// True for "localhost" or a loopback IP literal. <see cref="UriBuilder.Host"/> keeps the
+        /// brackets of an IPv6 literal ("[::1]"), so they are trimmed before parsing.
+        /// </summary>
         static bool IsLoopback(string host)
             => string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
-               || host == "127.0.0.1"
-               || host == "::1";
+               || (System.Net.IPAddress.TryParse(host.Trim('[', ']'), out var address)
+                   && System.Net.IPAddress.IsLoopback(address));
 
         static bool IsOrWrapsWinHttpHandler(HttpMessageHandler handler)
         {

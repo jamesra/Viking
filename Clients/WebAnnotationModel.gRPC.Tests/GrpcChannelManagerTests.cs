@@ -57,6 +57,7 @@ namespace WebAnnotationModel.gRPC.Tests
         [TestCase("localhost")]
         [TestCase("LOCALHOST")]
         [TestCase("127.0.0.1")]
+        [TestCase("[::1]")]
         public void LoopbackPort5010MapsToHttps5011(string host)
         {
             var result = Normalize($"http://{host}:5010/", new WinHttpHandler());
