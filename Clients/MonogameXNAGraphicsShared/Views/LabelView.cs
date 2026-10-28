@@ -150,18 +150,56 @@ namespace VikingXNAGraphics
             DrawOutlinedString(spriteBatch, font, row, position, text, outline, screenRotation, origin, fontScale);
         }
 
+        /// <summary>One way of drawing a label's glyphs, shifted by a screen-pixel offset in a color. Structs, so a draw allocates nothing.</summary>
+        private interface IOutlineDraw
+        {
+            void Draw(Vector2 offset, Color color);
+        }
+
+        /// <summary>
+        /// The one outline: <paramref name="draw"/> is called with each of <see cref="OutlineOffsets"/> and <paramref name="outlineColor"/>,
+        /// then unshifted in <paramref name="textColor"/>, so the text lies over its outline. Every outlined draw goes through here.
+        /// </summary>
+        private static void DrawOutlined<T>(T draw, Color textColor, Color outlineColor) where T : struct, IOutlineDraw
+        {
+            foreach (Vector2 offset in OutlineOffsets)
+                draw.Draw(offset, outlineColor);
+
+            draw.Draw(Vector2.Zero, textColor);
+        }
+
+        private readonly struct StringDraw(SpriteBatch spriteBatch, SpriteFont font, string text, Vector2 position,
+            float rotation, Vector2 origin, float scale) : IOutlineDraw
+        {
+            public void Draw(Vector2 offset, Color color) =>
+                spriteBatch.DrawString(font, text, position + offset, color, rotation, origin, scale, SpriteEffects.None, 0);
+        }
+
+        private readonly struct TextureDraw(SpriteBatch spriteBatch, Texture2D texture, Vector2 position,
+            Vector2 origin, float scale, SpriteEffects effects) : IOutlineDraw
+        {
+            public void Draw(Vector2 offset, Color color) =>
+                spriteBatch.Draw(texture, position + offset, null, color, 0f, origin, scale, effects, 0);
+        }
+
+        private readonly struct RectangleDraw(SpriteBatch spriteBatch, Texture2D texture,
+            Microsoft.Xna.Framework.Rectangle destination) : IOutlineDraw
+        {
+            public void Draw(Vector2 offset, Color color)
+            {
+                Microsoft.Xna.Framework.Rectangle shifted = destination;
+                shifted.Offset((int)offset.X, (int)offset.Y);
+                spriteBatch.Draw(texture, shifted, null, color);
+            }
+        }
+
         /// <summary>
         /// Draws <paramref name="text"/> in <paramref name="textColor"/> over copies of it in <paramref name="outlineColor"/>
         /// shifted one screen pixel in each direction. The caller has begun <paramref name="spriteBatch"/>.
         /// </summary>
         public static void DrawOutlinedString(SpriteBatch spriteBatch, SpriteFont font, string text, Vector2 position,
-            Color textColor, Color outlineColor, float rotation, Vector2 origin, float scale)
-        {
-            foreach (Vector2 offset in OutlineOffsets)
-                spriteBatch.DrawString(font, text, position + offset, outlineColor, rotation, origin, scale, SpriteEffects.None, 0);
-
-            spriteBatch.DrawString(font, text, position, textColor, rotation, origin, scale, SpriteEffects.None, 0);
-        }
+            Color textColor, Color outlineColor, float rotation, Vector2 origin, float scale) =>
+            DrawOutlined(new StringDraw(spriteBatch, font, text, position, rotation, origin, scale), textColor, outlineColor);
 
         /// <summary>
         /// Draws a white-on-clear <paramref name="texture"/> (such as <see cref="ArrowGlyph"/>) tinted like outlined text: in
@@ -169,13 +207,8 @@ namespace VikingXNAGraphics
         /// caller has begun <paramref name="spriteBatch"/>.
         /// </summary>
         public static void DrawOutlinedTexture(SpriteBatch spriteBatch, Texture2D texture, Vector2 position,
-            Color color, Color outlineColor, Vector2 origin, float scale, SpriteEffects effects)
-        {
-            foreach (Vector2 offset in OutlineOffsets)
-                spriteBatch.Draw(texture, position + offset, null, outlineColor, 0f, origin, scale, effects, 0);
-
-            spriteBatch.Draw(texture, position, null, color, 0f, origin, scale, effects, 0);
-        }
+            Color color, Color outlineColor, Vector2 origin, float scale, SpriteEffects effects) =>
+            DrawOutlined(new TextureDraw(spriteBatch, texture, position, origin, scale, effects), color, outlineColor);
 
         public Microsoft.Xna.Framework.Color _Color = new((byte)(0),
                                                                                     (byte)(0),
@@ -923,20 +956,15 @@ namespace VikingXNAGraphics
 
                 var destRect = new Microsoft.Xna.Framework.Rectangle((int)drawPos.X, (int)drawPos.Y, (int)textureWidth, (int)textureHeight);
                 LabelOutlineStyle style = CurrentOutlineStyle;
-                Color textColor = this._Color;
-                if (style != LabelOutlineStyle.Off)
+                if (style == LabelOutlineStyle.Off)
                 {
-                    (textColor, Color outlineColor) = OutlineColors(this._Color, style);
-                    Color premultipliedOutline = Premultiply(outlineColor);
-                    foreach (Vector2 offset in OutlineOffsets)
-                    {
-                        Microsoft.Xna.Framework.Rectangle shifted = destRect;
-                        shifted.Offset((int)offset.X, (int)offset.Y);
-                        spriteBatch.Draw(texture, shifted, null, premultipliedOutline);
-                    }
+                    spriteBatch.Draw(texture, destRect, null, Premultiply(this._Color));
                 }
-
-                spriteBatch.Draw(texture, destRect, null, Premultiply(textColor));
+                else
+                {
+                    (Color textColor, Color outlineColor) = OutlineColors(this._Color, style);
+                    DrawOutlined(new RectangleDraw(spriteBatch, texture, destRect), Premultiply(textColor), Premultiply(outlineColor));
+                }
             }
         }
 
