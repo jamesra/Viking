@@ -56,7 +56,11 @@ namespace VikingXNAGraphics
                         Anchor.CenterCenter,
                         scaleFontWithScene: false,
                         fontSize: fontSize
-                    );
+                    )
+                    {
+                        // Light digits over any image need a dark border; the shared LabelView outline draws it.
+                        OutlineStyleOverride = LabelOutlineStyle.WhiteTextBlackOutline
+                    };
                 }
                 else
                 {

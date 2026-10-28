@@ -95,6 +95,12 @@ namespace VikingXNAGraphics
         /// </summary>
         public bool Outlined { get; set; }
 
+        /// <summary>
+        /// When set, this label is outlined in this style whatever <see cref="Outlined"/> and <see cref="OutlineStyleAccessor"/> say,
+        /// for text that must stay readable on any image (the section number scroll). Null follows the preference.
+        /// </summary>
+        public LabelOutlineStyle? OutlineStyleOverride { get; set; }
+
         /// <summary>Screen-pixel offsets at which the outline copies of the text are drawn, one pixel in each direction.</summary>
         private static readonly Vector2[] OutlineOffsets =
         [
@@ -125,7 +131,7 @@ namespace VikingXNAGraphics
         }
 
         /// <summary>The outline style for this label right now, <see cref="LabelOutlineStyle.Off"/> unless it is <see cref="Outlined"/>.</summary>
-        private LabelOutlineStyle CurrentOutlineStyle => Outlined ? OutlineStyleAccessor() : LabelOutlineStyle.Off;
+        private LabelOutlineStyle CurrentOutlineStyle => OutlineStyleOverride ?? (Outlined ? OutlineStyleAccessor() : LabelOutlineStyle.Off);
 
         /// <summary>
         /// Draws one row of text turned <paramref name="screenRotation"/> radians clockwise on screen, with its outline first
