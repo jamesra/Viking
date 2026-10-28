@@ -25,6 +25,7 @@ Documentation/source/Client/versionhistory.rst.
 
 * Fix: dragging a polygon vertex could move a different vertex, and **Ctrl**-clicking a vertex to remove it could remove a different one. Near the polygon's first vertex, Viking picked that vertex instead of the one under the cursor; it now always picks the nearest vertex, including vertices of holes.
 * Fix: with **Default Line Width** in **Annotation Preferences** set below 2, **Ctrl**-clicking a polygon vertex toward the outside of the polygon did nothing instead of removing the vertex.
+* Fix: holding **Alt** as well as **Shift** or **Ctrl** no longer cancels the Shift or Ctrl click and pen actions on annotations (translate, link, add or remove control points, cut or remove holes), or Shift's slower mouse-wheel resize. Holding **Ctrl** and **Shift** together now counts as holding both, instead of as holding neither: where Shift and Ctrl have different actions, Shift's is used, and a click that needs no modifier (such as creating a linked annotation) is not made.
 
 ## 1.2.131 — 2026-10-28 (Viking Test, unsigned)
 

@@ -32,17 +32,24 @@ namespace WebAnnotation
         }
     }
 
+    /// <summary>
+    /// Modifier checks on <see cref="System.Windows.Forms.Control.ModifierKeys"/> for pen and mouse annotation actions.
+    /// Each is a flag test: Ctrl+Shift satisfies both <see cref="ShiftPressed"/> and <see cref="CtrlPressed"/>
+    /// (an <c>if Shift … else if Ctrl</c> chain takes its Shift branch), and Alt is ignored.
+    /// </summary>
     public static class KeysExtensions
     {
-        public static bool ShiftOrCtrlPressed(this System.Windows.Forms.Keys ModifierKeys)
-        {
-            return ModifierKeys == System.Windows.Forms.Keys.Control ||
-               ModifierKeys == System.Windows.Forms.Keys.Shift;
-        }
+        /// <summary>True when Shift or Ctrl is held, with or without other modifiers.</summary>
+        public static bool ShiftOrCtrlPressed(this System.Windows.Forms.Keys ModifierKeys) =>
+            ModifierKeys.ShiftPressed() || ModifierKeys.CtrlPressed();
 
-        public static bool ShiftPressed(this System.Windows.Forms.Keys ModifierKeys) => ModifierKeys == System.Windows.Forms.Keys.Shift;
+        /// <summary>True when Shift is held, with or without Ctrl or Alt.</summary>
+        public static bool ShiftPressed(this System.Windows.Forms.Keys ModifierKeys) =>
+            (ModifierKeys & System.Windows.Forms.Keys.Shift) != 0;
 
-        public static bool CtrlPressed(this System.Windows.Forms.Keys ModifierKeys) => ModifierKeys == System.Windows.Forms.Keys.Control;
+        /// <summary>True when Ctrl is held, with or without Shift or Alt.</summary>
+        public static bool CtrlPressed(this System.Windows.Forms.Keys ModifierKeys) =>
+            (ModifierKeys & System.Windows.Forms.Keys.Control) != 0;
     }
 
     public static class HitTestResultExtensions

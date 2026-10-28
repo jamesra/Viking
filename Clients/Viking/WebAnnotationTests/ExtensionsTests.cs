@@ -11,10 +11,9 @@ using WebAnnotation;
 namespace WebAnnotationTests
 {
     /// <summary>
-    /// Pins the pure helpers in <c>WebAnnotation/Extensions.cs</c>: hotkey modifier text, single-modifier
-    /// key checks, the user-settings annotation-type-name mapping, and nearest-location-link selection.
-    /// Combined modifier states (Ctrl+Shift, Alt) are deliberately not asserted; their intended
-    /// behavior is an open decision.
+    /// Pins the pure helpers in <c>WebAnnotation/Extensions.cs</c>: hotkey modifier text, modifier
+    /// key checks (flag tests: Ctrl+Shift counts as both, Alt is ignored), the user-settings
+    /// annotation-type-name mapping, and nearest-location-link selection.
     /// </summary>
     [TestClass]
     public class ExtensionsTests
@@ -52,6 +51,43 @@ namespace WebAnnotationTests
             Assert.IsFalse(Keys.None.ShiftPressed());
             Assert.IsFalse(Keys.None.CtrlPressed());
             Assert.IsFalse(Keys.None.ShiftOrCtrlPressed());
+        }
+
+        /// <summary>
+        /// Every Shift/Ctrl/Alt combination: Shift and Ctrl are read as flags and Alt never changes
+        /// the answer, so holding Alt, or Ctrl and Shift together, does not cancel a modifier.
+        /// </summary>
+        [TestMethod]
+        public void ModifierChecksAreFlagTestsAndIgnoreAlt()
+        {
+            foreach (bool shift in new[] { false, true })
+            {
+                foreach (bool ctrl in new[] { false, true })
+                {
+                    foreach (bool alt in new[] { false, true })
+                    {
+                        Keys keys = (shift ? Keys.Shift : Keys.None) |
+                                    (ctrl ? Keys.Control : Keys.None) |
+                                    (alt ? Keys.Alt : Keys.None);
+
+                        Assert.AreEqual(shift, keys.ShiftPressed(), $"ShiftPressed({keys})");
+                        Assert.AreEqual(ctrl, keys.CtrlPressed(), $"CtrlPressed({keys})");
+                        Assert.AreEqual(shift || ctrl, keys.ShiftOrCtrlPressed(), $"ShiftOrCtrlPressed({keys})");
+                    }
+                }
+            }
+        }
+
+        [TestMethod]
+        [DataRow(Keys.Shift | Keys.Control, true, true, DisplayName = "Ctrl+Shift is both")]
+        [DataRow(Keys.Shift | Keys.Alt, true, false, DisplayName = "Shift+Alt is Shift")]
+        [DataRow(Keys.Control | Keys.Alt, false, true, DisplayName = "Ctrl+Alt is Ctrl")]
+        [DataRow(Keys.Alt, false, false, DisplayName = "Alt alone is neither")]
+        public void CombinedModifiers(Keys keys, bool shift, bool ctrl)
+        {
+            Assert.AreEqual(shift, keys.ShiftPressed());
+            Assert.AreEqual(ctrl, keys.CtrlPressed());
+            Assert.AreEqual(shift || ctrl, keys.ShiftOrCtrlPressed());
         }
 
         [TestMethod]
