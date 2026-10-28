@@ -26,7 +26,7 @@ The volume has a number of structures:
    #. Small arrows within circles indicating links between overlapping annotations on adjacent sections
    #. White lines indicating links between non-overlapping annotations on adjacent sections.
    #. Other colored discs are child structures (synapses etc.) belonging to a parent structure (cell).
-   #. The space bar toggles the annotations on and off
+   #. Hold the space bar to hide the annotations; hold Ctrl+Space to hide the section image and show only the annotations. Annotations and image return when you release the keys
    #. The status bar at bottom gives the location:
 
       * **Section:** slice number
@@ -50,8 +50,9 @@ Keyboard commands
 
 * **+** and **-** move down and up 1 slice
 * **SHIFT +** and **-** move down and up 10 slices
-* **PageUp/PageDown** Increase/Decrease zoom
-* **Home** Roounds the zoom to the nearest integer.  If the zoom rounds to zero we use a zoom of 200%, downsampled by 0.5. 
+* **Arrow keys** pan the view by a quarter of the screen
+* **PageUp/PageDown** zoom in/out by about 15% per press (the same step as one scroll wheel notch)
+* **Home** rounds the magnification to the nearest power of two (1, 2, 4, 8 ... or 0.5, 0.25 ...)
    
 Menu commands
 =============
