@@ -1,7 +1,7 @@
 # Viking changelog
 
-Committed application version: **1.2.127.0**  
-(1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109; their changes are listed under 1.2.109.)
+Committed application version: **1.2.130.0**  
+(1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109; their changes are listed under 1.2.109. Builds 1.2.129 and 1.2.130 are not released yet; their changes are listed under 1.2.128. The pen and link fixes of builds 1.2.123 to 1.2.126 are listed under 1.2.127.)
 
 Older 1.1.x notes live in [Documentation/source/Client/versionhistory.rst](Documentation/source/Client/versionhistory.rst).
 
@@ -21,11 +21,22 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 * Location link colours are toned down: the red, orange and blue keep their hue (a burnt orange stays burnt orange) but are a little less vivid, the section numbers on overlapped-link markers use exactly the same colour as a link going that way, and the shadow, border and opacity are unchanged, so links are as easy to see.
 * Del now hides the location link under the mouse, as it hides annotations, and Insert brings it back. A link also hides while either of its locations is hidden.
 * More preferences change the view as you adjust them, before Apply or OK; Cancel puts them back. In Annotation Preferences: link visibility, link waist width, drawing links under markers, link end labels, the label outline, polygon point size, opacity and hiding in pen mode, the smallest rendered size, the auto-segment mask, prompt and ring overlays, the shimmer settings, and the section correction settings. In Viewer Preferences: the image loading window, min images loaded per window, how often loading priorities update, and loading textures for adjacent sections. The maximum number of concurrent texture requests still waits for Apply.
+* The arrow markers inside a circle, polygon or closed curve (they stand for a link to an overlapping location on an adjacent section) can now be handled like link lines: Del hides the marker under the mouse (before, it hid the whole location), Insert brings it back, and right-clicking it offers **Delete Link** (before, the menu was empty). A hidden marker is not clicked by mistake.
+* Del and Insert also work on locations shown from an adjacent section and on structure links, not only on locations and location links of the section you are viewing. Hidden links and polylines fade back in like other annotations, and Insert also finds a hidden link marker that lies outside its polygon's outline.
+* Annotation Preferences has a new **Visuals** section under Basic Settings. It gathers the settings that only change how the view looks (text sizes and outline, annotation opacities, adjacent-section size, smallest rendered size, curve display points, control point size and opacity, segmentation prompt point radius, link drawing, and the auto-segmentation shimmer), grouped under Text, Annotations, Control points, Location links and Auto-segmentation. Settings that change behavior stay where they were; no setting has changed meaning.
+* Pen: touching the section number strip at the left edge while a pen command is drawing (the pen was only lifted between strokes) now goes to the command instead of jumping to another section in the middle of the outline. Tapping the strip when no pen command is drawing still changes section.
+* Pen cut: drawing a stroke across a location that has a link marker inside it no longer stops at the marker. The stroke over the marker used to count as leaving the location, so the cut or add was not offered (the log said the path crossed the outline once).
+* Pen outlines keep their points. Cutting or extending a polygon, closed curve or hole with the pen used to refit the whole outline each time, so membranes bulged outward and parts you had not touched drifted a little with every edit. Now only the stretch you drew is spliced in, and the control points elsewhere stay exactly where they were. The pen's fitting tolerance is capped at 2 volume pixels (it was 3 times the downsample). A stroke that crosses the outline more than twice, or crosses into a hole, cuts out the region it encloses, or adds it when the stroke ends inside, for example to cut a bridge out of a cell; each resulting piece is offered as a choice. Reshaping keeps the polygon's holes, and a hole you replace is now saved in the right coordinates.
 
 ## 1.2.127 — 2026-10-26 (Viking Test, unsigned)
 
 * Circles: when you draw, resize, move or link a circle, the circle on the other side of the section-to-volume warp now gets the radius the warp's local scale implies, instead of a copy of the radius. Auto-segment of a circle also tolerates a rim point that does not map.
 * Segmentation uses the segmentation server's own tile caches before asking Viking to render tiles, so repeat segmentations over the same area start faster. Views with a blended or colored channel set, or with colorize or mesh overlays on, no longer share tiles with a plain grayscale view.
+* Pen: tapping the animated section number strip at the left edge now shows the tapped section instead of starting a stroke of the current pen command. A tapped number the volume does not have goes to the next existing section in that direction.
+* Pen input no longer throws an OverflowException when Windows reports a mouse message that came from the pen.
+* A location on an adjacent section whose marker could not be built (for example while its mapping was not ready) is tried again on the next load; before, it was remembered as shown and its marker never appeared on that section.
+* Pen cut: a hole that touches the smoothed outline no longer makes the cut fail with an error; the hole keeps its smoothed outline.
+* Location links no longer log an error each time a linked location leaves memory in the middle of an update, and changing section no longer fills the log with "does not contain expected location" lines.
 
 ## 1.2.122 — not yet released
 
