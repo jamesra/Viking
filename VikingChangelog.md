@@ -40,6 +40,7 @@ gained from about 2026-10-20 on. Earlier changes are not listed.
 * Fix: dragging a polygon vertex could move a different vertex, and **Ctrl**-clicking a vertex to remove it could remove a different one. Near the polygon's first vertex, Viking picked that vertex instead of the one under the cursor; it now always picks the nearest vertex, including vertices of holes.
 * Fix: with **Default Line Width** in **Annotation Preferences** set below 2, **Ctrl**-clicking a polygon vertex toward the outside of the polygon did nothing instead of removing the vertex.
 * Fix: a pen cut through a polygon with a hole near its outline could fail with an error. The cut now goes ahead; that hole keeps its smoothed outline.
+* Outlines drawn with the pen and auto-segmented outlines follow the drawn or segmented shape more closely once they are turned into a curve: the curve now stays within the simplify tolerance of it everywhere (for pen strokes, **Pen Simplify Threshold** in Annotation Preferences). Before, between two of the curve's points it could stray up to about one and a half times that distance.
 
 <!--
 Developer notes for 1.2.111: the Del/Insert hiding, Visuals section, pen-on-overlay fix and this change log are ports of

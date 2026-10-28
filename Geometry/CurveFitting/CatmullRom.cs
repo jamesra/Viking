@@ -376,84 +376,6 @@ namespace Geometry
     /// </summary>
     public static class CatmullRomControlPointSimplification
     {
-        private static Vector2[] GetControlPointSubsetForCurve(IReadOnlyList<Vector2> path, int iStart, bool IsClosed) => IsClosed ? GetControlPointSubsetForClosedCurve(path, iStart) : GetControlPointSubsetForOpenCurve(path, iStart);
-
-        /// <summary>
-        /// Returns the four control points we can feed into CatmullRom to obtain the curve from iStart to iStart + 1
-        /// </summary>
-        /// <param name="path"></param>
-        /// <param name="iStart"></param>
-        /// <returns></returns>
-        private static Vector2[] GetControlPointSubsetForOpenCurve(IReadOnlyList<Vector2> path, int iStart)
-        {
-            if (path.Count < 2)
-            {
-                throw new ArgumentException("Cannot generate control points for a straight line path with only two verticies.");
-            }
-
-            //CatmullRom will generate the curve between points B & C (1 & 2) accurately, needed control points will be inserted there
-            int[] ProposedControlPointIndicies = [iStart - 1,
-                                                                iStart,
-                                                                iStart + 1,
-                                                                iStart + 2];
-
-            Vector2[] ProposedCurveControlPoints = new Vector2[4];
-            for (int iV = 0; iV < ProposedControlPointIndicies.Length; iV++)
-            {
-                if (ProposedControlPointIndicies[iV] < 0)
-                {
-                    ProposedCurveControlPoints[iV] = CatmullRom.GetStartingPointForOpenCurve(path);
-                }
-                else
-                {
-                    ProposedCurveControlPoints[iV] = ProposedControlPointIndicies[iV] >= path.Count
-                        ? CatmullRom.GetEndingPointForOpenCurve(path)
-                        : path[ProposedControlPointIndicies[iV]];
-                }
-            }
-
-            return ProposedCurveControlPoints;
-        }
-
-        /// <summary>
-        /// Returns the four control points we can feed into CatmullRom to obtain the curve from iStart to iStart + 1
-        /// </summary>
-        /// <param name="path"></param>
-        /// <param name="iStart"></param>
-        /// <returns></returns>
-        private static Vector2[] GetControlPointSubsetForClosedCurve(IReadOnlyList<Vector2> path, int iStart)
-        {
-            if (path.Count < 3)
-            {
-                throw new ArgumentException("Cannot generate control points for a closed curve path with two or fewer verticies.");
-            }
-
-            //CatmullRom will generate the curve between points B & C (1 & 2) accurately, needed control points will be inserted there
-            int[] ProposedControlPointIndicies = [iStart - 1,
-                                                                iStart,
-                                                                iStart + 1,
-                                                                iStart + 2];
-
-            Vector2[] ProposedCurveControlPoints = new Vector2[4];
-            for (int iV = 0; iV < ProposedControlPointIndicies.Length; iV++)
-            {
-                if (ProposedControlPointIndicies[iV] < 0)
-                {
-                    ProposedCurveControlPoints[iV] = path[path.Count - 2];
-                }
-                else
-                {
-                    ProposedCurveControlPoints[iV] = ProposedControlPointIndicies[iV] >= path.Count ? path[1] : path[ProposedControlPointIndicies[iV]];
-                }
-            }
-
-
-            //IIndexSet path_indicies = new Geometry.InfiniteWrappedIndexSet(0, path.Count-1, 0);
-            //return ProposedControlPointIndicies.Select(i => path_indicies[i]).Select(i => path[(int)i]).ToArray();
-
-            return ProposedCurveControlPoints;
-        }
-
         private static List<Vector2> GenerateStartingSimplifiedLine(this IList<Vector2> path, bool IsClosed)
         {
             if (IsClosed)
@@ -498,9 +420,14 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Take a high density path, fit a curve to it using catmull rom, and remove control points until we have a smaller number of control points where all points are within a minimum distance from the curve. 
+        /// Take a high density path, fit a curve to it using catmull rom, and pick a smaller set of the curve's points as
+        /// control points such that the Catmull-Rom curve through them stays within
+        /// <paramref name="MaxDistanceFromSimplifiedToIdeal"/> of the fitted curve, measured both ways (see <see cref="RefineControlPoints"/>).
         /// </summary>
-        /// <param name="path"></param>
+        /// <param name="input">High density path to simplify</param>
+        /// <param name="MaxDistanceFromSimplifiedToIdeal">Largest distance allowed between the fitted curve and the curve through the control points</param>
+        /// <param name="IsClosed">True if the path is a closed ring</param>
+        /// <param name="NumInterpolations">Number of points generated along each curve segment</param>
         public static List<Vector2> IdentifyControlPoints(this IReadOnlyList<Vector2> input, double MaxDistanceFromSimplifiedToIdeal, bool IsClosed, uint NumInterpolations = 8)
         {
             //Copy the path so we don't modify the input
@@ -519,153 +446,269 @@ namespace Geometry
                 path.Add(path.First());
             }
 
-            //Vector2[] curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed);
             var curved_path = Geometry.CatmullRom.FitCurve(path, NumInterpolations, IsClosed).Select(p => p.Round(Tolerance.TransformSignificantDigits)).RemoveAdjacentDuplicates().ToArray();
-            LineSegment[] curve_segments = curved_path.ToLineSegments();
+
+            // The fitted curve is the reference. A closed one repeats its first point at the end; the reference does not.
+            Vector2[] reference = IsClosed && curved_path.Length > 1 && curved_path[0] == curved_path[curved_path.Length - 1]
+                ? curved_path.Take(curved_path.Length - 1).ToArray()
+                : curved_path;
+
             UniquePointMap<int> point_to_ideal_curve_index = new();
-            for (int i = 0; i < curved_path.Length; i++)
+            for (int i = 0; i < reference.Length; i++)
             {
-                if (IsClosed && i == curved_path.Length - 1)
-                    continue; //Skip the last point which is a duplicate in a closed curve
-
-                if (point_to_ideal_curve_index.Contains(curved_path[i]))
-                    continue;
-
-                point_to_ideal_curve_index.Add(curved_path[i], i);
+                if (!point_to_ideal_curve_index.Contains(reference[i]))
+                    point_to_ideal_curve_index.Add(reference[i], i);
             }
 
-#if DEBUG
-            for (int i = 0; i < path.Count; i++)
+            List<int> startIndices = [];
+            foreach (Vector2 start in GenerateStartingSimplifiedLine(path, IsClosed))
             {
-                Debug.Assert(point_to_ideal_curve_index.Contains(path[i]),
-                    $"Ideal curve dictionary is missing path point #{i} {path[i]}");
-            }
-#endif
-
-            //int[] inflectionIndicies = curved_path.InflectionPointIndices();
-            //Vector2[] inflectionPoints = inflectionIndicies.Select(i => curved_path[i]).ToArray();
-            //List<Vector2> simplified_inflection_points = inflectionPoints.DouglasPeuckerReduction(Tolerance: MaxDistanceFromSimplifiedToIdeal * 10);
-            List<Vector2> simplified_inflection_points = GenerateStartingSimplifiedLine(path, IsClosed);
-
-            //Walk subsets of our proposed simplified curve, compare distance to ideal curve, add new control points as needed until distance is below threshold.
-            int iProposedVertex = 0;
-            while (iProposedVertex < simplified_inflection_points.Count - 1)
-            {
-                Vector2[] proposedCurveControlPoints = simplified_inflection_points.Count >= 2
-                    ? GetControlPointSubsetForCurve(simplified_inflection_points, iProposedVertex, IsClosed)
-                    : [.. simplified_inflection_points];
-                Vector2[] proposedCurve = CatmullRom.RecursivelyFitCurveSegment(proposedCurveControlPoints[0],
-                                                                                    proposedCurveControlPoints[1],
-                                                                                    proposedCurveControlPoints[2],
-                                                                                    proposedCurveControlPoints[3],
-                                                                                    NumInterpolations);
-
-                //Find the subset of the real curve this proposed curve should accurately represent
-                //identify the segment on the ideal curve we are comparing against
-
-                if (false == point_to_ideal_curve_index.Contains(proposedCurve.First()))
-                {
-                    iProposedVertex++;
-                    continue;
-                }
-
-                if (false == point_to_ideal_curve_index.Contains(proposedCurve.Last()))
-                {
-                    iProposedVertex++;
-                    continue;
-                }
-
-                //int iIdealStart = point_to_ideal_curve_index[proposedCurve.First()];
-                //int iIdealEnd = point_to_ideal_curve_index[proposedCurve.Last()];
-                point_to_ideal_curve_index.TryFindNearest(proposedCurve.First(), out var foundStart, out int iIdealStart, out var distanceToStart);
-                point_to_ideal_curve_index.TryFindNearest(proposedCurve.Last(), out var foundEnd, out int iIdealEnd, out var distanceToEnd);
-
-                //I believe this is an impossible case, but checking anyway for debugging. 
-                //If the loop is closed the final vertex could be the first vertex of the loop, so we don't check
-                if (IsClosed == false)
-                {
-                    System.Diagnostics.Debug.Assert(iIdealEnd > iIdealStart);
-                    if (iIdealEnd - iIdealStart <= 0)
-                        continue;
-                }
-                else
-                {
-                    if (iIdealEnd <= iIdealStart) //We are using the first/last vertex
-                    {
-                        System.Diagnostics.Debug.Assert(iIdealEnd == 0);
-                        iIdealEnd = curved_path.Length - 1;
-                    }
-                }
-
-                //InfiniteWrappedIndexSet indicies = new InfiniteWrappedIndexSet(0, curve_segments.Length-1, iIdealStart);
-
-                //Copy the relevant part of the ideal curve into a smaller array to narrow our search
-                int num_ideal_segments = (iIdealEnd) - iIdealStart; // -1 to account for the index into a line array vs a point array
-                LineSegment[] ideal_segments = new LineSegment[num_ideal_segments];
-                System.Array.Copy(curve_segments, iIdealStart, ideal_segments, 0, num_ideal_segments);
-
-                //If we need to add a control point repeat this loop iteration, otherwise increment and check the next portion of the curve
-                if (TryFindOutlierControlPoint(ideal_segments, proposedCurve, MaxDistanceFromSimplifiedToIdeal, out Vector2 ControlPointToAdd))
-                {
-                    Debug.Assert(simplified_inflection_points.Contains(ControlPointToAdd) == false);
-#if DEBUG
-                    if (simplified_inflection_points.Contains(ControlPointToAdd))
-                    {
-                        iProposedVertex++;
-                        continue;
-                    }
-#endif 
-                    simplified_inflection_points.Insert(iProposedVertex + 1, ControlPointToAdd);
-                }
-                else
-                {
-                    iProposedVertex++;
-                }
+                if (point_to_ideal_curve_index.TryFindNearest(start, out _, out int index, out _))
+                    startIndices.Add(index);
             }
 
+            if (!IsClosed)
+            {
+                startIndices.Add(0);
+                startIndices.Add(reference.Length - 1);
+            }
+
+            List<int> controlIndices = RefineControlPoints(reference, startIndices, IsClosed, MaxDistanceFromSimplifiedToIdeal, NumInterpolations);
+            List<Vector2> simplified = [.. controlIndices.Select(i => reference[i])];
             if (IsClosed)
-            {
-                Debug.Assert(simplified_inflection_points.First() == simplified_inflection_points.Last());
+                simplified.Add(simplified[0]);
 
-                //simplified_inflection_points.Add(simplified_inflection_points[0]); //Close the ring
-            }
-
-            return simplified_inflection_points;
+            return simplified;
         }
 
-        private static bool TryFindOutlierControlPoint(LineSegment[] ideal_path, Vector2[] proposed_path, double MaxDistanceFromProposedToIdeal, out Vector2 ControlPointToAdd)
+        /// <summary>
+        /// Inserts vertices of <paramref name="reference"/> as control points until the Catmull-Rom curve through the control
+        /// points stays within <paramref name="tolerance"/> of the reference polyline. The distance is checked both ways on every
+        /// span: from each reference vertex to the curve, and from each curve sample back to the reference. A point inserted in
+        /// one span changes the tangent of its neighbours, so every span is checked again until a whole pass inserts nothing.
+        /// Control points already given are never moved or removed, which lets a caller keep part of a ring exactly as it was.
+        /// </summary>
+        /// <param name="reference">The polyline to follow. A closed ring must not repeat its first vertex at the end.</param>
+        /// <param name="controlIndices">
+        /// Indices into <paramref name="reference"/> to start from. An open curve should include the first and last index. A closed
+        /// one with fewer than three gets the middle of its longest gap added until it has three. Duplicates and order do not matter.
+        /// </param>
+        /// <param name="isClosed">True when <paramref name="reference"/> is a closed ring.</param>
+        /// <param name="tolerance">Largest distance allowed between the reference and the curve, in the reference's units.</param>
+        /// <param name="numInterpolations">Samples per span used to measure the curve (more are added where it bends).</param>
+        /// <returns>The control indices in ascending order.</returns>
+        public static List<int> RefineControlPoints(IReadOnlyList<Vector2> reference, IEnumerable<int> controlIndices, bool isClosed, double tolerance, uint numInterpolations)
         {
-            double MaxDistance = 0;
-            int iMaxSegment = -1; //The line segment on the ideal path that is closest to iMaxProposedVertex
-            int iMaxProposedVertex = -1; //THe proposed vertex that is furthest from the ideal path
-            ControlPointToAdd = Vector2.Zero;
+            int n = reference.Count;
+            List<int> indices = [.. controlIndices.Where(i => i >= 0 && i < n).Distinct().OrderBy(i => i)];
+            if (isClosed)
+                AddMiddlesUntilThree(indices, n);
 
-            LineSegment[] proposed_segments = proposed_path.ToLineSegments();
+            if (n < 3 || indices.Count < 2 || (isClosed && indices.Count < 3))
+                return indices;
 
-            for (int i = 0; i < ideal_path.Length - 1; i++)
+            bool inserted;
+            do
             {
-                int iNearestSegment = proposed_segments.NearestSegment(ideal_path[i].B, out double MinDistance);
-                if (MinDistance > MaxDistance)
+                inserted = false;
+                int span = 0;
+                while (span < (isClosed ? indices.Count : indices.Count - 1))
                 {
-                    iMaxProposedVertex = i;
-                    iMaxSegment = iNearestSegment;
-                    MaxDistance = MinDistance;
+                    int iStart = indices[span];
+                    // A closed ring's last span wraps to the first control point; its indices run past n and are taken mod n.
+                    int iEnd = span + 1 < indices.Count ? indices[span + 1] : indices[0] + n;
+                    if (iEnd - iStart < 2)
+                    {
+                        span++;
+                        continue;
+                    }
+
+                    Vector2 p1 = reference[iStart];
+                    Vector2 p2 = reference[iEnd % n];
+                    Vector2 p0;
+                    Vector2 p3;
+                    if (isClosed)
+                    {
+                        p0 = reference[indices[(span - 1 + indices.Count) % indices.Count]];
+                        p3 = reference[indices[(span + 2) % indices.Count]];
+                    }
+                    else
+                    {
+                        p0 = span > 0 ? reference[indices[span - 1]] : CatmullRom.GetStartingPointForOpenCurve([p1, p2]);
+                        p3 = span + 2 < indices.Count ? reference[indices[span + 2]] : CatmullRom.GetEndingPointForOpenCurve([p1, p2]);
+                    }
+
+                    Vector2[] curve = CatmullRom.RecursivelyFitCurveSegment(p0, p1, p2, p3, numInterpolations);
+                    int worst = WorstReferenceVertex(reference, iStart, iEnd, curve, out double worstDistance);
+                    if (worstDistance > tolerance && worst >= 0)
+                    {
+                        int value = worst % n;
+                        int position = value > indices[indices.Count - 1] ? indices.Count : indices.BinarySearch(value);
+                        if (position < 0)
+                            position = ~position;
+
+                        indices.Insert(position, value);
+                        inserted = true;
+
+                        // A wrapped insertion lands at the front, so the span being refined moved one place along
+                        if (position <= span)
+                            span++;
+                    }
+                    else
+                    {
+                        span++;
+                    }
+                }
+            }
+            while (inserted);
+
+            return indices;
+        }
+
+        /// <summary>
+        /// Adds points along the two segments of a closed reference ring that meet each corner vertex, no more than
+        /// <paramref name="spacing"/> apart. Where a pen stroke meets an old outline at an angle, the curve rounds the corner;
+        /// with only the corner's two neighbours to choose from, <see cref="RefineControlPoints"/> cannot pin it, and the rounding
+        /// can exceed the tolerance. The added points lie on the reference, so they do not change what the curve must follow.
+        /// </summary>
+        /// <param name="ring">The ring, without a closing repeat of the first vertex.</param>
+        /// <param name="isCorner">For each vertex of <paramref name="ring"/>, whether to densify next to it.</param>
+        /// <param name="sourceIndex">For each returned point, the index of the vertex of <paramref name="ring"/> it is, or -1 for an added point.</param>
+        public static List<Vector2> DensifyNextToCorners(IReadOnlyList<Vector2> ring, IReadOnlyList<bool> isCorner, double spacing, out List<int> sourceIndex)
+        {
+            int n = ring.Count;
+            List<Vector2> output = new(n);
+            sourceIndex = new(n);
+            for (int i = 0; i < n; i++)
+            {
+                output.Add(ring[i]);
+                sourceIndex.Add(i);
+
+                int next = (i + 1) % n;
+                if (!(isCorner[i] || isCorner[next]) || spacing <= 0)
+                    continue;
+
+                double length = Vector2.Distance(ring[i], ring[next]);
+                int pieces = (int)Math.Ceiling(length / spacing);
+                for (int k = 1; k < pieces; k++)
+                {
+                    double t = (double)k / pieces;
+                    output.Add(new Vector2(ring[i].X + t * (ring[next].X - ring[i].X), ring[i].Y + t * (ring[next].Y - ring[i].Y)));
+                    sourceIndex.Add(-1);
                 }
             }
 
-            if (MaxDistance > MaxDistanceFromProposedToIdeal)
+            return output;
+        }
+
+        /// <summary>A closed curve needs three control points; adds the middle of the longest gap until it has them.</summary>
+        private static void AddMiddlesUntilThree(List<int> indices, int count)
+        {
+            while (indices.Count is > 0 and < 3 && indices.Count < count)
             {
-                /*
-                LineSegment nearestIdeal = ideal_path[iMaxSegment];
-                nearestIdeal.DistanceToPoint(proposed_path[iMaxProposedVertex], out Vector2 NearestPointOnLine);
-                //Identify which end of the line is closest to the nearest point on the line
-                ControlPointToAdd = Vector2.DistanceSquared(nearestIdeal.A, NearestPointOnLine) < Vector2.DistanceSquared(nearestIdeal.B, NearestPointOnLine) ? nearestIdeal.A : nearestIdeal.B;
-                */
-                ControlPointToAdd = ideal_path[iMaxProposedVertex].B;
-                return true;
+                int bestStart = 0;
+                int bestGap = -1;
+                for (int i = 0; i < indices.Count; i++)
+                {
+                    int next = i + 1 < indices.Count ? indices[i + 1] : indices[0] + count;
+                    if (next - indices[i] > bestGap)
+                    {
+                        bestGap = next - indices[i];
+                        bestStart = indices[i];
+                    }
+                }
+
+                if (bestGap < 2)
+                    return;
+
+                indices.Add((bestStart + bestGap / 2) % count);
+                indices.Sort();
+            }
+        }
+
+        /// <summary>
+        /// The reference vertex strictly between <paramref name="iStart"/> and <paramref name="iEnd"/> (indices taken mod the
+        /// count) that best fixes the largest gap between the reference and <paramref name="curve"/>: the farthest vertex from
+        /// the curve, or the vertex nearest the curve sample that is farthest from the reference, whichever gap is larger.
+        /// </summary>
+        /// <returns>The vertex index (not reduced mod the count), or -1 when the span has no interior vertex.</returns>
+        private static int WorstReferenceVertex(IReadOnlyList<Vector2> reference, int iStart, int iEnd, Vector2[] curve, out double worstDistance)
+        {
+            int n = reference.Count;
+            worstDistance = 0;
+            int worst = -1;
+
+            for (int i = iStart + 1; i < iEnd; i++)
+            {
+                double d = DistanceToPolyline(reference[i % n], curve, 0, curve.Length - 1);
+                if (d > worstDistance)
+                {
+                    worstDistance = d;
+                    worst = i;
+                }
             }
 
-            return false;
+            for (int c = 1; c < curve.Length - 1; c++)
+            {
+                double best = double.MaxValue;
+                for (int i = iStart; i < iEnd; i++)
+                {
+                    double d = DistanceToSegment(curve[c], reference[i % n], reference[(i + 1) % n]);
+                    if (d < best)
+                        best = d;
+                }
+
+                if (best > worstDistance)
+                {
+                    worstDistance = best;
+                    worst = NearestInteriorVertex(reference, iStart, iEnd, curve[c]);
+                }
+            }
+
+            return worst;
+        }
+
+        private static int NearestInteriorVertex(IReadOnlyList<Vector2> reference, int iStart, int iEnd, Vector2 point)
+        {
+            int n = reference.Count;
+            int nearest = -1;
+            double best = double.MaxValue;
+            for (int i = iStart + 1; i < iEnd; i++)
+            {
+                double d = Vector2.DistanceSquared(point, reference[i % n]);
+                if (d < best)
+                {
+                    best = d;
+                    nearest = i;
+                }
+            }
+
+            return nearest;
+        }
+
+        private static double DistanceToPolyline(Vector2 point, Vector2[] polyline, int first, int last)
+        {
+            double best = double.MaxValue;
+            for (int i = first; i < last; i++)
+            {
+                double d = DistanceToSegment(point, polyline[i], polyline[i + 1]);
+                if (d < best)
+                    best = d;
+            }
+
+            return best;
+        }
+
+        internal static double DistanceToSegment(Vector2 p, Vector2 a, Vector2 b)
+        {
+            double dx = b.X - a.X;
+            double dy = b.Y - a.Y;
+            double lengthSquared = dx * dx + dy * dy;
+            double t = lengthSquared > 0 ? ((p.X - a.X) * dx + (p.Y - a.Y) * dy) / lengthSquared : 0;
+            t = t < 0 ? 0 : t > 1 ? 1 : t;
+            double ex = a.X + t * dx - p.X;
+            double ey = a.Y + t * dy - p.Y;
+            return Math.Sqrt(ex * ex + ey * ey);
         }
 
         public static Polygon Simplify(this Polygon polygon, double MaxDistanceFromSimplifiedToIdeal, uint NumInterpolations = 8)

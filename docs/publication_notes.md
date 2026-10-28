@@ -32,6 +32,14 @@ papers: citations, formulas, algorithmic decisions and the reasoning behind them
   time to the point of greatest clearance from outline, text and earlier markers, found with the same branch and bound
   on a 1-Lipschitz clearance function.
 
+- **Curves through chosen control points** (`Geometry/CurveFitting/CatmullRom.cs` `RefineControlPoints`,
+  `Geometry/CurveFitting/ControlRingCurve.cs`; ported from VikingLegacy 1c91fc81 without its client pen-splice and
+  region-cut code): an outline is stored as the control points of a centripetal Catmull-Rom curve. Control points are
+  chosen by insertion only: starting from a fixed set, the reference vertex that best closes the largest gap between
+  curve and reference is inserted until every span is within the tolerance both ways, and spans are re-checked until a
+  pass inserts nothing (an insertion changes the neighbouring spans' tangents). `ControlRingCurve.TrySplice` replaces the
+  stretch of a control ring between two crossings of a stroke and keeps the other control points exactly.
+
 ## Formulas
 
 Circle radius between spaces (section to volume, or section to section through the correction), with $\Phi$ the
@@ -43,6 +51,12 @@ $$
 
 Depth-relative trust of a seed (Sam2Trainer `docs/depth_relative_trust.md`): $w(\rho)$, $\rho = 1 - d / D_\ell$, full
 trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_scale`).
+
+- **Centripetal Catmull-Rom** (`CatmullRom.FitCurveSegmentWithTValues`): knots $t_{j+1} = t_j + \lVert P_{j+1} - P_j \rVert^{\alpha}$
+  with $\alpha = 0.5$, evaluated between $P_1$ and $P_2$ by the Barry–Goldman pyramid of linear interpolations.
+- **Control point acceptance** (`RefineControlPoints`): for each span between control points $i_s, i_e$ with curve
+  samples $C$ and reference polyline $R_{[i_s, i_e]}$, accept when
+  $\max\left(\max_{k \in (i_s, i_e)} d(R_k, C),\ \max_{c \in C} d(c, R_{[i_s,i_e]})\right) \le \tau$.
 
 - **Label font score** (`LabelLayout.RunFontSize`): for content whose rows at an ID font of 1 are $t_w$ wide (widest
   row, each row's width times its scale) and $t_h$ tall (sum of row scales: structure label 0.5, tags 0.25, ID 1, parent
@@ -66,6 +80,20 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   $r = \min(\operatorname{dist}(\tfrac{N + E}{2}, \partial P), \sqrt{A/\pi})$ and centre $E - r\,d$.
 
 ## Algorithmic decisions
+
+- **2026-10-28 Control point refinement checks both directions and re-checks neighbours** (ported from VikingLegacy
+  1c91fc81, 2026-10-27).
+  - **Why:** the old greedy pass in `IdentifyControlPoints` checked each span once, measured only from the reference to
+    the curve, and an insertion in the next span changed the accepted span's end tangent unchecked (measured on Legacy:
+    worst 4.47 px at tolerance 3, 15.1 px at tolerance 12).
+  - **Now:** `IdentifyControlPoints` builds on `RefineControlPoints`; the golden fingerprints in
+    `GeometryTests/Phase7GoldenTests.cs` were re-recorded.
+  - **Junctions:** where a stroke meets an old outline at an angle the curve rounds the corner, and with only the
+    corner's two neighbours available refinement could not pin it (1.87 px at tolerance 1 in
+    `ControlPointFittingTests`). `DensifyNextToCorners` adds points along the two segments meeting each junction, at
+    most τ apart.
+  - **Not ported:** Legacy's pen splice into the stored control ring, the 2 volume px pen tolerance cap and the
+    multi-crossing region cut. They are client code (`ControlPointCut`, `PenRegionCut`, `PenInputHelper`).
 
 - **2026-10-28 Correction lattices are sampled by one shared function** (ported from VikingLegacy cdaf80de).
   - **Why:** the client's `SectionLatticeField` was an older port of the service's sampler. Where a cell had only some
@@ -392,11 +420,19 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   *Journal of Microscopy* 241(1), 13-28. (verify) Used for: Viking's design.
 - Bajaj, C. L., Coyle, E. J., Lin, K.-N. (1996). Arbitrary topology shape reconstruction from planar cross sections.
   *Graphical Models and Image Processing* 58(6), 524-543. (verify) Used for: `MorphologyMesh` contour-to-mesh tiling.
+- Barry, P. J. & Goldman, R. N. (1988). A recursive evaluation algorithm for a class of Catmull-Rom splines. *SIGGRAPH
+  Computer Graphics* 22(4), 199–204. doi:10.1145/378456.378511 (verify). Used for: the pyramid evaluation in
+  `FitCurveSegmentWithTValues`.
+- Catmull, E. & Rom, R. (1974). A class of local interpolating splines. In *Computer Aided Geometric Design*, Academic
+  Press, 317–326 (verify). Used for: the interpolating curve through annotation control points.
 - Garcia-Castellanos, D. & Lombardo, U. (2007). Poles of inaccessibility: a calculation algorithm for the remotest
   places on Earth. *Scottish Geographical Journal* 123(3), 227–233. doi:10.1080/14702540801897809 (verify). Used for: the
   pole of inaccessibility as the label anchor.
 - Ravi, N., et al. (2024). SAM 2: Segment Anything in Images and Videos. arXiv:2408.00714. Used for: the segmentation
   server's model.
+- Yuksel, C., Schaefer, S. & Keyser, J. (2011). Parameterization and applications of Catmull-Rom curves. *Computer-Aided
+  Design* 43(7), 747–755. doi:10.1016/j.cad.2010.08.008 (verify). Used for: centripetal parameterization ($\alpha = 0.5$),
+  which avoids cusps and self-intersections within a span.
 
 ## Open questions for a paper
 
