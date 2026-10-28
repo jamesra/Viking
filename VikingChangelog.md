@@ -21,7 +21,7 @@ version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. 
 Documentation/source/Client/versionhistory.rst.
 -->
 
-## 1.2.133 — not yet released
+## 1.2.133 — 2026-10-28 (Viking Test, unsigned)
 
 * While you draw a stroke with the pen, and while its choice buttons are shown, location links are hidden: the up and down link markers inside locations, the link lines between sections and their labels. They no longer cover what you are tracing, and a stroke across a marker is treated as a stroke across the location under it. Links come back when the stroke ends or a choice is made. They stay visible while the pen is idle and while you make a link (**Shift** + pen on a polygon away from its centre, then drag to the other annotation). A stroke from an annotation onto a location on the adjacent section still offers to link the two.
 * Pen strokes that reshape a hole: when a stroke runs from a polygon across one of its holes and back, splitting the hole in two, click the part of the hole you want filled and it becomes part of the polygon; the other part stays a hole. Clicking the polygon itself fills the smaller part. Each part is shaded on its own, and the buttons read **Fill smaller part of hole** and **Fill larger part of hole**. Strokes across the outer boundary work as before: the piece you click is the one kept.
