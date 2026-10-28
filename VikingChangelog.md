@@ -34,6 +34,7 @@ gained from about 2026-10-20 on. Earlier changes are not listed.
 * Status bar tooltips show above the status bar, so they no longer flash.
 * Opening Viking from a link to a location jumps there once; zooming afterwards no longer resets the view.
 * Circle annotations keep their size when they are carried between a warped section and the volume.
+* Linking two locations after deleting a location link no longer fails with an error, and deleting a link and then linking the same two locations again keeps the new link.
 * Section corrections: near the edge of an annotated area, where the correction lattice has only some of its points, the image is now shifted by the same amount the correction service uses for annotations there. Before, Viking worked out the shift its own way and could disagree with the service by up to a lattice spacing.
 
 <!--

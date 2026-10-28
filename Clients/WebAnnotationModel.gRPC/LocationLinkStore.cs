@@ -48,7 +48,9 @@ namespace WebAnnotationModel.gRPC
         }
 
         /// <summary>
-        /// Deletes the link on the server first, then removes it from the cache.
+        /// Deletes the link on the server first, then removes it from the cache and raises the Remove event.
+        /// Nothing is queued for <c>Save()</c>: base <c>Remove</c> would queue a second DELETE, which fails with
+        /// NotFound or deletes the same link if it is re-created before the next Save.
         /// </summary>
         /// <returns>True when the link was in the cache; the server delete has been sent either way.</returns>
         public async Task<bool> DeleteLink(long A, long B)
@@ -56,8 +58,13 @@ namespace WebAnnotationModel.gRPC
             var key = new LocationLinkKey(A, B);
             var client = ClientFactory.GetOrCreate();
             await client.Delete(key, CancellationToken.None).ConfigureAwait(false);
-            var deleted = await Remove(key).ConfigureAwait(false);
-            return deleted != null;
+            var deleted = InternalDelete(key);
+            if (deleted == null)
+                return false;
+
+            // Not awaited, as in base Remove: listeners run on the thread pool when State.UseAsynchEvents is set.
+            _ = CallOnCollectionChangedForDelete(deleted);
+            return true;
         }
 
         /// <summary>
