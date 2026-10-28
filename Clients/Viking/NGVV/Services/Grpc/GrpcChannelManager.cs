@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Viking.DependencyInjection;
+using Viking.UI.WPF.Services;
 
 namespace Viking.Services.Grpc
 {
@@ -19,7 +20,7 @@ namespace Viking.Services.Grpc
         /// <inheritdoc />
         public Channel? GetOrCreateChannel()
         {
-            GrpcChannelTarget? parsed = TryFormatChannelTarget(_configuration.Endpoint());
+            GrpcChannelTarget? parsed = GrpcChannelTarget.TryFormat(_configuration.Endpoint());
             if (parsed is null)
             {
                 return null;
@@ -154,52 +155,6 @@ namespace Viking.Services.Grpc
             }
         }
 
-        /// <summary>
-        /// The port the segmentation server published for its cleartext listener before that listener
-        /// was removed. A saved endpoint that still names it is moved to <see cref="TlsPort"/>.
-        /// </summary>
-        internal const int LegacyCleartextPort = 40080;
-
-        /// <summary>The port the segmentation server publishes for gRPC over TLS.</summary>
-        internal const int TlsPort = 40443;
-
-        /// <summary>
-        /// C-core channel targets are host:port[/path][?query]. The segmentation server only speaks
-        /// TLS, so the result always selects TLS. An <c>http://</c> endpoint or one with no scheme was
-        /// plaintext before; it keeps its host and port (except <see cref="LegacyCleartextPort"/>,
-        /// which becomes <see cref="TlsPort"/>) and is flagged <see cref="GrpcChannelTarget.UpgradedFromPlaintext"/>
-        /// so the channel log says what happened. Called when the shared channel is created.
-        /// </summary>
-        internal static GrpcChannelTarget? TryFormatChannelTarget(string rawEndpoint)
-        {
-            if (string.IsNullOrWhiteSpace(rawEndpoint))
-                return null;
-
-            string trimmedEndpoint = rawEndpoint.Trim();
-            bool containsScheme = trimmedEndpoint.IndexOf("://", StringComparison.Ordinal) >= 0;
-            string endpointToParse = containsScheme ? trimmedEndpoint : $"http://{trimmedEndpoint}";
-
-            if (!Uri.TryCreate(endpointToParse, UriKind.Absolute, out Uri? parsedUri) || parsedUri is null)
-                return null;
-
-            if (parsedUri.Scheme != Uri.UriSchemeHttp && parsedUri.Scheme != Uri.UriSchemeHttps)
-                return null;
-
-            string absolutePath = parsedUri.AbsolutePath;
-            if (string.Equals(absolutePath, "/", StringComparison.Ordinal))
-                absolutePath = string.Empty;
-
-            string host = parsedUri.HostNameType == UriHostNameType.IPv6
-                ? $"[{parsedUri.Host}]"
-                : parsedUri.Host;
-            bool upgradedFromPlaintext = parsedUri.Scheme == Uri.UriSchemeHttp;
-            int port = upgradedFromPlaintext && parsedUri.Port == LegacyCleartextPort
-                ? TlsPort
-                : parsedUri.Port;
-            string target = $"{host}:{port}{absolutePath}{parsedUri.Query}";
-            return new GrpcChannelTarget(target, upgradedFromPlaintext);
-        }
-
         /// <summary>Takes the current channel out of service. Caller holds <c>_lock</c> and shuts the result down after releasing it.</summary>
         private Channel? DetachChannelUnlocked()
         {
@@ -243,24 +198,4 @@ namespace Viking.Services.Grpc
             }
         }
     }
-
-    /// <summary>
-    /// Host:port target for a TLS <see cref="Channel"/>, and whether the saved endpoint named plaintext
-    /// (<c>http://</c> or no scheme) and was upgraded.
-    /// </summary>
-    internal readonly struct GrpcChannelTarget
-    {
-        public GrpcChannelTarget(string target, bool upgradedFromPlaintext)
-        {
-            Target = target;
-            UpgradedFromPlaintext = upgradedFromPlaintext;
-        }
-
-        public string Target { get; }
-
-        public bool UpgradedFromPlaintext { get; }
-
-        public string ChannelKey => $"tls|{Target}";
-    }
 }
-
