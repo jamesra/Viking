@@ -269,14 +269,23 @@ function Test-TlsHandshake([int] $Port, [int] $TimeoutMilliseconds = 3000) {
 .SYNOPSIS
     Probes the port with Test-TlsHandshake every IntervalSeconds until it answers; $false after about TimeoutSeconds.
 .DESCRIPTION
-    Counts attempts (TimeoutSeconds / IntervalSeconds, at least one) rather than reading a clock,
-    so the wait also ends when Start-Sleep is mocked; each failed probe adds up to its own timeout.
+    Bounded by a clock deadline: each probe gets at most 3 s and never more than the time left
+    (at least 1 ms), and the wait stops instead of sleeping when the next probe would start after
+    the deadline. A port that accepts TCP but never handshakes therefore ends the wait near
+    TimeoutSeconds, not after attempts x (probe timeout + interval). The attempt cap
+    (TimeoutSeconds / IntervalSeconds, at least one) also ends the wait when Start-Sleep is mocked
+    and the clock barely moves. At least one probe always runs.
 #>
 function Wait-ServiceReady([int] $Port, [int] $TimeoutSeconds, [int] $IntervalSeconds = 2) {
     $attempts = [Math]::Max(1, [int][Math]::Ceiling($TimeoutSeconds / $IntervalSeconds))
+    $timeoutMs = $TimeoutSeconds * 1000
+    $clock = [System.Diagnostics.Stopwatch]::StartNew()
     for ($i = 1; $i -le $attempts; $i++) {
-        if (Test-TlsHandshake $Port) { return $true }
-        if ($i -lt $attempts) { Start-Sleep -Seconds $IntervalSeconds }
+        # Floor of 1 ms: a negative timeout would make the connect wait forever (-1) or throw.
+        $probeMs = [Math]::Max(1, [Math]::Min(3000, $timeoutMs - $clock.ElapsedMilliseconds))
+        if (Test-TlsHandshake $Port $probeMs) { return $true }
+        if ($i -eq $attempts -or $clock.ElapsedMilliseconds + $IntervalSeconds * 1000 -ge $timeoutMs) { break }
+        Start-Sleep -Seconds $IntervalSeconds
     }
     return $false
 }

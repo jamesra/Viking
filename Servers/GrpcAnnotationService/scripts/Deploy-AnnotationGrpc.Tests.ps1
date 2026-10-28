@@ -175,7 +175,7 @@ Describe 'Deploy-AnnotationGrpc helpers' {
         It 'returns $true without sleeping when the first probe answers' {
             Mock Test-TlsHandshake { $true }
             Wait-ServiceReady 5011 10 2 | Should Be $true
-            Assert-MockCalled Test-TlsHandshake -Exactly 1 -Scope It -ParameterFilter { $Port -eq 5011 }
+            Assert-MockCalled Test-TlsHandshake -Exactly 1 -Scope It -ParameterFilter { $Port -eq 5011 -and $TimeoutMilliseconds -eq 3000 }
             Assert-MockCalled Start-Sleep -Exactly 0 -Scope It
         }
         It 'keeps probing until the port answers' {
@@ -195,6 +195,47 @@ Describe 'Deploy-AnnotationGrpc helpers' {
             Mock Test-TlsHandshake { $false }
             Wait-ServiceReady 5011 0 2 | Should Be $false
             Assert-MockCalled Test-TlsHandshake -Exactly 1 -Scope It
+        }
+    }
+
+    # Pester 3.4 keeps a Mock made inside an It for the rest of its Context, so these tests, which
+    # sleep for real, have their own Context and run in this order.
+    Context 'Wait-ServiceReady deadline (real clock)' {
+        Mock Start-Sleep {}
+
+        It 'ends at the deadline when every probe runs to its own timeout' {
+            # A probe against a port that accepts TCP but never handshakes takes its whole timeout
+            # (3000 ms when none is passed). Counting attempts alone, this wait took 2 x 3 s = 6 s.
+            Mock Test-TlsHandshake {
+                $ms = if ($TimeoutMilliseconds -gt 0) { $TimeoutMilliseconds } else { 3000 }
+                [System.Threading.Thread]::Sleep($ms)
+                $false
+            }
+            $clock = [System.Diagnostics.Stopwatch]::StartNew()
+            Wait-ServiceReady 5011 2 1 | Should Be $false
+            $clock.Elapsed.TotalSeconds | Should BeLessThan 2.5
+            Assert-MockCalled Test-TlsHandshake -Exactly 1 -Scope It -ParameterFilter { $TimeoutMilliseconds -le 2000 }
+            Assert-MockCalled Start-Sleep -Exactly 0 -Scope It
+        }
+        It 'does not sleep when the next probe would start after the deadline' {
+            Mock Test-TlsHandshake { [System.Threading.Thread]::Sleep(1500); $false }
+            Wait-ServiceReady 5011 2 1 | Should Be $false
+            Assert-MockCalled Test-TlsHandshake -Exactly 1 -Scope It
+            Assert-MockCalled Start-Sleep -Exactly 0 -Scope It
+        }
+        It 'gives the last probe only the time left before the deadline' {
+            Mock Start-Sleep { [System.Threading.Thread]::Sleep(1200) }
+            Mock Test-TlsHandshake { $false }
+            Wait-ServiceReady 5011 2 1 | Should Be $false
+            Assert-MockCalled Test-TlsHandshake -Exactly 2 -Scope It
+            Assert-MockCalled Test-TlsHandshake -Exactly 1 -Scope It -ParameterFilter { $TimeoutMilliseconds -ge 1 -and $TimeoutMilliseconds -le 800 }
+        }
+        It 'never passes a timeout below 1 ms when a sleep runs past the deadline' {
+            # A negative timeout would make the connect wait forever (-1) or throw.
+            Mock Start-Sleep { [System.Threading.Thread]::Sleep(2500) }
+            Mock Test-TlsHandshake { $false }
+            Wait-ServiceReady 5011 2 1 | Should Be $false
+            Assert-MockCalled Test-TlsHandshake -Exactly 1 -Scope It -ParameterFilter { $TimeoutMilliseconds -eq 1 }
         }
     }
 
