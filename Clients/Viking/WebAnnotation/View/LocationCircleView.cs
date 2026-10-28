@@ -285,7 +285,7 @@ namespace WebAnnotation.View
     }
 
     /// <summary>On-section circle. OverlappedLinkCircleView children win hit-test over this parent.</summary>
-    internal class LocationCircleView : LocationCircleViewBase, ICanvasViewContainer, ISelectable, IColorView, ILabelView, IOverlappedLinkHost
+    internal class LocationCircleView : LocationCircleViewBase, ICanvasViewContainer, IColorView, ILabelView, IOverlappedLinkHost
     {
         protected readonly Circle _VolumeCircle;
         protected readonly Circle _MosaicCircle;
@@ -518,19 +518,6 @@ namespace WebAnnotation.View
         #endregion
 
         public override double Radius => VolumeCircle.Radius;
-
-        private bool _Selected = false;
-        public bool Selected
-        {
-            get => _Selected;
-
-            set
-            {
-                circleView.Alpha = value ? 0.25f : 0.5f;
-
-                _Selected = value;
-            }
-        }
 
         #region Linked Locations
 
