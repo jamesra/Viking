@@ -7,6 +7,8 @@ using Grpc.Core;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Google.Protobuf.WellKnownTypes;
 using Viking.SectionCorrectionServiceTypes.gRPC.V2.Protos;
+using GridCell = Viking.gRPC.Geometry.V1.GridCell;
+using Vector2 = Viking.gRPC.Geometry.V1.Vector2;
 
 namespace Viking.SectionCorrectionClient.Tests
 {
@@ -434,7 +436,7 @@ namespace Viking.SectionCorrectionClient.Tests
         {
             var message = new SectionCorrection { PitchNm = 1000 };
             foreach ((int gx, int gy, double dx) in new[] { (0, 0, 10.0), (1, 0, 20.0), (0, 1, 10.0), (1, 1, 20.0) })
-                message.Nodes.Add(new LatticeNode { Gx = gx, Gy = gy, Offset = new Vector2 { X = dx } });
+                message.Nodes.Add(new LatticeNode { Node = new GridCell { Col = gx, Row = gy }, Offset = new Vector2 { X = dx } });
             return message;
         }
 
