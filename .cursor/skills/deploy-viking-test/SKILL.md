@@ -121,7 +121,7 @@ Prefix: `[Viking-Client]`.
 ### How to build the change list
 
 1. Find the previous announced Viking Test version (last `#betatest` post, or previous `VikingTest-*-full.nupkg` on the feed / in `releases-test`).
-2. Diff commits (and, when helpful, `CHANGELOG.md` / `VikingChangelog.md`) from that point to HEAD on the client tree you packed.
+2. Start from the sections of `VikingChangelog.md` newer than that version (the user changelog Viking shows under Help > Change Log; see the `user-changelog` rule), and check the commits from that point to HEAD on the client tree you packed for anything it missed. Add missing user-visible changes to `VikingChangelog.md` too.
 3. Rewrite the diff into short user-facing bullets. Example shape:
 
 ```text
@@ -157,9 +157,10 @@ One announce per successful deploy. If deploy failed, do not post a release note
 
 1. In VikingClient (Legacy): `git fetch` / pull upstream; on hard conflicts, abort merge, keep a buildable local tree, and plan to notify James.
 2. Changes land under `Clients/Viking/Viking` (or the tree you can still pack after step 1).
-3. `.\PublishVelopack.ps1 -TestChannel` → `releases-test\Viking-win-Setup.exe` exists (alias of Velopack’s pack-id Setup).
-4. Feed folder `Software\VikingTest` exists on the websvc host.
-5. `.\DeployVelopack.ps1 -TestChannel -ServerPath …\Software\VikingTest`.
-6. Verify `https://websvc.codepharm.net/Software/VikingTest/Viking-win-Setup.exe` downloads.
-7. Post to `#betatest` (`C0C50RBA6DB`): version, install link, user-facing changes since last test version (hotkeys / UX called out explicitly).
-8. If upstream was skipped as incompatible: notify James in Cursor + Slack (`<@UCSNFCCAV>`).
+3. `VikingChangelog.md` ships in the install (Help > Change Log, and shown on each version's first start): before packing, make its newest heading the version being packed, with today's date and `(Viking Test, unsigned)`, and check its bullets cover the changes since the last test version. Commit that with the release.
+4. `.\PublishVelopack.ps1 -TestChannel` → `releases-test\Viking-win-Setup.exe` exists (alias of Velopack’s pack-id Setup).
+5. Feed folder `Software\VikingTest` exists on the websvc host.
+6. `.\DeployVelopack.ps1 -TestChannel -ServerPath …\Software\VikingTest`.
+7. Verify `https://websvc.codepharm.net/Software/VikingTest/Viking-win-Setup.exe` downloads.
+8. Post to `#betatest` (`C0C50RBA6DB`): version, install link, user-facing changes since last test version (hotkeys / UX called out explicitly).
+9. If upstream was skipped as incompatible: notify James in Cursor + Slack (`<@UCSNFCCAV>`).

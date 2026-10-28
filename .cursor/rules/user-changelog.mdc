@@ -1,0 +1,22 @@
+---
+description: Keep VikingChangelog.md, the change log Viking shows its users, up to date with every user-visible change.
+alwaysApply: true
+---
+# User changelog
+
+`VikingChangelog.md` (repository root) is installed beside Viking.exe. Viking shows it from **Help > Change Log** and once
+the first time each version starts, so it is written for the people who use Viking. This is the gRPC client's changelog
+(Viking and Jotunn on `dev`); VikingLegacy keeps its own on the `Legacy` branch.
+
+- A commit that changes what a Viking or Jotunn user can see or do (behaviour, a fix they could notice, a hotkey, menu,
+  dialog, preference or default) adds a bullet to the newest section of `VikingChangelog.md` in the same commit. Server
+  changes count when users see them in the client.
+- One `## <version> — <date, or "not yet released">` heading per version, newest first, each followed by a bulleted list.
+  The newest heading is the version in `Clients/Viking/Viking/Viking.csproj` (`ChangelogTests` in `VikingCoreTests` checks
+  this): when that version changes, rename the unreleased heading. When a version ships, replace "not yet released" with
+  the date and channel, for example `2026-10-26 (Viking Test, unsigned)`.
+- Write bullets for users: what changed and how to use it, naming menus, buttons, hotkeys and preferences as Viking shows
+  them. Leave out internal refactors and build changes. Notes only developers need go in an HTML comment (`<!-- -->`),
+  which Viking does not show.
+- Supported Markdown: `#` headings, `*` or `-` bullets (indent two spaces to nest), paragraphs, `**bold**`, `` `code` `` and
+  `[text](https://…)` links. Links into the repository are shown as plain text.
