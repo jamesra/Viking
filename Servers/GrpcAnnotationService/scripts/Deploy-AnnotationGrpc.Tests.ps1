@@ -216,6 +216,41 @@ Describe 'Deploy-AnnotationGrpc helpers' {
             $listener.Stop()
             Test-TlsHandshake $port 500 | Should Be $false
         }
+        It 'returns $true once the port completes a TLS handshake, whatever name the certificate carries' {
+            # A loopback TLS server with a throwaway self-signed certificate whose name is not
+            # "localhost" (the probe must accept any certificate). It runs on its own runspace so the
+            # server and client sides of the handshake run at the same time. The certificate is
+            # re-imported from PFX because Schannel on .NET Framework cannot use an ephemeral key.
+            $rsa = [System.Security.Cryptography.RSA]::Create(2048)
+            $request = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new('CN=pester', $rsa,
+                [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+            $ephemeral = $request.CreateSelfSigned([DateTimeOffset]::UtcNow.AddDays(-1), [DateTimeOffset]::UtcNow.AddDays(1))
+            $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
+                $ephemeral.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx, 'pester'), 'pester',
+                [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable)
+            $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
+            $listener.Start()
+            $server = [powershell]::Create().AddScript({
+                param($listener, $cert)
+                $client = $listener.AcceptTcpClient()
+                try {
+                    $ssl = [System.Net.Security.SslStream]::new($client.GetStream(), $false)
+                    $ssl.AuthenticateAsServer($cert)
+                    $ssl.Dispose()
+                }
+                finally { $client.Dispose() }
+            }).AddArgument($listener).AddArgument($cert)
+            $handle = $server.BeginInvoke()
+            try {
+                Test-TlsHandshake $listener.LocalEndpoint.Port 5000 | Should Be $true
+                # Rethrows a server-side handshake failure.
+                $server.EndInvoke($handle)
+            }
+            finally {
+                # Stopping the listener first unblocks AcceptTcpClient if the probe never connected.
+                $listener.Stop(); $server.Dispose(); $cert.Dispose(); $ephemeral.Dispose(); $rsa.Dispose()
+            }
+        }
     }
 
     Context 'Invoke-ComposeService' {
