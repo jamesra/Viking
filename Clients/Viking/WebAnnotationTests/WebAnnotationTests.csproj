@@ -93,6 +93,7 @@
     <Compile Include="Commands\PolygonCutFillCacheTests.cs" />
     <Compile Include="Commands\PenModeContactTests.cs" />
     <Compile Include="View\LocationLineHitTestTests.cs" />
+    <Compile Include="View\LocationViewIndexTests.cs" />
     <Compile Include="Commands\SegmentationServiceSessionTests.cs" />
     <Compile Include="Commands\SegmentationViewportInterfaceTests.cs" />
     <Compile Include="Commands\CommandConstructorBinderTests.cs" />

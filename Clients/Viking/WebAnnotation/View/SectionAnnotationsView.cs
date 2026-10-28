@@ -484,12 +484,17 @@ namespace WebAnnotation.ViewModel
 
         public readonly SectionStructureLinkAnnotationsViewModel SectionStructureLinks;
 
-        protected readonly KeyTracker<long> KnownLocations = new();
+        /// <summary>
+        /// Views of the locations on the section we are providing an overlay for, their spatial index and the location
+        /// objects they follow. Every view is built from the store's current object for its ID; see <see cref="LocationViewIndex{TView}"/>.
+        /// </summary>
+        private readonly LocationViewIndex<LocationCanvasView> ViewIndex;
+
         /// <summary>
         /// Locations on the section we are providing an overlay for
         /// </summary>
-        private readonly RTree.RTree<long> LocationViewSearch = new();
-        protected readonly ConcurrentDictionary<long, LocationCanvasView> LocationViews = new();
+        private RTree.RTree<long> LocationViewSearch => ViewIndex.Search;
+        protected ConcurrentDictionary<long, LocationCanvasView> LocationViews => ViewIndex.Views;
         private readonly object _linkHydrateLock = new();
         private Task _linkHydrateTask = Task.CompletedTask;
         private readonly ConcurrentDictionary<long, byte> _inFlightMissingLinkIds = new();
@@ -527,7 +532,25 @@ namespace WebAnnotation.ViewModel
             Transforms = transforms;
             Volume = volume;
 
-            SectionLocationLinks = new SectionLocationLinkAnnotationsViewModel(section.Number, transforms, KnownLocations.Contains);
+            ViewIndex = new LocationViewIndex<LocationCanvasView>(
+                id => Store.Locations.TryGetObjectByID(id, out LocationObj current) ? current : null,
+                CreateLocationView,
+                view => view.BoundingBox.ToRTreeRect((float)view.Z),
+                // The structure is followed as long as the location is, so a geometry edit does not drop and retake it.
+                loc =>
+                {
+                    SubscribeToStructureChangeEvents(loc);
+                    loc.SubscribeToPropertyChangeEvents(this);
+                },
+                loc =>
+                {
+                    loc.UnsubscribeToPropertyChangeEvents(this);
+                    UnsubscribeToStructureChangeEvents(loc);
+                },
+                onAdded: (loc, view) => AddLocationsForStructure(loc.ParentID.Value, view),
+                onRemoved: (loc, view) => RemoveLocationsForStructure(loc.ParentID.Value, loc.ID));
+
+            SectionLocationLinks = new SectionLocationLinkAnnotationsViewModel(section.Number, transforms, id => LocationViews.ContainsKey(id));
             SectionStructureLinks = new SectionStructureLinkAnnotationsViewModel(this);
 
             SubmitUpdatedVolumePositions = false;
@@ -616,7 +639,10 @@ namespace WebAnnotation.ViewModel
                 RemoveOverlappedLocations(locs);
                 SectionStructureLinks.RemoveStructureLinks(locs);
                 SectionLocationLinks.RemoveLocationLinks(locs);
-                RemoveLocations(new LocationObj[] { loc }, false);
+                if (loc.Section == SectionNumber)
+                {
+                    ViewIndex.RemoveView(loc.ID);
+                }
             }
             else
             {
@@ -641,6 +667,13 @@ namespace WebAnnotation.ViewModel
             if (LocationObj.IsGeometryProperty(e.PropertyName))
             {
                 loc.ResetVolumePositionHasBeenCalculated();
+                // Rebuild whatever view is present, not only a missing one: a view rebuilt between Changing and Changed
+                // from the old geometry (a region load on another thread) otherwise stayed drawn at the old place.
+                if (loc.Section == SectionNumber)
+                {
+                    ViewIndex.RemoveView(loc.ID);
+                }
+
                 LocationObj[] locs = [loc];
                 AddLocationBatch(locs);
 
@@ -665,7 +698,7 @@ namespace WebAnnotation.ViewModel
 
         private List<LocationObj> LocationsOnOurSectionLinkedFromSet(IEnumerable<LocationObj> locations)
         {
-            List<long> LocationIDs = [.. locations.SelectMany(l => l.LinksCopy).Where(id => KnownLocations.Contains(id)).Distinct()];
+            List<long> LocationIDs = [.. locations.SelectMany(l => l.LinksCopy).Where(id => LocationViews.ContainsKey(id)).Distinct()];
             Store.Locations.TryGetObjectsByIDs(LocationIDs, out var found, out _);
             return [.. found];
         }
@@ -752,7 +785,7 @@ namespace WebAnnotation.ViewModel
             // Re-mark only the locations that still have views: the ones just removed have none, and marking them
             // logged a "does not contain expected location" line for each (tens of thousands per session, every
             // time opening a section evicted the previous one's annotations).
-            AddOverlappedLocations(locsOnOurSectionOrLinkedByInputLocations.Where(loc => KnownLocations.Contains(loc.ID)));
+            AddOverlappedLocations(locsOnOurSectionOrLinkedByInputLocations.Where(loc => LocationViews.ContainsKey(loc.ID)));
         }
 
         //Called when a key is added or removed from the store
@@ -870,7 +903,7 @@ namespace WebAnnotation.ViewModel
 
         public override void AddLocations(IEnumerable<LocationObj> listLocations)
         {
-            AddLocations(listLocations.Where(l => l.Section == SectionNumber), true);
+            AddLocationsOnThisSection(listLocations.Where(l => l.Section == SectionNumber));
 
             SectionAbove?.AddLocations(listLocations.Where(l => l.Section == SectionAbove.SectionNumber));
 
@@ -880,9 +913,7 @@ namespace WebAnnotation.ViewModel
         /// <summary>   
         ///  Keys have been added to the locations store
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected void AddLocations(IEnumerable<LocationObj> listLocations, bool Subscribe)
+        protected void AddLocationsOnThisSection(IEnumerable<LocationObj> listLocations)
         {
             bool UpdateVolumeLocations = false;
             bool HaveUpdatedVolumePositionsToSubmit = false;
@@ -897,7 +928,7 @@ namespace WebAnnotation.ViewModel
 
             foreach (LocationObj loc in listLocations)
             { 
-                if (AddLocation(loc, Subscribe, UpdateVolumeLocations))
+                if (AddLocation(loc, UpdateVolumeLocations))
                 {
                     VolumePositionUpdatedCount++;
                     HaveUpdatedVolumePositionsToSubmit |= true;
@@ -916,49 +947,37 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// Add a location to the view model. 
+        /// Add a location to the view model, built from the store's current object for its ID (which can be a newer object
+        /// than <paramref name="loc"/>), and follow that object's changes. Nothing happens when the view is already built
+        /// from that object.
         /// </summary>
         /// <param name="loc">Location to add</param>
-        /// <param name="Subscribe">Subscribe to the location's change events</param>
         /// <param name="UpdateVolumeLocations">Return True if the volume position of the location was updated</param>
-        private bool AddLocation(LocationObj loc, bool Subscribe, bool UpdateVolumeLocations)
+        private bool AddLocation(LocationObj loc, bool UpdateVolumeLocations)
         {
             if (loc.Section != Section.Number)
             {
                 return false;
             }
 
-            return KnownLocations.TryAdd(loc.ID, () =>
+            return ViewIndex.Add(loc);
+        }
+
+        /// <summary>
+        /// The view factory for <see cref="ViewIndex"/>. Returns null when the location cannot be drawn on this section.
+        /// </summary>
+        private LocationCanvasView? CreateLocationView(LocationObj loc)
+        {
+            try
             {
-                //Add location if it hasn't been seen before
-                LocationCanvasView locView = null;
-                try
-                {
-                    locView = AnnotationViewFactory.Create(loc, mapper);
-                }
-                catch (ArgumentException)
-                {
-                    //Could not add location, probably because of a transform mapping issue
-                    Trace.WriteLine("ArgumentException adding location# " + loc.ToString());
-                    return false;
-                }
-
-                bool AddedView = LocationViews.TryAdd(loc.ID, locView);
-                Debug.Assert(AddedView == true);
-
-                RTree.Rectangle bbox = locView.BoundingBox.ToRTreeRect((float)loc.Z);
-
-                LocationViewSearch.Add(bbox, locView.ID);
-
-                if (Subscribe)
-                {
-                    SubscribeToLocationChangeEvents(loc);
-                    SubscribeToStructureChangeEvents(loc);
-                }
-
-                AddLocationsForStructure(loc.ParentID.Value, locView);
-                return true;
-            });
+                return AnnotationViewFactory.Create(loc, mapper);
+            }
+            catch (ArgumentException)
+            {
+                //Could not add location, probably because of a transform mapping issue
+                Trace.WriteLine("ArgumentException adding location# " + loc.ToString());
+                return null;
+            }
         }
 
         private void AddLocationsForStructure(long structureID, LocationCanvasView locView)
@@ -981,7 +1000,7 @@ namespace WebAnnotation.ViewModel
 
         public override void RemoveLocations(IEnumerable<LocationObj> listLocations)
         {
-            RemoveLocations(listLocations.Where(l => l.Section == SectionNumber), true);
+            RemoveLocationsOnThisSection(listLocations.Where(l => l.Section == SectionNumber));
 
             SectionAbove?.RemoveLocations(listLocations.Where(l => l.Section == SectionAbove.SectionNumber));
 
@@ -992,35 +1011,19 @@ namespace WebAnnotation.ViewModel
         /// <summary>
         /// A key is about to be removed from the location store.  Remove it from our cache as well
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected void RemoveLocations(IEnumerable<LocationObj> listLocations, bool Unsubscribe)
+        protected void RemoveLocationsOnThisSection(IEnumerable<LocationObj> listLocations)
         {
             foreach (LocationObj loc in listLocations)
             {
-                RemoveLocation(loc, Unsubscribe);
+                RemoveLocation(loc);
             }
         }
 
-        protected void RemoveLocation(LocationObj loc, bool Unsubscribe)
-        {
-            KnownLocations.TryRemove(loc.ID, () =>
-            {
-                bool Removed = LocationViews.TryRemove(loc.ID, out LocationCanvasView locView);
-                Debug.Assert(Removed, "Missing location that was removed " + loc.ID.ToString());
-
-                bool RTreeRemoved = LocationViewSearch.Delete(loc.ID, out long RemovedID);
-                Debug.Assert(RTreeRemoved, "Could not remove location from RTree " + loc.ID.ToString());
-                Debug.Assert(RemovedID == loc.ID);
-                if (Unsubscribe)
-                {
-                    UnsubscribeToLocationChangeEvents(loc);
-                    UnsubscribeToStructureChangeEvents(loc);
-                }
-
-                RemoveLocationsForStructure(loc.ParentID.Value, loc.ID);
-            });
-        }
+        /// <summary>
+        /// Remove the location's view and stop following its changes, whether or not it had a view. When the store
+        /// already holds a newer object for the ID, the view follows that object instead.
+        /// </summary>
+        protected void RemoveLocation(LocationObj loc) => ViewIndex.Remove(loc);
 
         /// <summary>
         /// Return the LocationObj for the linked location on the provided section number
@@ -1087,16 +1090,10 @@ namespace WebAnnotation.ViewModel
                 //long[] overlapped_links = loc.LinksCopy.Where(id => SectionLocationLinks.OverlappedAdjacentLocationIDs.Contains(id)).ToArray();
                 if (overlapped_links.Count > 0)
                 {
+                    // A location without a view (not on this section, removed, or whose view could not be made) is skipped.
                     if (LocationViews.TryGetValue(loc.ID, out LocationCanvasView locView))
                     {
                         locView.OverlappedLinks = [.. overlapped_links.Select(linkKey => linkKey.A == loc.ID ? linkKey.B : linkKey.A)];
-                    }
-                    else if (KnownLocations.Contains(loc.ID))
-                    {
-                        // Known locations have a view (AddLocation tracks one only when its view is made), so this
-                        // is a real inconsistency. A location without a view (not on this section, removed, or whose
-                        // view could not be made) is skipped silently.
-                        Trace.WriteLine("Location Views does not contain expected location: " + loc.ToString());
                     }
                 }
             }
@@ -1425,7 +1422,8 @@ namespace WebAnnotation.ViewModel
 
         protected override void AddLocationsInLocalCache(IEnumerable<LocationObj> locationObjs)
         {
-            LocationObj[] unknownObjs = [.. locationObjs.Where(l => !KnownLocations.Contains(l.ID))];
+            // A view built from an object the store has since replaced counts as missing, so it is rebuilt from the new one.
+            LocationObj[] unknownObjs = [.. locationObjs.Where(l => l.Section != SectionNumber || !ViewIndex.HasCurrentView(l.ID))];
             if (unknownObjs.Length > 0)
             {
                 AddLocationBatch(unknownObjs);
