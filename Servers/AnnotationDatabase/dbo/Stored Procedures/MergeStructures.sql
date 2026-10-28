@@ -1,4 +1,10 @@
-﻿ CREATE PROCEDURE [dbo].[MergeStructures]
+﻿-- MergeStructures: merges structure @MergeStructureID into @KeepStructureID. Moves its locations,
+-- child structures and structure links to the keep structure (links between the two are deleted),
+-- appends its Notes to the keep structure's Notes between BEGIN/END MERGE FROM markers (a NULL keep
+-- Notes counts as empty), then deletes the merged structure.
+-- Callers: gRPC StructureService.Merge (AnnotationContextProcedures.MergeStructuresAsync), WCF
+-- AnnotateService.Merge (ConnectomeDataModel).
+ CREATE PROCEDURE [dbo].[MergeStructures]
 					-- Add the parameters for the stored procedure here
 					@KeepStructureID bigint,
 					@MergeStructureID bigint
@@ -30,7 +36,7 @@
 						set @MergeFooter = '*****END MERGE FROM ' + CONVERT(nvarchar(80), @MergeStructureID) + '*****'
 
 						update Structure
-						set Notes = Notes + @crlf + @MergeHeader + @crlf + @MergeNotes + @crlf + @MergeFooter + @crlf
+						set Notes = ISNULL(Notes, N'') + @crlf + @MergeHeader + @crlf + @MergeNotes + @crlf + @MergeFooter + @crlf
 						where ID = @KeepStructureID
 					END
 
