@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using FsCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Viking.Common;
 
@@ -8,7 +10,8 @@ namespace VikingCoreTests
 {
     /// <summary>
     /// Pins <see cref="TaskChaining.ThenAsync{T}"/> (the chained task must not complete before the second stage does) and
-    /// <see cref="TaskChaining.DrainToAsync"/> (throttle that surfaces a failed task).
+    /// <see cref="TaskChaining.DrainToAsync"/> (throttle that surfaces a failed task) and
+    /// <see cref="TaskChaining.RestoreAfterAsync{T}"/> (the exports put the viewed section back).
     /// </summary>
     [TestClass]
     public class TaskChainingTests
@@ -113,6 +116,66 @@ namespace VikingCoreTests
             List<Task> pending = new List<Task> { canceled.Task };
 
             await Assert.ThrowsExceptionAsync<TaskCanceledException>(() => TaskChaining.DrainToAsync(pending, 0));
+        }
+
+        /// <summary>
+        /// Regression: Section > Export frames and Export Tiles switch the viewer to each exported section, and with several tiles in
+        /// flight the per-tile restore could leave it on an exported one. Whatever sections the body visits, and whether it finishes,
+        /// fails or is canceled, the value ends where it started.
+        /// </summary>
+        [TestMethod]
+        public void RestoreAfterAsync_RestoresStartingValueAfterAnySequenceOfChanges()
+        {
+            var gen = from start in Gen.Choose(0, 5000)
+                      from visited in Gen.ListOf(Gen.Choose(0, 5000))
+                      from ending in Gen.Elements("finish", "fail", "cancel")
+                      select (start, visited, ending);
+
+            Prop.ForAll(Arb.From(gen), t =>
+            {
+                int section = t.start;
+                Task body()
+                {
+                    foreach (int z in t.visited)
+                        section = z;
+                    return t.ending switch
+                    {
+                        "fail" => Task.FromException(new InvalidOperationException("tile failed")),
+                        "cancel" => Task.FromCanceled(new System.Threading.CancellationToken(true)),
+                        _ => Task.CompletedTask,
+                    };
+                }
+
+                Task run = TaskChaining.RestoreAfterAsync(() => section, s => section = s, body);
+                try
+                {
+                    run.GetAwaiter().GetResult();
+                }
+                catch (InvalidOperationException) when (t.ending == "fail") { }
+                catch (TaskCanceledException) when (t.ending == "cancel") { }
+
+                Assert.AreEqual(t.start, section);
+                Assert.AreEqual(t.ending == "finish", run.Status == TaskStatus.RanToCompletion, "the body's outcome must reach the caller");
+            }).QuickCheckThrowOnFailure();
+        }
+
+        /// <summary>
+        /// The restore waits for the body: tiles still rendering would otherwise switch the section again after it was restored.
+        /// </summary>
+        [TestMethod]
+        public async Task RestoreAfterAsync_DoesNotRestoreWhileBodyIsRunning()
+        {
+            int section = 10;
+            TaskCompletionSource<bool> tiles = new TaskCompletionSource<bool>();
+
+            Task run = TaskChaining.RestoreAfterAsync(() => section, s => section = s, () => { section = 42; return tiles.Task; });
+            await Task.Delay(50);
+            Assert.AreEqual(42, section, "restored before the body finished");
+            Assert.IsFalse(run.IsCompleted);
+
+            tiles.SetResult(true);
+            await run;
+            Assert.AreEqual(10, section);
         }
     }
 }
