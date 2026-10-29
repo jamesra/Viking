@@ -11,6 +11,9 @@ namespace Viking.UI.WPF.Controls
     /// box, clamped to [<see cref="Minimum"/>, <see cref="Maximum"/>], and the box then shows the stored value. Text that
     /// is not a number reverts to the current value. Escape reverts an uncommitted edit and is consumed only then, so
     /// Escape in an unchanged box still reaches the dialog's Cancel button.
+    /// Clicking the slider gives it the keyboard focus, and with focus Left/Down and Right/Up move it one step
+    /// (<see cref="SmallChange"/>, which defaults to one tick), snapped and clamped as a drag is, and set
+    /// <see cref="Value"/> as a drag does.
     /// </summary>
     /// <remarks>
     /// Text rules (format, parse, clamp) live in <see cref="SliderValueText"/>. <see cref="Value"/> itself is never
@@ -119,7 +122,10 @@ namespace Viking.UI.WPF.Controls
             set => SetValue(IsSnapToTickEnabledProperty, value);
         }
 
-        /// <summary>Slider arrow-key step (as <see cref="System.Windows.Controls.Primitives.RangeBase.SmallChange"/>).</summary>
+        /// <summary>
+        /// Slider arrow-key step (as <see cref="System.Windows.Controls.Primitives.RangeBase.SmallChange"/>). When not set,
+        /// the step is <see cref="TickFrequency"/>, so an arrow moves the slider one tick whatever the range.
+        /// </summary>
         public double SmallChange
         {
             get => (double)GetValue(SmallChangeProperty);
@@ -157,6 +163,15 @@ namespace Viking.UI.WPF.Controls
             control.ShowValue();
         }
 
+        /// <summary>
+        /// The slider's arrow-key step: <see cref="SmallChange"/> when it was set (locally, by a binding or a style),
+        /// otherwise one <see cref="TickFrequency"/>.
+        /// </summary>
+        private double EffectiveSmallChange =>
+            DependencyPropertyHelper.GetValueSource(this, SmallChangeProperty).BaseValueSource == BaseValueSource.Default
+                ? TickFrequency
+                : SmallChange;
+
         private static void OnSliderSettingChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             ((SliderWithValueBox)d).ApplySliderSettings();
@@ -187,7 +202,7 @@ namespace Viking.UI.WPF.Controls
                 PART_Slider.Maximum = Maximum;
                 PART_Slider.TickFrequency = TickFrequency;
                 PART_Slider.IsSnapToTickEnabled = IsSnapToTickEnabled;
-                PART_Slider.SmallChange = SmallChange;
+                PART_Slider.SmallChange = EffectiveSmallChange;
                 PART_Slider.LargeChange = LargeChange;
                 PART_Slider.Value = Value;
             }
@@ -221,6 +236,17 @@ namespace Viking.UI.WPF.Controls
 
             shownText = SliderValueText.Format(Value, ValueFormat);
             PART_ValueBox.Text = shownText;
+        }
+
+        /// <summary>
+        /// Gives the slider the keyboard focus when it is clicked (its thumb and track buttons are not focusable), so the
+        /// arrow keys then nudge it. Moving focus off the box commits any typed text first. The click itself is not
+        /// handled here, so the drag or page step goes on as usual.
+        /// </summary>
+        private void OnSliderPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!PART_Slider.IsKeyboardFocused)
+                PART_Slider.Focus();
         }
 
         private void OnSliderValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
