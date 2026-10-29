@@ -64,8 +64,9 @@ Developer notes for 1.2.111: the Del/Insert hiding, Visuals section, pen-on-over
 VikingLegacy 57dd42bd..f946d5b0, 200003d6, 402c7da1 and 5c33f0a4. Location link rendering mirrors Legacy (a83fce1b, 1df31a12).
 
 Database change, not a client bullet: 697a6185 fixes dbo.MergeStructures (AnnotationDatabase.sqlproj) so merging into a
-structure whose Notes is NULL keeps the merged notes. Users get it when the database project is published to their
-annotation database, whatever client version they run, so it is not listed under a client version. Add a user bullet
+structure whose Notes is NULL keeps the merged notes; DBVersion 87 of Servers/SQL/DatabaseCreateUpdate/CreateUpdateDatabase.sql
+carries the fix to deployed databases. Users get it when that script is run on their annotation database, whatever
+client version they run, so it is not listed under a client version. Add a user bullet
 ("Merging one structure into another keeps the merged structure's notes when the structure you keep had none") only if
 a release note for the database publish is wanted here.
 -->

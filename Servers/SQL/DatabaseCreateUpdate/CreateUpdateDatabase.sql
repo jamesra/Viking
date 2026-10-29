@@ -8565,5 +8565,182 @@ BEGIN TRANSACTION main
 		      N'Stop NetworkStructureIDs hop loop once a hop finds no new cells' ,getDate(),User_ID())
 	 COMMIT TRANSACTION eightysix
 	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 87)))
+	begin
+     print N'SET NOCOUNT ON in RecursiveSelectChildStructureIDs and SelectNetworkDetails; MergeStructures keeps merged notes when the kept Notes is NULL'
+	 BEGIN TRANSACTION eightyseven
+
+	 /*Brings the AnnotationDatabase sqlproj fixes to databases built by this script. Each body is its
+	   latest definition here (RecursiveSelectChildStructureIDs step 55, SelectNetworkDetails step 42,
+	   MergeStructures step 66) with only these changes: a header comment, SET NOCOUNT ON in the first two
+	   (their table-variable inserts and deletes sent a row-count message each), and ISNULL(Notes, N'')
+	   in MergeStructures, whose "Notes + @crlf + ..." turned a NULL kept Notes into NULL and lost the
+	   merged notes. CONCAT_NULL_YIELDS_NULL is a session setting, and SqlClient, ODBC and OLE DB
+	   connections turn it ON, so the OFF database default set at creation does not hide that bug; a
+	   session with it OFF cannot run MergeStructures at all (Msg 1934: its UPDATEs touch indexes that
+	   need it ON).*/
+	 EXEC('-- RecursiveSelectChildStructureIDs: IDs of every descendant (children, grandchildren, ...) of the
+-- given structures, found one generation per loop pass. The seed IDs themselves are not returned.
+-- Parameters: @IDs, the seed structure IDs.
+-- Callers: AnnotationContextProcedures.RecursiveSelectChildStructureIDsAsync (EF Core).
+-- SET NOCOUNT ON: the table-variable inserts and deletes send no row-count messages; only the
+-- result sets reach the client.
+		ALTER PROCEDURE [dbo].[RecursiveSelectChildStructureIDs]
+						-- Add the parameters for the stored procedure here
+						@IDs integer_list READONLY
+			AS
+			BEGIN
+				SET NOCOUNT ON;
+
+				DECLARE @NumSeedStructures int
+				DECLARE @SeedStructures integer_list
+				DECLARE @ChildStructures integer_list
+
+				insert into @SeedStructures select ID from @IDs
+
+				select @NumSeedStructures=count(ID) from @SeedStructures
+
+				while @NumSeedStructures > 0
+				BEGIN
+					DECLARE @NewChildStructures integer_list
+					insert into @NewChildStructures
+						select distinct Child.ID from Structure Child
+							inner join @SeedStructures Parents on Parents.ID = Child.ParentID
+
+					delete from @SeedStructures
+					insert into @SeedStructures select ID from @NewChildStructures
+					select @NumSeedStructures=count(ID) from @SeedStructures
+
+					insert into @ChildStructures select ID from @NewChildStructures
+					delete from @NewChildStructures
+				END
+
+				select ID from @ChildStructures
+			END
+	')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+
+	 EXEC('-- SelectNetworkDetails: three result sets for the network within @Hops links of @IDs
+-- (dbo.SelectNetworkStructureIDs): the network''s structures, their child structures, and the
+-- StructureLinks whose source or target is one of those children.
+-- Parameters: @IDs, the seed structure IDs; @Hops, the number of link hops to follow.
+-- Callers: WCF ConnectomeEntities.SelectNetworkDetails (EF6, reads the three sets with
+-- NextResult); AnnotationContextProcedures.SelectNetworkDetailsAsync (EF Core, first set).
+-- SET NOCOUNT ON: the table-variable inserts and deletes send no row-count messages; only the
+-- result sets reach the client.
+			ALTER PROCEDURE [dbo].[SelectNetworkDetails]
+						-- Add the parameters for the stored procedure here
+						@IDs integer_list READONLY,
+						@Hops int
+			AS
+			BEGIN
+				SET NOCOUNT ON;
+
+				DECLARE @CellsInNetwork integer_list
+				DECLARE @ChildrenInNetwork integer_list
+
+				insert into @CellsInNetwork exec SelectNetworkStructureIDs @IDs, @Hops
+
+				select S.* from Structure S
+					inner join @CellsInNetwork N ON N.ID = S.ID
+
+				select C.* from Structure C
+					inner join @CellsInNetwork N ON N.ID = C.ParentID
+
+				insert into @ChildrenInNetwork
+					select ChildStruct.ID from Structure S
+					inner join @CellsInNetwork N ON S.ID = N.ID
+					inner join Structure ChildStruct ON ChildStruct.ParentID = N.ID
+
+				select SL.* from StructureLink SL
+					where SL.SourceID in (Select ID from @ChildrenInNetwork) OR
+						  SL.TargetID in (Select ID from @ChildrenInNetwork)
+			END
+			')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+
+	 EXEC('-- MergeStructures: merges structure @MergeStructureID into @KeepStructureID. Moves its locations,
+-- child structures and structure links to the keep structure (links between the two are deleted),
+-- appends its Notes to the keep structure''s Notes between BEGIN/END MERGE FROM markers (a NULL keep
+-- Notes counts as empty), then deletes the merged structure.
+-- Callers: gRPC StructureService.Merge (AnnotationContextProcedures.MergeStructuresAsync), WCF
+-- AnnotateService.Merge (ConnectomeDataModel).
+ ALTER PROCEDURE [dbo].[MergeStructures]
+					-- Add the parameters for the stored procedure here
+					@KeepStructureID bigint,
+					@MergeStructureID bigint
+				AS
+				BEGIN
+					-- SET NOCOUNT ON added to prevent extra result sets from
+					-- interfering with SELECT statements.
+					SET NOCOUNT ON;
+
+					declare @MergeNotes nvarchar(max)
+					set @MergeNotes = (select notes from Structure where ID = @MergeStructureID)
+
+					update Location
+					set ParentID = @KeepStructureID
+					where ParentID = @MergeStructureID
+
+					update Structure
+					set ParentID = @KeepStructureID
+					where ParentID = @MergeStructureID
+
+					IF NOT (@MergeNotes IS NULL OR @MergeNotes = '''')
+					BEGIN
+						declare @crlf nvarchar(2)
+						set @crlf = CHAR(13) + CHAR(10)
+
+						declare @MergeHeader nvarchar(80)
+						declare @MergeFooter nvarchar(80)
+						set @MergeHeader = ''*****BEGIN MERGE FROM '' + CONVERT(nvarchar(80), @MergeStructureID) + ''*****''
+						set @MergeFooter = ''*****END MERGE FROM '' + CONVERT(nvarchar(80), @MergeStructureID) + ''*****''
+
+						update Structure
+						set Notes = ISNULL(Notes, N'''') + @crlf + @MergeHeader + @crlf + @MergeNotes + @crlf + @MergeFooter + @crlf
+						where ID = @KeepStructureID
+					END
+
+					-- Delete any structure links directly between the keep and merge structures, a rare occurrence from incorrect annotations
+					delete StructureLink where SourceID = @KeepStructureID AND TargetID = @MergeStructureID
+					delete StructureLink where TargetID = @KeepStructureID AND SourceID = @MergeStructureID
+
+					update StructureLink
+					set TargetID = @KeepStructureID
+					where TargetID = @MergeStructureID
+
+					update StructureLink
+					set SourceID = @KeepStructureID
+					where SourceID = @MergeStructureID
+
+					update Structure
+					set Notes = ''Merged into structure '' + CONVERT(nvarchar(80), @KeepStructureID)
+					where ID = @MergeStructureID
+
+					delete Structure
+					where ID = @MergeStructureID
+				END   ')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+
+	INSERT INTO DBVersion values (87,
+		      N'SET NOCOUNT ON in RecursiveSelectChildStructureIDs and SelectNetworkDetails; MergeStructures keeps merged notes when the kept Notes is NULL' ,getDate(),User_ID())
+	 COMMIT TRANSACTION eightyseven
+	end
 		   
 COMMIT TRANSACTION main
