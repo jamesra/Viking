@@ -312,15 +312,8 @@ namespace WebAnnotation.ViewModel
         {
             ToolStripMenuItem menuShape = new("Change Shape");
 
-            if (TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE)
-            {
-                ToolStripMenuItem menuOpenCurve = new("Curve")
-                {
-                    Tag = Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE
-                };
-                menuOpenCurve.Click += ContextMenu_ConvertShape;
-                menuShape.DropDownItems.Add(menuOpenCurve);
-            }
+            // No "Curve" item: converting a location to an open curve was never implemented (clicking it did nothing),
+            // so it stays hidden until it is (improvement-loop decision D-ChangeShapeCurveStub, 2026-10-29).
 
             if (TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE)
             {
@@ -464,8 +457,6 @@ namespace WebAnnotation.ViewModel
                 case Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE:
                     this.modelObj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
                     LocationActions.UpdateCircleLocationNoSaveCallback(this.modelObj, new Geometry.Vector2(VolumeX, VolumeY), new Geometry.Vector2(X, Y));
-                    break;
-                case Viking.AnnotationServiceTypes.Interfaces.LocationType.OPENCURVE:
                     break;
             }
         }
