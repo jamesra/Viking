@@ -634,14 +634,14 @@
                                 Value="{Binding AutoPolygonizeShimmerBrightness, Mode=TwoWay}"/>
 
                             <Label Grid.Row="1" Grid.Column="0" Content="Shimmer duration (ms):"/>
-                            <vc:SliderWithValueBox
-                                Grid.Row="1"
-                                Grid.Column="1" Grid.ColumnSpan="3"
-                                Minimum="250"
-                                Maximum="1000"
-                                TickFrequency="50"
-                                IsSnapToTickEnabled="True"
-                                ValueFormat="F0"
+                            <vc:SliderWithValueBox
+                                Grid.Row="1"
+                                Grid.Column="1" Grid.ColumnSpan="3"
+                                Minimum="250"
+                                Maximum="1000"
+                                TickFrequency="50"
+                                IsSnapToTickEnabled="True"
+                                ValueFormat="F0"
                                 Value="{Binding AutoPolygonizeShimmerDurationMs, Mode=TwoWay}"/>
 
                         </Grid>
