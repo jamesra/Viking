@@ -4,9 +4,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Viking.DataModel.Annotation;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
+using EfPermittedStructureLink = Viking.DataModel.Annotation.PermittedStructureLink;
+using ProtoPermittedStructureLink = Viking.AnnotationServiceTypes.gRPC.V1.Protos.PermittedStructureLink;
 
 namespace gRPCAnnotationService
 {
@@ -57,9 +60,11 @@ namespace gRPCAnnotationService
         }
 
         /// <summary>
-        /// Applies a batch of insert, update, and delete changes in one save. Each change gets a
-        /// response with <c>Sucess</c> false when its row (keyed by source and target type) does not
-        /// exist. Only <c>Bidirectional</c> can change on update. A delete echoes the request key.
+        /// Applies a batch of insert, update, and delete changes in order, in one save. Each change sees
+        /// the changes before it: <c>Sucess</c> is false, and only that row is skipped, for an insert whose
+        /// row (keyed by source and target type) already exists or is queued, and for an update or delete
+        /// whose row does not exist or was deleted earlier in the batch. Only <c>Bidirectional</c> can
+        /// change on update. A delete echoes the request key.
         /// </summary>
         public override async Task<UpdatePermittedStructureLinksResponse> UpdatePermittedStructureLinks(UpdatePermittedStructureLinksRequest request, ServerCallContext context)
         {
@@ -78,26 +83,29 @@ namespace gRPCAnnotationService
                             row_response.Sucess = true;
                             break;
                         case DBAction.Insert:
+                            if (await FindLiveAsync(r.Result, ct) != null)
+                            {
+                                row_response.Sucess = false;
+                                break;
+                            }
                             var inserted = await _context.PermittedStructureLinks.AddAsync(r.Result.ToPermittedStructureLink(), ct);
                             row_response.Sucess = true;
                             row_response.Result = inserted.Entity.ToProtobufMessage();
                             break;
                         case DBAction.Update:
-                            var psl = await _context.PermittedStructureLinks.FirstOrDefaultAsync(
-                                row => row.SourceTypeId == r.Result.SourceTypeId && row.TargetTypeId == r.Result.TargetTypeId, ct);
+                            var psl = await FindLiveAsync(r.Result, ct);
                             if (psl == null)
                             {
                                 row_response.Sucess = false;
                                 break;
                             }
+                            // Tracked (stored, or queued by this batch), so change tracking saves the new value.
                             psl.Bidirectional = r.Result.Bidirectional;
-                            var EF_Result = _context.PermittedStructureLinks.Update(psl);
                             row_response.Sucess = true;
-                            row_response.Result = EF_Result.Entity.ToProtobufMessage();
+                            row_response.Result = psl.ToProtobufMessage();
                             break;
                         case DBAction.Delete:
-                            var EF_remove_row = await _context.PermittedStructureLinks.FirstOrDefaultAsync(
-                                row => row.SourceTypeId == r.Result.SourceTypeId && row.TargetTypeId == r.Result.TargetTypeId, ct);
+                            var EF_remove_row = await FindLiveAsync(r.Result, ct);
                             if (EF_remove_row == null)
                             {
                                 row_response.Sucess = false;
@@ -118,6 +126,16 @@ namespace gRPCAnnotationService
                 return response;
             }
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(UpdatePermittedStructureLinks), e, context); }
+        }
+
+        /// <summary>
+        /// The link with this key as the batch so far leaves it: Find looks in the change tracker before the
+        /// database, so a row queued by an earlier insert is found, and one queued for delete counts as absent.
+        /// </summary>
+        private async Task<EfPermittedStructureLink> FindLiveAsync(ProtoPermittedStructureLink key, CancellationToken ct)
+        {
+            var row = await _context.PermittedStructureLinks.FindAsync(new object[] { key.SourceTypeId, key.TargetTypeId }, ct);
+            return row == null || _context.Entry(row).State == EntityState.Deleted ? null : row;
         }
     }
 }
