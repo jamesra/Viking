@@ -93,8 +93,7 @@ namespace Viking.UI.WPF.Forms
             }
 
             _open = new ChangelogWindow(ChangelogMarkdown.Parse(markdown), title, intro);
-            System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(_open);
-            _open.Show();
+            ModelessWindow.ShowFromWinForms(_open);
         }
 
         private void OnPreviewKeyDown(object sender, KeyEventArgs e)

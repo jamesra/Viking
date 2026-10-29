@@ -351,7 +351,8 @@ namespace WebAnnotation
                     RestoreOpacityPreview();
             };
 
-            _preferencesDialog.Show(); // Modeless dialog
+            // Modeless, and given the keyboard: a plain Show() from the Forms loop gets no typed digits or arrow keys
+            Viking.UI.WPF.Forms.ModelessWindow.ShowFromWinForms(_preferencesDialog);
         }
 
         /// <summary>

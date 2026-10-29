@@ -3580,7 +3580,8 @@ namespace Viking.UI.Controls
             // Cancel has already reverted the view model; push those values back over the live preview.
             _viewerPreferencesDialog.CancelClicked += (s, args) => ApplySectionNumberOverlaySettings(viewModel);
 
-            _viewerPreferencesDialog.Show(); // Modeless dialog
+            // Modeless, and given the keyboard: a plain Show() from the Forms loop gets no typed digits or arrow keys
+            Viking.UI.WPF.Forms.ModelessWindow.ShowFromWinForms(_viewerPreferencesDialog);
         }
 
         /// <summary>
