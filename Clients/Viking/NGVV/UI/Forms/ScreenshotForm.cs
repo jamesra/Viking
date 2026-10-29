@@ -72,12 +72,17 @@ namespace Viking.UI.Forms
             this.Downsample = ScreenshotForm.UseViewerDownsampleChecked ? Downsample : ScreenshotForm.LastDownsampleValue;
 
             InitializeComponent();
+
+            //The viewer zooms in past 1:1, so the box must show downsamples below 1 down to the viewer's own minimum
+            this.numDownsample.Minimum = (decimal)ViewerMagnificationSteps.MinDownsample;
+            this.numDownsample.DecimalPlaces = 2;
         }
 
         private void ScreenshotForm_Load(object sender, EventArgs e)
         {
             this.checkUseViewerDownsample.Checked = ScreenshotForm.UseViewerDownsampleChecked;
-            this.numDownsample.Value = (decimal)this.Downsample;
+            //A pinch zoom sets the camera directly and can pass the viewer's limits; show the nearest end of the box's range
+            this.numDownsample.Value = Math.Min(this.numDownsample.Maximum, Math.Max(this.numDownsample.Minimum, (decimal)this.Downsample));
             this.numX.Value = (decimal)Math.Round(this.Rect.Left + (this.Rect.Width / 2));
             this.numY.Value = (decimal)Math.Round(this.Rect.Bottom + (this.Rect.Height / 2));
             this.numWidth.Value = (decimal)Math.Round(this.Rect.Width / this.Downsample);
