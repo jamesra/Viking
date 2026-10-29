@@ -1272,9 +1272,6 @@ namespace Viking.UI.Controls
 
             //            this.CurrentVolumeTransform = null; 
 
-            Scene? originalScene = this.Scene;
-
-
             foreach (SectionViewModel S in State.volume.SectionViewModels.Values.Where(S => S.Number >= FirstSection && S.Number <= LastSection))
             {
                 string path = ExportPath + S.VolumeViewModel.Name + "/" + S.Number.ToString("D3") + "/Tiles/" + Downsample.ToString("D3") + "/";
@@ -1398,10 +1395,8 @@ namespace Viking.UI.Controls
 
                 }
 
-                //Wait for this section's tiles: a tile still rendering would set this.Section to this section again after the
-                //next section's tiles, or the restore when the export ends, had set it.
-                while (listTasks.Count > 0)
-                    listTasks.Remove(await Task.WhenAny(listTasks));
+                //Drain this section's tiles, or one still rendering switches this.Section back after the next section or the restore.
+                while (listTasks.Count > 0) listTasks.Remove(await Task.WhenAny(listTasks));
 
                 System.IO.StreamWriter? stream = null;
 
