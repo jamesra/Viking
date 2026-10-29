@@ -135,7 +135,7 @@ namespace GeometryTests
             Assert.AreEqual(50, square.Circle.Center.X, 0.2);
             Assert.AreEqual(50, square.Circle.Center.Y, 0.2);
             Assert.AreEqual(square.Circle.Radius / 2.0, square.FontSize, 1e-9);
-            Assert.AreEqual(0, square.Markers.Count);
+            Assert.AreEqual(4, square.Markers.Count, "The circle placement lays its markers out too");
 
             Vector2[] rim = [.. Enumerable.Range(0, 64).Select(i => new Vector2(50 * Math.Cos(i * Math.PI / 32), 50 * Math.Sin(i * Math.PI / 32)))];
             Polygon disc = new([.. rim, rim[0]]);
@@ -164,21 +164,219 @@ namespace GeometryTests
             Assert.AreEqual(2, placement.Markers.Count(m => m.IsUp));
         }
 
+        /// <summary>
+        /// Markers that fit no packing, not even the smallest markers in the most rows, go to free space: inside the
+        /// polygon, clear of the text, after the packed ones, and they cost the placement score.
+        /// </summary>
         [TestMethod]
         public void ExtraMarkersSpillInsideAndClearOfText()
         {
             Polygon box = Box(0, 0, 120, 20);
-            LabelPlacement placement = new LabelLayout(box).Fit(Content(down: 10));
+            LabelPlacement placement = new LabelLayout(box).Fit(Content(down: 60));
             Assert.AreEqual(LabelPlacementKind.Run, placement.Kind);
-            Assert.AreEqual(10, placement.Markers.Count);
+            Assert.AreEqual(60, placement.Markers.Count);
+            Assert.IsTrue(placement.FreeMarkerCount > 0, "Some markers should not fit at the run's ends");
+            Assert.AreEqual(LabelLayout.MinimumMarkerScale, placement.Packing.Scale, "Free space only after the smallest packing");
+            Assert.IsTrue(placement.MarkerReadability < 1 - (LabelLayout.MarkerShrinkCost * (1 - LabelLayout.MinimumMarkerScale)) + 1e-12);
 
-            MarkerSlot[] spilled = [.. placement.Markers.Where(m => Math.Abs(placement.Region.WorldToLocal(m.Center).Y) > 1e-9)];
-            Assert.IsTrue(spilled.Length > 0, "Some markers should not fit at the run's ends");
-            foreach (MarkerSlot marker in spilled)
+            RingSegmentSet rings = new(box);
+            foreach (MarkerSlot marker in placement.Markers.Skip(placement.Markers.Count - placement.FreeMarkerCount))
             {
-                Assert.IsTrue(box.Contains(marker.Center), $"Marker {marker.Circle} outside the polygon");
+                Assert.IsTrue(rings.SignedDistance(marker.Center.X, marker.Center.Y) >= marker.Radius - 1e-9, $"Marker {marker.Circle} crosses the outline");
                 Assert.IsTrue(placement.TextBox.SignedDistance(marker.Center) > 0, $"Marker {marker.Circle} inside the text box");
             }
+        }
+
+        /// <summary>Rows like the screenshot's: "CB OFF" (structure label), "CNR" (tags), "C 45733" (ID), in Arial widths.</summary>
+        private static LabelContent ScreenshotContent(int up, int down) =>
+            new([new LabelRow(3.25, 0.5), new LabelRow(1.91, 0.25), new LabelRow(3.36, 1.0)], up, down);
+
+        /// <summary>True when no two of <paramref name="markers"/> overlap.</summary>
+        private static bool Disjoint(System.Collections.Generic.IReadOnlyList<MarkerSlot> markers)
+        {
+            for (int i = 0; i < markers.Count; i++)
+            {
+                for (int j = i + 1; j < markers.Count; j++)
+                {
+                    if (Vector2.Distance(markers[i].Center, markers[j].Center) < markers[i].Radius + markers[j].Radius - 1e-9)
+                        return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Six markers do not fit one row at the ends of a level 110 × 40 run without costing more than 40% of the font
+        /// (W/9.74 against 20.8), but two staggered rows of full-size markers do (W/7.74): each end holds its three in a
+        /// zigzag, the second row half a marker in and √3/2 of a marker across, still inside the run.
+        /// </summary>
+        [TestMethod]
+        public void LevelRunStaggersMarkersThatOverflowOneRow()
+        {
+            Polygon box = Box(0, 0, 110, 40);
+            LabelPlacement placement = new LabelLayout(box).Fit(ScreenshotContent(up: 3, down: 3), LabelLayout.NeverRotate);
+            Assert.AreEqual(LabelPlacementKind.Run, placement.Kind);
+            Assert.AreEqual(2, placement.Packing.Rows);
+            Assert.AreEqual(1.0, placement.Packing.Scale);
+            Assert.AreEqual(0, placement.FreeMarkerCount);
+            Assert.AreEqual(1.0, placement.MarkerReadability, 1e-12, "Full-size markers cost nothing");
+
+            OrientedRectangle region = placement.Region;
+            double textLeft = region.WorldToLocal(placement.TextBox.Center).X - (placement.TextBox.Width / 2.0);
+            double textRight = textLeft + placement.TextBox.Width;
+            double d = placement.FontSize;
+            foreach (MarkerSlot marker in placement.Markers)
+            {
+                Vector2 local = region.WorldToLocal(marker.Center);
+                Assert.AreEqual(LabelLayout.EndMarkerRadius * d, marker.Radius, 1e-9);
+                Assert.AreEqual(LabelLayout.MarkerRowSpacing * d / 2.0, Math.Abs(local.Y), 1e-9, "Two rows either side of the axis");
+                Assert.IsTrue(Math.Abs(local.Y) + marker.Radius <= (region.Height / 2.0) + 1e-9, "Marker sticks out of the run");
+                if (marker.IsUp)
+                    Assert.IsTrue(local.X - marker.Radius >= textRight - 1e-9, $"Up marker at {local.X} overlaps text ending at {textRight}");
+                else
+                    Assert.IsTrue(local.X + marker.Radius <= textLeft + 1e-9, $"Down marker at {local.X} overlaps text starting at {textLeft}");
+            }
+
+            Assert.IsTrue(Disjoint(placement.Markers), "Packed markers overlap");
+            Assert.IsTrue(placement.FontSize >= LabelLayout.MarkerFontRetention * LabelLayout.RunFontSize(110, 40, placement.Content, 0) - 1e-9);
+
+            // One row of text in a 22-thick run: the two-row block (1.77 fonts) is thicker than the text (1.1), so the
+            // font is set by the block's height, 22 / 1.77, and the staggered markers stay inside the run.
+            LabelPlacement thin = new LabelLayout(Box(0, 0, 110, 22)).Fit(Content(up: 3, down: 3), LabelLayout.NeverRotate);
+            Assert.AreEqual(LabelPlacementKind.Run, thin.Kind);
+            Assert.AreEqual(2, thin.Packing.Rows);
+            Assert.AreEqual(1.0, thin.Packing.Scale);
+            Assert.AreEqual(thin.Region.Height / (LabelLayout.MarkerRowSpacing + (2 * LabelLayout.EndMarkerRadius)), thin.FontSize, 1e-9);
+            foreach (MarkerSlot marker in thin.Markers)
+                Assert.IsTrue(Math.Abs(thin.Region.WorldToLocal(marker.Center).Y) + marker.Radius <= (thin.Region.Height / 2.0) + 1e-9, "Marker sticks out of the run");
+        }
+
+        /// <summary>
+        /// Sixteen markers in the same run fit no full-size packing, so they shrink (here to 0.75 in four rows): all at
+        /// the ends, none in free space, and the placement's score pays for the smaller markers.
+        /// </summary>
+        [TestMethod]
+        public void LevelRunShrinksMarkersThatOverflowStaggeredRows()
+        {
+            Polygon box = Box(0, 0, 110, 40);
+            LabelPlacement placement = new LabelLayout(box).Fit(ScreenshotContent(up: 8, down: 8), LabelLayout.NeverRotate);
+            Assert.AreEqual(LabelPlacementKind.Run, placement.Kind);
+            Assert.IsTrue(placement.Packing.Scale < 1, $"Packing {placement.Packing}");
+            Assert.IsTrue(placement.Packing.Scale >= LabelLayout.MinimumMarkerScale);
+            Assert.IsTrue(placement.Packing.Rows > 2, $"Packing {placement.Packing}");
+            Assert.AreEqual(0, placement.FreeMarkerCount);
+            Assert.AreEqual(1 - (LabelLayout.MarkerShrinkCost * (1 - placement.Packing.Scale)), placement.MarkerReadability, 1e-12);
+
+            RingSegmentSet rings = new(box);
+            foreach (MarkerSlot marker in placement.Markers)
+            {
+                Assert.AreEqual(LabelLayout.EndMarkerRadius * placement.Packing.Scale * placement.FontSize, marker.Radius, 1e-9);
+                Assert.IsTrue(rings.SignedDistance(marker.Center.X, marker.Center.Y) >= marker.Radius - 1e-9, $"Marker {marker.Circle} crosses the outline");
+            }
+
+            Assert.IsTrue(Disjoint(placement.Markers), "Packed markers overlap");
+            Assert.AreEqual(8, placement.Markers.Count(m => m.IsUp));
+        }
+
+        /// <summary>
+        /// In the circle, up-links go above the text and down-links below, as circle annotations draw them: full size on
+        /// the 0.75 R arc with radius R/6 while seven fit a side. More than seven shrink and stagger into further rows,
+        /// still each in its own half, inside the polygon and clear of one another.
+        /// </summary>
+        [TestMethod]
+        public void CirclePutsUpLinksAboveAndDownLinksBelow()
+        {
+            LabelLayout square = new(Box(0, 0, 100, 100));
+            LabelPlacement few = square.Fit(Content(up: 3, down: 2));
+            Assert.AreEqual(LabelPlacementKind.Circle, few.Kind);
+            Circle c = few.Circle;
+            Assert.AreEqual(5, few.Markers.Count);
+            Assert.AreEqual(1.0, few.Packing.Scale);
+            foreach (MarkerSlot marker in few.Markers)
+            {
+                Assert.AreEqual(c.Radius * LabelLayout.CircleMarkerRadius, marker.Radius, 1e-9);
+                Assert.AreEqual(c.Radius * LabelLayout.CircleMarkerArc, Vector2.Distance(marker.Center, c.Center), 1e-9);
+                double y = marker.Center.Y - c.Center.Y;
+                Assert.IsTrue(marker.IsUp ? y > c.Radius * 0.5 : y < -c.Radius * 0.5, $"Marker {marker.Circle} up={marker.IsUp}");
+            }
+
+            Assert.AreEqual(c.Center.X, few.Markers.Single(m => m.IsUp && Math.Abs(m.Center.X - c.Center.X) < 1e-9).Center.X, 1e-9,
+                "Three up-links centre one on the vertical");
+
+            Vector2[] rim = [.. Enumerable.Range(0, 96).Select(i => new Vector2(50 * Math.Cos(i * Math.PI / 48), 50 * Math.Sin(i * Math.PI / 48)))];
+            Polygon disc = new([.. rim, rim[0]]);
+            LabelLayout round = new(disc);
+            RingSegmentSet rings = new(disc);
+            LabelPlacement many = round.Fit(Content(up: 14, down: 9));
+            Assert.AreEqual(LabelPlacementKind.Circle, many.Kind);
+            Assert.AreEqual(23, many.Markers.Count);
+            Assert.AreEqual(0, many.FreeMarkerCount);
+            Assert.IsTrue(many.Packing.Scale < 1 && many.Packing.Rows >= 2, $"Packing {many.Packing}");
+            foreach (MarkerSlot marker in many.Markers)
+            {
+                double y = marker.Center.Y - many.Circle.Center.Y;
+                Assert.IsTrue(marker.IsUp ? y - marker.Radius >= -1e-9 : y + marker.Radius <= 1e-9, $"Marker {marker.Circle} crosses into the other half");
+                Assert.IsTrue(rings.SignedDistance(marker.Center.X, marker.Center.Y) >= marker.Radius - 1e-9, $"Marker {marker.Circle} crosses the outline");
+            }
+
+            Assert.IsTrue(Disjoint(many.Markers), "Circle markers overlap");
+            Assert.IsTrue(many.MarkerReadability < 1);
+        }
+
+        /// <summary>
+        /// James's report, RC2 location 386775 (cell C 45733, section 645, two links down to 643 and three up to 646):
+        /// with the label level, one row at the ends held only four markers (five cost 42% of the font, beyond
+        /// <see cref="LabelLayout.MarkerFontRetention"/>), so the fifth went to the deepest free spot, the bulb at the
+        /// cell's other end, over 1100 units from the other up-links. Now the level label staggers both ends into two
+        /// rows and keeps all five beside it, down-links left and up-links right, inside the cell. Outline: the
+        /// location's control points (offset by 46000, 62000), smoothed as the viewer does.
+        /// </summary>
+        [TestMethod]
+        public void ScreenshotCellKeepsAllFiveMarkersBesideTheLevelLabel()
+        {
+            double[] xy =
+            [
+                1491, 790, 1435, 814, 1407, 817, 1397, 814, 1316, 733, 1290, 719, 1213, 709, 1097, 710,
+                1060, 716, 1016, 748, 1014, 758, 1002, 768, 997, 788, 973, 819, 978, 893, 955, 940,
+                916, 950, 848, 920, 755, 914, 692, 963, 604, 994, 580, 1018, 540, 1083, 527, 1111,
+                516, 1161, 508, 1170, 472, 1196, 413, 1225, 291, 1264, 284, 1278, 277, 1333, 252, 1351,
+                234, 1356, 125, 1344, 55, 1358, 0, 1384, -79, 1391, -151, 1388, -180, 1380, -202, 1363,
+                -230, 1311, -233, 1285, -213, 1249, -187, 1172, -152, 1101, -148, 1017, -118, 974, -21, 929,
+                51, 839, 148, 763, 178, 747, 420, 719, 467, 704, 496, 670, 516, 633, 525, 584,
+                523, 522, 533, 499, 679, 432, 779, 347, 838, 328, 872, 295, 926, 219, 948, 203,
+                1056, 235, 1220, 210, 1285, 211, 1355, 225, 1405, 249, 1530, 278, 1532, 306, 1616, 446,
+                1618, 460, 1596, 538, 1526, 671, 1524, 703, 1491, 789,
+            ];
+            Vector2[] ring = [.. Enumerable.Range(0, xy.Length / 2).Select(i => new Vector2(46000 + xy[2 * i], 62000 + xy[(2 * i) + 1]))];
+            Polygon cell = new Polygon([.. ring, ring[0]]).Smooth(3);
+            LabelLayout layout = new(cell);
+            RingSegmentSet rings = new(cell);
+            LabelContent content = ScreenshotContent(up: 3, down: 2);
+
+            foreach (double gain in new[] { LabelLayout.NeverRotate, LabelLayout.DefaultRotationGain })
+            {
+                LabelPlacement placement = layout.Fit(content, gain);
+                Assert.AreEqual(LabelPlacementKind.Run, placement.Kind, $"G = {gain}");
+                Assert.AreEqual(5, placement.Markers.Count);
+                Assert.AreEqual(0, placement.FreeMarkerCount, $"G = {gain}: every marker beside the label");
+                Assert.AreEqual(1.0, placement.Packing.Scale, $"G = {gain}: full-size markers");
+
+                OrientedRectangle region = placement.Region;
+                double textCenter = region.WorldToLocal(placement.TextBox.Center).X;
+                foreach (MarkerSlot marker in placement.Markers)
+                {
+                    Assert.IsTrue(rings.SignedDistance(marker.Center.X, marker.Center.Y) >= marker.Radius, $"G = {gain}: marker {marker.Circle} crosses the outline");
+                    double u = region.WorldToLocal(marker.Center).X;
+                    Assert.IsTrue(marker.IsUp ? u > textCenter : u < textCenter, $"G = {gain}: marker on the wrong side");
+                    Assert.IsTrue(Math.Abs(u) + marker.Radius <= (region.Width / 2.0) + 1e-9, $"G = {gain}: marker off the run's end");
+                }
+            }
+
+            LabelPlacement level = layout.Fit(content, LabelLayout.NeverRotate);
+            Assert.AreEqual(0, level.Angle, 1e-12);
+            Assert.AreEqual(2, level.Packing.Rows, "The level label staggers its markers into two rows");
+            Assert.AreEqual(3, level.Markers.Count(m => m.IsUp));
         }
 
         /// <summary>

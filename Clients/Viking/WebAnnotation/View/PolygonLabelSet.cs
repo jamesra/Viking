@@ -33,9 +33,10 @@ namespace WebAnnotation.View
 
         /// <summary>
         /// Fits <paramref name="obj"/>'s label and its <paramref name="links"/> into <paramref name="layout"/>: in the
-        /// inscribed circle as circle annotations are drawn, or along a run with down links at its left end and up links
-        /// at its right end. How readily the run may tilt is the Label rotation preference, read on every call so a
-        /// rebuild picks up a change.
+        /// inscribed circle as circle annotations are drawn (up links above the text, down links below), or along a run
+        /// with down links at its left end and up links at its right end. The markers are packed in staggered rows, and
+        /// shrunk, when one row does not fit (see <see cref="LabelLayout.PackingOrder"/>). How readily the run may tilt
+        /// is the Label rotation preference, read on every call so a rebuild picks up a change.
         /// </summary>
         /// <param name="previousPlacement">
         /// The placement of the labels being replaced, from this same layout, or null. It is kept while it still holds the
@@ -55,18 +56,18 @@ namespace WebAnnotation.View
             StructurePlacedLabels placed = new(obj);
             LabelPlacement placement = layout.Fit(placed.Content(up, down), Global.AnnotationSettings.LabelRotationGain, previousPlacement);
             StructureLabelsBase labels;
-            OverlappedLinkCircleView? linkView;
             if (placement.Kind == LabelPlacementKind.Run)
             {
                 placed.Place(placement);
                 labels = placed;
-                linkView = links.Count == 0 ? null : new OverlappedLinkCircleView(placement, id, z, links);
             }
             else
             {
                 labels = new StructureCircleLabels(obj, placement.Circle);
-                linkView = links.Count == 0 ? null : new OverlappedLinkCircleView(placement.Circle, id, z, links);
             }
+
+            // Both kinds take the markers' slots from the placement, which checked each against the outline and holes
+            OverlappedLinkCircleView? linkView = links.Count == 0 ? null : new OverlappedLinkCircleView(placement, id, z, links);
 
             labels.TransitionFrom(previousLabels);
             return new PolygonLabelSet(labels, linkView, placement);

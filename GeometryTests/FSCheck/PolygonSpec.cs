@@ -293,6 +293,56 @@ namespace GeometryTests
                 nameof(LabelPlacementStaysInside));
 
         /// <summary>
+        /// For any rows of text and any number of links up and down, at any Label rotation, every marker the layout
+        /// places is wholly inside the polygon and clear of its holes, there is one per link with its direction, and the
+        /// packed ones overlap neither one another nor the text: a run's beside its text box, the circle's each in its own
+        /// half (up-links above the centre, down-links below).
+        /// </summary>
+        [TestMethod]
+        public void MarkersStayInsideAndClearOfHoles() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbHoledPolygon(), Arb.From(Gen.Choose(0, 1000).ArrayOf(5)),
+                    (p, choice) =>
+                    {
+                        // Links 0 to 12 each way, 1 to 3 rows of width 1 to 25 at scales 0.25, 0.5 or 1, any rotation setting
+                        int up = choice[0] % 13, down = choice[1] % 13;
+                        double[] scales = [0.25, 0.5, 1.0];
+                        LabelRow[] rows = [.. Enumerable.Range(0, 1 + (choice[2] % 3))
+                            .Select(i => new LabelRow(1 + ((choice[3] + (7 * i)) % 25), scales[(choice[3] + i) % 3]))];
+                        LabelContent content = new(rows, up, down);
+                        double gain = LabelLayout.RotationGainForSetting(choice[4] % 101 / 100.0);
+
+                        LabelLayout layout = new(p);
+                        RingSegmentSet rings = new(p);
+                        double slack = LayoutSlack(p);
+                        LabelPlacement placement = layout.Fit(content, gain);
+
+                        IReadOnlyList<MarkerSlot> markers = placement.Markers;
+                        MarkerSlot[] packed = [.. markers.Take(markers.Count - placement.FreeMarkerCount)];
+                        bool counted = markers.Count == content.MarkerCount && markers.Count(m => m.IsUp) == up;
+                        bool inside = markers.All(m => m.Radius > 0 && rings.SignedDistance(m.Center.X, m.Center.Y) >= m.Radius - slack);
+
+                        bool apart = true;
+                        for (int i = 0; i < packed.Length; i++)
+                        {
+                            for (int j = i + 1; j < packed.Length; j++)
+                                apart &= Vector2.Distance(packed[i].Center, packed[j].Center) >= packed[i].Radius + packed[j].Radius - slack;
+                        }
+
+                        bool clearOfText = placement.Kind == LabelPlacementKind.Run
+                            ? packed.All(m => placement.TextBox.SignedDistance(m.Center) >= m.Radius - slack)
+                            : packed.All(m => m.IsUp
+                                ? m.Center.Y - m.Radius >= placement.Circle.Center.Y - slack
+                                : m.Center.Y + m.Radius <= placement.Circle.Center.Y + slack);
+
+                        return counted.Label("one marker per link, with its direction")
+                            .And(inside.Label("every marker inside the polygon and clear of holes"))
+                            .And(apart.Label("packed markers do not overlap"))
+                            .And(clearOfText.Label("packed markers clear of the text"));
+                    }),
+                nameof(MarkersStayInsideAndClearOfHoles));
+
+        /// <summary>
         /// Refitting with the previous placement passed back returns that same placement when nothing changed, and after
         /// the text width, link counts or rotation gain change it returns either the previous placement, only while its
         /// font still holds the text and its markers match the links, or a fresh fit for the new content; the result is
