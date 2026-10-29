@@ -24,7 +24,7 @@ Keep each report reviewable in a few minutes:
 4. **Open decisions:** each pending entry in `decisions` with its id and options.
 5. **Reworked:** loop commits you reverted or rewrote, and the pattern now avoided.
 6. **Proposals:** each proposal in full, protected areas first, then unbenchmarkable performance work, then deferred refactors.
-7. **Follow-ups:** `baselineFailures` and `flaky` tests, `syncSkips` (repos that could not fast-forward and why), docs mismatches found but not fixed, categories that came up empty, and the current top five hotspots.
+7. **Follow-ups:** `mirrorPending` shas still to port to the WCF client, `baselineFailures` and `flaky` tests, `syncSkips` (repos that could not fast-forward and why), docs mismatches found but not fixed, categories that came up empty, and the current top five hotspots.
 
 ## Learning from your changes
 

@@ -109,6 +109,10 @@ The main session only launches the subagents, talks to the user when needed, and
 4. When the user asks for a report, launch a scout-model subagent to write a `requested` report; the loop keeps running. When the user asks to stop, set `stop` in the ledger, call `ScheduleWakeup` with `stop: true`, launch a subagent for the `final` report, and schedule nothing.
 5. A wake that fires after `stop` was recorded writes nothing new and does not re-schedule. The first wake that starts after the deadline writes the `final` report (unless one already exists for this run), sets `stop`, and does not re-schedule. A wake that fires before `nextWakeAt` ends silently and re-schedules.
 
+## Mirror to the WCF client
+
+Fixes in code the WCF client in `d:\src\git\VikingLegacy` also has (shared libraries such as Geometry, AnnotationVizLib and the WebAnnotation views, or the same logic in its WCF stores) belong in Legacy too, but this loop never edits Legacy. After such a commit, append `{ sha, summary, legacyPaths }` to `mirrorPending` in the ledger, list it in every report until it is gone, and tell the user once so the client loop or a client session can port it. Remove an entry when its port lands on Legacy (search Legacy's log for the sha).
+
 ## Steering
 
 `d:\src\git\VikingSlackUsersAI\Automatic Improvement Reports\Server\STEERING.md` is the user's; the loop reads it every wake and never edits it. Lines it understands:
@@ -144,7 +148,7 @@ Record every answer with its source in `answerSource`: `chat <ISO date>` for an 
   "rejected": [], "deferred": [], "proposals": [],
   "decisions": [{ "id": "", "question": "", "options": [], "askedAt": "", "answer": null, "answerSource": null }],
   "buildBaseline": [], "warningBaseline": {}, "complexity": [],
-  "reworked": [],
+  "reworked": [], "mirrorPending": [],
   "lastSync": {}, "syncSkips": [], "modelSubstitutions": [],
   "lastReportAt": null, "reports": []
 }
