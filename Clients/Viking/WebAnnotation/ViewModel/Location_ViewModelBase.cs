@@ -785,7 +785,12 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         private void UpdateLocationShapeFromVolumePolygon(Polygon volume_poly)
         {
-            LocationShapeUpdate.ApplyVolumePolygon(modelObj, volume_poly, AnnotationOverlay.CurrentOverlay.Parent);
+            Viking.UI.Controls.SectionViewerControl parent = AnnotationOverlay.CurrentOverlay.Parent;
+            if (LocationShapeUpdate.ApplyVolumePolygon(modelObj, volume_poly, parent))
+            {
+                // An accepted manual polygon merges into overlapping annotations of the same structure, as auto-segmentation accept does.
+                WebAnnotation.UI.AutoPolygonize.SameStructureMerge.MergeOverlappingSiblings(modelObj, parent);
+            }
         }
 
         protected void ContextMenu_OnOffEdge(object sender, EventArgs e)

@@ -776,18 +776,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
             }
 
-            IReadOnlyList<long> toLink = LocationSiblingMerge.UniqueNeighborIdsToTransfer(
-                survivor.LinksCopy,
-                proposal.LocationIds,
-                victims.Select(victim => (IReadOnlyCollection<long>)victim.LinksCopy));
-            foreach (long neighborId in toLink)
-                Store.LocationLinks.CreateLink(survivorId, neighborId);
-
-            foreach (LocationObj victim in victims)
-                Store.Locations.Remove(victim);
-
-            if (victims.Count > 0)
-                AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+            SameStructureMerge.TransferLinksAndRemove(survivor, victims, proposal.LocationIds);
 
             foreach (long id in proposal.LocationIds)
                 cache.Remove(id);

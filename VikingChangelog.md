@@ -23,6 +23,8 @@ Documentation/source/Client/versionhistory.rst.
 
 ## 1.2.135 — not yet released
 
+* A polygon you accept from **Segment to Polygon** or **Resegment** now merges into any annotation of the same structure on the same section that it overlaps, as accepting an auto-segmentation does. The lowest-numbered of them is kept (the one with the most links wins first), it gets the union outline, and the location links of the others move to it.
+<!-- SameStructureMerge reuses LocationSiblingMerge.ChooseSurvivorId (most links, then lowest ID) and the link transfer from AutoCirclePolygonizeController.Accept. A brand-new structure from Tab has no siblings, so it is not merged; a linked location made by segmentation is not merged either. -->
 * Fix: an opacity changed in Annotation Preferences could jump back to its old value after **OK** on the annotation that was under the mouse when the dialog opened, once the mouse moved off it.
 * Fix: after **Export Frames** or **Export Tiles** (Commands menu), the viewer stayed on the last section exported instead of the section you were viewing. It now goes back to that section when the export finishes or is canceled.
 <!-- RenderSceneToTexture switches this.Section per tile and never restored it. The frame and tile exports now restore the viewed section once, through TaskChaining.RestoreAfterAsync, after every tile has drained (ExportTiles now waits for each section's tiles before the next). -->
@@ -36,6 +38,8 @@ Documentation/source/Client/versionhistory.rst.
 <!-- Decision D-ChangeShapeCurveStub (2026-10-29): Location_ViewModelBase._AddConvertShapeMenus no longer adds the item, and ContextMenu_ConvertShape lost its empty OPENCURVE case. -->
 * Polygon labels tilt only when that makes the text clearly larger: the steeper the tilt, the larger the text must get, so compact cells keep level labels while long, thin processes still get text along them. Set how readily labels tilt with **Annotation Preferences > Visuals > Label rotation**; slide it to **Never** for level labels everywhere, or toward **Freely** for more tilting. The line under the slider says what the setting does, and labels move as you slide.
 <!-- LabelLayout scores a run at angle θ as F / (1 + G·|sin θ|), replacing the flat 0.9 for any tilt; G = (1 − w)·1 for the slider w, default 0.5; w = 0 considers level runs only. Live relayout: AnnotationMenu.RequestLabelRelayout, throttled to one pass per 50 ms. Publication notes 2026-10-29. -->
+* You can now type a value in the box beside any slider in **Annotation Preferences** and **Viewer Preferences**. Press **Enter** or click elsewhere to use it; the slider moves to match. A number outside the slider's range is set to the nearest end, text that is not a number puts back the old value, and **Esc** undoes typing you have not yet entered. Either "0.5" or "0,5" works. Sliders with a circle preview show their unit (px or nm) beside the box; **Auto Polygonize Min Size** now shows just the number of nanometers in its box.
+<!-- Decision D-SliderEditBox (2026-10-29): the boxes were IsReadOnly="True" (and CircleSizePreviewSlider showed a derived OneWay string). Every pair is now Viking.UI.WPF.Controls.SliderWithValueBox; text rules in SliderValueText (VikingCoreTests). -->
 
 
 ## 1.2.134 — 2026-10-28 (Viking Test, unsigned)
