@@ -29,6 +29,8 @@
 		<ProjectReference Include="..\..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
 		<ProjectReference Include="..\WebAnnotationModel\WebAnnotationModel.csproj" />
 		<ProjectReference Include="..\WebAnnotationViewModels\WebAnnotationViewModels.csproj" />
+		<!-- SliderWithValueBox (Annotation Preferences, CircleSizePreviewSlider). In Legacy it comes through WebAnnotationModel -> VikingCore. -->
+		<ProjectReference Include="..\Viking.UI.WPF\Viking.UI.WPF.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Extended.Wpf.Toolkit" Version="4.0.1" />

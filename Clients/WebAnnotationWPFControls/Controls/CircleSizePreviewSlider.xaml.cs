@@ -6,7 +6,8 @@ using System.Windows.Media;
 namespace WebAnnotation.WPF.Controls
 {
     /// <summary>
-    /// Slider plus a preview of the selected cutoff. Pixel modes draw only the circle
+    /// Slider with an editable number box (<see cref="Viking.UI.WPF.Controls.SliderWithValueBox"/>, in the units of
+    /// <see cref="PreviewMode"/>) plus a preview of the selected cutoff. Pixel modes draw only the circle
     /// (on-screen size). NanometerRadius stores Value in nanometers and sizes the
     /// preview with <see cref="NanometersPerPixel"/>. PercentOfScreen draws a circle
     /// whose area is Value% of the live Viking view, at that same pixel size on this page.
@@ -48,11 +49,11 @@ namespace WebAnnotation.WPF.Controls
         public static readonly DependencyProperty NanometersPerPixelProperty =
             DependencyProperty.Register(nameof(NanometersPerPixel), typeof(double), typeof(CircleSizePreviewSlider), new PropertyMetadata(0.0, OnPreviewInputsChanged));
 
-        public static readonly DependencyProperty ValueTextProperty =
-            DependencyProperty.Register(nameof(ValueText), typeof(string), typeof(CircleSizePreviewSlider), new PropertyMetadata(string.Empty));
+        public static readonly DependencyProperty UnitTextProperty =
+            DependencyProperty.Register(nameof(UnitText), typeof(string), typeof(CircleSizePreviewSlider), new PropertyMetadata(string.Empty));
 
-        private bool updatingFromLayout;
-        private bool updatingFromValue;
+        public static readonly DependencyProperty ValueFormatProperty =
+            DependencyProperty.Register(nameof(ValueFormat), typeof(string), typeof(CircleSizePreviewSlider), new PropertyMetadata("F1"));
 
         public CircleSizePreviewSlider()
         {
@@ -125,18 +126,29 @@ namespace WebAnnotation.WPF.Controls
             set => SetValue(NanometersPerPixelProperty, value);
         }
 
-        public string ValueText
+        /// <summary>
+        /// Unit after the number box, plus the size in the other unit where that helps: "px · 120 nm" for a pixel radius
+        /// when the view scale is known, "% · 40 px" for a share of the view.
+        /// </summary>
+        public string UnitText
         {
-            get => (string)GetValue(ValueTextProperty);
-            private set => SetValue(ValueTextProperty, value);
+            get => (string)GetValue(UnitTextProperty);
+            private set => SetValue(UnitTextProperty, value);
+        }
+
+        /// <summary>Number format of the box: whole nanometers in NanometerRadius mode, one decimal otherwise.</summary>
+        public string ValueFormat
+        {
+            get => (string)GetValue(ValueFormatProperty);
+            private set => SetValue(ValueFormatProperty, value);
         }
 
         private static void OnPreviewModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is CircleSizePreviewSlider slider)
             {
+                slider.ValueFormat = slider.PreviewMode == CircleSizePreviewMode.NanometerRadius ? "F0" : "F1";
                 slider.ApplyPageWidthMaximum();
-                slider.SyncSliderFromValue();
                 slider.UpdatePreview();
             }
         }
@@ -144,25 +156,13 @@ namespace WebAnnotation.WPF.Controls
         private static void OnPreviewInputsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is CircleSizePreviewSlider slider)
-            {
-                slider.SyncSliderFromValue();
                 slider.UpdatePreview();
-            }
         }
 
         private void OnControlSizeChanged(object sender, SizeChangedEventArgs e)
         {
             ApplyPageWidthMaximum();
-            SyncSliderFromValue();
             UpdatePreview();
-        }
-
-        private void OnSliderValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        {
-            if (updatingFromLayout || updatingFromValue)
-                return;
-
-            Value = e.NewValue;
         }
 
         private void ApplyPageWidthMaximum()
@@ -173,39 +173,15 @@ namespace WebAnnotation.WPF.Controls
             if (PreviewMode == CircleSizePreviewMode.PercentOfScreen)
                 return;
 
-            updatingFromLayout = true;
-            try
-            {
-                if (PreviewMode == CircleSizePreviewMode.NanometerRadius && NanometersPerPixel > 0)
-                    Maximum = (ActualWidth / 2.0) * NanometersPerPixel;
-                else if (PreviewMode == CircleSizePreviewMode.PixelRadius ||
-                         PreviewMode == CircleSizePreviewMode.NanometerRadius)
-                    Maximum = ActualWidth / 2.0;
-                else
-                    Maximum = ActualWidth;
-            }
-            finally
-            {
-                updatingFromLayout = false;
-            }
-        }
-
-        private void SyncSliderFromValue()
-        {
-            if (SizeSlider is null)
-                return;
-
-            updatingFromValue = true;
-            try
-            {
-                double displayed = Math.Max(Minimum, Math.Min(Value, Maximum));
-                if (Math.Abs(SizeSlider.Value - displayed) > 0.0001)
-                    SizeSlider.Value = displayed;
-            }
-            finally
-            {
-                updatingFromValue = false;
-            }
+            // The editor only moves its thumb when the range changes; it never rewrites Value, so a page narrower than
+            // the stored size does not shrink the preference.
+            if (PreviewMode == CircleSizePreviewMode.NanometerRadius && NanometersPerPixel > 0)
+                Maximum = (ActualWidth / 2.0) * NanometersPerPixel;
+            else if (PreviewMode == CircleSizePreviewMode.PixelRadius ||
+                     PreviewMode == CircleSizePreviewMode.NanometerRadius)
+                Maximum = ActualWidth / 2.0;
+            else
+                Maximum = ActualWidth;
         }
 
         private void UpdatePreview()
@@ -228,7 +204,7 @@ namespace WebAnnotation.WPF.Controls
                 PreviewCircle.Height = dipDiameter;
                 PreviewHost.Width = double.NaN;
                 PreviewHost.Height = Math.Max(8, dipDiameter);
-                ValueText = FormatValueText(pixelDiameter);
+                UnitText = FormatUnitText(pixelDiameter);
                 return;
             }
 
@@ -246,7 +222,7 @@ namespace WebAnnotation.WPF.Controls
             PreviewCircle.Height = styleDiameter;
             PreviewHost.Width = double.NaN;
             PreviewHost.Height = Math.Max(8, styleDiameter);
-            ValueText = FormatValueText();
+            UnitText = FormatUnitText(ComputeCutoffDiameterPixels());
         }
 
         /// <summary>
@@ -290,27 +266,18 @@ namespace WebAnnotation.WPF.Controls
                 : Math.Max(0, Value);
         }
 
-        private string FormatValueText()
-        {
-            return FormatValueText(ComputeCutoffDiameterPixels());
-        }
-
-        private string FormatValueText(double pixelDiameter)
+        private string FormatUnitText(double pixelDiameter)
         {
             if (PreviewMode == CircleSizePreviewMode.PercentOfScreen)
-            {
-                if (pixelDiameter > 0)
-                    return $"{Value:F1}% · {pixelDiameter:F0} px";
-                return $"{Value:F1}% of view area";
-            }
+                return pixelDiameter > 0 ? $"% · {pixelDiameter:F0} px" : "% of view area";
 
             if (PreviewMode == CircleSizePreviewMode.NanometerRadius)
-                return $"{Value:F0} nm";
+                return "nm";
 
             if (PreviewMode == CircleSizePreviewMode.PixelRadius && NanometersPerPixel > 0)
-                return $"{Value * NanometersPerPixel:F0} nm";
+                return $"px · {Value * NanometersPerPixel:F0} nm";
 
-            return Value.ToString("F1");
+            return "px";
         }
     }
 }
