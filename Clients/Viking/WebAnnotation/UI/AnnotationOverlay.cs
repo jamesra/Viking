@@ -718,19 +718,6 @@ namespace WebAnnotation
             MouseButtons button,
             Geometry.Vector2 worldPosition)
         {
-            // #region agent log
-            {
-                bool dbgDefault = IsCommandDefault();
-                AutoPolygonizeProposal dbgProposal = null;
-                double dbgDistance = double.NaN;
-                bool dbgHit = dbgDefault && autoPolygonizeController?.TryHit(worldPosition, out dbgProposal, out dbgDistance) == true;
-                WebAnnotation.UI.Commands.Segmentation.SegmentationDiag.Log(
-                    $"DIAG H14 TryHandleMouseDoubleClick button={button} isDefault={dbgDefault} command={_Parent.CurrentCommand?.GetType().Name} " +
-                    $"queueDepth={Parent.CommandQueue.QueueDepth} controllerNull={autoPolygonizeController is null} " +
-                    $"hit={dbgHit} distance={dbgDistance} world={worldPosition}");
-            }
-            // #endregion
-
             if (!IsCommandDefault() ||
                 autoPolygonizeController?.TryHit(worldPosition, out AutoPolygonizeProposal proposal, out _) != true)
             {
