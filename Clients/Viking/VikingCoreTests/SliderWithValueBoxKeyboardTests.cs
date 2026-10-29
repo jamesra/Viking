@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -139,6 +140,85 @@ namespace VikingCoreTests
                 h.Model.Level = 2;
                 h.Pump();
                 Assert.AreEqual("2.00", h.Box.Text, "An unedited box shows a value change made elsewhere");
+            });
+        }
+
+        [TestMethod]
+        public void ArrowKeysNudgeTheFocusedSliderOneTick_LikeADrag()
+        {
+            Host.Run(h =>
+            {
+                h.Tab(from: h.Before);
+                Assert.IsTrue(h.Slider.IsKeyboardFocused, "Tab should reach the slider");
+
+                int changes = h.Model.Changes;
+                h.Press(Key.Right);
+                Assert.AreEqual(1 + Tick, h.Model.Level, 1e-9, "Right");
+                Assert.AreEqual(changes + 1, h.Model.Changes, "Each arrow updates the bound value once, as a drag step does");
+                Assert.AreEqual("1.05", h.Box.Text);
+                h.Press(Key.Up);
+                Assert.AreEqual(1 + (2 * Tick), h.Model.Level, 1e-9, "Up");
+                h.Press(Key.Left);
+                h.Press(Key.Down);
+                Assert.AreEqual(1, h.Model.Level, 1e-9, "Left then Down");
+                Assert.IsTrue(h.Slider.IsKeyboardFocused, "Arrows must not move focus off the slider");
+
+                h.Model.Level = 1.02;
+                h.Pump();
+                h.Press(Key.Right);
+                Assert.AreEqual(1.05, h.Model.Level, 1e-9, "Off a tick, Right snaps to the next one");
+
+                h.Model.Level = h.Control.Maximum;
+                h.Pump();
+                h.Press(Key.Right);
+                Assert.AreEqual(h.Control.Maximum, h.Model.Level, 1e-12, "Right stops at the maximum");
+                h.Model.Level = h.Control.Minimum;
+                h.Pump();
+                h.Press(Key.Left);
+                Assert.AreEqual(h.Control.Minimum, h.Model.Level, 1e-12, "Left stops at the minimum");
+            });
+        }
+
+        [TestMethod]
+        public void ArrowStepIsSmallChangeWhenSet()
+        {
+            Host.Run(h =>
+            {
+                h.Control.SmallChange = 0.25;
+                h.Control.IsSnapToTickEnabled = false;
+                h.Pump();
+                h.Tab(from: h.Before);
+                h.Press(Key.Right);
+                Assert.AreEqual(1.25, h.Model.Level, 1e-12);
+            });
+        }
+
+        /// <summary>
+        /// A press on the thumb, or on the track beside it, focuses the slider (its thumb and track buttons cannot take
+        /// focus themselves), which commits text typed in the box; the arrows then move the slider. The press goes in
+        /// through <see cref="InputManager"/> as the mouse's PreviewMouseDown, so WPF derives the left-button events
+        /// and routes them from the pressed part as it does for a real click.
+        /// </summary>
+        [TestMethod]
+        public void ClickingTheSliderGivesItTheKeyboard()
+        {
+            Host.Run(h =>
+            {
+                h.FocusBox();
+                h.Type("2.5");
+                h.PressMouseOn(FindDescendant<Thumb>(h.Slider));
+                Assert.IsTrue(h.Slider.IsKeyboardFocused, "A press on the thumb should focus the slider");
+                Assert.AreEqual(2.5, h.Model.Level, 1e-12, "Leaving the box for the slider commits what was typed");
+
+                h.Press(Key.Right);
+                Assert.AreEqual(2.55, h.Model.Level, 1e-9);
+
+                foreach (RepeatButton track in FindDescendants<RepeatButton>(h.Slider))
+                {
+                    h.Focus(h.Box);
+                    h.PressMouseOn(track);
+                    Assert.IsTrue(h.Slider.IsKeyboardFocused, "A press on the track should focus the slider");
+                }
             });
         }
 
@@ -342,11 +422,38 @@ namespace VikingCoreTests
                 Assert.IsTrue(element.IsKeyboardFocused, $"{element.GetType().Name} should take the keyboard focus");
             }
 
+            /// <summary>
+            /// Presses and releases the left mouse button on <paramref name="target"/> through the input pipeline, then
+            /// drops any capture the press took (a thumb starts a drag).
+            /// </summary>
+            public void PressMouseOn(UIElement target)
+            {
+                foreach (RoutedEvent routed in new[] { Mouse.PreviewMouseDownEvent, Mouse.PreviewMouseUpEvent })
+                {
+                    InputManager.Current.ProcessInput(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
+                    {
+                        RoutedEvent = routed,
+                        Source = target,
+                    });
+                    Pump();
+                }
+
+                Mouse.Capture(null);
+                Pump();
+            }
+
             /// <summary>Focuses the number box and selects its text, as clicking into it and selecting would.</summary>
             public void FocusBox()
             {
                 Focus(Box);
                 Box.SelectAll();
+            }
+
+            /// <summary>Focuses <paramref name="from"/> and presses Tab once.</summary>
+            public void Tab(UIElement from)
+            {
+                Focus(from);
+                Press(Key.Tab);
             }
 
             /// <summary>Presses each character's key in turn: digits, '.', ',' and '-'.</summary>

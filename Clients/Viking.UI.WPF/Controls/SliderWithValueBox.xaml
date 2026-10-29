@@ -17,6 +17,7 @@
                 Grid.Column="0"
                 Margin="5"
                 VerticalAlignment="Center"
+                PreviewMouseLeftButtonDown="OnSliderPreviewMouseLeftButtonDown"
                 ValueChanged="OnSliderValueChanged"/>
         <TextBox x:Name="PART_ValueBox"
                  Grid.Column="1"
