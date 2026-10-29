@@ -14,16 +14,19 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Viking.UI.WPF.Controls;
+using Viking.UI.WPF.Forms;
+using ModelessWindow = Viking.UI.ModelessWindow;
 using WinForms = System.Windows.Forms;
 
 namespace VikingCoreTests
 {
     /// <summary>
-    /// Drives the real <see cref="SliderWithValueBox"/> from the keyboard and mouse the way Viking hosts it: a WPF window
-    /// shown modelessly from a Windows Forms message loop with keyboard interop, with key presses posted to the window as
-    /// WM_KEYDOWN/WM_KEYUP and pumped by that loop (so TranslateMessage makes the characters, as for a real keyboard).
-    /// Ported from Legacy 40c5766e (arrow keys and click focus); Legacy's typing tests from 3c823484 come with the
-    /// port of that commit.
+    /// Types into the real <see cref="SliderWithValueBox"/> the way Viking hosts it: a WPF window shown modelessly with
+    /// <see cref="ModelessWindow.ShowFromWinForms"/> from a Windows Forms message loop, with key presses posted to the
+    /// window as WM_KEYDOWN/WM_KEYUP and pumped by that loop (so TranslateMessage makes the characters, as for a real
+    /// keyboard). Shown with a plain <see cref="Window.Show"/> instead, none of these keys reach the box or the slider,
+    /// which is why the preference dialogs' number boxes could not be typed into (2026-10-29). Ported from Legacy
+    /// 3c823484 and 40c5766e; dev's <see cref="ModelessWindow"/> is in VikingCore.
     /// </summary>
     /// <remarks>
     /// Each test runs on its own STA thread. The window is placed off screen and not activated; posted messages go to
@@ -33,6 +36,114 @@ namespace VikingCoreTests
     public class SliderWithValueBoxKeyboardTests
     {
         private const double Tick = 0.05;
+
+        [TestMethod]
+        public void TypedDecimalsCommitOnEnter_AndTheBoxIsNotRewrittenWhileTyping()
+        {
+            Host.Run(h =>
+            {
+                foreach ((string typed, double value, string shown) in new[]
+                         {
+                             ("0.35", 0.35, "0.35"),
+                             ("1.5", 1.5, "1.50"),
+                             ("12", 12.0, "12.00"),
+                             ("-1.25", -1.25, "-1.25"),
+                             (".5", 0.5, "0.50"),
+                             ("25", 20.0, "20.00"),
+                         })
+                {
+                    double before = h.Model.Level;
+                    h.FocusBox();
+                    h.Type(typed);
+                    Assert.AreEqual(typed, h.Box.Text, $"Typing {typed} should leave exactly that in the box");
+                    Assert.AreEqual(before, h.Model.Level, $"Typing {typed} should not commit before Enter");
+
+                    h.Press(Key.Enter);
+                    Assert.AreEqual(value, h.Model.Level, 1e-12, $"Enter after {typed}");
+                    Assert.AreEqual(shown, h.Box.Text, $"Box after Enter on {typed}");
+                    Assert.AreEqual(Math.Min(value, h.Control.Maximum), h.Slider.Value, 1e-12, $"Slider after {typed}");
+                }
+            });
+        }
+
+        [TestMethod]
+        public void CommaTypesAsTheDecimalSeparator_UnderACommaCulture()
+        {
+            Host.Run(h =>
+            {
+                h.FocusBox();
+                h.Type("0,5");
+                Assert.AreEqual("0,5", h.Box.Text);
+                h.Press(Key.Enter);
+                Assert.AreEqual(0.5, h.Model.Level, 1e-12);
+            }, culture: "de-DE");
+        }
+
+        [TestMethod]
+        public void BackspaceEditsAndATrailingPointSurvivesUntilCommitted()
+        {
+            Host.Run(h =>
+            {
+                h.FocusBox();
+                h.Type("1.25");
+                h.Press(Key.Back);
+                h.Press(Key.Back);
+                Assert.AreEqual("1.", h.Box.Text);
+                h.Press(Key.Enter);
+                Assert.AreEqual(1.0, h.Model.Level, 1e-12);
+                Assert.AreEqual("1.00", h.Box.Text);
+            });
+        }
+
+        [TestMethod]
+        public void EscapeRevertsAnUncommittedEdit()
+        {
+            Host.Run(h =>
+            {
+                h.FocusBox();
+                h.Type("3.3");
+                h.Press(Key.Escape);
+                Assert.AreEqual("1.00", h.Box.Text);
+                Assert.AreEqual(1.0, h.Model.Level, 1e-12);
+                Assert.IsTrue(h.Box.IsKeyboardFocused, "Escape should leave focus in the box");
+            });
+        }
+
+        [TestMethod]
+        public void TabCommitsAndMovesOn()
+        {
+            Host.Run(h =>
+            {
+                h.FocusBox();
+                h.Type("4.4");
+                h.Press(Key.Tab);
+                Assert.AreEqual(4.4, h.Model.Level, 1e-12);
+                Assert.AreEqual("4.40", h.Box.Text);
+                Assert.IsTrue(h.After.IsKeyboardFocused, "Tab should move focus to the next control");
+            });
+        }
+
+        [TestMethod]
+        public void AValueChangeFromElsewhereDoesNotRewriteTextBeingTyped()
+        {
+            Host.Run(h =>
+            {
+                h.FocusBox();
+                h.Type("0.");
+                h.Model.Level = 7;
+                h.Pump();
+                Assert.AreEqual("0.", h.Box.Text, "Typed text must survive a value change made elsewhere");
+                Assert.AreEqual(7, h.Slider.Value, 1e-12, "The slider still follows the value");
+
+                h.Press(Key.Enter);
+                Assert.AreEqual(0, h.Model.Level, 1e-12);
+                Assert.AreEqual("0.00", h.Box.Text);
+
+                h.Model.Level = 2;
+                h.Pump();
+                Assert.AreEqual("2.00", h.Box.Text, "An unedited box shows a value change made elsewhere");
+            });
+        }
 
         [TestMethod]
         public void ArrowKeysNudgeTheFocusedSliderOneTick_LikeADrag()
@@ -110,6 +221,36 @@ namespace VikingCoreTests
                     h.PressMouseOn(track);
                     Assert.IsTrue(h.Slider.IsKeyboardFocused, "A press on the track should focus the slider");
                 }
+            });
+        }
+
+        [TestMethod]
+        public void ViewerPreferencesBoxesTakeTypedDecimals()
+        {
+            Host.RunWindow(() =>
+            {
+                var vm = new ViewerPreferencesDialogViewModel();
+                return (new ViewerPreferencesDialog(vm), vm);
+            }, (h, window, vm) =>
+            {
+                // Collapsed sections' boxes cannot take focus
+                foreach (Expander section in FindDescendants<Expander>(window))
+                    section.IsExpanded = true;
+                h.Pump();
+
+                SliderWithValueBox[] controls = FindDescendants<SliderWithValueBox>(window).ToArray();
+                Assert.IsTrue(controls.Length >= 13, $"Viewer Preferences should have its 13 slider boxes, found {controls.Length}");
+
+                // Section number overlay opacity: its range comes from the view model, 0 to 1
+                SliderWithValueBox opacity = controls.Single(c =>
+                    BindingOperations.GetBinding(c, SliderWithValueBox.ValueProperty)?.Path.Path == nameof(ViewerPreferencesDialogViewModel.SectionNumberOverlayOpacity));
+                TextBox box = (TextBox)opacity.FindName("PART_ValueBox");
+                h.Focus(box);
+                box.SelectAll();
+                h.Type("0.35");
+                Assert.AreEqual("0.35", box.Text);
+                h.Press(Key.Enter);
+                Assert.AreEqual(0.35, vm.SectionNumberOverlayOpacity, 1e-12);
             });
         }
 
@@ -213,8 +354,8 @@ namespace VikingCoreTests
                 }, culture);
 
             /// <summary>
-            /// On a new STA thread: makes a window, shows it from a Windows Forms loop with keyboard interop, runs
-            /// <paramref name="body"/>, and rethrows its failure here.
+            /// On a new STA thread: makes a window, shows it from a Windows Forms loop with
+            /// <see cref="ModelessWindow.ShowFromWinForms"/>, runs <paramref name="body"/>, and rethrows its failure here.
             /// </summary>
             public static void RunWindow<TModel>(Func<(Window, TModel)> make, Action<Host, Window, TModel> body, string culture = "en-US")
             {
@@ -239,8 +380,7 @@ namespace VikingCoreTests
                         window.Top = -20000;
                         window.ShowActivated = false;
                         window.ShowInTaskbar = false;
-                        System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(window);
-                        window.Show();
+                        ModelessWindow.ShowFromWinForms(window);
 
                         var host = new Host { hwnd = new WindowInteropHelper(window).Handle };
                         host.Pump();

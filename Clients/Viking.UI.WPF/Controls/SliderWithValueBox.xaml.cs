@@ -10,7 +10,8 @@ namespace Viking.UI.WPF.Controls
     /// preview follows the drag. Typing in the box is free; the typed number is committed by Enter or by leaving the
     /// box, clamped to [<see cref="Minimum"/>, <see cref="Maximum"/>], and the box then shows the stored value. Text that
     /// is not a number reverts to the current value. Escape reverts an uncommitted edit and is consumed only then, so
-    /// Escape in an unchanged box still reaches the dialog's Cancel button.
+    /// Escape in an unchanged box still reaches the dialog's Cancel button. The box never rewrites text the user is
+    /// typing: a <see cref="Value"/> change from elsewhere while the box holds an uncommitted edit only moves the slider.
     /// Clicking the slider gives it the keyboard focus, and with focus Left/Down and Right/Up move it one step
     /// (<see cref="SmallChange"/>, which defaults to one tick), snapped and clamped as a drag is, and set
     /// <see cref="Value"/> as a drag does.
@@ -18,6 +19,11 @@ namespace Viking.UI.WPF.Controls
     /// <remarks>
     /// Text rules (format, parse, clamp) live in <see cref="SliderValueText"/>. <see cref="Value"/> itself is never
     /// coerced: a preference outside the range keeps its value and only the slider thumb is held at the end.
+    /// <para>
+    /// A window hosting this control from Viking's Windows Forms loop must be shown with VikingCore's
+    /// <c>Viking.UI.ModelessWindow.ShowFromWinForms</c> (or modally); otherwise neither the box nor the slider gets typed
+    /// characters or arrow keys. Jotunn's WPF loop needs nothing.
+    /// </para>
     /// </remarks>
     public partial class SliderWithValueBox : UserControl
     {
@@ -160,8 +166,15 @@ namespace Viking.UI.WPF.Controls
         {
             var control = (SliderWithValueBox)d;
             control.SyncSlider();
-            control.ShowValue();
+
+            // A commit shows the stored value itself once it is set; anything else must not discard what is being typed
+            if (!control.IsEditing)
+                control.ShowValue();
         }
+
+        /// <summary>True while the box has the keyboard focus and holds text the user typed that is not yet committed.</summary>
+        private bool IsEditing =>
+            PART_ValueBox is not null && PART_ValueBox.IsKeyboardFocusWithin && PART_ValueBox.Text != shownText;
 
         /// <summary>
         /// The slider's arrow-key step: <see cref="SmallChange"/> when it was set (locally, by a binding or a style),
