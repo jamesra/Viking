@@ -343,13 +343,12 @@ namespace GeometryTests
                 nameof(MarkersStayInsideAndClearOfHoles));
 
         /// <summary>
-        /// Refitting with the previous placement passed back returns that same placement when nothing changed, and after
-        /// the text width, link counts or rotation gain change it returns either the previous placement, only while its
-        /// font still holds the text and its markers match the links, or a fresh fit for the new content; the result is
-        /// always inside the polygon. Every candidate run angle is a 5° step or the principal axis, in (−90°, 90°].
+        /// A fit for any text width, link count and rotation gain is laid out for that content: a run's font holds the
+        /// text between its end markers, there is one marker per link, and the text stays inside the polygon; Never keeps
+        /// it level. Every candidate run angle is a 5° step or the principal axis, in (−90°, 90°].
         /// </summary>
         [TestMethod]
-        public void HysteresisOnlyKeepsPlacementsThatFit() =>
+        public void FitHoldsItsContentInsideThePolygon() =>
             CoreCheck.Run(
                 Prop.ForAll(CoreArbitraries.ArbHoledPolygon(), Arb.From(Gen.Three(Gen.Choose(0, 100))),
                     (p, change) =>
@@ -360,16 +359,10 @@ namespace GeometryTests
                         double slack = LayoutSlack(p);
                         bool Inside(Vector2 v) => rings.SignedDistance(v.X, v.Y) >= -slack;
 
-                        LabelContent before = new([new LabelRow(6, 0.5), new LabelRow(4, 1.0)], 1, 1);
                         LabelContent after = new([new LabelRow(width, 0.5), new LabelRow(4, 1.0)], links, 1);
                         double gain = LabelLayout.RotationGainForSetting(setting / 100.0);
 
-                        LabelPlacement previous = layout.Fit(before);
-                        if (!ReferenceEquals(previous, layout.Fit(before, LabelLayout.DefaultRotationGain, previous)))
-                            return false;
-
-                        LabelPlacement next = layout.Fit(after, gain, previous);
-                        bool kept = ReferenceEquals(next, previous);
+                        LabelPlacement next = layout.Fit(after, gain);
                         bool fits = next.Kind == LabelPlacementKind.Circle ||
                                     (next.Markers.Count == after.MarkerCount &&
                                      next.Markers.Count(m => m.IsUp) == after.UpCount &&
@@ -381,9 +374,9 @@ namespace GeometryTests
                             (Math.Abs(Math.IEEERemainder(a / (InscribedRuns.StepDegrees * Math.PI / 180.0), 1)) < 1e-9 ||
                              Math.Abs(a - InscribedRuns.NormalizeAngle(InscribedRuns.PrincipalAxisAngle(p))) < 1e-12));
 
-                        return fits && levelAtNever && anglesOnGrid && (kept || ReferenceEquals(next.Content, after));
+                        return fits && levelAtNever && anglesOnGrid && ReferenceEquals(next.Content, after);
                     }),
-                nameof(HysteresisOnlyKeepsPlacementsThatFit));
+                nameof(FitHoldsItsContentInsideThePolygon));
 
         /// <summary>
         /// The gain a tilted label must show over level text never falls as the tilt grows towards 90° or as the rotation

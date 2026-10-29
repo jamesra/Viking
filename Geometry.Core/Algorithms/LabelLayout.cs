@@ -51,24 +51,6 @@ namespace Geometry
 
         /// <summary>Height of all rows at an ID font size of 1.</summary>
         public readonly double TextHeight;
-
-        /// <summary>True when the rows have the same font scales in the same order, so they stack the same way.</summary>
-        internal bool SameRowScales(LabelContent other)
-        {
-            if (other.Rows.Count != Rows.Count)
-                return false;
-
-            for (int i = 0; i < Rows.Count; i++)
-            {
-                if (other.Rows[i].Scale != Rows[i].Scale)
-                    return false;
-            }
-
-            return true;
-        }
-
-        /// <summary>True when both have the same up and down marker counts, so a placement's marker slots fit both.</summary>
-        internal bool SameMarkerCounts(LabelContent other) => other.UpCount == UpCount && other.DownCount == DownCount;
     }
 
     public enum LabelPlacementKind
@@ -134,10 +116,7 @@ namespace Geometry
     /// <summary>The layout <see cref="LabelLayout.Fit(LabelContent, double)"/> chose for one <see cref="LabelContent"/>.</summary>
     public sealed class LabelPlacement
     {
-        /// <summary>The layout that made this placement; a previous placement from another layout is never kept.</summary>
-        internal readonly LabelLayout Owner;
-
-        /// <summary>What the placement was laid out for: its row scales, marker counts and text width.</summary>
+        /// <summary>The content the placement was laid out for.</summary>
         internal readonly LabelContent Content;
 
         public readonly LabelPlacementKind Kind;
@@ -185,10 +164,9 @@ namespace Geometry
         /// <summary>Direction the text reads along: the run's axis, or +X for the circle. Markers are ordered along it.</summary>
         public Vector2 Axis => Kind == LabelPlacementKind.Run ? Region.AxisU : new Vector2(1, 0);
 
-        internal LabelPlacement(LabelLayout owner, LabelContent content, Circle circle, double fontSize,
+        internal LabelPlacement(LabelContent content, Circle circle, double fontSize,
             IReadOnlyList<MarkerSlot> markers, MarkerPacking packing, int freeMarkerCount, double markerReadability)
         {
-            Owner = owner;
             Content = content;
             Kind = LabelPlacementKind.Circle;
             Circle = circle;
@@ -200,11 +178,10 @@ namespace Geometry
             MarkerReadability = markerReadability;
         }
 
-        internal LabelPlacement(LabelLayout owner, LabelContent content, Circle circle, OrientedRectangle region, double fontSize,
+        internal LabelPlacement(LabelContent content, Circle circle, OrientedRectangle region, double fontSize,
             OrientedRectangle textBox, double maxLineWidth, IReadOnlyList<Vector2> rowCenters, IReadOnlyList<MarkerSlot> markers,
             MarkerPacking packing, int freeMarkerCount, double markerReadability)
         {
-            Owner = owner;
             Content = content;
             Kind = LabelPlacementKind.Run;
             Circle = circle;
@@ -239,11 +216,6 @@ namespace Geometry
     /// in more rows, down to <see cref="MinimumMarkerScale"/>, and only then sends markers to the next-deepest free spots.
     /// Every marker is checked against the real outline and holes. Shrunken and free-space markers lower the placement's
     /// score by <see cref="MarkerReadability"/>, so a run and the circle are compared with their markers' cost.
-    /// </para>
-    /// <para>
-    /// Given the label's previous placement, <see cref="Fit(LabelContent, double, LabelPlacement)"/> keeps it while it
-    /// still holds the content and the new best beats it by no more than 1 + <see cref="Hysteresis"/>, so a label near a
-    /// tie does not flip back and forth while the Label rotation slider moves.
     /// </para>
     /// </remarks>
     public sealed class LabelLayout
@@ -326,12 +298,6 @@ namespace Geometry
         /// </summary>
         public static readonly IReadOnlyList<MarkerPacking> PackingOrder =
             [.. MarkerScales.SelectMany(s => Enumerable.Range(1, MaxMarkerRows).Select(rows => new MarkerPacking(rows, s)))];
-
-        /// <summary>
-        /// Hysteresis h: a label keeps its previous placement unless the new best is more than 1 + h times better by
-        /// <see cref="Advantage"/>. 5% hides near-ties without holding text in a placement clearly worse than the best.
-        /// </summary>
-        public const double Hysteresis = 0.05;
 
         private readonly RingSegmentSet Rings;
         private readonly RunCandidate[] Runs;
@@ -595,84 +561,6 @@ namespace Geometry
         }
 
         /// <summary>
-        /// <see cref="Fit(LabelContent, double)"/> with hysteresis: returns <paramref name="previous"/> itself while it
-        /// still holds <paramref name="content"/> (see <see cref="Holds"/>) and the new best beats it by at most
-        /// 1 + <see cref="Hysteresis"/> (see <see cref="Advantage"/>); otherwise the new best. The caller keeps the
-        /// returned placement and passes it back on the next fit, and drops it when the polygon changes, since a
-        /// placement from another layout is never kept.
-        /// </summary>
-        /// <remarks>
-        /// A previous circle whose link counts changed is replaced by the circle laid out for the new content before the
-        /// comparison, so the circle is still kept under hysteresis when a link is added, with marker slots for every link.
-        /// </remarks>
-        public LabelPlacement Fit(LabelContent content, double rotationGain, LabelPlacement? previous)
-        {
-            LabelPlacement best = Fit(content, rotationGain);
-            if (previous is not null && previous.Kind == LabelPlacementKind.Circle && ReferenceEquals(previous.Owner, this) &&
-                !previous.Content.SameMarkerCounts(content))
-            {
-                previous = best.Kind == LabelPlacementKind.Circle ? best : PlaceInCircle(content);
-            }
-
-            if (previous is null || !Holds(previous, content))
-                return best;
-
-            if (double.IsNaN(rotationGain))
-                rotationGain = DefaultRotationGain;
-
-            return Advantage(best, previous, content, rotationGain) <= 1 + Hysteresis ? previous : best;
-        }
-
-        /// <summary>
-        /// True when <paramref name="placement"/> was made by this layout and can show <paramref name="content"/> as it
-        /// stands: the up and down marker counts are unchanged (so every marker has its slot), and for a run the rows also
-        /// have the same scales (so its row centres stack them) and the widest row still fits between the end markers at
-        /// the run's font; the circle lays any text out itself. Longer text or a new link therefore drops a run.
-        /// </summary>
-        internal bool Holds(LabelPlacement placement, LabelContent content)
-        {
-            if (!ReferenceEquals(placement.Owner, this))
-                return false;
-
-            LabelContent laidOut = placement.Content;
-            if (!laidOut.SameMarkerCounts(content))
-                return false;
-
-            if (placement.Kind == LabelPlacementKind.Circle)
-                return true;
-
-            return laidOut.SameRowScales(content) &&
-                   TextPadding * content.TextWidth * placement.FontSize <= placement.MaxLineWidth * (1 + 1e-9);
-        }
-
-        /// <summary>
-        /// How many times better <paramref name="candidate"/> is than <paramref name="incumbent"/> for
-        /// <paramref name="content"/> by the rules <see cref="Fit(LabelContent, double)"/> decides with, so above 1 means
-        /// Fit would prefer the candidate. Between runs it is the ratio of their text-only scores F0 times
-        /// <see cref="TiltFactor"/>. Between a run and the circle it is how far the run's text-only font F0 is above (or
-        /// below) the font the circle test asks of it, <see cref="CircleThreshold"/> times R/2. Each side is multiplied by
-        /// its <see cref="LabelPlacement.MarkerReadability"/>, as in Fit. Infinite when the incumbent scores nothing, as a
-        /// tilted run does at <see cref="NeverRotate"/>. Both placements must hold <paramref name="content"/>'s links.
-        /// </summary>
-        internal double Advantage(LabelPlacement candidate, LabelPlacement incumbent, LabelContent content, double rotationGain)
-        {
-            static double Ratio(double a, double b) => b > 0 ? a / b : double.PositiveInfinity;
-            double RunScore(LabelPlacement run) => RunFontSize(run.Region.Width, run.Region.Height, content, 0) * run.MarkerReadability;
-            double CircleAsks(LabelPlacement run, LabelPlacement circle) =>
-                CircleThreshold(run.Angle, rotationGain) * circle.FontSize * circle.MarkerReadability;
-
-            return (candidate.Kind, incumbent.Kind) switch
-            {
-                (LabelPlacementKind.Run, LabelPlacementKind.Run) =>
-                    Ratio(RunScore(candidate) * TiltFactor(candidate.Angle, rotationGain),
-                          RunScore(incumbent) * TiltFactor(incumbent.Angle, rotationGain)),
-                (LabelPlacementKind.Run, LabelPlacementKind.Circle) => Ratio(RunScore(candidate), CircleAsks(candidate, incumbent)),
-                (LabelPlacementKind.Circle, LabelPlacementKind.Run) => Ratio(CircleAsks(incumbent, candidate), RunScore(incumbent)),
-                _ => 1,
-            };
-        }
-
-        /// <summary>
         /// How many times the circle's font a run at <paramref name="angle"/> must allow to replace it: the larger of
         /// <see cref="CirclePreference"/> and the tilt's <see cref="RequiredGain"/>.
         /// </summary>
@@ -825,7 +713,7 @@ namespace Geometry
             PlaceInFreeSpace(markers, textBox, font / 2.0, MinimumMarkerRadius * font, content.UpCount - ends.Up, true);
 
             int free = markers.Count - packed;
-            return new LabelPlacement(this, content, InscribedCircle, region, font, textBox, maxLineWidth, rowCenters, markers,
+            return new LabelPlacement(content, InscribedCircle, region, font, textBox, maxLineWidth, rowCenters, markers,
                 ends.Packing, free, MarkerReadability(packed, ends.Packing.Scale, free));
         }
 
@@ -838,7 +726,7 @@ namespace Geometry
         {
             double font = CircleFontSize(InscribedCircle);
             if (content.MarkerCount == 0)
-                return new LabelPlacement(this, content, InscribedCircle, font, [], MarkerPacking.Single, 0, 1);
+                return new LabelPlacement(content, InscribedCircle, font, [], MarkerPacking.Single, 0, 1);
 
             List<MarkerSlot> markers = new(content.MarkerCount);
             foreach (MarkerPacking packing in PackingOrder)
@@ -847,7 +735,7 @@ namespace Geometry
                 if (AddCircleRows(content.UpCount, true, packing, markers) == content.UpCount &&
                     AddCircleRows(content.DownCount, false, packing, markers) == content.DownCount)
                 {
-                    return new LabelPlacement(this, content, InscribedCircle, font, [.. markers], packing, 0,
+                    return new LabelPlacement(content, InscribedCircle, font, [.. markers], packing, 0,
                         MarkerReadability(markers.Count, packing.Scale, 0));
                 }
             }
@@ -865,7 +753,7 @@ namespace Geometry
             PlaceInFreeSpace(markers, text, fullRadius, MinimumMarkerScale * fullRadius, content.DownCount - down, false);
 
             int free = markers.Count - packed;
-            return new LabelPlacement(this, content, InscribedCircle, font, markers, densest, free,
+            return new LabelPlacement(content, InscribedCircle, font, markers, densest, free,
                 MarkerReadability(packed, densest.Scale, free));
         }
 

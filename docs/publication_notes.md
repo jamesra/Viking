@@ -68,15 +68,16 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
   alternating so each row sits in the gaps of the one inside it; up-links above the centre, down-links mirrored below.
   A row is used only if every marker in it clears the outline and holes. Score factor $m = 1 - 0.25\,(1 - \bar s)$,
   $\bar s$ the mean marker scale with a free-space marker counting 0.25; Fit compares $F_0\,m_{run}$ with
-  $\max(1.25, g(\theta))\,F_c\,m_{circle}$, and hysteresis uses the same products.
+  $\max(1.25, g(\theta))\,F_c\,m_{circle}$~~, and hysteresis uses the same products~~ (superseded 2026-10-29: hysteresis removed, user).
 
-- **Label placement hysteresis** (`LabelLayout.Fit(content, G, previous)`, `Advantage`, since 2026-10-29): with the
+- ~~**Label placement hysteresis** (`LabelLayout.Fit(content, G, previous)`, `Advantage`, since 2026-10-29): with the
   new best placement $B$ and the label's previous placement $P$ (from the same layout, and still holding the content:
   same row scales, same up and down link counts, $1.1\,t_w F_P \le$ its line width), $P$ is kept when
   $A(B, P) \le 1 + h$, $h = 0.05$. The advantage follows the rules Fit decides by: between runs
   $A = \frac{F_0(B)/g(\theta_B)}{F_0(P)/g(\theta_P)}$; a run over the circle $A = F_0(B) / (\max(1.25, g(\theta_B))\,F_c)$; the
   circle over a run $A = \max(1.25, g(\theta_P))\,F_c / F_0(P)$; $F_0$ is the text-only font of the run's rectangle for
-  the current content. A tilted $P$ at $G = \infty$ has $A = \infty$, so "Never" always levels the text.
+  the current content. A tilted $P$ at $G = \infty$ has $A = \infty$, so "Never" always levels the text.~~
+  superseded 2026-10-29: removed, user (see the decision of that date).
 - **Label switch easing** (`Geometry.Core/Algorithms/LabelEasing.cs`): each text row moves from its shown pose
   $(c_0, \theta_0, f_0)$ to its new one $(c_1, \theta_1, f_1)$ with $s = 1 - (1 - t/T)^3$, $T = 150$ ms:
   $c = c_0 + s\,(c_1 - c_0)$, $f = f_0 (f_1/f_0)^s$, $\theta = N(\theta_0 + s\,\delta)$ where $\delta$ is
@@ -95,6 +96,17 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
   $r = \min(\operatorname{dist}(\tfrac{N + E}{2}, \partial P), \sqrt{A/\pi})$ and centre $E - r\,d$.
 
 ## Algorithmic decisions
+
+- **2026-10-29 Label placement hysteresis removed; the eased move, 5° angles and 50 ms relayout throttle stay.** Why:
+  James, after using it: the jitter the hysteresis was meant to hide (labels flipping between level and tilted near a
+  tie while the Label rotation slider moves) is a non-issue, so every fit now takes the best placement and the views
+  keep no previous placement. Removed: `LabelLayout.Hysteresis`, `Fit(content, G, previous)`, `Holds`, `Advantage`,
+  `LabelPlacement.Owner`, `LabelContent.SameRowScales`/`SameMarkerCounts`, the polygon and closed-curve views'
+  `labelPlacement`, and the hysteresis tests (the FsCheck property now checks a plain fit for changed content). Kept:
+  the 150 ms eased move (a polygon view eases from its previous labels whenever it rebuilds in the same layout), the 5°
+  run angles, and `AnnotationMenu.RequestLabelRelayout`'s 50 ms throttle, which bounds relayout cost while dragging, not
+  jitter. Where: `Geometry.Core/Algorithms/LabelLayout.cs`, `Clients/Viking/WebAnnotation/View/PolygonLabelSet.cs`,
+  `LocationPolygonView.cs`, `LocationClosedCurveView.cs`.
 
 - **2026-10-29 Link markers stay inside the polygon: a staggered second row, then smaller markers, before free space.**
   Why: James's RC2 screenshots of cell C 45733 (location 386775, section 645, two links down to 643 and three up to
@@ -118,8 +130,8 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
   whose markers are full size on both sides decide exactly as before. Free-space markers are capped at $0.95\,d_P$
   (the old $0.1F$ floor could cross the outline). The circle placement now carries its own slots and polygon views
   draw both kinds from the placement; circle annotations keep their arc code (more than seven links a side still wrap
-  there, as before). Hysteresis: a circle kept when the link counts change is replaced by the circle laid out for the
-  new counts. Rejected: a second circle row inward (it covers the text); markers below half size (unreadable);
+  there, as before). ~~Hysteresis: a circle kept when the link counts change is replaced by the circle laid out for the
+  new counts.~~ (superseded 2026-10-29: hysteresis removed, user.) Rejected: a second circle row inward (it covers the text); markers below half size (unreadable);
   shrinking before staggering (the user's order). Where: `Geometry.Core/Algorithms/LabelLayout.cs` (`PackingOrder`,
   `ChooseEndMarkers`, `EndBlockSlot`, `PlaceInCircle`, `AddCircleRows`, `ClearOfOutline`, `MarkerReadability`),
   `Clients/Viking/WebAnnotation/View/PolygonLabelSet.cs`, `OverlappedLinkCircleView.cs`; tests
@@ -128,10 +140,11 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
 
 - **2026-10-29 Polygon labels switch placement smoothly: hysteresis, an eased move, and 5° run angles.** Why: the
   user found the live Label rotation relayout rough, with labels jumping between level and tilted. Three changes,
-  all chosen by him. (1) Hysteresis $h = 0.05$ (formula above): a label keeps its placement unless the new best is
+  all chosen by him. (1) ~~Hysteresis $h = 0.05$ (formula above): a label keeps its placement unless the new best is
   over 5% better by the rule Fit decides with, so a near-tie does not flip as the slider moves; the core returns the
   previous object itself, the view keeps it per polygon and drops it with a new `LabelLayout` (changed outline), and a
-  placement that no longer holds the content (longer text, a new link) is never kept. (2) A 150 ms cubic ease-out of
+  placement that no longer holds the content (longer text, a new link) is never kept.~~ superseded 2026-10-29: removed,
+  user. (2) A 150 ms cubic ease-out of
   each text row's centre, angle (the short way modulo 180°, consistent with `LabelView.DrawRotated`'s upside-down flip)
   and font, from where the old labels are shown at that moment, so a relayout mid-animation carries on from the
   current pose; a relayout that keeps the placement continues the running animation unchanged. Circle and run label
@@ -147,11 +160,11 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
   across the slider range) went 205 → 670 µs (round) and 166 → 480 µs (process) with 5° alone, because `TryBestRun`
   sorted every Pareto run (thousands for a round cell) for each marker count; it now picks the next best bound by a
   linear scan (verification stops after one or two), and `LabelContent` measures its text size once, so `Fit` is
-  16 µs (round) and 14 µs (process), 12× faster than before the change; with hysteresis it costs the same. Rejected:
+  16 µs (round) and 14 µs (process), 12× faster than before the change~~; with hysteresis it costs the same~~. Rejected:
   5° only near the principal axis, or a coarse-then-fine search (not needed at these costs); animating the link markers
   (they are hit-tested views rebuilt with the placement); a group transform for circle ↔ run (circle rows are not a
-  rigid copy of run rows). Where: `Geometry.Core/Algorithms/LabelLayout.cs` (`Fit`, `Holds`, `Advantage`,
-  `Hysteresis`), `InscribedRuns.cs` (`StepDegrees`, `Angles`), `LabelEasing.cs`;
+  rigid copy of run rows). Where: `Geometry.Core/Algorithms/LabelLayout.cs` (`Fit`; ~~`Holds`, `Advantage`,
+  `Hysteresis`~~ removed), `InscribedRuns.cs` (`StepDegrees`, `Angles`), `LabelEasing.cs`;
   `Clients/Viking/WebAnnotation/View/StructureLabelsBase.cs` (`TransitionFrom`, `DrawLabel`), `PolygonLabelSet.cs`,
   `LocationPolygonView.cs`, `LocationClosedCurveView.cs`, `UI/AnnotationOverlay.cs`; tests
   `GeometryTests/LabelLayoutTests.cs`, `GeometryTests/LabelEasingTests.cs`, `GeometryTests/FSCheck/PolygonSpec.cs`. To
