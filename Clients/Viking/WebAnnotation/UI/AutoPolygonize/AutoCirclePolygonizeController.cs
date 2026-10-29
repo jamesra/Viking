@@ -758,11 +758,6 @@ namespace WebAnnotation.UI.AutoPolygonize
                 survivor.VolumePosition,
                 survivor.ParentID,
                 proposal.ForegroundPrompts);
-            // #region agent log
-            SegmentationDiag.Log(
-                $"DIAG H14 Accept ids=[{string.Join(",", proposal.LocationIds)}] members={members.Count} survivor={survivorId} " +
-                $"carvedNull={toApply is null} proposalVerts={polygon.TotalUniqueVertices}");
-            // #endregion
             if (toApply is null)
             {
                 ClearParkedIf(proposal);
@@ -772,11 +767,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
 
             // Carve/union densifies; LocationShapeUpdate fits once then maps control points to mosaic.
-            bool dbgApplied = LocationShapeUpdate.ApplyVolumePolygon(survivor, toApply, parent, proposal.ForegroundPrompts);
-            // #region agent log
-            SegmentationDiag.Log($"DIAG H14 Accept ApplyVolumePolygon survivor={survivorId} applied={dbgApplied}");
-            // #endregion
-            if (!dbgApplied)
+            if (!LocationShapeUpdate.ApplyVolumePolygon(survivor, toApply, parent, proposal.ForegroundPrompts))
             {
                 // Overlay Accept keeps the ring; Paint mask restores the parked proposal so the user can retry.
                 parent.ShowTransientStatus("Could not save the auto-segment outline for this annotation.");
