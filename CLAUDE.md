@@ -26,6 +26,7 @@ same way.
 | Rule | Applies to |
 |------|-----------|
 | `.cursor/rules/Content-Pipeline.mdc` | Monogame content pipeline (`Content.mgcb`, `Content/**`) |
+| `.cursor/rules/annotation-schema-changes.mdc` | Annotation database schema: every change is a new DBVersion step in `Servers/SQL/DatabaseCreateUpdate/CreateUpdateDatabase.sql`, mirrored into the `.sqlproj`, `minimal-schema.sql` and EF copies |
 | `.cursor/rules/Database-persistence.mdc` | `DataContext*`/`DataModel*`, `Migrations/**`, `Servers/SQL/**`, `appsettings*.json` |
 | `.cursor/rules/circle-mapping-scale.mdc` | Circle annotations: centre from `X,Y`/`VolumeX,VolumeY`; radius across mosaic/volume by five-point mean scale (`Clients/VolumeModel`, mapping/annotation geometry, `WebAnnotation`, annotation servers) |
 | `.cursor/rules/contours-to-mesh.mdc` | `MorphologyMesh/**`, Bajaj/Mesh tests in MonogameTestbed, `Geometry/**/Meshing/**` |
