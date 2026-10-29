@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Viking.AnnotationServiceTypes.Interfaces;
@@ -780,7 +781,8 @@ namespace WebAnnotationModel.gRPC
         /// or repeatable and that the database does not update the key value on insert.
         /// If the server client cannot be created, the objects go back on the dirty set unchanged and the
         /// exception is rethrown, matching the WCF store's CreateProxy failure path. A failed update RPC
-        /// also requeues the objects but returns false.
+        /// also requeues the objects but returns false. If an object cannot be converted for the server, see
+        /// <see cref="ConvertForSave"/>: that object is dropped, the rest are requeued, and the exception is rethrown.
         /// </summary>
         /// <exception cref="FaultException"></exception>
         protected virtual async Task<bool> Save(List<OBJECT> changedObjects, CancellationToken token)
@@ -791,8 +793,8 @@ namespace WebAnnotationModel.gRPC
             if (changedObjects.Count == 0)
                 return true;
 
-            // Created before conversion and outside the outer try: its catch resets DBAction to NONE and
-            // drops INSERTs, which would discard edits that only failed for lack of a connection.
+            // Created before conversion: a client that cannot be created is not the objects' fault, so every
+            // edit goes back on the dirty set unchanged.
             IServerAnnotationsClient<KEY, SERVER_OBJECT, CREATION_DATA_TYPE, CREATION_RESULT> client;
             try
             {
@@ -805,69 +807,73 @@ namespace WebAnnotationModel.gRPC
                 throw;
             }
 
-            List<SERVER_OBJECT> changedDBObj = new List<SERVER_OBJECT>(changedObjects.Count);
+            List<SERVER_OBJECT> changedDBObj = ConvertForSave(changedObjects);
 
+            UpdateResults<KEY, SERVER_OBJECT> updateResults;
             try
-            {
-                foreach (OBJECT dbObj in changedObjects)
-                {
-                    changedDBObj.Add(ClientObjConverter.Convert(dbObj));
-                }
-
-                UpdateResults<KEY, SERVER_OBJECT> updateResults;
-                try
-                { 
-                    updateResults = await client.UpdateAsync(changedDBObj, token);
-                }
-                catch (Exception e)
-                {
-                    Trace.WriteLine($"An error occurred during the update:\n{e.Message}");
-                    LastSaveFault = e;
-                    RestoreChangedObjects(changedObjects);
-                    return false;
-                }
-                finally
-                {
-                }
-
-                //var inventory = await ProcessServerObjects(updateResults);
-                //CallOnCollectionChanged(inventory);
-
-                // The server accepted the batch, so each object mirrors it and is no longer queued, as after the
-                // WCF store's ProxyUpdate. NONE also clears per-field edit tracking (OnDBActionCleared), so the
-                // next server refresh may overwrite the fields that were just saved.
-                foreach (OBJECT dbObj in changedObjects)
-                    dbObj.DBAction = DBACTION.NONE;
-
-                await ApplySavedServerObjects(updateResults).ConfigureAwait(false);
+            { 
+                updateResults = await client.UpdateAsync(changedDBObj, token);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                //  System.Windows.Forms.MessageBox.Show("An exception occurred while saving structure types.  Viking is pretending none of the changes happened.  Exception Data: " + e.Message, "Error");
-                System.Diagnostics.Trace.WriteLine($"Exception saving: {e}");
-                if (changedDBObj != null && changedDBObj.Count > 0)
-                {
-                    //Remove new objects and //TODO: rescue deleted objects?
-                    for (int iObj = 0; iObj < changedObjects.Count; iObj++)
-                    {
-                        OBJECT data = changedObjects[iObj];
-
-                        if (data.DBAction == DBACTION.INSERT)
-                        {  
-                            InternalDelete(data.ID);
-                        }
-
-                        data.DBAction = DBACTION.NONE;
-                    }
-                }
-
-                //If we caught an exception return false
-                throw;
+                Trace.WriteLine($"An error occurred during the update:\n{e.Message}");
+                LastSaveFault = e;
+                RestoreChangedObjects(changedObjects);
+                return false;
             }
+
+            //var inventory = await ProcessServerObjects(updateResults);
+            //CallOnCollectionChanged(inventory);
+
+            // The server accepted the batch, so each object mirrors it and is no longer queued, as after the
+            // WCF store's ProxyUpdate. NONE also clears per-field edit tracking (OnDBActionCleared), so the
+            // next server refresh may overwrite the fields that were just saved.
+            foreach (OBJECT dbObj in changedObjects)
+                dbObj.DBAction = DBACTION.NONE;
+
+            await ApplySavedServerObjects(updateResults).ConfigureAwait(false);
 
             //CallOnAllUpdatesCompleted(new OnAllUpdatesCompletedEventArgs(output.ToArray()));
 
             return true;
+        }
+
+        /// <summary>
+        /// Converts each object for the update RPC. An object whose conversion throws is dropped with a trace, so it
+        /// cannot block every later save: an INSERT exists only locally and is removed from the store, any other
+        /// object goes back to NONE with its local values. If any object was dropped, the others go back on the dirty
+        /// set unchanged for the next <see cref="Save(CancellationToken)"/>, nothing is sent, and the first
+        /// conversion exception is rethrown so the caller can tell the user an edit was lost.
+        /// </summary>
+        private List<SERVER_OBJECT> ConvertForSave(List<OBJECT> changedObjects)
+        {
+            List<SERVER_OBJECT> converted = new List<SERVER_OBJECT>(changedObjects.Count);
+            ExceptionDispatchInfo firstFault = null;
+
+            foreach (OBJECT dbObj in changedObjects)
+            {
+                try
+                {
+                    converted.Add(ClientObjConverter.Convert(dbObj));
+                }
+                catch (Exception e)
+                {
+                    Trace.WriteLine($"Dropped {dbObj.DBAction} of {typeof(OBJECT).Name} {dbObj.ID} from the save; it could not be converted for the server:\n{e}");
+                    if (dbObj.DBAction == DBACTION.INSERT)
+                        InternalDelete(dbObj.ID);
+
+                    dbObj.DBAction = DBACTION.NONE;
+                    firstFault = firstFault ?? ExceptionDispatchInfo.Capture(e);
+                }
+            }
+
+            if (firstFault != null)
+            {
+                RestoreChangedObjects(changedObjects);
+                firstFault.Throw();
+            }
+
+            return converted;
         }
 
         /// <summary>
