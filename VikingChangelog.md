@@ -26,6 +26,9 @@ Documentation/source/Client/versionhistory.rst.
 * Fix: an opacity changed in Annotation Preferences could jump back to its old value after **OK** on the annotation that was under the mouse when the dialog opened, once the mouse moved off it.
 * Fix: after **Export frames** or **Export Tiles** (Section menu), the viewer stayed on the last section exported instead of the section you were viewing. It now goes back to that section when the export finishes or is canceled.
 <!-- RenderSceneToTexture switches this.Section per tile and never restored it. The frame and tile exports now restore the viewed section once, through TaskChaining.RestoreAfterAsync, after every tile has drained (ExportTiles now waits for each section's tiles before the next). -->
+* Fix: **Export Tiles** (Section menu) skipped a tile it could not render or save (for example a full disk or a locked file) without a word, and still wrote that section's index file as if the section were complete. It now stops, as **Export frames** does: the tiles already being written finish, the progress window closes, the viewer goes back to the section you were viewing, and a message says why. The section that failed gets no index file; sections finished before it keep theirs. Run the export again to finish it: tiles already on disk are not redone.
+<!-- ExportTiles' throttle and per-section drain used Task.WhenAny + Remove, which dropped faulted tiles; both now use TaskChaining.DrainToAsync. The progress form moved to the UI thread (it was created on a thread-pool thread and never closed when the export threw); menuExportTiles_Click awaits the export and shows the error like menuExportFrames_Click. -->
+
 
 ## 1.2.134 — 2026-10-28 (Viking Test, unsigned)
 
