@@ -50,12 +50,32 @@ One deployment per annotation database
 
 ``Servers/GrpcAnnotationService/scripts/Deploy-AnnotationGrpc.ps1`` deploys compose project
 ``viking-annotation-<database>`` with its own env file and port pair (``GRPC_ANNOTATION_ENV_FILE``,
-``GRPC_ANNOTATION_HTTP_PORT``, ``GRPC_ANNOTATION_HTTPS_PORT``): it checks it with
-``docker compose config --quiet``, runs ``docker compose up -d --build grpc-annotation-service``,
-waits up to 120 s for the HTTPS port to answer and prints the endpoint (``https://localhost:<port + 1>/``).
-A running project keeps its ports on a re-run. ``-WhatIf`` previews without starting anything,
-``-Status`` lists projects, ``-Remove`` runs ``down``. Each extra database needs its own hostname and
-proxy upstream if it is reached through the proxy.
+``GRPC_ANNOTATION_HTTP_PORT``, ``GRPC_ANNOTATION_HTTPS_PORT``). Each extra database needs its own
+hostname and proxy upstream if it is reached through the proxy.
+
+1. Preview. ``-WhatIf`` prints the project, ports and env file and starts nothing::
+
+     .\Servers\GrpcAnnotationService\scripts\Deploy-AnnotationGrpc.ps1 -Database RC3 -SqlServer "192.168.0.110,1433" -WhatIf
+
+2. First run (same command without ``-WhatIf``). It creates the env file from
+   ``Servers/GrpcAnnotationService/config-template/build/docker-env-template.txt`` with the database
+   name (and ``-SqlServer``) filled in, then stops and lists the keys that still hold a
+   ``REPLACE_WITH_`` placeholder. The file is ``D:\Docker\Builds\GrpcAnnotationService\<database>.env``
+   unless ``-EnvFile`` names another; it must be outside the repo because it holds credentials.
+   Fill in those keys and the ``IdentityServer__*`` values (see Configuration above).
+3. Run the command again. It refuses to go on while a placeholder is left; otherwise it checks the
+   configuration with ``docker compose config --quiet``, runs
+   ``docker compose up -d --build grpc-annotation-service``, waits up to 120 s for the HTTPS port to
+   answer and prints the endpoint (``https://localhost:<port + 1>/``). Re-running is safe.
+4. ``-Status`` lists the deployed projects; ``-Database <database> -Remove`` runs ``down`` (volumes are kept).
+5. Production needs ``-Environment Production -Confirm``; without ``-Confirm`` the script refuses
+   (and PowerShell then asks before each step). ``-Environment`` defaults to ``Test``.
+
+``-Port`` is the h2c port and HTTPS is ``-Port`` + 1, as in the Ports table. Omitted, a running
+project keeps the pair it publishes, and a new one gets the first free pair from 5010 up (5020 is
+skipped). A ``-Port`` that is already in use is refused. ``-SqlServer`` (a connection-string server such
+as ``host,1433``) is used only when the env file is created; to change it later, edit the env file.
+The script never changes the database schema or connects to the database.
 
 Local test stack
 ================

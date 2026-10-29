@@ -16,8 +16,8 @@
         D:\Docker\Builds\GrpcAnnotationService\), fills in the database name and, when given,
         the SQL server, then stops and lists the keys that still need real values.
       - Later runs: checks that no placeholder is left, prints the deployment plan and the
-        GRPC_ANNOTATION_* compose variables for the project (see the README's "Compose
-        variables"), then checks the configuration with the read-only
+        GRPC_ANNOTATION_* compose variables for the project (named in the "One deployment
+        per annotation database" section of Documentation/source/deployment/annotation_grpc.rst), then checks the configuration with the read-only
         `docker compose config --quiet`, then starts the project with
         `docker compose up -d --build grpc-annotation-service` (skipped by -WhatIf), with those
         variables set only for those calls. It then waits up to 120 seconds for
