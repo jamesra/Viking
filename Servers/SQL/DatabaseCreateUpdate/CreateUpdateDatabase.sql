@@ -8821,4 +8821,49 @@ BEGIN TRANSACTION main
 	 COMMIT TRANSACTION eightyeight
 	end
 		   
+	if(not(exists(select (1) from DBVersion where DBVersionID = 89)))
+	begin
+     print N'Prepopulate PermittedStructureLink from the existing structure links and add the glial adjacency (267) links'
+	 BEGIN TRANSACTION eightynine
+
+	 /*PermittedStructureLink was created empty at version 52, so a database has only the permitted links someone added by
+	   hand, and the client refuses any link whose type pair is not listed. First, list every type pair already joined by
+	   a StructureLink, so no existing link is left unpermitted (Bidirectional is set if any link of that pair is
+	   bidirectional). Second, permit Conventional (34), Ribbon (73) and BCS (189) structures to link to Glial Adjacency
+	   (267), as requested in #ai-requests 1793299387.994199. Pairs already listed are skipped, and the second insert is
+	   skipped on a database that lacks any of those structure types.*/
+	 EXEC('INSERT INTO [dbo].[PermittedStructureLink] (SourceTypeID, TargetTypeID, Bidirectional)
+			SELECT S.TypeID, T.TypeID, MAX(CAST(L.Bidirectional AS INT))
+			FROM [dbo].[StructureLink] L
+			INNER JOIN [dbo].[Structure] S ON S.ID = L.SourceID
+			INNER JOIN [dbo].[Structure] T ON T.ID = L.TargetID
+			WHERE NOT EXISTS (SELECT 1 FROM [dbo].[PermittedStructureLink] P
+							  WHERE P.SourceTypeID = S.TypeID AND P.TargetTypeID = T.TypeID)
+			GROUP BY S.TypeID, T.TypeID')
+
+	 if(@@error <> 0)
+	 begin
+	   ROLLBACK TRANSACTION
+	   RETURN
+	 end
+
+	 EXEC('INSERT INTO [dbo].[PermittedStructureLink] (SourceTypeID, TargetTypeID, Bidirectional)
+			SELECT Src.ID, Tgt.ID, 0
+			FROM [dbo].[StructureType] Src
+			INNER JOIN [dbo].[StructureType] Tgt ON Tgt.ID = 267
+			WHERE Src.ID IN (34, 73, 189)
+			AND NOT EXISTS (SELECT 1 FROM [dbo].[PermittedStructureLink] P
+							WHERE P.SourceTypeID = Src.ID AND P.TargetTypeID = Tgt.ID)')
+
+	 if(@@error <> 0)
+	 begin
+	   ROLLBACK TRANSACTION
+	   RETURN
+	 end
+
+	INSERT INTO DBVersion values (89,
+		      N'Prepopulate PermittedStructureLink from existing structure links; permit types 34, 73 and 189 to link to 267' ,getDate(),User_ID())
+	 COMMIT TRANSACTION eightynine
+	end
+		   
 COMMIT TRANSACTION main
