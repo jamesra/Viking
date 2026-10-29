@@ -23,8 +23,8 @@ namespace WebAnnotation.View
     }
 
     /// <summary>
-    /// Draw overlapped links as a set of circles inscribed in a larger circle, or at the marker slots a run
-    /// <see cref="LabelPlacement"/> chose
+    /// Draw overlapped links as a set of circles inscribed in a larger circle (circle annotations), or at the marker slots
+    /// a polygon's <see cref="LabelPlacement"/> chose (run or circle)
     /// </summary>
     internal class OverlappedLinkCircleView : ICanvasGeometryView, ICanvasViewContainer, IColorView, ILabelView
     {
@@ -48,10 +48,10 @@ namespace WebAnnotation.View
         private readonly long ID;
         private readonly int Z;
 
-        /// <summary>Marker positions from a run placement; null when markers go on the arcs of the outer circle.</summary>
-        private readonly IReadOnlyList<MarkerSlot> Slots;
+        /// <summary>Marker positions from a polygon's label placement; null when markers go on the arcs of the outer circle.</summary>
+        private readonly IReadOnlyList<MarkerSlot>? Slots;
 
-        /// <summary>Run axis that slots and linked locations are both ordered along.</summary>
+        /// <summary>Text axis (the run's, or +X in the circle) that slots and linked locations are both ordered along.</summary>
         private readonly Geometry.Vector2 SlotAxis;
 
         public OverlappedLinkCircleView(Circle outerCircle_MosaicSpace, long LocationID, int ZCut, ICollection<long> OverlappedLinks)
@@ -65,15 +65,16 @@ namespace WebAnnotation.View
         }
 
         /// <summary>
-        /// Markers at the slots of a run <paramref name="placement"/>. Links to sections above take the up slots and links
-        /// below the down slots, matched in order along the run so each marker sits on its link's side.
+        /// Markers at the slots of a polygon's <paramref name="placement"/>, run or circle. Links to sections above take
+        /// the up slots and links below the down slots, matched in order along the text axis so each marker sits on its
+        /// link's side. The slots are fixed for a placement, so a relayout that keeps it keeps every marker in place.
         /// </summary>
         public OverlappedLinkCircleView(LabelPlacement placement, long LocationID, int ZCut, ICollection<long> OverlappedLinks)
         {
             Slots = placement.Markers;
-            SlotAxis = placement.Region.AxisU;
+            SlotAxis = placement.Axis;
             BoundingBox = Slots.Count == 0
-                ? placement.Region.ToPolygon().BoundingBox
+                ? (placement.Kind == LabelPlacementKind.Run ? placement.Region.ToPolygon().BoundingBox : placement.Circle.BoundingBox)
                 : Slots.Select(s => s.Circle.BoundingBox).Aggregate((a, b) => Geometry.Rectangle.Union(a, b));
             Z = ZCut;
             ID = LocationID;

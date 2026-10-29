@@ -67,11 +67,28 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   level and ~~$0.9\,F_k$~~ tilted). $G = (1 - w)\cdot 1.0$ for the Label rotation preference $w \in (0, 1]$, default
   $w = 0.5$, $G = 0.5$; $w = 0$ ("Never") considers level runs only. The circle of radius $R$ allows $F_c = R/2$ (the
   circle labels' existing size). The best-scoring run is used when its text-only font
-  $F_0 \ge \max(1.25,\ g(\theta))\,F_c$; it then keeps the largest $k \le n$ markers with $s_k \ge 0.6\,s_0$, split
-  between down and up links in proportion. Free-space markers maximise
-  $f(p) = \min(d_P(p),\ d_T(p),\ \min_j(\lVert p - c_j\rVert - r_j))$, with $d_P$ the signed distance to the polygon,
-  $d_T$ the signed distance outside the text box and $c_j, r_j$ the markers placed so far; radius
-  $\min(F/2, 0.95 f)$, at least $0.1F$.
+  $F_0 \ge \max(1.25,\ g(\theta))\,F_c$; ~~it then keeps the largest $k \le n$ markers with $s_k \ge 0.6\,s_0$, split
+  between down and up links in proportion~~ (superseded 2026-10-29 by the marker packing below). Free-space markers
+  maximise $f(p) = \min(d_P(p),\ d_T(p),\ \min_j(\lVert p - c_j\rVert - r_j))$, with $d_P$ the signed distance to the
+  polygon, $d_T$ the signed distance outside the text box and $c_j, r_j$ the markers placed so far; radius
+  $\min(F/2, 0.95 f)$, at least $0.1F$, and since 2026-10-29 at most $0.95\,d_P$ (at the inscribed centre if $d_P \le 0$).
+
+- **Marker packing** (`LabelLayout.PackingOrder`, `EndBlockSlot`, `AddCircleRows`, since 2026-10-29): a packing is
+  $(r, s)$, up to $r$ hex-packed rows per direction of markers at scale $s$ of full size, tried in the order
+  $s \in (1, 0.75, 0.5)$, then $r = 1 \ldots 4$. In a run (pitch $d = sF$, radius $0.45d$) marker $j$ of an end's $m$
+  sits $u_j = \lfloor j/r' \rfloor + \tfrac12[\,j \bmod r' \text{ odd}\,] + \tfrac12$ pitches in from the end and
+  $v_j = (\tfrac{r'-1}{2} - j \bmod r')\tfrac{\sqrt3}{2}$ across, $r' = \min(r, m)$. The ends take
+  $w = s(\max_j u^{\downarrow}_j + \max_j u^{\uparrow}_j + 1)$ font lengths and $h = s((r'-1)\tfrac{\sqrt3}{2} + 0.9)$
+  font thicknesses, so $F = \min\!\left(\frac{H}{1.1\,t_h}, \frac{W}{w + 1.1\,t_w}, \frac{H}{h}\right)$. The first
+  packing with $F/g(\theta) \ge 0.6\,s_0$ whose markers all clear the outline is used; failing all, $k = n-1 \ldots 1$
+  markers at $s = 0.5$, the rest to free space. In the circle of radius $R$, row $k$ is an arc of radius
+  $\rho_k = \tfrac{7}{12}R + \rho_m + k\sqrt3\,\rho_m$, $\rho_m = sR/6$ (at $s = 1$ row 0 is circle annotations'
+  $0.75R$ arc), with pitch $\varphi = 2\arcsin(\rho_m/\rho_0)$ shared by every row and lattice angles $t\varphi$,
+  $t \in \mathbb{Z} + \tfrac{p_k}{2}$, $|t| \le (\pi/\varphi - 1)/2$ (each marker stays in its half), the phase $p_k$
+  alternating so each row sits in the gaps of the one inside it; up-links above the centre, down-links mirrored below.
+  A row is used only if every marker in it clears the outline and holes. Score factor $m = 1 - 0.25\,(1 - \bar s)$,
+  $\bar s$ the mean marker scale with a free-space marker counting 0.25; Fit compares $F_0\,m_{run}$ with
+  $\max(1.25, g(\theta))\,F_c\,m_{circle}$.
 - **Label switch easing** (`Geometry.Core/Algorithms/LabelEasing.cs`): each text row moves from its shown pose
   $(c_0, \theta_0, f_0)$ to its new one $(c_1, \theta_1, f_1)$ with $s = 1 - (1 - t/T)^3$, $T = 150$ ms:
   $c = c_0 + s\,(c_1 - c_0)$, $f = f_0 (f_1/f_0)^s$, $\theta = N(\theta_0 + s\,\delta)$ where $\delta$ is
@@ -90,6 +107,35 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   $r = \min(\operatorname{dist}(\tfrac{N + E}{2}, \partial P), \sqrt{A/\pi})$ and centre $E - r\,d$.
 
 ## Algorithmic decisions
+
+- **2026-10-29 Link markers stay inside the polygon: a staggered second row, then smaller markers, before free space**
+  (ported from VikingLegacy 124f3ec8, same day). Why: James's RC2 screenshots of cell C 45733 (location 386775,
+  section 645, two links down to 643 and three up to 646). Level, the run's ends held only four markers: five in one
+  row left $F_5 = 109.8$ against $0.6\,s_0 = 112.8$ (reproduced from the location's control points smoothed as the
+  viewer does, with Arial row widths), so the fifth went to the deepest free spot, the bulb at the cell's far end over
+  1100 units from the other up-links, where it looked lost. The circle placement already put up-links above and
+  down-links below, so the level label in the screenshot was a run, and that was the path to fix. His rule: stagger a
+  second row by half a marker to save height, then shrink and add rows, then anything else. Now (formula above) the
+  cell's level label holds all five in two staggered full-size rows at font 124.7 (was 120.4), and the default tilted
+  run still holds one row. Decisions: rows stagger along the run's axis at each end (down left, up right) and outward
+  from the text in the circle, so both conventions hold; all circle rows share the innermost row's angular pitch with
+  alternating phase, so they interleave without overlap
+  ($d^2 = 3\rho_m^2 + 4\rho_a\rho_b\sin^2(\varphi/4) \ge 4\rho_m^2$); the circle's row 0 uses
+  $2\arcsin(\rho_m/\rho_0)$ rather than circle annotations' $2\rho_m/\rho_0$ (0.8% wider, so neighbours no longer
+  overlap); a row past the inscribed circle is kept only where the real outline allows; the smallest marker is half
+  size (`MinimumMarkerScale`: a run pitch of half the ID font, a circle radius $R/12$), since a smaller one's section
+  number is unreadable; the run's font also obeys the end blocks' height, so a staggered block never sticks out of the
+  run. Marker cost enters the score as a factor on both sides of the run/circle test, the run's side still its
+  text-only font $F_0$, so labels whose markers are full size on both sides decide exactly as before. Free-space
+  markers are capped at $0.95\,d_P$ (the old $0.1F$ floor could cross the outline). The circle placement now carries
+  its own slots and polygon views draw both kinds from the placement, in Viking and Jotunn alike (both build labels
+  through `PolygonLabelSet`); circle annotations keep their arc code (more than seven links a side still wrap there,
+  as before). Rejected: a second circle row inward (it covers the text); markers below half size (unreadable);
+  shrinking before staggering (the user's order). Where: `Geometry.Core/Algorithms/LabelLayout.cs` (`PackingOrder`,
+  `ChooseEndMarkers`, `EndBlockSlot`, `PlaceInCircle`, `AddCircleRows`, `ClearOfOutline`, `MarkerReadability`),
+  `Clients/Viking/WebAnnotation/View/PolygonLabelSet.cs`, `OverlappedLinkCircleView.cs`; tests
+  `GeometryTests/LabelLayoutTests.cs` (stagger, shrink, circle halves, the screenshot cell) and
+  `GeometryTests/FSCheck/PolygonSpec.cs` (`MarkersStayInsideAndClearOfHoles`).
 
 - **2026-10-29 Polygon labels switch placement smoothly: an eased move and 5° run angles** (ported from VikingLegacy
   bc1643cd and 3caf531e, same day). Why: the user found the live Label rotation relayout rough, with labels jumping

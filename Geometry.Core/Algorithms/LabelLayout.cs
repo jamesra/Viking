@@ -55,11 +55,43 @@ namespace Geometry
 
     public enum LabelPlacementKind
     {
-        /// <summary>Text and markers laid out in <see cref="LabelPlacement.Circle"/> as circle annotations are.</summary>
+        /// <summary>
+        /// Text laid out in <see cref="LabelPlacement.Circle"/> as circle annotations are, up-link markers above it and
+        /// down-link markers below.
+        /// </summary>
         Circle,
 
         /// <summary>Text along <see cref="LabelPlacement.Region"/>, with markers at its ends and in free space.</summary>
         Run
+    }
+
+    /// <summary>
+    /// How a placement packs its overlapped-link markers: up to <see cref="Rows"/> hex-packed rows per direction, each
+    /// marker <see cref="Scale"/> of the full size. A second row sits half a marker along, in the gaps of the first, so it
+    /// adds √3/2 of a marker to the height rather than a whole one. In a run the rows lie along the axis at each end; in
+    /// the circle they are arcs above and below the text, moving outward from it.
+    /// </summary>
+    public readonly struct MarkerPacking
+    {
+        /// <summary>Most rows one direction's markers may use; with fewer markers than rows, each marker has a row.</summary>
+        public readonly int Rows;
+
+        /// <summary>
+        /// Marker size as a fraction of the full size: of a pitch equal to the ID font in a run, of a radius R/6 in the
+        /// circle (as circle annotations draw them). Between <see cref="LabelLayout.MinimumMarkerScale"/> and 1.
+        /// </summary>
+        public readonly double Scale;
+
+        public MarkerPacking(int rows, double scale)
+        {
+            Rows = rows;
+            Scale = scale;
+        }
+
+        /// <summary>One row of full-size markers: the layout before 2026-10-29, and still the first one tried.</summary>
+        public static MarkerPacking Single => new(1, 1.0);
+
+        public override string ToString() => $"{Rows} row(s) at {Scale:F2}";
     }
 
     /// <summary>Where one overlapped-link marker is drawn.</summary>
@@ -107,24 +139,48 @@ namespace Geometry
         /// <summary>Centre of each <see cref="LabelContent.Rows"/> entry, in order. Only set for runs.</summary>
         public readonly IReadOnlyList<Vector2> RowCenters;
 
-        /// <summary>Every marker for a run: the end markers, then any placed in free space. Empty for circles.</summary>
+        /// <summary>
+        /// Every marker, one per link to another section: first the packed ones (at the run's ends, or above and below the
+        /// circle's text) in a fixed order for the same placement, then the last <see cref="FreeMarkerCount"/>, placed in
+        /// free space. Each lies inside the polygon and clear of its holes.
+        /// </summary>
         public readonly IReadOnlyList<MarkerSlot> Markers;
+
+        /// <summary>How the packed markers are laid out.</summary>
+        public readonly MarkerPacking Packing;
+
+        /// <summary>How many of <see cref="Markers"/>, at its end, did not fit the packing and went to free space.</summary>
+        public readonly int FreeMarkerCount;
+
+        /// <summary>
+        /// Score factor for how readable the markers are, 1 when every marker is packed at full size (or there are none),
+        /// lower for shrunken markers and markers in free space; see <see cref="LabelLayout.MarkerReadability"/>.
+        /// </summary>
+        public readonly double MarkerReadability;
 
         /// <summary>Text angle in radians, counter-clockwise from +X, in (−π/2, π/2]. 0 for circles.</summary>
         public double Angle => Kind == LabelPlacementKind.Run ? Region.Angle : 0;
 
-        internal LabelPlacement(LabelContent content, Circle circle, double fontSize)
+        /// <summary>Direction the text reads along: the run's axis, or +X for the circle. Markers are ordered along it.</summary>
+        public Vector2 Axis => Kind == LabelPlacementKind.Run ? Region.AxisU : new Vector2(1, 0);
+
+        internal LabelPlacement(LabelContent content, Circle circle, double fontSize,
+            IReadOnlyList<MarkerSlot> markers, MarkerPacking packing, int freeMarkerCount, double markerReadability)
         {
             Content = content;
             Kind = LabelPlacementKind.Circle;
             Circle = circle;
             FontSize = fontSize;
             RowCenters = [];
-            Markers = [];
+            Markers = markers;
+            Packing = packing;
+            FreeMarkerCount = freeMarkerCount;
+            MarkerReadability = markerReadability;
         }
 
         internal LabelPlacement(LabelContent content, Circle circle, OrientedRectangle region, double fontSize,
-            OrientedRectangle textBox, double maxLineWidth, IReadOnlyList<Vector2> rowCenters, IReadOnlyList<MarkerSlot> markers)
+            OrientedRectangle textBox, double maxLineWidth, IReadOnlyList<Vector2> rowCenters, IReadOnlyList<MarkerSlot> markers,
+            MarkerPacking packing, int freeMarkerCount, double markerReadability)
         {
             Content = content;
             Kind = LabelPlacementKind.Run;
@@ -135,6 +191,9 @@ namespace Geometry
             MaxLineWidth = maxLineWidth;
             RowCenters = rowCenters;
             Markers = markers;
+            Packing = packing;
+            FreeMarkerCount = freeMarkerCount;
+            MarkerReadability = markerReadability;
         }
     }
 
@@ -149,6 +208,15 @@ namespace Geometry
     /// G = 0.5, 13% at 15°, 25% at 30°, 35% at 45° and 50% at 90°. Near-level runs pay almost nothing, and a long thin
     /// process, which gains several-fold along its length, still rotates. G = ∞ keeps text level. A run's font must beat
     /// the circle's R/2 by 25%, so round cells look as circles do, or by its required gain when that is larger.
+    /// <para>
+    /// Markers: in a run, down-links at the left end and up-links at the right; in the circle, up-links above the text and
+    /// down-links below, on the arcs circle annotations use. When one row of full-size markers does not fit (in a run, it
+    /// would cost more than <see cref="MarkerFontRetention"/> of the text-only font; in the circle, it would leave its half
+    /// or the polygon), the <see cref="PackingOrder"/> tries a second row staggered by half a marker, then smaller markers
+    /// in more rows, down to <see cref="MinimumMarkerScale"/>, and only then sends markers to the next-deepest free spots.
+    /// Every marker is checked against the real outline and holes. Shrunken and free-space markers lower the placement's
+    /// score by <see cref="MarkerReadability"/>, so a run and the circle are compared with their markers' cost.
+    /// </para>
     /// </remarks>
     public sealed class LabelLayout
     {
@@ -173,14 +241,63 @@ namespace Geometry
         /// <summary>Room around the text, as a multiple of its size.</summary>
         public const double TextPadding = 1.1;
 
-        /// <summary>End markers are kept while the font is at least this fraction of the font without them.</summary>
+        /// <summary>
+        /// A run's end-marker packing is used while the font it leaves is at least this fraction of the font without
+        /// markers; the first packing in <see cref="PackingOrder"/> that keeps it wins.
+        /// </summary>
         public const double MarkerFontRetention = 0.6;
 
-        /// <summary>End marker radius as a fraction of the marker pitch, which equals the ID font size.</summary>
+        /// <summary>End marker radius as a fraction of the marker pitch, which equals the ID font size at full size.</summary>
         public const double EndMarkerRadius = 0.45;
 
         /// <summary>Smallest free-space marker radius as a fraction of the ID font size, used when no room is left.</summary>
         public const double MinimumMarkerRadius = 0.1;
+
+        /// <summary>
+        /// Smallest packed marker, as a fraction of the full size: in a run a pitch of half the ID font, in the circle a
+        /// radius of R/12, a quarter of the circle's ID font. Below it the section number in a marker is hard to read, so
+        /// markers that still do not fit go to free space instead of shrinking further.
+        /// </summary>
+        public const double MinimumMarkerScale = 0.5;
+
+        /// <summary>Most hex-packed rows of markers per direction (per run end, or per side of the circle's text).</summary>
+        public const int MaxMarkerRows = 4;
+
+        /// <summary>Distance between hex-packed rows as a fraction of the marker pitch: √3/2.</summary>
+        public const double MarkerRowSpacing = 0.86602540378443865;
+
+        /// <summary>
+        /// Score cost of unreadable markers: a placement scores 1 − c·(1 − m̄), with m̄ the mean marker scale, a free-space
+        /// marker counting <see cref="FreeSpaceMarkerScale"/>. At c = 0.25 markers at <see cref="MinimumMarkerScale"/>
+        /// cost 12.5%, all markers in free space 19%.
+        /// </summary>
+        public const double MarkerShrinkCost = 0.25;
+
+        /// <summary>What a marker in free space counts as in <see cref="MarkerReadability"/>: away from its row it is hard to find.</summary>
+        public const double FreeSpaceMarkerScale = 0.25;
+
+        /// <summary>Full-size circle marker radius as a fraction of the circle's, as <c>OverlappedLinkCircleView</c> draws circle annotations.</summary>
+        public const double CircleMarkerRadius = 1.0 / 6.0;
+
+        /// <summary>Radius of the arc full-size circle markers sit on, as a fraction of the circle's, as for circle annotations.</summary>
+        public const double CircleMarkerArc = 0.75;
+
+        /// <summary>
+        /// Half the height of the circle's text, as a fraction of its radius: the inner edge of the full-size marker arc.
+        /// Circle marker rows start here and move outward.
+        /// </summary>
+        public const double CircleTextHalfHeight = CircleMarkerArc - CircleMarkerRadius;
+
+        /// <summary>Marker sizes tried, largest first.</summary>
+        private static readonly double[] MarkerScales = [1.0, 0.75, MinimumMarkerScale];
+
+        /// <summary>
+        /// Packings tried for markers, most readable first: by marker size, largest first, then by row count, fewest
+        /// first. The first is <see cref="MarkerPacking.Single"/>, then a staggered second row at full size, then smaller
+        /// markers in one to <see cref="MaxMarkerRows"/> rows.
+        /// </summary>
+        public static readonly IReadOnlyList<MarkerPacking> PackingOrder =
+            [.. MarkerScales.SelectMany(s => Enumerable.Range(1, MaxMarkerRows).Select(rows => new MarkerPacking(rows, s)))];
 
         private readonly RingSegmentSet Rings;
         private readonly RunCandidate[] Runs;
@@ -210,12 +327,71 @@ namespace Geometry
         /// <summary>ID font size in a circle, as <c>StructureCircleLabels</c> draws it.</summary>
         public static double CircleFontSize(Circle circle) => circle.Radius / 2.0;
 
-        /// <summary>ID font size a <paramref name="width"/> by <paramref name="height"/> run allows with <paramref name="markers"/> end markers.</summary>
-        public static double RunFontSize(double width, double height, LabelContent content, int markers)
+        /// <summary>
+        /// ID font size a <paramref name="width"/> by <paramref name="height"/> run allows with <paramref name="markers"/>
+        /// full-size end markers in one row.
+        /// </summary>
+        public static double RunFontSize(double width, double height, LabelContent content, int markers) =>
+            RunFontSize(width, height, content, markers, markers > 0 ? 2 * EndMarkerRadius : 0);
+
+        /// <summary>
+        /// ID font size a <paramref name="width"/> by <paramref name="height"/> run allows when its end markers take
+        /// <paramref name="markerWidth"/> times the font of its length and <paramref name="markerHeight"/> times the font
+        /// of its thickness (see <see cref="EndBlockWidth"/> and <see cref="EndBlockHeight"/>). The height limit keeps every
+        /// marker inside the run, and so inside the polygon, whatever the text's height.
+        /// </summary>
+        public static double RunFontSize(double width, double height, LabelContent content, double markerWidth, double markerHeight)
         {
             double th = Math.Max(content.TextHeight, 1e-9);
             double tw = content.TextWidth;
-            return Math.Max(0, Math.Min(height / (TextPadding * th), width / Math.Max(markers + (TextPadding * tw), 1e-9)));
+            double font = Math.Min(height / (TextPadding * th), width / Math.Max(markerWidth + (TextPadding * tw), 1e-9));
+            if (markerHeight > 0)
+                font = Math.Min(font, height / markerHeight);
+
+            return Math.Max(0, font);
+        }
+
+        /// <summary>
+        /// Where marker <paramref name="j"/> of a run end's <paramref name="count"/> sits in a block of up to
+        /// <paramref name="rows"/> hex-packed rows, in marker pitches: <c>U</c> from the run's end inward to its centre,
+        /// <c>V</c> across the axis from it. The block fills column by column, odd rows half a pitch further in, so
+        /// neighbours touch and a second row adds <see cref="MarkerRowSpacing"/> to the height.
+        /// </summary>
+        public static (double U, double V) EndBlockSlot(int j, int count, int rows)
+        {
+            int used = Math.Max(1, Math.Min(rows, count));
+            int column = j / used;
+            int row = j % used;
+            return (column + (row % 2 == 1 ? 0.5 : 0) + 0.5, (((used - 1) / 2.0) - row) * MarkerRowSpacing);
+        }
+
+        /// <summary>Length along the run, in marker pitches, of an end block of <paramref name="count"/> markers in up to <paramref name="rows"/> rows.</summary>
+        public static double EndBlockWidth(int count, int rows)
+        {
+            double width = 0;
+            for (int j = 0; j < count; j++)
+                width = Math.Max(width, EndBlockSlot(j, count, rows).U + 0.5);
+
+            return width;
+        }
+
+        /// <summary>Thickness across the run, in marker pitches, of the drawn markers of an end block.</summary>
+        public static double EndBlockHeight(int count, int rows) =>
+            count <= 0 ? 0 : ((Math.Min(rows, count) - 1) * MarkerRowSpacing) + (2 * EndMarkerRadius);
+
+        /// <summary>
+        /// Score factor for markers <paramref name="packed"/> of which are at <paramref name="scale"/> and
+        /// <paramref name="free"/> in free space: 1 − <see cref="MarkerShrinkCost"/>·(1 − mean scale), a free marker
+        /// counting <see cref="FreeSpaceMarkerScale"/>. 1 with no markers.
+        /// </summary>
+        public static double MarkerReadability(int packed, double scale, int free)
+        {
+            int count = packed + free;
+            if (count <= 0)
+                return 1;
+
+            double mean = ((packed * scale) + (free * FreeSpaceMarkerScale)) / count;
+            return 1 - (MarkerShrinkCost * (1 - mean));
         }
 
         /// <summary>
@@ -251,8 +427,36 @@ namespace Geometry
         /// <summary>Score multiplier for a run at <paramref name="angle"/>: 1 / <see cref="RequiredGain"/>, so at most 1.</summary>
         public static double TiltFactor(double angle, double rotationGain) => 1.0 / RequiredGain(angle, rotationGain);
 
-        private static double Score(OrientedRectangle region, LabelContent content, int markers, double rotationGain) =>
-            RunFontSize(region.Width, region.Height, content, markers) * TiltFactor(region.Angle, rotationGain);
+        private static double Score(OrientedRectangle region, LabelContent content, EndMarkers ends, double rotationGain) =>
+            RunFontSize(region.Width, region.Height, content, ends.WidthUnits, ends.HeightUnits) * TiltFactor(region.Angle, rotationGain);
+
+        /// <summary>
+        /// The markers a run holds at its ends and how they are packed, with the length and thickness the two end blocks
+        /// take in units of the ID font.
+        /// </summary>
+        private readonly struct EndMarkers
+        {
+            public readonly int Down;
+            public readonly int Up;
+            public readonly MarkerPacking Packing;
+
+            /// <summary>Length of both end blocks together, times the ID font.</summary>
+            public readonly double WidthUnits;
+
+            /// <summary>Thickness of the thicker end block, times the ID font.</summary>
+            public readonly double HeightUnits;
+
+            public EndMarkers(int down, int up, MarkerPacking packing)
+            {
+                Down = down;
+                Up = up;
+                Packing = packing;
+                WidthUnits = packing.Scale * (EndBlockWidth(down, packing.Rows) + EndBlockWidth(up, packing.Rows));
+                HeightUnits = packing.Scale * Math.Max(EndBlockHeight(down, packing.Rows), EndBlockHeight(up, packing.Rows));
+            }
+
+            public static EndMarkers None => new(0, 0, MarkerPacking.Single);
+        }
 
         /// <summary>The placement with the largest ID font for <paramref name="content"/>, at <see cref="DefaultRotationGain"/>.</summary>
         public LabelPlacement Fit(LabelContent content) => Fit(content, DefaultRotationGain);
@@ -274,27 +478,86 @@ namespace Geometry
             // The two preferences are not multiplied: a run needs the larger of the circle preference and that gain.
             // Multiplied, a thin vertical process asks 1.25 × 1.5 = 1.875 over its circle, which a two-line label
             // (run font H/2.2 against circle font H/4, 1.82) never reaches, so its text would shrink into the circle.
-            double circleFont = CircleFontSize(InscribedCircle);
-            if (!TryBestRun(content, 0, rotationGain, out OrientedRectangle region, out double textOnlyScore))
-                return new LabelPlacement(content, InscribedCircle, circleFont);
+            // Both sides carry their markers' readability, so shrunken or scattered markers count against a placement;
+            // the run's side is its text-only font F0, as before markers were scored, so full-size markers on both
+            // sides decide exactly as before.
+            LabelPlacement circle = PlaceInCircle(content);
+            if (!TryBestRun(content, EndMarkers.None, rotationGain, out OrientedRectangle region, out double textOnlyScore))
+                return circle;
 
             double runFont = RunFontSize(region.Width, region.Height, content, 0);
-            if (runFont < CircleThreshold(region.Angle, rotationGain) * circleFont)
-                return new LabelPlacement(content, InscribedCircle, circleFont);
+            double circleAsks = CircleThreshold(region.Angle, rotationGain) * circle.FontSize * circle.MarkerReadability;
+            if (runFont < circleAsks)
+                return circle;
 
-            int endMarkers = 0;
-            for (int k = content.MarkerCount; k > 0; k--)
+            EndMarkers ends = ChooseEndMarkers(content, rotationGain, textOnlyScore, ref region);
+            LabelPlacement run = PlaceInRun(region, content, ends);
+            return runFont * run.MarkerReadability < circleAsks ? circle : run;
+        }
+
+        /// <summary>
+        /// The end markers for a run and the run they fit best, trying in order: every marker in each
+        /// <see cref="PackingOrder"/> packing (one row, a staggered second row, then smaller markers in more rows); then
+        /// fewer markers at <see cref="MinimumMarkerScale"/>, the rest going to free space; then none. A packing is used
+        /// when its best run keeps <see cref="MarkerFontRetention"/> of <paramref name="textOnlyScore"/> and every marker
+        /// it places clears the outline and holes. <paramref name="region"/> is the text-only run on entry and the run
+        /// chosen on return.
+        /// </summary>
+        private EndMarkers ChooseEndMarkers(LabelContent content, double rotationGain, double textOnlyScore, ref OrientedRectangle region)
+        {
+            int total = content.MarkerCount;
+            if (total == 0)
+                return EndMarkers.None;
+
+            double floor = MarkerFontRetention * textOnlyScore;
+            List<(double Width, double Height)> failed = [];
+            if (TryPackings(content.DownCount, content.UpCount, PackingOrder, out EndMarkers ends, out OrientedRectangle fitted))
             {
-                if (TryBestRun(content, k, rotationGain, out OrientedRectangle withMarkers, out double score) &&
-                    score >= MarkerFontRetention * textOnlyScore)
+                region = fitted;
+                return ends;
+            }
+
+            MarkerPacking[] smallest = [.. PackingOrder.Where(p => p.Scale == MinimumMarkerScale)];
+            for (int k = total - 1; k > 0; k--)
+            {
+                int down = Math.Min(content.DownCount, (int)Math.Round(k * (double)content.DownCount / total));
+                int up = Math.Min(content.UpCount, k - down);
+                down = Math.Min(content.DownCount, k - up);
+                failed.Clear();
+                if (TryPackings(down, up, smallest, out ends, out fitted))
                 {
-                    endMarkers = k;
-                    region = withMarkers;
-                    break;
+                    region = fitted;
+                    return ends;
                 }
             }
 
-            return PlaceInRun(region, content, endMarkers);
+            return EndMarkers.None;
+
+            bool TryPackings(int down, int up, IEnumerable<MarkerPacking> packings, out EndMarkers chosen, out OrientedRectangle chosenRegion)
+            {
+                foreach (MarkerPacking packing in packings)
+                {
+                    chosen = new EndMarkers(down, up, packing);
+                    double width = chosen.WidthUnits, height = chosen.HeightUnits;
+
+                    // A packing at least as long and as thick as one that failed allows no larger font, so it fails too.
+                    if (failed.Exists(f => f.Width <= width && f.Height <= height))
+                        continue;
+
+                    if (!TryBestRun(content, chosen, rotationGain, out chosenRegion, out double score) || score < floor)
+                    {
+                        failed.Add((width, height));
+                        continue;
+                    }
+
+                    if (EndMarkersClear(chosenRegion, content, chosen))
+                        return true;
+                }
+
+                chosen = default;
+                chosenRegion = default;
+                return false;
+            }
         }
 
         /// <summary>
@@ -305,7 +568,7 @@ namespace Geometry
             Math.Max(CirclePreference, RequiredGain(angle, rotationGain));
 
         /// <summary>
-        /// The verified run with the best score for <paramref name="markers"/> end markers. Raster sizes bound the
+        /// The verified run with the best score for the end markers <paramref name="ends"/>. Raster sizes bound the
         /// verified ones from above, and a verified run keeps its candidate's angle, so the same tilt factor keeps the
         /// bound: runs are verified best first only until no unverified one could win. With <see cref="NeverRotate"/>
         /// tilted runs are skipped, not merely scored 0.
@@ -315,7 +578,7 @@ namespace Geometry
         /// thousands of Pareto runs, and the scan stops after the first one or two verify, so sorting dominated the fit.
         /// Ties go to the earlier candidate, as the stable sort did.
         /// </remarks>
-        private bool TryBestRun(LabelContent content, int markers, double rotationGain, out OrientedRectangle best, out double bestScore)
+        private bool TryBestRun(LabelContent content, EndMarkers ends, double rotationGain, out OrientedRectangle best, out double bestScore)
         {
             best = default;
             bestScore = 0;
@@ -333,7 +596,7 @@ namespace Geometry
                 }
 
                 double tilt = RunSin[i] == 0 ? 1 : 1.0 / (1 + (gain * RunSin[i]));
-                bounds[i] = RunFontSize(Runs[i].Width, Runs[i].Height, content, markers) * tilt;
+                bounds[i] = RunFontSize(Runs[i].Width, Runs[i].Height, content, ends.WidthUnits, ends.HeightUnits) * tilt;
             }
 
             while (true)
@@ -356,7 +619,7 @@ namespace Geometry
                 if (!Runs[next].TryVerify(out OrientedRectangle region))
                     continue;
 
-                double score = Score(region, content, markers, rotationGain);
+                double score = Score(region, content, ends, rotationGain);
                 if (score > bestScore)
                 {
                     best = region;
@@ -369,29 +632,69 @@ namespace Geometry
         }
 
         /// <summary>
-        /// Lays out the run's local frame: down markers from the left end, up markers from the right end, rows stacked
-        /// top to bottom in the space between, centred on the axis. Markers beyond <paramref name="endMarkers"/> go to the
-        /// deepest free spots of the polygon.
+        /// Adds the end markers of <paramref name="ends"/> for a run at ID font <paramref name="font"/>: down-links in a
+        /// block from the left end, up-links in a block from the right end, each block <see cref="EndBlockSlot"/>'s
+        /// hex-packed rows centred on the axis. Slot j is always in the same place for the same run, font and counts.
         /// </summary>
-        private LabelPlacement PlaceInRun(OrientedRectangle region, LabelContent content, int endMarkers)
+        private static void AddEndSlots(OrientedRectangle region, double font, EndMarkers ends, List<MarkerSlot> markers)
         {
-            double font = RunFontSize(region.Width, region.Height, content, endMarkers);
-            int total = content.MarkerCount;
-            int downEnd = total == 0 ? 0 : Math.Min(content.DownCount, (int)Math.Round(endMarkers * (double)content.DownCount / total));
-            int upEnd = Math.Min(content.UpCount, endMarkers - downEnd);
-            downEnd = Math.Min(content.DownCount, endMarkers - upEnd);
-
-            double d = font;
+            double d = ends.Packing.Scale * font;
+            double radius = EndMarkerRadius * d;
             double halfW = region.Width / 2.0;
-            List<MarkerSlot> markers = new(total);
-            for (int i = 0; i < downEnd; i++)
-                markers.Add(new MarkerSlot(region.LocalToWorld(-halfW + (d / 2.0) + (i * d), 0), EndMarkerRadius * d, false));
+            for (int j = 0; j < ends.Down; j++)
+            {
+                (double u, double v) = EndBlockSlot(j, ends.Down, ends.Packing.Rows);
+                markers.Add(new MarkerSlot(region.LocalToWorld(-halfW + (u * d), v * d), radius, false));
+            }
 
-            for (int i = 0; i < upEnd; i++)
-                markers.Add(new MarkerSlot(region.LocalToWorld(halfW - (d / 2.0) - (i * d), 0), EndMarkerRadius * d, true));
+            for (int j = 0; j < ends.Up; j++)
+            {
+                (double u, double v) = EndBlockSlot(j, ends.Up, ends.Packing.Rows);
+                markers.Add(new MarkerSlot(region.LocalToWorld(halfW - (u * d), v * d), radius, true));
+            }
+        }
 
-            double textCenterU = (downEnd - upEnd) * d / 2.0;
-            double maxLineWidth = region.Width - ((downEnd + upEnd) * d);
+        /// <summary>True when every end marker <paramref name="ends"/> puts in <paramref name="region"/> clears the outline and holes.</summary>
+        private bool EndMarkersClear(OrientedRectangle region, LabelContent content, EndMarkers ends)
+        {
+            double font = RunFontSize(region.Width, region.Height, content, ends.WidthUnits, ends.HeightUnits);
+            List<MarkerSlot> slots = new(ends.Down + ends.Up);
+            AddEndSlots(region, font, ends, slots);
+            return slots.TrueForAll(s => ClearOfOutline(s, region));
+        }
+
+        /// <summary>
+        /// True when <paramref name="slot"/>'s whole circle is inside the polygon and out of its holes, by the real
+        /// segments. A circle inside the inscribed circle, or inside <paramref name="verified"/> (a run checked against
+        /// every ring), passes without a segment scan.
+        /// </summary>
+        private bool ClearOfOutline(MarkerSlot slot, OrientedRectangle? verified = null)
+        {
+            if (Vector2.Distance(slot.Center, InscribedCircle.Center) + slot.Radius <= InscribedCircle.Radius)
+                return true;
+
+            if (verified.HasValue && -verified.Value.SignedDistance(slot.Center) >= slot.Radius)
+                return true;
+
+            return Rings.SignedDistance(slot.Center.X, slot.Center.Y) >= slot.Radius;
+        }
+
+        /// <summary>
+        /// Lays out the run's local frame: down markers from the left end, up markers from the right end (see
+        /// <see cref="AddEndSlots"/>), rows stacked top to bottom in the space between, centred on the axis. Markers not
+        /// in <paramref name="ends"/> go to the deepest free spots of the polygon.
+        /// </summary>
+        private LabelPlacement PlaceInRun(OrientedRectangle region, LabelContent content, EndMarkers ends)
+        {
+            double font = RunFontSize(region.Width, region.Height, content, ends.WidthUnits, ends.HeightUnits);
+            List<MarkerSlot> markers = new(content.MarkerCount);
+            AddEndSlots(region, font, ends, markers);
+
+            double d = ends.Packing.Scale * font;
+            double downWidth = EndBlockWidth(ends.Down, ends.Packing.Rows) * d;
+            double upWidth = EndBlockWidth(ends.Up, ends.Packing.Rows) * d;
+            double textCenterU = (downWidth - upWidth) / 2.0;
+            double maxLineWidth = region.Width - downWidth - upWidth;
             double textHeight = content.TextHeight * font;
             OrientedRectangle textBox = new(region.LocalToWorld(textCenterU, 0),
                 Math.Min(maxLineWidth, TextPadding * content.TextWidth * font), TextPadding * textHeight, region.Angle);
@@ -405,27 +708,151 @@ namespace Geometry
                 above += row.Scale;
             }
 
-            PlaceInFreeSpace(markers, textBox, font, content.DownCount - downEnd, false);
-            PlaceInFreeSpace(markers, textBox, font, content.UpCount - upEnd, true);
+            int packed = markers.Count;
+            PlaceInFreeSpace(markers, textBox, font / 2.0, MinimumMarkerRadius * font, content.DownCount - ends.Down, false);
+            PlaceInFreeSpace(markers, textBox, font / 2.0, MinimumMarkerRadius * font, content.UpCount - ends.Up, true);
 
-            return new LabelPlacement(content, InscribedCircle, region, font, textBox, maxLineWidth, rowCenters, markers);
+            int free = markers.Count - packed;
+            return new LabelPlacement(content, InscribedCircle, region, font, textBox, maxLineWidth, rowCenters, markers,
+                ends.Packing, free, MarkerReadability(packed, ends.Packing.Scale, free));
+        }
+
+        /// <summary>
+        /// The circle placement: text as <c>StructureCircleLabels</c> draws it, up-link markers above it and down-link
+        /// markers below, in the first <see cref="PackingOrder"/> packing whose rows (see <see cref="AddCircleRows"/>) hold
+        /// every marker. With none, the densest packing holds what it can and the rest go to free space clear of the text.
+        /// </summary>
+        private LabelPlacement PlaceInCircle(LabelContent content)
+        {
+            double font = CircleFontSize(InscribedCircle);
+            if (content.MarkerCount == 0)
+                return new LabelPlacement(content, InscribedCircle, font, [], MarkerPacking.Single, 0, 1);
+
+            List<MarkerSlot> markers = new(content.MarkerCount);
+            foreach (MarkerPacking packing in PackingOrder)
+            {
+                markers.Clear();
+                if (AddCircleRows(content.UpCount, true, packing, markers) == content.UpCount &&
+                    AddCircleRows(content.DownCount, false, packing, markers) == content.DownCount)
+                {
+                    return new LabelPlacement(content, InscribedCircle, font, [.. markers], packing, 0,
+                        MarkerReadability(markers.Count, packing.Scale, 0));
+                }
+            }
+
+            MarkerPacking densest = new(MaxMarkerRows, MinimumMarkerScale);
+            markers.Clear();
+            int up = AddCircleRows(content.UpCount, true, densest, markers);
+            int down = AddCircleRows(content.DownCount, false, densest, markers);
+            int packed = markers.Count;
+
+            double r = InscribedCircle.Radius;
+            OrientedRectangle text = new(InscribedCircle.Center, 2 * r, 2 * CircleTextHalfHeight * r, 0);
+            double fullRadius = CircleMarkerRadius * r;
+            PlaceInFreeSpace(markers, text, fullRadius, MinimumMarkerScale * fullRadius, content.UpCount - up, true);
+            PlaceInFreeSpace(markers, text, fullRadius, MinimumMarkerScale * fullRadius, content.DownCount - down, false);
+
+            int free = markers.Count - packed;
+            return new LabelPlacement(content, InscribedCircle, font, markers, densest, free,
+                MarkerReadability(packed, densest.Scale, free));
+        }
+
+        /// <summary>
+        /// Adds up to <paramref name="count"/> markers of one direction in hex-packed arcs about the inscribed circle's
+        /// centre, above the text for up-links and mirrored below it for down-links, and returns how many it added. Row 0
+        /// lies just outside the text (<see cref="CircleTextHalfHeight"/>); at full size it is the arc circle annotations
+        /// use, radius 0.75 R with markers of R/6, centred on the vertical. Each further row is √3 marker radii farther out
+        /// and half a pitch along, in the gaps of the row before. All rows share one angular pitch, the innermost row's, so
+        /// the rows interleave, and no marker crosses the horizontal through the centre. A row that would leave the
+        /// polygon or touch a hole is not added, nor any row past <see cref="MarkerPacking.Rows"/>.
+        /// </summary>
+        private int AddCircleRows(int count, bool isUp, MarkerPacking packing, List<MarkerSlot> markers)
+        {
+            double r = InscribedCircle.Radius;
+            double markerRadius = packing.Scale * CircleMarkerRadius * r;
+            if (count <= 0 || !(markerRadius > 0))
+                return 0;
+
+            double innerRadius = (CircleTextHalfHeight * r) + markerRadius;
+            double pitch = 2 * Math.Asin(Math.Min(1, markerRadius / innerRadius));
+
+            // Lattice positions t (angle t·pitch from the vertical) with |t| <= reach keep a marker in its half.
+            double reach = ((Math.PI / pitch) - 1) / 2.0;
+            int Capacity(int phase) => phase == 0 ? (2 * (int)Math.Floor(reach)) + 1 : 2 * (int)Math.Floor(reach + 0.5);
+
+            Vector2 center = InscribedCircle.Center;
+            double side = isUp ? 1 : -1;
+            int placed = 0;
+            int previousPhase = 0;
+            List<MarkerSlot> row = [];
+            for (int k = 0; k < packing.Rows && placed < count; k++)
+            {
+                // Row 0 is centred like a circle annotation's arc (an odd count on the vertical, an even one either side
+                // of it); each later row takes the other phase, so its markers sit in the gaps of the row inside it.
+                int remaining = count - placed;
+                int matching = remaining % 2 == 1 ? 0 : 1;
+                int phase = k > 0 ? 1 - previousPhase
+                    : remaining <= Capacity(matching) ? matching
+                    : Capacity(1) > Capacity(0) ? 1 : 0;
+
+                previousPhase = phase;
+                int take = Math.Min(remaining, Capacity(phase));
+                if (take <= 0)
+                    break;
+
+                int span = (int)Math.Ceiling(reach) + 1;
+                double[] lattice = [.. Enumerable.Range(-span, (2 * span) + 1)
+                    .Select(i => i + (phase / 2.0))
+                    .Where(t => Math.Abs(t) <= reach)
+                    .OrderBy(t => Math.Abs(t)).ThenBy(t => t)
+                    .Take(take)
+                    .OrderBy(t => t)];
+
+                double rowRadius = innerRadius + (k * 2 * MarkerRowSpacing * markerRadius);
+                row.Clear();
+                foreach (double t in lattice)
+                {
+                    double angle = t * pitch;
+                    MarkerSlot slot = new(new Vector2(center.X + (rowRadius * Math.Sin(angle)), center.Y + (side * rowRadius * Math.Cos(angle))),
+                        markerRadius, isUp);
+                    if (!ClearOfOutline(slot))
+                        return placed;
+
+                    row.Add(slot);
+                }
+
+                markers.AddRange(row);
+                placed += row.Count;
+            }
+
+            return placed;
         }
 
         /// <summary>
         /// Adds <paramref name="count"/> markers one at a time at the point farthest from the outline, the text box and
-        /// every marker placed so far, each as large as that clearance allows up to half the ID font size.
+        /// every marker placed so far, each as large as that clearance allows up to <paramref name="maxRadius"/> and at
+        /// least <paramref name="minRadius"/>. A marker never crosses the outline or a hole: its radius is capped by its
+        /// distance to them, and where no point clears the text and the other markers it goes to the inscribed circle's
+        /// centre, overlapping them rather than leaving the polygon.
         /// </summary>
-        private void PlaceInFreeSpace(List<MarkerSlot> markers, OrientedRectangle textBox, double font, int count, bool isUp)
+        private void PlaceInFreeSpace(List<MarkerSlot> markers, OrientedRectangle textBox, double maxRadius, double minRadius, int count, bool isUp)
         {
             if (count <= 0)
                 return;
 
-            double tolerance = Math.Max(PoleOfInaccessibility.DefaultTolerance(Bounds), font / 20.0);
+            double tolerance = Math.Max(PoleOfInaccessibility.DefaultTolerance(Bounds), maxRadius / 10.0);
             for (int i = 0; i < count; i++)
             {
                 Vector2 center = PoleOfInaccessibility.Maximize(Bounds, Clearance, tolerance, Centroid, out double clearance);
-                double radius = Math.Max(Math.Min(font / 2.0, 0.95 * clearance), MinimumMarkerRadius * font);
-                markers.Add(new MarkerSlot(center, radius, isUp));
+                double radius = Math.Max(Math.Min(maxRadius, 0.95 * clearance), minRadius);
+                double room = Rings.SignedDistance(center.X, center.Y);
+                if (!(room > 0))
+                {
+                    center = InscribedCircle.Center;
+                    room = InscribedCircle.Radius;
+                }
+
+                markers.Add(new MarkerSlot(center, Math.Min(radius, 0.95 * room), isUp));
             }
 
             double Clearance(double x, double y)
