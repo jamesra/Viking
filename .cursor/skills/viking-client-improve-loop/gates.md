@@ -12,6 +12,8 @@ Read by the implementer and the reviewer. Protected areas are in [protected.md](
 - **Semantics traps checked.** Records gain value equality (check dictionary keys, `HashSet`, `==`, reference identity). A class becoming a struct changes copy and null behavior. `in` on a non-readonly struct adds defensive copies. LINQ is lazy where a loop was eager. Async changes timing and thread. Check each caller for the trap that applies.
 - **Same behavior.** A test pins the old behavior before the edit and passes after it. Bug fixes are the one exception; they follow Bug fixes.
 - **Reviewable size.** About 300 changed lines at most. Larger work goes to `deferred` with a one-line plan; do a smaller slice now if one exists.
+- **No new warnings.** Each file the change touches ends with no more compiler warnings than `warningBaseline` records for its project. New code builds warning-free; nullable and XML doc warnings count.
+- **Complexity does not grow.** In a file listed in `complexity`, no changed method ends longer than about 60 lines or nested deeper than three levels unless it already was, and an already-over method does not get worse. Refresh that file's entries in `complexity` after the commit.
 - **Builds everywhere it is used.** Shared-library edits build Viking (.NET Framework 4.8) and MonogameTestbed (.NET 9). `Span<T>` and `ArrayPool<T>` on .NET 4.8 need `System.Memory`/`System.Buffers`; do not add a package only to save a few allocations.
 - **Documentation.** Follow [docs.md](docs.md) (read it once per wake before writing docs): API docs on new or changed code, and any user doc that names a changed script, setting, port, or behavior is updated in the same commit.
 
@@ -35,6 +37,7 @@ How to fix one:
 3. Fix only the defect. If the fix would change user-visible behavior beyond removing the defect (UI flow, defaults, what gets saved), add it to `decisions` instead.
 4. For a bug a Viking user could notice, add one line to `VikingChangelog.md` in the same commit, so the next Viking Test announcement lists it.
 5. If the bug is in a protected area, or cannot be reproduced outside the UI or a live server, write a proposal with the evidence and the likely fix.
+6. **Sweep for siblings.** Name the defect's pattern in one line (see Bug patterns in [categories.md](categories.md); add the pattern there if it is new). Search this repo, the Client-track paths and every shared library they compile, for other instances, and add each hit to `deferred` with its file, line, and the pattern. Fix only the wake's instance; the hits become later candidates. Do not search or edit `d:\src\git\Viking` for this; the server loop owns it.
 
 ## Math and precision
 
@@ -70,16 +73,27 @@ Every change is covered by a test that would fail if the change were wrong.
    - assert with tolerances derived from the data's precision;
    - where it helps, compare against a higher-precision reference: `double` for `float` code, or `decimal` or exact rational arithmetic for `double` code.
 2. **Example tests** when a property would only restate the code, or for one known regression input. Keep each regression input as a named example next to the property that generalizes it.
+3. **Every member of a closed set gets classified.** When code depends on a fixed list (enum values such as annotation or location types, command and action types, hotkey actions, pen and barrel-button kinds, store event kinds), the test enumerates the whole set, with `Enum.GetValues` or by reflection, and fails for any member not placed in a named group. A new member then fails the test until someone decides where it belongs. `BarrelButtonBindingTests.FormatThenParse_RoundTrips` shows the enumeration; a classification test also asserts each member's group.
+4. **Documented guarantees are tested.** A doc comment that promises "never throws", "thread-safe", "all-or-nothing", "idempotent", "order-preserving", or a complexity bound needs a test that would fail if the promise broke: a property over hostile inputs (self-touching rings, crossing holes, near-degenerate polygons) for "never throws", concurrent callers for "thread-safe", a failing item for "all-or-nothing". If the promise is false and the code cannot keep it, fix the doc in the same commit.
+5. **Batch and boundary inputs.** A change to a method that takes a list (store `Add`, `GetObjectsByIDs` and `Save`, `ReviewChangeFeed.ApplyDeletes`, polygon, polyline and curve-fitting constructors over point lists, section range parsing) is tested with an empty list, a repeated item (including a repeated or closing point), a self-reference where the item can name itself (a link from a location to itself), one invalid item in an otherwise valid batch (the batch behaves as its contract says), and the largest size real use reaches (a full section's locations, a contour with thousands of vertices).
 
 For category 14 (test-only wakes), pick untested code from hotspots and shared libraries first. A test-only commit counts toward the six-commit publish only if it would have caught a real defect. Every new or changed test also goes through the Mutation check.
 
-## Test baseline
+## Baselines
 
-At launch and with each daily report, run every test project in scope once and record failing tests in `baselineFailures`. Re-run failures once; a test that passes on the re-run goes in `flaky`. "Green" means no failure outside `baselineFailures` and `flaky`. Do not fix baseline failures unless one is the wake's chosen candidate.
+At launch and with each daily report, record three baselines. Do not fix a baseline failure unless one is the wake's chosen candidate.
+
+- **Tests.** Run every test project in scope once and record failing tests in `baselineFailures`. Re-run failures once; a test that passes on the re-run goes in `flaky`.
+- **Builds.** Build every solution that holds a Client-track project (`Clients/Viking.sln`, `Everything.sln`, `Clients/Viewer.sln`) and every shared library they reference, for every target framework each project declares (a net48 target catches APIs that only modern .NET has, such as `MinBy` or index-from-end). Record each failing project and framework, with its first error, in `buildBaseline`. A failure that predates the run is a category 13 candidate of its own, ranked above other work, because it hides every later break in that project.
+- **Warnings.** From the same builds, record the compiler warning count per project in `warningBaseline`.
+
+"Green" means no test failure outside `baselineFailures` and `flaky`, no build failure outside `buildBaseline`, and no project with more warnings than `warningBaseline`.
 
 ## Mutation check
 
-When a wake adds or changes tests, run Stryker.NET (`dotnet stryker`, installed once as a global tool) from the covering test project, scoped to the changed production file with `--mutate`. Mutants on changed lines that survive must be killed by a stronger test, or listed in the commit message as equivalent with one line of reasoning. Run it only on a tree with no other uncommitted changes in that project. If the run passes about 15 minutes, stop it and record `mutation: not run (time)`.
+When a wake adds or changes tests, run Stryker.NET (`dotnet stryker`, installed once as a global tool) from the covering test project, scoped to the changed production file with `--mutate`. Mutants on changed lines that survive must be killed by a stronger test, or listed in the commit message as equivalent with one line of reasoning. Run it only on a tree with no other uncommitted changes in that project. If the run passes about 15 minutes, stop it and record `mutation: not run (time)`. When Stryker cannot run or matches nothing (no test filter, a line-span filter that selects no mutants, mutants reported as compile errors), mutate by hand: apply each mutant to the changed lines, run the covering tests, revert, and list every mutant and its result in the commit message.
+
+The reviewer of a high-risk commit reruns the check, or at least the mutants on changed lines, without relying on the implementer's results. A mutant the implementer reported killed that survives is a gate violation: the reviewer adds the missing test in a follow-up commit.
 
 ## Benchmarking performance changes
 
@@ -97,7 +111,7 @@ If a realistic benchmark needs a live server, a GPU frame loop, UI interaction, 
 
 Read the full diff once as a reviewer: callers still compile and behave the same, no comment lost, nothing outside scope or in Protected areas changed. Build the touched solutions and run the covering test projects, the mutation check, and for performance changes, the benchmark.
 
-Commit only when green. Stage only the files this wake changed, by path; never `git add -A` or `git add .`. If a file the candidate needs already has uncommitted edits the loop did not make, choose a different candidate so those edits never land in a loop commit. A new characterization test may be its own commit just before the change it protects; the pair counts as one change. The commit message states what improved, the category, and the line delta (and the benchmark summary for performance changes), and ends with the trailer `Improvement-Loop: <category number>`  so later wakes can find loop commits. On failure, revert and log it; the wake does not count toward publish.
+Commit only when green. Stage only the files this wake changed, by path; never `git add -A` or `git add .`. If a file the candidate needs already has uncommitted edits the loop did not make, choose a different candidate so those edits never land in a loop commit. A new characterization test may be its own commit just before the change it protects; the pair counts as one change. The commit message states what improved, the category, and the line delta (and the benchmark summary for performance changes), and ends with the trailer `Improvement-Loop: <category number>` so later wakes can find loop commits. Generate the facts instead of typing them: take the line delta from `git diff --cached --shortstat` after staging, and add the trailer with `git commit --trailer "Improvement-Loop: <n>"` (plus the `Co-Authored-By` trailer the session requires) rather than writing it into the message body. Record the same shortstat in the ledger entry's `lineDelta`. On failure, revert and log it; the wake does not count toward publish.
 
 ## Publish
 

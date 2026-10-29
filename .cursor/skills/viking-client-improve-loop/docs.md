@@ -19,6 +19,7 @@ Readers are lab members who run Viking. Keep it task-first:
 - **Verified.** Run every documented command or script before committing. A step that fails is fixed in the same commit.
 - **Consistent terms.** "WCF client", "gRPC client", "annotation database", and "gRPC annotation service" mean one thing each everywhere.
 - **Current.** A change to a script, setting, hotkey, or menu that users see updates the doc that names it in the same commit. Remove docs for removed features.
+- **No hand-kept counts.** Do not write numbers a command can produce, such as test counts, warning tallies or line counts. Give the command, or generate the number in the file from the data it summarizes. A count that must stay goes next to the data it counts, so both change in one edit.
 
 ## Consistency checks (Docs track)
 
@@ -28,4 +29,6 @@ The scout looks for:
 2. The same instructions in two places (merge them; link the second).
 3. Stale summary files at a repo root (`*-SUMMARY.md`, `*.plan.md`, `UpgradeLog*.htm`): propose archiving or deleting them as a decision; do not delete them directly.
 4. Public types, members, scripts, and SQL objects in changed areas that lack the docs above.
+5. Hand-kept counts (see "No hand-kept counts"): replace them with the command or generate them, rather than updating the number.
+
 A docs change is structural when it removes a mismatch, removes duplication, or fills a missing required doc. Rewording alone does not count.
