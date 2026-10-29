@@ -32,6 +32,19 @@ namespace GeometryTests
             new([new Vector2(0, 0), new Vector2(200, 0), new Vector2(200, 20), new Vector2(20, 20), new Vector2(20, 100),
                  new Vector2(0, 100), new Vector2(0, 0)]);
 
+        /// <summary>
+        /// A "V" open to the right: a level arm 10 thick along +X and an arm <paramref name="tiltedThickness"/> thick at
+        /// 30°, both 100 long and joined at the origin.
+        /// </summary>
+        private static Polygon LevelAndThirtyDegreeArms(double tiltedThickness)
+        {
+            double cos = Math.Cos(30 * Degree), sin = Math.Sin(30 * Degree);
+            Vector2 across = new(-sin * tiltedThickness, cos * tiltedThickness);
+            Vector2 tip = new(100 * cos, 100 * sin);
+            return new([new Vector2(0, 0), new Vector2(100, 0), new Vector2(100, 10), new Vector2(10 / Math.Tan(30 * Degree), 10),
+                        tip, tip + across, across, new Vector2(0, 0)]);
+        }
+
         /// <summary>One row of text four units wide at an ID font size of 1.</summary>
         private static LabelContent Content(int up = 0, int down = 0) => new([new LabelRow(4, 1.0)], up, down);
 
@@ -166,6 +179,93 @@ namespace GeometryTests
                 Assert.IsTrue(box.Contains(marker.Center), $"Marker {marker.Circle} outside the polygon");
                 Assert.IsTrue(placement.TextBox.SignedDistance(marker.Center) > 0, $"Marker {marker.Circle} inside the text box");
             }
+        }
+
+        /// <summary>
+        /// The 30° arm is thicker than the level arm, so tilting gains a little font (about 17% once rasterised): less
+        /// than the 25% the default asks at 30°, more than the 11% the old flat 0.9 penalty asked. Level at the default,
+        /// tilted at "Freely". Thicknesses from 12 to 12.5 all gain 17-18%; the raster makes the gain step, not slide.
+        /// </summary>
+        [TestMethod]
+        public void SmallGainAtThirtyDegreesStaysLevelUntilFreely()
+        {
+            LabelLayout layout = new(LevelAndThirtyDegreeArms(12.25));
+
+            LabelPlacement level = layout.Fit(Content(), LabelLayout.NeverRotate);
+            LabelPlacement free = layout.Fit(Content(), LabelLayout.RotationGainForSetting(1));
+            Assert.AreEqual(LabelPlacementKind.Run, free.Kind);
+            Assert.AreEqual(30 * Degree, free.Angle, 1 * Degree);
+
+            double gain = free.FontSize / level.FontSize;
+            Assert.IsTrue(gain > 1 / 0.9 && gain < LabelLayout.RequiredGain(30 * Degree, LabelLayout.DefaultRotationGain),
+                $"Test shape should gain between 11% and 25% at 30°, gains {gain:F3}");
+
+            LabelPlacement standard = layout.Fit(Content());
+            Assert.AreEqual(LabelPlacementKind.Run, standard.Kind);
+            Assert.AreEqual(0, standard.Angle, 1e-9);
+        }
+
+        /// <summary>At "Never" thin tilted shapes get level text: here the inscribed circle, which beats any level box.</summary>
+        [TestMethod]
+        public void NeverKeepsDiagonalAndVerticalShapesLevel()
+        {
+            foreach (Polygon shape in new[] { Rotated(Box(-100, -5, 100, 5), 45 * Degree), Box(0, 0, 10, 200) })
+            {
+                LabelLayout layout = new(shape);
+                LabelPlacement placement = layout.Fit(Content(), LabelLayout.RotationGainForSetting(0));
+                Assert.AreEqual(0, placement.Angle, 1e-12);
+                Assert.AreEqual(LabelPlacementKind.Circle, placement.Kind);
+                Assert.AreEqual(LabelLayout.CircleFontSize(layout.InscribedCircle), placement.FontSize, 1e-9);
+            }
+        }
+
+        /// <summary>At "Never" a shape whose widest level box beats the circle still gets that box.</summary>
+        [TestMethod]
+        public void NeverUsesTheWidestLevelRun()
+        {
+            LabelPlacement placement = new LabelLayout(LShape()).Fit(Content(), LabelLayout.NeverRotate);
+            Assert.AreEqual(LabelPlacementKind.Run, placement.Kind);
+            Assert.AreEqual(0, placement.Angle, 1e-12);
+            Assert.IsTrue(placement.Region.Width > 150, $"Run {placement.Region}");
+        }
+
+        /// <summary>
+        /// A long box 1.2° off level is laid along its principal axis: the tilt costs about 1%, where the old flat 0.9
+        /// penalty preferred the shorter level box that fits inside it.
+        /// </summary>
+        [TestMethod]
+        public void NearLevelPrincipalAxisIsNotPenalised()
+        {
+            Assert.IsTrue(LabelLayout.TiltFactor(1.2 * Degree, LabelLayout.DefaultRotationGain) > 0.985);
+
+            LabelPlacement placement = new LabelLayout(Rotated(Box(-100, -5, 100, 5), 1.2 * Degree)).Fit(Content());
+            Assert.AreEqual(LabelPlacementKind.Run, placement.Kind);
+            Assert.AreEqual(1.2 * Degree, placement.Angle, 0.1 * Degree);
+        }
+
+        [TestMethod]
+        public void RotationGainForSettingMapsNeverDefaultAndFreely()
+        {
+            Assert.IsTrue(double.IsPositiveInfinity(LabelLayout.RotationGainForSetting(0)));
+            Assert.IsTrue(double.IsPositiveInfinity(LabelLayout.RotationGainForSetting(-0.5)));
+            Assert.AreEqual(LabelLayout.DefaultRotationGain, LabelLayout.RotationGainForSetting(0.5), 1e-12);
+            Assert.AreEqual(0, LabelLayout.RotationGainForSetting(1), 1e-12);
+            Assert.AreEqual(0, LabelLayout.RotationGainForSetting(2), 1e-12);
+            Assert.AreEqual(LabelLayout.MaxRotationGain * 0.99, LabelLayout.RotationGainForSetting(0.01), 1e-12);
+        }
+
+        [TestMethod]
+        public void RequiredGainMatchesTheDocumentedTable()
+        {
+            double g = LabelLayout.DefaultRotationGain;
+            Assert.AreEqual(1.0, LabelLayout.RequiredGain(0, g), 1e-12);
+            Assert.AreEqual(1.13, LabelLayout.RequiredGain(15 * Degree, g), 0.005);
+            Assert.AreEqual(1.25, LabelLayout.RequiredGain(30 * Degree, g), 1e-12);
+            Assert.AreEqual(1.35, LabelLayout.RequiredGain(45 * Degree, g), 0.005);
+            Assert.AreEqual(1.5, LabelLayout.RequiredGain(90 * Degree, g), 1e-12);
+            Assert.AreEqual(1.5, LabelLayout.RequiredGain(-90 * Degree, g), 1e-12);
+            Assert.AreEqual(1.0, LabelLayout.RequiredGain(0, LabelLayout.NeverRotate), 1e-12);
+            Assert.IsTrue(double.IsPositiveInfinity(LabelLayout.RequiredGain(15 * Degree, LabelLayout.NeverRotate)));
         }
 
         [TestMethod]

@@ -515,13 +515,28 @@ namespace Jotunn
                 WebAnnotation.Global.AnnotationSettings.PolygonVertexPointsHiddenAtWidthFraction,
                 correctionShimEnabled: WebAnnotation.Global.AnnotationSettings.CorrectionShimEnabled,
                 correctionShimFadeStartDownsample: WebAnnotation.Global.AnnotationSettings.CorrectionShimFadeStartDownsample,
-                correctionShimFadeEndDownsample: WebAnnotation.Global.AnnotationSettings.CorrectionShimFadeEndDownsample);
+                correctionShimFadeEndDownsample: WebAnnotation.Global.AnnotationSettings.CorrectionShimFadeEndDownsample,
+                labelRotation: WebAnnotation.Global.AnnotationSettings.LabelRotation);
+
+            // Label rotation is the one live setting here, as in Viking: labels relay while the slider moves. Revert and
+            // reset raise a change of every property (empty name), which puts the stored value back on Cancel or X.
+            vm.PropertyChanged += (_, e) =>
+            {
+                if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == nameof(vm.LabelRotation))
+                    WebAnnotation.AnnotationMenu.ApplyLiveSettings(vm, nameof(vm.LabelRotation));
+            };
+
             AnnotationPreferencesDialog dialog = new(vm) { Owner = this };
             dialog.OkClicked += (_, _) => ApplyAnnotationPreferences(vm);
             dialog.ApplyClicked += (_, _) => ApplyAnnotationPreferences(vm);
             dialog.ResetToDefaultsRequested += (_, _) =>
             {
+                // The reset writes the stored rotation directly, so the view model's reset finds the two equal and would
+                // not relay labels built at the old value.
+                double rotationBeforeReset = WebAnnotation.Global.AnnotationSettings.LabelRotation;
                 WebAnnotation.Global.AnnotationSettings.ResetToDefaults();
+                if (WebAnnotation.Global.AnnotationSettings.LabelRotation != rotationBeforeReset)
+                    WebAnnotation.AnnotationMenu.RequestLabelRelayout();
                 vm.ResetToDefaults();
             };
             dialog.Show();
@@ -551,6 +566,8 @@ namespace Jotunn
             WebAnnotation.Global.AnnotationSettings.CorrectionShimEnabled = vm.CorrectionShimEnabled;
             WebAnnotation.Global.AnnotationSettings.CorrectionShimFadeStartDownsample = vm.CorrectionShimFadeStartDownsample;
             WebAnnotation.Global.AnnotationSettings.CorrectionShimFadeEndDownsample = vm.CorrectionShimFadeEndDownsample;
+            // Normally already applied live by the slider; this relays labels only if it was not.
+            WebAnnotation.AnnotationMenu.ApplyLiveSettings(vm, nameof(vm.LabelRotation));
             vm.Apply();
         }
 

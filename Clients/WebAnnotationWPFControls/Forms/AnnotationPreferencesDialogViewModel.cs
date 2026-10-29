@@ -25,6 +25,7 @@ namespace WebAnnotation.WPF.Forms
         private int _originalLocationLinkVisibilityPercent = DefaultLocationLinkVisibilityPercent;
         private bool _originalLocationLinkLabels = true;
         private int _originalHideAnnotationSeconds = DefaultHideAnnotationSeconds;
+        private double _originalLabelRotation = DefaultLabelRotation;
         private uint _originalNumClosedCurveInterpolationPointsForDisplay;
         private int _originalPenSimplifyThreshold;
         private double _originalMinRadius;
@@ -188,6 +189,55 @@ namespace WebAnnotation.WPF.Forms
                     OnPropertyChanged();
                 }
             }
+        }
+
+        /// <summary>
+        /// Starting <see cref="LabelRotation"/>; matches WebAnnotation's stored default and
+        /// <see cref="Geometry.LabelLayout.DefaultRotationGain"/> through <see cref="Geometry.LabelLayout.RotationGainForSetting"/>.
+        /// </summary>
+        public const double DefaultLabelRotation = 0.5;
+
+        private double _labelRotation = DefaultLabelRotation;
+
+        /// <summary>
+        /// How readily polygon labels tilt to run along the shape: 0 ("Never") keeps them level, 1 ("Freely") tilts for any
+        /// gain in font size. Clamped to 0 to 1 and rounded to hundredths, as the number box shows it.
+        /// </summary>
+        public double LabelRotation
+        {
+            get => _labelRotation;
+            set
+            {
+                double clampedValue = double.IsNaN(value) ? DefaultLabelRotation : Math.Round(Math.Max(0.0, Math.Min(1.0, value)), 2);
+                if (_labelRotation != clampedValue)
+                {
+                    _labelRotation = clampedValue;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(LabelRotationReadout));
+                }
+            }
+        }
+
+        /// <summary>The rule <see cref="LabelRotation"/> sets, in words, for the line under the slider.</summary>
+        public string LabelRotationReadout => DescribeLabelRotation(_labelRotation);
+
+        /// <summary>
+        /// States how much larger tilted text must be than level text for <paramref name="labelRotation"/>, at 45° and
+        /// 90°, from <see cref="Geometry.LabelLayout.RequiredGain"/>.
+        /// </summary>
+        public static string DescribeLabelRotation(double labelRotation)
+        {
+            double gain = Geometry.LabelLayout.RotationGainForSetting(labelRotation);
+            if (double.IsPositiveInfinity(gain))
+                return "Labels always stay level.";
+
+            if (gain <= 0)
+                return "Labels tilt whenever tilted text is any larger than level text.";
+
+            double at45 = (Geometry.LabelLayout.RequiredGain(Math.PI / 4, gain) - 1) * 100;
+            double at90 = (Geometry.LabelLayout.RequiredGain(Math.PI / 2, gain) - 1) * 100;
+            return string.Format(System.Globalization.CultureInfo.CurrentCulture,
+                "Rotates when text grows ≥ {0:0}% at 45°, ≥ {1:0}% at 90°.", at45, at90);
         }
 
         /// <summary>Starting <see cref="HideAnnotationSeconds"/>; matches WebAnnotation's stored default.</summary>
@@ -1067,7 +1117,8 @@ namespace WebAnnotation.WPF.Forms
             bool locationLinkDrawUnderMarkers = false,
             int locationLinkVisibilityPercent = DefaultLocationLinkVisibilityPercent,
             bool locationLinkLabels = true,
-            int hideAnnotationSeconds = DefaultHideAnnotationSeconds)
+            int hideAnnotationSeconds = DefaultHideAnnotationSeconds,
+            double labelRotation = DefaultLabelRotation)
         {
             _polygonPointOpacity = _originalPolygonPointOpacity = polygonPointOpacity;
             _hidePolygonPointsInPenMode = _originalHidePolygonPointsInPenMode = hidePolygonPointsInPenMode;
@@ -1192,6 +1243,8 @@ namespace WebAnnotation.WPF.Forms
             LocationLinkVisibilityPercent = locationLinkVisibilityPercent;
             LocationLinkLabels = locationLinkLabels;
             HideAnnotationSeconds = hideAnnotationSeconds;
+            LabelRotation = labelRotation;
+            _originalLabelRotation = _labelRotation;
             CorrectionShimEnabled = correctionShimEnabled;
             CorrectionShimShowOffset = correctionShimShowOffset;
             CorrectionShimFadeStartDownsample = correctionShimFadeStartDownsample;
@@ -1220,6 +1273,7 @@ namespace WebAnnotation.WPF.Forms
             _originalLocationLinkVisibilityPercent = _locationLinkVisibilityPercent;
             _originalLocationLinkLabels = _locationLinkLabels;
             _originalHideAnnotationSeconds = _hideAnnotationSeconds;
+            _originalLabelRotation = _labelRotation;
             _originalNumClosedCurveInterpolationPointsForDisplay = _numClosedCurveInterpolationPointsForDisplay;
             _originalPenSimplifyThreshold = _penSimplifyThreshold;
             _originalMinRadius = _minRadius;
@@ -1271,6 +1325,7 @@ namespace WebAnnotation.WPF.Forms
             _locationLinkVisibilityPercent = _originalLocationLinkVisibilityPercent;
             _locationLinkLabels = _originalLocationLinkLabels;
             _hideAnnotationSeconds = _originalHideAnnotationSeconds;
+            _labelRotation = _originalLabelRotation;
             _numClosedCurveInterpolationPointsForDisplay = _originalNumClosedCurveInterpolationPointsForDisplay;
             _penSimplifyThreshold = _originalPenSimplifyThreshold;
             _minRadius = _originalMinRadius;
@@ -1324,6 +1379,7 @@ namespace WebAnnotation.WPF.Forms
             _locationLinkLabels = true;
             _locationLinkDrawUnderMarkers = false;
             _hideAnnotationSeconds = DefaultHideAnnotationSeconds;
+            _labelRotation = DefaultLabelRotation;
             _numClosedCurveInterpolationPointsForDisplay = 3;
             _penSimplifyThreshold = 3;
             _minRadius = 0.5;

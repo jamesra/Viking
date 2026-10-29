@@ -260,7 +260,8 @@ namespace GeometryTests
                 nameof(InscribedCircleClearsEveryRing));
 
         /// <summary>
-        /// Wherever <see cref="LabelLayout"/> puts the text and markers, they are inside the polygon and out of its holes.
+        /// Wherever <see cref="LabelLayout"/> puts the text and markers, at the default rotation, "Freely" and "Never",
+        /// they are inside the polygon and out of its holes; at "Never" the text is always level.
         /// </summary>
         [TestMethod]
         public void LabelPlacementStaysInside() =>
@@ -268,20 +269,50 @@ namespace GeometryTests
                 Prop.ForAll(CoreArbitraries.ArbHoledPolygon(), p =>
                 {
                     LabelContent content = new([new LabelRow(6, 0.5), new LabelRow(4, 1.0)], 3, 3);
-                    LabelPlacement placement = new LabelLayout(p).Fit(content);
+                    LabelLayout layout = new(p);
                     RingSegmentSet rings = new(p);
                     double slack = LayoutSlack(p);
                     bool Inside(Vector2 v) => rings.SignedDistance(v.X, v.Y) >= -slack;
 
-                    if (placement.Kind == LabelPlacementKind.Circle)
-                        return rings.SignedDistance(placement.Circle.Center.X, placement.Circle.Center.Y) >= placement.Circle.Radius - slack;
+                    bool PlacedInside(LabelPlacement placement)
+                    {
+                        if (placement.Kind == LabelPlacementKind.Circle)
+                            return rings.SignedDistance(placement.Circle.Center.X, placement.Circle.Center.Y) >= placement.Circle.Radius - slack;
 
-                    return placement.TextBox.Corners.All(Inside) &&
-                           placement.RowCenters.All(Inside) &&
-                           placement.Markers.Count == content.MarkerCount &&
-                           placement.Markers.All(m => Inside(m.Center));
+                        return placement.TextBox.Corners.All(Inside) &&
+                               placement.RowCenters.All(Inside) &&
+                               placement.Markers.Count == content.MarkerCount &&
+                               placement.Markers.All(m => Inside(m.Center));
+                    }
+
+                    LabelPlacement level = layout.Fit(content, LabelLayout.NeverRotate);
+                    return PlacedInside(layout.Fit(content)) &&
+                           PlacedInside(layout.Fit(content, 0)) &&
+                           PlacedInside(level) && level.Angle == 0;
                 }),
                 nameof(LabelPlacementStaysInside));
+
+        /// <summary>
+        /// The gain a tilted label must show over level text never falls as the tilt grows towards 90° or as the rotation
+        /// gain G grows, and is 1 for level text whatever G is.
+        /// </summary>
+        [TestMethod]
+        public void RequiredGainGrowsWithAngleAndRotationGain() =>
+            CoreCheck.Run(
+                Prop.ForAll(Arb.From(Gen.Two(Gen.Choose(0, 90))), Arb.From(Gen.Two(Gen.Choose(0, 100))),
+                    (degrees, gains) =>
+                    {
+                        double a = Math.Min(degrees.Item1, degrees.Item2) * Math.PI / 180.0;
+                        double b = Math.Max(degrees.Item1, degrees.Item2) * Math.PI / 180.0;
+                        double g = Math.Min(gains.Item1, gains.Item2) / 100.0, h = Math.Max(gains.Item1, gains.Item2) / 100.0;
+                        return LabelLayout.RequiredGain(a, g) <= LabelLayout.RequiredGain(b, g) &&
+                               LabelLayout.RequiredGain(-a, g) <= LabelLayout.RequiredGain(-b, g) &&
+                               LabelLayout.RequiredGain(b, g) <= LabelLayout.RequiredGain(b, h) &&
+                               LabelLayout.RequiredGain(b, h) <= LabelLayout.RequiredGain(b, LabelLayout.NeverRotate) &&
+                               LabelLayout.RequiredGain(0, h) == 1 &&
+                               LabelLayout.TiltFactor(b, g) <= 1;
+                    }),
+                nameof(RequiredGainGrowsWithAngleAndRotationGain));
 
         private static double LayoutSlack(Polygon p) => PoleOfInaccessibility.DefaultTolerance(p.BoundingBox) * 1.01;
 

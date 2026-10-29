@@ -75,7 +75,7 @@ namespace Geometry
         public Circle Circle => new(Center, Radius);
     }
 
-    /// <summary>The layout <see cref="LabelLayout.Fit"/> chose for one <see cref="LabelContent"/>.</summary>
+    /// <summary>The layout <see cref="LabelLayout.Fit(LabelContent, double)"/> chose for one <see cref="LabelContent"/>.</summary>
     public sealed class LabelPlacement
     {
         public readonly LabelPlacementKind Kind;
@@ -133,17 +133,31 @@ namespace Geometry
     /// </summary>
     /// <remarks>
     /// Each candidate is scored by the ID font size it allows. A run of width W and height H holding k end markers of
-    /// diameter F allows F = min(H / (1.1·th), W / (k + 1.1·tw)), with tw and th the text's size at font 1. A tilted run
-    /// scores 0.9 of that, so near-level text snaps to level. A run must beat the circle's R/2 by 25%, so round cells look
-    /// as circles do.
+    /// diameter F allows F = min(H / (1.1·th), W / (k + 1.1·tw)), with tw and th the text's size at font 1. A run tilted
+    /// by θ scores F / (1 + G·|sin θ|), so it must beat level text by a gain that grows with the angle: with the default
+    /// G = 0.5, 13% at 15°, 25% at 30°, 35% at 45° and 50% at 90°. Near-level runs pay almost nothing, and a long thin
+    /// process, which gains several-fold along its length, still rotates. G = ∞ keeps text level. A run's font must beat
+    /// the circle's R/2 by 25%, so round cells look as circles do, or by its required gain when that is larger.
     /// </remarks>
     public sealed class LabelLayout
     {
         /// <summary>How much larger a run's score must be than the circle's font size before the run is used.</summary>
         public const double CirclePreference = 1.25;
 
-        /// <summary>Score multiplier for a run that is not level.</summary>
-        public const double TiltPenalty = 0.9;
+        /// <summary>
+        /// Rotation gain G that <see cref="Fit(LabelContent)"/> uses: a run tilted by θ needs 1 + G·|sin θ| times the font
+        /// of level text to win. It is the gain at the middle of the Label rotation preference.
+        /// </summary>
+        public const double DefaultRotationGain = 0.5;
+
+        /// <summary>
+        /// Rotation gain just above the "Never" end of the preference; the gain falls linearly from it to 0 at "Freely".
+        /// The setting 0 itself means <see cref="NeverRotate"/>.
+        /// </summary>
+        public const double MaxRotationGain = 1.0;
+
+        /// <summary>Rotation gain that keeps every label level: only level runs and the circle are considered.</summary>
+        public const double NeverRotate = double.PositiveInfinity;
 
         /// <summary>Room around the text, as a multiple of its size.</summary>
         public const double TextPadding = 1.1;
@@ -165,7 +179,7 @@ namespace Geometry
         /// <summary>The polygon's maximum inscribed circle.</summary>
         public readonly Circle InscribedCircle;
 
-        /// <summary>Finds the inscribed circle and runs of <paramref name="polygon"/>; <see cref="Fit"/> is then cheap.</summary>
+        /// <summary>Finds the inscribed circle and runs of <paramref name="polygon"/>; <see cref="Fit(LabelContent, double)"/> is then cheap.</summary>
         public LabelLayout(Polygon polygon)
         {
             if (polygon is null)
@@ -189,26 +203,74 @@ namespace Geometry
             return Math.Max(0, Math.Min(height / (TextPadding * th), width / Math.Max(markers + (TextPadding * tw), 1e-9)));
         }
 
-        private static double Score(OrientedRectangle region, LabelContent content, int markers) =>
-            RunFontSize(region.Width, region.Height, content, markers) * (region.Angle == 0 ? 1 : TiltPenalty);
+        /// <summary>
+        /// Rotation gain G for the Label rotation preference <paramref name="setting"/>, 0 ("Never") to 1 ("Freely"):
+        /// <see cref="NeverRotate"/> at 0 or below, otherwise (1 − setting)·<see cref="MaxRotationGain"/>, so 0.5 gives
+        /// <see cref="DefaultRotationGain"/> and 1 gives 0, where any gain in font size rotates. NaN reads as the default.
+        /// </summary>
+        public static double RotationGainForSetting(double setting)
+        {
+            if (double.IsNaN(setting))
+                return DefaultRotationGain;
 
-        /// <summary>The placement with the largest ID font for <paramref name="content"/>.</summary>
-        public LabelPlacement Fit(LabelContent content)
+            if (setting <= 0)
+                return NeverRotate;
+
+            return (1.0 - Math.Min(setting, 1.0)) * MaxRotationGain;
+        }
+
+        /// <summary>
+        /// How many times the font of level text a run tilted by <paramref name="angle"/> radians must allow to win with
+        /// rotation gain <paramref name="rotationGain"/>: 1 + G·|sin θ|. Infinite for a tilted run when G is
+        /// <see cref="NeverRotate"/>; always 1 for level text.
+        /// </summary>
+        public static double RequiredGain(double angle, double rotationGain)
+        {
+            double sin = Math.Abs(Math.Sin(angle));
+            if (sin == 0)
+                return 1;
+
+            return double.IsPositiveInfinity(rotationGain) ? double.PositiveInfinity : 1 + (Math.Max(0, rotationGain) * sin);
+        }
+
+        /// <summary>Score multiplier for a run at <paramref name="angle"/>: 1 / <see cref="RequiredGain"/>, so at most 1.</summary>
+        public static double TiltFactor(double angle, double rotationGain) => 1.0 / RequiredGain(angle, rotationGain);
+
+        private static double Score(OrientedRectangle region, LabelContent content, int markers, double rotationGain) =>
+            RunFontSize(region.Width, region.Height, content, markers) * TiltFactor(region.Angle, rotationGain);
+
+        /// <summary>The placement with the largest ID font for <paramref name="content"/>, at <see cref="DefaultRotationGain"/>.</summary>
+        public LabelPlacement Fit(LabelContent content) => Fit(content, DefaultRotationGain);
+
+        /// <summary>
+        /// The placement with the largest ID font for <paramref name="content"/>, a tilted run scoring its font times
+        /// <see cref="TiltFactor"/> for <paramref name="rotationGain"/>. With <see cref="NeverRotate"/> only level runs are
+        /// considered, so the result is the widest level box or the inscribed circle.
+        /// </summary>
+        public LabelPlacement Fit(LabelContent content, double rotationGain)
         {
             if (content is null)
                 throw new ArgumentNullException(nameof(content));
 
+            if (double.IsNaN(rotationGain))
+                rotationGain = DefaultRotationGain;
+
+            // The circle is level text, so a tilted run must beat it by its required gain, as it must beat a level run.
+            // The two preferences are not multiplied: a run needs the larger of the circle preference and that gain.
+            // Multiplied, a thin vertical process asks 1.25 × 1.5 = 1.875 over its circle, which a two-line label
+            // (run font H/2.2 against circle font H/4, 1.82) never reaches, so its text would shrink into the circle.
             double circleFont = CircleFontSize(InscribedCircle);
-            if (!TryBestRun(content, 0, out OrientedRectangle region, out double textOnlyScore) ||
-                textOnlyScore < CirclePreference * circleFont)
-            {
+            if (!TryBestRun(content, 0, rotationGain, out OrientedRectangle region, out double textOnlyScore))
                 return new LabelPlacement(InscribedCircle, circleFont);
-            }
+
+            double runFont = RunFontSize(region.Width, region.Height, content, 0);
+            if (runFont < Math.Max(CirclePreference, RequiredGain(region.Angle, rotationGain)) * circleFont)
+                return new LabelPlacement(InscribedCircle, circleFont);
 
             int endMarkers = 0;
             for (int k = content.MarkerCount; k > 0; k--)
             {
-                if (TryBestRun(content, k, out OrientedRectangle withMarkers, out double score) &&
+                if (TryBestRun(content, k, rotationGain, out OrientedRectangle withMarkers, out double score) &&
                     score >= MarkerFontRetention * textOnlyScore)
                 {
                     endMarkers = k;
@@ -222,16 +284,20 @@ namespace Geometry
 
         /// <summary>
         /// The verified run with the best score for <paramref name="markers"/> end markers. Raster sizes bound the
-        /// verified ones from above, so runs are verified best first only until no unverified one could win.
+        /// verified ones from above, and a verified run keeps its candidate's angle, so the same tilt factor keeps the
+        /// bound: runs are verified best first only until no unverified one could win. With <see cref="NeverRotate"/>
+        /// tilted runs are skipped, not merely scored 0.
         /// </summary>
-        private bool TryBestRun(LabelContent content, int markers, out OrientedRectangle best, out double bestScore)
+        private bool TryBestRun(LabelContent content, int markers, double rotationGain, out OrientedRectangle best, out double bestScore)
         {
             best = default;
             bestScore = 0;
             bool found = false;
 
+            bool levelOnly = double.IsPositiveInfinity(rotationGain);
             IEnumerable<(RunCandidate Run, double Bound)> ranked = Runs
-                .Select(r => (Run: r, Bound: RunFontSize(r.Width, r.Height, content, markers) * (r.Angle == 0 ? 1 : TiltPenalty)))
+                .Where(r => !levelOnly || r.Angle == 0)
+                .Select(r => (Run: r, Bound: RunFontSize(r.Width, r.Height, content, markers) * TiltFactor(r.Angle, rotationGain)))
                 .OrderByDescending(r => r.Bound);
 
             foreach ((RunCandidate run, double bound) in ranked)
@@ -242,7 +308,7 @@ namespace Geometry
                 if (!run.TryVerify(out OrientedRectangle region))
                     continue;
 
-                double score = Score(region, content, markers);
+                double score = Score(region, content, markers, rotationGain);
                 if (score > bestScore)
                 {
                     best = region;

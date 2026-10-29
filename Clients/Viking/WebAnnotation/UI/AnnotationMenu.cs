@@ -34,6 +34,24 @@ namespace WebAnnotation
         private static double _pendingCircleOpacityParentless;
         private static double _pendingCircleOpacityWithParent;
 
+        /// <summary>Shortest time between the starts of two label relayout passes while the Label rotation slider moves.</summary>
+        internal static readonly TimeSpan LabelRelayoutInterval = TimeSpan.FromMilliseconds(50);
+
+        /// <summary>Guards <see cref="_labelRelayoutTimer"/>, <see cref="_labelRelayoutTicket"/>, <see cref="_labelRelayoutCancellation"/> and <see cref="_lastLabelRelayoutStart"/>.</summary>
+        private static readonly object _labelRelayoutLock = new();
+
+        /// <summary>The next relayout pass, when one is scheduled and has not started. A request while it waits needs no new pass.</summary>
+        private static System.Threading.Timer? _labelRelayoutTimer;
+
+        /// <summary>Identifies the request <see cref="_labelRelayoutTimer"/> serves; cleared when its pass starts.</summary>
+        private static object? _labelRelayoutTicket;
+
+        /// <summary>Cancels the running relayout pass; replaced when the next pass starts.</summary>
+        private static CancellationTokenSource? _labelRelayoutCancellation;
+
+        /// <summary><see cref="Stopwatch"/> timestamp of the last pass start, 0 before the first.</summary>
+        private static long _lastLabelRelayoutStart;
+
         System.Windows.Forms.ToolStripItem Viking.Common.IMenuFactory.CreateMenuItem()
         {
             //Create a menu containing each of our bookmarks
@@ -216,7 +234,8 @@ namespace WebAnnotation
                 locationLinkDrawUnderMarkers: Global.AnnotationSettings.LocationLinkDrawUnderMarkers,
                 locationLinkVisibilityPercent: Global.AnnotationSettings.LocationLinkVisibilityPercent,
                 locationLinkLabels: Global.AnnotationSettings.LocationLinkLabels,
-                hideAnnotationSeconds: Global.AnnotationSettings.HideAnnotationSeconds
+                hideAnnotationSeconds: Global.AnnotationSettings.HideAnnotationSeconds,
+                labelRotation: Global.AnnotationSettings.LabelRotation
             );
 
             VikingXNA.Scene scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
@@ -345,7 +364,12 @@ namespace WebAnnotation
             // When user confirms Reset to Defaults: persist defaults and reload ViewModel from Global
             _preferencesDialog.ResetToDefaultsRequested += (s, args) =>
             {
+                // The reset writes the stored rotation directly, so the reload below finds Global and the view model
+                // equal and would not relay labels built at the old value.
+                double rotationBeforeReset = Global.AnnotationSettings.LabelRotation;
                 Global.AnnotationSettings.ResetToDefaults();
+                if (Global.AnnotationSettings.LabelRotation != rotationBeforeReset)
+                    RequestLabelRelayout();
                 viewModel.LoadCurrentSettings(
                     Global.AnnotationSettings.NumSectionsInMemory,
                     Global.AnnotationSettings.NumSectionsLoading,
@@ -371,7 +395,8 @@ namespace WebAnnotation
                     Global.AnnotationSettings.CorrectionShimEnabled,
                     Global.AnnotationSettings.CorrectionShimFadeStartDownsample,
                     Global.AnnotationSettings.CorrectionShimFadeEndDownsample,
-                    Global.AnnotationSettings.CorrectionShimShowOffset
+                    Global.AnnotationSettings.CorrectionShimShowOffset,
+                    labelRotation: Global.AnnotationSettings.LabelRotation
                 );
             };
 
@@ -478,6 +503,173 @@ namespace WebAnnotation
 
             if (redraw)
                 AnnotationOverlay.CurrentOverlay?.InvalidateParent();
+
+            // Labels are laid out when built, not when drawn, so a new rotation needs a relayout. Only when the value
+            // changed: a revert or reset passes every setting, and relaying every loaded label for nothing is not free.
+            if (Changed(nameof(viewModel.LabelRotation)) &&
+                Global.AnnotationSettings.LabelRotation != viewModel.LabelRotation)
+            {
+                Global.AnnotationSettings.LabelRotation = viewModel.LabelRotation;
+                RequestLabelRelayout();
+            }
+        }
+
+        /// <summary>
+        /// Asks for the polygon and closed-curve labels of every loaded section to be laid out again with the current
+        /// <see cref="Global.AnnotationSettings.LabelRotation"/>. Throttled, not debounced, so labels follow a slider
+        /// drag: a pass starts at most once per <see cref="LabelRelayoutInterval"/>, a request while one waits is covered
+        /// by it, and the last request always gets a pass. Each pass reads the setting as it lays out, so the newest value
+        /// wins; starting a pass cancels the one still running. Safe to call from any thread. Viking's preferences and
+        /// Jotunn's (MainWindowShell.OnAnnotationPreferences) both call it.
+        /// </summary>
+        internal static void RequestLabelRelayout()
+        {
+            lock (_labelRelayoutLock)
+            {
+                if (_labelRelayoutTimer != null)
+                    return;
+
+                double sinceLastMs = _lastLabelRelayoutStart == 0
+                    ? double.MaxValue
+                    : PolygonViewTimingLog.ToMilliseconds(Stopwatch.GetTimestamp() - _lastLabelRelayoutStart);
+                long dueMs = (long)Math.Max(0, LabelRelayoutInterval.TotalMilliseconds - sinceLastMs);
+
+                // The ticket, not the timer, identifies the request: a due time of 0 can fire the callback before the
+                // constructor returns, and the callback compares under this lock, after the field is set.
+                object ticket = new();
+                _labelRelayoutTicket = ticket;
+                _labelRelayoutTimer = new System.Threading.Timer(StartLabelRelayoutPass, ticket, dueMs, Timeout.Infinite);
+            }
+        }
+
+        /// <summary>
+        /// Timer callback for <see cref="RequestLabelRelayout"/>: cancels the running pass and runs a new one on the
+        /// thread pool. Skips a callback whose request was already served.
+        /// </summary>
+        private static void StartLabelRelayoutPass(object? ticket)
+        {
+            CancellationToken token;
+            lock (_labelRelayoutLock)
+            {
+                if (ticket is null || !ReferenceEquals(ticket, _labelRelayoutTicket))
+                    return;
+
+                _labelRelayoutTicket = null;
+                _labelRelayoutTimer?.Dispose();
+                _labelRelayoutTimer = null;
+                _labelRelayoutCancellation?.Cancel();
+                _labelRelayoutCancellation?.Dispose();
+                _labelRelayoutCancellation = new CancellationTokenSource();
+                token = _labelRelayoutCancellation.Token;
+                _lastLabelRelayoutStart = Stopwatch.GetTimestamp();
+            }
+
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    RelayoutLoadedLabels(token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // A newer pass replaced this one; it relays every section again.
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error relaying out labels: {ex.Message}");
+                }
+            });
+        }
+
+        /// <summary>
+        /// Rebuilds the labels of every <see cref="LocationPolygonView"/> and <see cref="LocationClosedCurveView"/> in
+        /// the loaded sections: the current and adjacent sections first, redrawn as soon as they are done, then the rest.
+        /// Each view reuses its cached <see cref="Geometry.LabelLayout"/>, so this costs a fit per label, not a layout.
+        /// Runs on the thread pool; <see cref="LocationPolygonView.CreateLabelObjects"/> locks each view's labels.
+        /// In Jotunn, which has no <see cref="AnnotationOverlay.CurrentOverlay"/>, the scene's section comes first and
+        /// <see cref="Viking.TileLoadEnvironment.RequestRender"/> redraws; sections the scene does not hold are skipped.
+        /// Writes the pass time to the trace, and to the polygon view timing log when a pass is slower than
+        /// <see cref="LabelRelayoutInterval"/>.
+        /// </summary>
+        /// <returns>How many labels were rebuilt.</returns>
+        /// <exception cref="OperationCanceledException">A newer pass started.</exception>
+        internal static int RelayoutLoadedLabels(CancellationToken cancellationToken)
+        {
+            // Checked before anything touches AnnotationOverlay, whose type initializer needs an open volume.
+            if (Viking.UI.State.volume?.SectionViewModels is null)
+                return 0;
+
+            long start = Stopwatch.GetTimestamp();
+            List<int> visible = GetVisibleSectionNumbers();
+            if (visible.Count == 0 && Viking.TileLoadEnvironment.GetSectionNumber?.Invoke() is int sceneSection)
+                visible.Add(sceneSection);
+            IEnumerable<int> loaded = Viking.UI.State.volume?.SectionViewModels?.Keys.ToArray() ?? [];
+            int[] order = [.. visible, .. loaded.Where(n => !visible.Contains(n))];
+
+            ParallelOptions parallelOptions = new()
+            {
+                CancellationToken = cancellationToken,
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
+            };
+
+            int labels = 0;
+            double visibleMs = 0;
+            for (int i = 0; i < order.Length; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                SectionAnnotationsView? section = AnnotationOverlay.GetAnnotationsForSection(order[i]);
+                if (section != null)
+                {
+                    LocationCanvasView[] views;
+                    try
+                    {
+                        views = [.. section.GetLocations()];
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // The section's views changed while copying; the next pass, or the view's own build, covers it.
+                        continue;
+                    }
+
+                    Parallel.ForEach(views, parallelOptions, view =>
+                    {
+                        Geometry.LabelPlacementKind? kind = view switch
+                        {
+                            LocationPolygonView polygon => polygon.CreateLabelObjects(),
+                            LocationClosedCurveView curve => curve.CreateLabelObjects(),
+                            _ => null,
+                        };
+                        if (kind.HasValue)
+                            Interlocked.Increment(ref labels);
+                    });
+                }
+
+                if (i < visible.Count)
+                {
+                    RedrawAfterRelayout();
+                    if (i == visible.Count - 1)
+                        visibleMs = PolygonViewTimingLog.ToMilliseconds(Stopwatch.GetTimestamp() - start);
+                }
+            }
+
+            RedrawAfterRelayout();
+
+            double totalMs = PolygonViewTimingLog.ToMilliseconds(Stopwatch.GetTimestamp() - start);
+            string line = FormattableString.Invariant(
+                $"label-relayout ms={totalMs:F1} visible_ms={visibleMs:F1} sections={order.Length} labels={labels} rotation={Global.AnnotationSettings.LabelRotation:F2}");
+            if (totalMs > LabelRelayoutInterval.TotalMilliseconds)
+                PolygonViewTimingLog.Write(line);
+            else
+                Trace.WriteLine(line);
+
+            return labels;
+        }
+
+        /// <summary>Redraws Viking's viewer, or Jotunn's scene, after a relayout pass changed labels.</summary>
+        private static void RedrawAfterRelayout()
+        {
+            AnnotationOverlay.CurrentOverlay?.InvalidateParent();
+            Viking.TileLoadEnvironment.RequestRender?.Invoke();
         }
 
         /// <summary>
@@ -537,6 +729,12 @@ namespace WebAnnotation
             Global.AnnotationSettings.LocationLinkVisibilityPercent = viewModel.LocationLinkVisibilityPercent;
             Global.AnnotationSettings.LocationLinkLabels = viewModel.LocationLinkLabels;
             Global.AnnotationSettings.HideAnnotationSeconds = viewModel.HideAnnotationSeconds;
+            // Normally already applied live by the slider; relay labels only if it was not.
+            if (Global.AnnotationSettings.LabelRotation != viewModel.LabelRotation)
+            {
+                Global.AnnotationSettings.LabelRotation = viewModel.LabelRotation;
+                RequestLabelRelayout();
+            }
             Global.AnnotationSettings.NumClosedCurveInterpolationPointsForDisplay = viewModel.NumClosedCurveInterpolationPointsForDisplay;
             Global.AnnotationSettings.PenSimplifyThreshold = viewModel.PenSimplifyThreshold;
             Global.AnnotationSettings.MinRadius = viewModel.MinRadius;

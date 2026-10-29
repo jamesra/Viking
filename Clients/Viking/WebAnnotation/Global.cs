@@ -532,6 +532,33 @@ namespace WebAnnotation
                 }
             }
 
+            /// <summary>Starting <see cref="LabelRotation"/>. Must match the DefaultSettingValue in Settings.LocationLinks.cs.</summary>
+            public const double DEFAULT_LABEL_ROTATION = 0.5;
+
+            /// <summary>
+            /// The Label rotation preference, 0 ("Never": polygon labels stay level) to 1 ("Freely": they tilt for any gain
+            /// in font size), clamped to that range; NaN reads as the default. <see cref="LabelRotationGain"/> is what the
+            /// label layout uses. Setting it does not relay labels already built; see AnnotationMenu.RequestLabelRelayout.
+            /// </summary>
+            public static double LabelRotation
+            {
+                get => ClampLabelRotation(Properties.Settings.Default.LabelRotation);
+                set
+                {
+                    Properties.Settings.Default.LabelRotation = ClampLabelRotation(value);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            private static double ClampLabelRotation(double value) =>
+                double.IsNaN(value) ? DEFAULT_LABEL_ROTATION : Math.Max(0.0, Math.Min(1.0, value));
+
+            /// <summary>
+            /// The rotation gain G <see cref="Geometry.LabelLayout.Fit(Geometry.LabelContent, double)"/> takes for
+            /// <see cref="LabelRotation"/>: <see cref="Geometry.LabelLayout.NeverRotate"/> at 0, otherwise (1 − setting)·1.
+            /// </summary>
+            public static double LabelRotationGain => Geometry.LabelLayout.RotationGainForSetting(LabelRotation);
+
             public static uint NumClosedCurveInterpolationPointsForDisplay
             {
                 get => (uint)MathUtils.Clamp((int)Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay, MIN_CURVE_POINTS, MAX_CURVE_POINTS);
@@ -1237,6 +1264,7 @@ namespace WebAnnotation
                 Properties.Settings.Default.HideAnnotationSeconds = DEFAULT_HIDE_ANNOTATION_SECONDS;
                 Properties.Settings.Default.LocationLinkVisibilityPercent = DEFAULT_LOCATION_LINK_VISIBILITY_PERCENT;
                 Properties.Settings.Default.LocationLinkLabels = true;
+                Properties.Settings.Default.LabelRotation = DEFAULT_LABEL_ROTATION;
                 Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = (uint)DEFAULT_NUM_CLOSED_CURVE_INTERPOLATION_POINTS;
                 Properties.Settings.Default.PenSimplifyThreshold = DEFAULT_PEN_SIMPLIFY_THRESHOLD;
                 Properties.Settings.Default.MinRadius = DEFAULT_MIN_RADIUS;

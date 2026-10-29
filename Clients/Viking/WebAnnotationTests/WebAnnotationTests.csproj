@@ -65,6 +65,7 @@
     <Compile Include="AnnotationPreferencesRevertTests.cs" />
     <Compile Include="AnnotationPreferencesLivePreviewTests.cs" />
     <Compile Include="AnnotationPreferencesLocationLinkTests.cs" />
+    <Compile Include="LabelRotationTests.cs" />
     <Compile Include="LocationLinkBorderTests.cs" />
     <Compile Include="LocationLinkVisibilityTests.cs" />
     <Compile Include="LocationLinkPolygonEndTests.cs" />

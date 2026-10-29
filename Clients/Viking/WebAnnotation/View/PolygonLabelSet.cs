@@ -29,7 +29,8 @@ namespace WebAnnotation.View
         /// <summary>
         /// Fits <paramref name="obj"/>'s label and its <paramref name="links"/> into <paramref name="layout"/>: in the
         /// inscribed circle as circle annotations are drawn, or along a run with down links at its left end and up links
-        /// at its right end.
+        /// at its right end. How readily the run may tilt is the Label rotation preference, read on every call so a
+        /// rebuild picks up a change.
         /// </summary>
         public static PolygonLabelSet Build(LabelLayout layout, LocationObj obj, long id, int z, ICollection<long> links)
         {
@@ -44,7 +45,7 @@ namespace WebAnnotation.View
             int down = linked.Count(l => l.Z < z);
 
             StructurePlacedLabels placed = new(obj);
-            LabelPlacement placement = layout.Fit(placed.Content(up, down));
+            LabelPlacement placement = layout.Fit(placed.Content(up, down), Global.AnnotationSettings.LabelRotationGain);
             if (placement.Kind == LabelPlacementKind.Run)
             {
                 placed.Place(placement);
