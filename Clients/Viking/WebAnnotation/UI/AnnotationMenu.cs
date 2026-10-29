@@ -364,12 +364,7 @@ namespace WebAnnotation
             // When user confirms Reset to Defaults: persist defaults and reload ViewModel from Global
             _preferencesDialog.ResetToDefaultsRequested += (s, args) =>
             {
-                // The reset writes the stored rotation directly, so the reload below finds Global and the view model
-                // equal and would not relay labels built at the old value.
-                double rotationBeforeReset = Global.AnnotationSettings.LabelRotation;
-                Global.AnnotationSettings.ResetToDefaults();
-                if (Global.AnnotationSettings.LabelRotation != rotationBeforeReset)
-                    RequestLabelRelayout();
+                ResetStoredSettingsAndRelayLabels(Global.AnnotationSettings.ResetToDefaults);
                 viewModel.LoadCurrentSettings(
                     Global.AnnotationSettings.NumSectionsInMemory,
                     Global.AnnotationSettings.NumSectionsLoading,
@@ -405,8 +400,8 @@ namespace WebAnnotation
 
         /// <summary>
         /// Writes the settings that preview live into <see cref="Global.AnnotationSettings"/>, so the view shows them
-        /// while the dialog is open. Called with the changed property's name as the user edits, and with null (every
-        /// live setting) when the view model is reverted or reset and on Cancel, which restores the values from
+        /// while the dialog is open. Called with the changed property's name as the user edits, and with null or empty
+        /// (every live setting) when the view model is reverted or reset and on Cancel, which restores the values from
         /// opening or the last Apply. Settings not listed here take effect on Apply/OK.
         /// </summary>
         internal static void ApplyLiveSettings(AnnotationPreferencesDialogViewModel viewModel, string? propertyName)
@@ -504,14 +499,52 @@ namespace WebAnnotation
             if (redraw)
                 AnnotationOverlay.CurrentOverlay?.InvalidateParent();
 
-            // Labels are laid out when built, not when drawn, so a new rotation needs a relayout. Only when the value
-            // changed: a revert or reset passes every setting, and relaying every loaded label for nothing is not free.
-            if (Changed(nameof(viewModel.LabelRotation)) &&
-                Global.AnnotationSettings.LabelRotation != viewModel.LabelRotation)
-            {
-                Global.AnnotationSettings.LabelRotation = viewModel.LabelRotation;
-                RequestLabelRelayout();
-            }
+            ApplyLiveLabelRotation(viewModel, propertyName);
+        }
+
+        /// <summary>
+        /// The Label rotation part of <see cref="ApplyLiveSettings"/>: writes the view model's rotation into
+        /// <see cref="Global.AnnotationSettings.LabelRotation"/> and asks for a <see cref="RequestLabelRelayout"/> when
+        /// <paramref name="propertyName"/> is that property or null/empty and the value differs. Labels are laid out when
+        /// built, not when drawn, so a new rotation needs a relayout. Cancel and the title-bar X reach here through the
+        /// view model's empty-name change (RevertToOriginal raises it), which relays labels back after the user moved the
+        /// slider or reset the settings. Only a changed value relays: those paths pass every setting, and relaying every
+        /// loaded label for nothing is not free.
+        /// </summary>
+        /// <returns>True when the stored rotation changed and a relayout was requested.</returns>
+        internal static bool ApplyLiveLabelRotation(AnnotationPreferencesDialogViewModel viewModel, string? propertyName)
+        {
+            if (!string.IsNullOrEmpty(propertyName) && propertyName != nameof(viewModel.LabelRotation))
+                return false;
+            if (Global.AnnotationSettings.LabelRotation == viewModel.LabelRotation)
+                return false;
+
+            Global.AnnotationSettings.LabelRotation = viewModel.LabelRotation;
+            RequestLabelRelayout();
+            return true;
+        }
+
+        /// <summary>
+        /// The stored-settings half of Reset to Defaults in Viking's and Jotunn's Annotation Preferences: runs
+        /// <paramref name="resetStoredSettings"/> (<c>Global.AnnotationSettings.ResetToDefaults</c> in both dialogs) and asks
+        /// for a <see cref="RequestLabelRelayout"/> when that changed the stored Label rotation. The reset writes the stored
+        /// value directly, so the view model reloaded or reset afterwards matches it and
+        /// <see cref="ApplyLiveLabelRotation"/> would not relay labels built at the old value. Unlike Legacy, whose dialog
+        /// resets only the view model, dev's reset writes Global first, so this is where the relayout comes from.
+        /// </summary>
+        /// <returns>True when the stored rotation changed and a relayout was requested.</returns>
+        internal static bool ResetStoredSettingsAndRelayLabels(Action resetStoredSettings)
+        {
+            if (resetStoredSettings is null)
+                throw new ArgumentNullException(nameof(resetStoredSettings));
+
+            double rotationBeforeReset = Global.AnnotationSettings.LabelRotation;
+            resetStoredSettings();
+            if (Global.AnnotationSettings.LabelRotation == rotationBeforeReset)
+                return false;
+
+            RequestLabelRelayout();
+            return true;
         }
 
         /// <summary>

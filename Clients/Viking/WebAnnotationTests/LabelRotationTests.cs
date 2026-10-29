@@ -124,6 +124,57 @@ namespace WebAnnotationTests
         }
 
         /// <summary>
+        /// Reset to Defaults then Cancel, as Viking's and Jotunn's dialogs run them: the reset writes the stored default
+        /// (here only the rotation, standing in for <c>Global.AnnotationSettings.ResetToDefaults</c>, which would write every
+        /// user setting) and relays labels once; the view model's reset that follows (an empty-name change, which the
+        /// dialogs pass to the live settings) finds nothing left to relay; Cancel's revert relays them back, and the
+        /// CancelClicked pass that follows (null) finds nothing changed. Ported from Legacy e3745889, where the view
+        /// model's reset alone relays because Legacy's dialog does not write the stored value first.
+        /// </summary>
+        [TestMethod]
+        public void ResetToDefaultsRelaysLabelsAndCancelRelaysThemBack()
+        {
+            AnnotationGlobal.AnnotationSettings.LabelRotation = 0.2;
+            AnnotationPreferencesDialogViewModel vm = new();
+            vm.LoadCurrentSettings(10, 5, 5, 2.5f, 24, 4, 0.5, 3, 3, 0.5, 0.5, 0.33, 0.5, 1, 5, 12, 10, 0.0025, 0.002,
+                labelRotation: AnnotationGlobal.AnnotationSettings.LabelRotation);
+            int relayouts = 0;
+            vm.PropertyChanged += (_, e) => { if (AnnotationMenu.ApplyLiveLabelRotation(vm, e.PropertyName)) relayouts++; };
+
+            if (AnnotationMenu.ResetStoredSettingsAndRelayLabels(ResetStoredRotation))
+                relayouts++;
+            vm.ResetToDefaults();
+
+            Assert.AreEqual(1, relayouts, "Reset to Defaults relays labels once");
+            Assert.AreEqual(AnnotationGlobal.AnnotationSettings.DEFAULT_LABEL_ROTATION, AnnotationGlobal.AnnotationSettings.LabelRotation, 1e-12);
+
+            vm.RevertToOriginal();
+
+            Assert.AreEqual(2, relayouts, "Cancel after a reset relays labels back");
+            Assert.AreEqual(0.2, AnnotationGlobal.AnnotationSettings.LabelRotation, 1e-12);
+            Assert.IsFalse(AnnotationMenu.ApplyLiveLabelRotation(vm, null), "The CancelClicked pass finds the rotation already restored");
+        }
+
+        [TestMethod]
+        public void ResetToDefaultsAtTheDefaultRotationDoesNotRelay()
+        {
+            AnnotationGlobal.AnnotationSettings.LabelRotation = AnnotationGlobal.AnnotationSettings.DEFAULT_LABEL_ROTATION;
+            AnnotationPreferencesDialogViewModel vm = new();
+            int relayouts = 0;
+            vm.PropertyChanged += (_, e) => { if (AnnotationMenu.ApplyLiveLabelRotation(vm, e.PropertyName)) relayouts++; };
+
+            if (AnnotationMenu.ResetStoredSettingsAndRelayLabels(ResetStoredRotation))
+                relayouts++;
+            vm.ResetToDefaults();
+
+            Assert.AreEqual(0, relayouts);
+        }
+
+        /// <summary>The rotation part of <c>Global.AnnotationSettings.ResetToDefaults</c>.</summary>
+        private static void ResetStoredRotation() =>
+            AnnotationGlobal.AnnotationSettings.LabelRotation = AnnotationGlobal.AnnotationSettings.DEFAULT_LABEL_ROTATION;
+
+        /// <summary>
         /// The live relayout runs while no volume is open (and in tests) without touching the overlay. Other tests in this
         /// assembly leave a volume in <see cref="Viking.UI.State.volume"/>, so it is cleared here and put back.
         /// </summary>

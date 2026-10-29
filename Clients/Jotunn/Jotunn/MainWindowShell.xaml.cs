@@ -531,12 +531,9 @@ namespace Jotunn
             dialog.ApplyClicked += (_, _) => ApplyAnnotationPreferences(vm);
             dialog.ResetToDefaultsRequested += (_, _) =>
             {
-                // The reset writes the stored rotation directly, so the view model's reset finds the two equal and would
-                // not relay labels built at the old value.
-                double rotationBeforeReset = WebAnnotation.Global.AnnotationSettings.LabelRotation;
-                WebAnnotation.Global.AnnotationSettings.ResetToDefaults();
-                if (WebAnnotation.Global.AnnotationSettings.LabelRotation != rotationBeforeReset)
-                    WebAnnotation.AnnotationMenu.RequestLabelRelayout();
+                // The reset writes the stored rotation directly, so the view model's reset finds the two equal; the
+                // helper relays labels built at the old value.
+                WebAnnotation.AnnotationMenu.ResetStoredSettingsAndRelayLabels(WebAnnotation.Global.AnnotationSettings.ResetToDefaults);
                 vm.ResetToDefaults();
             };
             dialog.Show();
