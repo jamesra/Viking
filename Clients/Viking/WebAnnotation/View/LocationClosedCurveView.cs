@@ -107,7 +107,10 @@ namespace WebAnnotation.View
         /// </summary>
         protected Circle InscribedCircle => labelLayout?.InscribedCircle ?? new Circle(BoundingBox.Center, ControlPointRadius);
 
-        /// <summary>Rebuilds the labels and overlapped-link markers together, since the fit depends on the link counts.</summary>
+        /// <summary>
+        /// Rebuilds the labels and overlapped-link markers together, since the fit depends on the link counts. Eases the
+        /// text from the labels it replaces to the new placement.
+        /// </summary>
         /// <returns>Where the label went, Circle if nothing was built.</returns>
         public LabelPlacementKind CreateLabelObjects()
         {
@@ -118,7 +121,7 @@ namespace WebAnnotation.View
                     return LabelPlacementKind.Circle;
                 }
 
-                PolygonLabelSet labels = PolygonLabelSet.Build(labelLayout, modelObj, ID, (int)Z, overlappedLinks);
+                PolygonLabelSet labels = PolygonLabelSet.Build(labelLayout, modelObj, ID, (int)Z, overlappedLinks, curveLabels);
                 if (labels.LinkView != null)
                 {
                     labels.LinkView.Color = Color;

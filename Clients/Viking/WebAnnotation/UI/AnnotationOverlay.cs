@@ -3162,6 +3162,10 @@ break;
 
             DrawLocationLabels(listVisibleNonOverlappingLocationsOnAdjacentSections, scene);
 
+            // A label easing to a new placement needs the following frames until it lands; then the viewer goes idle.
+            if (StructureLabelsBase.TakeAnimatingFrame())
+                _Parent.Invalidate();
+
             autoPolygonizeController?.Draw(graphicsDevice, scene);
 
             if (OriginalRasterState != null && !OriginalRasterState.IsDisposed)

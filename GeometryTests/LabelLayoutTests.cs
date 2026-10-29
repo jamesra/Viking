@@ -34,14 +34,14 @@ namespace GeometryTests
 
         /// <summary>
         /// A "V" open to the right: a level arm 10 thick along +X and an arm <paramref name="tiltedThickness"/> thick at
-        /// 30°, both 100 long and joined at the origin.
+        /// <paramref name="degrees"/>, both 100 long and joined at the origin.
         /// </summary>
-        private static Polygon LevelAndThirtyDegreeArms(double tiltedThickness)
+        private static Polygon LevelAndTiltedArms(double tiltedThickness, double degrees = 30)
         {
-            double cos = Math.Cos(30 * Degree), sin = Math.Sin(30 * Degree);
+            double cos = Math.Cos(degrees * Degree), sin = Math.Sin(degrees * Degree);
             Vector2 across = new(-sin * tiltedThickness, cos * tiltedThickness);
             Vector2 tip = new(100 * cos, 100 * sin);
-            return new([new Vector2(0, 0), new Vector2(100, 0), new Vector2(100, 10), new Vector2(10 / Math.Tan(30 * Degree), 10),
+            return new([new Vector2(0, 0), new Vector2(100, 0), new Vector2(100, 10), new Vector2(10 / Math.Tan(degrees * Degree), 10),
                         tip, tip + across, across, new Vector2(0, 0)]);
         }
 
@@ -189,7 +189,7 @@ namespace GeometryTests
         [TestMethod]
         public void SmallGainAtThirtyDegreesStaysLevelUntilFreely()
         {
-            LabelLayout layout = new(LevelAndThirtyDegreeArms(12.25));
+            LabelLayout layout = new(LevelAndTiltedArms(12.25));
 
             LabelPlacement level = layout.Fit(Content(), LabelLayout.NeverRotate);
             LabelPlacement free = layout.Fit(Content(), LabelLayout.RotationGainForSetting(1));
@@ -278,6 +278,43 @@ namespace GeometryTests
             double[] v = [.. placement.RowCenters.Select(c => placement.Region.WorldToLocal(c).Y)];
             Assert.IsTrue(v[0] > v[1] && v[1] > v[2], "Rows should stack down the text's up direction");
             Assert.AreEqual(0, (v[0] + v[2]) / 2.0, placement.FontSize * 0.01, "Rows should centre on the axis");
+        }
+
+        [TestMethod]
+        public void RunAnglesAreEveryFiveDegreesPlusThePrincipalAxis()
+        {
+            double[] steps = [.. Enumerable.Range(0, 36).Select(i => (-85 + (5 * i)) * Degree)];
+
+            double[] offStep = [.. InscribedRuns.Angles(Rotated(Box(-100, -5, 100, 5), 22 * Degree))];
+            Assert.AreEqual(37, offStep.Length, "36 steps and the 22° principal axis");
+            CollectionAssert.AreEqual(steps, offStep.Take(36).ToArray(), new ToleranceComparer(1e-12));
+            Assert.AreEqual(22 * Degree, offStep[36], 1e-6);
+            Assert.IsTrue(offStep.All(a => a > -Math.PI / 2 && a <= Math.PI / 2), "Angles must be in (−90°, 90°]");
+
+            double[] nearStep = [.. InscribedRuns.Angles(Rotated(Box(-100, -5, 100, 5), 20.5 * Degree))];
+            Assert.AreEqual(36, nearStep.Length, "A principal axis within 1° of a step is not added");
+        }
+
+        /// <summary>
+        /// A thick arm at 25°, between the old 15° steps and not the shape's principal axis, gets its own angle: at 15°
+        /// steps the text sat at 30° or 15° in a shorter box across the arm.
+        /// </summary>
+        [TestMethod]
+        public void ArmBetweenFifteenDegreeStepsGetsItsOwnAngle()
+        {
+            Polygon shape = LevelAndTiltedArms(14, 25);
+            double principal = InscribedRuns.NormalizeAngle(InscribedRuns.PrincipalAxisAngle(shape));
+            Assert.IsTrue(Math.Abs(principal - (25 * Degree)) > 2 * Degree, $"Test shape's principal axis is {principal / Degree:F1}°");
+
+            LabelPlacement placement = new LabelLayout(shape).Fit(Content(), LabelLayout.RotationGainForSetting(1));
+            Assert.AreEqual(LabelPlacementKind.Run, placement.Kind);
+            Assert.AreEqual(25 * Degree, placement.Angle, 1e-9);
+        }
+
+        /// <summary>Compares angles within a tolerance for <see cref="CollectionAssert"/>.</summary>
+        private sealed class ToleranceComparer(double tolerance) : System.Collections.IComparer
+        {
+            public int Compare(object x, object y) => Math.Abs((double)x - (double)y) <= tolerance ? 0 : ((double)x).CompareTo((double)y);
         }
     }
 }

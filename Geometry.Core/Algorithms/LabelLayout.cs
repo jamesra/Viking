@@ -31,20 +31,26 @@ namespace Geometry
         /// <summary>Markers for links to sections below.</summary>
         public readonly int DownCount;
 
+        /// <summary>
+        /// <paramref name="rows"/> must not change afterwards: <see cref="TextWidth"/> and <see cref="TextHeight"/> are
+        /// measured here, once, because <see cref="LabelLayout"/> reads them for every candidate run.
+        /// </summary>
         public LabelContent(IReadOnlyList<LabelRow> rows, int upCount, int downCount)
         {
             Rows = rows ?? throw new ArgumentNullException(nameof(rows));
             UpCount = upCount;
             DownCount = downCount;
+            TextWidth = rows.Count == 0 ? 0 : rows.Max(r => r.UnitWidth * r.Scale);
+            TextHeight = rows.Sum(r => r.Scale);
         }
 
         public int MarkerCount => UpCount + DownCount;
 
         /// <summary>Width of the widest row at an ID font size of 1.</summary>
-        public double TextWidth => Rows.Count == 0 ? 0 : Rows.Max(r => r.UnitWidth * r.Scale);
+        public readonly double TextWidth;
 
         /// <summary>Height of all rows at an ID font size of 1.</summary>
-        public double TextHeight => Rows.Sum(r => r.Scale);
+        public readonly double TextHeight;
     }
 
     public enum LabelPlacementKind
@@ -78,6 +84,9 @@ namespace Geometry
     /// <summary>The layout <see cref="LabelLayout.Fit(LabelContent, double)"/> chose for one <see cref="LabelContent"/>.</summary>
     public sealed class LabelPlacement
     {
+        /// <summary>The content the placement was laid out for.</summary>
+        internal readonly LabelContent Content;
+
         public readonly LabelPlacementKind Kind;
 
         /// <summary>The polygon's maximum inscribed circle; the layout region when <see cref="Kind"/> is Circle.</summary>
@@ -104,8 +113,9 @@ namespace Geometry
         /// <summary>Text angle in radians, counter-clockwise from +X, in (−π/2, π/2]. 0 for circles.</summary>
         public double Angle => Kind == LabelPlacementKind.Run ? Region.Angle : 0;
 
-        internal LabelPlacement(Circle circle, double fontSize)
+        internal LabelPlacement(LabelContent content, Circle circle, double fontSize)
         {
+            Content = content;
             Kind = LabelPlacementKind.Circle;
             Circle = circle;
             FontSize = fontSize;
@@ -113,9 +123,10 @@ namespace Geometry
             Markers = [];
         }
 
-        internal LabelPlacement(Circle circle, OrientedRectangle region, double fontSize, OrientedRectangle textBox,
-            double maxLineWidth, IReadOnlyList<Vector2> rowCenters, IReadOnlyList<MarkerSlot> markers)
+        internal LabelPlacement(LabelContent content, Circle circle, OrientedRectangle region, double fontSize,
+            OrientedRectangle textBox, double maxLineWidth, IReadOnlyList<Vector2> rowCenters, IReadOnlyList<MarkerSlot> markers)
         {
+            Content = content;
             Kind = LabelPlacementKind.Run;
             Circle = circle;
             Region = region;
@@ -172,7 +183,10 @@ namespace Geometry
         public const double MinimumMarkerRadius = 0.1;
 
         private readonly RingSegmentSet Rings;
-        private readonly IReadOnlyList<RunCandidate> Runs;
+        private readonly RunCandidate[] Runs;
+
+        /// <summary>|sin| of each <see cref="Runs"/> entry's angle, for its tilt factor without a sine per fit.</summary>
+        private readonly double[] RunSin;
         private readonly Rectangle Bounds;
         private readonly Vector2 Centroid;
 
@@ -189,7 +203,8 @@ namespace Geometry
             Bounds = polygon.BoundingBox;
             Centroid = polygon.Centroid;
             InscribedCircle = polygon.MaximumInscribedCircle();
-            Runs = InscribedRuns.Find(polygon);
+            Runs = [.. InscribedRuns.Find(polygon)];
+            RunSin = [.. Runs.Select(r => Math.Abs(Math.Sin(r.Angle)))];
         }
 
         /// <summary>ID font size in a circle, as <c>StructureCircleLabels</c> draws it.</summary>
@@ -261,11 +276,11 @@ namespace Geometry
             // (run font H/2.2 against circle font H/4, 1.82) never reaches, so its text would shrink into the circle.
             double circleFont = CircleFontSize(InscribedCircle);
             if (!TryBestRun(content, 0, rotationGain, out OrientedRectangle region, out double textOnlyScore))
-                return new LabelPlacement(InscribedCircle, circleFont);
+                return new LabelPlacement(content, InscribedCircle, circleFont);
 
             double runFont = RunFontSize(region.Width, region.Height, content, 0);
-            if (runFont < Math.Max(CirclePreference, RequiredGain(region.Angle, rotationGain)) * circleFont)
-                return new LabelPlacement(InscribedCircle, circleFont);
+            if (runFont < CircleThreshold(region.Angle, rotationGain) * circleFont)
+                return new LabelPlacement(content, InscribedCircle, circleFont);
 
             int endMarkers = 0;
             for (int k = content.MarkerCount; k > 0; k--)
@@ -283,11 +298,23 @@ namespace Geometry
         }
 
         /// <summary>
+        /// How many times the circle's font a run at <paramref name="angle"/> must allow to replace it: the larger of
+        /// <see cref="CirclePreference"/> and the tilt's <see cref="RequiredGain"/>.
+        /// </summary>
+        private static double CircleThreshold(double angle, double rotationGain) =>
+            Math.Max(CirclePreference, RequiredGain(angle, rotationGain));
+
+        /// <summary>
         /// The verified run with the best score for <paramref name="markers"/> end markers. Raster sizes bound the
         /// verified ones from above, and a verified run keeps its candidate's angle, so the same tilt factor keeps the
         /// bound: runs are verified best first only until no unverified one could win. With <see cref="NeverRotate"/>
         /// tilted runs are skipped, not merely scored 0.
         /// </summary>
+        /// <remarks>
+        /// Picks the next best bound by a linear scan rather than sorting every candidate: the 5° angles give a round cell
+        /// thousands of Pareto runs, and the scan stops after the first one or two verify, so sorting dominated the fit.
+        /// Ties go to the earlier candidate, as the stable sort did.
+        /// </remarks>
         private bool TryBestRun(LabelContent content, int markers, double rotationGain, out OrientedRectangle best, out double bestScore)
         {
             best = default;
@@ -295,17 +322,38 @@ namespace Geometry
             bool found = false;
 
             bool levelOnly = double.IsPositiveInfinity(rotationGain);
-            IEnumerable<(RunCandidate Run, double Bound)> ranked = Runs
-                .Where(r => !levelOnly || r.Angle == 0)
-                .Select(r => (Run: r, Bound: RunFontSize(r.Width, r.Height, content, markers) * TiltFactor(r.Angle, rotationGain)))
-                .OrderByDescending(r => r.Bound);
-
-            foreach ((RunCandidate run, double bound) in ranked)
+            double gain = Math.Max(0, rotationGain);
+            double[] bounds = new double[Runs.Length];
+            for (int i = 0; i < Runs.Length; i++)
             {
-                if (bound <= bestScore)
+                if (levelOnly && Runs[i].Angle != 0)
+                {
+                    bounds[i] = -1;
+                    continue;
+                }
+
+                double tilt = RunSin[i] == 0 ? 1 : 1.0 / (1 + (gain * RunSin[i]));
+                bounds[i] = RunFontSize(Runs[i].Width, Runs[i].Height, content, markers) * tilt;
+            }
+
+            while (true)
+            {
+                int next = -1;
+                double nextBound = bestScore;
+                for (int i = 0; i < bounds.Length; i++)
+                {
+                    if (bounds[i] > nextBound)
+                    {
+                        next = i;
+                        nextBound = bounds[i];
+                    }
+                }
+
+                if (next < 0)
                     break;
 
-                if (!run.TryVerify(out OrientedRectangle region))
+                bounds[next] = -1;
+                if (!Runs[next].TryVerify(out OrientedRectangle region))
                     continue;
 
                 double score = Score(region, content, markers, rotationGain);
@@ -360,7 +408,7 @@ namespace Geometry
             PlaceInFreeSpace(markers, textBox, font, content.DownCount - downEnd, false);
             PlaceInFreeSpace(markers, textBox, font, content.UpCount - upEnd, true);
 
-            return new LabelPlacement(InscribedCircle, region, font, textBox, maxLineWidth, rowCenters, markers);
+            return new LabelPlacement(content, InscribedCircle, region, font, textBox, maxLineWidth, rowCenters, markers);
         }
 
         /// <summary>

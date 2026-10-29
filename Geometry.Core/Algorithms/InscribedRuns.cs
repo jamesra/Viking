@@ -97,23 +97,29 @@ namespace Geometry
         /// <summary>Raster cells along each axis of the rotated bounds.</summary>
         public const int GridSize = 128;
 
-        /// <summary>Angles tried besides the principal axis: −75° to 90° in 15° steps.</summary>
+        /// <summary>
+        /// Spacing of the fixed angles in degrees. 5° since 2026-10-29 (15° before): at 15° a process between two steps
+        /// fell to the nearer step, so a label could sit up to 7.5° off a straight arm that is not the principal axis.
+        /// </summary>
+        public const int StepDegrees = 5;
+
+        /// <summary>Angles tried besides the principal axis: every <see cref="StepDegrees"/> from just above −90° to 90°.</summary>
         private static readonly double[] StepAngles = CreateStepAngles();
 
         private static double[] CreateStepAngles()
         {
-            double[] angles = new double[12];
+            double[] angles = new double[180 / StepDegrees];
             for (int i = 0; i < angles.Length; i++)
-                angles[i] = (-75 + (15 * i)) * Math.PI / 180.0;
+                angles[i] = (90 - (StepDegrees * (angles.Length - 1 - i))) * Math.PI / 180.0;
 
             return angles;
         }
 
         /// <summary>
-        /// Pareto-optimal raster runs of <paramref name="polygon"/> at every 15° from −75° to 90°, and along its principal
-        /// axis, normalised to (−90°, 90°].
+        /// The angles <see cref="Find"/> rasterises <paramref name="polygon"/> at, in radians in (−π/2, π/2]: every
+        /// <see cref="StepDegrees"/>, plus the principal axis unless a step lies within 1° of it.
         /// </summary>
-        public static IReadOnlyList<RunCandidate> Find(Polygon polygon)
+        public static IReadOnlyList<double> Angles(Polygon polygon)
         {
             if (polygon is null)
                 throw new ArgumentNullException(nameof(polygon));
@@ -123,9 +129,17 @@ namespace Geometry
             if (!angles.Exists(a => Math.Abs(a - principal) < Math.PI / 180.0))
                 angles.Add(principal);
 
-            Vector2 origin = polygon.BoundingBox.Center;
+            return angles;
+        }
+
+        /// <summary>
+        /// Pareto-optimal raster runs of <paramref name="polygon"/> at each of its <see cref="Angles"/>.
+        /// </summary>
+        public static IReadOnlyList<RunCandidate> Find(Polygon polygon)
+        {
+            Vector2 origin = polygon?.BoundingBox.Center ?? throw new ArgumentNullException(nameof(polygon));
             List<RunCandidate> candidates = [];
-            foreach (double angle in angles)
+            foreach (double angle in Angles(polygon))
                 candidates.AddRange(FindAtAngle(polygon, origin, angle));
 
             return candidates;

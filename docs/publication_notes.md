@@ -25,7 +25,8 @@ papers: citations, formulas, algorithmic decisions and the reasoning behind them
   client `Clients/Viking/WebAnnotation/View/PolygonLabelSet.cs`): a polygon or closed curve's ID, structure label, tags,
   parent ID and overlapped-link markers go either in the true maximum inscribed circle (pole of inaccessibility, by
   polylabel's branch and bound over signed distance to exterior and hole segments) or along the largest inscribed
-  oriented rectangle ("run") at 13 angles, whichever allows the larger ID font. Runs come from rasterising the rotated
+  oriented rectangle ("run") at 37 angles (every 5° and the principal axis; 13 at 15° steps before 2026-10-29),
+  whichever allows the larger ID font. Runs come from rasterising the rotated
   polygon to a 128×128 grid and the histogram-and-stack maximal-rectangle pass, keeping the (width, height) Pareto front
   so any text aspect fits without rasterising again; the candidate chosen is verified against the real segments
   (Liang–Barsky clip) and shrunk by 10% up to four times if a raster cell hid an edge. Markers that do not fit go one at a
@@ -71,6 +72,12 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   $f(p) = \min(d_P(p),\ d_T(p),\ \min_j(\lVert p - c_j\rVert - r_j))$, with $d_P$ the signed distance to the polygon,
   $d_T$ the signed distance outside the text box and $c_j, r_j$ the markers placed so far; radius
   $\min(F/2, 0.95 f)$, at least $0.1F$.
+- **Label switch easing** (`Geometry.Core/Algorithms/LabelEasing.cs`): each text row moves from its shown pose
+  $(c_0, \theta_0, f_0)$ to its new one $(c_1, \theta_1, f_1)$ with $s = 1 - (1 - t/T)^3$, $T = 150$ ms:
+  $c = c_0 + s\,(c_1 - c_0)$, $f = f_0 (f_1/f_0)^s$, $\theta = N(\theta_0 + s\,\delta)$ where $\delta$ is
+  $\theta_1 - \theta_0$ or that minus $\operatorname{sign}\cdot\pi$, whichever is shorter (direct on a tie), and $N$
+  maps to $(-\pi/2, \pi/2]$; text at $\theta$ and $\theta + \pi$ lies on the same line and the renderer never draws
+  it upside down, so the turn is at most 90°.
 
 - **Location link fade depth** (`Clients/Viking/WebAnnotation/View/LocationLinkView.cs` `FadeDepthAt`, shader
   `PinchedFadeDepth` in `Clients/MonogameXNAGraphicsShared/Content/PinchedLineShaders.fx`): for a point $x$ along a link of
@@ -83,6 +90,35 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   $r = \min(\operatorname{dist}(\tfrac{N + E}{2}, \partial P), \sqrt{A/\pi})$ and centre $E - r\,d$.
 
 ## Algorithmic decisions
+
+- **2026-10-29 Polygon labels switch placement smoothly: an eased move and 5° run angles** (ported from VikingLegacy
+  bc1643cd and 3caf531e, same day). Why: the user found the live Label rotation relayout rough, with labels jumping
+  between level and tilted. (1) A 150 ms cubic ease-out of each text row's centre, angle (the short way modulo 180°,
+  consistent with `LabelView.DrawRotated`'s upside-down flip) and font (formula above), from where the old labels are
+  shown at that moment, so a relayout mid-animation carries on from the current pose; a relayout that keeps the
+  placement continues the running animation unchanged. Circle and run label sets have the same rows (ID, structure
+  label, tags, parent), so a circle ↔ run switch animates row by row; line widths scale with the font so wrapping does
+  not change mid-move; overlapped-link markers move at once (they are pickable geometry). A polygon view eases from its
+  previous labels while its layout is unchanged; a closed curve always eases. The viewer asks for another frame after
+  drawing labels while any label is easing, and is idle otherwise: Viking's `AnnotationOverlay` invalidates its
+  control, and Jotunn's `AnnotationScene` (dev only) calls `TileLoadEnvironment.RequestRender`, since Jotunn draws on
+  request. (2) Run angles every 5° from −85° to 90° (36, plus the principal axis unless within 1° of a step) instead of
+  15°: an arm off the principal axis got text up to 7.5° off its direction. Measured on Legacy 2026-10-29, net48
+  Release, synthetic cells (`round`: 300 vertices; `process`: a bent tapering process, 580 and 1980 vertices), median
+  of 30: `LabelLayout` constructor 2.1 → 6.1 ms (round), 2.8 → 5.7 ms (process 580), 5.4 → 9.0 ms (process 1980),
+  within the 3× and 40 ms budget set beforehand, on the background `Initialize`. `Fit` went 205 → 670 µs (round) and
+  166 → 480 µs (process) with 5° alone, because `TryBestRun` sorted every Pareto run for each marker count; it now picks
+  the next best bound by a linear scan, and `LabelContent` measures its text size once, so `Fit` is 16 µs (round) and
+  14 µs (process). Rejected: placement hysteresis (Legacy bc1643cd kept a placement unless the new best was over 5%
+  better; removed in 3caf531e the same day because the user found the near-tie flipping it hid a non-issue, so dev
+  never had it; `AnnotationMenu.RequestLabelRelayout`'s 50 ms throttle stays, for cost); 5° only near the principal
+  axis, or a coarse-then-fine search (not needed at these costs); animating the link markers (hit-tested views rebuilt
+  with the placement); a group transform for circle ↔ run (circle rows are not a rigid copy of run rows). Where:
+  `Geometry.Core/Algorithms/LabelLayout.cs` (`Fit`, `TryBestRun`), `InscribedRuns.cs` (`StepDegrees`, `Angles`),
+  `LabelEasing.cs`; `Clients/Viking/WebAnnotation/View/StructureLabelsBase.cs` (`TransitionFrom`, `DrawLabel`),
+  `PolygonLabelSet.cs`, `LocationPolygonView.cs`, `LocationClosedCurveView.cs`, `UI/AnnotationOverlay.cs`,
+  `AnnotationScene.cs`; tests `GeometryTests/LabelLayoutTests.cs`, `GeometryTests/LabelEasingTests.cs`,
+  `GeometryTests/FSCheck/PolygonSpec.cs`.
 
 - **2026-10-29 Label tilt costs a gain that grows with the angle; one preference sets it** (ported from VikingLegacy
   9629e4dd, same day). Why: a user disliked rotated polygon labels. The flat 0.9 tilt score (2026-10-26 entry) let a 30°
@@ -333,7 +369,7 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   old "inscribed circle" (centroid, radius to the nearest vertex) lies outside C-shaped cells and cells with holes, is
   tiny on long processes, and pokes past edges between vertices (user report). The same circle placed adjacent-section
   markers and translate targets, so `Polygon.InscribedCircle` and `CalculateInscribedCircle` now return the maximum
-  inscribed circle and the centroid version is deleted. Decisions: angles −75° to 90° in 15° steps plus the principal
+  inscribed circle and the centroid version is deleted. Decisions: angles ~~−75° to 90° in 15° steps~~ (superseded 2026-10-29: every 5°, entry above) plus the principal
   axis of the second moments of area, all in (−90°, 90°] so text never reads upside down and a vertical process reads
   bottom to top; ~~a tilted run scores 0.9 so near-level text snaps to level~~ superseded 2026-10-29: a tilted run's
   score is divided by $1 + G\lvert\sin\theta\rvert$ (entry above); the circle is kept unless a run beats it by

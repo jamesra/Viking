@@ -450,6 +450,10 @@ namespace WebAnnotation
                 _spriteBatch.End();
             }
 
+            // Jotunn draws on request, so a label easing to a new placement asks for the next frame until it lands.
+            if (StructureLabelsBase.TakeAnimatingFrame())
+                TileLoadEnvironment.RequestRender?.Invoke();
+
             DrawToolPreview(sectionNumber, graphicsDevice, scene, lineManager, overlayEffect);
             try
             {

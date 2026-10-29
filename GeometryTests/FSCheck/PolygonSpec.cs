@@ -293,6 +293,42 @@ namespace GeometryTests
                 nameof(LabelPlacementStaysInside));
 
         /// <summary>
+        /// A fit for any text width, link count and rotation gain is laid out for that content: a run's font holds the
+        /// text between its end markers, there is one marker per link, and the text stays inside the polygon; Never keeps
+        /// it level. Every candidate run angle is a 5° step or the principal axis, in (−90°, 90°].
+        /// </summary>
+        [TestMethod]
+        public void FitHoldsItsContentInsideThePolygon() =>
+            CoreCheck.Run(
+                Prop.ForAll(CoreArbitraries.ArbHoledPolygon(), Arb.From(Gen.Three(Gen.Choose(0, 100))),
+                    (p, change) =>
+                    {
+                        int width = 1 + (change.Item1 % 40), links = change.Item2 % 4, setting = change.Item3;
+                        LabelLayout layout = new(p);
+                        RingSegmentSet rings = new(p);
+                        double slack = LayoutSlack(p);
+                        bool Inside(Vector2 v) => rings.SignedDistance(v.X, v.Y) >= -slack;
+
+                        LabelContent after = new([new LabelRow(width, 0.5), new LabelRow(4, 1.0)], links, 1);
+                        double gain = LabelLayout.RotationGainForSetting(setting / 100.0);
+
+                        LabelPlacement next = layout.Fit(after, gain);
+                        bool fits = next.Kind == LabelPlacementKind.Circle ||
+                                    (next.Markers.Count == after.MarkerCount &&
+                                     next.Markers.Count(m => m.IsUp) == after.UpCount &&
+                                     LabelLayout.TextPadding * after.TextWidth * next.FontSize <= next.MaxLineWidth * (1 + 1e-9) &&
+                                     next.TextBox.Corners.All(Inside) && next.RowCenters.All(Inside));
+                        bool levelAtNever = !double.IsPositiveInfinity(gain) || next.Angle == 0;
+                        bool anglesOnGrid = InscribedRuns.Angles(p).All(a =>
+                            a > -Math.PI / 2 && a <= Math.PI / 2 &&
+                            (Math.Abs(Math.IEEERemainder(a / (InscribedRuns.StepDegrees * Math.PI / 180.0), 1)) < 1e-9 ||
+                             Math.Abs(a - InscribedRuns.NormalizeAngle(InscribedRuns.PrincipalAxisAngle(p))) < 1e-12));
+
+                        return fits && levelAtNever && anglesOnGrid && ReferenceEquals(next.Content, after);
+                    }),
+                nameof(FitHoldsItsContentInsideThePolygon));
+
+        /// <summary>
         /// The gain a tilted label must show over level text never falls as the tilt grows towards 90° or as the rotation
         /// gain G grows, and is 1 for level text whatever G is.
         /// </summary>
