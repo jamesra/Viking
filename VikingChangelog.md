@@ -32,6 +32,8 @@ Documentation/source/Client/versionhistory.rst.
 <!-- numDownsample started at 1 with no decimals, so ScreenshotForm_Load's Value assignment threw ArgumentOutOfRangeException for any viewer downsample below 1. Its Minimum is now ViewerMagnificationSteps.MinDownsample (the viewer's own clamp) with 2 decimals; a value outside the box's range (a pinch zoom can pass the viewer's clamp) is shown at the nearest end, and the capture still uses the viewer's exact downsample. -->
 * Fix: **Measurement > Set Scale** showed an error instead of the dialog when the volume's scale was over 100 units per pixel, showed a small scale such as 0.0025 um rounded to 0.003, and showed an error after **OK** when **cm** was picked. The dialog now shows the scale with all its digits, keeps it exactly when you change only the unit, no longer lists **cm** (not a unit Viking can measure in), and asks you to correct a unit it does not know instead of failing.
 <!-- numUnitsPerPixel was fixed at 0..100 with 3 decimals; ScaleForm_Load now sizes DecimalPlaces and Minimum from the scale, Maximum 1e9, and OK writes the number back only when it was edited, so the volume's double is never sent through decimal. MeasurementMenu's Enum.Parse of the combo text moved into ScaleForm.TryParseUnit (case-sensitive: mm vs Mm). -->
+* Removed **Change Shape > Curve** from the right-click menu of annotations. It never did anything: converting an annotation to a curve is not implemented. **Change Shape > Circle** and **Convert to Polygon** work as before.
+<!-- Decision D-ChangeShapeCurveStub (2026-10-29): Location_ViewModelBase._AddConvertShapeMenus no longer adds the item, and ContextMenu_ConvertShape lost its empty OPENCURVE case. -->
 
 
 ## 1.2.134 — 2026-10-28 (Viking Test, unsigned)

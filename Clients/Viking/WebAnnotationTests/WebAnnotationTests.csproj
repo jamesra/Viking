@@ -74,6 +74,7 @@
         <Compile Include="HotkeyKeyCodeTests.cs" />
         <Compile Include="CreateStructureCommandActionAttributeListTests.cs" />
         <Compile Include="OverlayHotkeysTests.cs" />
+        <Compile Include="ConvertShapeMenuTests.cs" />
         <Compile Include="TemporarilyHiddenAnnotationsTests.cs" />
         <Compile Include="LabelOutlineTests.cs" />
         <Compile Include="LocationLinkBorderTests.cs" />
