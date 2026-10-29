@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Viking.UI.WPF.Forms"
         xmlns:converters="clr-namespace:Viking.UI.WPF.Converters"
+        xmlns:controls="clr-namespace:Viking.UI.WPF.Controls"
         mc:Ignorable="d"
         Title="Viewer Preferences" 
         Height="450" 
@@ -22,10 +23,6 @@
             <Setter Property="Margin" Value="10"/>
         </Style>
         <converters:Int32Converter x:Key="SectionCountConverter" Minimum="1" Maximum="50"/>
-        <converters:Int32Converter x:Key="TextureLoadingWindowConverter" Minimum="5" Maximum="200"/>
-        <converters:Int32Converter x:Key="MinTexturesToLoadConverter" Minimum="1" Maximum="100"/>
-        <converters:Int32Converter x:Key="VisibleTileSortIntervalConverter" Minimum="200" Maximum="10000"/>
-        <converters:Int32Converter x:Key="MaxConcurrentTextureRequestsConverter" Minimum="0" Maximum="256"/>
     </Window.Resources>
     
     <Grid>
@@ -101,19 +98,15 @@
                             </Grid.RowDefinitions>
                             
                             <Label Grid.Row="0" Grid.Column="0" Content="Animation Acceleration:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding SectionNumberOverlayAcceleration, Mode=TwoWay}"
-                                    Minimum="{Binding SectionNumberOverlayAccelerationMinimum}"
-                                    Maximum="{Binding SectionNumberOverlayAccelerationMaximum}"
-                                    TickFrequency="0.01"
-                                    IsSnapToTickEnabled="False"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="2"
-                                     Text="{Binding SectionNumberOverlayAcceleration, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <controls:SliderWithValueBox
+                                      Grid.Row="0"
+                                      Grid.Column="1" Grid.ColumnSpan="2"
+                                      Minimum="{Binding SectionNumberOverlayAccelerationMinimum}"
+                                      Maximum="{Binding SectionNumberOverlayAccelerationMaximum}"
+                                      TickFrequency="0.01"
+                                      IsSnapToTickEnabled="False"
+                                      ValueFormat="F2"
+                                      Value="{Binding SectionNumberOverlayAcceleration, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
                                      Margin="10,0,10,10"
                                      FontSize="10"
@@ -135,19 +128,15 @@
                             </Grid.RowDefinitions>
                             
                             <Label Grid.Row="0" Grid.Column="0" Content="Opacity:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding SectionNumberOverlayOpacity, Mode=TwoWay}"
-                                    Minimum="{Binding SectionNumberOverlayOpacityMinimum}"
-                                    Maximum="{Binding SectionNumberOverlayOpacityMaximum}"
-                                    TickFrequency="0.05"
-                                    IsSnapToTickEnabled="False"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="2"
-                                     Text="{Binding SectionNumberOverlayOpacity, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <controls:SliderWithValueBox
+                                      Grid.Row="0"
+                                      Grid.Column="1" Grid.ColumnSpan="2"
+                                      Minimum="{Binding SectionNumberOverlayOpacityMinimum}"
+                                      Maximum="{Binding SectionNumberOverlayOpacityMaximum}"
+                                      TickFrequency="0.05"
+                                      IsSnapToTickEnabled="False"
+                                      ValueFormat="F2"
+                                      Value="{Binding SectionNumberOverlayOpacity, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
                                      Margin="10,0,10,10"
                                      FontSize="10"
@@ -169,19 +158,15 @@
                             </Grid.RowDefinitions>
                             
                             <Label Grid.Row="0" Grid.Column="0" Content="Min opacity (non-center):"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding SectionNumberOverlayMinOpacityNonCenter, Mode=TwoWay}"
-                                    Minimum="{Binding SectionNumberOverlayMinOpacityNonCenterMinimum}"
-                                    Maximum="{Binding SectionNumberOverlayMinOpacityNonCenterMaximum}"
-                                    TickFrequency="0.1"
-                                    IsSnapToTickEnabled="False"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="2"
-                                     Text="{Binding SectionNumberOverlayMinOpacityNonCenter, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <controls:SliderWithValueBox
+                                      Grid.Row="0"
+                                      Grid.Column="1" Grid.ColumnSpan="2"
+                                      Minimum="{Binding SectionNumberOverlayMinOpacityNonCenterMinimum}"
+                                      Maximum="{Binding SectionNumberOverlayMinOpacityNonCenterMaximum}"
+                                      TickFrequency="0.1"
+                                      IsSnapToTickEnabled="False"
+                                      ValueFormat="F2"
+                                      Value="{Binding SectionNumberOverlayMinOpacityNonCenter, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
                                      Margin="10,0,10,10"
                                      FontSize="10"
@@ -203,19 +188,15 @@
                             </Grid.RowDefinitions>
                             
                             <Label Grid.Row="0" Grid.Column="0" Content="Center Magnification:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding SectionNumberOverlayCenterMagnification, Mode=TwoWay}"
-                                    Minimum="{Binding SectionNumberOverlayCenterMagnificationMinimum}"
-                                    Maximum="{Binding SectionNumberOverlayCenterMagnificationMaximum}"
-                                    TickFrequency="0.25"
-                                    IsSnapToTickEnabled="False"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="2"
-                                     Text="{Binding SectionNumberOverlayCenterMagnification, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F1'}"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <controls:SliderWithValueBox
+                                      Grid.Row="0"
+                                      Grid.Column="1" Grid.ColumnSpan="2"
+                                      Minimum="{Binding SectionNumberOverlayCenterMagnificationMinimum}"
+                                      Maximum="{Binding SectionNumberOverlayCenterMagnificationMaximum}"
+                                      TickFrequency="0.25"
+                                      IsSnapToTickEnabled="False"
+                                      ValueFormat="F1"
+                                      Value="{Binding SectionNumberOverlayCenterMagnification, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
                                      Margin="10,0,10,10"
                                      FontSize="10"
@@ -296,19 +277,14 @@
                                         <ColumnDefinition Width="60"/>
                                     </Grid.ColumnDefinitions>
                                     <Label Grid.Column="0" Content="Image Loading Window (ms):"/>
-                                    <Slider Grid.Column="1"
-                                            Value="{Binding TextureLoadingWindow, Mode=TwoWay}"
-                                            Minimum="{Binding TextureLoadingWindowMinimum}"
-                                            Maximum="{Binding TextureLoadingWindowMaximum}"
-                                            TickFrequency="5"
-                                            IsSnapToTickEnabled="True"
-                                            Margin="5"/>
-                                    <TextBox Grid.Column="2"
-                                             Text="{Binding TextureLoadingWindow, Mode=TwoWay, UpdateSourceTrigger=LostFocus, Converter={StaticResource TextureLoadingWindowConverter}}"
-                                             Margin="5,0,0,0"
-                                             VerticalAlignment="Center"
-                                             Width="50"
-                                             HorizontalAlignment="Left"/>
+                                    <controls:SliderWithValueBox
+                                              Grid.Column="1" Grid.ColumnSpan="2"
+                                              Minimum="{Binding TextureLoadingWindowMinimum}"
+                                              Maximum="{Binding TextureLoadingWindowMaximum}"
+                                              TickFrequency="5"
+                                              IsSnapToTickEnabled="True"
+                                              ValueFormat="F0"
+                                              Value="{Binding TextureLoadingWindow, Mode=TwoWay}"/>
                                 </Grid>
                                 <TextBlock Margin="10,2,10,10" FontSize="10" Foreground="Gray" TextWrapping="Wrap"
                                            Text="A shorter window makes the UI more responsive. A longer window loads the entire scene faster."/>
@@ -319,19 +295,14 @@
                                         <ColumnDefinition Width="60"/>
                                     </Grid.ColumnDefinitions>
                                     <Label Grid.Column="0" Content="Min images loaded per window:"/>
-                                    <Slider Grid.Column="1"
-                                            Value="{Binding MinTexturesToLoadFromQueue, Mode=TwoWay}"
-                                            Minimum="{Binding MinTexturesToLoadFromQueueMinimum}"
-                                            Maximum="{Binding MinTexturesToLoadFromQueueMaximum}"
-                                            TickFrequency="1"
-                                            IsSnapToTickEnabled="True"
-                                            Margin="5"/>
-                                    <TextBox Grid.Column="2"
-                                             Text="{Binding MinTexturesToLoadFromQueue, Mode=TwoWay, UpdateSourceTrigger=LostFocus, Converter={StaticResource MinTexturesToLoadConverter}}"
-                                             Margin="5,0,0,0"
-                                             VerticalAlignment="Center"
-                                             Width="50"
-                                             HorizontalAlignment="Left"/>
+                                    <controls:SliderWithValueBox
+                                              Grid.Column="1" Grid.ColumnSpan="2"
+                                              Minimum="{Binding MinTexturesToLoadFromQueueMinimum}"
+                                              Maximum="{Binding MinTexturesToLoadFromQueueMaximum}"
+                                              TickFrequency="1"
+                                              IsSnapToTickEnabled="True"
+                                              ValueFormat="F0"
+                                              Value="{Binding MinTexturesToLoadFromQueue, Mode=TwoWay}"/>
                                 </Grid>
                                 <TextBlock Margin="10,2,10,0" FontSize="10" Foreground="Gray" TextWrapping="Wrap"
                                            Text="Slow CPUs may benefit from loading more textures at each opportunity."/>
@@ -350,19 +321,15 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <Label Grid.Row="0" Grid.Column="0" Content="Update loading priorities (ms):"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding VisibleTileSortIntervalMs, Mode=TwoWay}"
-                                    Minimum="{Binding VisibleTileSortIntervalMsMinimum}"
-                                    Maximum="{Binding VisibleTileSortIntervalMsMaximum}"
-                                    TickFrequency="100"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="2"
-                                     Text="{Binding VisibleTileSortIntervalMs, Mode=TwoWay, UpdateSourceTrigger=LostFocus, Converter={StaticResource VisibleTileSortIntervalConverter}}"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <controls:SliderWithValueBox
+                                      Grid.Row="0"
+                                      Grid.Column="1" Grid.ColumnSpan="2"
+                                      Minimum="{Binding VisibleTileSortIntervalMsMinimum}"
+                                      Maximum="{Binding VisibleTileSortIntervalMsMaximum}"
+                                      TickFrequency="100"
+                                      IsSnapToTickEnabled="True"
+                                      ValueFormat="F0"
+                                      Value="{Binding VisibleTileSortIntervalMs, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
                                      Margin="10,0,10,10"
                                      FontSize="10"
@@ -384,19 +351,15 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <Label Grid.Row="0" Grid.Column="0" Content="Max Concurrent Texture Requests:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding MaxConcurrentTextureRequests, Mode=TwoWay}"
-                                    Minimum="{Binding MaxConcurrentTextureRequestsMinimum}"
-                                    Maximum="{Binding MaxConcurrentTextureRequestsMaximum}"
-                                    TickFrequency="1"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="2"
-                                     Text="{Binding MaxConcurrentTextureRequests, Mode=TwoWay, UpdateSourceTrigger=LostFocus, Converter={StaticResource MaxConcurrentTextureRequestsConverter}}"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <controls:SliderWithValueBox
+                                      Grid.Row="0"
+                                      Grid.Column="1" Grid.ColumnSpan="2"
+                                      Minimum="{Binding MaxConcurrentTextureRequestsMinimum}"
+                                      Maximum="{Binding MaxConcurrentTextureRequestsMaximum}"
+                                      TickFrequency="1"
+                                      IsSnapToTickEnabled="True"
+                                      ValueFormat="F0"
+                                      Value="{Binding MaxConcurrentTextureRequests, Mode=TwoWay}"/>
                             <Button Grid.Row="0" Grid.Column="3"
                                     Content="Default"
                                     Command="{Binding SetMaxConcurrentTextureRequestsToDefaultCommand}"
@@ -429,13 +392,14 @@
                                 <ColumnDefinition Width="60"/>
                             </Grid.ColumnDefinitions>
                             <Label Grid.Column="0" Content="Proportional Gain (P):"/>
-                            <Slider Grid.Column="1"
-                                    Value="{Binding PidProportionalGain, Mode=TwoWay}"
-                                    Minimum="{Binding PidProportionalGainMinimum}" Maximum="{Binding PidProportionalGainMaximum}" TickFrequency="0.5"
-                                    IsSnapToTickEnabled="False" Margin="5"/>
-                            <TextBox Grid.Column="2"
-                                     Text="{Binding PidProportionalGain, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"
-                                     Margin="5,0,0,0" VerticalAlignment="Center" Width="50"/>
+                            <controls:SliderWithValueBox
+                                      Grid.Column="1" Grid.ColumnSpan="2"
+                                      Minimum="{Binding PidProportionalGainMinimum}"
+                                      Maximum="{Binding PidProportionalGainMaximum}"
+                                      TickFrequency="0.5"
+                                      IsSnapToTickEnabled="False"
+                                      ValueFormat="F2"
+                                      Value="{Binding PidProportionalGain, Mode=TwoWay}"/>
                         </Grid>
                         
                         <!-- Integral Gain -->
@@ -446,13 +410,14 @@
                                 <ColumnDefinition Width="60"/>
                             </Grid.ColumnDefinitions>
                             <Label Grid.Column="0" Content="Integral Gain (I):"/>
-                            <Slider Grid.Column="1"
-                                    Value="{Binding PidIntegralGain, Mode=TwoWay}"
-                                    Minimum="{Binding PidIntegralGainMinimum}" Maximum="{Binding PidIntegralGainMaximum}" TickFrequency="0.01"
-                                    IsSnapToTickEnabled="False" Margin="5"/>
-                            <TextBox Grid.Column="2"
-                                     Text="{Binding PidIntegralGain, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F3'}"
-                                     Margin="5,0,0,0" VerticalAlignment="Center" Width="50"/>
+                            <controls:SliderWithValueBox
+                                      Grid.Column="1" Grid.ColumnSpan="2"
+                                      Minimum="{Binding PidIntegralGainMinimum}"
+                                      Maximum="{Binding PidIntegralGainMaximum}"
+                                      TickFrequency="0.01"
+                                      IsSnapToTickEnabled="False"
+                                      ValueFormat="F3"
+                                      Value="{Binding PidIntegralGain, Mode=TwoWay}"/>
                         </Grid>
                         
                         <!-- Derivative Gain -->
@@ -463,13 +428,14 @@
                                 <ColumnDefinition Width="60"/>
                             </Grid.ColumnDefinitions>
                             <Label Grid.Column="0" Content="Derivative Gain (D):"/>
-                            <Slider Grid.Column="1"
-                                    Value="{Binding PidDerivativeGain, Mode=TwoWay}"
-                                    Minimum="{Binding PidDerivativeGainMinimum}" Maximum="{Binding PidDerivativeGainMaximum}" TickFrequency="1"
-                                    IsSnapToTickEnabled="False" Margin="5"/>
-                            <TextBox Grid.Column="2"
-                                     Text="{Binding PidDerivativeGain, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F0'}"
-                                     Margin="5,0,0,0" VerticalAlignment="Center" Width="50"/>
+                            <controls:SliderWithValueBox
+                                      Grid.Column="1" Grid.ColumnSpan="2"
+                                      Minimum="{Binding PidDerivativeGainMinimum}"
+                                      Maximum="{Binding PidDerivativeGainMaximum}"
+                                      TickFrequency="1"
+                                      IsSnapToTickEnabled="False"
+                                      ValueFormat="F0"
+                                      Value="{Binding PidDerivativeGain, Mode=TwoWay}"/>
                         </Grid>
                         
                         <!-- Velocity Threshold -->
@@ -480,13 +446,14 @@
                                 <ColumnDefinition Width="60"/>
                             </Grid.ColumnDefinitions>
                             <Label Grid.Column="0" Content="Velocity Threshold:"/>
-                            <Slider Grid.Column="1"
-                                    Value="{Binding PidVelocityThreshold, Mode=TwoWay}"
-                                    Minimum="{Binding PidVelocityThresholdMinimum}" Maximum="{Binding PidVelocityThresholdMaximum}" TickFrequency="0.01"
-                                    IsSnapToTickEnabled="False" Margin="5"/>
-                            <TextBox Grid.Column="2"
-                                     Text="{Binding PidVelocityThreshold, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"
-                                     Margin="5,0,0,0" VerticalAlignment="Center" Width="50"/>
+                            <controls:SliderWithValueBox
+                                      Grid.Column="1" Grid.ColumnSpan="2"
+                                      Minimum="{Binding PidVelocityThresholdMinimum}"
+                                      Maximum="{Binding PidVelocityThresholdMaximum}"
+                                      TickFrequency="0.01"
+                                      IsSnapToTickEnabled="False"
+                                      ValueFormat="F2"
+                                      Value="{Binding PidVelocityThreshold, Mode=TwoWay}"/>
                         </Grid>
                         
                         <!-- Position Threshold -->
@@ -497,13 +464,14 @@
                                 <ColumnDefinition Width="60"/>
                             </Grid.ColumnDefinitions>
                             <Label Grid.Column="0" Content="Position Threshold:"/>
-                            <Slider Grid.Column="1"
-                                    Value="{Binding PidPositionThreshold, Mode=TwoWay}"
-                                    Minimum="{Binding PidPositionThresholdMinimum}" Maximum="{Binding PidPositionThresholdMaximum}" TickFrequency="0.005"
-                                    IsSnapToTickEnabled="False" Margin="5"/>
-                            <TextBox Grid.Column="2"
-                                     Text="{Binding PidPositionThreshold, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='F2'}"
-                                     Margin="5,0,0,0" VerticalAlignment="Center" Width="50"/>
+                            <controls:SliderWithValueBox
+                                      Grid.Column="1" Grid.ColumnSpan="2"
+                                      Minimum="{Binding PidPositionThresholdMinimum}"
+                                      Maximum="{Binding PidPositionThresholdMaximum}"
+                                      TickFrequency="0.005"
+                                      IsSnapToTickEnabled="False"
+                                      ValueFormat="F2"
+                                      Value="{Binding PidPositionThreshold, Mode=TwoWay}"/>
                         </Grid>
                         
                         <TextBlock Margin="10,5,10,0" FontSize="10" Foreground="Gray" TextWrapping="Wrap"

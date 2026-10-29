@@ -4,6 +4,7 @@
         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
         xmlns:local="clr-namespace:WebAnnotation.WPF.Forms"
         xmlns:controls="clr-namespace:WebAnnotation.WPF.Controls"
+        xmlns:vc="clr-namespace:Viking.UI.WPF.Controls;assembly=Viking.UI.WPF"
         Title="Annotation Preferences" 
         Height="750" 
         Width="520"
@@ -215,20 +216,15 @@
                             </Grid.RowDefinitions>
 
                             <Label Grid.Row="0" Grid.Column="0" Content="Label rotation:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding LabelRotation, Mode=TwoWay}"
-                                    Minimum="0"
-                                    Maximum="1"
-                                    TickFrequency="0.05"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding LabelRotation, StringFormat='F2'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <vc:SliderWithValueBox
+                                Grid.Row="0"
+                                Grid.Column="1" Grid.ColumnSpan="3"
+                                Minimum="0"
+                                Maximum="1"
+                                TickFrequency="0.05"
+                                IsSnapToTickEnabled="True"
+                                ValueFormat="F2"
+                                Value="{Binding LabelRotation, Mode=TwoWay}"/>
                             <Grid Grid.Row="1" Grid.Column="1" Margin="5,0,5,0">
                                 <TextBlock Text="Never" FontSize="10" Foreground="Gray" HorizontalAlignment="Left"/>
                                 <TextBlock Text="Freely" FontSize="10" Foreground="Gray" HorizontalAlignment="Right"/>
@@ -260,20 +256,15 @@
                             </Grid.RowDefinitions>
                             
                             <Label Grid.Row="0" Grid.Column="0" Content="Polygon Opacity (Parentless):"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding PolygonOpacityParentless, Mode=TwoWay}"
-                                    Minimum="0"
-                                    Maximum="1"
-                                    TickFrequency="0.01"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding PolygonOpacityParentless, StringFormat='F2'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <vc:SliderWithValueBox
+                                Grid.Row="0"
+                                Grid.Column="1" Grid.ColumnSpan="3"
+                                Minimum="0"
+                                Maximum="1"
+                                TickFrequency="0.01"
+                                IsSnapToTickEnabled="True"
+                                ValueFormat="F2"
+                                Value="{Binding PolygonOpacityParentless, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
                                      Margin="10,0,10,10"
                                      FontSize="10"
@@ -296,20 +287,15 @@
                             </Grid.RowDefinitions>
                             
                             <Label Grid.Row="0" Grid.Column="0" Content="Polygon Opacity (With Parent):"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding PolygonOpacityWithParent, Mode=TwoWay}"
-                                    Minimum="0"
-                                    Maximum="1"
-                                    TickFrequency="0.01"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding PolygonOpacityWithParent, StringFormat='F2'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <vc:SliderWithValueBox
+                                Grid.Row="0"
+                                Grid.Column="1" Grid.ColumnSpan="3"
+                                Minimum="0"
+                                Maximum="1"
+                                TickFrequency="0.01"
+                                IsSnapToTickEnabled="True"
+                                ValueFormat="F2"
+                                Value="{Binding PolygonOpacityWithParent, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
                                      Margin="10,0,10,10"
                                      FontSize="10"
@@ -332,20 +318,15 @@
                             </Grid.RowDefinitions>
                             
                             <Label Grid.Row="0" Grid.Column="0" Content="Circle Opacity (Parentless):"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding CircleOpacityParentless, Mode=TwoWay}"
-                                    Minimum="0"
-                                    Maximum="1"
-                                    TickFrequency="0.01"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding CircleOpacityParentless, StringFormat='F2'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <vc:SliderWithValueBox
+                                Grid.Row="0"
+                                Grid.Column="1" Grid.ColumnSpan="3"
+                                Minimum="0"
+                                Maximum="1"
+                                TickFrequency="0.01"
+                                IsSnapToTickEnabled="True"
+                                ValueFormat="F2"
+                                Value="{Binding CircleOpacityParentless, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
                                      Margin="10,0,10,10"
                                      FontSize="10"
@@ -368,20 +349,15 @@
                             </Grid.RowDefinitions>
                             
                             <Label Grid.Row="0" Grid.Column="0" Content="Circle Opacity (With Parent):"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding CircleOpacityWithParent, Mode=TwoWay}"
-                                    Minimum="0"
-                                    Maximum="1"
-                                    TickFrequency="0.01"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding CircleOpacityWithParent, StringFormat='F2'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <vc:SliderWithValueBox
+                                Grid.Row="0"
+                                Grid.Column="1" Grid.ColumnSpan="3"
+                                Minimum="0"
+                                Maximum="1"
+                                TickFrequency="0.01"
+                                IsSnapToTickEnabled="True"
+                                ValueFormat="F2"
+                                Value="{Binding CircleOpacityWithParent, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
                                      Margin="10,0,10,10"
                                      FontSize="10"
@@ -471,20 +447,15 @@
                             </Grid.RowDefinitions>
 
                             <Label Grid.Row="0" Grid.Column="0" Content="Polygon Point Opacity:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding PolygonPointOpacity, Mode=TwoWay}"
-                                    Minimum="0"
-                                    Maximum="1"
-                                    TickFrequency="0.01"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding PolygonPointOpacity, StringFormat='F2', Mode=OneWay}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <vc:SliderWithValueBox
+                                Grid.Row="0"
+                                Grid.Column="1" Grid.ColumnSpan="3"
+                                Minimum="0"
+                                Maximum="1"
+                                TickFrequency="0.01"
+                                IsSnapToTickEnabled="True"
+                                ValueFormat="F2"
+                                Value="{Binding PolygonPointOpacity, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
                                      Margin="10,0,10,10"
                                      FontSize="10"
@@ -521,20 +492,15 @@
                             </Grid.RowDefinitions>
 
                             <Label Grid.Row="0" Grid.Column="0" Content="Link waist width (pixels):"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding LocationLinkWaistPixels, Mode=TwoWay}"
-                                    Minimum="2"
-                                    Maximum="32"
-                                    TickFrequency="1"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding LocationLinkWaistPixels, StringFormat='F0'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <vc:SliderWithValueBox
+                                Grid.Row="0"
+                                Grid.Column="1" Grid.ColumnSpan="3"
+                                Minimum="2"
+                                Maximum="32"
+                                TickFrequency="1"
+                                IsSnapToTickEnabled="True"
+                                ValueFormat="F0"
+                                Value="{Binding LocationLinkWaistPixels, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
                                      Margin="10,0,10,10"
                                      FontSize="10"
@@ -567,20 +533,15 @@
                             </Grid.RowDefinitions>
 
                             <Label Grid.Row="0" Grid.Column="0" Content="Link visibility (%):"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding LocationLinkVisibilityPercent, Mode=TwoWay}"
-                                    Minimum="10"
-                                    Maximum="100"
-                                    TickFrequency="5"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding LocationLinkVisibilityPercent, StringFormat='F0'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <vc:SliderWithValueBox
+                                Grid.Row="0"
+                                Grid.Column="1" Grid.ColumnSpan="3"
+                                Minimum="10"
+                                Maximum="100"
+                                TickFrequency="5"
+                                IsSnapToTickEnabled="True"
+                                ValueFormat="F0"
+                                Value="{Binding LocationLinkVisibilityPercent, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
                                      Margin="10,0,10,10"
                                      FontSize="10"
@@ -623,36 +584,26 @@
                             </Grid.RowDefinitions>
 
                             <Label Grid.Row="0" Grid.Column="0" Content="Shimmer brightness:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding AutoPolygonizeShimmerBrightness, Mode=TwoWay}"
-                                    Minimum="0.1"
-                                    Maximum="1"
-                                    TickFrequency="0.05"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding AutoPolygonizeShimmerBrightness, StringFormat='F2'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <vc:SliderWithValueBox
+                                Grid.Row="0"
+                                Grid.Column="1" Grid.ColumnSpan="3"
+                                Minimum="0.1"
+                                Maximum="1"
+                                TickFrequency="0.05"
+                                IsSnapToTickEnabled="True"
+                                ValueFormat="F2"
+                                Value="{Binding AutoPolygonizeShimmerBrightness, Mode=TwoWay}"/>
 
                             <Label Grid.Row="1" Grid.Column="0" Content="Shimmer duration (ms):"/>
-                            <Slider Grid.Row="1" Grid.Column="1"
-                                    Value="{Binding AutoPolygonizeShimmerDurationMs, Mode=TwoWay}"
-                                    Minimum="250"
-                                    Maximum="1000"
-                                    TickFrequency="50"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="1" Grid.Column="3"
-                                     Text="{Binding AutoPolygonizeShimmerDurationMs, StringFormat='F0'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <vc:SliderWithValueBox
+                                Grid.Row="1"
+                                Grid.Column="1" Grid.ColumnSpan="3"
+                                Minimum="250"
+                                Maximum="1000"
+                                TickFrequency="50"
+                                IsSnapToTickEnabled="True"
+                                ValueFormat="F0"
+                                Value="{Binding AutoPolygonizeShimmerDurationMs, Mode=TwoWay}"/>
 
                             <Label Grid.Row="2" Grid.Column="0" Content="Shimmer style:"/>
                             <ComboBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3"
@@ -846,20 +797,15 @@
                             </Grid.RowDefinitions>
 
                             <Label Grid.Row="0" Grid.Column="0" Content="Segmentation Minimum Width (nm):"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding SegmentationMinFeatureNanometers, Mode=TwoWay}"
-                                    Minimum="0"
-                                    Maximum="100"
-                                    TickFrequency="1"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding SegmentationMinFeatureNanometers, StringFormat='F0'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <vc:SliderWithValueBox
+                                Grid.Row="0"
+                                Grid.Column="1" Grid.ColumnSpan="3"
+                                Minimum="0"
+                                Maximum="100"
+                                TickFrequency="1"
+                                IsSnapToTickEnabled="True"
+                                ValueFormat="F0"
+                                Value="{Binding SegmentationMinFeatureNanometers, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
                                      Margin="10,0,10,10"
                                      FontSize="10"
@@ -882,20 +828,15 @@
                             </Grid.RowDefinitions>
 
                             <Label Grid.Row="0" Grid.Column="0" Content="Segmentation Smoothing:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding SegmentationSmoothingSigma, Mode=TwoWay}"
-                                    Minimum="0"
-                                    Maximum="2"
-                                    TickFrequency="0.05"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding SegmentationSmoothingSigma, StringFormat='F2'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <vc:SliderWithValueBox
+                                Grid.Row="0"
+                                Grid.Column="1" Grid.ColumnSpan="3"
+                                Minimum="0"
+                                Maximum="2"
+                                TickFrequency="0.05"
+                                IsSnapToTickEnabled="True"
+                                ValueFormat="F2"
+                                Value="{Binding SegmentationSmoothingSigma, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
                                      Margin="10,0,10,10"
                                      FontSize="10"
@@ -922,20 +863,15 @@
                             </Grid.RowDefinitions>
 
                             <Label Grid.Row="0" Grid.Column="0" Content="Drop Holes Smaller Than:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding SegmentationHoleDropFraction, Mode=TwoWay}"
-                                    Minimum="0"
-                                    Maximum="0.25"
-                                    TickFrequency="0.01"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding SegmentationHoleDropFraction, StringFormat='P0'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <vc:SliderWithValueBox
+                                Grid.Row="0"
+                                Grid.Column="1" Grid.ColumnSpan="3"
+                                Minimum="0"
+                                Maximum="0.25"
+                                TickFrequency="0.01"
+                                IsSnapToTickEnabled="True"
+                                ValueFormat="P0"
+                                Value="{Binding SegmentationHoleDropFraction, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
                                      Margin="10,0,10,10"
                                      FontSize="10"
@@ -957,20 +893,15 @@
                             </Grid.RowDefinitions>
 
                             <Label Grid.Row="0" Grid.Column="0" Content="Edge Cleanup Radius:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding SegmentationEdgeCleanupRadius, Mode=TwoWay}"
-                                    Minimum="0"
-                                    Maximum="32"
-                                    TickFrequency="1"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding SegmentationEdgeCleanupRadius}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <vc:SliderWithValueBox
+                                Grid.Row="0"
+                                Grid.Column="1" Grid.ColumnSpan="3"
+                                Minimum="0"
+                                Maximum="32"
+                                TickFrequency="1"
+                                IsSnapToTickEnabled="True"
+                                ValueFormat="F0"
+                                Value="{Binding SegmentationEdgeCleanupRadius, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
                                      Margin="10,0,10,10"
                                      FontSize="10"
@@ -992,20 +923,15 @@
                             </Grid.RowDefinitions>
 
                             <Label Grid.Row="0" Grid.Column="0" Content="SAM2 Mask Threshold:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding SegmentationMaskThreshold, Mode=TwoWay}"
-                                    Minimum="-5"
-                                    Maximum="5"
-                                    TickFrequency="0.1"
-                                    IsSnapToTickEnabled="True"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding SegmentationMaskThreshold, StringFormat='F1'}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <vc:SliderWithValueBox
+                                Grid.Row="0"
+                                Grid.Column="1" Grid.ColumnSpan="3"
+                                Minimum="-5"
+                                Maximum="5"
+                                TickFrequency="0.1"
+                                IsSnapToTickEnabled="True"
+                                ValueFormat="F1"
+                                Value="{Binding SegmentationMaskThreshold, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
                                      Margin="10,0,10,10"
                                      FontSize="10"
@@ -1067,22 +993,17 @@
                             </Grid.RowDefinitions>
 
                             <Label Grid.Row="0" Grid.Column="0" Content="Max Auto-Segment Downsample:"/>
-                            <Slider Grid.Row="0" Grid.Column="1"
-                                    Value="{Binding AutoPolygonizeMaxDownsample, Mode=TwoWay}"
-                                    Minimum="1"
-                                    Maximum="6"
-                                    TickFrequency="0.25"
-                                    IsSnapToTickEnabled="True"
-                                    SmallChange="0.25"
-                                    LargeChange="0.25"
-                                    Margin="5"/>
-                            <TextBox Grid.Row="0" Grid.Column="3"
-                                     Text="{Binding AutoPolygonizeMaxDownsample, StringFormat=0.##}"
-                                     IsReadOnly="True"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Width="50"
-                                     HorizontalAlignment="Left"/>
+                            <vc:SliderWithValueBox
+                                Grid.Row="0"
+                                Grid.Column="1" Grid.ColumnSpan="3"
+                                Minimum="1"
+                                Maximum="6"
+                                TickFrequency="0.25"
+                                IsSnapToTickEnabled="True"
+                                SmallChange="0.25"
+                                LargeChange="0.25"
+                                ValueFormat="0.##"
+                                Value="{Binding AutoPolygonizeMaxDownsample, Mode=TwoWay}"/>
                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4"
                                      Margin="10,0,10,10"
                                      FontSize="10"

@@ -3,6 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vc="clr-namespace:Viking.UI.WPF.Controls;assembly=Viking.UI.WPF"
+             xmlns:local="clr-namespace:WebAnnotation.WPF.Controls"
              mc:Ignorable="d"
              d:DesignHeight="160"
              d:DesignWidth="460"
@@ -11,28 +13,24 @@
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="150"/>
+                <ColumnDefinition Width="210"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="80"/>
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0"
                    Content="{Binding Header, RelativeSource={RelativeSource AncestorType=UserControl}}"
                    VerticalAlignment="Center"/>
-            <Slider x:Name="SizeSlider"
-                    Grid.Column="1"
-                    Minimum="{Binding Minimum, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                    Maximum="{Binding Maximum, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                    TickFrequency="{Binding TickFrequency, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                    IsSnapToTickEnabled="True"
-                    Margin="5"
-                    ValueChanged="OnSliderValueChanged"/>
-            <TextBox Grid.Column="3"
-                     Text="{Binding ValueText, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay}"
-                     IsReadOnly="True"
-                     Margin="5,0,0,0"
-                     VerticalAlignment="Center"
-                     MinWidth="70"
-                     HorizontalAlignment="Left"/>
+            <vc:SliderWithValueBox x:Name="ValueEditor"
+                                   Grid.Column="1"
+                                   Minimum="{Binding Minimum, RelativeSource={RelativeSource AncestorType=local:CircleSizePreviewSlider}}"
+                                   Maximum="{Binding Maximum, RelativeSource={RelativeSource AncestorType=local:CircleSizePreviewSlider}}"
+                                   TickFrequency="{Binding TickFrequency, RelativeSource={RelativeSource AncestorType=local:CircleSizePreviewSlider}}"
+                                   IsSnapToTickEnabled="True"
+                                   ValueFormat="{Binding ValueFormat, RelativeSource={RelativeSource AncestorType=local:CircleSizePreviewSlider}}"
+                                   Value="{Binding Value, RelativeSource={RelativeSource AncestorType=local:CircleSizePreviewSlider}, Mode=TwoWay}"/>
+            <TextBlock Grid.Column="2"
+                       Text="{Binding UnitText, RelativeSource={RelativeSource AncestorType=local:CircleSizePreviewSlider}}"
+                       Margin="4,0,0,0"
+                       VerticalAlignment="Center"/>
         </Grid>
         <TextBlock Margin="10,0,10,10"
                    FontSize="10"
