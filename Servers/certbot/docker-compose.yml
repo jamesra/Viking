@@ -24,9 +24,6 @@ x-viking-hostnames: &viking-hostnames
   VIKING_HOSTNAME_CORRECTIONS: ${VIKING_HOSTNAME_CORRECTIONS:-corrections.${VIKING_DOMAIN}}
   VIKING_HOSTNAME_SEGMENTATION: ${VIKING_HOSTNAME_SEGMENTATION:-segmentation.${VIKING_DOMAIN}}
   VIKING_HOSTNAME_SEGMENTATIONDEMO: ${VIKING_HOSTNAME_SEGMENTATIONDEMO:-segmentationdemo.${VIKING_DOMAIN}}
-  VIKING_HOSTNAME_SEG_V3: ${VIKING_HOSTNAME_SEG_V3:-segmentation-v3.${VIKING_DOMAIN}}
-  VIKING_HOSTNAME_SEG_V4: ${VIKING_HOSTNAME_SEG_V4:-segmentation-v4.${VIKING_DOMAIN}}
-  VIKING_HOSTNAME_SEG_SEM_V1: ${VIKING_HOSTNAME_SEG_SEM_V1:-segmentation-sem-v1.${VIKING_DOMAIN}}
   VIKING_HOSTNAME_GALLERY: ${VIKING_HOSTNAME_GALLERY:-gallery.${VIKING_DOMAIN}}
   VIKING_HOSTNAME_TEM_GALLERY: ${VIKING_HOSTNAME_TEM_GALLERY:-gallery-tem.${VIKING_DOMAIN}}
   VIKING_HOSTNAME_SEM_GALLERY: ${VIKING_HOSTNAME_SEM_GALLERY:-gallery-sem.${VIKING_DOMAIN}}
@@ -46,7 +43,8 @@ services:
       TLS_MODE: ${TLS_MODE:-manual}
       TLS_EMAIL: ${TLS_EMAIL:-}
       TLS_CERT_NAME: ${TLS_CERT_NAME:-${VIKING_DOMAIN:-viking}}
-      # Comma list. Empty = every VIKING_HOSTNAME_* above.
+      # Comma list. Empty = every VIKING_HOSTNAME_* above. Names listed in /etc/viking-certs/names.d/*.names
+      # (one per line; written by `stack.ps1 viking-segmentation model ...`) are added either way.
       TLS_HOSTNAMES: ${TLS_HOSTNAMES:-}
       TLS_ACME_SERVER: ${TLS_ACME_SERVER:-}
       TLS_EAB_KID: ${TLS_EAB_KID:-}
@@ -83,6 +81,8 @@ services:
       - certbot-lib:/var/lib/letsencrypt
       - ${STACK_LOGS_DIR:?STACK_LOGS_DIR must be set (stack.ps1 exports it)}:/var/log/letsencrypt
       - ${STACK_SECRETS_DIR:?STACK_SECRETS_DIR must be set (stack.ps1 exports it)}:/run/secrets/viking-certs:ro
+      # Extra host names to put on the certificate, one per line in *.names files.
+      - ${VIKING_CERT_NAMES_DIR:-${STACK_DATA_DIR}/names.d}:/etc/viking-certs/names.d:ro
       # Restarts labelled containers after a renewal. Same path on Linux and Docker Desktop.
       - type: bind
         source: ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}

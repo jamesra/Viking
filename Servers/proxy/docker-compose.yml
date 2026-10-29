@@ -27,9 +27,6 @@ x-viking-hostnames: &viking-hostnames
   VIKING_HOSTNAME_CORRECTIONS: ${VIKING_HOSTNAME_CORRECTIONS:-corrections.${VIKING_DOMAIN}}
   VIKING_HOSTNAME_SEGMENTATION: ${VIKING_HOSTNAME_SEGMENTATION:-segmentation.${VIKING_DOMAIN}}
   VIKING_HOSTNAME_SEGMENTATIONDEMO: ${VIKING_HOSTNAME_SEGMENTATIONDEMO:-segmentationdemo.${VIKING_DOMAIN}}
-  VIKING_HOSTNAME_SEG_V3: ${VIKING_HOSTNAME_SEG_V3:-segmentation-v3.${VIKING_DOMAIN}}
-  VIKING_HOSTNAME_SEG_V4: ${VIKING_HOSTNAME_SEG_V4:-segmentation-v4.${VIKING_DOMAIN}}
-  VIKING_HOSTNAME_SEG_SEM_V1: ${VIKING_HOSTNAME_SEG_SEM_V1:-segmentation-sem-v1.${VIKING_DOMAIN}}
   VIKING_HOSTNAME_GALLERY: ${VIKING_HOSTNAME_GALLERY:-gallery.${VIKING_DOMAIN}}
   VIKING_HOSTNAME_TEM_GALLERY: ${VIKING_HOSTNAME_TEM_GALLERY:-gallery-tem.${VIKING_DOMAIN}}
   VIKING_HOSTNAME_SEM_GALLERY: ${VIKING_HOSTNAME_SEM_GALLERY:-gallery-sem.${VIKING_DOMAIN}}
@@ -59,12 +56,10 @@ services:
       VIKING_UPSTREAM_GALLERY: ${VIKING_UPSTREAM_GALLERY:-host.docker.internal:8442}
       VIKING_UPSTREAM_TEM_GALLERY: ${VIKING_UPSTREAM_TEM_GALLERY:-host.docker.internal:8442}
       VIKING_UPSTREAM_SEM_GALLERY: ${VIKING_UPSTREAM_SEM_GALLERY:-host.docker.internal:8442}
-      # Compute host (viking-segmentation).
+      # Compute host (viking-segmentation). Its other models are not listed here: `stack.ps1
+      # viking-segmentation model` writes their host names and upstreams to models.d/segmentation.map.
       VIKING_UPSTREAM_SEGMENTATION: ${VIKING_UPSTREAM_SEGMENTATION:-${VIKING_COMPUTE_HOST:-host.docker.internal}:40443}
       VIKING_UPSTREAM_SEGMENTATIONDEMO: ${VIKING_UPSTREAM_SEGMENTATIONDEMO:-${VIKING_COMPUTE_HOST:-host.docker.internal}:40444}
-      VIKING_UPSTREAM_SEG_V3: ${VIKING_UPSTREAM_SEG_V3:-${VIKING_COMPUTE_HOST:-host.docker.internal}:40445}
-      VIKING_UPSTREAM_SEG_V4: ${VIKING_UPSTREAM_SEG_V4:-${VIKING_COMPUTE_HOST:-host.docker.internal}:40446}
-      VIKING_UPSTREAM_SEG_SEM_V1: ${VIKING_UPSTREAM_SEG_SEM_V1:-${VIKING_COMPUTE_HOST:-host.docker.internal}:40447}
       # Legacy IIS host (WCF annotation, OData, DataExport, tiles).
       VIKING_UPSTREAM_WEBSVC: ${VIKING_UPSTREAM_WEBSVC:-${VIKING_IIS_HOST:-host.docker.internal}:443}
       # Unknown SNI names.
@@ -78,6 +73,8 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./templates:/etc/nginx/templates:ro
+      # Host name -> upstream lines written by other stacks (segmentation.map); included in the SNI map.
+      - ${VIKING_PROXY_MODELS_DIR:-${STACK_DATA_DIR:?STACK_DATA_DIR must be set (stack.ps1 exports it)}/models.d}:/etc/nginx/models.d:ro
       # Shared certificates (Identity is the only name TLS-terminated here).
       - ${DOCKER_CERTS_DIR:?DOCKER_CERTS_DIR must be set (stack.ps1 exports it)}:/certs:ro
       # The HTTP-01 webroot viking-certs writes (its STACK_DATA_DIR/webroot).

@@ -75,6 +75,19 @@ if [ -z "${TLS_HOSTNAMES:-}" ]; then
   TLS_HOSTNAMES="$(for v in $(compgen -v VIKING_HOSTNAME_ | sort); do [ -n "${!v}" ] && echo "${!v}"; done | awk '!seen[$0]++' | paste -sd, -)"
 fi
 
+# Names other stacks ask for (the segmentation model servers), one per line in *.names files. Read on every
+# cycle, so a new model's name is on the next certificate request without restarting this container.
+TLS_HOSTNAMES_BASE="${TLS_HOSTNAMES:-}"
+TLS_NAMES_DIR="${TLS_NAMES_DIR:-/etc/viking-certs/names.d}"
+refresh_hostnames() {
+  local extra=""
+  if compgen -G "${TLS_NAMES_DIR}/*.names" >/dev/null; then
+    extra="$(cat "${TLS_NAMES_DIR}"/*.names | tr -d '\r' | sed 's/#.*//' | tr -s ' \t\n' '\n' | awk 'NF && !seen[$0]++' | paste -sd, -)"
+  fi
+  TLS_HOSTNAMES="$(printf '%s,%s' "${TLS_HOSTNAMES_BASE}" "${extra}" | tr ',' '\n' | awk 'NF && !seen[$0]++' | paste -sd, -)"
+}
+refresh_hostnames
+
 TLS_MODE="${TLS_MODE:-manual}"
 TLS_CERT_NAME="${TLS_CERT_NAME:-viking}"
 TLS_RENEW_INTERVAL_HOURS="${TLS_RENEW_INTERVAL_HOURS:-12}"
@@ -244,6 +257,7 @@ AUTH_ARGS=()
 COMMON_ARGS=()
 build_acme_args() {
   local hmac="" name
+  refresh_hostnames
   if [ -z "${TLS_HOSTNAMES}" ]; then
     log "TLS_HOSTNAMES is empty and no VIKING_HOSTNAME_* is set; nothing to request."
     return 1

@@ -1,21 +1,21 @@
 # Stack: viking-segmentation  (registry: deploy/stacks.psd1; runs on the GPU compute host)
 #
 # segmentation-server is the bare VIKING_HOSTNAME_SEGMENTATION model (plus the optional demo page
-# behind VIKING_HOSTNAME_SEGMENTATIONDEMO). The extra models are profiles, one container each, routed
-# by SNI in viking-proxy:
-#   profile seg-v3      segmentation-v3      host port 40445   VIKING_HOSTNAME_SEG_V3
-#   profile seg-v4      segmentation-v4      host port 40446   VIKING_HOSTNAME_SEG_V4
-#   profile seg-sem-v1  segmentation-sem-v1  host port 40447   VIKING_HOSTNAME_SEG_SEM_V1
-#   profile models      all three
-# This replaces the docker-compose.models.yml that rebuild-and-start.ps1 used to generate from models.json.
+# behind VIKING_HOSTNAME_SEGMENTATIONDEMO). Every other model is a row of models.json
+# (<STACK_RUN_DIR>/models.json): one container per row, reached by its own host name that viking-proxy
+# routes by SNI. rebuild-and-start.ps1 (stack.ps1 viking-segmentation model <prefix> <file.pt>) writes
+# the rows into <STACK_RUN_DIR>/compose.generated.yaml, which stack.ps1 merges after this file. Each
+# generated service extends the segmentation-model template below, so the settings every server shares
+# (image, GPU, TLS, caches) live in one place.
 #
-#   stack.ps1 up viking-segmentation          (the registry turns on profile "models")
-#   docker compose -p viking-segmentation --env-file <host.env> --env-file <run.env> \
-#     -f Servers/SegmentationServer/docker-compose.yml --profile models up -d --build
+#   stack.ps1 viking-segmentation up
+#   docker compose -p viking-segmentation --env-file <host.env> --env-file <run.env> #     -f Servers/SegmentationServer/docker-compose.yml -f <run dir>/compose.generated.yaml up -d --build
 #
-# TLS: every container presents ${DOCKER_CERTS_DIR}/${TLS_CERT_NAME}/ (mounted at /certs) and only
+# TLS: every container presents fullchain.pem and privkey.pem from one folder mounted at /tls, and only
 # listens with TLS; it waits SEGMENTATION_TLS_WAIT_SECONDS (120) for the files, exits, and
-# `restart: unless-stopped` retries. viking-certs restarts them (label viking.tls-reload) on renewal.
+# `restart: unless-stopped` retries. The folder is the certificate manager's
+# ${DOCKER_CERTS_DIR}/${TLS_CERT_NAME}/ (viking-certs restarts the servers, label viking.tls-reload, on
+# renewal) unless SEGMENTATION_CERT_DIR points at a folder of your own holding the two files.
 #
 # Host folders (defaults under STACK_DATA_DIR, override in the run env):
 #   SEGMENTATION_MODEL_HOST  weights + <stem>.model.json manifests, mounted read-only at /models
@@ -54,8 +54,8 @@ x-segmentation-env: &segmentation-env
   TORCHINDUCTOR_FX_GRAPH_CACHE: "1"
   TRITON_CACHE_DIR: /home/user/.cache/torch_inductor/triton
   TORCHINDUCTOR_PERSISTENT_AUTOTUNE_DIR: /home/user/.cache/torch_inductor/autotune
-  SSL_CERT_PATH: /certs/${TLS_CERT_NAME:-${VIKING_DOMAIN:-viking}}/fullchain.pem
-  SSL_KEY_PATH: /certs/${TLS_CERT_NAME:-${VIKING_DOMAIN:-viking}}/privkey.pem
+  SSL_CERT_PATH: /tls/fullchain.pem
+  SSL_KEY_PATH: /tls/privkey.pem
   SEGMENTATION_TLS_WAIT_SECONDS: ${SEGMENTATION_TLS_WAIT_SECONDS:-120}
   # Tile embeddings (not weights). Survives eviction and container restart.
   SEGMENTATION_EMBEDDING_CACHE: /var/cache/segmentation-embeddings
@@ -85,7 +85,7 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >-
-        for d in default v3 v4 sem-v1; do
+        for d in default; do
         mkdir -p /cache/segmentation-$$d-inductor /cache/segmentation-$$d-embeddings;
         done;
         chown -R user:user /cache
@@ -115,65 +115,19 @@ services:
       - ${SEGMENTATION_MODEL_HOST:-${STACK_DATA_DIR}/models}:/models:ro
       - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-default-inductor:/home/user/.cache/torch_inductor
       - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-default-embeddings:/var/cache/segmentation-embeddings
-      - ${DOCKER_CERTS_DIR:?DOCKER_CERTS_DIR must be set (stack.ps1 exports it)}:/certs:ro
+      - ${SEGMENTATION_CERT_DIR:-${DOCKER_CERTS_DIR:?DOCKER_CERTS_DIR must be set (stack.ps1 exports it)}/${TLS_CERT_NAME:-${VIKING_DOMAIN:-viking}}}:/tls:ro
 
-  segmentation-v3:
+  # Template for the servers generated from models.json; never started itself. Each generated service
+  # extends it and adds its weights, ports or network, and caches. The demo page is plain HTTP on port 80
+  # for the proxy to route, so it is never published.
+  segmentation-model:
     <<: *segmentation-common
-    profiles: ["seg-v3", "models"]
-    ports:
-      - "${SEG_V3_HTTPS_PORT:-40445}:443"
-      # Demo page as plain HTTP, no token: loopback only by default. Do not publish it to the internet.
-      - "${SEGMENTATION_MODEL_DEMO_HOST_BIND:-127.0.0.1}:${SEG_V3_DEMO_PORT:-40545}:80"
+    profiles: ["template"]
     environment:
       <<: *segmentation-env
-      SAM2_CHECKPOINT: ${SEG_V3_CHECKPOINT:-/models/sam2_em_v3_epoch_9.pt}
-      SEGMENTATION_SERVICE_NAME: ${SEG_V3_SERVICE_NAME:-}
-      SEGMENTATION_MODEL_NAME: "v3"
-      SEGMENTATION_DEMO_SITE: ${SEGMENTATION_MODEL_DEMO_SITE:-1}
+      SEGMENTATION_DEMO_SITE: "1"
       SEGMENTATION_DEMO_PLAINTEXT: "1"
       SEGMENTATION_DEMO_BIND: "0.0.0.0"
     volumes:
       - ${SEGMENTATION_MODEL_HOST:-${STACK_DATA_DIR}/models}:/models:ro
-      - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-v3-inductor:/home/user/.cache/torch_inductor
-      - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-v3-embeddings:/var/cache/segmentation-embeddings
-      - ${DOCKER_CERTS_DIR}:/certs:ro
-
-  segmentation-v4:
-    <<: *segmentation-common
-    profiles: ["seg-v4", "models"]
-    ports:
-      - "${SEG_V4_HTTPS_PORT:-40446}:443"
-      - "${SEGMENTATION_MODEL_DEMO_HOST_BIND:-127.0.0.1}:${SEG_V4_DEMO_PORT:-40546}:80"
-    environment:
-      <<: *segmentation-env
-      SAM2_CHECKPOINT: ${SEG_V4_CHECKPOINT:-/models/v4.epoch0.pt}
-      SEGMENTATION_SERVICE_NAME: ${SEG_V4_SERVICE_NAME:-}
-      SEGMENTATION_MODEL_NAME: "v4"
-      SEGMENTATION_DEMO_SITE: ${SEGMENTATION_MODEL_DEMO_SITE:-1}
-      SEGMENTATION_DEMO_PLAINTEXT: "1"
-      SEGMENTATION_DEMO_BIND: "0.0.0.0"
-    volumes:
-      - ${SEGMENTATION_MODEL_HOST:-${STACK_DATA_DIR}/models}:/models:ro
-      - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-v4-inductor:/home/user/.cache/torch_inductor
-      - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-v4-embeddings:/var/cache/segmentation-embeddings
-      - ${DOCKER_CERTS_DIR}:/certs:ro
-
-  segmentation-sem-v1:
-    <<: *segmentation-common
-    profiles: ["seg-sem-v1", "models"]
-    ports:
-      - "${SEG_SEM_V1_HTTPS_PORT:-40447}:443"
-      - "${SEGMENTATION_MODEL_DEMO_HOST_BIND:-127.0.0.1}:${SEG_SEM_V1_DEMO_PORT:-40547}:80"
-    environment:
-      <<: *segmentation-env
-      SAM2_CHECKPOINT: ${SEG_SEM_V1_CHECKPOINT:-/models/sem-v1.5.pt}
-      SEGMENTATION_SERVICE_NAME: ${SEG_SEM_V1_SERVICE_NAME:-}
-      SEGMENTATION_MODEL_NAME: "sem-v1"
-      SEGMENTATION_DEMO_SITE: ${SEGMENTATION_MODEL_DEMO_SITE:-1}
-      SEGMENTATION_DEMO_PLAINTEXT: "1"
-      SEGMENTATION_DEMO_BIND: "0.0.0.0"
-    volumes:
-      - ${SEGMENTATION_MODEL_HOST:-${STACK_DATA_DIR}/models}:/models:ro
-      - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-sem-v1-inductor:/home/user/.cache/torch_inductor
-      - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-sem-v1-embeddings:/var/cache/segmentation-embeddings
-      - ${DOCKER_CERTS_DIR}:/certs:ro
+      - ${SEGMENTATION_CERT_DIR:-${DOCKER_CERTS_DIR}/${TLS_CERT_NAME:-${VIKING_DOMAIN:-viking}}}:/tls:ro

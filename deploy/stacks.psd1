@@ -27,6 +27,8 @@
             Engine       = 'compose'
             RepoRootVar  = 'VIKING_REPO_ROOT_HOST'
             ComposeFiles = @('Servers/proxy/docker-compose.yml')
+            # models.d: host name -> upstream lines other stacks write (segmentation.map).
+            DataDirs     = @('models.d')
             Profiles     = @()
             Required     = @('VIKING_DOMAIN', 'VIKING_COMPUTE_HOST', 'VIKING_IIS_HOST')
             Example      = 'deploy/examples/example.viking-proxy.run.env'
@@ -41,6 +43,8 @@
             Engine       = 'compose'
             RepoRootVar  = 'VIKING_REPO_ROOT_HOST'
             ComposeFiles = @('Servers/certbot/docker-compose.yml')
+            # names.d: extra host names for the certificate, one per line (segmentation.names).
+            DataDirs     = @('names.d')
             Profiles     = @()
             Required     = @('VIKING_DOMAIN', 'TLS_MODE', 'TLS_CERT_NAME')
             Example      = 'deploy/examples/example.viking-certs.run.env'
@@ -111,16 +115,20 @@
             Engine       = 'compose'
             RepoRootVar  = 'VIKING_REPO_ROOT_HOST'
             ComposeFiles = @('Servers/SegmentationServer/docker-compose.yml')
-            # 'models' = segmentation-v3, -v4 and -sem-v1 (also seg-v3 / seg-v4 / seg-sem-v1 one at a time).
-            Profiles     = @('models')
+            # The default model is the base service; every other model is a row of Run/viking-segmentation/models.json.
+            Profiles     = @()
+            # `stack.ps1 viking-segmentation model <prefix> <file.pt>` runs this script, which writes
+            # Run/viking-segmentation/compose.generated.yaml (merged after ComposeFiles) and starts the servers.
+            ModelScript  = 'Servers/SegmentationServer/rebuild-and-start.ps1'
+            ModelsExample = 'deploy/examples/example.viking-segmentation.models.json'
             Required     = @('VIKING_HOSTNAME_SEGMENTATION', 'TLS_CERT_NAME')
             Example      = 'deploy/examples/example.viking-segmentation.run.env'
             Secrets      = @()
             # gRPC only (and the optional demo page); no plain HTTP endpoint to probe.
             HealthUrl    = ''
-            Ports        = @(40443, 40444, 40445, 40446, 40447)
+            Ports        = @(40443, 40444)
             Os           = @('linux', 'windows')
-            Description  = 'SAM2 segmentation gRPC servers (GPU): default model plus v3 / v4 / sem-v1 profiles'
+            Description  = 'SAM2 segmentation gRPC servers (GPU): the default model, plus one server per row of models.json'
         }
 
         'viking-iis' = @{

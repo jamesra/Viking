@@ -44,7 +44,7 @@ CORRECTIONS            ``host.docker.internal:41443``              web
 GALLERY, TEM, SEM      ``host.docker.internal:8442``               web (gallery-router)
 SEGMENTATION           ``${VIKING_COMPUTE_HOST}:40443``            compute
 SEGMENTATIONDEMO       ``${VIKING_COMPUTE_HOST}:40444``            compute
-SEG_V3 / V4 / SEM_V1   ``${VIKING_COMPUTE_HOST}:40445`` / 46 / 47  compute
+SEGMENTATION models    lines in ``models.d/segmentation.map``      compute (written by ``stack.ps1 viking-segmentation model``)
 WEBSVC, DEFAULT        ``${VIKING_IIS_HOST}:443``                  iis
 =====================  ==========================================  ===============================
 

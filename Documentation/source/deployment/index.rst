@@ -22,7 +22,7 @@ dev box     Windows, Docker Desktop                any of the above, same files
 
 Every hostname is a single label under ``VIKING_DOMAIN`` (``identity.``, ``websvc.``,
 ``annotation.``, ``corrections.``, ``segmentation.``, ``segmentationdemo.``,
-``segmentation-v3.``, ``segmentation-v4.``, ``segmentation-sem-v1.``, ``gallery.``,
+``segmentation-<prefix>.`` (one per segmentation model), ``gallery.``,
 ``gallery-tem.``, ``gallery-sem.``), so one ``*.connectomes.pitt.edu`` certificate can cover all of
 them.
 

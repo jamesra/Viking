@@ -19,9 +19,9 @@ map $ssl_preread_server_name $viking_backend {
     ${VIKING_HOSTNAME_CORRECTIONS}       ${VIKING_UPSTREAM_CORRECTIONS};
     ${VIKING_HOSTNAME_SEGMENTATION}      ${VIKING_UPSTREAM_SEGMENTATION};
     ${VIKING_HOSTNAME_SEGMENTATIONDEMO}  ${VIKING_UPSTREAM_SEGMENTATIONDEMO};
-    ${VIKING_HOSTNAME_SEG_V3}            ${VIKING_UPSTREAM_SEG_V3};
-    ${VIKING_HOSTNAME_SEG_V4}            ${VIKING_UPSTREAM_SEG_V4};
-    ${VIKING_HOSTNAME_SEG_SEM_V1}        ${VIKING_UPSTREAM_SEG_SEM_V1};
+    # One line per segmentation model server, written by `stack.ps1 viking-segmentation model ...`
+    # (<host name> <host:port>;). Nothing here when the folder is empty.
+    include /etc/nginx/models.d/*.map;
     # gallery-router (sam2-gallery stack) terminates TLS for all three gallery names.
     ${VIKING_HOSTNAME_GALLERY}           ${VIKING_UPSTREAM_GALLERY};
     ${VIKING_HOSTNAME_TEM_GALLERY}       ${VIKING_UPSTREAM_TEM_GALLERY};
