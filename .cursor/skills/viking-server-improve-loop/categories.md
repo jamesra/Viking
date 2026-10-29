@@ -74,6 +74,7 @@ Defect shapes this loop has fixed. Category 13 searches for these first, and eac
 - **NULL propagation in SQL string building.** `col + N'...'` yields NULL when `col` is NULL. Search: `+` on nullable `varchar`/`nvarchar` columns in procedures. Fix: `ISNULL(col, N'')` or `CONCAT` (`697a6185`).
 - **Classification lists that miss members.** A hand-kept list of RPCs, enum values or commands silently omits new ones (a retry list without a read RPC, or with a write). Search: `HashSet`/arrays of method or enum names. Fix: the Test coverage 3 test (`3137cfcb`).
 - **API that a target framework lacks.** Code in a multi-targeted project uses an API only the newer target has. Search: the build baseline for each target framework. Fix: a version both targets have (`1a5e7dbb`).
+- **A catch-all that rewraps a deliberate status.** A `catch (Exception)` turns an `RpcException` the code threw on purpose (InvalidArgument, NotFound) into Unknown with an error log. Search: catch-alls in gRPC services and the helpers they call, `throw new RpcException` inside a `try` with no `catch (RpcException)`. Fix: pass an `RpcException` through unchanged, once in the shared mapping (`AnnotationRpc.Failure`).
 - **Tests with lasting side effects.** A test script changes state its rollback cannot undo (identity seeds, sequences, files) or can run against a real database. Search: `IDENTITY_INSERT`, `DBCC`, `CREATE DATABASE` in test scripts. Fix: a guard on `DB_NAME()` and a note of what persists (`4fa04385`, `8ffac752`).
 
 ## Proposals

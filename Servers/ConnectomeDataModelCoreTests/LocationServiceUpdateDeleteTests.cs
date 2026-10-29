@@ -162,7 +162,6 @@ namespace ConnectomeDataModelCoreTests
             Assert.Equal(new[] { (4L, 9L) }, store.Saved.AddedLinks);
         }
 
-        /// <summary>The refusal reaches the caller wrapped in an Unknown status (CreateLocationLink has no RpcException pass-through).</summary>
         [Fact]
         public async Task LinkingALocationToItselfIsRefusedWithoutSaving()
         {
@@ -172,8 +171,7 @@ namespace ConnectomeDataModelCoreTests
             var ex = await Assert.ThrowsAsync<RpcException>(() => NewService(db).CreateLocationLink(
                 new CreateLocationLinkRequest { SourceId = 4, TargetId = 4 }, new TestCallContext()));
 
-            var refusal = Assert.IsType<RpcException>(ex.Status.DebugException);
-            Assert.Equal((StatusCode.InvalidArgument, "A location cannot link to itself"), (refusal.StatusCode, refusal.Status.Detail));
+            Assert.Equal((StatusCode.InvalidArgument, "A location cannot link to itself"), (ex.StatusCode, ex.Status.Detail));
             Assert.Same(SavedRows.None, store.Saved);
         }
 
