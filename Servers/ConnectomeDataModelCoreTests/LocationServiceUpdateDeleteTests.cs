@@ -19,6 +19,7 @@ using Viking.DataModel.Annotation;
 using Xunit;
 using EfLocation = Viking.DataModel.Annotation.Location;
 using EfLocationLink = Viking.DataModel.Annotation.LocationLink;
+using EfStructure = Viking.DataModel.Annotation.Structure;
 using ProtoLocation = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location;
 
 namespace ConnectomeDataModelCoreTests
@@ -29,8 +30,9 @@ namespace ConnectomeDataModelCoreTests
     /// peer twice each writes one row per key (one DeletedLocationLink, one DeletedLocation, one LocationLink)
     /// and commits, instead of failing the whole batch on an EF identity conflict. Also pins the tombstones a
     /// plain delete writes today: one DeletedLocationLink per attached link with both sections, none for a link
-    /// the database already logged. No database is contacted: interceptors stand in for the connection, the
-    /// transaction, the queries and SaveChanges.
+    /// the database already logged. CreateLocation and CreateLocationLink, which share Update's link helper, save
+    /// one link per distinct pair and refuse a self-link. No database is contacted: interceptors stand in for
+    /// the connection, the transaction, the queries and SaveChanges.
     /// </summary>
     public class LocationServiceUpdateDeleteTests
     {
@@ -133,6 +135,48 @@ namespace ConnectomeDataModelCoreTests
             Assert.True(store.Committed);
         }
 
+        [Fact]
+        public async Task CreateLocationWithARepeatedPeerSavesOneLink()
+        {
+            var store = new FakeDatabase();
+            using var db = NewContext(store);
+            var created = NewLocation();
+            created.Links.Add(5);
+            created.Links.Add(5);
+
+            var response = await NewService(db).CreateLocation(new CreateLocationRequest { Obj = created }, new TestCallContext());
+
+            Assert.Equal(FakeDatabase.FirstGeneratedId, response.Result.Id);
+            Assert.Equal(new[] { (5L, FakeDatabase.FirstGeneratedId) }, store.Saved.AddedLinks);
+            Assert.True(store.Committed);
+        }
+
+        [Fact]
+        public async Task CreateLocationLinkSavesTheLinkLowerIdFirst()
+        {
+            var store = new FakeDatabase();
+            using var db = NewContext(store);
+
+            await NewService(db).CreateLocationLink(new CreateLocationLinkRequest { SourceId = 9, TargetId = 4 }, new TestCallContext());
+
+            Assert.Equal(new[] { (4L, 9L) }, store.Saved.AddedLinks);
+        }
+
+        /// <summary>The refusal reaches the caller wrapped in an Unknown status (CreateLocationLink has no RpcException pass-through).</summary>
+        [Fact]
+        public async Task LinkingALocationToItselfIsRefusedWithoutSaving()
+        {
+            var store = new FakeDatabase();
+            using var db = NewContext(store);
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => NewService(db).CreateLocationLink(
+                new CreateLocationLinkRequest { SourceId = 4, TargetId = 4 }, new TestCallContext()));
+
+            var refusal = Assert.IsType<RpcException>(ex.Status.DebugException);
+            Assert.Equal((StatusCode.InvalidArgument, "A location cannot link to itself"), (refusal.StatusCode, refusal.Status.Detail));
+            Assert.Same(SavedRows.None, store.Saved);
+        }
+
         private static LocationService NewService(AnnotationContext db) => new(db, NullLogger<LocationService>.Instance);
 
         private static LocationChangeRequest Delete(long id) => new() { Delete = id };
@@ -144,7 +188,7 @@ namespace ConnectomeDataModelCoreTests
             return request;
         }
 
-        private static ProtoLocation NewLocation() => new()
+        internal static ProtoLocation NewLocation() => new()
         {
             ParentId = 3,
             Section = 12,
@@ -162,14 +206,14 @@ namespace ConnectomeDataModelCoreTests
                 db.Locations.Attach(new EfLocation { Id = id, Z = store.LocationZ[id], Username = "someone" });
         }
 
-        private static AnnotationContext NewContext(FakeDatabase store) =>
+        internal static AnnotationContext NewContext(FakeDatabase store) =>
             new(new DbContextOptionsBuilder<AnnotationContext>()
                 .UseSqlServer(UnreachableConnection, o => o.UseNetTopologySuite())
                 .AddInterceptors(store)
                 .Options);
 
         /// <summary>What the batch's last SaveChanges would write, by entity type and state.</summary>
-        private sealed record SavedRows(
+        internal sealed record SavedRows(
             (long A, long B, long? Az, long? Bz)[] LinkTombstones,
             (long Id, long? Z)[] LocationTombstones,
             (long A, long B)[] DeletedLinks,
@@ -186,12 +230,12 @@ namespace ConnectomeDataModelCoreTests
         /// transaction are fakes, so EF never touches SqlClient. Queries are answered from the stored rows by
         /// table, matching any row whose key is among the command's parameter values. A full Location row is
         /// answered with its key only, which is enough for a location the test tracked. SaveChanges is
-        /// suppressed: it gives each added location a generated ID and records what would be written. Nothing
-        /// is accepted, so the last save holds every write of the batch.
+        /// suppressed: it gives each added location or structure a generated ID and records what would be
+        /// written. Nothing is accepted, so the last save holds every write of the batch.
         /// </summary>
-        private sealed class FakeDatabase : IDbConnectionInterceptor, IDbCommandInterceptor, IDbTransactionInterceptor, ISaveChangesInterceptor
+        internal sealed class FakeDatabase : IDbConnectionInterceptor, IDbCommandInterceptor, IDbTransactionInterceptor, ISaveChangesInterceptor
         {
-            /// <summary>The ID the first added location receives.</summary>
+            /// <summary>The ID the first added location or structure receives.</summary>
             public const long FirstGeneratedId = 1000;
 
             private static readonly Regex SelectedColumn = new(@"\]\.\[(\w+)\]");
@@ -222,8 +266,9 @@ namespace ConnectomeDataModelCoreTests
             public ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
             {
                 var tracker = eventData.Context.ChangeTracker;
-                foreach (var added in tracker.Entries<EfLocation>().Where(e => e.State == EntityState.Added && e.Property(l => l.Id).IsTemporary))
-                    added.Property(l => l.Id).CurrentValue = _nextId++;
+                foreach (var id in tracker.Entries().Where(e => e.State == EntityState.Added && e.Entity is EfLocation or EfStructure)
+                             .Select(e => e.Property(nameof(EfLocation.Id))).Where(p => p.IsTemporary))
+                    id.CurrentValue = _nextId++;
 
                 Saved = new SavedRows(
                     tracker.Entries<DeletedLocationLink>().Where(e => e.State == EntityState.Added)
@@ -340,7 +385,7 @@ namespace ConnectomeDataModelCoreTests
         }
 
         /// <summary>Call context carrying an anonymous HTTP context (as ASP.NET Core hosting supplies) and an uncancelled token.</summary>
-        private sealed class TestCallContext : ServerCallContext
+        internal sealed class TestCallContext : ServerCallContext
         {
             /// <summary>Key Grpc.AspNetCore's GetHttpContext reads from <see cref="ServerCallContext.UserState"/>.</summary>
             private const string HttpContextKey = "__HttpContext";

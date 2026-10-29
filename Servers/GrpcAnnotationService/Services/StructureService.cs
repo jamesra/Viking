@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using Viking.DataModel.Annotation;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using EfLocation = Viking.DataModel.Annotation.Location;
-using EfLocationLink = Viking.DataModel.Annotation.LocationLink;
 using EfStructure = Viking.DataModel.Annotation.Structure;
 using EfStructureLink = Viking.DataModel.Annotation.StructureLink;
 using ProtoStructure = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Structure;
@@ -415,7 +414,7 @@ namespace gRPCAnnotationService
                         await _context.PersistCircleShapesAsync(addedLocation, mosaicWkt, volumeWkt, ct);
                     }
 
-                    await PersistLocationProtoLinksAsync(request.NewAnnotation.Links, addedLocation.Id, username, ct);
+                    await LocationService.PersistProtoLinksAsync(_context, request.NewAnnotation.Links, addedLocation.Id, username, ct);
                     await _context.SaveChangesAsync(ct);
                 }
 
@@ -723,28 +722,6 @@ namespace gRPCAnnotationService
                     source.Links.Add(ToProtobufMessage(link));
                 if (link.TargetId != link.SourceId && byId.TryGetValue(link.TargetId, out var target))
                     target.Links.Add(ToProtobufMessage(link));
-            }
-        }
-
-        private async Task PersistLocationProtoLinksAsync(IEnumerable<long> peerIds, long locationId, string username, CancellationToken ct)
-        {
-            foreach (var peerId in peerIds)
-            {
-                if (peerId == 0 || peerId == locationId)
-                    continue;
-
-                var (a, b) = peerId < locationId ? (peerId, locationId) : (locationId, peerId);
-                var exists = await _context.LocationLinks.AnyAsync(l => l.A == a && l.B == b, ct);
-                if (exists)
-                    continue;
-
-                await _context.LocationLinks.AddAsync(new EfLocationLink
-                {
-                    A = a,
-                    B = b,
-                    Username = username,
-                    Created = DateTime.UtcNow
-                }, ct);
             }
         }
 

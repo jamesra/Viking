@@ -36,6 +36,7 @@ gained from about 2026-10-20 on. Earlier changes are not listed.
 * Circle annotations keep their size when they are carried between a warped section and the volume.
 * Linking two locations after deleting a location link no longer fails with an error, and deleting a link and then linking the same two locations again keeps the new link.
 * Deleting two linked locations before the changes are saved no longer makes the whole save fail on the server.
+* Creating a new structure whose first location lists the same linked location twice no longer fails on the server.
 * Fix: a pen stroke on a polygon with a hole close to its outline could crash Viking ("Replacement inner polygon is not a valid addition") while showing the choice buttons. Where the smoothed hole would cross the smoothed outline, the hole is now drawn unsmoothed.
 * Section corrections: near the edge of an annotated area, where the correction lattice has only some of its points, the image is now shifted by the same amount the correction service uses for annotations there. Before, Viking worked out the shift its own way and could disagree with the service by up to a lattice spacing.
 * Fix: dragging a polygon vertex could move a different vertex, and **Ctrl**-clicking a vertex to remove it could remove a different one. Near the polygon's first vertex, Viking picked that vertex instead of the one under the cursor; it now always picks the nearest vertex, including vertices of holes.

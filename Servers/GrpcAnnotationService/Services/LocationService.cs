@@ -451,7 +451,7 @@ namespace gRPCAnnotationService
                 var added = await _context.Locations.AddAsync(row, ct);
                 await _context.SaveChangesAsync(ct);
                 await PersistCircleShapesIfNeededAsync(request.Obj, added.Entity, ct);
-                await PersistProtoLinksAsync(request.Obj.Links, added.Entity.Id, username, ct);
+                await PersistProtoLinksAsync(_context, request.Obj.Links, added.Entity.Id, username, ct);
                 await _context.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
 
@@ -557,7 +557,7 @@ namespace gRPCAnnotationService
                 {
                     await PersistCircleShapesIfNeededAsync(proto, entity, ct);
                     if (isCreate)
-                        await PersistProtoLinksAsync(proto.Links, entity.Id, username, ct);
+                        await PersistProtoLinksAsync(_context, proto.Links, entity.Id, username, ct);
                 }
 
                 await _context.SaveChangesAsync(ct);
@@ -591,7 +591,7 @@ namespace gRPCAnnotationService
             try
             {
                 var ct = context.CancellationToken;
-                await AddLinkIfMissing(request.SourceId, request.TargetId, AnnotationRpc.CallerName(context), ct);
+                await AddLinkIfMissing(_context, request.SourceId, request.TargetId, AnnotationRpc.CallerName(context), ct);
                 await _context.SaveChangesAsync(ct);
                 return new CreateLocationLinkResponse();
             }
@@ -774,13 +774,18 @@ namespace gRPCAnnotationService
             return links;
         }
 
-        private async Task PersistProtoLinksAsync(IEnumerable<long> peerIds, long locationId, string username, CancellationToken ct)
+        /// <summary>
+        /// Queues a LocationLink from <paramref name="locationId"/> to each peer in a proto's Links (CreateLocation,
+        /// Update, and StructureService.CreateStructure), skipping peer 0, the location itself, and any link
+        /// <see cref="AddLinkIfMissing"/> finds stored or already queued. The caller saves.
+        /// </summary>
+        internal static async Task PersistProtoLinksAsync(AnnotationContext db, IEnumerable<long> peerIds, long locationId, string username, CancellationToken ct)
         {
             foreach (var peerId in peerIds)
             {
                 if (peerId == 0 || peerId == locationId)
                     continue;
-                await AddLinkIfMissing(locationId, peerId, username, ct);
+                await AddLinkIfMissing(db, locationId, peerId, username, ct);
             }
         }
 
@@ -788,17 +793,17 @@ namespace gRPCAnnotationService
         /// Queues the link unless it is stored or already queued in this context (a peer listed twice in
         /// Location.Links). Refuses a self-link with InvalidArgument.
         /// </summary>
-        private async Task AddLinkIfMissing(long source, long target, string username, CancellationToken ct)
+        private static async Task AddLinkIfMissing(AnnotationContext db, long source, long target, string username, CancellationToken ct)
         {
             if (source == target)
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "A location cannot link to itself"));
 
             var (a, b) = Ordered(source, target);
-            var exists = await _context.LocationLinks.FindAsync(new object[] { a, b }, ct) != null;
+            var exists = await db.LocationLinks.FindAsync(new object[] { a, b }, ct) != null;
             if (exists)
                 return;
 
-            await _context.LocationLinks.AddAsync(new EfLocationLink
+            await db.LocationLinks.AddAsync(new EfLocationLink
             {
                 A = a,
                 B = b,
