@@ -378,7 +378,7 @@ or `0` overrides it).
 **Several models at once** run as separate containers of the same image, each reached by its own host name that the
 reverse proxy routes by SNI. Each model is a row of `Run/viking-segmentation/models.json`
 (`stack.ps1 viking-segmentation model v3 sam2_em_v3_epoch_9.pt` adds or changes one; `rebuild-and-start.ps1` in this
-folder does the work), served as `segmentation-v3.<domain>` by default. Each container has its own cache folders, because the server deletes the other checkpoint folders it finds in its cache
+folder does the work), served as `v3.segmentation.<domain>` by default. Each container has its own cache folders, because the server deletes the other checkpoint folders it finds in its cache
 at start-up. The shared certificate carries every name, and `viking-certs` restarts every container labelled
 `viking.tls-reload` when it renews. See `Documentation/source/deployment/segmentation.rst`.
 

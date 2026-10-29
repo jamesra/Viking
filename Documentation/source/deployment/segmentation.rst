@@ -10,7 +10,7 @@ Service                  Host port (TLS)         Hostname
 =======================  ======================  ===============================================
 segmentation-server      40443, demo 40444       ``VIKING_HOSTNAME_SEGMENTATION``,
                                                  ``..._SEGMENTATIONDEMO``
-segmentation-<prefix>    per row (see below)     ``segmentation-<prefix>.<VIKING_DOMAIN>``
+<prefix>.segmentation    per row (see below)     ``<prefix>.segmentation.<VIKING_DOMAIN>``
 =======================  ======================  ===============================================
 
 ``segmentation-server`` is the default model (``SAM2_CHECKPOINT`` in the run env). Every other model
@@ -38,8 +38,8 @@ Field                       Meaning
 ``prefix``                  DNS label; the service is ``segmentation-<prefix>``
 ``model``                   weights file in the models folder, or a path below it
 ``port``                    host port when published (default: next free from 40445)
-``hostname``                full host name; default ``segmentation-<prefix>.<VIKING_DOMAIN>``, one label,
-                            so the shared ``*.<VIKING_DOMAIN>`` certificate covers it
+``hostname``                full host name; default ``<prefix>.segmentation.<VIKING_DOMAIN>`` (under the
+                            bare ``VIKING_HOSTNAME_SEGMENTATION``); needs a wildcard, see TLS
 ``network``                 ``backend``, ``published`` or ``macvlan`` (below)
 ``mac``, ``ip``,            macvlan only: the DHCP-reserved MAC and IP, and the name sent with the request
 ``dhcpHostname``
@@ -160,8 +160,14 @@ choices for the folder:
   files ``fullchain.pem`` and ``privkey.pem``. Nothing restarts the servers when you renew: run
   ``stack.ps1 viking-segmentation restart``.
 
-The certificate must cover every host name. ``model`` reports a name the certificate lacks (it needs
-``openssl`` on the host); the server just waits for valid files.
+The certificate must cover every host name. A model's default name ``<prefix>.segmentation.<VIKING_DOMAIN>``
+has two labels, so ``*.<VIKING_DOMAIN>`` does not cover it. Ask for **``*.segmentation.<VIKING_DOMAIN>``** as an
+extra name on the certificate (with ``<VIKING_DOMAIN>`` and ``*.<VIKING_DOMAIN>``), then install the issued files
+with ``stack.ps1 certs manual``, or set ``TLS_HOSTNAMES`` to the full list for ``acme-eab`` if the CA issues the
+wildcard that way. A wildcard cannot be validated through the HTTP-01 webroot, so with ``letsencrypt`` mode the
+only route is each name listed (``names.d`` does that); ``viking-certs`` leaves out a name that a wildcard in the
+list already covers. ``model`` reports a name the certificate lacks (it needs ``openssl`` on the host); the server
+just waits for valid files.
 
 Demo pages
 ==========

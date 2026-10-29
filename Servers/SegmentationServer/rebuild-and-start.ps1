@@ -13,7 +13,7 @@
   models.json (<STACK_RUN_DIR>/models.json) is the one place that says which servers exist. Each row maps
   a DNS prefix to a weights file:
 
-      v3  ->  segmentation-v3.<VIKING_DOMAIN>  ->  <models folder>/sam2_em_v3_epoch_9.pt
+      v3  ->  v3.segmentation.<VIKING_DOMAIN>  ->  <models folder>/sam2_em_v3_epoch_9.pt
 
   The bare segmentation.<VIKING_DOMAIN> is the stack's own segmentation-server (SAM2_CHECKPOINT in the run
   env), not a row. A row has:
@@ -22,8 +22,8 @@
       model                  weights file in the models folder, or a path below it (v5/serve_epoch4.pt);
                              <stem>.model.json beside it is served with it
       port                   host port when the server is published (default: next free from 40445)
-      hostname               full host name (default segmentation-<prefix>.<VIKING_DOMAIN>, one label, so
-                             the shared *.<VIKING_DOMAIN> certificate covers it)
+      hostname               full host name (default <prefix>.segmentation.<VIKING_DOMAIN>: two labels, so
+                             the certificate needs *.segmentation.<VIKING_DOMAIN> or each name listed)
       network                how the proxy reaches it: backend | published | macvlan
       mac, ip, dhcpHostname  macvlan only: the DHCP-reserved MAC and IP (and the name sent with the request)
       serviceName            Identity SegmentationService resource, to read local tilesets (optional)
@@ -113,6 +113,8 @@ $NamesPath = Join-Path $DataDir 'cert-names.names'
 $ModelDir = Get-Setting 'SEGMENTATION_MODEL_HOST' (Join-Path $DataDir 'models')
 $BackendNetwork = Get-Setting 'VIKING_BACKEND_NETWORK'
 $UpstreamHost = Get-Setting 'SEGMENTATION_UPSTREAM_HOST' (Get-Setting 'VIKING_COMPUTE_HOST')
+# The bare segmentation host name (VIKING_HOSTNAME_SEGMENTATION); each model is <prefix>.<that name>.
+$SegmentationHost = Get-Setting 'VIKING_HOSTNAME_SEGMENTATION' "segmentation.$Domain"
 $BaseCompose = (Join-Path $PSScriptRoot 'docker-compose.yml') -replace '\\', '/'
 
 # ---- the table ---------------------------------------------------------------------------------------------
@@ -155,7 +157,7 @@ else {
 function Get-HostName($Row) {
     $custom = Get-RowValue $Row 'hostname'
     if ($custom) { return [string]$custom }
-    return "segmentation-$($Row.prefix).$Domain"
+    return "$($Row.prefix).$SegmentationHost"
 }
 
 $seenHosts = @{}
@@ -344,7 +346,7 @@ if ($fullchain -and (Test-Path -LiteralPath $fullchain) -and (Get-Command openss
         $dot = $name.IndexOf('.')
         $covered = ($san -match ([regex]::Escape("DNS:$name") + '(,|\s|$)')) -or
             ($dot -gt 0 -and $san -match ([regex]::Escape('DNS:*' + $name.Substring($dot)) + '(,|\s|$)'))
-        if (-not $covered) { $Warnings.Add("The certificate in $certDir does not cover $name. Add it (TLS_HOSTNAMES, or a wildcard) and renew, or point SEGMENTATION_CERT_DIR at a certificate that does.") }
+        if (-not $covered) { $Warnings.Add("The certificate in $certDir does not cover $name. Request *.$SegmentationHost (or list the name in TLS_HOSTNAMES) and renew, or point SEGMENTATION_CERT_DIR at a certificate that does.") }
     }
 }
 elseif ($selected.Count -gt 0) {

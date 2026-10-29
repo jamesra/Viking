@@ -84,7 +84,19 @@ refresh_hostnames() {
   if compgen -G "${TLS_NAMES_DIR}/*.names" >/dev/null; then
     extra="$(cat "${TLS_NAMES_DIR}"/*.names | tr -d '\r' | sed 's/#.*//' | tr -s ' \t\n' '\n' | awk 'NF && !seen[$0]++' | paste -sd, -)"
   fi
-  TLS_HOSTNAMES="$(printf '%s,%s' "${TLS_HOSTNAMES_BASE}" "${extra}" | tr ',' '\n' | awk 'NF && !seen[$0]++' | paste -sd, -)"
+  # A name under a wildcard in the list (*.segmentation.<domain> covers v3.segmentation.<domain>) is left out.
+  TLS_HOSTNAMES="$(printf '%s,%s' "${TLS_HOSTNAMES_BASE}" "${extra}" | tr ',' '\n' | awk '
+    NF && !seen[$0]++ { names[++n] = $0 }
+    END {
+      for (i = 1; i <= n; i++) {
+        covered = 0
+        if (names[i] !~ /^\*\./) {
+          parent = names[i]; sub(/^[^.]*/, "", parent)
+          for (j = 1; j <= n; j++) if (names[j] == "*" parent) covered = 1
+        }
+        if (!covered) print names[i]
+      }
+    }' | paste -sd, -)"
 }
 refresh_hostnames
 
