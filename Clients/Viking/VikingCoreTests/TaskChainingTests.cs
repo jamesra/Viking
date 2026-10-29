@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FsCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -243,6 +244,41 @@ namespace VikingCoreTests
             tiles.SetResult(true);
             await run;
             Assert.AreEqual(10, section);
+        }
+
+        /// <summary>
+        /// The restore runs on the caller's synchronization context, as <see cref="TaskChaining.RestoreAfterAsync{T}"/> documents:
+        /// the exports call it on the UI thread and their <c>set</c> assigns the viewer's section, which must not happen on a
+        /// thread-pool thread. A <c>ConfigureAwait(false)</c> on the body's await would move the restore to the thread that finished
+        /// the last tile.
+        /// </summary>
+        [TestMethod]
+        public void RestoreAfterAsync_RestoresOnTheCallersContext()
+        {
+            SynchronizationContext? previous = SynchronizationContext.Current;
+            PostingContext context = new();
+            SynchronizationContext.SetSynchronizationContext(context);
+            try
+            {
+                bool restoredOnContext = false;
+                //The body finishes on a timer thread, so the restore reaches the context only if the await captured it
+                Task run = TaskChaining.RestoreAfterAsync(() => 0, _ => restoredOnContext = SynchronizationContext.Current == context, () => Task.Delay(100));
+                Assert.IsTrue(run.Wait(5000), "the restore never ran");
+                Assert.IsTrue(restoredOnContext, "the section was restored off the caller's context");
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(previous);
+            }
+        }
+
+        /// <summary>
+        /// Stands in for the Windows Forms context: posted work runs with this context current, as on the UI thread's message loop.
+        /// </summary>
+        private sealed class PostingContext : SynchronizationContext
+        {
+            public override void Post(SendOrPostCallback d, object? state) =>
+                ThreadPool.QueueUserWorkItem(_ => { SetSynchronizationContext(this); d(state); });
         }
     }
 }
