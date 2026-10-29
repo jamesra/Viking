@@ -16,6 +16,11 @@ namespace Viking.UI
         private const double DefaultDownsample = 0.5;
 
         /// <summary>
+        /// Smallest downsample the viewer allows (100 screen pixels per volume pixel); zooming in further stops here.
+        /// </summary>
+        public const double MinDownsample = 0.01;
+
+        /// <summary>
         /// Per-click factor so four Zoom Out clicks double downsample (halve detail)
         /// and four Zoom In clicks do the inverse.
         /// </summary>

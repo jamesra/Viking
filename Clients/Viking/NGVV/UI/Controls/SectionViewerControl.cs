@@ -139,9 +139,9 @@ namespace Viking.UI.Controls
             get => base.Downsample;
             set
             {
-                if (value < 0.01)
+                if (value < ViewerMagnificationSteps.MinDownsample)
                 {
-                    value = 0.01;
+                    value = ViewerMagnificationSteps.MinDownsample;
                 }
                 StatusMagnification = value;
                 base.Downsample = value;

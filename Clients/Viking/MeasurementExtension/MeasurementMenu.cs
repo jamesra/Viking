@@ -1,5 +1,4 @@
-﻿using SIMeasurement;
-using System;
+﻿using System;
 using System.Diagnostics;
 
 namespace MeasurementExtension
@@ -15,12 +14,12 @@ namespace MeasurementExtension
         {
             Debug.Print("Set Scale");
 
-            using ScaleForm form = new(Global.UnitOfMeasure.ToString(), Global.UnitsPerPixel);
+            using ScaleForm form = new(Global.UnitOfMeasure, Global.UnitsPerPixel);
 
             if (form.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
                 Global._UnitsPerPixel = form.UnitsPerPixel;
-                Global._UnitOfMeasure = (SILengthUnits)Enum.Parse(typeof(SILengthUnits), form.UnitsOfMeasure);
+                Global._UnitOfMeasure = form.UnitOfMeasure;
             }
         }
 

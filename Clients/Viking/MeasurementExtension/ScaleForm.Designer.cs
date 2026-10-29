@@ -64,7 +64,6 @@
             "nm",
             "um",
             "mm",
-            "cm",
             "m",
             "km"});
             this.comboUnits.Location = new System.Drawing.Point(127, 13);
