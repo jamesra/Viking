@@ -3,7 +3,9 @@ using Microsoft.Xna.Framework;
 using SqlGeometryUtils;
 using System;
 using System.Diagnostics;
+using System.Linq;
 using Viking.AnnotationServiceTypes.Interfaces;
+using WebAnnotation.UI.AutoPolygonize;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using WebAnnotationModel;
@@ -84,7 +86,32 @@ namespace WebAnnotation.UI.Actions
                 AnnotationOverlay.ShowFaultExceptionMsgBox(e);
                 Location.TypeCode = originalType;
                 Location.SetShapeFromGeometryInSection(Transform, original_mosaic_polygon);
+                return;
             }
+
+            if (originalType == LocationType.CIRCLE)
+                MergeWithSameStructure();
+        }
+
+        /// <summary>
+        /// A loop drawn around a circle also takes in the structure's other circles it touches. Its polygons it touches are merged only
+        /// after the user says so.
+        /// </summary>
+        private void MergeWithSameStructure()
+        {
+            Viking.UI.Controls.SectionViewerControl? parent = AnnotationOverlay.CurrentOverlay?.Parent;
+            if (parent is null)
+                return;
+
+            SameStructureMerge.MergeAfterPenLoop(Location, parent, polygons =>
+                System.Windows.Forms.MessageBox.Show(
+                    parent,
+                    polygons.Count == 1
+                        ? $"The new outline overlaps another polygon of this structure (location {polygons[0].ID}). Merge them into one?"
+                        : $"The new outline overlaps {polygons.Count} other polygons of this structure ({string.Join(", ", polygons.Select(p => p.ID))}). Merge them into one?",
+                    "Merge polygons",
+                    System.Windows.Forms.MessageBoxButtons.YesNo,
+                    System.Windows.Forms.MessageBoxIcon.Question) == System.Windows.Forms.DialogResult.Yes);
         }
 
         public void CreateDefaultVisuals()
