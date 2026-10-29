@@ -1411,7 +1411,15 @@ namespace Viking.UI.Controls
         }
 
 
-        private async Task ExportTiles(string ExportPath, int FirstSection, int LastSection, int Downsample, CancellationToken token)
+        /// <summary>
+        /// Writes sections <paramref name="FirstSection"/> to <paramref name="LastSection"/> as a 512-pixel PNG tile pyramid level
+        /// under <paramref name="ExportPath"/>, with one index XML per section written after all of that section's tiles. Tiles already
+        /// on disk are kept. A tile that cannot be rendered or saved stops the export once the tiles in flight finish, and its exception
+        /// reaches the caller; that section gets no index XML. Reports to <paramref name="progressForm"/>, which the caller owns,
+        /// and stops when its Cancel button is pressed: tiles still rendering are canceled, which may end the export with an
+        /// <see cref="OperationCanceledException"/> before that section's index XML is written.
+        /// </summary>
+        private async Task ExportTiles(string ExportPath, int FirstSection, int LastSection, int Downsample, GenericProgressForm progressForm, CancellationToken token)
         {
             //Make sure sections are in order
             if (FirstSection > LastSection)
@@ -1420,10 +1428,6 @@ namespace Viking.UI.Controls
             }
 
             ExportPath += "/";
-
-            //Capture each of the requested frames
-            GenericProgressForm progressForm = new();
-            progressForm.Show();
 
             using var userCancelCts = new CancellationTokenSource();
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, userCancelCts.Token);
@@ -1508,13 +1512,8 @@ namespace Viking.UI.Controls
 
                         listTasks.Add(ExportTileToFileAsync(TileScene, (float)X, (float)Y, S.Number, false, false, Filename, cancelToken));
 
-                        //Throttle tile creation so we don't exceed our memory limits
-
-                        while (listTasks.Count > 0 && (listTasks.Count > MaxTilesQueued))
-                        {
-                            var completedTask = await Task.WhenAny([.. listTasks]);
-                            listTasks.Remove(completedTask);
-                        }
+                        //Throttle tile creation so we don't exceed our memory limits; a tile that could not be rendered or saved stops the export
+                        await TaskChaining.DrainToAsync(listTasks, MaxTilesQueued);
 
                         Application.DoEvents();
 
@@ -1564,7 +1563,8 @@ namespace Viking.UI.Controls
                         }
                     }
 
-                    await Task.WhenAll(listTasks).ConfigureAwait(false);
+                    //Drain this column's tiles. A failed tile throws here, so no index XML claims a section whose tiles are incomplete.
+                    await TaskChaining.DrainToAsync(listTasks, 0);
 
                     if (progressForm.DialogResult == DialogResult.Cancel)
                     {
@@ -1588,8 +1588,6 @@ namespace Viking.UI.Controls
                     break;
                 }
             }
-
-            progressForm.BeginInvoke(new Action(() => progressForm.Close()));
         }
 
         private async Task ExportTileToFileAsync(VikingXNA.Scene TileScene, float CenterX, float CenterY, int sectionNumber, bool showOverlays, bool asyncTextureLoad, string filename, CancellationToken token = default)
@@ -3496,7 +3494,20 @@ namespace Viking.UI.Controls
 
         private void menuColorizeTiles_Click(object sender, EventArgs e) => menuColorizeTiles.Checked = !menuColorizeTiles.Checked;
 
-        private void menuExportTiles_Click(object sender, EventArgs e)
+        private async void menuExportTiles_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                await ExportTilesFromDialogAsync();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"menuExportTiles_Click failed: {ex}", "SectionViewerControl");
+                MessageBox.Show(this, "Could not export tiles: " + ex.Message, "Export Tiles", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async Task ExportTilesFromDialogAsync()
         {
             using TileExportForm exportProperties = new();
             if (exportProperties.ShowDialog() != DialogResult.OK)
@@ -3518,10 +3529,21 @@ namespace Viking.UI.Controls
                 LastExportSection = exportProperties.LastSectionInExport;
             }
 
+            //Owned here, on the UI thread, so it is closed however the export ends
+            using GenericProgressForm progressForm = new();
+            progressForm.Show();
+
             //Each tile render switches the viewer to the tile's section. Read and restore the viewed section here, on the UI thread,
-            //once every tile has been written.
-            _ = TaskChaining.RestoreAfterAsync(() => this.Section, s => this.Section = s,
-                () => Task.Run(() => ExportTiles(exportProperties.ExportPath, FirstExportSection, LastExportSection, exportProperties.Downsample, CancellationToken.None)));
+            //once every tile has been written or the export failed.
+            try
+            {
+                await TaskChaining.RestoreAfterAsync(() => this.Section, s => this.Section = s,
+                    () => Task.Run(() => ExportTiles(exportProperties.ExportPath, FirstExportSection, LastExportSection, exportProperties.Downsample, progressForm, CancellationToken.None)));
+            }
+            catch (OperationCanceledException) when (progressForm.DialogResult == DialogResult.Cancel)
+            {
+                //Cancel was pressed and stopped tiles mid-render: not an error. Tiles already written stay on disk.
+            }
         }
 
         private void menuSectionShowTileMesh_Click(object sender, EventArgs e) => State.ShowTileMesh = !State.ShowTileMesh;

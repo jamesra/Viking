@@ -119,6 +119,73 @@ namespace VikingCoreTests
         }
 
         /// <summary>
+        /// Regression: Export Tiles dropped a tile whose render or PNG save failed (<c>Task.WhenAny</c> + <c>Remove</c>) and still wrote
+        /// the section's index XML, so the pyramid had a hole the XML called complete. Export Tiles now throttles with
+        /// <c>DrainToAsync(tiles, 256)</c> and drains each column with <c>DrainToAsync(tiles, 0)</c> before the index is written. For
+        /// any tile outcomes, completion order and limit, the code after the drain runs only when no tile it took off the list failed
+        /// or was canceled, and a failure surfaces only once every tile has finished, so none is still writing when the export reports it.
+        /// </summary>
+        [TestMethod]
+        public void DrainToAsync_CodeAfterDrainRunsOnlyWhenNoTileFailed()
+        {
+            var gen = from outcomes in Gen.ListOf(Gen.Elements("ok", "fail", "cancel"))
+                      from order in Gen.ListOf(outcomes.Count(), Gen.Choose(0, 1000))
+                      from max in Gen.Choose(0, outcomes.Count())
+                      select (outcomes: outcomes.ToArray(), order: order.ToArray(), max);
+
+            Prop.ForAll(Arb.From(gen), t =>
+            {
+                int n = t.outcomes.Length;
+                TaskCompletionSource<bool>[] tiles = Enumerable.Range(0, n).Select(_ => new TaskCompletionSource<bool>()).ToArray();
+                List<Task> pending = tiles.Select(tile => (Task)tile.Task).ToList();
+                bool indexWritten = false;
+                async Task Section()
+                {
+                    await TaskChaining.DrainToAsync(pending, t.max);
+                    indexWritten = true;
+                }
+
+                Task run = Section();
+
+                //Model: done once at most max tiles are left, unless a tile it took off the list failed; then once every tile finished.
+                bool expectDone = n <= t.max, expectSuccess = expectDone, failed = false;
+                Assert.AreEqual(expectDone, run.IsCompleted, "a drain with at most max tiles pending must not wait");
+                int finished = 0;
+                foreach (int i in Enumerable.Range(0, n).OrderBy(i => t.order[i]))
+                {
+                    if (!expectDone)
+                        Assert.IsFalse(run.IsCompleted, "the drain finished while a tile it must wait for was still writing");
+
+                    switch (t.outcomes[i])
+                    {
+                        case "fail": tiles[i].SetException(new InvalidOperationException("png not written")); break;
+                        case "cancel": tiles[i].SetCanceled(); break;
+                        default: tiles[i].SetResult(true); break;
+                    }
+
+                    finished++;
+                    if (expectDone)
+                        continue;
+
+                    failed |= t.outcomes[i] != "ok";
+                    if (failed ? finished == n : n - finished <= t.max)
+                    {
+                        (expectDone, expectSuccess) = (true, !failed);
+                        //Continuations run inline on SetResult here, so a drain that keeps waiting is caught at this point
+                        Assert.IsTrue(run.IsCompleted, "the drain kept waiting after its condition was met");
+                    }
+                }
+
+                Assert.AreSame(run, Task.WhenAny(run, Task.Delay(5000)).GetAwaiter().GetResult(), "the drain never finished");
+                _ = run.Exception;
+                Assert.AreEqual(expectSuccess, indexWritten, "the index was written although a tile failed, or not written after all succeeded");
+                Assert.AreEqual(expectSuccess, run.Status == TaskStatus.RanToCompletion, "a tile's failure must reach the caller");
+                if (!expectSuccess)
+                    Assert.AreEqual(0, pending.Count);
+            }).QuickCheckThrowOnFailure();
+        }
+
+        /// <summary>
         /// Regression: Section > Export frames and Export Tiles switch the viewer to each exported section, and with several tiles in
         /// flight the per-tile restore could leave it on an exported one. Whatever sections the body visits, and whether it finishes,
         /// fails or is canceled, the value ends where it started.
