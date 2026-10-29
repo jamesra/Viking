@@ -444,7 +444,7 @@ namespace ConnectomeDataModelCoreTests
         private static string NormaliseExpression(string expression) =>
             Regex.Replace(expression, @"\s+", "").ToLowerInvariant();
 
-        private static string StripComments(string sql) =>
+        internal static string StripComments(string sql) =>
             Regex.Replace(sql, @"/\*.*?\*/|--[^\r\n]*", " ", RegexOptions.Singleline);
 
         /// <summary>Text between the parenthesis at <paramref name="open"/> and its matching close parenthesis.</summary>
@@ -515,12 +515,7 @@ namespace ConnectomeDataModelCoreTests
         /// <summary>The tables (not views) the EF model maps in the dbo schema, built offline.</summary>
         private static Dictionary<string, Dictionary<string, Column>> ReadEfTables()
         {
-            var options = new DbContextOptionsBuilder<AnnotationContext>()
-                .UseSqlServer(UnreachableConnection, o => o.UseNetTopologySuite())
-                .Options;
-            using var db = new AnnotationContext(options);
-            var model = db.GetService<IDesignTimeModel>().Model;
-
+            var model = OfflineModel();
             var tables = new Dictionary<string, Dictionary<string, Column>>(StringComparer.Ordinal);
             foreach (var entity in model.GetEntityTypes())
             {
@@ -546,6 +541,16 @@ namespace ConnectomeDataModelCoreTests
             return tables;
         }
 
+        /// <summary>The design-time <see cref="AnnotationContext"/> model, built without opening a connection.</summary>
+        internal static IModel OfflineModel()
+        {
+            var options = new DbContextOptionsBuilder<AnnotationContext>()
+                .UseSqlServer(UnreachableConnection, o => o.UseNetTopologySuite())
+                .Options;
+            using var db = new AnnotationContext(options);
+            return db.GetService<IDesignTimeModel>().Model;
+        }
+
         /// <summary>EF store types read like "nvarchar(254)" or "float"; use the same spelling as the SQL parser.</summary>
         private static string EfTypeText(string storeType)
         {
@@ -554,7 +559,7 @@ namespace ConnectomeDataModelCoreTests
         }
 
         /// <summary>Finds a file in the repository by walking up from the test binaries.</summary>
-        private static string RepoFile(string relativePath)
+        internal static string RepoFile(string relativePath)
         {
             for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
             {

@@ -208,8 +208,8 @@ BEGIN
 END
 GO
 
--- EF Core DELETE uses OUTPUT, which cannot coexist with FOR DELETE triggers on
--- Location. Audit DeletedLocations from DeepDeleteStructure / LocationService instead.
+-- LocationService and DeepDeleteStructure write DeletedLocations themselves (with Z); the
+-- deployed Location_delete trigger would insert the same ID again (PK_DeletedLocations).
 IF OBJECT_ID(N'dbo.Location_delete', N'TR') IS NOT NULL
     DROP TRIGGER dbo.Location_delete;
 GO

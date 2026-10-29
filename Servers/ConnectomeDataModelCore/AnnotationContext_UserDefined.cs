@@ -55,6 +55,31 @@ namespace Viking.DataModel.Annotation
                 entity.Property(e => e.MosaicShape)
                     .HasColumnType("geometry");
             });
+
+            DeclareTriggers(modelBuilder);
+        }
+
+        /// <summary>
+        /// Declares the triggers CreateUpdateDatabase.sql leaves on each table. SQL Server rejects
+        /// <c>INSERT/UPDATE/DELETE ... OUTPUT</c> without <c>INTO</c> when a trigger on the table fires for that
+        /// statement (Msg 334); EF Core leaves out the bare OUTPUT clause only for tables whose triggers it knows.
+        /// ModelTriggerDeclarationTests compares this list with the script and the sqlproj.
+        /// </summary>
+        private static void DeclareTriggers(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Location>().ToTable(tb =>
+            {
+                tb.HasTrigger("Location_update");
+                tb.HasTrigger("Location_delete");
+                tb.HasTrigger("UpdateStructureSpatialCache");
+            });
+            modelBuilder.Entity<Structure>().ToTable(tb =>
+            {
+                tb.HasTrigger("Structure_LastModified");
+                tb.HasTrigger("Structure_delete");
+            });
+            modelBuilder.Entity<StructureType>().ToTable(tb => tb.HasTrigger("StructureType_LastModified"));
+            modelBuilder.Entity<StructureLink>().ToTable(tb => tb.HasTrigger("StructureLink_ReciprocalCheck"));
         }
     }
 }

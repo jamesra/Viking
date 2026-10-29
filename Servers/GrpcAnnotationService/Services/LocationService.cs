@@ -524,10 +524,11 @@ namespace gRPCAnnotationService
                             _context.LocationLinks.RemoveRange(attached);
 
                             // Record the delete so incremental GetLocationChanges* calls can
-                            // tell clients to drop the ID. (A FOR DELETE trigger cannot be used:
-                            // EF Core DELETE statements include OUTPUT, which SQL Server rejects
-                            // when the target table has triggers.) Find also sees a row this batch
-                            // queued for the same ID, which the database cannot.
+                            // tell clients to drop the ID. The service writes it because the deployed
+                            // Location_delete trigger logs no Z; minimal-schema.sql drops that trigger.
+                            // Where both exist they insert the same ID (PK_DeletedLocations), so the
+                            // tombstone must move to the trigger alone. Find also sees a row this
+                            // batch queued for the same ID, which the database cannot.
                             var alreadyLogged = await _context.DeletedLocations.FindAsync(new object[] { toDelete.Id }, ct) != null;
                             if (!alreadyLogged)
                             {

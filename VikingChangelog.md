@@ -74,4 +74,10 @@ Database change, not a client bullet: DBVersion 88 adds dbo.DeletedStructures an
 an incremental structure sync (GetStructuresForSection or a region read with modified_after) failed on a script-built
 database ("Invalid object name 'DeletedStructures'"), and nothing recorded deleted or merged structures. Users get it when
 that script is run on their annotation database; deletes made before then are not in the list.
+
+gRPC annotation service change, not a client bullet: the EF model now declares the seven table triggers
+CreateUpdateDatabase.sql leaves. Before it, on a script-built database the service failed with SQL Msg 334 when it
+created or edited a location, or edited a structure, structure type or structure link. Users get it when the gRPC
+annotation service is redeployed. Deleting a location on such a database still fails until DeletedLocations.Z and
+DeletedLocationLinks reach the script.
 -->
