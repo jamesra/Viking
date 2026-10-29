@@ -123,14 +123,64 @@ namespace WebAnnotationTests
             Assert.AreEqual(0.7, AnnotationGlobal.AnnotationSettings.LabelRotation, 1e-12);
         }
 
-        /// <summary>The live relayout runs while no volume is open (and in tests) without touching the overlay.</summary>
+        /// <summary>
+        /// Reset to Defaults and Cancel/X reach the live settings through the view model's empty-name change, as
+        /// AnnotationMenu's PropertyChanged handler passes it on. A reset that changes the rotation stores the default and
+        /// asks for a relayout; cancelling it puts the stored value back with another; the CancelClicked pass that
+        /// follows (null) finds nothing changed.
+        /// </summary>
+        [TestMethod]
+        public void ResetToDefaultsRelaysLabelsAndCancelRelaysThemBack()
+        {
+            AnnotationGlobal.AnnotationSettings.LabelRotation = 0.2;
+            AnnotationPreferencesDialogViewModel vm = new();
+            vm.LoadCurrentSettings(10, 5, 5, 2.5f, 24, 4, 0.5, 3, 3, 0.5, 0.5, 0.33, 0.5, 1, 5, 0.03, 8, 6, 0.5, false, 10, 2,
+                labelRotation: AnnotationGlobal.AnnotationSettings.LabelRotation);
+            int relayouts = 0;
+            vm.PropertyChanged += (_, e) => { if (AnnotationMenu.ApplyLiveLabelRotation(vm, e.PropertyName)) relayouts++; };
+
+            vm.ResetToDefaults();
+
+            Assert.AreEqual(1, relayouts, "Reset to Defaults relays labels");
+            Assert.AreEqual(AnnotationGlobal.AnnotationSettings.DEFAULT_LABEL_ROTATION, AnnotationGlobal.AnnotationSettings.LabelRotation, 1e-12);
+
+            vm.RevertToOriginal();
+
+            Assert.AreEqual(2, relayouts, "Cancel after a reset relays labels back");
+            Assert.AreEqual(0.2, AnnotationGlobal.AnnotationSettings.LabelRotation, 1e-12);
+            Assert.IsFalse(AnnotationMenu.ApplyLiveLabelRotation(vm, null), "The CancelClicked pass finds the rotation already restored");
+        }
+
+        [TestMethod]
+        public void ResetToDefaultsAtTheDefaultRotationDoesNotRelay()
+        {
+            AnnotationGlobal.AnnotationSettings.LabelRotation = AnnotationGlobal.AnnotationSettings.DEFAULT_LABEL_ROTATION;
+            AnnotationPreferencesDialogViewModel vm = new();
+            int relayouts = 0;
+            vm.PropertyChanged += (_, e) => { if (AnnotationMenu.ApplyLiveLabelRotation(vm, e.PropertyName)) relayouts++; };
+
+            vm.ResetToDefaults();
+
+            Assert.AreEqual(0, relayouts);
+        }
+
+        /// <summary>
+        /// The live relayout runs while no volume is open (and in tests) without touching the overlay. Other tests in this
+        /// assembly leave a volume in <see cref="Viking.UI.State.volume"/>, so it is cleared here and put back.
+        /// </summary>
         [TestMethod]
         public void RelayoutWithoutAVolumeDoesNothing()
         {
-            if (Viking.UI.State.volume != null)
-                Assert.Inconclusive("Another test opened a volume");
-
-            Assert.AreEqual(0, AnnotationMenu.RelayoutLoadedLabels(System.Threading.CancellationToken.None));
+            var savedVolume = Viking.UI.State.volume;
+            Viking.UI.State.volume = null;
+            try
+            {
+                Assert.AreEqual(0, AnnotationMenu.RelayoutLoadedLabels(System.Threading.CancellationToken.None));
+            }
+            finally
+            {
+                Viking.UI.State.volume = savedVolume;
+            }
         }
 
         [TestMethod]

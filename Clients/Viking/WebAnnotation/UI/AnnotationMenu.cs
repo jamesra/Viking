@@ -356,8 +356,8 @@ namespace WebAnnotation
 
         /// <summary>
         /// Writes the settings that preview live into <see cref="Global.AnnotationSettings"/>, so the view shows them
-        /// while the dialog is open. Called with the changed property's name as the user edits, and with null (every
-        /// live setting) when the view model is reverted or reset and on Cancel, which restores the values from
+        /// while the dialog is open. Called with the changed property's name as the user edits, and with null or empty
+        /// (every live setting) when the view model is reverted or reset and on Cancel, which restores the values from
         /// opening or the last Apply. Settings not listed here take effect on Apply/OK.
         /// </summary>
         internal static void ApplyLiveSettings(AnnotationPreferencesDialogViewModel viewModel, string? propertyName)
@@ -459,14 +459,29 @@ namespace WebAnnotation
             if (redraw)
                 AnnotationOverlay.CurrentOverlay?.InvalidateParent();
 
-            // Labels are laid out when built, not when drawn, so a new rotation needs a relayout. Only when the value
-            // changed: a revert or reset passes every setting, and relaying every loaded label for nothing is not free.
-            if (Changed(nameof(viewModel.LabelRotation)) &&
-                Global.AnnotationSettings.LabelRotation != viewModel.LabelRotation)
-            {
-                Global.AnnotationSettings.LabelRotation = viewModel.LabelRotation;
-                RequestLabelRelayout();
-            }
+            ApplyLiveLabelRotation(viewModel, propertyName);
+        }
+
+        /// <summary>
+        /// The Label rotation part of <see cref="ApplyLiveSettings"/>: writes the view model's rotation into
+        /// <see cref="Global.AnnotationSettings.LabelRotation"/> and asks for a <see cref="RequestLabelRelayout"/> when
+        /// <paramref name="propertyName"/> is that property or null/empty and the value differs. Labels are laid out when
+        /// built, not when drawn, so a new rotation needs a relayout. Reset to Defaults, Cancel and the title-bar X reach
+        /// here through the view model's empty-name change (ResetToDefaults and RevertToOriginal raise it), which is what
+        /// relays labels after a reset and back after cancelling one. Only a changed value relays: those paths pass every
+        /// setting, and relaying every loaded label for nothing is not free.
+        /// </summary>
+        /// <returns>True when the stored rotation changed and a relayout was requested.</returns>
+        internal static bool ApplyLiveLabelRotation(AnnotationPreferencesDialogViewModel viewModel, string? propertyName)
+        {
+            if (!string.IsNullOrEmpty(propertyName) && propertyName != nameof(viewModel.LabelRotation))
+                return false;
+            if (Global.AnnotationSettings.LabelRotation == viewModel.LabelRotation)
+                return false;
+
+            Global.AnnotationSettings.LabelRotation = viewModel.LabelRotation;
+            RequestLabelRelayout();
+            return true;
         }
 
         /// <summary>
