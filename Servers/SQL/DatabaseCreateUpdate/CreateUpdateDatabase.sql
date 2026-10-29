@@ -8742,5 +8742,83 @@ BEGIN TRANSACTION main
 		      N'SET NOCOUNT ON in RecursiveSelectChildStructureIDs and SelectNetworkDetails; MergeStructures keeps merged notes when the kept Notes is NULL' ,getDate(),User_ID())
 	 COMMIT TRANSACTION eightyseven
 	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 88)))
+	begin
+     print N'Add DeletedStructures and the Structure_delete trigger that logs every structure delete'
+	 BEGIN TRANSACTION eightyeight
+
+	 /*The gRPC StructureService returns IDs from dbo.DeletedStructures as DeletedIds on every incremental
+	   section or region structure sync (modified_after set), but no step created the table, so on a
+	   script-built database that read failed. The table matches the EF model (ConnectomeDataModelCore
+	   DeletedStructure, index DeletedStructures_DeletedOn) and DeletedLocations (DeletedOn defaults to
+	   getutcdate()). The table and index are guarded because a hand fix may already have made them.
+
+	   Structure_delete logs deletes the way Location_delete logs locations. A trigger catches every path:
+	   DeepDeleteStructure (the structure and its children), MergeStructures (the merged structure), the
+	   WCF AnnotateService and any plain DELETE. Neither procedure changes. The trigger skips IDs already
+	   logged, so deleting a reused ID does not fail on the primary key. It only inserts into
+	   DeletedStructures, which has no triggers, so it starts no nested trigger. Structure_LastModified
+	   fires on UPDATE only, so the two never fire for the same statement. SET NOCOUNT ON comes first so
+	   the logging row does not change the row count EF6 (WCF) checks after its DELETE. EF Core never
+	   deletes Structure rows itself (it calls DeepDeleteStructure and MergeStructures), so its OUTPUT
+	   clause never meets this trigger.*/
+	 IF OBJECT_ID(N'dbo.DeletedStructures', N'U') IS NULL
+	 BEGIN
+		EXEC('CREATE TABLE [dbo].[DeletedStructures] (
+				[ID]        BIGINT   NOT NULL,
+				[DeletedOn] DATETIME CONSTRAINT [DF_DeletedStructures_DeletedOn] DEFAULT (getutcdate()) NOT NULL,
+				CONSTRAINT [PK_DeletedStructures] PRIMARY KEY CLUSTERED ([ID] ASC) WITH (FILLFACTOR = 90)
+			)')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+	 END
+
+	 IF NOT EXISTS(select * from sys.indexes where name = 'DeletedStructures_DeletedOn' AND object_id = OBJECT_ID(N'dbo.DeletedStructures'))
+	 BEGIN
+		EXEC('CREATE NONCLUSTERED INDEX [DeletedStructures_DeletedOn]
+				ON [dbo].[DeletedStructures]([DeletedOn] ASC) WITH (FILLFACTOR = 90)')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+	 END
+
+	 IF EXISTS(select * from sys.triggers where name = 'Structure_delete')
+	 BEGIN
+		DROP TRIGGER [dbo].[Structure_delete];
+	 END
+
+	 EXEC('-- Structure_delete: records the ID of every deleted structure in dbo.DeletedStructures, which
+-- the gRPC StructureService returns as DeletedIds on incremental structure syncs. IDs already logged
+-- are skipped. Fires for DeepDeleteStructure, MergeStructures, WCF AnnotateService and plain DELETEs.
+		CREATE TRIGGER [dbo].[Structure_delete]
+			ON  [dbo].[Structure]
+			FOR DELETE
+		AS
+		BEGIN
+			SET NOCOUNT ON;
+
+			INSERT INTO [dbo].[DeletedStructures] (ID)
+			SELECT deleted.ID FROM deleted
+			WHERE NOT EXISTS (SELECT 1 FROM [dbo].[DeletedStructures] DS WHERE DS.ID = deleted.ID)
+		END')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+
+	INSERT INTO DBVersion values (88,
+		      N'Add DeletedStructures and the Structure_delete trigger that logs every structure delete' ,getDate(),User_ID())
+	 COMMIT TRANSACTION eightyeight
+	end
 		   
 COMMIT TRANSACTION main

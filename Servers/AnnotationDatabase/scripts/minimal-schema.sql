@@ -83,6 +83,30 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'DeletedStructures_DeletedOn' AND object_id = OBJECT_ID(N'dbo.DeletedStructures'))
+    CREATE NONCLUSTERED INDEX [DeletedStructures_DeletedOn] ON [dbo].[DeletedStructures]([DeletedOn] ASC);
+GO
+
+-- Structure_delete, as CreateUpdateDatabase.sql DBVersion 88 and dbo/Tables/Structure.sql define it:
+-- every structure delete (DeepDeleteStructure, MergeStructures, plain DELETE) logs its ID once.
+-- EF Core never deletes Structure rows itself, so its DELETE ... OUTPUT never meets this trigger.
+IF OBJECT_ID(N'dbo.Structure_delete', N'TR') IS NOT NULL
+    DROP TRIGGER dbo.Structure_delete;
+GO
+
+CREATE TRIGGER [dbo].[Structure_delete]
+    ON  [dbo].[Structure]
+    FOR DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT INTO [dbo].[DeletedStructures] (ID)
+    SELECT deleted.ID FROM deleted
+    WHERE NOT EXISTS (SELECT 1 FROM [dbo].[DeletedStructures] DS WHERE DS.ID = deleted.ID)
+END
+GO
+
 IF OBJECT_ID(N'dbo.DeletedLocationLinks', N'U') IS NULL
 BEGIN
     CREATE TABLE [dbo].[DeletedLocationLinks] (
@@ -230,11 +254,6 @@ BEGIN
     WHERE L.ParentID IN (SELECT ID FROM #StructuresToDelete)
       AND NOT EXISTS (SELECT 1 FROM dbo.DeletedLocations DL WHERE DL.ID = L.ID);
 
-    INSERT INTO dbo.DeletedStructures (ID)
-    SELECT S.ID
-    FROM #StructuresToDelete S
-    WHERE NOT EXISTS (SELECT 1 FROM dbo.DeletedStructures DS WHERE DS.ID = S.ID);
-
     DELETE FROM dbo.Location
     WHERE ParentID IN (SELECT ID FROM #StructuresToDelete);
 
@@ -251,7 +270,7 @@ END');
 GO
 
 -- MergeStructures (subset of full SSDT proc; enough for gRPC Merge RPC tests).
--- Recreate so AnnotationTest picks up DeletedStructures logging.
+-- Recreate so AnnotationTest drops the DeletedStructures insert older copies had (Structure_delete logs it now).
 IF OBJECT_ID(N'dbo.MergeStructures', N'P') IS NOT NULL
     DROP PROCEDURE dbo.MergeStructures;
 GO
@@ -294,9 +313,6 @@ BEGIN
 
     UPDATE dbo.StructureLink SET TargetID = @KeepStructureID WHERE TargetID = @MergeStructureID;
     UPDATE dbo.StructureLink SET SourceID = @KeepStructureID WHERE SourceID = @MergeStructureID;
-
-    IF NOT EXISTS (SELECT 1 FROM dbo.DeletedStructures WHERE ID = @MergeStructureID)
-        INSERT INTO dbo.DeletedStructures (ID) VALUES (@MergeStructureID);
 
     DELETE FROM dbo.Structure WHERE ID = @MergeStructureID;
 END');

@@ -59,6 +59,22 @@ CREATE TRIGGER [dbo].[Structure_LastModified]
 				-- interfering with SELECT statements.
 				SET NOCOUNT ON;
 GO
+-- Structure_delete: records the ID of every deleted structure in dbo.DeletedStructures, which
+-- the gRPC StructureService returns as DeletedIds on incremental structure syncs. IDs already logged
+-- are skipped. Fires for DeepDeleteStructure, MergeStructures, WCF AnnotateService and plain DELETEs.
+-- Deployed by CreateUpdateDatabase.sql DBVersion 88.
+CREATE TRIGGER [dbo].[Structure_delete]
+    ON  [dbo].[Structure]
+    FOR DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT INTO [dbo].[DeletedStructures] (ID)
+    SELECT deleted.ID FROM deleted
+    WHERE NOT EXISTS (SELECT 1 FROM [dbo].[DeletedStructures] DS WHERE DS.ID = deleted.ID)
+END
+GO
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'Strings seperated by semicolins', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'Structure', @level2type = N'COLUMN', @level2name = N'Tags';
 
 

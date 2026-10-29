@@ -40,8 +40,9 @@ procedure's body (even `SET NOCOUNT ON` or a one-line fix).
 schema for the throwaway test container) and the EF model in `Servers/ConnectomeDataModelCore` are copies for tests and
 code. Mirror each `CreateUpdateDatabase.sql` change into whichever of them holds that object, in the same commit, so
 tests see what deployed databases will have. A change made only in a copy is not deployed, so never add or change an object in a
-copy without the matching `CreateUpdateDatabase.sql` step. (`dbo.DeletedStructures`, added only to `minimal-schema.sql`
-and the EF model, is the example of what goes wrong: code came to depend on a table no deployed database has.)
+copy without the matching `CreateUpdateDatabase.sql` step. (`dbo.DeletedStructures` shows what goes wrong: added only to
+`minimal-schema.sql` and the EF model, it let the gRPC structure sync depend on a table no deployed database had until
+DBVersion 88.)
 
 ## Before committing
 

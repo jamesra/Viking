@@ -45,20 +45,12 @@ namespace ConnectomeDataModelCoreTests
         private const string UnreachableConnection =
             "Server=127.0.0.1,1;Database=None;Integrated Security=True;Connect Timeout=1;TrustServerCertificate=True";
 
-        private const string DeletedStructuresDecision =
-            "Open decision D-DeletedStructuresSchema: dbo.DeletedStructures exists in minimal-schema.sql and the EF model " +
-            "but not in the sqlproj; remove this entry when the decision is acted on.";
-
         /// <summary>
         /// Every difference the three sources are known to have, keyed by the text <see cref="Compare"/> reports,
         /// with the reason it is accepted. Keep a reason on every entry; do not add one to silence new drift.
         /// </summary>
         private static readonly Dictionary<string, string> AllowedDifferences = new()
         {
-            // dbo.DeletedStructures (decision D-DeletedStructuresSchema).
-            [$"table dbo.DeletedStructures only in {MinimalSchema}, not in {SqlProject}"] = DeletedStructuresDecision,
-            [$"table dbo.DeletedStructures only in {EfModel}, not in {SqlProject}"] = DeletedStructuresDecision,
-
             // minimal-schema.sql is the smoke-test schema: it deliberately creates only the tables the
             // gRPC tests need, so the production-only tables are absent from it.
             [$"table dbo.DBVersion only in {SqlProject}, not in {MinimalSchema}"] =
@@ -78,10 +70,7 @@ namespace ConnectomeDataModelCoreTests
         };
 
         /// <summary>Objects minimal-schema.sql creates that are not in dbo/ or the sqlproj, with the reason.</summary>
-        private static readonly Dictionary<string, string> AllowedMissingObjects = new()
-        {
-            ["table DeletedStructures"] = DeletedStructuresDecision,
-        };
+        private static readonly Dictionary<string, string> AllowedMissingObjects = new();
 
         // ---- The checks -------------------------------------------------------------------------------
 

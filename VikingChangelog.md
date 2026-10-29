@@ -69,4 +69,9 @@ carries the fix to deployed databases. Users get it when that script is run on t
 client version they run, so it is not listed under a client version. Add a user bullet
 ("Merging one structure into another keeps the merged structure's notes when the structure you keep had none") only if
 a release note for the database publish is wanted here.
+
+Database change, not a client bullet: DBVersion 88 adds dbo.DeletedStructures and the Structure_delete trigger. Before it,
+an incremental structure sync (GetStructuresForSection or a region read with modified_after) failed on a script-built
+database ("Invalid object name 'DeletedStructures'"), and nothing recorded deleted or merged structures. Users get it when
+that script is run on their annotation database; deletes made before then are not in the list.
 -->
