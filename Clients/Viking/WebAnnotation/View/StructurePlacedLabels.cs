@@ -68,6 +68,8 @@ namespace WebAnnotation.View
                         break;
                 }
             }
+
+            RecordTargets();
         }
     }
 }

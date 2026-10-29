@@ -31,20 +31,41 @@ namespace Geometry
         /// <summary>Markers for links to sections below.</summary>
         public readonly int DownCount;
 
+        /// <summary>
+        /// <paramref name="rows"/> must not change afterwards: <see cref="TextWidth"/> and <see cref="TextHeight"/> are
+        /// measured here, once, because <see cref="LabelLayout"/> reads them for every candidate run.
+        /// </summary>
         public LabelContent(IReadOnlyList<LabelRow> rows, int upCount, int downCount)
         {
             Rows = rows ?? throw new ArgumentNullException(nameof(rows));
             UpCount = upCount;
             DownCount = downCount;
+            TextWidth = rows.Count == 0 ? 0 : rows.Max(r => r.UnitWidth * r.Scale);
+            TextHeight = rows.Sum(r => r.Scale);
         }
 
         public int MarkerCount => UpCount + DownCount;
 
         /// <summary>Width of the widest row at an ID font size of 1.</summary>
-        public double TextWidth => Rows.Count == 0 ? 0 : Rows.Max(r => r.UnitWidth * r.Scale);
+        public readonly double TextWidth;
 
         /// <summary>Height of all rows at an ID font size of 1.</summary>
-        public double TextHeight => Rows.Sum(r => r.Scale);
+        public readonly double TextHeight;
+
+        /// <summary>True when the rows have the same font scales in the same order, so they stack the same way.</summary>
+        internal bool SameRowScales(LabelContent other)
+        {
+            if (other.Rows.Count != Rows.Count)
+                return false;
+
+            for (int i = 0; i < Rows.Count; i++)
+            {
+                if (other.Rows[i].Scale != Rows[i].Scale)
+                    return false;
+            }
+
+            return true;
+        }
     }
 
     public enum LabelPlacementKind
@@ -78,6 +99,12 @@ namespace Geometry
     /// <summary>The layout <see cref="LabelLayout.Fit(LabelContent, double)"/> chose for one <see cref="LabelContent"/>.</summary>
     public sealed class LabelPlacement
     {
+        /// <summary>The layout that made this placement; a previous placement from another layout is never kept.</summary>
+        internal readonly LabelLayout Owner;
+
+        /// <summary>What the placement was laid out for: its row scales, marker counts and text width.</summary>
+        internal readonly LabelContent Content;
+
         public readonly LabelPlacementKind Kind;
 
         /// <summary>The polygon's maximum inscribed circle; the layout region when <see cref="Kind"/> is Circle.</summary>
@@ -104,8 +131,10 @@ namespace Geometry
         /// <summary>Text angle in radians, counter-clockwise from +X, in (−π/2, π/2]. 0 for circles.</summary>
         public double Angle => Kind == LabelPlacementKind.Run ? Region.Angle : 0;
 
-        internal LabelPlacement(Circle circle, double fontSize)
+        internal LabelPlacement(LabelLayout owner, LabelContent content, Circle circle, double fontSize)
         {
+            Owner = owner;
+            Content = content;
             Kind = LabelPlacementKind.Circle;
             Circle = circle;
             FontSize = fontSize;
@@ -113,9 +142,11 @@ namespace Geometry
             Markers = [];
         }
 
-        internal LabelPlacement(Circle circle, OrientedRectangle region, double fontSize, OrientedRectangle textBox,
-            double maxLineWidth, IReadOnlyList<Vector2> rowCenters, IReadOnlyList<MarkerSlot> markers)
+        internal LabelPlacement(LabelLayout owner, LabelContent content, Circle circle, OrientedRectangle region, double fontSize,
+            OrientedRectangle textBox, double maxLineWidth, IReadOnlyList<Vector2> rowCenters, IReadOnlyList<MarkerSlot> markers)
         {
+            Owner = owner;
+            Content = content;
             Kind = LabelPlacementKind.Run;
             Circle = circle;
             Region = region;
@@ -138,6 +169,11 @@ namespace Geometry
     /// G = 0.5, 13% at 15°, 25% at 30°, 35% at 45° and 50% at 90°. Near-level runs pay almost nothing, and a long thin
     /// process, which gains several-fold along its length, still rotates. G = ∞ keeps text level. A run's font must beat
     /// the circle's R/2 by 25%, so round cells look as circles do, or by its required gain when that is larger.
+    /// <para>
+    /// Given the label's previous placement, <see cref="Fit(LabelContent, double, LabelPlacement)"/> keeps it while it
+    /// still holds the content and the new best beats it by no more than 1 + <see cref="Hysteresis"/>, so a label near a
+    /// tie does not flip back and forth while the Label rotation slider moves.
+    /// </para>
     /// </remarks>
     public sealed class LabelLayout
     {
@@ -171,8 +207,17 @@ namespace Geometry
         /// <summary>Smallest free-space marker radius as a fraction of the ID font size, used when no room is left.</summary>
         public const double MinimumMarkerRadius = 0.1;
 
+        /// <summary>
+        /// Hysteresis h: a label keeps its previous placement unless the new best is more than 1 + h times better by
+        /// <see cref="Advantage"/>. 5% hides near-ties without holding text in a placement clearly worse than the best.
+        /// </summary>
+        public const double Hysteresis = 0.05;
+
         private readonly RingSegmentSet Rings;
-        private readonly IReadOnlyList<RunCandidate> Runs;
+        private readonly RunCandidate[] Runs;
+
+        /// <summary>|sin| of each <see cref="Runs"/> entry's angle, for its tilt factor without a sine per fit.</summary>
+        private readonly double[] RunSin;
         private readonly Rectangle Bounds;
         private readonly Vector2 Centroid;
 
@@ -189,7 +234,8 @@ namespace Geometry
             Bounds = polygon.BoundingBox;
             Centroid = polygon.Centroid;
             InscribedCircle = polygon.MaximumInscribedCircle();
-            Runs = InscribedRuns.Find(polygon);
+            Runs = [.. InscribedRuns.Find(polygon)];
+            RunSin = [.. Runs.Select(r => Math.Abs(Math.Sin(r.Angle)))];
         }
 
         /// <summary>ID font size in a circle, as <c>StructureCircleLabels</c> draws it.</summary>
@@ -261,11 +307,11 @@ namespace Geometry
             // (run font H/2.2 against circle font H/4, 1.82) never reaches, so its text would shrink into the circle.
             double circleFont = CircleFontSize(InscribedCircle);
             if (!TryBestRun(content, 0, rotationGain, out OrientedRectangle region, out double textOnlyScore))
-                return new LabelPlacement(InscribedCircle, circleFont);
+                return new LabelPlacement(this, content, InscribedCircle, circleFont);
 
             double runFont = RunFontSize(region.Width, region.Height, content, 0);
-            if (runFont < Math.Max(CirclePreference, RequiredGain(region.Angle, rotationGain)) * circleFont)
-                return new LabelPlacement(InscribedCircle, circleFont);
+            if (runFont < CircleThreshold(region.Angle, rotationGain) * circleFont)
+                return new LabelPlacement(this, content, InscribedCircle, circleFont);
 
             int endMarkers = 0;
             for (int k = content.MarkerCount; k > 0; k--)
@@ -283,11 +329,90 @@ namespace Geometry
         }
 
         /// <summary>
+        /// <see cref="Fit(LabelContent, double)"/> with hysteresis: returns <paramref name="previous"/> itself while it
+        /// still holds <paramref name="content"/> (see <see cref="Holds"/>) and the new best beats it by at most
+        /// 1 + <see cref="Hysteresis"/> (see <see cref="Advantage"/>); otherwise the new best. The caller keeps the
+        /// returned placement and passes it back on the next fit, and drops it when the polygon changes, since a
+        /// placement from another layout is never kept.
+        /// </summary>
+        public LabelPlacement Fit(LabelContent content, double rotationGain, LabelPlacement? previous)
+        {
+            LabelPlacement best = Fit(content, rotationGain);
+            if (previous is null || !Holds(previous, content))
+                return best;
+
+            if (double.IsNaN(rotationGain))
+                rotationGain = DefaultRotationGain;
+
+            return Advantage(best, previous, content, rotationGain) <= 1 + Hysteresis ? previous : best;
+        }
+
+        /// <summary>
+        /// True when <paramref name="placement"/> was made by this layout and can show <paramref name="content"/> as it
+        /// stands: always for the circle, which lays any content out itself; for a run only when the rows have the same
+        /// scales (so its row centres stack them), the up and down marker counts are unchanged (so every marker has its
+        /// slot) and the widest row still fits between the end markers at the run's font. Longer text or a new link
+        /// therefore drops the placement.
+        /// </summary>
+        internal bool Holds(LabelPlacement placement, LabelContent content)
+        {
+            if (!ReferenceEquals(placement.Owner, this))
+                return false;
+
+            if (placement.Kind == LabelPlacementKind.Circle)
+                return true;
+
+            LabelContent laidOut = placement.Content;
+            return laidOut.SameRowScales(content) &&
+                   laidOut.UpCount == content.UpCount &&
+                   laidOut.DownCount == content.DownCount &&
+                   TextPadding * content.TextWidth * placement.FontSize <= placement.MaxLineWidth * (1 + 1e-9);
+        }
+
+        /// <summary>
+        /// How many times better <paramref name="candidate"/> is than <paramref name="incumbent"/> for
+        /// <paramref name="content"/> by the rules <see cref="Fit(LabelContent, double)"/> decides with, so above 1 means
+        /// Fit would prefer the candidate. Between runs it is the ratio of their text-only scores F0 times
+        /// <see cref="TiltFactor"/>. Between a run and the circle it is how far the run's text-only font F0 is above (or
+        /// below) the font the circle test asks of it, <see cref="CircleThreshold"/> times R/2. Infinite when the
+        /// incumbent scores nothing, as a tilted run does at <see cref="NeverRotate"/>.
+        /// </summary>
+        internal double Advantage(LabelPlacement candidate, LabelPlacement incumbent, LabelContent content, double rotationGain)
+        {
+            double circleFont = CircleFontSize(InscribedCircle);
+            static double Ratio(double a, double b) => b > 0 ? a / b : double.PositiveInfinity;
+            double TextOnlyFont(LabelPlacement run) => RunFontSize(run.Region.Width, run.Region.Height, content, 0);
+            double CircleAsks(LabelPlacement run) => CircleThreshold(run.Angle, rotationGain) * circleFont;
+
+            return (candidate.Kind, incumbent.Kind) switch
+            {
+                (LabelPlacementKind.Run, LabelPlacementKind.Run) =>
+                    Ratio(TextOnlyFont(candidate) * TiltFactor(candidate.Angle, rotationGain),
+                          TextOnlyFont(incumbent) * TiltFactor(incumbent.Angle, rotationGain)),
+                (LabelPlacementKind.Run, LabelPlacementKind.Circle) => Ratio(TextOnlyFont(candidate), CircleAsks(candidate)),
+                (LabelPlacementKind.Circle, LabelPlacementKind.Run) => Ratio(CircleAsks(incumbent), TextOnlyFont(incumbent)),
+                _ => 1,
+            };
+        }
+
+        /// <summary>
+        /// How many times the circle's font a run at <paramref name="angle"/> must allow to replace it: the larger of
+        /// <see cref="CirclePreference"/> and the tilt's <see cref="RequiredGain"/>.
+        /// </summary>
+        private static double CircleThreshold(double angle, double rotationGain) =>
+            Math.Max(CirclePreference, RequiredGain(angle, rotationGain));
+
+        /// <summary>
         /// The verified run with the best score for <paramref name="markers"/> end markers. Raster sizes bound the
         /// verified ones from above, and a verified run keeps its candidate's angle, so the same tilt factor keeps the
         /// bound: runs are verified best first only until no unverified one could win. With <see cref="NeverRotate"/>
         /// tilted runs are skipped, not merely scored 0.
         /// </summary>
+        /// <remarks>
+        /// Picks the next best bound by a linear scan rather than sorting every candidate: the 5° angles give a round cell
+        /// thousands of Pareto runs, and the scan stops after the first one or two verify, so sorting dominated the fit.
+        /// Ties go to the earlier candidate, as the stable sort did.
+        /// </remarks>
         private bool TryBestRun(LabelContent content, int markers, double rotationGain, out OrientedRectangle best, out double bestScore)
         {
             best = default;
@@ -295,17 +420,38 @@ namespace Geometry
             bool found = false;
 
             bool levelOnly = double.IsPositiveInfinity(rotationGain);
-            IEnumerable<(RunCandidate Run, double Bound)> ranked = Runs
-                .Where(r => !levelOnly || r.Angle == 0)
-                .Select(r => (Run: r, Bound: RunFontSize(r.Width, r.Height, content, markers) * TiltFactor(r.Angle, rotationGain)))
-                .OrderByDescending(r => r.Bound);
-
-            foreach ((RunCandidate run, double bound) in ranked)
+            double gain = Math.Max(0, rotationGain);
+            double[] bounds = new double[Runs.Length];
+            for (int i = 0; i < Runs.Length; i++)
             {
-                if (bound <= bestScore)
+                if (levelOnly && Runs[i].Angle != 0)
+                {
+                    bounds[i] = -1;
+                    continue;
+                }
+
+                double tilt = RunSin[i] == 0 ? 1 : 1.0 / (1 + (gain * RunSin[i]));
+                bounds[i] = RunFontSize(Runs[i].Width, Runs[i].Height, content, markers) * tilt;
+            }
+
+            while (true)
+            {
+                int next = -1;
+                double nextBound = bestScore;
+                for (int i = 0; i < bounds.Length; i++)
+                {
+                    if (bounds[i] > nextBound)
+                    {
+                        next = i;
+                        nextBound = bounds[i];
+                    }
+                }
+
+                if (next < 0)
                     break;
 
-                if (!run.TryVerify(out OrientedRectangle region))
+                bounds[next] = -1;
+                if (!Runs[next].TryVerify(out OrientedRectangle region))
                     continue;
 
                 double score = Score(region, content, markers, rotationGain);
@@ -360,7 +506,7 @@ namespace Geometry
             PlaceInFreeSpace(markers, textBox, font, content.DownCount - downEnd, false);
             PlaceInFreeSpace(markers, textBox, font, content.UpCount - upEnd, true);
 
-            return new LabelPlacement(InscribedCircle, region, font, textBox, maxLineWidth, rowCenters, markers);
+            return new LabelPlacement(this, content, InscribedCircle, region, font, textBox, maxLineWidth, rowCenters, markers);
         }
 
         /// <summary>

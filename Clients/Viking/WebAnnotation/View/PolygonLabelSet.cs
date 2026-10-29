@@ -16,13 +16,19 @@ namespace WebAnnotation.View
         /// <summary>Null when there are no overlapped links.</summary>
         public readonly OverlappedLinkCircleView? LinkView;
 
-        public readonly LabelPlacementKind Kind;
+        /// <summary>
+        /// The placement the labels were built at. The view keeps it and passes it back to the next
+        /// <see cref="Build"/> for hysteresis, and drops it when its polygon (its <see cref="LabelLayout"/>) changes.
+        /// </summary>
+        public readonly LabelPlacement Placement;
 
-        private PolygonLabelSet(StructureLabelsBase labels, OverlappedLinkCircleView? linkView, LabelPlacementKind kind)
+        public LabelPlacementKind Kind => Placement.Kind;
+
+        private PolygonLabelSet(StructureLabelsBase labels, OverlappedLinkCircleView? linkView, LabelPlacement placement)
         {
             Labels = labels;
             LinkView = linkView;
-            Kind = kind;
+            Placement = placement;
         }
 
         /// <summary>
@@ -31,25 +37,39 @@ namespace WebAnnotation.View
         /// at its right end. How readily the run may tilt is the Label rotation preference, read on every call so a
         /// rebuild picks up a change.
         /// </summary>
-        public static PolygonLabelSet Build(LabelLayout layout, LocationObj obj, long id, int z, ICollection<long> links)
+        /// <param name="previousPlacement">
+        /// The placement of the labels being replaced, from this same layout, or null. It is kept while it still holds the
+        /// label and the new best beats it by no more than <see cref="LabelLayout.Hysteresis"/>.
+        /// </param>
+        /// <param name="previousLabels">
+        /// The labels being replaced, or null for a first build. When the placement changes, the new labels ease from
+        /// where these are shown to their new place; the link markers move at once.
+        /// </param>
+        public static PolygonLabelSet Build(LabelLayout layout, LocationObj obj, long id, int z, ICollection<long> links,
+            LabelPlacement? previousPlacement = null, StructureLabelsBase? previousLabels = null)
         {
             ICollection<LocationObj> linked = links.Count == 0 ? [] : Store.Locations.GetObjectsByIDs(links, false);
             int up = linked.Count(l => l.Z > z);
             int down = linked.Count(l => l.Z < z);
 
             StructurePlacedLabels placed = new(obj);
-            LabelPlacement placement = layout.Fit(placed.Content(up, down), Global.AnnotationSettings.LabelRotationGain);
+            LabelPlacement placement = layout.Fit(placed.Content(up, down), Global.AnnotationSettings.LabelRotationGain, previousPlacement);
+            StructureLabelsBase labels;
+            OverlappedLinkCircleView? linkView;
             if (placement.Kind == LabelPlacementKind.Run)
             {
                 placed.Place(placement);
-                return new PolygonLabelSet(placed,
-                    links.Count == 0 ? null : new OverlappedLinkCircleView(placement, id, z, links),
-                    placement.Kind);
+                labels = placed;
+                linkView = links.Count == 0 ? null : new OverlappedLinkCircleView(placement, id, z, links);
+            }
+            else
+            {
+                labels = new StructureCircleLabels(obj, placement.Circle);
+                linkView = links.Count == 0 ? null : new OverlappedLinkCircleView(placement.Circle, id, z, links);
             }
 
-            return new PolygonLabelSet(new StructureCircleLabels(obj, placement.Circle),
-                links.Count == 0 ? null : new OverlappedLinkCircleView(placement.Circle, id, z, links),
-                placement.Kind);
+            labels.TransitionFrom(previousLabels);
+            return new PolygonLabelSet(labels, linkView, placement);
         }
     }
 }

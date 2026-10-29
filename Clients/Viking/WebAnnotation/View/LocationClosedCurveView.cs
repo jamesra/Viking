@@ -32,6 +32,9 @@ namespace WebAnnotation.View
         /// <summary>Inscribed circle and runs of the rendered curve's polygon; null until the constructor makes it.</summary>
         private LabelLayout? labelLayout;
 
+        /// <summary>Where <see cref="curveLabels"/> were placed in <see cref="labelLayout"/>, passed back to the next fit for hysteresis.</summary>
+        private LabelPlacement? labelPlacement;
+
         private ICollection<long> overlappedLinks = [];
 
         public override string[] HelpStrings
@@ -104,7 +107,10 @@ namespace WebAnnotation.View
         /// </summary>
         protected Circle InscribedCircle => labelLayout?.InscribedCircle ?? new Circle(BoundingBox.Center, ControlPointRadius);
 
-        /// <summary>Rebuilds the labels and overlapped-link markers together, since the fit depends on the link counts.</summary>
+        /// <summary>
+        /// Rebuilds the labels and overlapped-link markers together, since the fit depends on the link counts. Keeps the
+        /// current placement under hysteresis, and eases the text to a new one.
+        /// </summary>
         /// <returns>Where the label went, Circle if nothing was built.</returns>
         public LabelPlacementKind CreateLabelObjects()
         {
@@ -115,12 +121,14 @@ namespace WebAnnotation.View
                     return LabelPlacementKind.Circle;
                 }
 
-                PolygonLabelSet labels = PolygonLabelSet.Build(labelLayout, modelObj, ID, (int)Z, overlappedLinks);
+                PolygonLabelSet labels = PolygonLabelSet.Build(labelLayout, modelObj, ID, (int)Z, overlappedLinks,
+                    labelPlacement, labelPlacement is null ? null : curveLabels);
                 if (labels.LinkView != null)
                 {
                     labels.LinkView.Color = Color;
                 }
 
+                labelPlacement = labels.Placement;
                 curveLabels = labels.Labels;
                 OverlappedLinkView = labels.LinkView;
                 return labels.Kind;

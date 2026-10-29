@@ -11,7 +11,8 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
   client `Clients/Viking/WebAnnotation/View/PolygonLabelSet.cs`): a polygon or closed curve's ID, structure label, tags,
   parent ID and overlapped-link markers go either in the true maximum inscribed circle (pole of inaccessibility, by
   polylabel's branch and bound over signed distance to exterior and hole segments) or along the largest inscribed
-  oriented rectangle ("run") at 13 angles, whichever allows the larger ID font. Runs come from rasterising the rotated
+  oriented rectangle ("run") at 37 angles (every 5° and the principal axis; 13 at 15° steps before 2026-10-29),
+  whichever allows the larger ID font. Runs come from rasterising the rotated
   polygon to a 128×128 grid and the histogram-and-stack maximal-rectangle pass, keeping the (width, height) Pareto front
   so any text aspect fits without rasterising again; the candidate chosen is verified against the real segments
   (Liang–Barsky clip) and shrunk by 10% up to four times if a raster cell hid an edge. Markers that do not fit go one at a
@@ -52,6 +53,20 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
   $d_T$ the signed distance outside the text box and $c_j, r_j$ the markers placed so far; radius
   $\min(F/2, 0.95 f)$, at least $0.1F$.
 
+- **Label placement hysteresis** (`LabelLayout.Fit(content, G, previous)`, `Advantage`, since 2026-10-29): with the
+  new best placement $B$ and the label's previous placement $P$ (from the same layout, and still holding the content:
+  same row scales, same up and down link counts, $1.1\,t_w F_P \le$ its line width), $P$ is kept when
+  $A(B, P) \le 1 + h$, $h = 0.05$. The advantage follows the rules Fit decides by: between runs
+  $A = \frac{F_0(B)/g(\theta_B)}{F_0(P)/g(\theta_P)}$; a run over the circle $A = F_0(B) / (\max(1.25, g(\theta_B))\,F_c)$; the
+  circle over a run $A = \max(1.25, g(\theta_P))\,F_c / F_0(P)$; $F_0$ is the text-only font of the run's rectangle for
+  the current content. A tilted $P$ at $G = \infty$ has $A = \infty$, so "Never" always levels the text.
+- **Label switch easing** (`Geometry.Core/Algorithms/LabelEasing.cs`): each text row moves from its shown pose
+  $(c_0, \theta_0, f_0)$ to its new one $(c_1, \theta_1, f_1)$ with $s = 1 - (1 - t/T)^3$, $T = 150$ ms:
+  $c = c_0 + s\,(c_1 - c_0)$, $f = f_0 (f_1/f_0)^s$, $\theta = N(\theta_0 + s\,\delta)$ where $\delta$ is
+  $\theta_1 - \theta_0$ or that minus $\operatorname{sign}\cdot\pi$, whichever is shorter (direct on a tie), and $N$
+  maps to $(-\pi/2, \pi/2]$; text at $\theta$ and $\theta + \pi$ lies on the same line and the renderer never draws
+  it upside down, so the turn is at most 90°.
+
 - **Location link fade depth** (`Clients/Viking/WebAnnotation/View/LocationLinkView.cs` `FadeDepthAt`, shader
   `PinchedFadeDepth` in `Clients/MonogameXNAGraphicsShared/Content/PinchedLineShaders.fx`): for a point $x$ along a link of
   length $L$ between end circles of radii $r_A, r_B$,
@@ -63,6 +78,37 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
   $r = \min(\operatorname{dist}(\tfrac{N + E}{2}, \partial P), \sqrt{A/\pi})$ and centre $E - r\,d$.
 
 ## Algorithmic decisions
+
+- **2026-10-29 Polygon labels switch placement smoothly: hysteresis, an eased move, and 5° run angles.** Why: the
+  user found the live Label rotation relayout rough, with labels jumping between level and tilted. Three changes,
+  all chosen by him. (1) Hysteresis $h = 0.05$ (formula above): a label keeps its placement unless the new best is
+  over 5% better by the rule Fit decides with, so a near-tie does not flip as the slider moves; the core returns the
+  previous object itself, the view keeps it per polygon and drops it with a new `LabelLayout` (changed outline), and a
+  placement that no longer holds the content (longer text, a new link) is never kept. (2) A 150 ms cubic ease-out of
+  each text row's centre, angle (the short way modulo 180°, consistent with `LabelView.DrawRotated`'s upside-down flip)
+  and font, from where the old labels are shown at that moment, so a relayout mid-animation carries on from the
+  current pose; a relayout that keeps the placement continues the running animation unchanged. Circle and run label
+  sets have the same rows (ID, structure label, tags, parent), so a circle ↔ run switch animates row by row like any
+  other; line widths scale with the font so wrapping does not change mid-move; overlapped-link markers move at once
+  (they are pickable geometry). The overlay asks for another frame after drawing labels while any label is easing, and
+  is idle otherwise. (3) Run angles every 5° from −85° to 90° (36, plus the principal axis unless within 1° of a step)
+  instead of 15°: an arm off the principal axis got text up to 7.5° off its direction. Measured 2026-10-29, net48
+  Release, synthetic cells (`round`: 300 vertices, radius 300 with 5% and 3% harmonics; `process`: a bent tapering
+  process 1600 long, about 110 to 40 wide, 580 and 1980 vertices; not the 2026-10-26 shapes), median of 30: `LabelLayout`
+  constructor 2.1 → 6.1 ms (round, 2.9×), 2.8 → 5.7 ms (process 600, 2.1×), 5.4 → 9.0 ms (process 2000, 1.7×), within
+  the 3× and 40 ms budget set beforehand, on the background `Initialize`. `Fit` (four rows, two markers; median of 2000
+  across the slider range) went 205 → 670 µs (round) and 166 → 480 µs (process) with 5° alone, because `TryBestRun`
+  sorted every Pareto run (thousands for a round cell) for each marker count; it now picks the next best bound by a
+  linear scan (verification stops after one or two), and `LabelContent` measures its text size once, so `Fit` is
+  16 µs (round) and 14 µs (process), 12× faster than before the change; with hysteresis it costs the same. Rejected:
+  5° only near the principal axis, or a coarse-then-fine search (not needed at these costs); animating the link markers
+  (they are hit-tested views rebuilt with the placement); a group transform for circle ↔ run (circle rows are not a
+  rigid copy of run rows). Where: `Geometry.Core/Algorithms/LabelLayout.cs` (`Fit`, `Holds`, `Advantage`,
+  `Hysteresis`), `InscribedRuns.cs` (`StepDegrees`, `Angles`), `LabelEasing.cs`;
+  `Clients/Viking/WebAnnotation/View/StructureLabelsBase.cs` (`TransitionFrom`, `DrawLabel`), `PolygonLabelSet.cs`,
+  `LocationPolygonView.cs`, `LocationClosedCurveView.cs`, `UI/AnnotationOverlay.cs`; tests
+  `GeometryTests/LabelLayoutTests.cs`, `GeometryTests/LabelEasingTests.cs`, `GeometryTests/FSCheck/PolygonSpec.cs`. To
+  mirror into Viking `dev` `Clients/` and `Geometry.Core`.
 
 - **2026-10-29 Label tilt costs a gain that grows with the angle; one preference sets it.** Why: a user disliked rotated
   polygon labels. The flat 0.9 tilt score (2026-10-26 entry) let a 30° run beat level text for an 11% larger font, the
@@ -142,8 +188,8 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
   old "inscribed circle" (centroid, radius to the nearest vertex) lies outside C-shaped cells and cells with holes, is
   tiny on long processes, and pokes past edges between vertices (user report). The same circle placed adjacent-section
   markers and translate targets, so `Polygon.InscribedCircle` and `CalculateInscribedCircle` now return the maximum
-  inscribed circle and the centroid version is deleted. Decisions: angles −75° to 90° in 15° steps plus the principal
-  axis of the second moments of area, all in (−90°, 90°] so text never reads upside down and a vertical process reads
+  inscribed circle and the centroid version is deleted. Decisions: angles ~~−75° to 90° in 15° steps~~ (superseded 2026-10-29:
+  every 5°, entry above) plus the principal axis of the second moments of area, all in (−90°, 90°] so text never reads upside down and a vertical process reads
   bottom to top; ~~a tilted run scores 0.9 so near-level text snaps to level~~ superseded 2026-10-29: a tilted run's
   score is divided by $1 + G\lvert\sin\theta\rvert$ (entry above); the circle is kept unless a run beats it by
   25%, so round cells look as before, only correctly centred; in a run down-links sit at the left end and up-links at

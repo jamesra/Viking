@@ -93,6 +93,8 @@ namespace WebAnnotation.View
             {
                 ParentStructureLabelView = null;
             }
+
+            RecordTargets();
         }
     }
 }

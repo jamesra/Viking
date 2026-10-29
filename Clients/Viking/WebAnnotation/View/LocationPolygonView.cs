@@ -37,6 +37,12 @@ namespace WebAnnotation.View
         /// <summary>Inscribed circle and runs of <see cref="SmoothedVolumePolygon"/>; null until <see cref="Initialize"/>.</summary>
         private LabelLayout? labelLayout;
 
+        /// <summary>
+        /// Where <see cref="curveLabels"/> were placed in <see cref="labelLayout"/>, passed back to the next fit for
+        /// hysteresis; cleared with each new layout, so a changed outline starts afresh.
+        /// </summary>
+        private LabelPlacement? labelPlacement;
+
         /// <summary>Links set before <see cref="Initialize"/> are kept here and laid out when it finishes.</summary>
         private ICollection<long> overlappedLinks = [];
         private LocationInteriorHoleView[]? InteriorHoleViews;
@@ -319,6 +325,7 @@ namespace WebAnnotation.View
             lock (labelSync)
             {
                 labelLayout = layout;
+                labelPlacement = null;
                 labelKind = CreateLabelObjects();
             }
 
@@ -359,7 +366,8 @@ namespace WebAnnotation.View
 
         /// <summary>
         /// Rebuilds the labels and overlapped-link markers together, since the fit depends on the link counts. Does
-        /// nothing before <see cref="Initialize"/> has laid out the smoothed polygon; it builds them then.
+        /// nothing before <see cref="Initialize"/> has laid out the smoothed polygon; it builds them then. A rebuild in
+        /// the same layout keeps the current placement under hysteresis, and eases the text to a new one.
         /// </summary>
         /// <returns>Where the label went, Circle if nothing was built.</returns>
         public LabelPlacementKind CreateLabelObjects()
@@ -371,12 +379,14 @@ namespace WebAnnotation.View
                     return LabelPlacementKind.Circle;
                 }
 
-                PolygonLabelSet labels = PolygonLabelSet.Build(labelLayout, modelObj, ID, (int)Z, overlappedLinks);
+                PolygonLabelSet labels = PolygonLabelSet.Build(labelLayout, modelObj, ID, (int)Z, overlappedLinks,
+                    labelPlacement, labelPlacement is null ? null : curveLabels);
                 if (labels.LinkView != null)
                 {
                     labels.LinkView.Color = Color;
                 }
 
+                labelPlacement = labels.Placement;
                 curveLabels = labels.Labels;
                 OverlappedLinkView = labels.LinkView;
                 return labels.Kind;
