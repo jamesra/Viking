@@ -82,5 +82,19 @@ namespace WebAnnotationTests.Tools
             Assert.IsNotNull(volume);
             Assert.AreEqual(20, volume.Value.Radius, 0.01);
         }
+
+        [TestMethod]
+        public void TheRenderedVolumeCircleHasTheSameRadiusAsThePreviewedOne()
+        {
+            ScaleTransform section = new(scale: 1.25, offset: new Vector2(500, -200));
+            // The mosaic circle that saving a 100-unit volume circle produces (UpdateCircleLocationNoSaveCallback maps it this way).
+            Circle mosaic = (Circle)section.TryMapShapeVolumeToSection(new Circle(new Vector2(3000, 4000), 100));
+
+            Circle rendered = WebAnnotation.View.LocationCircleViewBase.MapToVolume(section, mosaic);
+
+            Assert.AreEqual(100, rendered.Radius, 0.01, "the saved circle is drawn at the radius that was previewed");
+            Assert.AreEqual(3000, rendered.Center.X, 0.01);
+            Assert.AreEqual(4000, rendered.Center.Y, 0.01);
+        }
     }
 }

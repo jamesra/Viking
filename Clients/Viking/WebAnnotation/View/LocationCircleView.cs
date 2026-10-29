@@ -32,6 +32,19 @@ namespace WebAnnotation.View
             }
         }
 
+        /// <summary>
+        /// The circle as drawn in volume space. The radius follows the section's local scale (five-point mean, see
+        /// .cursor/rules/circle-mapping-scale.mdc) so it matches the volume circle that was previewed when the circle was drawn
+        /// or resized. When the circle cannot be mapped, the mosaic radius is used unscaled.
+        /// </summary>
+        internal static Circle MapToVolume(IVolumeToSectionTransform mapper, Circle mosaicCircle)
+        {
+            if (mapper.TryMapShapeSectionToVolume(mosaicCircle) is Circle mapped)
+                return new Circle(new Geometry.Vector2(mapped.Center.X, mapped.Center.Y), mapped.Radius);
+
+            return new Circle(mapper.SectionToVolume(mosaicCircle.Center), mosaicCircle.Radius);
+        }
+
         public abstract Circle MosaicCircle { get; }
 
         public abstract Circle VolumeCircle { get; }
@@ -111,7 +124,7 @@ namespace WebAnnotation.View
         public AdjacentLocationCircleView(LocationObj obj, IVolumeToSectionTransform mapper, double Radius) : base(obj)
         {
             _MosaicCircle = new Circle(obj.Position, Radius);
-            _VolumeCircle = new Circle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
+            _VolumeCircle = MapToVolume(mapper, _MosaicCircle);
 
             CreateViewObjects(MosaicCircle, mapper);
             CreateLabelObjects();
@@ -120,7 +133,7 @@ namespace WebAnnotation.View
         public AdjacentLocationCircleView(LocationObj obj, IVolumeToSectionTransform mapper) : base(obj)
         {
             _MosaicCircle = new Circle(obj.Position, obj.Radius * Global.AdjacentLocationRadiusScalar);
-            _VolumeCircle = new Circle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
+            _VolumeCircle = MapToVolume(mapper, _MosaicCircle);
 
             CreateViewObjects(MosaicCircle, mapper);
             CreateLabelObjects();
@@ -129,7 +142,7 @@ namespace WebAnnotation.View
         public AdjacentLocationCircleView(LocationObj obj, Circle mosaicCircle, IVolumeToSectionTransform mapper) : base(obj)
         {
             _MosaicCircle = mosaicCircle;
-            _VolumeCircle = new Circle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
+            _VolumeCircle = MapToVolume(mapper, _MosaicCircle);
 
             CreateViewObjects(MosaicCircle, mapper);
             CreateLabelObjects();
@@ -327,7 +340,7 @@ namespace WebAnnotation.View
         public LocationCircleView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
         {
             _MosaicCircle = new Circle(obj.Position, obj.Radius);
-            _VolumeCircle = new Circle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
+            _VolumeCircle = MapToVolume(mapper, _MosaicCircle);
 
             //RegisterForLocationEvents();
             //RegisterForStructureChangeEvents();
@@ -337,13 +350,12 @@ namespace WebAnnotation.View
 
         private void CreateViewObjects(Circle MosaicCircle, IVolumeToSectionTransform mapper)
         {
-            Geometry.Vector2 VolumePosition = mapper.SectionToVolume(MosaicCircle.Center);
             bool hasParent = modelObj.Parent?.ParentID.HasValue ?? false;
             float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(modelObj.TypeCode, hasParent);
             Color color = modelObj.Parent is null
                 ? Color.Gray.SetAlpha(opacity)
                 : ColorForStructure(modelObj.Parent, opacity);
-            circleView = new CircleView(new Circle(VolumePosition, modelObj.Radius), color);
+            circleView = new CircleView(_VolumeCircle, color);
         }
 
         private void CreateLabelObjects() => structureLabels = new StructureCircleLabels(modelObj, VolumeCircle);

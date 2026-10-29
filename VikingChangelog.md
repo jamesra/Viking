@@ -23,6 +23,7 @@ Documentation/source/Client/versionhistory.rst.
 
 ## 1.2.135 — not yet released
 
+* A circle you resize now keeps the size of the blue preview after you drop it, including on sections where the volume is scaled or warped (it was redrawn at its section-pixel radius, so it could come out a different size).
 * A polygon you accept from **Segment to Polygon** or **Resegment** now merges into any annotation of the same structure on the same section that it overlaps, as accepting an auto-segmentation does. The lowest-numbered of them is kept (the one with the most links wins first), it gets the union outline, and the location links of the others move to it.
 <!-- SameStructureMerge reuses LocationSiblingMerge.ChooseSurvivorId (most links, then lowest ID) and the link transfer from AutoCirclePolygonizeController.Accept. A brand-new structure from Tab has no siblings, so it is not merged; a linked location made by segmentation is not merged either. -->
 * Drawing a closed loop with the pen around a circle and choosing **Convert to polygon** now also merges the other circles of the same structure on that section that the loop touches or holds into the new polygon. If the loop touches or holds other polygons of the same structure, Viking asks **Merge polygons** first (a glial cell can split and bump into another of its processes). The lowest-numbered location is kept, and the others' location links move to it.
