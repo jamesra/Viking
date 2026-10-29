@@ -24,6 +24,8 @@ Documentation/source/Client/versionhistory.rst.
 ## 1.2.135 — not yet released
 
 * Fix: an opacity changed in Annotation Preferences could jump back to its old value after **OK** on the annotation that was under the mouse when the dialog opened, once the mouse moved off it.
+* Fix: after **Export frames** or **Export Tiles** (Section menu), the viewer stayed on the last section exported instead of the section you were viewing. It now goes back to that section when the export finishes or is canceled.
+<!-- RenderSceneToTexture switches this.Section per tile and never restored it. The frame and tile exports now restore the viewed section once, through TaskChaining.RestoreAfterAsync, after every tile has drained (ExportTiles now waits for each section's tiles before the next). -->
 
 ## 1.2.134 — 2026-10-28 (Viking Test, unsigned)
 

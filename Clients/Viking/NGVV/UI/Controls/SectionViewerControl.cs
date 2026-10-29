@@ -1193,7 +1193,8 @@ namespace Viking.UI.Controls
         /// <paramref name="Filename"/>, rendered with <see cref="Viking.Common.FrameExportPlan"/>: one tile when the frame fits, otherwise a grid
         /// whose tile size is capped at 4096 pixels on HiDef devices and 2048 otherwise. Each tile file name appends the section, tile center,
         /// and downsample to the base name. A tile whose file already exists is skipped, not re-rendered. At most two tiles render and
-        /// save at a time. Called by the frame capture export.
+        /// save at a time. Leaves the viewer on section <paramref name="Z"/>, as <see cref="RenderSceneToTexture"/> switches it per tile;
+        /// the frame capture export, its caller, restores the viewed section once all frames are written.
         /// </summary>
         /// <param name="Filename">Base file name that each tile name is built from.</param>
         /// <param name="MyRect">Volume-space rectangle to export.</param>
@@ -1282,7 +1283,7 @@ namespace Viking.UI.Controls
                 dirInfo.Attributes &= ~System.IO.FileAttributes.ReadOnly;
 
                 //Get the boundaries of the exported section S, not the section on screen; this runs off the UI thread,
-                //so this.Section is not switched here (RenderSceneToTexture switches it per tile).
+                //so this.Section is not switched here (RenderSceneToTexture switches it per tile; menuExportTiles_Click restores it).
                 MappingBase mapping = S.VolumeViewModel.GetTileMapping(Volume.ActiveVolumeTransform, S.Number, this.CurrentChannel, this.CurrentTransform);
 
                 //A section without this channel or transform has nothing to export
@@ -1397,6 +1398,11 @@ namespace Viking.UI.Controls
 
                 }
 
+                //Wait for this section's tiles: a tile still rendering would set this.Section to this section again after the
+                //next section's tiles, or the restore when the export ends, had set it.
+                while (listTasks.Count > 0)
+                    listTasks.Remove(await Task.WhenAny(listTasks));
+
                 System.IO.StreamWriter? stream = null;
 
                 string XMLString =
@@ -1435,8 +1441,6 @@ namespace Viking.UI.Controls
             */
             if (token.IsCancellationRequested)
                 return null;
-
-            SectionViewModel originalSection = this.Section;
 
             this.Section = State.volume.SectionViewModels[Z];
 
@@ -3078,18 +3082,21 @@ namespace Viking.UI.Controls
             using GenericProgressForm progressForm = new();
             progressForm.Show();
 
-            //Request the UI to capture each frame
-            for (int i = 0; i < form.Frames.Length; i++)
+            //Request the UI to capture each frame. Each render switches the viewer to the frame's section; go back to the viewed one after.
+            await TaskChaining.RestoreAfterAsync(() => this.Section, s => this.Section = s, async () =>
             {
-                FrameCapture frame = form.Frames[i];
-                int Z = (int)Math.Round(frame.Z);
-                if (State.volume.SectionViewModels.ContainsKey(Z) == false)
-                    continue;
-                await this.ExportImage(frame.Filename, frame.Rect, Z, frame.downsample, frame.IncludeOverlay);
-                progressForm.ShowProgress("Exported frame: " + frame.Filename, (double)i / (double)form.Frames.Length);
-                if (progressForm.DialogResult == DialogResult.Cancel)
-                    break;
-            }
+                for (int i = 0; i < form.Frames.Length; i++)
+                {
+                    FrameCapture frame = form.Frames[i];
+                    int Z = (int)Math.Round(frame.Z);
+                    if (State.volume.SectionViewModels.ContainsKey(Z) == false)
+                        continue;
+                    await this.ExportImage(frame.Filename, frame.Rect, Z, frame.downsample, frame.IncludeOverlay);
+                    progressForm.ShowProgress("Exported frame: " + frame.Filename, (double)i / (double)form.Frames.Length);
+                    if (progressForm.DialogResult == DialogResult.Cancel)
+                        break;
+                }
+            });
 
             progressForm.Close();
         }
@@ -3269,7 +3276,10 @@ namespace Viking.UI.Controls
                 LastExportSection = exportProperties.LastSectionInExport;
             }
 
-            Task.Run(() => ExportTiles(exportProperties.ExportPath, FirstExportSection, LastExportSection, exportProperties.Downsample, CancellationToken.None));
+            //Each tile render switches the viewer to the tile's section. Read and restore the viewed section here, on the UI thread,
+            //once every tile has been written.
+            _ = TaskChaining.RestoreAfterAsync(() => this.Section, s => this.Section = s,
+                () => Task.Run(() => ExportTiles(exportProperties.ExportPath, FirstExportSection, LastExportSection, exportProperties.Downsample, CancellationToken.None)));
         }
 
         private void menuSectionShowTileMesh_Click(object sender, EventArgs e) => State.ShowTileMesh = !State.ShowTileMesh;
