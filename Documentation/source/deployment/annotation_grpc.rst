@@ -67,7 +67,12 @@ hostname and proxy upstream if it is reached through the proxy.
    configuration with ``docker compose config --quiet``, runs
    ``docker compose up -d --build grpc-annotation-service``, waits up to 120 s for the HTTPS port to
    answer and prints the endpoint (``https://localhost:<port + 1>/``). Re-running is safe.
-4. ``-Status`` lists the deployed projects; ``-Database <database> -Remove`` runs ``down`` (volumes are kept).
+4. ``-Status`` lists the deployed projects with their containers, then for each one a line such as
+   ``Endpoint: https://localhost:5011/  Health: ready``. Health is ``ready`` when the HTTPS port
+   completes a TLS handshake, ``not answering`` when the service runs but does not (still starting,
+   or failing: check ``docker compose --project-name <project> logs grpc-annotation-service``), and
+   ``stopped`` when it is not running. It only reads. ``-Database <database> -Remove`` runs ``down``
+   (volumes are kept).
 5. Production needs ``-Environment Production -Confirm``; without ``-Confirm`` the script refuses
    (and PowerShell then asks before each step). ``-Environment`` defaults to ``Test``.
 

@@ -23,7 +23,10 @@
         variables set only for those calls. It then waits up to 120 seconds for
         the HTTPS port to complete a TLS handshake (Docker accepts TCP on a published port before
         the service listens) and prints the endpoint a Viking client should use.
-      - -Status lists deployed viking-annotation-* projects with their containers and ports.
+      - -Status lists deployed viking-annotation-* projects with their containers and ports, then
+        each project's Viking endpoint (https://localhost:<HTTPS port>/) and health: ready when
+        the HTTPS port completes a TLS handshake within 2 seconds, not answering when the service
+        runs but does not, stopped when it is not running. Read-only.
       - -Remove stops and removes one project's containers and network (volumes are kept).
 
     Safety contract:
@@ -60,7 +63,8 @@
     without -v, so volumes are kept).
 
 .PARAMETER Status
-    Lists deployed viking-annotation-* projects with container status and published ports.
+    Lists deployed viking-annotation-* projects with container status, published ports, endpoint
+    and health (ready, not answering or stopped).
 
 .EXAMPLE
     .\Servers\GrpcAnnotationService\scripts\Deploy-AnnotationGrpc.ps1 -Database RC3 -SqlServer "192.168.0.110,1433" -WhatIf
@@ -120,6 +124,8 @@ $firstPort = 5010
 $reservedPorts = @(5020)
 # Seconds to wait after `up` for the HTTPS port to answer.
 $startTimeoutSeconds = 120
+# Milliseconds -Status gives each running project's TLS probe.
+$statusProbeMilliseconds = 2000
 $serviceName = 'grpc-annotation-service'
 
 <#
@@ -230,13 +236,26 @@ function Invoke-ComposeService([string] $ProjectName, [System.Collections.IDicti
 
 <#
 .SYNOPSIS
-    Returns the host port a `docker ps` Ports column maps to container port 80/tcp, or $null.
+    Returns the host port a `docker ps` Ports column maps to the given container TCP port, or $null.
 .DESCRIPTION
     Pure. Reads text such as "0.0.0.0:5010->80/tcp, [::]:5010->80/tcp, 0.0.0.0:5011->443/tcp".
+    The IPv4 and IPv6 rows of one mapping name the same host port, so the first match is taken.
+    Used with 80 for the h2c port a running project keeps and with 443 for its Viking endpoint.
 #>
-function Get-PublishedHttpPort([string] $Ports) {
-    if ($Ports -match ':(\d+)->80/tcp') { return [int]$Matches[1] }
+function Get-PublishedPort([string] $Ports, [int] $ContainerPort) {
+    if ($Ports -match ":(\d+)->$ContainerPort/tcp") { return [int]$Matches[1] }
     return $null
+}
+
+<#
+.SYNOPSIS
+    Returns the `docker ps` Ports text of each running grpc-annotation-service container of the project.
+.DESCRIPTION
+    Read-only. Returns nothing when the service is not running (stopped or never started).
+#>
+function Get-ServicePorts([string] $ProjectName) {
+    return (docker ps --filter "label=com.docker.compose.project=$ProjectName" `
+            --filter "label=com.docker.compose.service=$serviceName" --format '{{.Ports}}')
 }
 
 <#
@@ -311,6 +330,24 @@ function Start-ComposeProject([string] $ProjectName, [System.Collections.IDictio
 
 <#
 .SYNOPSIS
+    Returns the -Status line for one project: its Viking endpoint and whether it is ready, not answering, or stopped.
+.DESCRIPTION
+    RunningPorts is the Ports text of the project's running grpc-annotation-service containers
+    (Get-ServicePorts); none means stopped, and nothing is probed. A running service is probed
+    once with Test-TlsHandshake on the host port mapped to 443/tcp: ready when the handshake
+    completes within ProbeMilliseconds, otherwise not answering. A running service that publishes
+    no HTTPS port has no endpoint and is not answering. Read-only; never throws.
+#>
+function Get-StatusLine([string[]] $RunningPorts, [int] $ProbeMilliseconds) {
+    if (@($RunningPorts | Where-Object { $null -ne $_ }).Count -eq 0) { return '  Endpoint: none  Health: stopped' }
+    $httpsPort = Get-PublishedPort ($RunningPorts -join ', ') 443
+    if (-not $httpsPort) { return '  Endpoint: none  Health: not answering' }
+    $health = if (Test-TlsHandshake $httpsPort $ProbeMilliseconds) { 'ready' } else { 'not answering' }
+    return "  Endpoint: https://localhost:$httpsPort/  Health: $health"
+}
+
+<#
+.SYNOPSIS
     Throws unless docker is on PATH.
 #>
 function Assert-Docker {
@@ -328,8 +365,10 @@ if ($Environment -eq 'Production') {
 
 if ($Status) {
     Assert-Docker
-    $projects = @(docker compose ls --all --format json | ConvertFrom-Json |
-        Where-Object { $_.Name -like "$projectPrefix*" })
+    # Assigned before filtering: Windows PowerShell 5.1's ConvertFrom-Json emits a JSON array as one
+    # pipeline object, which Where-Object would pass through whole.
+    $listed = docker compose ls --all --format json | ConvertFrom-Json
+    $projects = @($listed | Where-Object { $_.Name -like "$projectPrefix*" })
     if ($projects.Count -eq 0) {
         Write-Host 'No viking-annotation-* deployments found.'
         return
@@ -337,6 +376,7 @@ if ($Status) {
     foreach ($proj in $projects) {
         Write-Host ("{0}  [{1}]" -f $proj.Name, $proj.Status)
         docker ps --all --filter "label=com.docker.compose.project=$($proj.Name)" --format '  {{.Names}}  {{.Status}}  {{.Ports}}'
+        Write-Host (Get-StatusLine (Get-ServicePorts $proj.Name) $statusProbeMilliseconds)
     }
     return
 }
@@ -369,8 +409,7 @@ if ($envFull.StartsWith($repoRoot.TrimEnd('\') + '\', [System.StringComparison]:
 # A running project keeps its ports: its own listeners would otherwise make a re-run fail or move it.
 $published = $null
 if (Get-Command docker -ErrorAction SilentlyContinue) {
-    $published = Get-PublishedHttpPort ((docker ps --filter "label=com.docker.compose.project=$project" `
-                --filter "label=com.docker.compose.service=$serviceName" --format '{{.Ports}}') -join ', ')
+    $published = Get-PublishedPort ((Get-ServicePorts $project) -join ', ') 80
 }
 $inUse = Get-ListeningPorts
 if ($PSBoundParameters.ContainsKey('Port')) {

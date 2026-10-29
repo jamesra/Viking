@@ -12,7 +12,8 @@
 
     The whole-script tests replace docker with a function named docker that records its
     arguments, so no real docker command runs: -WhatIf must skip `up`, a real run must call
-    `up -d --build grpc-annotation-service`, and a running project must keep its port.
+    `up -d --build grpc-annotation-service`, and a running project must keep its port. -Status
+    must print each project's endpoint and health line and call nothing but `compose ls` and `ps`.
 
     Written for Pester 3.4 (the version shipped with Windows PowerShell); the same syntax runs on
     PowerShell 7 with that module.
@@ -31,8 +32,8 @@ $ast = [System.Management.Automation.Language.Parser]::ParseFile($scriptPath, [r
 if ($errors.Count -gt 0) { throw "Cannot parse ${scriptPath}: $($errors[0].Message)" }
 
 $helperNames = 'Get-ProjectName', 'Find-FreePortPair', 'Get-UnfilledKeys', 'Get-ComposeVariables',
-               'Invoke-ComposeService', 'Get-PublishedHttpPort', 'Test-TlsHandshake', 'Wait-ServiceReady',
-               'Start-ComposeProject'
+               'Invoke-ComposeService', 'Get-PublishedPort', 'Get-ServicePorts', 'Test-TlsHandshake',
+               'Wait-ServiceReady', 'Start-ComposeProject', 'Get-StatusLine'
 $helperSource = $ast.FindAll({
         param($node)
         $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $helperNames -contains $node.Name
@@ -47,9 +48,57 @@ $settingSource = $ast.EndBlock.Statements |
         $settingNames -contains $_.Left.VariablePath.UserPath
     } | ForEach-Object { $_.Extent.Text }
 
+<#
+.SYNOPSIS
+    Starts a loopback TLS server that completes one handshake; returns its parts for Complete-/Stop-LoopbackTlsServer.
+.DESCRIPTION
+    Uses a throwaway self-signed certificate whose name is not "localhost" (the probe must accept
+    any certificate). The server runs on its own runspace so the server and client sides of the
+    handshake run at the same time. The certificate is re-imported from PFX because Schannel on
+    .NET Framework cannot use an ephemeral key.
+#>
+function Start-LoopbackTlsServer {
+    $s = @{ Rsa = [System.Security.Cryptography.RSA]::Create(2048) }
+    $request = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new('CN=pester', $s.Rsa,
+        [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+    $s.Ephemeral = $request.CreateSelfSigned([DateTimeOffset]::UtcNow.AddDays(-1), [DateTimeOffset]::UtcNow.AddDays(1))
+    $s.Cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
+        $s.Ephemeral.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx, 'pester'), 'pester',
+        [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable)
+    $s.Listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
+    $s.Listener.Start()
+    $s.Port = $s.Listener.LocalEndpoint.Port
+    $s.Server = [powershell]::Create().AddScript({
+        param($listener, $cert)
+        $client = $listener.AcceptTcpClient()
+        try {
+            $ssl = [System.Net.Security.SslStream]::new($client.GetStream(), $false)
+            $ssl.AuthenticateAsServer($cert)
+            $ssl.Dispose()
+        }
+        finally { $client.Dispose() }
+    }).AddArgument($s.Listener).AddArgument($s.Cert)
+    $s.Handle = $s.Server.BeginInvoke()
+    return $s
+}
+
+<#
+.SYNOPSIS
+    Waits for the server's handshake to finish; rethrows a server-side handshake failure.
+#>
+function Complete-LoopbackTlsServer($Server) { $Server.Server.EndInvoke($Server.Handle) }
+
+<#
+.SYNOPSIS
+    Stops and disposes the server; stopping the listener first unblocks AcceptTcpClient if nothing connected.
+#>
+function Stop-LoopbackTlsServer($Server) {
+    $Server.Listener.Stop(); $Server.Server.Dispose(); $Server.Cert.Dispose(); $Server.Ephemeral.Dispose(); $Server.Rsa.Dispose()
+}
+
 Describe 'Deploy-AnnotationGrpc helper loading' {
-    It 'finds all nine helpers and all four settings in the script' {
-        @($helperSource).Count | Should Be 9
+    It 'finds all eleven helpers and all four settings in the script' {
+        @($helperSource).Count | Should Be 11
         @($settingSource).Count | Should Be 4
     }
 }
@@ -156,16 +205,87 @@ Describe 'Deploy-AnnotationGrpc helpers' {
         }
     }
 
-    Context 'Get-PublishedHttpPort' {
+    Context 'Get-PublishedPort' {
+        $ports = '0.0.0.0:5011->443/tcp, [::]:5011->443/tcp, 0.0.0.0:5010->80/tcp, [::]:5010->80/tcp'
         It 'returns the host port mapped to 80/tcp' {
-            Get-PublishedHttpPort '0.0.0.0:5011->443/tcp, [::]:5011->443/tcp, 0.0.0.0:5010->80/tcp, [::]:5010->80/tcp' | Should Be 5010
+            Get-PublishedPort $ports 80 | Should Be 5010
         }
-        It 'returns $null when 80/tcp is not published' {
-            Get-PublishedHttpPort '0.0.0.0:5011->443/tcp' | Should Be $null
-            Get-PublishedHttpPort '' | Should Be $null
+        It 'returns the host port mapped to 443/tcp, once, despite the IPv4 and IPv6 rows' {
+            $p = @(Get-PublishedPort $ports 443)
+            $p.Count | Should Be 1
+            $p[0] | Should Be 5011
         }
-        It 'does not take a container port that only ends in 80' {
-            Get-PublishedHttpPort '0.0.0.0:6080->8080/tcp, 0.0.0.0:6180->180/tcp' | Should Be $null
+        It 'reads an IPv6-only mapping' {
+            Get-PublishedPort '[::]:6011->443/tcp' 443 | Should Be 6011
+        }
+        It 'returns $null when the container port is not published' {
+            Get-PublishedPort '0.0.0.0:5011->443/tcp' 80 | Should Be $null
+            Get-PublishedPort '0.0.0.0:5010->80/tcp, [::]:5010->80/tcp' 443 | Should Be $null
+            Get-PublishedPort '' 443 | Should Be $null
+        }
+        It 'does not take a container port that only ends in the one asked for' {
+            Get-PublishedPort '0.0.0.0:6080->8080/tcp, 0.0.0.0:6180->180/tcp' 80 | Should Be $null
+            Get-PublishedPort '0.0.0.0:6443->8443/tcp, 0.0.0.0:6444->1443/tcp' 443 | Should Be $null
+        }
+        It 'does not take a container port that only starts with the one asked for' {
+            Get-PublishedPort '0.0.0.0:5443->4430/tcp' 443 | Should Be $null
+        }
+        It 'ignores a UDP mapping of the same port' {
+            Get-PublishedPort '0.0.0.0:7443->443/udp' 443 | Should Be $null
+        }
+    }
+
+    Context 'Get-ServicePorts' {
+        $calls = New-Object System.Collections.ArrayList
+        $fake = @{ out = @() }
+        function docker { [void]$calls.Add(@($args) -join ' '); $fake.out }
+
+        It 'asks docker ps for the running service containers of the project only' {
+            $calls.Clear(); $fake.out = @('0.0.0.0:5011->443/tcp')
+            $r = @(Get-ServicePorts 'viking-annotation-rc3')
+            $calls.Count | Should Be 1
+            $calls[0] | Should BeExactly 'ps --filter label=com.docker.compose.project=viking-annotation-rc3 --filter label=com.docker.compose.service=grpc-annotation-service --format {{.Ports}}'
+            $r.Count | Should Be 1
+            $r[0] | Should BeExactly '0.0.0.0:5011->443/tcp'
+        }
+        It 'returns one entry per running container, and none when no container runs' {
+            $fake.out = @('0.0.0.0:5011->443/tcp', '')
+            @(Get-ServicePorts 'p').Count | Should Be 2
+            $fake.out = @()
+            @(Get-ServicePorts 'p').Count | Should Be 0
+        }
+    }
+
+    Context 'Get-StatusLine' {
+        It 'reports stopped, without probing, when no service container runs' {
+            Mock Test-TlsHandshake { $true }
+            Get-StatusLine @() 2000 | Should BeExactly '  Endpoint: none  Health: stopped'
+            Get-StatusLine $null 2000 | Should BeExactly '  Endpoint: none  Health: stopped'
+            Assert-MockCalled Test-TlsHandshake -Exactly 0 -Scope It
+        }
+        It 'reports the endpoint and ready when the HTTPS port completes a TLS handshake' {
+            Mock Test-TlsHandshake { $true }
+            Get-StatusLine @('0.0.0.0:5010->80/tcp, [::]:5010->80/tcp, 0.0.0.0:5011->443/tcp, [::]:5011->443/tcp') 2000 |
+                Should BeExactly '  Endpoint: https://localhost:5011/  Health: ready'
+            Assert-MockCalled Test-TlsHandshake -Exactly 1 -Scope It -ParameterFilter { $Port -eq 5011 -and $TimeoutMilliseconds -eq 2000 }
+        }
+        It 'reports the endpoint and not answering when the handshake fails' {
+            Mock Test-TlsHandshake { $false }
+            Get-StatusLine @('0.0.0.0:6011->443/tcp') 750 |
+                Should BeExactly '  Endpoint: https://localhost:6011/  Health: not answering'
+            Assert-MockCalled Test-TlsHandshake -Exactly 1 -Scope It -ParameterFilter { $Port -eq 6011 -and $TimeoutMilliseconds -eq 750 }
+        }
+        It 'reads the HTTPS port from any running container of the project' {
+            Mock Test-TlsHandshake { $true }
+            Get-StatusLine @('', '0.0.0.0:6011->443/tcp') 2000 |
+                Should BeExactly '  Endpoint: https://localhost:6011/  Health: ready'
+        }
+        It 'reports no endpoint and not answering, without probing, when HTTPS is not published' {
+            Mock Test-TlsHandshake { $true }
+            Get-StatusLine @('0.0.0.0:5010->80/tcp, [::]:5010->80/tcp') 2000 |
+                Should BeExactly '  Endpoint: none  Health: not answering'
+            Get-StatusLine @('') 2000 | Should BeExactly '  Endpoint: none  Health: not answering'
+            Assert-MockCalled Test-TlsHandshake -Exactly 0 -Scope It
         }
     }
 
@@ -258,39 +378,12 @@ Describe 'Deploy-AnnotationGrpc helpers' {
             Test-TlsHandshake $port 500 | Should Be $false
         }
         It 'returns $true once the port completes a TLS handshake, whatever name the certificate carries' {
-            # A loopback TLS server with a throwaway self-signed certificate whose name is not
-            # "localhost" (the probe must accept any certificate). It runs on its own runspace so the
-            # server and client sides of the handshake run at the same time. The certificate is
-            # re-imported from PFX because Schannel on .NET Framework cannot use an ephemeral key.
-            $rsa = [System.Security.Cryptography.RSA]::Create(2048)
-            $request = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new('CN=pester', $rsa,
-                [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
-            $ephemeral = $request.CreateSelfSigned([DateTimeOffset]::UtcNow.AddDays(-1), [DateTimeOffset]::UtcNow.AddDays(1))
-            $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
-                $ephemeral.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx, 'pester'), 'pester',
-                [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable)
-            $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
-            $listener.Start()
-            $server = [powershell]::Create().AddScript({
-                param($listener, $cert)
-                $client = $listener.AcceptTcpClient()
-                try {
-                    $ssl = [System.Net.Security.SslStream]::new($client.GetStream(), $false)
-                    $ssl.AuthenticateAsServer($cert)
-                    $ssl.Dispose()
-                }
-                finally { $client.Dispose() }
-            }).AddArgument($listener).AddArgument($cert)
-            $handle = $server.BeginInvoke()
+            $tls = Start-LoopbackTlsServer
             try {
-                Test-TlsHandshake $listener.LocalEndpoint.Port 5000 | Should Be $true
-                # Rethrows a server-side handshake failure.
-                $server.EndInvoke($handle)
+                Test-TlsHandshake $tls.Port 5000 | Should Be $true
+                Complete-LoopbackTlsServer $tls
             }
-            finally {
-                # Stopping the listener first unblocks AcceptTcpClient if the probe never connected.
-                $listener.Stop(); $server.Dispose(); $cert.Dispose(); $ephemeral.Dispose(); $rsa.Dispose()
-            }
+            finally { Stop-LoopbackTlsServer $tls }
         }
     }
 
@@ -420,5 +513,75 @@ Describe 'Deploy-AnnotationGrpc start step (docker faked)' {
             { & $scriptPath -Database Pester -EnvFile $envPath -Port $port -WhatIf 6>$null } | Should Throw 'already in use'
         }
         finally { $listeners | ForEach-Object { $_.Stop() } }
+    }
+}
+
+Describe 'Deploy-AnnotationGrpc -Status (docker faked)' {
+    $calls = New-Object System.Collections.ArrayList
+    # A loopback port with no listener stands in for a running project whose service does not answer;
+    # the script's own Test-TlsHandshake probes it.
+    $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
+    $listener.Start()
+    $closedPort = $listener.LocalEndpoint.Port
+    $listener.Stop()
+    $fake = @{
+        ls = '[{"Name":"viking-annotation-rc3","Status":"running(1)"},{"Name":"identityserver","Status":"running(2)"},{"Name":"viking-annotation-old","Status":"exited(1)"}]'
+        ps = @{ 'viking-annotation-rc3' = "0.0.0.0:6010->80/tcp, [::]:6010->80/tcp, 0.0.0.0:$closedPort->443/tcp, [::]:$closedPort->443/tcp" }
+    }
+    # Shadows docker.exe for the script: records every call and never runs a real docker command.
+    function docker {
+        $a = @($args)
+        [void]$calls.Add($a -join ' ')
+        $global:LASTEXITCODE = 0
+        if ($a[0] -eq 'compose' -and $a[1] -eq 'ls') { return $fake.ls }
+        if ($a[0] -eq 'ps' -and $a -contains '--all') { return '  fake-container  fake-status' }
+        if ($a[0] -eq 'ps') {
+            $project = ($a | Where-Object { $_ -like 'label=com.docker.compose.project=*' }) -replace '^.*=', ''
+            if ($fake.ps.ContainsKey($project)) { return $fake.ps[$project] }
+        }
+    }
+
+    It 'prints an endpoint and health line under each viking-annotation-* project and nothing for others' {
+        $calls.Clear()
+        $out = & $scriptPath -Status 6>&1 | Out-String
+        $rc3 = $out.IndexOf('viking-annotation-rc3  [running(1)]')
+        $rc3Health = $out.IndexOf("  Endpoint: https://localhost:$closedPort/  Health: not answering")
+        $old = $out.IndexOf('viking-annotation-old  [exited(1)]')
+        $oldHealth = $out.IndexOf('  Endpoint: none  Health: stopped')
+        $rc3 | Should Not Be -1
+        $rc3 | Should BeLessThan $rc3Health
+        $rc3Health | Should BeLessThan $old
+        $old | Should BeLessThan $oldHealth
+        @([regex]::Matches($out, 'Health: ')).Count | Should Be 2
+        $out | Should Not Match 'identityserver'
+    }
+    It 'reports ready, with its endpoint, for a project whose HTTPS port completes a TLS handshake' {
+        $tls = Start-LoopbackTlsServer
+        $saved = $fake.ls
+        try {
+            $fake.ls = '[{"Name":"viking-annotation-live","Status":"running(1)"}]'
+            $fake.ps['viking-annotation-live'] = "0.0.0.0:6010->80/tcp, 0.0.0.0:$($tls.Port)->443/tcp, [::]:$($tls.Port)->443/tcp"
+            $out = & $scriptPath -Status 6>&1 | Out-String
+            # Asserted before Complete-LoopbackTlsServer, which would wait forever if nothing connected.
+            $out | Should Match ([regex]::Escape("  Endpoint: https://localhost:$($tls.Port)/  Health: ready"))
+            Complete-LoopbackTlsServer $tls
+        }
+        finally { $fake.ls = $saved; Stop-LoopbackTlsServer $tls }
+    }
+    It 'only reads: calls docker compose ls once and otherwise only docker ps' {
+        $calls.Clear()
+        & $scriptPath -Status 6>$null | Out-Null
+        @($calls | Where-Object { $_ -like 'compose ls *' }).Count | Should Be 1
+        @($calls | Where-Object { $_ -notlike 'compose ls *' -and $_ -notlike 'ps *' }).Count | Should Be 0
+    }
+    It 'says so when no viking-annotation-* project exists' {
+        $saved = $fake.ls
+        try {
+            $fake.ls = '[{"Name":"identityserver","Status":"running(2)"}]'
+            $out = & $scriptPath -Status 6>&1 | Out-String
+            $out | Should Match 'No viking-annotation-\* deployments found\.'
+            $out | Should Not Match 'Health: '
+        }
+        finally { $fake.ls = $saved }
     }
 }
