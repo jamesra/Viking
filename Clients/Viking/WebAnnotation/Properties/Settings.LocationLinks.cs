@@ -68,6 +68,20 @@ namespace WebAnnotation.Properties
         }
 
         /// <summary>
+        /// How readily polygon labels tilt to run along the shape, 0 ("Never", level only) to 1 ("Freely", any gain in
+        /// font size). Keep the default in step with
+        /// <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_LABEL_ROTATION"/>.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.5")]
+        public double LabelRotation
+        {
+            get => (double)this[nameof(LabelRotation)];
+            set => this[nameof(LabelRotation)] = value;
+        }
+
+        /// <summary>
         /// False outlines black text in white. True draws white text with a black outline.
         /// Only used while <see cref="LabelOutlineEnabled"/> is true.
         /// </summary>

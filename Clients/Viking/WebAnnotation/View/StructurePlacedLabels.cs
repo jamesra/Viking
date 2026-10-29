@@ -9,7 +9,7 @@ namespace WebAnnotation.View
 {
     /// <summary>
     /// Renders labels for a Structure along a run of a polygon, one row per <see cref="LabelPlacement.RowCenters"/> entry,
-    /// rotated with the run. Built in two steps so the rows <see cref="LabelLayout.Fit"/> measured are the rows placed:
+    /// rotated with the run. Built in two steps so the rows <see cref="LabelLayout.Fit(LabelContent, double)"/> measured are the rows placed:
     /// construct, pass <see cref="Content"/> to the layout, then <see cref="Place"/> the result.
     /// </summary>
     public class StructurePlacedLabels : StructureLabelsBase
@@ -33,7 +33,7 @@ namespace WebAnnotation.View
         public LabelContent Content(int upCount, int downCount) =>
             new([.. LabelRows.Select(r => new LabelRow(LabelMetrics.UnitWidth(r.Text), r.Scale))], upCount, downCount);
 
-        /// <summary>Creates the row views at a run placement that <see cref="LabelLayout.Fit"/> made from <see cref="Content"/>.</summary>
+        /// <summary>Creates the row views at a run placement that <see cref="LabelLayout.Fit(LabelContent, double)"/> made from <see cref="Content"/>.</summary>
         public void Place(LabelPlacement placement)
         {
             Placement = placement;

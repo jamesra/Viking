@@ -199,6 +199,52 @@
                                    TextWrapping="Wrap"
                                    Text="Draws a thin outline around annotation text so it stays readable over both light and dark images."/>
 
+                        <!-- Label Rotation -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Content="Label rotation:"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding LabelRotation, Mode=TwoWay}"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    TickFrequency="0.05"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="5"/>
+                            <TextBox Grid.Row="0" Grid.Column="3"
+                                     Text="{Binding LabelRotation, StringFormat='F2'}"
+                                     IsReadOnly="True"
+                                     Margin="5,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Width="50"
+                                     HorizontalAlignment="Left"/>
+                            <Grid Grid.Row="1" Grid.Column="1" Margin="5,0,5,0">
+                                <TextBlock Text="Never" FontSize="10" Foreground="Gray" HorizontalAlignment="Left"/>
+                                <TextBlock Text="Freely" FontSize="10" Foreground="Gray" HorizontalAlignment="Right"/>
+                            </Grid>
+                            <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,2,10,2"
+                                     TextWrapping="Wrap"
+                                     Text="{Binding LabelRotationReadout, Mode=OneWay}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="4"
+                                     Margin="10,0,10,10"
+                                     FontSize="10"
+                                     Foreground="Gray"
+                                     TextWrapping="Wrap"
+                                     Text="How readily a polygon's label tilts to run along a long, thin cell. Tilted text must be larger than level text, by more the steeper it tilts. Never keeps every label level; Freely tilts whenever that gives larger text. Labels move as you slide."/>
+                        </Grid>
+
                         <TextBlock Style="{StaticResource VisualsHeading}" Text="Annotations"/>
                         <!-- Polygon Opacity Parentless -->
                         <Grid>

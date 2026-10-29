@@ -41,10 +41,13 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
 - **Label font score** (`LabelLayout.RunFontSize`): for content whose rows at an ID font of 1 are $t_w$ wide (widest
   row, each row's width times its scale) and $t_h$ tall (sum of row scales: structure label 0.5, tags 0.25, ID 1, parent
   0.5), a run of width $W$ and height $H$ holding $k$ end markers of diameter $F$ allows the ID font
-  $F_k = \min\left(\frac{H}{1.1\,t_h}, \frac{W}{k + 1.1\,t_w}\right)$; its score is $F_k$ for a level run and $0.9\,F_k$
-  otherwise. The circle of radius $R$ allows $F_c = R/2$ (the circle labels' existing size). A run is used when its
-  text-only score $s_0 \ge 1.25\,F_c$; it then keeps the largest $k \le n$ markers with $s_k \ge 0.6\,s_0$, split between
-  down and up links in proportion. Free-space markers maximise
+  $F_k = \min\left(\frac{H}{1.1\,t_h}, \frac{W}{k + 1.1\,t_w}\right)$; a run at angle $\theta$ scores
+  $s_k = F_k / g(\theta)$ with required gain $g(\theta) = 1 + G\,\lvert\sin\theta\rvert$ (since 2026-10-29; before, $F_k$
+  level and ~~$0.9\,F_k$~~ tilted). $G = (1 - w)\cdot 1.0$ for the Label rotation preference $w \in (0, 1]$, default
+  $w = 0.5$, $G = 0.5$; $w = 0$ ("Never") considers level runs only. The circle of radius $R$ allows $F_c = R/2$ (the
+  circle labels' existing size). The best-scoring run is used when its text-only font
+  $F_0 \ge \max(1.25,\ g(\theta))\,F_c$; it then keeps the largest $k \le n$ markers with $s_k \ge 0.6\,s_0$, split
+  between down and up links in proportion. Free-space markers maximise
   $f(p) = \min(d_P(p),\ d_T(p),\ \min_j(\lVert p - c_j\rVert - r_j))$, with $d_P$ the signed distance to the polygon,
   $d_T$ the signed distance outside the text box and $c_j, r_j$ the markers placed so far; radius
   $\min(F/2, 0.95 f)$, at least $0.1F$.
@@ -60,6 +63,27 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
   $r = \min(\operatorname{dist}(\tfrac{N + E}{2}, \partial P), \sqrt{A/\pi})$ and centre $E - r\,d$.
 
 ## Algorithmic decisions
+
+- **2026-10-29 Label tilt costs a gain that grows with the angle; one preference sets it.** Why: a user disliked rotated
+  polygon labels. The flat 0.9 tilt score (2026-10-26 entry) let a 30° run beat level text for an 11% larger font, the
+  same price as 90°, and charged a principal axis 0.3° off level the full 10%. A run at $\theta$ now scores
+  $F / (1 + G\lvert\sin\theta\rvert)$: at the default $G = 0.5$ it must beat level text by 13% at 15°, 25% at 30°, 35%
+  at 45° and 50% at 90°, while a long thin process, which gains several-fold along its length, still rotates up to
+  vertical. The factor is at most 1, so it keeps the raster bound used to verify runs best first an upper bound. The
+  Label rotation preference $w$ (Annotation Preferences → Visuals → Text, "Never" 0 to "Freely" 1, default 0.5) sets
+  $G = (1 - w)\cdot 1.0$; at 0 only level runs and the circle are considered. The circle test takes the larger of the
+  circle preference and the tilt's required gain, $F_0 \ge \max(1.25, g(\theta))\,F_c$, rather than their product:
+  the circle is level text, so a tilted run needs its required gain over it as over a level run, but multiplied
+  ($1.25 \times 1.5 = 1.875$ at 90°) a two-line label in a thin vertical process (run font $H/2.2$ against circle font
+  $H/4$, ratio 1.82 whatever the length) would always fall back to the circle. Rejected: a separate on/off switch beside
+  a strength (the user chose one slider whose minimum is off); a threshold on the angle (a 30° process would then never
+  get text along it). Measured 2026-10-29 (synthetic, net48 Release): with the layouts cached, refitting a four-row label
+  with two markers costs 150 µs per cell (500 cells, 75 ms on one thread); the live relayout runs it in parallel per
+  section, visible sections first, at most every 50 ms while the slider moves. Where:
+  `Geometry.Core/Algorithms/LabelLayout.cs` (`RequiredGain`, `RotationGainForSetting`, `Fit`),
+  `Clients/Viking/WebAnnotation/UI/AnnotationMenu.cs` (`RequestLabelRelayout`); tests
+  `GeometryTests/LabelLayoutTests.cs`, `GeometryTests/FSCheck/PolygonSpec.cs`. To mirror into Viking `dev` `Clients/`
+  (same files, e81a41a0).
 
 - **2026-10-28 Correction lattices are sampled by one shared function.** Why: the client's `SectionLatticeField` was an
   older port of the service's sampler. Where a cell had only some corners it went straight to inverse-distance weighting,
@@ -120,7 +144,8 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
   markers and translate targets, so `Polygon.InscribedCircle` and `CalculateInscribedCircle` now return the maximum
   inscribed circle and the centroid version is deleted. Decisions: angles −75° to 90° in 15° steps plus the principal
   axis of the second moments of area, all in (−90°, 90°] so text never reads upside down and a vertical process reads
-  bottom to top; a tilted run scores 0.9 so near-level text snaps to level; the circle is kept unless a run beats it by
+  bottom to top; ~~a tilted run scores 0.9 so near-level text snaps to level~~ superseded 2026-10-29: a tilted run's
+  score is divided by $1 + G\lvert\sin\theta\rvert$ (entry above); the circle is kept unless a run beats it by
   25%, so round cells look as before, only correctly centred; in a run down-links sit at the left end and up-links at
   the right (user's convention), in the circle up-links above and down-links below as before; markers that do not fit
   go to the next-deepest free spots, as Sam2Trainer `seed.py interior_points` picks seeds. A raster cell counts as

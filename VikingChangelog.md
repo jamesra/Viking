@@ -34,6 +34,8 @@ Documentation/source/Client/versionhistory.rst.
 <!-- numUnitsPerPixel was fixed at 0..100 with 3 decimals; ScaleForm_Load now sizes DecimalPlaces and Minimum from the scale, Maximum 1e9, and OK writes the number back only when it was edited, so the volume's double is never sent through decimal. MeasurementMenu's Enum.Parse of the combo text moved into ScaleForm.TryParseUnit (case-sensitive: mm vs Mm). -->
 * Removed **Change Shape > Curve** from the right-click menu of annotations. It never did anything: converting an annotation to a curve is not implemented. **Change Shape > Circle** and **Convert to Polygon** work as before.
 <!-- Decision D-ChangeShapeCurveStub (2026-10-29): Location_ViewModelBase._AddConvertShapeMenus no longer adds the item, and ContextMenu_ConvertShape lost its empty OPENCURVE case. -->
+* Polygon labels tilt only when that makes the text clearly larger: the steeper the tilt, the larger the text must get, so compact cells keep level labels while long, thin processes still get text along them. Set how readily labels tilt with **Annotation Preferences > Visuals > Label rotation**; slide it to **Never** for level labels everywhere, or toward **Freely** for more tilting. The line under the slider says what the setting does, and labels move as you slide.
+<!-- LabelLayout scores a run at angle θ as F / (1 + G·|sin θ|), replacing the flat 0.9 for any tilt; G = (1 − w)·1 for the slider w, default 0.5; w = 0 considers level runs only. Live relayout: AnnotationMenu.RequestLabelRelayout, throttled to one pass per 50 ms. Publication notes 2026-10-29. -->
 
 
 ## 1.2.134 — 2026-10-28 (Viking Test, unsigned)
