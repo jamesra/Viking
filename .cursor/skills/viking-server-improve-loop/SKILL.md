@@ -107,7 +107,7 @@ The main session only launches the subagents, talks to the user when needed, and
 
 3. Parent: if `stop` is yes, do not schedule a wake (and have a subagent write the `final` report if the scout did not). Else increment `wakeCount`, run compactness hygiene if due (see Session and context), and schedule the next wake. Post to the user only when there is a commit, a new decision (as a question), a six-commit notice, a compact notice, or a stop; otherwise stay silent.
 4. When the user asks for a report, launch a scout-model subagent to write a `requested` report; the loop keeps running. When the user asks to stop, set `stop` in the ledger, call `ScheduleWakeup` with `stop: true`, launch a subagent for the `final` report, and schedule nothing.
-5. A wake that fires after `stop` was recorded or the deadline passed writes nothing new and does not re-schedule. A wake that fires before `nextWakeAt` ends silently and re-schedules.
+5. A wake that fires after `stop` was recorded writes nothing new and does not re-schedule. The first wake that starts after the deadline writes the `final` report (unless one already exists for this run), sets `stop`, and does not re-schedule. A wake that fires before `nextWakeAt` ends silently and re-schedules.
 
 ## Steering
 
