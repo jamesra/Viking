@@ -16,5 +16,8 @@ the first time each version starts, so it is written for the people who use Viki
 - Write bullets for users: what changed and how to use it, naming menus, buttons, hotkeys and preferences as Viking shows
   them. Leave out internal refactors and build changes. Notes only developers need go in an HTML comment (`<!-- -->`),
   which Viking does not show.
+- Start each bullet with a bold summary of 2–7 plain words that lets a reader skim (a fix keeps `Fix:` inside the bold),
+  then the full detail as plain text that does not repeat the summary, for example
+  `* **Fix: Capture Screen when zoomed in.** **Capture Screen** (Commands menu) showed an error instead of its dialog …`.
 - Supported Markdown: `#` headings, `*` or `-` bullets (indent two spaces to nest), paragraphs, `**bold**`, `` `code` `` and
   `[text](https://…)` links. Links into the repository are shown as plain text.
