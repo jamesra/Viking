@@ -33,6 +33,9 @@ namespace WebAnnotation.Actions
 
         private float OriginalAlpha;
 
+        /// <summary>The alpha the effect left on the view, read back from it, so a change made since can be recognized.</summary>
+        private float EffectAlpha;
+
         public MouseOverLocationCanvasViewEffect()
         {
         }
@@ -49,9 +52,14 @@ namespace WebAnnotation.Actions
             {
                 OriginalAlpha = cView.Alpha;
                 cView.Alpha /= 2.0f;
+                EffectAlpha = cView.Alpha;
             }
         }
 
+        /// <summary>
+        /// Puts the alpha back, unless something set the view's alpha while the effect was on (the Annotation Preferences
+        /// opacity sliders, OK or Apply). Restoring then would undo that new opacity, so the view keeps it.
+        /// </summary>
         protected void RemoveEffect(object view_obj)
         {
             if (view_obj is LocationLinkView link)
@@ -60,7 +68,7 @@ namespace WebAnnotation.Actions
                 return;
             }
 
-            if (view_obj is IColorView cView)
+            if (view_obj is IColorView cView && cView.Alpha == EffectAlpha)
             {
                 cView.Alpha = OriginalAlpha;
             }
