@@ -12,6 +12,8 @@ Prefer code that is both changed often and complex, not code that only looks unt
 
 Rank by churn times size. Within each category, search hotspots before the rest of the scope.
 
+With `hotspots`, rebuild `complexity`: for each of the top 20 hotspot files, every method over about 60 lines or nested deeper than three levels, as `{ file, method, lines, depth }`. The gate "Complexity does not grow" in [gates.md](gates.md) reads it, and category 9 works through it worst first.
+
 ## What to look for
 
 Each wake, pick the track (see SKILL.md Scope), then start at the track's category after `lastCategory` and search for an instance. gRPC-client wakes use 1-19 plus 20-21; Server uses 1-19 and 22; SQL uses 23 and 13-14; Parity uses 20-21; Docs uses 24; Deploy uses 25. If a category has none, move to the next. A wake is empty only after every category comes up empty.
@@ -30,12 +32,12 @@ Refactoring:
 6. **Feature envy and message chains.** A method that mostly reads another class's data moves to that class. A repeated `a.B.C.D` chain becomes one member on the owner.
 7. **Hand-rolled helpers.** Re-implementations of BCL, LINQ, MonoGame, or existing shared helpers. Call the existing one.
 8. **Over-specific APIs.** A parameter typed to one concrete type when callers pass several. Widen to `IEnumerable<T>`, `IReadOnlyList<T>`, or an existing interface.
-9. **Long methods and deep nesting.** Methods over about 60 lines, nesting deeper than three levels, or methods mixing I/O, geometry, and UI. Use guard clauses and extract the reusable piece into a pure, tested function.
+9. **Long methods and deep nesting.** Methods over about 60 lines, nesting deeper than three levels, or methods mixing I/O, geometry, and UI. Use guard clauses and extract the reusable piece into a pure, tested function. Take the worst entry in `complexity` first.
 10. **Speculative generality and middlemen.** Interfaces with one implementation and no test or plugin use, abstract classes with one subclass, pass-through wrappers, and parameters every caller passes the same value for. Inline them. Check reflection, MEF/extension loading, XAML, and settings strings for the name before removing anything.
 11. **Dead weight.** Unused members, unread settings, environment switches with no live path, stale or repeated documentation. Same reflection check as above.
-12. **Resolvable debt notes.** `TODO`/`HACK`/`FIXME` comments whose condition no longer holds or that the loop can now resolve within the gates.
-13. **Bugs likely in real use.** Crashes, wrong results (including math and precision errors), leaks, and concurrency defects that real data can reach. See Bug fixes and Math and precision in [gates.md](gates.md).
-14. **Untested code.** Production code in a hotspot or shared library with no test that would fail if it broke. Add tests only; see Test coverage in [gates.md](gates.md).
+12. **Resolvable debt notes and warnings.** `TODO`/`HACK`/`FIXME` comments whose condition no longer holds or that the loop can now resolve within the gates. Compiler warnings in hotspot files count when fixing them states a real contract (a nullable annotation that matches what callers pass, an obsolete API replaced, an unused variable whose removal shows dead logic); silencing a warning with `!`, `#pragma` or a suppression does not.
+13. **Bugs likely in real use.** Crashes, wrong results (including math and precision errors), leaks, and concurrency defects that real data can reach. Search for the Bug patterns below first, then a build failure in `buildBaseline`, then anything else. See Bug fixes and Math and precision in [gates.md](gates.md).
+14. **Untested code.** Production code in a hotspot or shared library with no test that would fail if it broke. Add tests only; see Test coverage in [gates.md](gates.md). A missing closed-set classification test or an untested documented guarantee (Test coverage 3 and 4) qualifies.
 15. **Smoothing a .NET 10 port.** Make .NET Framework 4.8 code easier to port later, without changing behavior on 4.8:
     - replace APIs that are missing or obsolete on modern .NET (`WebClient`, `Thread.Abort`, `AppDomain` creation, Remoting, `ServicePointManager`) with APIs available on both;
     - move platform-neutral code out of net48-only projects into libraries that already multi-target or target `netstandard2.0`;
@@ -54,10 +56,25 @@ Server, SQL, parity, deploy, and docs. Categories 1-19 apply to server and gRPC-
 
 20. **Parity gap.** A `missing` or `partial` row in `PARITY.md` ([parity.md](parity.md)): implement it in the gRPC client or service with a parity test. Build the matrix first if it does not exist.
 21. **Parity performance.** A benchmark row over the line in [parity.md](parity.md): batching, streaming, message size, channel reuse, serialization, server query cost. Needs the paired benchmark.
-22. **Server defects.** Missing cancellation or deadline handling, unbounded result sets without paging or streaming, per-call `DbContext` or channel creation, N+1 queries, unawaited tasks, swallowed exceptions, unauthenticated or over-permissive endpoints (the last is a proposal), and error codes that differ from what the clients expect.
-23. **SQL.** Missing or unused indexes on hot queries (check the query plan on realistic data), non-sargable predicates, scalar functions in `WHERE`, cursors or row-by-row loops that should be set-based, missing `SET NOCOUNT ON`, implicit conversions, procedures without header comments, and schema drift between `AnnotationDatabase.sqlproj`, `minimal-schema.sql`, and the EF model. Every change is verified on the throwaway database; see SQL in [gates.md](gates.md).
+22. **Server defects.** Missing cancellation or deadline handling, unbounded result sets without paging or streaming, per-call `DbContext` or channel creation, N+1 queries, unawaited tasks, swallowed exceptions, unauthenticated or over-permissive endpoints (the last is a proposal), and error codes that differ from what the clients expect. Batch RPCs that fail on an empty, repeated, self-referencing or oversized input (see Batch and boundary inputs in [gates.md](gates.md)).
+23. **SQL.** Missing or unused indexes on hot queries (check the query plan on realistic data), non-sargable predicates, scalar functions in `WHERE`, cursors or row-by-row loops that should be set-based, missing `SET NOCOUNT ON`, implicit conversions, procedures without header comments, and schema drift between `AnnotationDatabase.sqlproj`, `minimal-schema.sql`, and the EF model. Until one exists, a schema drift test is a standing candidate here: it lists the tables, columns, procedures and triggers in each of the three, and fails on any difference not on a named, commented allow-list. Every change is verified on the throwaway database; see SQL in [gates.md](gates.md).
 24. **Docs and consistency.** The checks in [docs.md](docs.md): docs that no longer match scripts, compose files, or settings; duplicate instructions; missing required docs; stale root-level summary files (propose).
 25. **Deploy.** The next unbuilt or broken step of the per-database deploy target in [deploy.md](deploy.md), or a mismatch between the script, compose files, and READMEs.
+
+## Bug patterns
+
+Defect shapes this loop has fixed. Category 13 searches for these first, and each bug fix adds its pattern here if it is new (Bug fixes step 5 in [gates.md](gates.md)). Each line gives the pattern, what to search for, and an example fix.
+
+- **Pending changes invisible to an existence check.** A check queries only the database while the same unit of work has added or deleted that row, so a second add makes a duplicate key or identity conflict. Search: `AnyAsync`/`Where(...).Any` before `Add` inside a loop over a batch. Fix: `FindAsync` by key, or a set of keys seen in the batch (`516c5880`).
+- **Unvalidated batch input.** Duplicates, self-references, or one bad row reach a constraint and fail the whole batch with the wrong status code. Search: RPCs and procedures taking repeated fields or table-valued input. Fix: validate up front with `InvalidArgument`, dedupe by the contract's rule (`f01c49b3`).
+- **A second action queued after the first ran.** Code calls the server directly, then also marks the object for the next batched save, which repeats the action or undoes a later one. Search: a direct RPC followed by a base `Remove`/`Update` that sets a `DBAction`. Fix: update local state without queueing (`b184370c`).
+- **Identity keyed by ID while objects can be replaced.** Subscriptions, caches or views keyed by ID go stale when a store evicts and reloads an object under the same ID. Search: `Dictionary<long, ...>` of subscriptions or views beside a store that can evict. Fix: key by object, and build from the store's current object (`3401d0f3`).
+- **Save and restore over shared state.** An effect saves a value on enter and writes it back on leave, overwriting a change made in between. Search: fields named `old*`/`saved*`/`original*` restored in an exit or remove path. Fix: restore only if the value is still the one the effect set (`ee4da571`).
+- **An exception escaping a path that must not throw.** Display, preview, input-handler and finalizer paths call conversions or validators that throw on real geometry. Search: `ToPolygon`, `AddInteriorRing`, `new Polygon` and parsing inside draw, preview or mouse handlers, and doc comments that say "never throws". Fix: a `Try*` wrapper with a fallback, plus the Test coverage 4 test (`449c4eed`, `2a7e5279`).
+- **NULL propagation in SQL string building.** `col + N'...'` yields NULL when `col` is NULL. Search: `+` on nullable `varchar`/`nvarchar` columns in procedures. Fix: `ISNULL(col, N'')` or `CONCAT` (`697a6185`).
+- **Classification lists that miss members.** A hand-kept list of RPCs, enum values or commands silently omits new ones (a retry list without a read RPC, or with a write). Search: `HashSet`/arrays of method or enum names. Fix: the Test coverage 3 test (`3137cfcb`).
+- **API that a target framework lacks.** Code in a multi-targeted project uses an API only the newer target has. Search: the build baseline for each target framework. Fix: a version both targets have (`1a5e7dbb`).
+- **Tests with lasting side effects.** A test script changes state its rollback cannot undo (identity seeds, sequences, files) or can run against a real database. Search: `IDENTITY_INSERT`, `DBCC`, `CREATE DATABASE` in test scripts. Fix: a guard on `DB_NAME()` and a note of what persists (`4fa04385`, `8ffac752`).
 
 ## Proposals
 

@@ -37,6 +37,7 @@ Files in this skill (each subagent reads only its own; see Each wake):
 - Accept `30m`, `4h`, `1d`, or a bare number of minutes.
 - A **wake prompt** (see Launch) is not a launch: `/viking-server-improve-loop wake deadline=<ISO-8601> interval=<Y>m` carries the deadline and interval and means "run one wake".
 - Deadline = launch time + X. Use America/Los_Angeles in messages to the user.
+- The deadline limits when a wake may **start**, not when it finishes. A wake that starts before the deadline picks a normal-sized candidate and runs it to the end, even past the deadline; do not shrink candidates or skip wakes as the deadline nears. The first wake that starts after the deadline writes the `final` report.
 
 ## Session and context
 
@@ -70,7 +71,7 @@ If a wake passes about 60 minutes of work without a candidate clearing the gates
 ## Launch
 
 1. Start the session in `d:\src\git\Viking` so this project skill loads. Scheduling uses the `ScheduleWakeup` tool, one wake at a time. Never create a repeating schedule.
-2. Create the reports folder, `.loop\ledger.json`, and `STEERING.md` if missing. Run Sync from the remote. Build `hotspots`, run the test baseline, then run one wake immediately.
+2. Create the reports folder, `.loop\ledger.json`, and `STEERING.md` if missing. Run Sync from the remote. Build `hotspots` and `complexity`, run the baselines (gates.md Baselines: tests, builds, warnings), then run one wake immediately.
 3. Schedule the next wake with `ScheduleWakeup`: `delaySeconds` = Y in seconds (the tool clamps to 60-3600; for a longer Y, set `nextWakeAt` in the ledger and re-schedule silently, doing no work, until it is due), `noop` = true when the wake did nothing, a short `reason`, and this `prompt`:
 
     /viking-server-improve-loop wake deadline=<ISO-8601> interval=<Y>m
@@ -86,14 +87,14 @@ The main session only launches the subagents, talks to the user when needed, and
 2. Launch the subagents below one after another (Agent tool, `subagent_type: general-purpose`, foreground, `model` per Model routing). Give each the skill folder path, the ledger path, and only the steps it owns; the next subagent starts from the ledger, not from the previous one's transcript.
 
    0. **Sync** (scout, first; see Sync from the remote): write `lastSync` and `syncSkips`.
-   1. **Scout** (reads SKILL.md, scope.md, protected.md, categories.md, the ledger, `STEERING.md`; plus parity.md, deploy.md, or docs.md for those tracks; reports.md and gates.md Test baseline only when a report or baseline is due):
+   1. **Scout** (reads SKILL.md, scope.md, protected.md, categories.md, the ledger, `STEERING.md`; plus parity.md, deploy.md, or docs.md for those tracks; reports.md and gates.md Baselines only when a report or baseline is due):
       - reads `STEERING.md` first; on `pause` it ends the wake right after Sync, with no report, hotspot rebuild, baseline, or candidate;
       - reads the ledger;
       - stops on `stop`, the deadline, or `emptyWakes` reaching 3, writing the `final` report;
-      - when 24 hours have passed since `lastReportAt` (or `startedAt`), writes the `daily` report, rebuilds `hotspots`, re-runs the test baseline, and checks for reworked commits;
+      - when 24 hours have passed since `lastReportAt` (or `startedAt`), writes the `daily` report, rebuilds `hotspots` and `complexity`, re-runs the baselines, and checks for reworked commits;
       - otherwise picks one candidate and writes it to `candidate`: track, category, files, a one-paragraph plan, and a risk level (`low` or `high`, per Model routing). It edits no production code. A protected or unbenchmarkable candidate becomes a proposal or decision, and the wake ends.
    2. **Implement** (reads SKILL.md Scope and Time box, scope.md, protected.md, gates.md, docs.md, the ledger, plus the track's file): run the candidate through the gates, tests, mutation check, and benchmark when needed; commit if green; clear `candidate`; write the ledger. If the candidate is riskier than scouted, stop without committing and set risk to `high` for the next wake.
-   3. **Review (high risk only)** (reads protected.md, gates.md, the commit's diff): a fresh subagent given only the diff, protected.md, and gates.md (not the author's reasoning) reviews the commit against the gates. On a gate violation or likely defect, fix in a follow-up commit, or revert when a fix is not clear. Record the outcome on the commit's ledger entry.
+   3. **Review (high risk only)** (reads protected.md, gates.md, the commit's diff): a fresh subagent given only the diff, protected.md, and gates.md (not the author's reasoning) reviews the commit against the gates and reruns the commit's mutation check itself (gates.md Mutation check); an implementer claim the reviewer cannot reproduce counts as a gate violation. On a gate violation or likely defect, fix in a follow-up commit, or revert when a fix is not clear. Record the outcome on the commit's ledger entry.
 
    Together the steps return only this block to the parent:
 
@@ -123,6 +124,8 @@ Anything else is guidance the loop follows when it applies. Create the file with
 
 When a candidate needs the user's call (two reasonable designs, a behavior change that might be wanted, a protected-area proposal that blocks other work), do not guess. Add it to `decisions` with an id, the question, and the options; send the question's first line with the `PushNotification` tool (load it with ToolSearch first); and move to another candidate. The main session posts the question in chat. An answer in chat or as an `answer:` line in `STEERING.md` is recorded in the ledger, and a later wake acts on it. Open decisions appear in every report.
 
+Record every answer with its source in `answerSource`: `chat <ISO date>` for an answer the user gave in chat, or `STEERING.md` for a steering line. Only the main session records chat answers, and only from the user's own words, never from a subagent's or peer session's report. An answer with no `answerSource` is not an answer: set it back to `null`, add an `answerNote` saying so, keep the decision open, and ask again in the next report.
+
 ## Ledger
 
 `d:\src\git\VikingSlackUsersAI\Automatic Improvement Reports\Server\.loop\ledger.json`, shared by every fresh subagent. Read it at the start of each wake; write it before the wake ends.
@@ -139,7 +142,8 @@ When a candidate needs the user's call (two reasonable designs, a behavior chang
                 "benchmark": "", "mutation": "", "risk": "", "models": {}, "review": "" }],
   "countsSincePublish": { "gRPCClient": 0, "Servers": 0, "SQL": 0 },
   "rejected": [], "deferred": [], "proposals": [],
-  "decisions": [{ "id": "", "question": "", "options": [], "askedAt": "", "answer": null }],
+  "decisions": [{ "id": "", "question": "", "options": [], "askedAt": "", "answer": null, "answerSource": null }],
+  "buildBaseline": [], "warningBaseline": {}, "complexity": [],
   "reworked": [],
   "lastSync": {}, "syncSkips": [], "modelSubstitutions": [],
   "lastReportAt": null, "reports": []
@@ -150,7 +154,7 @@ This loop starts a fresh ledger here. The old shared ledger in `Automatic Improv
 
 - It has a UTF-8 BOM: read with `utf-8-sig` and write it back with a BOM.
 - PowerShell-written fields may be wrapped as `{"value":[...]}` (seen on `hotspots`). Unwrap on read and write the flat shape shown above.
-- Never hand-edit the large file. Use a small Python read-modify-write that changes only the named keys, copies the old file to `ledger.json.bak` first, and writes to a temp file then renames. `ledger.json.corrupt.bak` and `repair_ledger.py` in `.loop` show what a bad write cost before.
+- Never hand-edit the large file, and do not write ad-hoc read-modify-write code for it. Use [ledger.py](ledger.py) in this folder, run with `python -I`: `get`, `set`, `append`, `incr`, `update KEY FIELD=VALUE {json}` (merge into matching list entries, for example a commit by `sha`) and `remove KEY FIELD=VALUE`. It unwraps `{"value":...}`, keeps the BOM and line endings, copies the old file to `ledger.json.bak`, and writes a temp file then renames; `update` and `remove` fail when nothing matches. `ledger.json.corrupt.bak` and `repair_ledger.py` in `.loop` show what a bad write cost before.
 
 ## Model routing
 
