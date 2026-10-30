@@ -104,7 +104,7 @@ namespace WebAnnotation.UI.Actions
             Transform = transform ?? WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
 
             NewMosaicPolygon = newMosaicPolygon;
-            NewVolumePolygon = newVolumePolygon ?? Transform.TryMapShapeSectionToVolume(newMosaicPolygon);
+            NewVolumePolygon = newVolumePolygon ?? LocationVolumeGeometry.TryMapPolygon(newMosaicPolygon, Transform);
             _newSmoothedVolumePolygon = SmoothWhenDrawn(NewVolumePolygon);
         }
 
@@ -117,7 +117,7 @@ namespace WebAnnotation.UI.Actions
 
             NewMosaicPolygon = newMosaicPolygon;
 
-            NewVolumePolygon = newVolumePolygon is null ? Transform.TryMapShapeSectionToVolume(newMosaicPolygon) : newVolumePolygon;
+            NewVolumePolygon = newVolumePolygon ?? LocationVolumeGeometry.TryMapPolygon(newMosaicPolygon, Transform);
             _newSmoothedVolumePolygon = SmoothWhenDrawn(NewVolumePolygon);
         }
 
@@ -129,7 +129,15 @@ namespace WebAnnotation.UI.Actions
             Microsoft.SqlServer.Types.SqlGeometry original_mosaic_polygon = Location.MosaicShape;
             //var mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolygon);
             WebAnnotation.View.PolygonViewTimingLog.MarkBoundaryChange(Location.ID, "ChangeContour");
-            Location.SetShapeFromGeometryInSection(Transform, NewMosaicPolygon.ToSqlGeometry());
+            try
+            {
+                Location.SetShapeFromGeometryInSection(Transform, NewMosaicPolygon.ToSqlGeometry());
+            }
+            catch (ArgumentException e)
+            {
+                Trace.WriteLine($"Change2DContourAction: location {Location.ID} unchanged: {e.Message}", "WebAnnotation");
+                return;
+            }
 
             try
             {
@@ -211,14 +219,22 @@ namespace WebAnnotation.UI.Actions
         public void OnExecute()
         {
             Microsoft.SqlServer.Types.SqlGeometry originalShape = Location.MosaicShape;
-            Polyline mosaic_shape = Transform.TryMapShapeVolumeToSection(NewVolumePolyline);
+            Polyline mosaic_shape = LocationVolumeGeometry.TryMapPolylineToMosaic(NewVolumePolyline, Transform);
             if (mosaic_shape is null)
             {
                 Trace.WriteLine("Change1DContourAction: new polyline crosses an unmapped region of the section; location " + Location.ID + " unchanged.", "WebAnnotation");
                 return;
             }
 
-            Location.SetShapeFromGeometryInSection(Transform, mosaic_shape.ToSqlGeometry());
+            try
+            {
+                Location.SetShapeFromGeometryInSection(Transform, mosaic_shape.ToSqlGeometry());
+            }
+            catch (ArgumentException e)
+            {
+                Trace.WriteLine($"Change1DContourAction: location {Location.ID} unchanged: {e.Message}", "WebAnnotation");
+                return;
+            }
 
             try
             {

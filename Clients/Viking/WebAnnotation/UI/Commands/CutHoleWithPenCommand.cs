@@ -33,7 +33,7 @@ namespace WebAnnotation.UI.Commands
         {
             mapping = parent.Section.ActiveSectionToVolumeTransform;
             OriginalMosaicPolygon = mosaic_polygon;
-            OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
+            OriginalVolumePolygon = LocationVolumeGeometry.TryMapPolygon(mosaic_polygon, mapping);
             //SmoothedVolumePolygon = OriginalVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
 
             ExteriorSegments = [.. OriginalVolumePolygon.ExteriorSegments];
@@ -51,7 +51,7 @@ namespace WebAnnotation.UI.Commands
         {
             mapping = parent.Section.ActiveSectionToVolumeTransform;
             OriginalMosaicPolygon = mosaic_polygon;
-            OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
+            OriginalVolumePolygon = LocationVolumeGeometry.TryMapPolygon(mosaic_polygon, mapping);
         }
 
         protected override bool IsProposedClosedLoopValid(IReadOnlyCollection<Geometry.Vector2> proposed_curve)

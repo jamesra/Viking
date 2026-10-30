@@ -62,7 +62,7 @@ namespace WebAnnotation.UI.Actions
                 throw new ArgumentException($"StructureTypeID {TypeID} not found when assigning type to structure");
             }
 
-            Polygon mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolygon);
+            Polygon mosaic_polygon = LocationVolumeGeometry.TryMapPolygonToMosaic(NewVolumePolygon, Transform);
             if (mosaic_polygon is null)
             {
                 Trace.WriteLine("Create2DStructureAction: drawn polygon crosses an unmapped region of section " + SectionNumber + "; no structure created.", "WebAnnotation");
@@ -143,7 +143,7 @@ namespace WebAnnotation.UI.Actions
                 throw new ArgumentException($"StructureTypeID {TypeID} not found when assigning type to structure");
             }
 
-            Polyline mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumeShape);
+            Polyline mosaic_polygon = LocationVolumeGeometry.TryMapPolylineToMosaic(NewVolumeShape, Transform);
             if (mosaic_polygon is null)
             {
                 Trace.WriteLine("Create1DStructureAction: drawn line crosses an unmapped region of section " + SectionNumber + "; no structure created.", "WebAnnotation");

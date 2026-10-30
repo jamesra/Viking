@@ -113,7 +113,7 @@ namespace WebAnnotation.UI.Actions
 
                 for (int i = 0; i < PolyToCut.InteriorRings.Count && i < unsmooth_mosaic_poly.InteriorPolygons.Count; i++)
                 {
-                    Polygon unsmooth_volume_inner_poly = Transform.TryMapShapeSectionToVolume(unsmooth_mosaic_poly.InteriorPolygons[i]);
+                    Polygon unsmooth_volume_inner_poly = LocationVolumeGeometry.TryMapPolygon(unsmooth_mosaic_poly.InteriorPolygons[i], Transform);
                     if (unsmooth_volume_inner_poly is null)
                         continue;
 
@@ -187,9 +187,9 @@ namespace WebAnnotation.UI.Actions
 
             // A side the splice could not build falls back to the walked piece
             if (mosaic_clockwise_poly is null && clockwise_poly is not null)
-                mosaic_clockwise_poly = Transform.TryMapShapeVolumeToSection(clockwise_poly);
+                mosaic_clockwise_poly = LocationVolumeGeometry.TryMapPolygonToMosaic(clockwise_poly, Transform);
             if (mosaic_counter_clockwise_poly is null && counter_clockwise_poly is not null)
-                mosaic_counter_clockwise_poly = Transform.TryMapShapeVolumeToSection(counter_clockwise_poly);
+                mosaic_counter_clockwise_poly = LocationVolumeGeometry.TryMapPolygonToMosaic(counter_clockwise_poly, Transform);
 
 
 
@@ -525,7 +525,7 @@ namespace WebAnnotation.UI.Actions
                             mosaic_shape_copy.RemoveInteriorRing(iInnerPoly);
                         }
 
-                        Polygon mosaic_hole = transform.TryMapShapeVolumeToSection(closedpath);
+                        Polygon mosaic_hole = LocationVolumeGeometry.TryMapPolygonToMosaic(closedpath, transform);
                         if (mosaic_hole is null)
                             return actions;
 
@@ -563,7 +563,7 @@ namespace WebAnnotation.UI.Actions
                 Polygon newShape = new(path.SimplifiedFirstLoop);
 
                 IVolumeToSectionTransform Transform = WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
-                Polygon mosaic_shape = Transform.TryMapShapeVolumeToSection(newShape);
+                Polygon mosaic_shape = LocationVolumeGeometry.TryMapPolygonToMosaic(newShape, Transform);
                 if (mosaic_shape is null)
                     return actions;
 
@@ -573,7 +573,7 @@ namespace WebAnnotation.UI.Actions
                 {
                     foreach (Vector2[] mosaicHole in origin_loc.MosaicShape.ToPolygon().InteriorRings)
                     {
-                        if (Transform.TrySectionToVolume(mosaicHole, out Vector2[] volumeHole).Any(mapped => !mapped))
+                        if (LocationVolumeGeometry.TryMapPoints(mosaicHole, Transform, out Vector2[] volumeHole).Any(mapped => !mapped))
                             continue;
 
                         try

@@ -200,6 +200,43 @@ namespace WebAnnotationTests.Commands
             StringAssert.Contains(reason, "1 of 4 points");
         }
 
+        /// <summary>
+        /// A pen region cut under a warp offers pieces whose saved mosaic polygon draws, through the forward owner's mapping,
+        /// exactly as the piece previewed: kept stored points map forward unchanged and the new pen points are the inverse
+        /// owner's.
+        /// </summary>
+        [TestMethod]
+        public void APenCutPieceIsSavedAsItIsPreviewed()
+        {
+            IVolumeToSectionTransform transform = new WarpTransform();
+            Vector2[] corners = [new(2000, 2000), new(2100, 2000), new(2100, 2040), new(2150, 2040), new(2150, 2000), new(2250, 2000),
+                                 new(2250, 2100), new(2150, 2100), new(2150, 2060), new(2100, 2060), new(2100, 2100), new(2000, 2100)];
+            List<Vector2> ring = [];
+            for (int i = 0; i < corners.Length; i++)
+            {
+                Vector2 a = corners[i], b = corners[(i + 1) % corners.Length];
+                int steps = (int)(Vector2.Distance(a, b) / 10);
+                for (int s = 0; s < steps; s++)
+                    ring.Add(a + ((b - a) * ((double)s / steps)));
+            }
+
+            ring.Add(ring[0]);
+            LocationObj location = LocationVolumeGeometryTests.NewLocation(LocationType.POLYGON, ring.ToArray().ToPolygon());
+            Vector2[] mosaicStroke = [.. Enumerable.Range(0, 36).Select(i => new Vector2(2115, 2085 - (i * 2))),
+                                      .. Enumerable.Range(0, 10).Select(i => new Vector2(2117 + (i * 2), 2015)),
+                                      .. Enumerable.Range(0, 36).Select(i => new Vector2(2135, 2015 + (i * 2)))];
+            List<Vector2> volumeStroke = [.. transform.SectionToVolume(mosaicStroke)];
+
+            List<WebAnnotation.UI.Actions.Change2DContourAction> choices = WebAnnotation.UI.Actions.PenRegionCut.GetActions(location, transform, volumeStroke, 2.0);
+
+            Assert.AreEqual(2, choices.Count);
+            foreach (WebAnnotation.UI.Actions.Change2DContourAction choice in choices)
+            {
+                Polygon drawn = LocationVolumeGeometry.TryMapPolygon(choice.NewMosaicPolygon, transform)!;
+                AssertSamePoints(choice.NewVolumePolygon.ExteriorRing, drawn.ExteriorRing, "piece");
+            }
+        }
+
         internal sealed class SingleTransformProvider(IVolumeToSectionTransform transform) : IVolumeTransformProvider
         {
             public IVolumeToSectionTransform GetSectionToVolumeTransform(int SectionNumber) => transform;

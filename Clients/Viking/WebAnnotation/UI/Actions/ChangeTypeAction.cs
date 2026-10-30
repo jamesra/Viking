@@ -66,7 +66,7 @@ namespace WebAnnotation.UI.Actions
         {
             Microsoft.SqlServer.Types.SqlGeometry original_mosaic_polygon = Location.MosaicShape;
             LocationType originalType = Location.TypeCode;
-            Polygon mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolygon);
+            Polygon mosaic_polygon = LocationVolumeGeometry.TryMapPolygonToMosaic(NewVolumePolygon, Transform);
             if (mosaic_polygon is null)
             {
                 Trace.WriteLine("ChangeToPolygonAction: new polygon crosses an unmapped region of the section; location " + Location.ID + " unchanged.", "WebAnnotation");
@@ -204,7 +204,7 @@ namespace WebAnnotation.UI.Actions
         {
             Microsoft.SqlServer.Types.SqlGeometry originalShape = Location.MosaicShape;
             LocationType originalType = Location.TypeCode;
-            Polyline mosaic_polygon = Transform.TryMapShapeVolumeToSection(NewVolumePolyline);
+            Polyline mosaic_polygon = LocationVolumeGeometry.TryMapPolylineToMosaic(NewVolumePolyline, Transform);
             if (mosaic_polygon is null)
             {
                 Trace.WriteLine("ChangeToPolylineAction: new polyline crosses an unmapped region of the section; location " + Location.ID + " unchanged.", "WebAnnotation");

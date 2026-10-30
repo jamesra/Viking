@@ -237,6 +237,25 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
+        /// <see cref="TryMapPolygonToMosaic(Polygon, IVolumeToSectionTransform, out Polygon?, out string?)"/> for callers that
+        /// only test for null (a pen choice that is not offered when its shape cannot be mapped).
+        /// </summary>
+        /// <returns>The mosaic polygon, or null when any point does not map.</returns>
+        public static Polygon? TryMapPolygonToMosaic(Polygon volumePolygon, IVolumeToSectionTransform transform) =>
+            TryMapPolygonToMosaic(volumePolygon, transform, out Polygon? mosaic, out _) ? mosaic : null;
+
+        /// <summary>An edited volume polyline mapped back to mosaic space, all or none (<see cref="TryMapPointsToMosaic"/>).</summary>
+        /// <returns>The mosaic polyline, or null when any point does not map.</returns>
+        public static Polyline? TryMapPolylineToMosaic(Polyline volumePolyline, IVolumeToSectionTransform transform)
+        {
+            if (volumePolyline is null)
+                throw new ArgumentNullException(nameof(volumePolyline));
+
+            Vector2[] points = [.. volumePolyline.Points.Select(p => new Vector2(p.X, p.Y))];
+            return TryMapPointsToMosaic(points, transform, out Vector2[] mosaic, out _) ? new Polyline(mosaic, volumePolyline.AllowsSelfIntersection) : null;
+        }
+
+        /// <summary>
         /// The mosaic width whose forward width is <paramref name="volumeWidth"/>: volume width divided by the five-point mean
         /// scale the forward owner samples at the shape's centre. For lines and open curves that sample radius is half the
         /// width itself, so the width is found by a short fixed-point iteration (one step for an affine transform).
