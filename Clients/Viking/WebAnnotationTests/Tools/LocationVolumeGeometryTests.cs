@@ -152,6 +152,23 @@ namespace WebAnnotationTests.Tools
         }
 
         [TestMethod]
+        public void AnAdjacentCircleOrPointMarkerIsTheVolumeCircleScaledByTheScalar()
+        {
+            foreach (var (name, transform) in Transforms)
+            {
+                foreach (LocationType type in new[] { LocationType.CIRCLE, LocationType.POINT })
+                {
+                    LocationVolumeGeometry geometry = LocationVolumeGeometry.For(Fixture(type), transform);
+
+                    Circle marker = geometry.AdjacentMarker(0.5);
+
+                    Assert.AreEqual(geometry.Circle!.Value.Center, marker.Center, $"{type} under {name}");
+                    Assert.AreEqual(geometry.Circle.Value.Radius * 0.5, marker.Radius, Tolerance, $"{type} under {name}: half the drawn radius");
+                }
+            }
+        }
+
+        [TestMethod]
         public void ALineOrCurveIsAsWideAsItsWidthTimesTheFivePointMeanScale()
         {
             foreach (var (name, transform) in Transforms)

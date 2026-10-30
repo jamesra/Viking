@@ -36,6 +36,13 @@ namespace WebAnnotationTests.Tools
             public Vector2[] VolumeToSection(Vector2[] Points) => [.. Points.Select(Inverse)];
         }
 
+        /// <summary>
+        /// LocationActions reads WebAnnotation.Global, whose static initializer needs an open volume's cache path; without
+        /// this the class only passes when an earlier test happened to open one.
+        /// </summary>
+        [TestInitialize]
+        public void OpenAVolumeForGlobal() => SegmentationServiceSessionTests.EnsureVolumeCachePathAvailable();
+
         private static double Radius(IShape2D shape) => ((ICircle2D)shape).Radius;
 
         [TestMethod]
