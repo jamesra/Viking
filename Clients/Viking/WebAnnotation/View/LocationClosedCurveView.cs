@@ -68,6 +68,7 @@ namespace WebAnnotation.View
         public LocationClosedCurveView(LocationObj obj, Viking.VolumeModel.LocationVolumeGeometry geometry) : base(obj, geometry)
         {
             _VolumeCurveControlPoints = geometry.Shape.ToPoints();
+            _RenderedVolumeShape = geometry.Outline!;
             _ControlPointRadius = Global.DefaultClosedLineWidth / 2.0;
             bool hasParent = obj.Parent?.ParentID.HasValue ?? false;
             float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(obj.TypeCode, hasParent);
@@ -134,16 +135,10 @@ namespace WebAnnotation.View
         private readonly Geometry.Vector2[] _VolumeCurveControlPoints;
         public override Geometry.Vector2[] VolumeCurveControlPoints => _VolumeCurveControlPoints;
 
-        private SqlGeometry _RenderedVolumeShape;
-        public override SqlGeometry VolumeShapeAsRendered
-        {
-            get
-            {
-                _RenderedVolumeShape ??= VolumeCurveControlPoints.ToPolygon();// this.VolumeCurveControlPoints.ToPolyLine().STBuffer(this.Width / 2.0);                    
+        private readonly SqlGeometry _RenderedVolumeShape;
 
-                return _RenderedVolumeShape;
-            }
-        }
+        /// <summary>The owner's <see cref="Viking.VolumeModel.LocationVolumeGeometry.Outline"/>, the ring of the smoothed curve.</summary>
+        public override SqlGeometry VolumeShapeAsRendered => _RenderedVolumeShape;
 
         /// <summary>
         /// We have this because with the current renderings the control points are circles that fall outside the polygon we use to render the closed curves

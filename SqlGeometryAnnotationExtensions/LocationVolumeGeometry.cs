@@ -48,6 +48,7 @@ namespace Viking.VolumeModel
         private readonly Lazy<SqlGeometry> shape;
         private readonly Lazy<Vector2> center;
         private readonly Lazy<Circle> inscribedCircle;
+        private readonly Lazy<SqlGeometry?> outline;
 
         /// <summary>The location type the geometry was built for.</summary>
         public LocationType TypeCode { get; }
@@ -95,6 +96,13 @@ namespace Viking.VolumeModel
 
         /// <summary>The smoothed volume shape, the value <see cref="MapShape"/> gives and the stored cache should hold.</summary>
         public SqlGeometry Shape => shape.Value;
+
+        /// <summary>
+        /// The polygon a polygon, curve polygon or closed curve is hit-tested as on its own section, and the outline its
+        /// location links leave: the mapped control polygon of a polygon or curve polygon, the ring of <see cref="Shape"/>
+        /// for a closed curve. Null for other types.
+        /// </summary>
+        public SqlGeometry? Outline => outline.Value;
 
         /// <summary>
         /// The volume position labels and markers are placed at: the circle's centre for circles and points, otherwise the
@@ -147,6 +155,12 @@ namespace Viking.VolumeModel
             shape = new Lazy<SqlGeometry>(() => SmoothedShape(TypeCode, controlShape));
             center = new Lazy<Vector2>(() => Circle?.Center ?? Shape.Centroid());
             inscribedCircle = new Lazy<Circle>(() => Shape.CalculateInscribedCircle());
+            outline = new Lazy<SqlGeometry?>(() => TypeCode switch
+            {
+                LocationType.POLYGON or LocationType.CURVEPOLYGON => controlShape,
+                LocationType.CLOSEDCURVE => Shape.ToPoints().ToPolygon(),
+                _ => null,
+            });
         }
 
         /// <summary>
