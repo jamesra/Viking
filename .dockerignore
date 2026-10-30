@@ -126,7 +126,6 @@ Servers/Neo4JService/
 Servers/SQL/
 Servers/VolumeAnnotationServices/
 Servers/WebAppSettings/
-Servers/WebVisualization/
 Servers/certbot/
 .cursor/
 .idea/

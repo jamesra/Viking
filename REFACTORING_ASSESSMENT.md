@@ -38,7 +38,7 @@ Refactoring assessment of the Viking monorepo. Items marked **Status: completed*
 
 ## 2. Cross-cutting themes
 
-1. **Dead / orphaned product surfaces** — Identity `source/` (IS3/net45, **completed**), Bifrost, ConnectomicsWebsite, ConnectomeOpenData, WebVisualization, Neo4j island, `gRPCSegmentAnything`, SmoothMesh (MeshXNAVizLib completed), orphan WCF client projects.
+1. **Dead / orphaned product surfaces** — Identity `source/` (IS3/net45, **completed**), Bifrost, ConnectomicsWebsite, ConnectomeOpenData, WebVisualization (moved to VikingLegacy, **completed**), Neo4j island, `gRPCSegmentAnything`, SmoothMesh (MeshXNAVizLib completed), orphan WCF client projects.
 2. **Dual WCF / gRPC stacks** — Combined docker still ships WCF AnnotationService + ODataV4 (net48) beside gRPC + DataExport; first-party clients already bootstrap gRPC.
 3. **Annotation draw / tile-path fork** — WinForms `AnnotationOverlay.Draw` vs Jotunn `AnnotationScene.Draw`; Viking tile draw still bypasses shared `SectionSceneRenderer` (deduped C15-002/C16-012 and C16-001/C15-003/C17-024).
 4. **Triple (plus) OData clients** — Generated `ODataClient`, `AnnotationVizLibODataClient`, SimpleOData (MorphologyView), unused WCF viz client, dead server OData stub.
@@ -941,6 +941,7 @@ Refactoring assessment of the Viking monorepo. Items marked **Status: completed*
 - **Evidence:** Stock MVC scaffold; not in Everything.sln; no ProjectReferences; no docker/CI.
 
 #### C05-004 — WebVisualization / ConnectomeViz — ARCHIVE
+- **Status:** completed — archived in VikingLegacy (Servers/WebVisualization, d2b68856) and deleted from dev
 - **Paths:** `Servers/WebVisualization/` (~17k app LOC + large vendor; ~32MB+)
 - **Category:** archive
 - **Recommendation:** Archive then delete; confirm no lingering external IIS.
@@ -1613,6 +1614,7 @@ Refactoring assessment of the Viking monorepo. Items marked **Status: completed*
 - **Evidence:** No AnnotationVizLib usings in host.
 
 #### C09-015 — ConnectomeViz stale WCF BuildGraph calls
+- **Status:** moot on dev — ConnectomeViz now lives only in VikingLegacy (d2b68856)
 - **Paths:** `Servers/WebVisualization/*`
 - **Category:** bug
 - **Recommendation:** Migrate to OData factories or archive ConnectomeViz (C05).
@@ -4474,6 +4476,7 @@ Refactoring assessment of the Viking monorepo. Items marked **Status: completed*
 - **Evidence:** Only in Connectome Project.sln; web.config activates Annotate.svc.
 
 #### C21-008 — Repair or replace WebVisualization WCF client wiring
+- **Status:** moot on dev — ConnectomeViz now lives only in VikingLegacy (d2b68856)
 - **Paths:** WebVisualization Models/State.cs; Controllers; Service References
 - **Category:** bug
 - **Recommendation:** Rebind to OData/gRPC or restore compiling Service Reference.
@@ -4482,6 +4485,7 @@ Refactoring assessment of the Viking monorepo. Items marked **Status: completed*
 - **Evidence:** `using AnnotationVizLib.AnnotationService` namespace absent; CreateCircuitClient called but only CreateNetworkClient exists; AnnotationService Reference not compiled.
 
 #### C21-009 — Delete unused ConnectomeViz AnnotationService Service Reference artifacts
+- **Status:** moot on dev — ConnectomeViz now lives only in VikingLegacy (d2b68856)
 - **Paths:** WebVisualization/Service References/AnnotationService/; DataSources
 - **Category:** delete
 - **Recommendation:** After C21-008, delete unused WSDL/XSD/Reference (~73KB).
@@ -4562,6 +4566,7 @@ Refactoring assessment of the Viking monorepo. Items marked **Status: completed*
 - **Evidence:** Both define NONE/INSERT/UPDATE/DELETE; WCF has ProtoContract.
 
 #### C21-019 — Security: WebVisualization trusts any cert + hardcoded anon creds
+- **Status:** moot on dev — ConnectomeViz now lives only in VikingLegacy (d2b68856)
 - **Paths:** WebVisualization/Models/State.cs
 - **Category:** security
 - **Recommendation:** Remove always-true cert validate; stop embedding anonymous/connectome.
