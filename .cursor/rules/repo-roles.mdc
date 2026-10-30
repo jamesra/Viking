@@ -10,7 +10,7 @@ Two checkouts share this product. Put the change in the repo that owns that kind
 | Work | Repo | Path | Branch |
 |------|------|------|--------|
 | Servers, Docker, containers, identity, annotation, export, OData, segmentation, section correction, `gRPC_Protos`, and the gRPC clients (the gRPC Viking, Jotunn) | **Viking** | `d:\src\git\Viking` | `dev` |
-| WCF clients (Viking, VikingAU, MonogameTestbed, shared client libraries); Viking Test builds are packed from here | **VikingLegacy** | `d:\src\git\VikingLegacy` | `Legacy` |
+| WCF clients (Viking, VikingAU, MonogameTestbed, shared client libraries) and the production WCF annotation server (`Servers/AnnotationService`, built and deployed from here); Viking Test builds are packed from here | **VikingLegacy** | `d:\src\git\VikingLegacy` | `Legacy` |
 
 ## Keep clients in parallel
 
@@ -21,7 +21,7 @@ Viking has a `Clients/` tree too: the gRPC client was ported from VikingLegacy's
 - If a client fix is made in Viking and it affects the WCF client, back port it into VikingLegacy the same way.
 - Do not let the two client trees drift when the mirror is practical in the same change.
 
-Server and container changes stay in Viking. VikingLegacy runs no servers; do not start that work there.
+Server and container changes stay in Viking; the one exception is the WCF annotation server, which lives only in VikingLegacy.
 
 ```text
 WCF Viking annotation fix
