@@ -198,18 +198,28 @@ namespace WebAnnotationTests.Tools
         [TestMethod]
         public void EveryViewDrawsAndHitTestsTheOwnersGeometry()
         {
+            List<string> failures = [];
             foreach (var (name, transform) in Transforms)
             {
                 foreach (var (type, adjacent) in CoveredCases)
                 {
                     LocationObj location = Fixture(type);
-                    LocationCanvasView view = adjacent
-                        ? AnnotationViewFactory.CreateAdjacent(location, transform)
-                        : AnnotationViewFactory.Create(location, transform);
+                    try
+                    {
+                        LocationCanvasView view = adjacent
+                            ? AnnotationViewFactory.CreateAdjacent(location, transform)
+                            : AnnotationViewFactory.Create(location, transform);
 
-                    RenderedGeometry.AssertMatchesOwner(view, LocationVolumeGeometry.For(location, transform), adjacent, $"{type} {(adjacent ? "adjacent" : "on section")} under {name}");
+                        RenderedGeometry.AssertMatchesOwner(view, LocationVolumeGeometry.For(location, transform), adjacent, $"{type} {(adjacent ? "adjacent" : "on section")} under {name}");
+                    }
+                    catch (AssertFailedException e)
+                    {
+                        failures.Add(e.Message);
+                    }
                 }
             }
+
+            Assert.AreEqual(0, failures.Count, string.Join(Environment.NewLine, failures));
         }
     }
 
@@ -222,8 +232,7 @@ namespace WebAnnotationTests.Tools
         private const double Tolerance = 1e-6;
 
         /// <summary>True for the (type, adjacent) pairs whose view <see cref="AssertMatchesOwner"/> knows.</summary>
-        public static bool IsChecked(LocationType type, bool adjacent) =>
-            adjacent ? type != LocationType.POLYLINE : type is LocationType.CIRCLE or LocationType.POINT;
+        public static bool IsChecked(LocationType type, bool adjacent) => true;
 
         public static void AssertMatchesOwner(LocationCanvasView view, LocationVolumeGeometry owner, bool adjacent, string message)
         {
@@ -240,10 +249,51 @@ namespace WebAnnotationTests.Tools
                     Assert.AreEqual(owner.Circle.Value.Radius, circle.Radius, Tolerance, message);
                     AssertCircle(circle.VolumeCircle, circle.VolumeShapeAsRendered.ToCircle(), message + " (hit test)");
                     break;
+                case AdjacentLocationLineView or LocationLineView:
+                    var line = (LocationLineViewBase)view;
+                    Assert.AreEqual(adjacent, view is AdjacentLocationLineView, message);
+                    AssertPoints(owner.ControlPoints, line.VolumeControlPoints, message);
+                    Assert.AreEqual(owner.Width, line.LineWidth, Tolerance, message + " width");
+                    AssertSameArea(owner.Shape.STBuffer(Math.Max(owner.Width, owner.Width / 2.0)), line.VolumeShapeAsRendered, message + " (hit test)");
+                    break;
+                case LocationOpenCurveView curve:
+                    Assert.IsFalse(adjacent, message);
+                    AssertPoints(owner.ControlPoints, curve.VolumeControlPoints, message + " control points");
+                    AssertPoints(owner.Shape.ToPoints(), curve.VolumeCurveControlPoints, message + " curve");
+                    Assert.AreEqual(owner.Width, curve.LineWidth, Tolerance, message + " width");
+                    AssertSameArea(owner.Shape.STBuffer(owner.Width / 2.0), curve.VolumeShapeAsRendered, message + " (hit test)");
+                    break;
+                case LocationClosedCurveView closed:
+                    Assert.IsFalse(adjacent, message);
+                    AssertPoints(owner.ControlPoints, closed.VolumeControlPoints, message + " control points");
+                    AssertPoints(owner.Shape.ToPoints(), closed.VolumeCurveControlPoints, message + " curve");
+                    AssertSameArea(owner.Shape.ToPoints().ToPolygon(), closed.VolumeShapeAsRendered, message + " (hit test)");
+                    break;
+                case LocationPolygonView polygon:
+                    Assert.IsFalse(adjacent, message);
+                    AssertSameArea(owner.ControlPolygon().ToSqlGeometry(), polygon.VolumeShapeAsRendered, message + " (hit test)");
+                    break;
                 default:
                     Assert.Fail($"{message}: {view.GetType().Name} is not checked against LocationVolumeGeometry");
                     break;
             }
+        }
+
+        public static void AssertPoints(IReadOnlyList<Vector2> expected, IReadOnlyList<Vector2> actual, string message)
+        {
+            Assert.AreEqual(expected.Count, actual.Count, message + " point count");
+            for (int i = 0; i < expected.Count; i++)
+            {
+                Assert.AreEqual(expected[i].X, actual[i].X, 1e-6, $"{message} point {i} X");
+                Assert.AreEqual(expected[i].Y, actual[i].Y, 1e-6, $"{message} point {i} Y");
+            }
+        }
+
+        /// <summary>The two areas differ by less than a millionth of the expected area.</summary>
+        public static void AssertSameArea(SqlGeometry expected, SqlGeometry actual, string message)
+        {
+            double difference = expected.STSymDifference(actual).STArea().Value;
+            Assert.IsTrue(difference <= expected.STArea().Value * 1e-6, $"{message}: areas differ by {difference}");
         }
 
         /// <summary>Equal to 1e-5 of the radius, at least 1e-3: a circle read back from SQL geometry carries rounding.</summary>

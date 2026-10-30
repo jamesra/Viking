@@ -213,18 +213,22 @@ namespace WebAnnotation.View
         /// </summary>
         private readonly PolygonViewTiming timing;
 
-        public LocationPolygonView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
+        /// <summary>
+        /// A polygon or curve polygon on the viewed section, drawn from the owner's mapped control polygon (smoothed for
+        /// display in <see cref="Initialize"/>). Throws <see cref="ArgumentException"/> when the owner says it cannot be
+        /// drawn on its section.
+        /// </summary>
+        public LocationPolygonView(LocationObj obj, LocationVolumeGeometry geometry) : base(obj)
         {
             long constructionStart = Stopwatch.GetTimestamp();
             timing = PolygonViewTimingLog.TryBegin(obj.ID);
             _ControlPointRadius = Global.AnnotationSettings.PolygonPointRadius;
-            var mappedShape = mapper.TryMapShapeSectionToVolume(obj.MosaicShape);
-            if (mappedShape is null)
+            if (!geometry.CanDrawOnSection)
             {
                 throw new ArgumentException($"Could not map location {obj.ID} to volume");
             }
 
-            VolumePolygon = mappedShape.ToPolygon();
+            VolumePolygon = geometry.ControlPolygon();
             //_ControlPointRadius = GetRadiusFromPolygonArea(VolumePolygon, 0.01);
             SmoothedVolumePolygon = VolumePolygon;//VolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
             bool hasParent = obj.Parent?.ParentID.HasValue ?? false;

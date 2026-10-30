@@ -37,27 +37,27 @@ namespace WebAnnotation.View
         /// <returns></returns>
         public static LocationCanvasView Create(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapping)
         {
+            LocationVolumeGeometry geometry = LocationVolumeGeometry.For(obj, mapping);
             switch (obj.TypeCode)
             {
                 case LocationType.CIRCLE:
-                    return new LocationCircleView(obj, LocationVolumeGeometry.For(obj, mapping));
+                case LocationType.POINT:
+                    return new LocationCircleView(obj, geometry);
                 case LocationType.OPENCURVE:
-                    return new LocationOpenCurveView(obj, mapping);
+                    return new LocationOpenCurveView(obj, geometry);
                 case LocationType.CURVEPOLYGON:
                 case LocationType.POLYGON:
                     {
-                        LocationPolygonView polyview = new(obj, mapping);
+                        LocationPolygonView polyview = new(obj, geometry);
                         Task.Run(() => polyview.Initialize()).ContinueWith(
                             t => polyview.ReportInitializeFailure(t.Exception.GetBaseException()),
                             TaskContinuationOptions.OnlyOnFaulted);
                         return polyview;
                     }
                 case LocationType.CLOSEDCURVE:
-                    return new LocationClosedCurveView(obj, mapping);
+                    return new LocationClosedCurveView(obj, geometry);
                 case LocationType.POLYLINE:
-                    return new LocationLineView(obj, mapping);
-                case LocationType.POINT:
-                    return new LocationCircleView(obj, LocationVolumeGeometry.For(obj, mapping));
+                    return new LocationLineView(obj, geometry);
                 default:
                     throw new NotImplementedException("View for type " + obj.TypeCode.ToString() + " is not implemented");
             }
@@ -82,7 +82,7 @@ namespace WebAnnotation.View
                     return new AdjacentLocationCircleView(obj, LocationVolumeGeometry.For(obj, mapping).AdjacentMarker(Global.AdjacentLocationRadiusScalar));
                 case LocationType.POLYLINE:
                     {
-                        AdjacentLocationLineView view = new(obj, mapping)
+                        AdjacentLocationLineView view = new(obj, LocationVolumeGeometry.For(obj, mapping))
                         {
                             Color = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.2f)
                         };

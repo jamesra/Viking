@@ -7,9 +7,9 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
-    internal abstract class LocationCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : LocationLineViewBase(obj, mapper), VikingXNAGraphics.IColorView
+    internal abstract class LocationCurveView(LocationObj obj, Viking.VolumeModel.LocationVolumeGeometry geometry) : LocationLineViewBase(obj, geometry), VikingXNAGraphics.IColorView
     {
-        public abstract Geometry.Vector2[] MosaicCurveControlPoints { get; }
+        /// <summary>The smoothed curve in volume space, the points of <see cref="Viking.VolumeModel.LocationVolumeGeometry.Shape"/>.</summary>
         public abstract Geometry.Vector2[] VolumeCurveControlPoints { get; }
         public abstract Color Color { get; set; }
         public abstract float Alpha { get; set; }
