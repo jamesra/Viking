@@ -6,6 +6,10 @@ using System.Collections.Generic;
 namespace Viking.VolumeModel
 {
 
+    /// <summary>
+    /// Sets a location's shapes. Mosaic is the truth and the volume shape is always the forward owner's
+    /// (<see cref="LocationVolumeGeometry"/>); see <c>.cursor/rules/annotation-volume-geometry.mdc</c>.
+    /// </summary>
     public static class LocationObjExtensions
     {
 
@@ -27,40 +31,56 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
-        /// Takes unsmoothed points and sets both the mosaic and volume shape for a locationObj
+        /// Sets a location from a mosaic shape, the truth: <c>MosaicShape</c> is <paramref name="shape"/> and <c>VolumeShape</c>
+        /// is what the forward owner (<see cref="LocationVolumeGeometry"/>) derives from it, never a volume shape the caller
+        /// kept. Set <c>TypeCode</c> (and <c>Width</c>) first: the volume shape is smoothed for the type.
         /// </summary>
-        /// <param name="mapper"></param>
-        /// <param name="location"></param>
-        /// <param name="volumePoints"></param>
-        /// <param name="volume_innerRingPoints"></param>
-        public static void SetShapeFromPointsInSection(this WebAnnotationModel.LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, Vector2[] sectionPoints, ICollection<Vector2[]> section_innerRingPoints)
-        {
-            Vector2[] volume_points = mapper.SectionToVolume(sectionPoints);
-
-            location.VolumeShape = location.TypeCode.GetSmoothedShape(volume_points, SectionInnerRingPointsToVolume(mapper, section_innerRingPoints));
-            location.MosaicShape = location.TypeCode.GetShape(sectionPoints, section_innerRingPoints);
-
-            return;
-        }
-
-        /// <summary>
-        /// Takes unsmoothed points and sets both the mosaic and volume shape for a locationObj
-        /// </summary>
-        /// <param name="mapper"></param>
-        /// <param name="location"></param>
-        /// <param name="volumePoints"></param>
-        /// <param name="volume_innerRingPoints"></param>
+        /// <exception cref="ArgumentException">The shape is not valid SQL geometry, or it does not map onto the volume under
+        /// <paramref name="mapper"/>; the location is then unchanged.</exception>
         public static void SetShapeFromGeometryInSection(this WebAnnotationModel.LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
             if (!shape.STIsValid().Value)
                 throw new ArgumentException("Shape must be valid SQL Geometry " + shape.IsValidDetailed());
 
-            Microsoft.SqlServer.Types.SqlGeometry volume_shape = mapper.TryMapShapeSectionToVolume(shape);
+            if (LocationVolumeGeometry.MapShape(location.TypeCode, shape, mapper) is null)
+                throw new ArgumentException("The shape lies partly outside the region this section's transform maps, so it cannot be drawn on the volume.");
 
-            location.VolumeShape = location.TypeCode.GetSmoothedShape(volume_shape);
             location.MosaicShape = shape;
+            location.VolumeShape = LocationVolumeGeometry.For(location, mapper).Shape;
+        }
 
-            return;
+        /// <summary>
+        /// Saves an edit made in volume space after <see cref="LocationVolumeGeometry.ToMosaic(Viking.AnnotationServiceTypes.Interfaces.LocationType, Microsoft.SqlServer.Types.SqlGeometry, IVolumeToSectionTransform, double?)"/>
+        /// mapped it back: the mosaic shape (and width) become the truth and the forward owner derives the volume shape
+        /// (<see cref="SetShapeFromGeometryInSection"/>). Set <c>TypeCode</c> first.
+        /// </summary>
+        /// <returns>False, with the location unchanged, when the edit could not be mapped; <see cref="MosaicGeometry.Failure"/> says why.</returns>
+        /// <exception cref="ArgumentException">The mapped shape is not valid SQL geometry; the location is then unchanged.</exception>
+        public static bool TryApply(this WebAnnotationModel.LocationObj location, MosaicGeometry mosaic, Viking.VolumeModel.IVolumeToSectionTransform mapper)
+        {
+            if (location is null)
+                throw new ArgumentNullException(nameof(location));
+            if (mosaic is null)
+                throw new ArgumentNullException(nameof(mosaic));
+
+            if (!mosaic.Succeeded)
+                return false;
+
+            double? oldWidth = location.Width;
+            if (mosaic.Width is double width)
+                location.Width = width;
+
+            try
+            {
+                location.SetShapeFromGeometryInSection(mapper, mosaic.Shape);
+            }
+            catch (ArgumentException)
+            {
+                location.Width = oldWidth;
+                throw;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -95,20 +115,6 @@ namespace Viking.VolumeModel
             }
 
             return mosaic_innerRingPoints;
-        }
-
-        private static List<Vector2[]> SectionInnerRingPointsToVolume(Viking.VolumeModel.IVolumeToSectionTransform mapper, ICollection<Vector2[]> section_innerRingPoints)
-        {
-            if (section_innerRingPoints is null)
-                return null;
-
-            List<Vector2[]> volume_innerRingPoints = new(section_innerRingPoints.Count);
-            foreach (Vector2[] volume_ring in section_innerRingPoints)
-            {
-                volume_innerRingPoints.Add(mapper.SectionToVolume(volume_ring));
-            }
-
-            return volume_innerRingPoints;
         }
 
     }

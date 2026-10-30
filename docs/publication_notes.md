@@ -94,8 +94,23 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
   the crossing of segment $cp$ with the outline farthest from $c$, $d = (p - E)/\lVert p - E \rVert$, entry $N$ = the
   nearest crossing behind $E$ along $-d$, the end circle has radius
   $r = \min(\operatorname{dist}(\tfrac{N + E}{2}, \partial P), \sqrt{A/\pi})$ and centre $E - r\,d$.
+- **Inverse of an annotation edit** (`LocationVolumeGeometry.ToMosaic`, since 2026-10-30): with section-to-volume map
+  $T$ and the forward five-point mean scale $s_T(c, r) = \tfrac14 \sum_{k=1}^{4} \lVert T(c + r e_k) - T(c) \rVert / r$
+  ($e_k$ the east, north, west and south unit vectors), a circle edited in volume space as $(c_v, r_v)$ is saved as
+  $c_m = T^{-1}(c_v)$ and the fixed point $r_m \leftarrow r_v / s_T(c_m, r_m)$, started from the inverse five-point
+  estimate; a line width $w_v$ is saved as $w_m \leftarrow w_v / s_T(\bar{x}_m, w_m/2)$ ($\bar{x}_m$ the centroid of the
+  mosaic shape; a closed curve samples at its own radius instead). Control points map pointwise by $T^{-1}$, all or none.
 
 ## Algorithmic decisions
+
+- **2026-10-30 Annotation edits are saved by one inverse owner, solved against the forward rule.** Why: mosaic is the
+  truth and every view draws the forward owner's mapping, so an edit made on screen must save the mosaic geometry whose
+  forward mapping is what the user saw. The one-step inverse five-point mean is not the inverse of the forward one under
+  shear or unequal axis scales (for $A = \operatorname{diag}(2, 1)$ the forward scale is $1.5$, the inverse $0.75$, so a
+  saved circle would redraw 12.5% larger), and copying a volume line width into the mosaic `Width` ignored the scale
+  altogether. Rejected: keeping the user's volume shape as the cache (it drifts from what a changed `.stos` draws) and
+  saving partly mapped shapes (an edit with a point outside the transform is refused with the reason). Where:
+  `SqlGeometryAnnotationExtensions/LocationVolumeGeometry.Inverse.cs`, `LocationObjExtensions.TryApply`.
 
 - **2026-10-29 Label placement hysteresis removed; the eased move, 5° angles and 50 ms relayout throttle stay.** Why:
   James, after using it: the jitter the hysteresis was meant to hide (labels flipping between level and tilted near a

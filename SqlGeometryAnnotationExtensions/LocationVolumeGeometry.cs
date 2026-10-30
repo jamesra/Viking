@@ -30,8 +30,10 @@ namespace Viking.VolumeModel
     /// false for polygons, curve polygons and polylines: on the viewed section those are not drawn from an extrapolated
     /// outline, while their markers on adjacent sections, and every curve, are.</para>
     /// <para>Instances are immutable and shared between threads; the lazily computed parts are thread-safe.</para>
+    /// <para>The inverse, from a geometry the user edited in volume space back to the mosaic geometry that is saved, is
+    /// <see cref="ToMosaic(LocationType, SqlGeometry, IVolumeToSectionTransform, double?)"/> and its overloads.</para>
     /// </remarks>
-    public sealed class LocationVolumeGeometry
+    public sealed partial class LocationVolumeGeometry
     {
         private sealed class Slot
         {

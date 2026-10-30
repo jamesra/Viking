@@ -42,6 +42,7 @@
     <Compile Include="Tools\CircleLocationScaleTests.cs" />
         <Compile Include="Tools\TestTransforms.cs" />
         <Compile Include="Tools\LocationVolumeGeometryTests.cs" />
+        <Compile Include="Tools\LocationVolumeGeometryInverseTests.cs" />
         <Compile Include="Tools\LocationLinkEndGeometryTests.cs" />
         <Compile Include="Tools\StoredVolumeCacheReaderTests.cs" />
         <Compile Include="Tools\VolumeGeometryGuardTests.cs" />
