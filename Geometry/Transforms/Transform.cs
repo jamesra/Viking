@@ -158,7 +158,7 @@ namespace Geometry.Transforms
             else if (transformType == typeof(GridTransform))
             {
                 IGridTransformInfo grid_info = (IGridTransformInfo)AtoB;
-                return new GridTransform(newControlPoints, newControlPoints.MappedBounds(), grid_info.GridSizeX, grid_info.GridSizeY, AtoCInfo);
+                return GridTransform.Create(newControlPoints, newControlPoints.MappedBounds(), grid_info.GridSizeX, grid_info.GridSizeY, AtoCInfo);
             }
             else if (transformType == typeof(MeshTransform))
             {
