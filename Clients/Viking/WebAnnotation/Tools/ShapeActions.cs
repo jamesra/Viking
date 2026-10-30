@@ -28,7 +28,7 @@ namespace WebAnnotation.Tools
         {
             IVolumeToSectionTransform mapper = context.Mapper;
             Vector2 mosaicCenter = location.Position;
-            if (!mapper.TrySectionToVolume(mosaicCenter, out _))
+            if (!LocationVolumeGeometry.TryMapPoints([mosaicCenter], mapper, out _)[0])
             {
                 context.SetStatus("This location could not be mapped onto the volume");
                 return Task.CompletedTask;
@@ -124,6 +124,7 @@ namespace WebAnnotation.Tools
             IVolumeToSectionTransform mapper = context.Mapper;
             SqlGeometry undoShape = location.MosaicShape.ToSqlGeometry();
             LocationType undoType = location.TypeCode;
+            double? undoWidth = location.Width;
             try
             {
                 if (!change())
@@ -131,6 +132,9 @@ namespace WebAnnotation.Tools
             }
             catch (ArgumentException ex)
             {
+                // A refused mapping leaves the shape alone; put back the type and width the change set first.
+                location.TypeCode = undoType;
+                location.Width = undoWidth;
                 Trace.WriteLine($"{description} failed: {ex}");
                 context.SetStatus($"{description} failed: {ex.Message}");
                 return false;

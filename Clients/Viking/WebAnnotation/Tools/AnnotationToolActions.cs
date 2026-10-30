@@ -39,7 +39,7 @@ namespace WebAnnotation.Tools
                 }
 
                 IVolumeToSectionTransform mapper = context.Mapper;
-                if (!mapper.TryVolumeToSection(world, out Vector2 mosaic))
+                if (!Viking.VolumeModel.LocationVolumeGeometry.TryMapPointsToMosaic([world], mapper, out _, out _))
                     return;
 
                 StructureObj structure = new(type);
@@ -65,6 +65,12 @@ namespace WebAnnotation.Tools
                     location.SetShapeFromPointsInVolume(mapper, volumePoints, null);
 
                 await CreateOrPickParentAsync(context, structure, location);
+            }
+            catch (ArgumentException ex)
+            {
+                // The drawn shape does not map into this section (LocationObjExtensions.SetShapeFromPointsInVolume).
+                Trace.WriteLine($"Create structure refused: {ex.Message}");
+                context.SetStatus(ex.Message);
             }
             catch (Exception ex)
             {
@@ -105,7 +111,7 @@ namespace WebAnnotation.Tools
                     return;
 
                 IVolumeToSectionTransform mapper = context.Mapper;
-                if (!mapper.TryVolumeToSection(world, out Vector2 mosaic))
+                if (!Viking.VolumeModel.LocationVolumeGeometry.TryMapPointsToMosaic([world], mapper, out _, out _))
                     return;
 
                 int existingSection = (int)Math.Round(existing.Z);
@@ -129,6 +135,12 @@ namespace WebAnnotation.Tools
                 await Store.Locations.Create(created, [existing.ID]);
                 Global.LastEditedAnnotationID = created.ID;
                 context.Invalidate();
+            }
+            catch (ArgumentException ex)
+            {
+                // The drawn shape does not map into this section (LocationObjExtensions.SetShapeFromPointsInVolume).
+                Trace.WriteLine($"Create linked location refused: {ex.Message}");
+                context.SetStatus(ex.Message);
             }
             catch (Exception ex)
             {
@@ -253,6 +265,29 @@ namespace WebAnnotation.Tools
 
         /// <summary>Saves the store's pending location changes; tests replace it to run without a server.</summary>
         internal static Func<Task<bool>> SaveLocations = () => Store.Locations.Save();
+
+        /// <summary>
+        /// Puts a location dragged by a tool back to the mosaic shape and width it had (mosaic is the truth; the volume cache is
+        /// derived again by <c>LocationObjExtensions</c>) and its <see cref="DBACTION"/>, as Escape does. A circle goes back as
+        /// its exact <see cref="Circle"/>.
+        /// </summary>
+        internal static void RestoreShape(LocationObj location, IVolumeToSectionTransform mapper, IShape2D mosaic, double? width, DBACTION action)
+        {
+            try
+            {
+                location.Width = width;
+                if (mosaic is Circle circle)
+                    location.SetShapeFromCircleInSection(mapper, circle);
+                else
+                    location.SetShapeFromGeometryInSection(mapper, LocationVolumeGeometry.ToSqlGeometry(mosaic));
+            }
+            catch (ArgumentException ex)
+            {
+                Trace.WriteLine($"Restoring location {location.ID} failed: {ex}");
+            }
+
+            location.DBAction = action;
+        }
 
         /// <summary>
         /// Saves a shape edit of <paramref name="location"/>. Accepted: the edit is recorded for Ctrl+Z under

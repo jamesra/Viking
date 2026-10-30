@@ -47,21 +47,22 @@ namespace WebAnnotation.Tools
             AddPath(lines, ring, closed: true, width, color);
         }
 
-        /// <summary>The outline of <paramref name="location"/>'s volume shape; nothing if the shape is not loaded.</summary>
+        /// <summary>
+        /// The outline of <paramref name="location"/> as its view draws it, from the forward owner
+        /// (<see cref="LocationVolumeGeometryExtensions.VolumeGeometry"/>), never the stored volume cache: a circle's ring,
+        /// a polygon's or closed curve's outline, a line's drawn path. Nothing when the location cannot be mapped.
+        /// </summary>
         public static void AddOutline(List<LineView> lines, LocationObj location, double width, Color color)
         {
-            switch (location?.VolumeShape)
-            {
-                case ICircle2D circle:
-                    AddRing(lines, new Vector2(circle.Center.X, circle.Center.Y), circle.Radius, width, color);
-                    break;
-                case IPolygon2D polygon:
-                    AddPath(lines, ToVectors(polygon.ExteriorRing), closed: true, width, color);
-                    break;
-                case IPolyLine2D polyline:
-                    AddPath(lines, ToVectors(polyline.Points), closed: false, width, color);
-                    break;
-            }
+            if (location?.VolumeGeometry() is not Viking.VolumeModel.LocationVolumeGeometry geometry)
+                return;
+
+            if (geometry.Circle is Circle circle)
+                AddRing(lines, circle.Center, circle.Radius, width, color);
+            else if (geometry.Outline is Microsoft.SqlServer.Types.SqlGeometry outline)
+                AddPath(lines, SqlGeometryUtils.Extensions.ToPoints(outline), closed: true, width, color);
+            else
+                AddPath(lines, SqlGeometryUtils.Extensions.ToPoints(geometry.Shape), closed: false, width, color);
         }
 
         public static void Draw(GraphicsDevice device, VikingXNA.Scene scene, RoundLineCode.RoundLineManager lineManager, List<LineView> lines)
@@ -70,15 +71,5 @@ namespace WebAnnotation.Tools
                 LineView.Draw(device, scene, lineManager, lines.ToArray());
         }
 
-        static Vector2[] ToVectors(IReadOnlyList<IPoint2D> points)
-        {
-            if (points == null)
-                return null;
-
-            Vector2[] result = new Vector2[points.Count];
-            for (int i = 0; i < points.Count; i++)
-                result[i] = new Vector2(points[i].X, points[i].Y);
-            return result;
-        }
     }
 }

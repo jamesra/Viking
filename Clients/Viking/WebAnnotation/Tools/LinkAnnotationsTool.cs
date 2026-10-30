@@ -46,17 +46,23 @@ namespace WebAnnotation.Tools
 
         public string StatusText => "Release over an annotation to link it (Esc to cancel)";
 
-        /// <summary>Where the link line starts: the center, or the middle control point of a line.</summary>
+        /// <summary>
+        /// Where the link line starts: the middle point of a line or curve as drawn, else the location's volume centre, both
+        /// from the forward owner (<see cref="LocationVolumeGeometryExtensions.VolumeGeometry"/>), as Viking's link command does.
+        /// </summary>
         static Vector2 OriginFor(LocationObj location)
         {
-            if (location.TypeCode is LocationType.OPENCURVE or LocationType.POLYLINE && location.VolumeShape != null)
+            if (location.VolumeGeometry() is not Viking.VolumeModel.LocationVolumeGeometry geometry)
+                return location.Position;
+
+            if (location.TypeCode is LocationType.OPENCURVE or LocationType.POLYLINE)
             {
-                Vector2[] points = location.VolumeShape.ToPoints();
+                Vector2[] points = geometry.Shape.ToPoints();
                 if (points.Length > 0)
                     return points[points.Length / 2];
             }
 
-            return location.VolumePosition;
+            return geometry.Center;
         }
 
         public AnnotationToolResult OnMouseDown(Vector2 screen, MouseButton button, int clickCount) => AnnotationToolResult.Continue;

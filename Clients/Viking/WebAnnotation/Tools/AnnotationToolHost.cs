@@ -498,20 +498,25 @@ namespace WebAnnotation.Tools
             if (!IsIdle || polygon == null)
                 return;
 
-            Viking.VolumeModel.IVolumeToSectionTransform mapper = _context.Mapper;
-            Polygon mosaic = SqlGeometryUtils.Extensions.ToPolygon(polygon.MosaicShape);
-            List<Vector2[]> volumeRings = new();
-            foreach (Vector2[] ring in new[] { mosaic.ExteriorRing }.Concat(mosaic.InteriorRings))
+            // The rings the forward owner draws, as Viking's Edit mask starts from (annotation-volume-geometry.mdc).
+            Viking.VolumeModel.LocationVolumeGeometry geometry;
+            try
             {
-                bool[] mapped = mapper.TrySectionToVolume(ring, out Vector2[] volumeRing);
-                if (mapped.Any(ok => !ok))
-                {
-                    StatusChanged?.Invoke(this, "This polygon could not be mapped onto the volume");
-                    return;
-                }
-
-                volumeRings.Add(volumeRing);
+                geometry = Viking.VolumeModel.LocationVolumeGeometry.For(polygon, _context.Mapper);
             }
+            catch (ArgumentException)
+            {
+                geometry = null;
+            }
+
+            if (geometry is null || !geometry.IsExact)
+            {
+                StatusChanged?.Invoke(this, "This polygon could not be mapped onto the volume");
+                return;
+            }
+
+            Polygon volume = geometry.ControlPolygon();
+            List<Vector2[]> volumeRings = [volume.ExteriorRing, .. volume.InteriorRings];
 
             int downsample = Math.Max(1, (int)Math.Ceiling(_host.Downsample));
             UI.Commands.Segmentation.RasterMask mask = UI.Commands.Segmentation.RasterMask.FromRings(

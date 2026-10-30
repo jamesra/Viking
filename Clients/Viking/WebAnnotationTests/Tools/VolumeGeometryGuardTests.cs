@@ -25,8 +25,11 @@ namespace WebAnnotationTests.Tools
 
         private static readonly Regex InlineBlockComment = new(@"/\*.*?\*/", RegexOptions.Compiled);
 
-        /// <summary>The WebAnnotation folders checked: everything that draws, hit-tests or edits annotations.</summary>
-        private static readonly string[] Folders = ["View", "ViewModel", "UI"];
+        /// <summary>
+        /// The WebAnnotation folders checked: everything that draws, hit-tests or edits annotations. Tools/ is the tool layer
+        /// Jotunn draws previews and edits through (dev only).
+        /// </summary>
+        private static readonly string[] Folders = ["View", "ViewModel", "UI", "Tools"];
 
         /// <summary>
         /// The justified, read-only exceptions, as (file under WebAnnotation, text on the line, why). None of them maps an

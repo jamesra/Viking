@@ -14,9 +14,10 @@ namespace WebAnnotation.Tools
         readonly AnnotationToolContext _context;
         readonly LocationObj _location;
         readonly Vector2 _volumeCenter;
-        readonly Vector2 _mosaicCenter;
+        /// <summary>False when the circle cannot be mapped exactly; the drag then changes nothing.</summary>
+        readonly bool _canResize;
         readonly IShape2D _originalMosaic;
-        readonly IShape2D _originalVolume;
+        readonly double? _originalWidth;
         bool _resized;
         readonly Viking.AnnotationServiceTypes.Interfaces.DBACTION _originalAction;
 
@@ -24,11 +25,12 @@ namespace WebAnnotation.Tools
         {
             _context = context;
             _location = location;
-            _mosaicCenter = location.Position;
-            // As Viking does, map the mosaic center through this section's transform; the stored volume position can lag it.
-            _volumeCenter = context.Mapper is { } mapper && mapper.TrySectionToVolume(_mosaicCenter, out Vector2 mapped) ? mapped : location.VolumePosition;
+            // As Viking does, start from the circle the forward owner draws; the stored volume position can lag it.
+            Circle? drawn = context.Mapper is { } mapper ? LocationActions.TryGetVolumeCircle(location, mapper) : null;
+            _canResize = drawn.HasValue;
+            _volumeCenter = drawn?.Center ?? location.Position;
             _originalMosaic = location.MosaicShape;
-            _originalVolume = location.VolumeShape;
+            _originalWidth = location.Width;
             _originalAction = location.DBAction;
             _context.Host.CapturePointer();
         }
@@ -40,6 +42,9 @@ namespace WebAnnotation.Tools
 
         public void OnMouseMove(Vector2 screen)
         {
+            if (!_canResize)
+                return;
+
             Vector2 world = _context.ScreenToWorld(screen);
             // The pointer is in volume space, so this is a volume radius; the mosaic circle is mapped from it (see circle-mapping-scale.mdc).
             double radius = Math.Max(Global.MinRadius, Vector2.Distance(_volumeCenter, world));
@@ -74,10 +79,8 @@ namespace WebAnnotation.Tools
             _context.Host.ReleasePointer();
             if (_resized)
             {
-                // Restore the shapes as they were; a radius cannot be copied between mosaic and volume space.
-                _location.MosaicShape = _originalMosaic;
-                _location.VolumeShape = _originalVolume;
-                _location.DBAction = _originalAction;
+                // Restore the mosaic circle as it was; the volume cache is derived from it again.
+                AnnotationToolActions.RestoreShape(_location, _context.Mapper, _originalMosaic, _originalWidth, _originalAction);
             }
 
             _context.SetStatus(null);

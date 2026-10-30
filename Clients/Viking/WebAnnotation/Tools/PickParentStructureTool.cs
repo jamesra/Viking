@@ -30,7 +30,7 @@ namespace WebAnnotation.Tools
             _context = context;
             _structure = structure;
             _location = location;
-            _pointer = location.VolumePosition;
+            _pointer = location.VolumeCenter();
         }
 
         public string StatusText => $"Click the parent structure of the new {_structure.Type?.Name ?? "structure"} (Esc cancels)";
@@ -103,8 +103,8 @@ namespace WebAnnotation.Tools
             Color color = _candidate != null ? ToolPreviewDrawing.ActionColor : ToolPreviewDrawing.HoverColor;
             List<LineView> lines = new();
             ToolPreviewDrawing.AddOutline(lines, _location, width, ToolPreviewDrawing.ActionColor);
-            Vector2 target = _candidate?.VolumePosition ?? _pointer;
-            lines.Add(new LineView(_location.VolumePosition, target, width, color, LineStyle.Standard));
+            Vector2 target = _candidate?.VolumeCenter() ?? _pointer;
+            lines.Add(new LineView(_location.VolumeCenter(), target, width, color, LineStyle.Standard));
             if (_candidate != null)
                 ToolPreviewDrawing.AddOutline(lines, _candidate, width, color);
             ToolPreviewDrawing.Draw(device, scene, lineManager, lines);
