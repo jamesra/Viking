@@ -15,13 +15,26 @@ namespace WebAnnotationTests.Tools
     /// <c>TryMapCircle</c>/<c>TryMapControlShape</c>/<c>MapShape</c> for geometry that is not a saved location's), and every
     /// edit is mapped back by the inverse owner (<c>LocationVolumeGeometry.ToMosaic</c>, <c>TryMapPointsToMosaic</c>,
     /// <c>TryMapPolygonToMosaic</c>, <c>TryMapPolylineToMosaic</c>). So no <c>SectionToVolume(</c> or <c>VolumeToSection(</c>
-    /// in any form (<c>Try…</c>, <c>TryMapShape…</c>), and no <c>.VolumePosition</c> or <c>.VolumeShape</c> read. See
-    /// <c>.cursor/rules/annotation-volume-geometry.mdc</c>.
+    /// in any form (<c>Try…</c>, <c>TryMapShape…</c>), and no <c>.VolumePosition</c> or <c>.VolumeShape</c> read. And no code
+    /// but the owners (<c>LocationObjExtensions.SetShapeFromGeometryInSection</c>, which <c>TryApply</c> and
+    /// <c>SetShapeFromPointsInVolume</c> save through) writes a <c>MosaicShape</c>, so the stored volume cache is always
+    /// derived again. See <c>.cursor/rules/annotation-volume-geometry.mdc</c>.
     /// </summary>
     [TestClass]
     public class VolumeGeometryGuardTests
     {
         private static readonly Regex Forbidden = new(@"SectionToVolume\(|VolumeToSection\(|\.VolumePosition\b|\.VolumeShape\b", RegexOptions.Compiled);
+
+        /// <summary>An assignment to a location's <c>MosaicShape</c> (member access or object initializer), not a comparison.</summary>
+        private static readonly Regex MosaicShapeWrite = new(@"(?:\.|[{,]\s*)MosaicShape\s*=(?!=)", RegexOptions.Compiled);
+
+        /// <summary>
+        /// The client code checked for <see cref="MosaicShapeWrite"/>, relative to the repository root, and the one file there
+        /// that may write it: the owner.
+        /// </summary>
+        private static readonly string[] MosaicShapeWriteRoots = ["Clients/Viking/WebAnnotation", "Clients/VikingAU", "SqlGeometryAnnotationExtensions"];
+
+        private const string MosaicShapeOwner = "SqlGeometryAnnotationExtensions/LocationObjExtensions.cs";
 
         private static readonly Regex InlineBlockComment = new(@"/\*.*?\*/", RegexOptions.Compiled);
 
@@ -144,6 +157,54 @@ namespace WebAnnotationTests.Tools
             {
                 File.Delete(file);
             }
+        }
+
+        /// <summary>
+        /// Only the owner writes a location's <c>MosaicShape</c>: an edit sets it through
+        /// <c>SetShapeFromGeometryInSection</c> (or <c>TryApply</c>), which derives <c>VolumeShape</c> again under the volume's
+        /// default transform. A direct write leaves the stored cache describing the old shape.
+        /// </summary>
+        [TestMethod]
+        public void OnlyTheOwnerWritesAMosaicShape()
+        {
+            string repository = Path.GetFullPath(Path.Combine(WebAnnotationDirectory(), "..", "..", ".."));
+            List<string> violations = [];
+            foreach (string root in MosaicShapeWriteRoots)
+            {
+                string directory = Path.Combine(repository, root);
+                Assert.IsTrue(Directory.Exists(directory), directory + " not found");
+                foreach (string path in Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories))
+                {
+                    string relative = path.Substring(repository.Length + 1).Replace('\\', '/');
+                    if (relative == MosaicShapeOwner || relative.Contains("/obj/") || relative.Contains("/bin/"))
+                        continue;
+
+                    foreach (var (number, code) in CodeLines(path))
+                    {
+                        if (MosaicShapeWrite.IsMatch(code))
+                            violations.Add($"{relative}:{number}: {code}");
+                    }
+                }
+            }
+
+            Assert.AreEqual(0, violations.Count, "set a mosaic shape with SetShapeFromGeometryInSection or TryApply, which derive the stored volume shape again:"
+                + Environment.NewLine + string.Join(Environment.NewLine, violations));
+        }
+
+        [TestMethod]
+        public void TheGuardFlagsADirectMosaicShapeWrite()
+        {
+            string[] lines =
+            [
+                "modelObj.MosaicShape = poly.ToSqlGeometry();",
+                "if (loc.MosaicShape == null) return;",
+                "SqlGeometry MosaicShape = TryTransform(shape);",
+                "LocationObj l = new() { MosaicShape = shape };",
+                "loc.MosaicShape.STIsValid();",
+            ];
+
+            bool[] flagged = [.. lines.Select(line => MosaicShapeWrite.IsMatch(line))];
+            CollectionAssert.AreEqual(new[] { true, false, false, true, false }, flagged);
         }
     }
 }

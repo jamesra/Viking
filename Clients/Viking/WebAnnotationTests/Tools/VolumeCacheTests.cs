@@ -110,6 +110,35 @@ namespace WebAnnotationTests.Tools
         }
 
         /// <summary>
+        /// Simplify Polygon and removing a hole (polygon context menu) edit the mosaic shape and save it through the owner, so
+        /// the stored volume shape is derived again under the default transform. They used to write <c>MosaicShape</c>
+        /// directly, which left the cache describing the old polygon.
+        /// </summary>
+        [TestMethod]
+        public void SimplifyPolygonAndRemoveHoleDeriveTheCacheAgain()
+        {
+            SegmentationServiceSessionTests.EnsureVolumeCachePathAvailable(); // Global's settings
+
+            // A densely sampled round outline, which Simplify Polygon thins, around a square hole.
+            Vector2[] ring = new Vector2[65];
+            for (int i = 0; i < 64; i++)
+                ring[i] = new Vector2(2050 + (250 * Math.Cos(i * Math.PI / 32)), 3000 + (250 * Math.Sin(i * Math.PI / 32)));
+            ring[64] = ring[0];
+            Vector2[] hole = [new(2000, 2950), new(2100, 2950), new(2100, 3050), new(2000, 3050), new(2000, 2950)];
+            LocationObj location = LocationVolumeGeometryTests.NewLocation(LocationType.POLYGON, ring.ToPolygon([hole]));
+            location.SetShapeFromGeometryInSection(ActiveTransform, location.MosaicShape);
+            int exteriorBefore = location.MosaicShape.ToPolygon().ExteriorRing.Length;
+
+            Assert.IsTrue(WebAnnotation.ViewModel.Location_ViewModelBase.TrySimplifyPolygon(location, null, ActiveTransform));
+            Assert.IsTrue(location.MosaicShape.ToPolygon().ExteriorRing.Length < exteriorBefore, "the near-collinear vertex is removed");
+            AssertSamePoints(LocationVolumeGeometry.For(location, DefaultTransform).CacheShape, location.VolumeShape, "after Simplify Polygon");
+
+            Assert.IsTrue(WebAnnotation.ViewModel.Location_ViewModelBase.TryRemoveInnerPolygon(location, 0, ActiveTransform));
+            Assert.IsFalse(location.MosaicShape.ToPolygon().HasInteriorRings, "the hole is removed");
+            AssertSamePoints(LocationVolumeGeometry.For(location, DefaultTransform).CacheShape, location.VolumeShape, "after removing the hole");
+        }
+
+        /// <summary>
         /// <see cref="VolumeViewModel.GetDefaultSectionToVolumeTransform"/> is the one helper that gives the default transform:
         /// the default group's .stos while another group is active, the active transform's own object while the default is
         /// active, and identity for a section the default has no entry for (the reference section) or a volume without it.
