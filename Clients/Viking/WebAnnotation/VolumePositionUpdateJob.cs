@@ -232,7 +232,8 @@ namespace WebAnnotation
                 }
             }
 
-            SqlGeometry? updatedVolumeShape = VolumeShapeForLocation(location, mapper);
+            // The same forward mapping every view draws with, so the cache it writes is what the viewer shows.
+            SqlGeometry? updatedVolumeShape = LocationVolumeGeometry.MapShape(location.TypeCode, location.MosaicShape, mapper);
             if (updatedVolumeShape is null)
             {
                 Trace.WriteLine("Could not map location ID : " + location.ID);
@@ -258,15 +259,6 @@ namespace WebAnnotation
             }
 
             return typeUpdated;
-        }
-
-        private static SqlGeometry? VolumeShapeForLocation(LocationObj location, MappingBase mapper)
-        {
-            SqlGeometry? unsmoothed = mapper.TryMapShapeSectionToVolume(location.MosaicShape);
-            if (unsmoothed is null)
-                return null;
-
-            return location.TypeCode.GetSmoothedShape(unsmoothed);
         }
 
         private static bool IsLocationTypeValid(LocationObj location)
