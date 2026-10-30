@@ -294,16 +294,14 @@ namespace WebAnnotation
                     if (location.TypeCode == LocationType.POLYGON || location.TypeCode == LocationType.CURVEPOLYGON)
                     {
                         SqlGeometry newShape = location.MosaicShape.ToPoints().ToPolygon();
-                        location.Width = null;
-                        return TrySetRepairedShape(location, defaultTransform, newShape);
+                        return TrySetRepairedShape(location, defaultTransform, newShape, null);
                     }
                     break;
                 case SupportedGeometryType.POLYGON:
                     if (location.TypeCode == LocationType.CLOSEDCURVE || location.TypeCode == LocationType.POLYLINE)
                     {
                         SqlGeometry newShape = location.MosaicShape.ToPoints().ToSqlGeometry();
-                        location.Width = 8;
-                        return TrySetRepairedShape(location, defaultTransform, newShape);
+                        return TrySetRepairedShape(location, defaultTransform, newShape, 8);
                     }
                     break;
             }
@@ -311,11 +309,18 @@ namespace WebAnnotation
             return false;
         }
 
-        private static bool TrySetRepairedShape(LocationObj location, IVolumeToSectionTransform defaultTransform, SqlGeometry newShape)
+        /// <summary>
+        /// Saves a repaired mosaic shape through the owner (<see cref="LocationObjExtensions.SetShapeFromGeometryInSection"/>)
+        /// with its new <paramref name="width"/>. The width is set first because the cache is derived for it; when the shape is
+        /// invalid or cannot be saved, the location keeps both its shape and its old width.
+        /// </summary>
+        private static bool TrySetRepairedShape(LocationObj location, IVolumeToSectionTransform defaultTransform, SqlGeometry newShape, double? width)
         {
             if (!newShape.STIsValid().IsTrue)
                 return false;
 
+            double? oldWidth = location.Width;
+            location.Width = width;
             try
             {
                 location.SetShapeFromGeometryInSection(defaultTransform, newShape);
@@ -323,6 +328,7 @@ namespace WebAnnotation
             }
             catch (ArgumentException e)
             {
+                location.Width = oldWidth;
                 Trace.WriteLine($"Location {location.ID}: the repaired shape could not be saved: {e.Message}");
                 return false;
             }

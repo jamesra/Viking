@@ -587,13 +587,17 @@ namespace Viking.AU
 
         /// <summary>
         /// Saves a repaired mosaic shape through the owner (<see cref="LocationObjExtensions.SetShapeFromGeometryInSection"/>),
-        /// which also derives its volume shape. False, with the location unchanged, when the shape is invalid or unmappable.
+        /// which also derives its volume shape, with its new <paramref name="width"/>. False, with the location (its width
+        /// included) unchanged, when the shape is invalid or unmappable.
         /// </summary>
-        static bool TrySetRepairedShape(LocationObj loc, MappingBase mapper, SqlGeometry newShape)
+        static bool TrySetRepairedShape(LocationObj loc, MappingBase mapper, SqlGeometry newShape, double? width)
         {
             if (!newShape.STIsValid().IsTrue)
                 return false;
 
+            // The width is set first because the cache is derived for it; a failed repair puts the old width back.
+            double? oldWidth = loc.Width;
+            loc.Width = width;
             try
             {
                 loc.SetShapeFromGeometryInSection(mapper, newShape);
@@ -601,6 +605,7 @@ namespace Viking.AU
             }
             catch (ArgumentException e)
             {
+                loc.Width = oldWidth;
                 Console.WriteLine($"Location {loc.ID}: the repaired shape could not be saved: {e.Message}");
                 return false;
             }
@@ -640,8 +645,7 @@ namespace Viking.AU
                     if (loc.TypeCode == LocationType.POLYGON || loc.TypeCode == LocationType.CURVEPOLYGON)
                     {
                         SqlGeometry newShape = loc.MosaicShape.ToPoints().ToPolygon();
-                        loc.Width = new long?();
-                        return TrySetRepairedShape(loc, mapper, newShape);
+                        return TrySetRepairedShape(loc, mapper, newShape, null);
 
                     }
                     break;
@@ -649,8 +653,7 @@ namespace Viking.AU
                     if (loc.TypeCode == LocationType.CLOSEDCURVE || loc.TypeCode == LocationType.POLYLINE)
                     {
                         SqlGeometry newShape = loc.MosaicShape.ToPoints().ToSqlGeometry();
-                        loc.Width = 8;
-                        return TrySetRepairedShape(loc, mapper, newShape);
+                        return TrySetRepairedShape(loc, mapper, newShape, 8);
                     }
                     break;
                 default:
