@@ -86,7 +86,7 @@ namespace WebAnnotation.UI.Actions
                 saved = await Store.Locations.Save();
                 UndoManager.PushLocationShape("Change Type", Location, Transform, original_mosaic_polygon, originalType);
             }
-            catch (System.ServiceModel.FaultException e)
+            catch (Exception e)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(e);
                 Location.TypeCode = originalType;
@@ -239,7 +239,7 @@ namespace WebAnnotation.UI.Actions
                 await Store.Locations.Save();
                 UndoManager.PushLocationShape("Change Type", Location, Transform, originalShape, originalType);
             }
-            catch (System.ServiceModel.FaultException e)
+            catch (Exception e)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(e);
                 Location.TypeCode = originalType;

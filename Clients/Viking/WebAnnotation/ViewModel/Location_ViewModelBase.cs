@@ -914,7 +914,7 @@ namespace WebAnnotation.ViewModel
                 await Store.Locations.Save();
                 UndoManager.PushLocationFlags("Toggle OffEdge", modelObj, oldTerminal, oldOffEdge);
             }
-            catch (System.ServiceModel.FaultException ex)
+            catch (Exception ex)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
                 modelObj.OffEdge = !modelObj.OffEdge;

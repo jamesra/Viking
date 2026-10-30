@@ -79,7 +79,7 @@ namespace WebAnnotation.View
                 //              this.modelObj = newLink;
                 //CreateView(newLink);
             }
-            catch (System.ServiceModel.FaultException ex)
+            catch (Exception ex)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
             }
@@ -97,7 +97,7 @@ namespace WebAnnotation.View
                 //              this.modelObj = newLink;
                 //CreateView(newLink);
             }
-            catch (System.ServiceModel.FaultException ex)
+            catch (Exception ex)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
             }

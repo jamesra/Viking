@@ -8,7 +8,7 @@ namespace WebAnnotationTests
     /// <summary>
     /// Pins the bounded undo stack in <c>WebAnnotation/UndoManager.cs</c>: newest-first order, the 50-entry cap
     /// that drops the oldest entry, <c>CanUndo</c>/<c>NextUndoDescription</c>, and that an entry is removed even
-    /// when its undo throws. The FaultException path is not covered because it shows a MessageBox.
+    /// when its undo throws. The failed-save path is not covered because it shows a MessageBox.
     /// </summary>
     [TestClass]
     public class UndoManagerTests

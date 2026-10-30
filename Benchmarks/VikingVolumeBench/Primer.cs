@@ -6,9 +6,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-#if VIKINGBENCH_WCF_ANNOTATIONS
-using WebAnnotationModel;
-#endif
 
 namespace Viking.Benchmarks.VolumeBench
 {
@@ -71,9 +68,8 @@ namespace Viking.Benchmarks.VolumeBench
             return SnapshotAnnotations(options, volume);
         }
 
-#if !VIKINGBENCH_WCF_ANNOTATIONS
         /// <summary>
-        /// This build has no WCF annotation store (Viking splits it into a separate project). The snapshot format is
+        /// Viking dev has no WCF annotation store (it lives in VikingLegacy). The snapshot format is
         /// tree-independent, so copy the <c>annotations</c> folder from a VikingLegacy prime instead.
         /// </summary>
         private static int SnapshotAnnotations(BenchOptions options, XElement volume)
@@ -82,96 +78,6 @@ namespace Viking.Benchmarks.VolumeBench
             Console.WriteLine($"Annotation snapshot not supported in this build. Copy <root>\\annotations from a VikingLegacy prime into {options.AnnotationRoot}.");
             return 0;
         }
-#else
-        private static int SnapshotAnnotations(BenchOptions options, XElement volume)
-        {
-            XElement endpointElement = volume.Elements().FirstOrDefault(e => e.Name.LocalName.Equals("VolumeToEndpoint", StringComparison.OrdinalIgnoreCase));
-            string endpoint = endpointElement is null ? null : Attr(endpointElement, "Endpoint");
-            if (endpoint is null)
-            {
-                Console.WriteLine("The VikingXML has no <VolumeToEndpoint>; no annotation snapshot taken. Phases C, D3 and E2 will be skipped.");
-                return 0;
-            }
-
-            State.Endpoint = new Uri(endpoint);
-            string user = Environment.GetEnvironmentVariable("VIKINGBENCH_USER");
-            string password = Environment.GetEnvironmentVariable("VIKINGBENCH_PASSWORD");
-            bool haveLogin = !string.IsNullOrEmpty(user) && !string.IsNullOrEmpty(password);
-            if (haveLogin)
-                State.UserCredentials = new System.Net.NetworkCredential(user, password);
-
-            Console.WriteLine($"Annotation snapshot from {endpoint} using {(haveLogin ? "VIKINGBENCH_USER" : "the anonymous login")}.");
-
-            LocationStore store = new();
-            int emptySections = 0;
-            foreach (int number in options.Sections)
-            {
-                var locations = store.GetObjectsForSection(number);
-                SectionSnapshot snapshot = new()
-                {
-                    Section = number,
-                    FetchedUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture),
-                    Endpoint = endpoint,
-                };
-
-                foreach (LocationObj loc in locations.Values.OrderBy(l => l.ID))
-                {
-                    snapshot.Locations.Add(new SnapshotLocation
-                    {
-                        Id = loc.ID,
-                        ParentId = loc.ParentID,
-                        TypeCode = (short)loc.TypeCode,
-                        Width = loc.Width,
-                        LastModifiedTicks = loc.LastModified.Ticks,
-                        Z = loc.Z,
-                        MosaicWkb = loc.MosaicShape is null ? null : Convert.ToBase64String(loc.MosaicShape.STAsBinary().Value),
-                        VolumeWkb = loc.VolumeShape is null ? null : Convert.ToBase64String(loc.VolumeShape.STAsBinary().Value),
-                    });
-                }
-
-                snapshot.Save(options);
-                if (snapshot.Locations.Count == 0)
-                    emptySections++;
-                Console.WriteLine($"  Section {number}: {snapshot.Locations.Count} locations");
-                store.RemoveSection(number);
-            }
-
-            if (emptySections == options.Sections.Length)
-            {
-                Console.WriteLine("Every section returned 0 locations. LocationStore swallows errors, so querying directly to see why:");
-                Console.WriteLine("  " + DiagnoseAnnotationQuery(endpoint, options.Sections[0]));
-                Console.WriteLine("Set VIKINGBENCH_USER and VIKINGBENCH_PASSWORD and rerun prime to take the snapshot.");
-                return 2;
-            }
-
-            return 0;
-        }
-
-        /// <summary>One read-only location query that reports the exception <c>LocationStore</c> would have swallowed.</summary>
-        private static string DiagnoseAnnotationQuery(string endpoint, int section)
-        {
-            using System.ServiceModel.ChannelFactory<WebAnnotationModel.Service.IAnnotateLocations> factory =
-                new("Annotation.Service.Interfaces.IAnnotateLocations-Binary");
-            factory.Credentials.UserName.UserName = State.UserCredentials.UserName;
-            factory.Credentials.UserName.Password = State.UserCredentials.Password;
-            var channel = factory.CreateChannel(new System.ServiceModel.EndpointAddress(endpoint));
-            try
-            {
-                var locations = channel.GetLocationChanges(out _, out _, section, 0);
-                ((System.ServiceModel.IClientChannel)channel).Close();
-                return $"Direct query succeeded with {locations?.Length ?? 0} locations for section {section}.";
-            }
-            catch (Exception e)
-            {
-                ((System.ServiceModel.IClientChannel)channel).Abort();
-                Exception inner = e;
-                while (inner.InnerException != null)
-                    inner = inner.InnerException;
-                return $"Direct query failed: {e.GetType().Name}: {e.Message}" + (inner == e ? "" : $" (inner {inner.GetType().Name}: {inner.Message})");
-            }
-        }
-
-#endif
 
         private static string Attr(XElement e, string name) =>
             e.Attributes().FirstOrDefault(a => a.Name.LocalName.Equals(name, StringComparison.OrdinalIgnoreCase))?.Value;

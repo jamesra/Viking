@@ -34,7 +34,7 @@ Viking's cache for the run lives in `<root>\viking-cache`, never the user's cach
 
 ## Annotations
 
-`prime` reads every location on the benchmark sections with `LocationStore.GetObjectsForSection` and saves them to `<root>\annotations\<section>.json` (IDs, type, width, mosaic and volume shapes as WKB). It only reads. The login comes from `VIKINGBENCH_USER` and `VIKINGBENCH_PASSWORD` and is never written anywhere; without them it tries the anonymous login, which RC2 refuses. Without a snapshot, phase C and the annotation steps of D and E record zero.
+In VikingLegacy, `prime` reads every location on the benchmark sections with the WCF `LocationStore.GetObjectsForSection` and saves them to `<root>\annotations\<section>.json` (IDs, type, width, mosaic and volume shapes as WKB). It only reads. The login comes from `VIKINGBENCH_USER` and `VIKINGBENCH_PASSWORD` and is never written anywhere; without them it tries the anonymous login, which RC2 refuses. This build (Viking dev) has no WCF client, so copy `<root>\annotations` from a VikingLegacy prime. Without a snapshot, phase C and the annotation steps of D and E record zero.
 
 ## Phases and measurements
 

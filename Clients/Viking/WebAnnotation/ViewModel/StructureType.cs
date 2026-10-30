@@ -146,7 +146,7 @@ namespace WebAnnotation.ViewModel
             {
                 await Store.StructureTypes.Save();
             }
-            catch (System.ServiceModel.FaultException ex)
+            catch (Exception ex)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
             }
@@ -188,7 +188,7 @@ namespace WebAnnotation.ViewModel
                     newType = await Store.StructureTypes.Create(newType);
                     await Store.StructureTypes.Save();
                 }
-                catch (System.ServiceModel.FaultException ex)
+                catch (Exception ex)
                 {
                     AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
                 }

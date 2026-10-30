@@ -170,7 +170,7 @@ namespace WebAnnotation.ViewModel
             {
                 await Store.StructureLinks.Save();
             }
-            catch (System.ServiceModel.FaultException e)
+            catch (Exception e)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(e);
             }
@@ -184,7 +184,7 @@ namespace WebAnnotation.ViewModel
             {
                 await Store.StructureLinks.Save();
             }
-            catch (System.ServiceModel.FaultException e)
+            catch (Exception e)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(e);
             }

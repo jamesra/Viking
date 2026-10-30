@@ -83,7 +83,7 @@ namespace WebAnnotation.UI.Actions
                 await Store.Locations.Save();
                 UndoManager.PushLocationShape("Cut Hole", Location, Transform, original_mosaic_shape, Location.TypeCode);
             }
-            catch (System.ServiceModel.FaultException e)
+            catch (Exception e)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(e);
                 Location.SetShapeFromGeometryInSection(Transform, original_mosaic_shape);

@@ -59,19 +59,6 @@ namespace WebAnnotation.UI
             {
                 await Store.Structures.Merge(KeepID, MergeID);
             }
-            catch (System.ServiceModel.FaultException<System.ServiceModel.ExceptionDetail> fe)
-            {
-                if (fe?.Detail?.InnerException != null)
-                {
-                    MessageBox.Show(fe.Detail.InnerException.Message, "Merge error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                else
-                {
-                    MessageBox.Show(fe.Detail.Message, "Merge error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-
-                return;
-            }
             catch (Exception except)
             {
                 MessageBox.Show(except.Message, "Merge error", MessageBoxButtons.OK, MessageBoxIcon.Error);

@@ -29,7 +29,6 @@
     <ProjectReference Include="..\..\VikingXNAGraphics\MonographicsNet48.csproj" Condition="'$(TargetFramework)' == 'net48'" />
   </ItemGroup>
   <ItemGroup>
-    <!-- ChannelPoolTests.cs (Legacy) is left out: it tests the WCF ChannelPool, which the gRPC client does not have. -->
     <Compile Include="TestModel.cs" />
     <Compile Include="View\LocationShapeChangeEventTests.cs" />
     <Compile Include="View\StructureLinkRestoreAfterRemovalTests.cs" />
@@ -169,7 +168,6 @@
   <ItemGroup>
     <PackageReference Include="FlaUI.UIA3" Version="4.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
-    <PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
     <PackageReference Include="MSTest.TestAdapter" Version="3.9.3" />
     <PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
   </ItemGroup>

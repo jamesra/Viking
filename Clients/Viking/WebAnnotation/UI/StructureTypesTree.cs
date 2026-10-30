@@ -205,7 +205,7 @@ namespace WebAnnotation.UI
                     newTypeObj = await Store.StructureTypes.Create(newTypeObj);
                     await Store.StructureTypes.Save();
                 }
-                catch (System.ServiceModel.FaultException ex)
+                catch (Exception ex)
                 {
                     AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
                 }

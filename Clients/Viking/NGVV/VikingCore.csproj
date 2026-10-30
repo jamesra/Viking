@@ -191,7 +191,4 @@
     <Compile Remove="Threading\TextureLoadQueueSort.cs" />
   </ItemGroup>
 
-  <ItemGroup>
-    <WCFMetadata Include="Service References\" />
-  </ItemGroup> 
 </Project>

@@ -37,7 +37,6 @@
     <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
     <PackageReference Include="LinqToXsd" Version="2.0.2" />
     <PackageReference Include="protobuf-net" Version="3.2.56" />
-    <PackageReference Include="protobuf-net.ServiceModel" Version="3.2.52" />
     <PackageReference Include="Velopack" Version="0.0.1298" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>

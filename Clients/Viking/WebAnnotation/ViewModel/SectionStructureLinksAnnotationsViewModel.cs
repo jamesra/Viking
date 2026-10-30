@@ -218,7 +218,7 @@ namespace WebAnnotation.ViewModel
             {
                 await Store.StructureLinks.Save();
             }
-            catch (System.ServiceModel.FaultException e)
+            catch (System.Exception e)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(e);
             }

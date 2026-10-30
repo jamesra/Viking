@@ -61,7 +61,7 @@ namespace WebAnnotation.UI.Actions
                 await Store.LocationLinks.CreateLink(A.ID, B.ID);
                 await Store.LocationLinks.Save();
             }
-            catch (System.ServiceModel.FaultException e)
+            catch (Exception e)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(e);
             }

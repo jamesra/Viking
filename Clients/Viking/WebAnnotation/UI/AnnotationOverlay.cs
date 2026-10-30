@@ -392,10 +392,6 @@ namespace WebAnnotation
 
                 ShowSaveFailedMsgBox(lastFault());
             }
-            catch (System.ServiceModel.FaultException e)
-            {
-                ShowFaultExceptionMsgBox(e);
-            }
             catch (Exception e)
             {
                 ShowFaultExceptionMsgBox(e);

@@ -146,7 +146,7 @@ namespace WebAnnotation.UI.Actions
                 await Store.Locations.Save();
                 UndoManager.PushLocationShape("Change Contour", Location, Transform, original_mosaic_polygon, Location.TypeCode);
             }
-            catch (System.ServiceModel.FaultException e)
+            catch (Exception e)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(e);
                 Location.SetShapeFromGeometryInSection(Transform, original_mosaic_polygon);
@@ -243,7 +243,7 @@ namespace WebAnnotation.UI.Actions
                 await Store.Locations.Save();
                 UndoManager.PushLocationShape("Change Contour", Location, Transform, originalShape, Location.TypeCode);
             }
-            catch (System.ServiceModel.FaultException e)
+            catch (Exception e)
             {
                 AnnotationOverlay.ShowFaultExceptionMsgBox(e);
                 Location.SetShapeFromGeometryInSection(Transform, originalShape);

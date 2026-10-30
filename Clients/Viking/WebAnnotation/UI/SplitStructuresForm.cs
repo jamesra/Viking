@@ -125,19 +125,6 @@ namespace WebAnnotation.UI
                 await Store.Structures.SplitStructureAtLocationLink(KeepLocID, MergeLocID);
 
             }
-            catch (System.ServiceModel.FaultException<System.ServiceModel.ExceptionDetail> fe)
-            {
-                if (fe?.Detail?.InnerException != null)
-                {
-                    MessageBox.Show(fe.Detail.InnerException.Message, "Split error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                else
-                {
-                    MessageBox.Show(fe.Detail.Message, "Split error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-
-                return;
-            }
             catch (Exception except)
             {
                 if (except.Message != null)

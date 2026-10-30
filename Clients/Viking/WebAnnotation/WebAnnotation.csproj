@@ -131,14 +131,12 @@
 		<PackageReference Include="NETStandard.Library" Version="2.0.3" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="protobuf-net" Version="3.2.56" />
-		<PackageReference Include="protobuf-net.ServiceModel" Version="3.2.52" />
 		<PackageReference Include="System.Buffers" Version="4.6.1" />
 		<PackageReference Include="System.Memory" Version="4.6.3" />
 		<PackageReference Include="System.Net.Http" Version="4.3.4" />
 		<PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
 		<PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
 		<PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
-		<PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
 		<PackageReference Include="System.Text.Encodings.Web" Version="9.0.8" />
 		<PackageReference Include="System.ValueTuple" Version="4.6.1" />
 		<PackageReference Include="Thinktecture.IdentityModel.Client" Version="4.0.1" Condition="'$(TargetFramework)' == 'net48'" />
@@ -168,10 +166,6 @@
 	<ItemGroup>
 		<InternalsVisibleTo Include="Jotunn" />
 		<InternalsVisibleTo Include="VolumeView" />
-	</ItemGroup>
-	<ItemGroup>
-		<!-- The WCF service proxy; the client talks to the gRPC annotation service. -->
-		<Compile Remove="Service References\**" />
 	</ItemGroup>
 	<ItemGroup>
 	  <Folder Include="bin\" />
