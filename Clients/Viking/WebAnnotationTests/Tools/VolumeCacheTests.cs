@@ -48,7 +48,7 @@ namespace WebAnnotationTests.Tools
 
         internal sealed class OneDefault(IVolumeToSectionTransform transform) : IDefaultVolumeTransformProvider
         {
-            public IVolumeToSectionTransform GetDefaultSectionToVolumeTransform(int SectionNumber) => transform;
+            public IVolumeToSectionTransform? GetDefaultSectionToVolumeTransform(int SectionNumber) => transform;
         }
 
         private static void AssertSamePoints(SqlGeometry expected, SqlGeometry actual, string because)
@@ -127,18 +127,21 @@ namespace WebAnnotationTests.Tools
             volume.DefaultVolumeTransform = "Grid";
             VolumeViewModel model = new(volume);
 
-            IVolumeToSectionTransform grid = model.GetDefaultSectionToVolumeTransform(5);
+            IVolumeToSectionTransform grid = model.GetDefaultSectionToVolumeTransform(5)!;
             Assert.AreSame(model.GetSectionToVolumeTransform(5), grid, "the default is active: the same object");
 
             model.ActiveVolumeTransform = "Rigid";
             Assert.AreNotSame(grid, model.GetSectionToVolumeTransform(5), "another transform is active");
             Assert.AreSame(grid, model.GetDefaultSectionToVolumeTransform(5), "the default is unchanged");
 
-            IVolumeToSectionTransform reference = model.GetDefaultSectionToVolumeTransform(1);
+            IVolumeToSectionTransform reference = model.GetDefaultSectionToVolumeTransform(1)!;
             Assert.AreEqual(new Vector2(12, 34), reference.SectionToVolume(new Vector2(12, 34)), "no entry: identity");
 
             volume.DefaultVolumeTransform = "Not loaded";
-            Assert.AreEqual(new Vector2(12, 34), model.GetDefaultSectionToVolumeTransform(5).SectionToVolume(new Vector2(12, 34)), "no such group: identity");
+            Assert.IsNull(model.GetDefaultSectionToVolumeTransform(5), "a default that did not load while others did: none, not identity");
+
+            volume.Transforms.Clear();
+            Assert.AreEqual(new Vector2(12, 34), model.GetDefaultSectionToVolumeTransform(5)!.SectionToVolume(new Vector2(12, 34)), "a volume without transforms: identity");
         }
     }
 }

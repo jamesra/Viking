@@ -16,7 +16,8 @@ namespace Viking.VolumeModel
     /// <remarks>
     /// <para><b>Missing transform.</b> A volume without transforms, or a section the default transform has no entry for
     /// (the reference section, or a .stos that did not load), is mapped by identity, as the viewer and <c>MappingManager</c>
-    /// place such a section (<see cref="IDefaultVolumeTransformProvider"/>).</para>
+    /// place such a section (<see cref="IDefaultVolumeTransformProvider"/>). A default transform that did not load at all
+    /// while others did is not replaced by identity (<see cref="Basis"/>).</para>
     /// <para><b>Mapping failure.</b> A location the default transform cannot map exactly (a point outside the .stos hull)
     /// gets the forward owner's one mapping-failure policy (extrapolated points; see <see cref="LocationVolumeGeometry"/>), not
     /// no cache: the WCF server writes a circle of the mosaic radius at the old <c>VolumePosition</c> when no
@@ -34,7 +35,8 @@ namespace Viking.VolumeModel
         /// <summary>
         /// The transform the cache of <paramref name="location"/> is written in: the open volume's default transform for its
         /// section. Without an open volume (VikingAU, unit tests) it is <paramref name="transform"/>, the transform the caller
-        /// passed, which such a caller must make the default one.
+        /// passed, which such a caller must make the default one; so it is when the volume's default transform did not load
+        /// (the transform the edit was made under, as before the cache had one basis, rather than unaligned positions).
         /// </summary>
         public static IVolumeToSectionTransform Basis(LocationObj location, IVolumeToSectionTransform transform)
         {
