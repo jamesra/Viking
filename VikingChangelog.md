@@ -90,6 +90,7 @@ gained from about 2026-10-20 on. Earlier changes are not listed.
 * **Fix: no silent refusal to edit.** Moving, resizing or reshaping an annotation that lies partly outside its section's alignment now shows a message saying it cannot be edited on that section, instead of doing nothing.
 * Editing on a section is refused with a message while the volume's default alignment, or that section's own alignment file, is not loaded, so stored volume positions are never written without it.
 * **Jotunn:** annotations are drawn in the alignment chosen in the section list, the one the images are drawn with. They were always drawn in the volume's default alignment, so with another alignment chosen they sat off the images. Edits made in the chosen alignment are still stored under the default one.
+* **Fix: crash drawing some aligned sections.** A section whose alignment grid places two points at the same position no longer stops drawing with "Index was outside the bounds of the array"; the section is shown through the rest of its alignment points.
 <!-- gRPC annotation service change (dev), not a client bullet: Location.EF.Conversion.ToLocation refuses any location sent without its volume shape, a point included, instead of storing the mosaic shape or a point at the volume position; Viking and Jotunn always send it (VolumeCache). -->
 <!--
 Developer notes for 1.2.111: the Del/Insert hiding, Visuals section, pen-on-overlay fix and this change log are ports of

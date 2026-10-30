@@ -245,7 +245,29 @@ namespace Geometry.Transforms
                 throw new ArgumentException("GridTransform constructor. Number of points incorrect");
             }
 
+            //The shared triangle table indexes points by grid position, so a removed duplicate would leave it indexing past the end
+            if (MapPoints.Length != points.Length)
+            {
+                throw new ArgumentException("GridTransform constructor. Grid points repeat a control or mapped position; use GridTransform.Create");
+            }
+
             _TriangleIndicies = GridTransformHelper.TrianglesForGrid(GridSizeX, GridSizeY);
+        }
+
+        /// <summary>
+        /// Builds a grid transform, or a <see cref="MeshTransform"/> over the same points when two grid points share a control or
+        /// mapped position. Duplicates are removed from <c>MapPoints</c>, after which the points no longer form the grid.
+        /// </summary>
+        public static TriangulationTransform Create(MappingVector2[] points, Rectangle mappedBounds, int gridSizeX, int gridSizeY, TransformBasicInfo info)
+        {
+            //The same two passes MapPoints assignment runs, on a copy
+            List<MappingVector2> distinct = [.. points];
+            bool controlHadDuplicates = MappingVector2.RemoveControlSpaceDuplicates(distinct);
+            bool mappedHadDuplicates = MappingVector2.RemoveMappedSpaceDuplicates(distinct);
+            if (controlHadDuplicates || mappedHadDuplicates)
+                return new MeshTransform([.. distinct], info);
+
+            return new GridTransform(points, mappedBounds, gridSizeX, gridSizeY, info);
         }
 
         protected GridTransform(SerializationInfo info, StreamingContext context)

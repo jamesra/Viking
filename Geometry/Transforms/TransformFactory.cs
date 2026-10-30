@@ -274,7 +274,7 @@ namespace Geometry.Transforms
                 case "LegendrePolynomialTransform_double_2_2_1":
                 {
                     List<MappingVector2> mappings = ParsePolyTransform(transform_parts, pixelSpacing, 0, 0, MappedBounds);
-                    return new GridTransform([.. mappings], MappedBounds, 5, 5, info);
+                    return GridTransform.Create([.. mappings], MappedBounds, 5, 5, info);
                 }
                 case "fixedcenterofrotationaffinetransform_double_2_2":
                     throw new NotImplementedException("stos transform not supported: fixedcenterofrotationaffinetransform_double_2_2");
@@ -346,7 +346,7 @@ namespace Geometry.Transforms
             return new ReadOnlyCollection<MappingVector2>(mappings);
         }
 
-        private static GridTransform ParseGridTransform(TransformParameters transform,
+        private static TriangulationTransform ParseGridTransform(TransformParameters transform,
                                                                 StosTransformInfo info,
                                                                 float pixelSpacing,
                                                                 int iFixedParameters,
@@ -421,7 +421,7 @@ namespace Geometry.Transforms
                 }
             }
 
-            return new GridTransform(mappings, MappedBounds, gridWidth, gridHeight, info);
+            return GridTransform.Create(mappings, MappedBounds, gridWidth, gridHeight, info);
         }
 
         const uint Dimensions = 3;
@@ -822,9 +822,9 @@ namespace Geometry.Transforms
             return new RigidNoRotationTransform(sourceToTargetOffset, info);
         }
 
-        private static GridTransform ParseGridTransform(TransformParameters transform, TransformBasicInfo info) => ParseGridTransform(transform, 1, info);
+        private static TriangulationTransform ParseGridTransform(TransformParameters transform, TransformBasicInfo info) => ParseGridTransform(transform, 1, info);
 
-        private static GridTransform ParseGridTransform(TransformParameters transform, double PixelSpacing, TransformBasicInfo info)
+        private static TriangulationTransform ParseGridTransform(TransformParameters transform, double PixelSpacing, TransformBasicInfo info)
         {
             //string filename = System.IO.Path.GetFileName(parts[1]);
             //string[] fileparts = filename.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
@@ -909,7 +909,7 @@ namespace Geometry.Transforms
                 }
             }
 
-            return new GridTransform(mapList, MappedBounds, gridWidth, gridHeight, info);
+            return GridTransform.Create(mapList, MappedBounds, gridWidth, gridHeight, info);
         }
 
         private static DiscreteTransformWithContinuousFallback ParseMeshTransform(TransformParameters transform, TransformBasicInfo info, double PixelSpacing = 1.0)

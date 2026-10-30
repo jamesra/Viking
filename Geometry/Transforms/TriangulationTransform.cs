@@ -733,11 +733,9 @@ namespace Geometry.Transforms
 
             ITransformControlPoints newTransform = null;
 
-            //If we started with a grid transform and all the control points mapped then we can create a new grid transform
-            if (AtoB is GridTransform gridTransform && AllPointsTransformed)
+            //If we started with a grid transform and all the control points mapped to distinct points then we can create a new grid transform
+            if (AtoB is GridTransform gridTransform && AllPointsTransformed && AtoB.MapPoints.Length == newPoints.Count)
             {
-                Debug.Assert(AtoB.MapPoints.Length == newPoints.Count);
-
                 //Used to set mapped bounds to WarpingTransform.MappedBounds, but it was incorrect.  Setting mapped bounds to null so it is calculated.
                 newTransform = new GridTransform([.. newPoints], new Rectangle(), gridTransform.GridSizeX, gridTransform.GridSizeY, info);
             }
