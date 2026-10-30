@@ -154,7 +154,7 @@ namespace WebAnnotation
                     return null;
                 case LocationAction.SCALETRANSLATE:
                 case LocationAction.TRANSLATE:
-                    if (TryGetVolumeCircle(loc, section_mapper) is not Circle volumeCircle)
+                    if (EditableGeometry(loc, section_mapper, Parent)?.Circle is not Circle volumeCircle)
                         return null;
 
                     return new TranslateCircleLocationCommand(Parent,
@@ -163,7 +163,7 @@ namespace WebAnnotation
                                                               loc.Parent.Type.Color.ToXNAColor(1f),
                                                               (NewVolumePosition, NewRadius) => UpdateCircleLocationCallback(Parent, loc, section_mapper, NewVolumePosition, NewRadius));
                 case LocationAction.SCALE:
-                    if (TryGetVolumeCircle(loc, section_mapper) is not Circle resizedCircle)
+                    if (EditableGeometry(loc, section_mapper, Parent)?.Circle is not Circle resizedCircle)
                         return null;
 
                     return new ResizeCircleCommand(Parent,
@@ -181,7 +181,7 @@ namespace WebAnnotation
                         return null;
 
                     // The source circle is on another section: its volume radius comes from that section's own transform.
-                    if (TryGetVolumeCircle(loc, Parent.Volume.GetSectionToVolumeTransform((int)loc.Z)) is not Circle sourceVolumeCircle)
+                    if (EditableGeometry(loc, Parent.Volume.GetSectionToVolumeTransform((int)loc.Z), Parent)?.Circle is not Circle sourceVolumeCircle)
                         return null;
 
                     return new TranslateCircleLocationCommand(Parent,
@@ -214,7 +214,7 @@ namespace WebAnnotation
                 case LocationAction.TRANSLATE:
                     {
                         IVolumeToSectionTransform section_mapper = Parent.Section.ActiveSectionToVolumeTransform;
-                        if (EditableGeometry(loc, section_mapper) is not LocationVolumeGeometry geometry)
+                        if (EditableGeometry(loc, section_mapper, Parent) is not LocationVolumeGeometry geometry)
                             return null;
 
                         return new TranslateOpenCurveCommand(Parent,
@@ -263,7 +263,7 @@ namespace WebAnnotation
                                                                             double? adjustLineWidth)
         {
             IVolumeToSectionTransform section_mapper = Parent.Section.ActiveSectionToVolumeTransform;
-            if (EditableGeometry(loc, section_mapper) is not LocationVolumeGeometry geometry)
+            if (EditableGeometry(loc, section_mapper, Parent) is not LocationVolumeGeometry geometry)
                 return null;
 
             Geometry.Vector2[] controlPoints = [.. geometry.ControlPoints];
@@ -302,7 +302,7 @@ namespace WebAnnotation
                 case LocationAction.TRANSLATE:
                     {
                         IVolumeToSectionTransform section_mapper = Parent.Section.ActiveSectionToVolumeTransform;
-                        if (EditableGeometry(loc, section_mapper) is not LocationVolumeGeometry geometry)
+                        if (EditableGeometry(loc, section_mapper, Parent) is not LocationVolumeGeometry geometry)
                             return null;
 
                         return new TranslateClosedCurveCommand(Parent,
@@ -387,7 +387,7 @@ namespace WebAnnotation
                     {
                         // The commands edit the polygon the forward owner draws and hand back the edit mapped to mosaic by
                         // the inverse owner (AnnotationCommandBase.TryApplyInSection); none starts on an unmappable polygon.
-                        if (EditableGeometry(loc, Parent.Section.ActiveSectionToVolumeTransform) is not LocationVolumeGeometry geometry)
+                        if (EditableGeometry(loc, Parent.Section.ActiveSectionToVolumeTransform, Parent) is not LocationVolumeGeometry geometry)
                             return null;
 
                         void Save(Polygon MosaicPolygon, Polygon VolumePolygon) => SaveMosaicPolygonEdit(Parent, loc, MosaicPolygon);
@@ -432,7 +432,7 @@ namespace WebAnnotation
                                                             loc.MosaicShape.ToPolygon(),
                                                             mosaicClick,
                                                             MosaicPolygon => SaveMosaicPolygonEdit(Parent, loc, MosaicPolygon),
-                                                            EditableGeometry(loc, section_mapper)?.ControlPolygon(),
+                                                            EditableGeometry(loc, section_mapper, reportTo: null)?.ControlPolygon(),
                                                             volumePosition);
                     }
                 case LocationAction.CREATELINKEDLOCATION:
@@ -663,20 +663,35 @@ namespace WebAnnotation
 
         /// <summary>
         /// The location's geometry as the forward owner draws it, for a command to start editing from; null, so no command
-        /// starts, when it cannot be mapped exactly (the failure policy's extrapolated outline is not editable).
+        /// starts, when it cannot be mapped exactly (the failure policy's extrapolated outline is not editable). Then the
+        /// user is told why (<see cref="UneditableMessage"/>) when <paramref name="reportTo"/> is given: an edit attempt that
+        /// starts nothing must not be silent.
         /// </summary>
-        private static LocationVolumeGeometry? EditableGeometry(LocationObj loc, IVolumeToSectionTransform transform)
+        /// <param name="reportTo">The window to show the message over; null where no edit was attempted.</param>
+        internal static LocationVolumeGeometry? EditableGeometry(LocationObj loc, IVolumeToSectionTransform transform, IWin32Window? reportTo)
         {
+            LocationVolumeGeometry? geometry;
             try
             {
-                LocationVolumeGeometry geometry = LocationVolumeGeometry.For(loc, transform);
-                return geometry.IsExact ? geometry : null;
+                geometry = LocationVolumeGeometry.For(loc, transform);
             }
             catch (ArgumentException)
             {
-                return null;
+                geometry = null;
             }
+
+            if (geometry is { IsExact: true })
+                return geometry;
+
+            if (reportTo is not null)
+                ShowWarning(reportTo, UneditableMessage, "Cannot edit annotation");
+
+            return null;
         }
+
+        /// <summary>What the user is told when an edit is attempted on a location the owner cannot map exactly.</summary>
+        internal const string UneditableMessage =
+            "Part of this annotation lies outside the region this section's alignment maps, so it cannot be edited on this section.";
 
         /// <summary>
         /// Where a line or curve linked from <paramref name="source"/> on another section starts: the source's control points
@@ -685,7 +700,7 @@ namespace WebAnnotation
         /// </summary>
         private static (Geometry.Vector2[] Points, double Width)? LinkedLineStart(Viking.UI.Controls.SectionViewerControl parent, LocationObj source, Geometry.Vector2 volumePosition)
         {
-            if (EditableGeometry(source, parent.Volume.GetSectionToVolumeTransform((int)source.Z)) is not LocationVolumeGeometry geometry)
+            if (EditableGeometry(source, parent.Volume.GetSectionToVolumeTransform((int)source.Z), parent) is not LocationVolumeGeometry geometry)
                 return null;
 
             Geometry.Vector2[] points = [.. geometry.ControlPoints];
@@ -847,9 +862,15 @@ namespace WebAnnotation
         /// </summary>
         internal static void ShowUnmappedEdit(IWin32Window owner, string failure, string caption)
         {
-            System.Diagnostics.Trace.WriteLine($"{caption}: {failure}", "WebAnnotation");
-            MessageBox.Show(owner, failure + " The annotation keeps its previous shape.", caption, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            ShowWarning(owner, failure + " The annotation keeps its previous shape.", caption);
         }
+
+        /// <summary>Shows and traces a warning box over <c>owner</c>; tests replace it.</summary>
+        internal static Action<IWin32Window, string, string> ShowWarning = (owner, text, caption) =>
+        {
+            System.Diagnostics.Trace.WriteLine($"{caption}: {text}", "WebAnnotation");
+            MessageBox.Show(owner, text, caption, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        };
 
         /// <summary>
         /// The location's circle in volume space as the forward owner draws it (<see cref="LocationVolumeGeometry.Circle"/>:

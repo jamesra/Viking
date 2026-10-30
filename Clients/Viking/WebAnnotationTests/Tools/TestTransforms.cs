@@ -110,9 +110,10 @@ namespace WebAnnotationTests.Tools
 
     /// <summary>
     /// <paramref name="inner"/> where a volume point lies inside <paramref name="volumeRegion"/> (and a mosaic point maps
-    /// into it); everywhere else the checked mappings fail and the unchecked ones throw, like a stos outside its hull.
+    /// into it); everywhere else the checked mappings fail and the unchecked ones throw, like a stos outside its hull, or
+    /// extrapolate with <paramref name="inner"/> when <paramref name="extrapolate"/> is set.
     /// </summary>
-    internal sealed class ClippedTransform(IVolumeToSectionTransform inner, Rectangle volumeRegion) : IVolumeToSectionTransform
+    internal sealed class ClippedTransform(IVolumeToSectionTransform inner, Rectangle volumeRegion, bool extrapolate = false) : IVolumeToSectionTransform
     {
         public long ID => inner.ID;
         public Rectangle? SectionBounds => null;
@@ -152,7 +153,7 @@ namespace WebAnnotationTests.Tools
             return ok;
         }
 
-        public Vector2 SectionToVolume(Vector2 P) => TrySectionToVolume(P, out Vector2 v) ? v : throw new ArgumentOutOfRangeException(nameof(P));
+        public Vector2 SectionToVolume(Vector2 P) => TrySectionToVolume(P, out Vector2 v) || extrapolate ? v : throw new ArgumentOutOfRangeException(nameof(P));
         public Vector2 VolumeToSection(Vector2 P) => TryVolumeToSection(P, out Vector2 m) ? m : throw new ArgumentOutOfRangeException(nameof(P));
         public Vector2[] SectionToVolume(Vector2[] Points) => [.. Points.Select(SectionToVolume)];
         public Vector2[] VolumeToSection(Vector2[] Points) => [.. Points.Select(VolumeToSection)];
