@@ -16,8 +16,10 @@ namespace WebAnnotation.ViewModel
     /// <summary>
     /// Persists a volume-space polygon onto a location, converting the type to CURVEPOLYGON.
     /// Used by Segment to Polygon and auto-polygonize accept; shows a MessageBox on save failure.
-    /// Fits the ring once, then maps those control points to mosaic space — MosaicShape stays
-    /// the unsmoothed control polygon; VolumeShape is the Catmull-smoothed render copy.
+    /// Fits the ring once, then maps those control points back to mosaic space with the inverse owner
+    /// (<see cref="LocationVolumeGeometry.ToMosaic(LocationType, Polygon, IVolumeToSectionTransform)"/>): MosaicShape is the
+    /// unsmoothed control polygon and VolumeShape the forward owner's smoothed shape. A result with any point outside the
+    /// section's transform is refused and nothing is saved.
     /// </summary>
     internal static class LocationShapeUpdate
     {
@@ -26,7 +28,7 @@ namespace WebAnnotation.ViewModel
         /// the section transform, and saves. Boolean carve/union output is often vertex-dense;
         /// this is the choke point that keeps the database ring at CreatedShapeSimplify size.
         /// </summary>
-        /// <returns>False when the location, polygon, or section is missing, or save throws.</returns>
+        /// <returns>False when the location, polygon, or section is missing, a point cannot be mapped, or save throws.</returns>
         public static bool ApplyVolumePolygon(
             LocationObj modelObj,
             Polygon volumePolygon,
@@ -67,6 +69,8 @@ namespace WebAnnotation.ViewModel
         /// Callers that enqueue a later Save (new structure create) use this; Accept uses
         /// <see cref="ApplyVolumePolygon"/> which saves immediately.
         /// </summary>
+        /// <exception cref="ArgumentException">A point of the simplified polygon cannot be mapped into the section (the
+        /// message says which) or the mapped polygon is not valid; the location, its type included, is then unchanged.</exception>
         public static void AssignSimplifiedVolumePolygon(
             LocationObj modelObj,
             Polygon volumePolygon,
@@ -83,16 +87,23 @@ namespace WebAnnotation.ViewModel
 
             // Single save-time pass at the "Simplify Polygon" menu tolerance; no second fit follows.
             Polygon simplified = AutoPolygonizeSelection.SimplifyForSave(volumePolygon, mustContain);
+
+            // Mapped before anything changes, so a refused result leaves the location as it was.
+            MosaicGeometry mosaic = LocationVolumeGeometry.ToMosaic(LocationType.CURVEPOLYGON, simplified, transform);
+            if (!mosaic.Succeeded)
+                throw new ArgumentException(mosaic.Failure);
+
+            LocationType originalType = modelObj.TypeCode;
             modelObj.TypeCode = LocationType.CURVEPOLYGON;
-
-            ICollection<Vector2[]>? interior = simplified.HasInteriorRings
-                ? simplified.InteriorRings.ToList()
-                : null;
-
-            modelObj.SetShapeFromPointsInVolume(
-                transform,
-                simplified.ExteriorRing,
-                interior);
+            try
+            {
+                modelObj.TryApply(mosaic, transform);
+            }
+            catch (ArgumentException)
+            {
+                modelObj.TypeCode = originalType;
+                throw;
+            }
         }
     }
 }

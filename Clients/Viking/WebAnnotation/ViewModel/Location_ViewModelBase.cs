@@ -676,19 +676,24 @@ namespace WebAnnotation.ViewModel
                     return;
                 }
 
-                Polygon mosaicPolygon = modelObj.MosaicShape.ToPolygon();
-                List<Geometry.Vector2[]> volumeRings = [];
-                foreach (Geometry.Vector2[] ring in new[] { mosaicPolygon.ExteriorRing }.Concat(mosaicPolygon.InteriorRings))
+                // The mask starts from the polygon as the forward owner draws it (its control polygon, holes included).
+                LocationVolumeGeometry? geometry = null;
+                try
                 {
-                    bool[] mapped = parent.Section.ActiveSectionToVolumeTransform.TrySectionToVolume(ring, out Geometry.Vector2[] volumeRing);
-                    if (mapped.Any(ok => !ok))
-                    {
-                        MessageBox.Show("This polygon could not be mapped onto the volume.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        return;
-                    }
-
-                    volumeRings.Add(volumeRing);
+                    geometry = LocationVolumeGeometry.For(modelObj, parent.Section.ActiveSectionToVolumeTransform);
                 }
+                catch (ArgumentException)
+                {
+                }
+
+                if (geometry is null || !geometry.IsExact)
+                {
+                    MessageBox.Show("This polygon could not be mapped onto the volume.", "Edit mask", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                Polygon volumePolygon = geometry.ControlPolygon();
+                List<Geometry.Vector2[]> volumeRings = [volumePolygon.ExteriorRing, .. volumePolygon.InteriorRings];
 
                 // The raster has the resolution of the view (a mosaic pixel is at least one volume unit), whatever the segmentation tile level.
                 int downsample = Math.Max(1, (int)Math.Ceiling(parent.Camera?.Downsample ?? parent.Downsample));
