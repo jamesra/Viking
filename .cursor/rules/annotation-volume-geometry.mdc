@@ -1,5 +1,5 @@
 ---
-description: Annotation volume geometry - mosaic is the truth, the stored volume columns are a cache, and every view draws from one forward owner (LocationVolumeGeometry); views never see a transform or read the stored cache.
+description: Annotation volume geometry - mosaic is the truth, the stored volume columns are a cache, every view draws from one forward owner (LocationVolumeGeometry), and every edit is mapped back by one inverse owner (LocationVolumeGeometry.ToMosaic); views and commands never map or read the stored cache themselves.
 globs: Clients/Viking/WebAnnotation/**,Clients/VolumeModel/**,**/SqlGeometryAnnotationExtensions/**,**/WebAnnotationModel/**
 alwaysApply: false
 ---
@@ -38,13 +38,29 @@ on the class (circles extrapolate the centre and keep the mosaic radius; other s
   `VolumeRadius()`), which reads the open volume's transforms.
 - A link, label or marker that belongs to a location takes its geometry from that location's owner, so it meets what is
   drawn.
-- `VolumeGeometryGuardTests` enforces this for `View/` and `ViewModel/`; each exception is on its named, commented
-  allow-list. `LocationVolumeGeometryTests` checks every view and every factory branch against the owner (property and
-  closed-set tests); add a new view there.
+- `VolumeGeometryGuardTests` enforces this for `View/`, `ViewModel/` and `UI/` (commands, actions, auto-polygonize); each
+  exception is a read-only entry on its named, commented allow-list. `LocationVolumeGeometryTests` checks every view and
+  every factory branch against the owner (property and closed-set tests); add a new view there.
 
-## Commands and edits (phase 2 target, the inverse rule)
-The user edits in volume space (what is on screen). A command maps the edited geometry **back to mosaic** with the
-inverse transform (`VolumeToSection`; the five-point mean for a circle radius or a line width), saves `MosaicShape` (and
-`Width`) as the truth, and writes `VolumeShape` only as `LocationVolumeGeometry.MapShape` of the new mosaic shape. A
-command never copies a volume value into the mosaic columns or writes a volume shape it did not derive from mosaic. Edit
-previews inside commands (translate, adjust control point, resize, retrace) are still hand-mapped until phase 2 moves them.
+## Commands and edits: the inverse rule (in force)
+The user edits in volume space (what is on screen). Every command and save path follows one rule:
+1. **Start from the forward owner.** A command edits the geometry `LocationVolumeGeometry.For` gives (`ControlPoints`,
+   `ControlPolygon()`, `Circle`, `Width`), never the stored `VolumeShape` and never its own mapping of the mosaic shape.
+   Previews of geometry that is not a saved location's (a polygon being moved, a prompt, a cut piece) use the owner's
+   static forward helpers (`TryMapPoints`, `TryMapPolygon`, `TryMapCircle`, `TryMapControlShape`, `MapShape`).
+2. **Map the edit back with the one inverse owner**, `LocationVolumeGeometry.ToMosaic` (shape, control points, polygon or
+   circle, with an optional volume width) and its point-level forms `TryMapPointsToMosaic`, `TryMapPolygonToMosaic`,
+   `TryMapPolylineToMosaic`. Points map with the checked inverse, all or none. A circle's mosaic radius is solved against
+   the forward five-point mean and a width is the volume width divided by the forward owner's local scale, so
+   forward(inverse(v)) == v, also under shear and non-rigid warps.
+3. **Save mosaic, derive volume.** `LocationObjExtensions.TryApply` (or `SetShapeFromGeometryInSection` for an edit made in
+   mosaic space, such as a polygon move or a hole removal) sets `MosaicShape` (and `Width`) and takes `VolumeShape` from the
+   forward owner. A command never copies a volume value into the mosaic columns and never keeps the user's volume shape.
+4. **Failure is explicit.** When any point does not map, `MosaicGeometry.Failure` says why; the command refuses, the
+   location keeps its shape, and the user is shown the reason (`LocationActions.ShowUnmappedEdit`), or the pen choice is not
+   offered. Nothing partial or extrapolated is saved.
+
+Mosaic-first edits that keep stored control points (pen splice cuts, region cuts, hole removal, polygon moves by the
+mapped drag) stay mosaic-first and map only their new points back. Which `VolumeShape` is written to the server (default
+transform only) and `VolumePositionUpdateJob` pinning are left to phase 3; until then commands send the forward owner's
+shape (a circle as the owner's circle).

@@ -2139,12 +2139,14 @@ break;
                 bool StructureNeedsParent = type.ParentID.HasValue;
                 System.Drawing.Point ClientPoint = _Parent.PointToClient(System.Windows.Forms.Control.MousePosition);
                 Geometry.Vector2 WorldPos = _Parent.ScreenToWorld(ClientPoint.X, ClientPoint.Y);
-                bool success = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(WorldPos, out Geometry.Vector2 SectionPos);
+                bool success = Viking.VolumeModel.LocationVolumeGeometry.TryMapPointsToMosaic([WorldPos], Parent.Section.ActiveSectionToVolumeTransform, out Geometry.Vector2[] mosaicClick, out _);
                 Debug.Assert(success);
                 if (!success)
                 {
                     return;
                 }
+
+                Geometry.Vector2 SectionPos = mosaicClick[0];
 
                 StructureObj newStruct = new(type.modelObj);
                 LocationObj newLocation = new(newStruct,
@@ -2434,12 +2436,14 @@ break;
                 return;
             }
 
-            bool success = Parent.Section.ActiveSectionToVolumeTransform.TryVolumeToSection(LastMouseMoveVolumeCoords, out Geometry.Vector2 SectionPos);
+            bool success = Viking.VolumeModel.LocationVolumeGeometry.TryMapPointsToMosaic([LastMouseMoveVolumeCoords], Parent.Section.ActiveSectionToVolumeTransform, out Geometry.Vector2[] mosaicPoint, out _);
             Debug.Assert(success);
             if (!success)
             {
                 return;
             }
+
+            Geometry.Vector2 SectionPos = mosaicPoint[0];
 
             switch (newLocType)
             {

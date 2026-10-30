@@ -30,10 +30,13 @@ Use `CircleMapping.TryMapCircle` / `IVolumeToSectionTransform.TryMapShape` for t
 ring and rebuild the circle from its bounding box (a rotated ring's box shrinks).
 
 ## Editing a circle in the viewer
-The user draws in volume space (what is on screen), so a volume radius is the source: set `VolumeShape` from it and derive
-`MosaicShape` by mapping. Code that starts from mosaic (VikingAU, `VolumePositionUpdateJob`, "convert to circle" from a mosaic
-radius) derives `VolumeShape` the same way. Use the `LocationActions` helpers that take the mapper; moving a circle by
-translation (`MoveTo`) keeps each shape's own radius.
+The user draws in volume space (what is on screen), so a volume circle is the edit, and mosaic is what is saved
+(`annotation-volume-geometry.mdc`): `LocationVolumeGeometry.ToMosaic(Circle, transform)` maps the centre back and solves
+for the mosaic radius whose forward five-point mean is the volume radius (starting from the inverse five-point estimate;
+the one-step inverse does not invert the forward rule under shear), and the volume shape is the forward owner's circle.
+Code that starts from mosaic (VikingAU, `VolumePositionUpdateJob`, "convert to circle" from a mosaic radius) maps forward
+by the rule above. Use the `LocationActions` circle helpers; moving a circle saves the moved volume circle through the same
+inverse, never `MoveTo` on the stored shapes.
 
 ## Other languages and services
 - The gRPC read path returns the stored volume circle; it no longer rebuilds it from the mosaic `Radius`. That stored

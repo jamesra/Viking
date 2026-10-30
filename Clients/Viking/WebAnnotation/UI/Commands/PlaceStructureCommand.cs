@@ -70,7 +70,7 @@ namespace WebAnnotation.UI.Commands
 
                 //Transform from volume space to section space if we need to
 
-                bool Transformed = mapping.TryVolumeToSection(WorldPos, out Geometry.Vector2 SectionPos);
+                bool Transformed = Viking.VolumeModel.LocationVolumeGeometry.TryMapPointsToMosaic([WorldPos], mapping, out _, out _);
 
                 if (!Transformed)
                 {
