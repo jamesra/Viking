@@ -2,6 +2,7 @@ using SqlGeometryUtils;
 using System;
 using System.Threading.Tasks;
 using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.VolumeModel;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
@@ -41,7 +42,7 @@ namespace WebAnnotation.View
             switch (obj.TypeCode)
             {
                 case LocationType.CIRCLE:
-                    return new LocationCircleView(obj, mapping);
+                    return new LocationCircleView(obj, LocationVolumeGeometry.For(obj, mapping));
                 case LocationType.OPENCURVE:
                     return new LocationOpenCurveView(obj, mapping);
                 case LocationType.CURVEPOLYGON:
@@ -58,32 +59,16 @@ namespace WebAnnotation.View
                 case LocationType.POLYLINE:
                     return new LocationLineView(obj, mapping);
                 case LocationType.POINT:
-                    return new LocationCircleView(obj, mapping);
+                    return new LocationCircleView(obj, LocationVolumeGeometry.For(obj, mapping));
                 default:
                     throw new NotImplementedException("View for type " + obj.TypeCode.ToString() + " is not implemented");
             }
         }
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="obj"></param>
-        /// <param name="OnAdjacentSection">Indicates the location is not on the section being displayed.</param>
-        /// <returns></returns>
-        /// <summary>
-        /// The section-space circle a polygon, curve polygon or closed curve on an adjacent section is drawn as. Location
-        /// links use it too, so a link ends on the marker that is drawn.
-        /// </summary>
-        internal static Geometry.Circle AdjacentPolygonMarkerCircle(LocationObj obj) => obj.MosaicShape.CalculateInscribedCircle();
-
-        /// <summary>
-        /// The section-space circle an open curve on an adjacent section is drawn as: at its centre, half its length across.
-        /// Location links use it too, so a link ends on the marker that is drawn.
-        /// </summary>
-        internal static Geometry.Circle AdjacentOpenCurveMarkerCircle(LocationObj obj) => new(obj.Position, obj.Radius);
-
-        /// <summary>
-        /// Adjacent-section proxy. Polygons and closed curves become an inscribed-circle AdjacentLocationCircleView, not a full polygon.
+        /// The view of a location on an adjacent section. Circles, points, curves and polygons are drawn as the volume
+        /// marker circle <see cref="LocationVolumeGeometry.AdjacentMarker"/> gives; location links end on the same circle.
+        /// Polylines are drawn as a line.
         /// </summary>
         public static LocationCanvasView CreateAdjacent(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapping)
         {
@@ -91,27 +76,12 @@ namespace WebAnnotation.View
             switch (obj.TypeCode)
             {
                 case LocationType.CIRCLE:
-                    return new AdjacentLocationCircleView(obj, mapping);
                 case LocationType.POINT:
-                    return new AdjacentLocationCircleView(obj, mapping);
                 case LocationType.OPENCURVE:
-                    {
-                        return new AdjacentLocationCircleView(obj, AdjacentOpenCurveMarkerCircle(obj), mapping);
-                        /*
-                        LocationOpenCurveView view = new LocationOpenCurveView(obj, mapping, obj.Radius);
-                        view.Color = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.2f);
-                        view.LabelTextColor = new Microsoft.Xna.Framework.Color(1, 1, 1, 0.5f);
-                        view.ParentLabelTextAlpha = 0.5f;
-                        return view;
-                        */
-                    }
                 case LocationType.POLYGON:
                 case LocationType.CURVEPOLYGON:
                 case LocationType.CLOSEDCURVE:
-                    {
-                        AdjacentLocationCircleView view = new(obj, AdjacentPolygonMarkerCircle(obj), mapping);
-                        return view;
-                    }
+                    return new AdjacentLocationCircleView(obj, LocationVolumeGeometry.For(obj, mapping).AdjacentMarker(Global.AdjacentLocationRadiusScalar));
                 case LocationType.POLYLINE:
                     {
                         AdjacentLocationLineView view = new(obj, mapping)

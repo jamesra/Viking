@@ -21,9 +21,14 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
+    /// <summary>
+    /// Base of the views drawn as a volume circle: circles and points on the viewed section, and the markers of every
+    /// location on an adjacent section. The circle comes from <see cref="LocationVolumeGeometry"/>; these views never map.
+    /// </summary>
     internal abstract class LocationCircleViewBase(LocationObj obj) : LocationCanvasView(obj), ILabelView
     {
-        public virtual double Radius => MosaicCircle.Radius;
+        /// <summary>The radius of <see cref="VolumeCircle"/>, the circle drawn and hit-tested.</summary>
+        public double Radius => VolumeCircle.Radius;
 
         private SqlGeometry? _VolumeShape = null;
         public override SqlGeometry VolumeShapeAsRendered
@@ -35,8 +40,7 @@ namespace WebAnnotation.View
             }
         }
 
-        public abstract Circle MosaicCircle { get; }
-
+        /// <summary>The circle as drawn and hit-tested in volume space.</summary>
         public abstract Circle VolumeCircle { get; }
 
         public override Rectangle BoundingBox => VolumeCircle.BoundingBox;
@@ -98,9 +102,6 @@ namespace WebAnnotation.View
         public StructureCircleLabels structureLabels;
 
         protected readonly Circle _VolumeCircle;
-        protected readonly Circle _MosaicCircle;
-
-        public override Circle MosaicCircle => _MosaicCircle;
 
         public override Circle VolumeCircle => _VolumeCircle;
 
@@ -112,37 +113,17 @@ namespace WebAnnotation.View
             set => throw new NotImplementedException();
         }
 
-        public AdjacentLocationCircleView(LocationObj obj, IVolumeToSectionTransform mapper, double Radius) : base(obj)
-        {
-            _MosaicCircle = new Circle(obj.Position, Radius);
-            _VolumeCircle = new Circle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
-
-            CreateViewObjects(MosaicCircle, mapper);
-            CreateLabelObjects();
-        }
-
-        public AdjacentLocationCircleView(LocationObj obj, IVolumeToSectionTransform mapper) : base(obj)
-        {
-            _MosaicCircle = new Circle(obj.Position, obj.Radius * Global.AdjacentLocationRadiusScalar);
-            _VolumeCircle = new Circle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
-
-            CreateViewObjects(MosaicCircle, mapper);
-            CreateLabelObjects();
-        }
-
-        public AdjacentLocationCircleView(LocationObj obj, Circle mosaicCircle, IVolumeToSectionTransform mapper) : base(obj)
-        {
-            _MosaicCircle = mosaicCircle;
-            _VolumeCircle = new Circle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
-
-            CreateViewObjects(MosaicCircle, mapper);
-            CreateLabelObjects();
-        }
-
         /// <summary>
-        /// We scale down the radius when the location is on an adjacent section
+        /// A marker for a location on an adjacent section, drawn as <paramref name="volumeMarker"/>
+        /// (<see cref="LocationVolumeGeometry.AdjacentMarker"/>).
         /// </summary>
-        public override double Radius => VolumeCircle.Radius;
+        public AdjacentLocationCircleView(LocationObj obj, Circle volumeMarker) : base(obj)
+        {
+            _VolumeCircle = volumeMarker;
+
+            CreateViewObjects();
+            CreateLabelObjects();
+        }
 
         public Color Color
         {
@@ -166,7 +147,7 @@ namespace WebAnnotation.View
             }
         }
 
-        private void CreateViewObjects(Circle MosaicCircle, IVolumeToSectionTransform mapper)
+        private void CreateViewObjects()
         {
             var color = modelObj.Parent is null
                 ? Microsoft.Xna.Framework.Color.Gray.SetAlpha(0.5f)
@@ -264,22 +245,7 @@ namespace WebAnnotation.View
 
         public override void DrawLabel(Microsoft.Xna.Framework.Graphics.SpriteBatch spriteBatch,
                               Microsoft.Xna.Framework.Graphics.SpriteFont font,
-                              VikingXNA.Scene scene) => structureLabels.DrawLabel(spriteBatch, font, scene);/*
-            if (font is null)
-                throw new ArgumentNullException("font");
-
-            if (spriteBatch is null)
-                throw new ArgumentNullException("spriteBatch");
-
-            float MagnificationFactor = (float)(1.0 / scene.Camera.Downsample);
-            double DesiredRowsOfText = 6.0;
-            double DefaultFontSize = (this.Radius * 2) / DesiredRowsOfText;
-            StructureIDLabelView.FontSize = DefaultFontSize;
-            StructureIDLabelView.Position = modelObj.VolumePosition - new Geometry.Vector2(0.0, this.Radius / 3.0f);
-            StructureIDLabelView.Draw(spriteBatch, font, scene);
-
-            return; 
-            */
+                              VikingXNA.Scene scene) => structureLabels.DrawLabel(spriteBatch, font, scene);
 
         #endregion 
     }
@@ -288,9 +254,6 @@ namespace WebAnnotation.View
     internal class LocationCircleView : LocationCircleViewBase, ICanvasViewContainer, IColorView, ILabelView, IOverlappedLinkHost
     {
         protected readonly Circle _VolumeCircle;
-        protected readonly Circle _MosaicCircle;
-
-        public override Circle MosaicCircle => _MosaicCircle;
 
         public override Circle VolumeCircle => _VolumeCircle;
 
@@ -331,26 +294,23 @@ namespace WebAnnotation.View
         private static readonly float RadiusToPenResizeCircle = 1.0f / 8.0f;
         private static readonly float RadiusToLinkCircle = 1.75f / 4.0f;
 
-        public LocationCircleView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
+        /// <summary>A circle or point on the viewed section, drawn as <see cref="LocationVolumeGeometry.Circle"/>.</summary>
+        public LocationCircleView(LocationObj obj, LocationVolumeGeometry geometry) : base(obj)
         {
-            _MosaicCircle = new Circle(obj.Position, obj.Radius);
-            _VolumeCircle = new Circle(mapper.SectionToVolume(_MosaicCircle.Center), _MosaicCircle.Radius);
+            _VolumeCircle = geometry.Circle ?? throw new ArgumentException($"Location {obj.ID} of type {obj.TypeCode} is not drawn as a circle");
 
-            //RegisterForLocationEvents();
-            //RegisterForStructureChangeEvents();
-            CreateViewObjects(_MosaicCircle, mapper);
+            CreateViewObjects();
             CreateLabelObjects();
         }
 
-        private void CreateViewObjects(Circle MosaicCircle, IVolumeToSectionTransform mapper)
+        private void CreateViewObjects()
         {
-            Geometry.Vector2 VolumePosition = mapper.SectionToVolume(MosaicCircle.Center);
             bool hasParent = modelObj.Parent?.ParentID.HasValue ?? false;
             float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(modelObj.TypeCode, hasParent);
             Color color = modelObj.Parent is null
                 ? Color.Gray.SetAlpha(opacity)
                 : ColorForStructure(modelObj.Parent, opacity);
-            circleView = new CircleView(new Circle(VolumePosition, modelObj.Radius), color);
+            circleView = new CircleView(_VolumeCircle, color);
         }
 
         private void CreateLabelObjects() => structureLabels = new StructureCircleLabels(modelObj, VolumeCircle);
@@ -516,8 +476,6 @@ namespace WebAnnotation.View
 
 
         #endregion
-
-        public override double Radius => VolumeCircle.Radius;
 
         #region Linked Locations
 
