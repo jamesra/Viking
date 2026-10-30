@@ -70,9 +70,11 @@ The script writes the proxy's lines (``<host name> <upstream>;``) to
 ``<root>/Data/viking-segmentation/proxy-models.map`` and the host names to ``cert-names.names``. On
 the proxy host, ``segmentation.map`` goes in ``Data/viking-proxy/models.d/`` (``viking-proxy``
 includes it in its SNI map) and ``segmentation.names`` in ``Data/viking-certs/names.d/``
-(``viking-certs`` adds the names to the certificate on its next cycle). When those stacks run on the
+(``viking-certs`` adds the names to the certificate on its next cycle, every 12 hours). When those stacks run on the
 same host, set ``SEGMENTATION_PROXY_MAP_DIR`` and ``SEGMENTATION_CERT_NAMES_DIR`` in the run env and the
-script writes them there. Restart ``viking-proxy`` after the map changes. Creating the DNS record for a
+script writes them there; when the names changed and ``TLS_MODE`` is not ``manual``, ``stack.ps1`` then restarts
+``viking-certs`` so the new name is requested at once, and the renewer restarts the model servers when the
+certificate arrives. Restart ``viking-proxy`` after the map changes. Creating the DNS record for a
 new name is up to you.
 
 Prebuilt image

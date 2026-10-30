@@ -42,7 +42,9 @@
                                              (viking-proxy's models.d folder on this host)
     <STACK_DATA_DIR>/cert-names.names        the rows' host names, for the certificate manager; written as
                                              segmentation.names to SEGMENTATION_CERT_NAMES_DIR when that is set
-                                             (viking-certs' names.d folder on this host)
+                                             (viking-certs' names.d folder on this host). When the names changed
+                                             and TLS_MODE is not manual, stack.ps1 then restarts viking-certs so
+                                             the new name is requested at once instead of at its next cycle.
   A certificate that does not cover a row's host name is reported, never fatal: the server waits for valid
   files. Creating the DNS record for a new name is up to you.
 
@@ -82,6 +84,7 @@ if ($Help -or $Prefix -in @('-h', '--help', '/?', 'help')) {
 $ErrorActionPreference = 'Stop'
 $FirstFreePort = 40445
 $Warnings = [System.Collections.Generic.List[string]]::new()
+$RestartStacks = [System.Collections.Generic.List[string]]::new()
 
 function Get-Setting([string]$Name, [string]$Default = '') {
     $v = [Environment]::GetEnvironmentVariable($Name)
@@ -376,8 +379,21 @@ else {
     $namesDir = Get-Setting 'SEGMENTATION_CERT_NAMES_DIR'
     if ($namesDir) {
         $null = New-Item -ItemType Directory -Force -Path $namesDir
-        Write-Utf8 (Join-Path $namesDir 'segmentation.names') $names.ToString()
-        Write-Host "Wrote the certificate names to $namesDir. viking-certs adds them on its next cycle."
+        $namesFile = Join-Path $namesDir 'segmentation.names'
+        $before = if (Test-Path -LiteralPath $namesFile) { (Get-Content -LiteralPath $namesFile -Raw) -replace "`r`n", "`n" } else { '' }
+        Write-Utf8 $namesFile $names.ToString()
+        if ($before -eq ($names.ToString() -replace "`r`n", "`n")) {
+            Write-Host "Certificate names in $namesDir are unchanged."
+        }
+        elseif ((Get-Setting 'TLS_MODE' 'manual') -eq 'manual') {
+            Write-Host "Wrote the certificate names to $namesDir. TLS_MODE is manual, so the certificate comes from you: it must cover the new name."
+        }
+        else {
+            # viking-certs reads the names every cycle (12 hours); a restart starts a cycle now, and it restarts
+            # the labelled servers when the new certificate arrives. stack.ps1 does the restart.
+            $RestartStacks.Add('viking-certs')
+            Write-Host "Wrote the certificate names to $namesDir. viking-certs will be restarted to request the new name now."
+        }
     }
     else {
         Write-Host "Certificate names: $NamesPath. For a certificate that lists its names (letsencrypt, acme-eab), put it in viking-certs' names.d folder as segmentation.names."
@@ -397,7 +413,7 @@ foreach ($w in ($Warnings | Select-Object -Unique)) { Write-Warning $w }
 
 $resultPath = Get-Setting 'STACK_ACTION_RESULT'
 if ($resultPath -and -not $DryRun) {
-    $result = @{ services = @($selected | ForEach-Object { "segmentation-$($_.prefix)" }); removed = $removed }
+    $result = @{ services = @($selected | ForEach-Object { "segmentation-$($_.prefix)" }); removed = $removed; restartStacks = @($RestartStacks) }
     Write-Utf8 $resultPath ($result | ConvertTo-Json -Compress)
 }
 exit 0
