@@ -47,6 +47,7 @@
     <Compile Include="Tools\LocationLinkEndGeometryTests.cs" />
     <Compile Include="Tools\StoredVolumeCacheReaderTests.cs" />
     <Compile Include="Tools\VolumeGeometryGuardTests.cs" />
+    <Compile Include="Tools\VolumeCacheTests.cs" />
     <Compile Include="Tools\LocationVolumeGeometryInverseTests.cs" />
     <Compile Include="Commands\VolumeEditSaveTests.cs" />
     <Compile Include="View\LinkedLocationShapeMappingTests.cs" />
