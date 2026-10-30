@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Geometry;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
 using WebAnnotation.View;
 using WebAnnotation.ViewModel;
@@ -12,21 +13,22 @@ using WebAnnotationModel.Objects;
 namespace WebAnnotation.UI.AutoPolygonize
 {
     /// <summary>
-    /// Merges same-structure polygon locations on one section into the survivor <see cref="LocationSiblingMerge"/> picks.
-    /// Auto-polygonize accept and an accepted manual polygon (Segment to Polygon, Resegment, Convert to Polygon and an edited
-    /// mask, in Viking's context menu and in Jotunn's tools) all end here, so the links move and the extra locations go the
-    /// same way.
+    /// Merges same-structure locations on one section into the survivor <see cref="LocationSiblingMerge"/> picks.
+    /// Auto-polygonize accept, an accepted manual polygon (Segment to Polygon, Resegment, Convert to Polygon and an edited
+    /// mask, in Viking's context menu and in Jotunn's tools) and a pen loop drawn around a circle all end here, so the links
+    /// move and the extra locations go the same way.
     /// </summary>
     /// <remarks>
     /// Overlaps are tested in volume space, on shapes derived from the authoritative mosaic shapes: a polygon is its mosaic
     /// shape mapped through the section transform (<see cref="AutoPolygonizeSelection.TryGetVolumePolygon"/>). The union is
     /// written with <see cref="LocationShapeUpdate.ApplyVolumePolygon(LocationObj, Polygon, IVolumeToSectionTransform, double)"/>,
-    /// which maps it back to mosaic space before the save, so no volume coordinate is saved as a mosaic one.
+    /// which maps it back to mosaic space before the save, so no volume coordinate is saved as a mosaic one. A circle joins as
+    /// its disk: its mosaic circle mapped with the five-point scale rule (<see cref="LocationActions.TryGetVolumeCircle"/>).
     /// </remarks>
     internal static class SameStructureMerge
     {
-        /// <summary>A location that may join the merge, with its outline in volume space.</summary>
-        internal readonly record struct Piece(LocationObj Location, Polygon Polygon);
+        /// <summary>A location that may join the merge, with its outline in volume space (a circle's disk when <c>IsCircle</c>).</summary>
+        internal readonly record struct Piece(LocationObj Location, Polygon Polygon, bool IsCircle = false);
 
         /// <summary>
         /// Gives the survivor the Z-links the victims had that it lacks, deletes the victims and saves.
@@ -54,15 +56,34 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// After a manual polygon is saved on <paramref name="saved"/>: finds the polygons of the same structure on the same section
-        /// that overlap it (chains of overlaps included), writes the union of all of them onto the survivor and removes the rest,
-        /// moving their links. Edge contact alone is not an overlap. Does nothing when nothing overlaps.
+        /// After a manual polygon is saved on <paramref name="saved"/>: merges the polygons of the same structure on the same section
+        /// that overlap it (see <see cref="MergeAsync"/>). Circles are left alone.
         /// </summary>
         /// <param name="transform">Section-to-volume transform of <paramref name="saved"/>'s section.</param>
         /// <param name="downsample">The view's downsample, passed on to <see cref="LocationShapeUpdate.ApplyVolumePolygon(LocationObj, Polygon, IVolumeToSectionTransform, double)"/>.</param>
         /// <param name="invalidate">Redraws the view once locations were merged; may be null.</param>
         /// <returns>True when locations were merged.</returns>
-        public static async Task<bool> MergeOverlappingSiblingsAsync(LocationObj saved, IVolumeToSectionTransform transform, double downsample, Action? invalidate = null)
+        public static Task<bool> MergeOverlappingSiblingsAsync(LocationObj saved, IVolumeToSectionTransform transform, double downsample, Action? invalidate = null) =>
+            MergeAsync(saved, transform, downsample, invalidate, includeCircles: false, confirmPolygons: null);
+
+        /// <summary>
+        /// After a pen loop turned a circle into the polygon now saved on <paramref name="saved"/>: circles of the same structure that
+        /// the loop touches or holds are merged without asking; polygons of the same structure that it touches or holds are merged only
+        /// when <paramref name="confirmPolygons"/> says yes (a glial cell can split and bump into another of its processes, or the user
+        /// may want them kept apart). Called by <see cref="Actions.ChangeToPolygonAction"/> in Viking and Jotunn.
+        /// </summary>
+        /// <param name="confirmPolygons">Given the polygon locations that would join; true merges them too. Runs on the calling thread.</param>
+        /// <returns>True when locations were merged.</returns>
+        public static Task<bool> MergeAfterPenLoopAsync(LocationObj saved, IVolumeToSectionTransform transform, double downsample,
+            Func<IReadOnlyList<LocationObj>, bool> confirmPolygons, Action? invalidate = null) =>
+            MergeAsync(saved, transform, downsample, invalidate, includeCircles: true, confirmPolygons);
+
+        /// <summary>
+        /// Finds the same-structure, same-section locations whose outline overlaps <paramref name="saved"/>'s (<see cref="FindGroup"/>),
+        /// writes the union of all of them onto the survivor and removes the rest, moving their links. Does nothing when nothing overlaps.
+        /// </summary>
+        private static async Task<bool> MergeAsync(LocationObj saved, IVolumeToSectionTransform transform, double downsample, Action? invalidate,
+            bool includeCircles, Func<IReadOnlyList<LocationObj>, bool>? confirmPolygons)
         {
             if (saved?.ParentID is null || transform is null)
                 return false;
@@ -83,7 +104,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     nearby.Add(other);
             }
 
-            List<Piece> group = FindGroup(saved, savedPolygon, nearby, transform);
+            List<Piece> group = FindGroup(saved, savedPolygon, nearby, transform, includeCircles, confirmPolygons);
             if (group.Count < 2)
                 return false;
 
@@ -101,12 +122,19 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// <paramref name="saved"/> and the polygons among <paramref name="nearby"/> of its structure and section that overlap it,
-        /// directly or through a chain of overlaps (<see cref="AutoPolygonizeSelection.ShouldGroupSiblingPolygons"/>). Circles,
-        /// curves and other structures' locations never join. The first piece is always <paramref name="saved"/>.
+        /// directly or through a chain of overlaps (<see cref="AutoPolygonizeSelection.ShouldGroupSiblingPolygons"/>). Circles join
+        /// only with <paramref name="includeCircles"/>; curves, points and other structures' locations never join. The first piece is
+        /// always <paramref name="saved"/>.
         /// </summary>
         /// <param name="savedPolygon"><paramref name="saved"/>'s outline in volume space.</param>
         /// <param name="transform">Maps each candidate's mosaic shape into volume space.</param>
-        internal static List<Piece> FindGroup(LocationObj saved, Polygon savedPolygon, IEnumerable<LocationObj> nearby, IVolumeToSectionTransform transform)
+        /// <param name="includeCircles">Circle annotations join as their disks.</param>
+        /// <param name="confirmPolygons">
+        /// Null takes in the polygons that overlap. Otherwise it is asked about the polygons that would join (only when there are
+        /// any), and when it returns false the group keeps only the circles, and what chains through them.
+        /// </param>
+        internal static List<Piece> FindGroup(LocationObj saved, Polygon savedPolygon, IEnumerable<LocationObj> nearby, IVolumeToSectionTransform transform,
+            bool includeCircles = false, Func<IReadOnlyList<LocationObj>, bool>? confirmPolygons = null)
         {
             List<Piece> pool = [];
             foreach (LocationObj other in nearby)
@@ -118,9 +146,20 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 if (AutoPolygonizeSelection.TryGetVolumePolygon(other, transform, out Polygon? polygon) && polygon is not null)
                     pool.Add(new Piece(other, polygon));
+                else if (includeCircles && other.TypeCode == LocationType.CIRCLE && LocationActions.TryGetVolumeCircle(other, transform) is Circle disk)
+                    pool.Add(new Piece(other, AutoPolygonizeSelection.CircleToPolygon(disk.Center, disk.Radius), IsCircle: true));
             }
 
-            return Group(new Piece(saved, savedPolygon), pool);
+            Piece self = new(saved, savedPolygon);
+            List<Piece> group = Group(self, pool);
+            if (confirmPolygons is not null)
+            {
+                List<Piece> polygons = [.. group.Where(piece => !piece.IsCircle && piece.Location.ID != saved.ID)];
+                if (polygons.Count > 0 && !confirmPolygons([.. polygons.Select(piece => piece.Location)]))
+                    group = Group(self, [.. pool.Where(piece => piece.IsCircle)]);
+            }
+
+            return group;
         }
 
         /// <summary>The seed and every piece of the pool reachable from it through overlaps.</summary>

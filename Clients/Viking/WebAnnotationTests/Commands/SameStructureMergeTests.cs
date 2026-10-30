@@ -113,5 +113,76 @@ namespace WebAnnotationTests.Commands
             CollectionAssert.AreEqual(new long[] { 1, 2 }, Ids(group));
             Assert.AreEqual(130, group[1].Polygon.BoundingBox.Left, 1e-6, "the sibling's outline is in volume space");
         }
+
+        // ---- A pen loop drawn around a circle (MergeAfterPenLoopAsync: circles included, polygons asked about) ----
+
+        [TestMethod]
+        public void APenLoopTakesInTheStructuresCirclesItTouchesWithoutAsking()
+        {
+            LocationObj saved = PolygonLocation(1, 10, 10, 40);
+            bool asked = false;
+
+            List<SameStructureMerge.Piece> group = SameStructureMerge.FindGroup(saved, Square(10, 10, 40),
+                [CircleLocation(2, 50, 30, 15), CircleLocation(3, 150, 150, 10)], Identity,
+                includeCircles: true, confirmPolygons: _ => asked = true);
+
+            CollectionAssert.AreEqual(new long[] { 1, 2 }, Ids(group), "the circle the loop touches joins, the far one does not");
+            Assert.IsFalse(asked, "circles are merged without asking");
+            Assert.IsTrue(group.Single(piece => piece.Location.ID == 2).IsCircle);
+        }
+
+        [TestMethod]
+        public void APenLoopAsksBeforeTakingInTheStructuresPolygons()
+        {
+            LocationObj saved = PolygonLocation(1, 10, 10, 40);
+            IReadOnlyList<LocationObj>? askedAbout = null;
+
+            List<SameStructureMerge.Piece> group = SameStructureMerge.FindGroup(saved, Square(10, 10, 40),
+                [PolygonLocation(2, 40, 10, 40), CircleLocation(3, 30, 55, 10)], Identity,
+                includeCircles: true, confirmPolygons: polygons => { askedAbout = polygons; return true; });
+
+            Assert.IsNotNull(askedAbout, "an overlapping polygon is asked about");
+            CollectionAssert.AreEqual(new long[] { 2 }, askedAbout.Select(location => location.ID).ToArray(), "only polygons are asked about");
+            CollectionAssert.AreEqual(new long[] { 1, 2, 3 }, Ids(group));
+        }
+
+        [TestMethod]
+        public void DecliningThePolygonMergeKeepsTheCirclesAndDropsWhatChainsOnlyThroughThePolygon()
+        {
+            LocationObj saved = PolygonLocation(1, 10, 10, 40);
+            LocationObj polygon = PolygonLocation(2, 40, 10, 40);
+            LocationObj circleOnPolygon = CircleLocation(3, 85, 30, 10);
+            LocationObj circleOnLoop = CircleLocation(4, 30, 55, 10);
+
+            List<SameStructureMerge.Piece> group = SameStructureMerge.FindGroup(saved, Square(10, 10, 40),
+                [polygon, circleOnPolygon, circleOnLoop], Identity, includeCircles: true, confirmPolygons: _ => false);
+
+            CollectionAssert.AreEqual(new long[] { 1, 4 }, Ids(group));
+        }
+
+        [TestMethod]
+        public void ThePolygonMergeQuestionNamesTheLocations()
+        {
+            StringAssert.Contains(WebAnnotation.UI.Actions.ChangeToPolygonAction.PolygonMergeQuestion([PolygonLocation(12, 0, 0, 1)]), "location 12");
+            StringAssert.Contains(WebAnnotation.UI.Actions.ChangeToPolygonAction.PolygonMergeQuestion([PolygonLocation(12, 0, 0, 1), PolygonLocation(13, 0, 0, 1)]),
+                "2 other polygons of this structure (12, 13)");
+        }
+
+        [TestMethod]
+        public void ACirclesDiskIsItsMosaicCircleMappedWithTheFivePointScale()
+        {
+            // volume = 2 * mosaic: the circle at mosaic (80, 60) radius 10 is at volume (160, 120) radius 20, reaching x = 140,
+            // inside the loop's 100..145. Its mosaic radius (10) copied into the volume would stop at x = 150 and miss it.
+            CircleLocationScaleTests.ScaleTransform scale = new(2, new Vector2(0, 0));
+            LocationObj saved = PolygonLocation(1, 50, 50, 22.5);
+
+            List<SameStructureMerge.Piece> group = SameStructureMerge.FindGroup(saved, Square(100, 100, 45),
+                [CircleLocation(2, 80, 60, 10)], scale, includeCircles: true, confirmPolygons: _ => true);
+
+            CollectionAssert.AreEqual(new long[] { 1, 2 }, Ids(group));
+            Rectangle disk = group[1].Polygon.BoundingBox;
+            Assert.AreEqual(140, disk.Left, 1e-3);
+            Assert.AreEqual(180, disk.Right, 1e-3);
+        }
     }
 }

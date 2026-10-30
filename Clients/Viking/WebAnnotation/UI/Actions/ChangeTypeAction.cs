@@ -2,10 +2,13 @@ using Geometry;
 using Microsoft.Xna.Framework;
 using SqlGeometryUtils;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
+using WebAnnotation.UI.AutoPolygonize;
 using VikingXNAGraphics;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
@@ -60,7 +63,8 @@ namespace WebAnnotation.UI.Actions
         /// <summary>
         /// Maps the new volume polygon to the section, makes the location a curve polygon with that shape, and saves it.
         /// Changes nothing, and writes a trace line, when any vertex of the polygon cannot be mapped to the section.
-        /// On a save fault the location's original type and shape are restored.
+        /// On a save fault the location's original type and shape are restored. A circle converted this way (a pen loop drawn
+        /// around it) then merges with its structure's circles the loop touches, and with its polygons once the user agrees.
         /// </summary>
         public async void OnExecute()
         {
@@ -76,9 +80,10 @@ namespace WebAnnotation.UI.Actions
             Location.TypeCode = LocationType.CURVEPOLYGON;
             Location.SetShapeFromGeometryInSection(Transform, mosaic_polygon.ToSqlGeometry());
 
+            bool saved;
             try
             {
-                await Store.Locations.Save();
+                saved = await Store.Locations.Save();
                 UndoManager.PushLocationShape("Change Type", Location, Transform, original_mosaic_polygon, originalType);
             }
             catch (System.ServiceModel.FaultException e)
@@ -86,8 +91,48 @@ namespace WebAnnotation.UI.Actions
                 AnnotationOverlay.ShowFaultExceptionMsgBox(e);
                 Location.TypeCode = originalType;
                 Location.SetShapeFromGeometryInSection(Transform, original_mosaic_polygon);
+                return;
+            }
+
+            if (saved && originalType == LocationType.CIRCLE)
+                await MergeWithSameStructureAsync();
+        }
+
+        /// <summary>
+        /// A loop drawn around a circle also takes in the structure's other circles it touches. The structure's polygons it touches
+        /// are merged only after the user says so. Works in Viking and Jotunn: the transform is the action's own, and the question
+        /// is owned by Viking's viewer when there is one. Failures are reported, never thrown, as this runs from async void.
+        /// </summary>
+        private async Task MergeWithSameStructureAsync()
+        {
+            try
+            {
+                Viking.UI.Controls.SectionViewerControl? viewer = AnnotationOverlay.CurrentOverlay?.Parent;
+                await SameStructureMerge.MergeAfterPenLoopAsync(
+                    Location,
+                    Transform,
+                    AnnotationOverlay.ActiveDownsample,
+                    polygons => System.Windows.Forms.MessageBox.Show(
+                        viewer,
+                        PolygonMergeQuestion(polygons),
+                        "Merge polygons",
+                        System.Windows.Forms.MessageBoxButtons.YesNo,
+                        System.Windows.Forms.MessageBoxIcon.Question) == System.Windows.Forms.DialogResult.Yes,
+                    () => viewer?.Invalidate());
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"ChangeToPolygonAction: merging location {Location.ID} with its structure failed: {ex}", "WebAnnotation");
+                System.Windows.Forms.MessageBox.Show($"Could not merge location {Location.ID} with the other annotations of its structure: {ex.Message}",
+                    "Merge polygons", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
             }
         }
+
+        /// <summary>The question asked before a pen loop's polygon takes in <paramref name="polygons"/> of the same structure.</summary>
+        internal static string PolygonMergeQuestion(IReadOnlyList<LocationObj> polygons) =>
+            polygons.Count == 1
+                ? $"The new outline overlaps another polygon of this structure (location {polygons[0].ID}). Merge them into one?"
+                : $"The new outline overlaps {polygons.Count} other polygons of this structure ({string.Join(", ", polygons.Select(p => p.ID))}). Merge them into one?";
 
         public void CreateDefaultVisuals()
         {
