@@ -69,4 +69,92 @@ namespace WebAnnotationTests.Tools
 
     /// <summary>volume = scale * mosaic + offset, in both directions.</summary>
     internal sealed class ScaleTransform(double scale, Vector2 offset) : AffineTransform(scale, 0, 0, scale, offset);
+
+    /// <summary>
+    /// A smooth non-linear warp with an exact inverse, so its scale, rotation and shear change from point to point as a stos
+    /// warp's do: volume = R(25 degrees) · (1.2 x + 2e-5 y², 0.85 y) + (800, -300).
+    /// </summary>
+    internal sealed class WarpTransform : IVolumeToSectionTransform
+    {
+        private const double Ax = 1.2, By = 0.85, K = 2e-5;
+        private static readonly double Cos = Math.Cos(25 * Math.PI / 180), Sin = Math.Sin(25 * Math.PI / 180);
+        private static readonly Vector2 Offset = new(800, -300);
+
+        public long ID => 1;
+        public Rectangle? SectionBounds => null;
+        public Rectangle? VolumeBounds => null;
+
+        public static Vector2 Forward(Vector2 p)
+        {
+            double u = (Ax * p.X) + (K * p.Y * p.Y), v = By * p.Y;
+            return new Vector2((Cos * u) - (Sin * v) + Offset.X, (Sin * u) + (Cos * v) + Offset.Y);
+        }
+
+        public static Vector2 Inverse(Vector2 p)
+        {
+            double x = p.X - Offset.X, y = p.Y - Offset.Y;
+            double u = (Cos * x) + (Sin * y), v = (-Sin * x) + (Cos * y);
+            double my = v / By;
+            return new Vector2((u - (K * my * my)) / Ax, my);
+        }
+
+        public bool TrySectionToVolume(Vector2 P, out Vector2 transformedP) { transformedP = Forward(P); return true; }
+        public bool TryVolumeToSection(Vector2 P, out Vector2 transformedP) { transformedP = Inverse(P); return true; }
+        public bool[] TrySectionToVolume(in Vector2[] Points, out Vector2[] transformedP) { transformedP = [.. Points.Select(Forward)]; return [.. Points.Select(_ => true)]; }
+        public bool[] TryVolumeToSection(in Vector2[] Points, out Vector2[] transformedP) { transformedP = [.. Points.Select(Inverse)]; return [.. Points.Select(_ => true)]; }
+        public Vector2 SectionToVolume(Vector2 P) => Forward(P);
+        public Vector2 VolumeToSection(Vector2 P) => Inverse(P);
+        public Vector2[] SectionToVolume(Vector2[] Points) => [.. Points.Select(Forward)];
+        public Vector2[] VolumeToSection(Vector2[] Points) => [.. Points.Select(Inverse)];
+    }
+
+    /// <summary>
+    /// <paramref name="inner"/> where a volume point lies inside <paramref name="volumeRegion"/> (and a mosaic point maps
+    /// into it); everywhere else the checked mappings fail and the unchecked ones throw, like a stos outside its hull.
+    /// </summary>
+    internal sealed class ClippedTransform(IVolumeToSectionTransform inner, Rectangle volumeRegion) : IVolumeToSectionTransform
+    {
+        public long ID => inner.ID;
+        public Rectangle? SectionBounds => null;
+        public Rectangle? VolumeBounds => volumeRegion;
+
+        public bool TrySectionToVolume(Vector2 P, out Vector2 transformedP)
+        {
+            transformedP = inner.SectionToVolume(P);
+            return volumeRegion.Contains(transformedP);
+        }
+
+        public bool TryVolumeToSection(Vector2 P, out Vector2 transformedP)
+        {
+            transformedP = volumeRegion.Contains(P) ? inner.VolumeToSection(P) : P;
+            return volumeRegion.Contains(P);
+        }
+
+        public bool[] TrySectionToVolume(in Vector2[] Points, out Vector2[] transformedP)
+        {
+            Vector2[] mapped = new Vector2[Points.Length];
+            bool[] ok = new bool[Points.Length];
+            for (int i = 0; i < Points.Length; i++)
+                ok[i] = TrySectionToVolume(Points[i], out mapped[i]);
+
+            transformedP = mapped;
+            return ok;
+        }
+
+        public bool[] TryVolumeToSection(in Vector2[] Points, out Vector2[] transformedP)
+        {
+            Vector2[] mapped = new Vector2[Points.Length];
+            bool[] ok = new bool[Points.Length];
+            for (int i = 0; i < Points.Length; i++)
+                ok[i] = TryVolumeToSection(Points[i], out mapped[i]);
+
+            transformedP = mapped;
+            return ok;
+        }
+
+        public Vector2 SectionToVolume(Vector2 P) => TrySectionToVolume(P, out Vector2 v) ? v : throw new ArgumentOutOfRangeException(nameof(P));
+        public Vector2 VolumeToSection(Vector2 P) => TryVolumeToSection(P, out Vector2 m) ? m : throw new ArgumentOutOfRangeException(nameof(P));
+        public Vector2[] SectionToVolume(Vector2[] Points) => [.. Points.Select(SectionToVolume)];
+        public Vector2[] VolumeToSection(Vector2[] Points) => [.. Points.Select(VolumeToSection)];
+    }
 }
