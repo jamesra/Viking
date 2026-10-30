@@ -141,7 +141,6 @@ namespace WebAnnotationTests.View
             public bool Hit(GridVector2 p) => PointIntersectsAnyLineSegment(p);
             public override double LineWidth => Width;
             public override double ControlPointRadius => Width / 2.0;
-            public override GridVector2[] MosaicCurveControlPoints => CurvePoints;
             public override GridVector2[] VolumeCurveControlPoints => CurvePoints;
             public override Color Color { get; set; }
             public override float Alpha { get; set; }

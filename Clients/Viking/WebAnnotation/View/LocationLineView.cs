@@ -8,6 +8,7 @@ using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Viking.VolumeModel;
 using VikingXNA;
 using VikingXNAGraphics;
 using WebAnnotation.UI;
@@ -45,13 +46,12 @@ namespace WebAnnotation.View
 
         public override double ControlPointRadius => LineWidth / 2.0;
 
-        public AdjacentLocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
+        /// <summary>A polyline on an adjacent section, drawn through the owner's control points at its scaled width.</summary>
+        public AdjacentLocationLineView(LocationObj obj, LocationVolumeGeometry geometry) : base(obj, geometry)
         {
-            Color parentColor = obj.Parent is null
-                ? Color.Gray.SetAlpha(0.5f)
-                : ColorForStructure(obj.Parent, 1f).ConvertToHCL(0.5f);
-            upPolyLineView = new PolyLineView(VolumeControlPoints, parentColor, GlobalPrimitives.UpArrowTexture, obj.Width.Value, lineStyle: LineStyle.Tubular);
-            downPolyLineView = new PolyLineView(VolumeControlPoints, parentColor, GlobalPrimitives.DownArrowTexture, obj.Width.Value, lineStyle: LineStyle.Tubular);
+            Color parentColor = obj.Parent is null ? Color.Gray.SetAlpha(0.5f) : ColorForStructure(obj.Parent, 1f).ConvertToHCL(0.5f);
+            upPolyLineView = new PolyLineView(VolumeControlPoints, parentColor, GlobalPrimitives.UpArrowTexture, geometry.Width, lineStyle: LineStyle.Tubular);
+            downPolyLineView = new PolyLineView(VolumeControlPoints, parentColor, GlobalPrimitives.DownArrowTexture, geometry.Width, lineStyle: LineStyle.Tubular);
         }
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
@@ -115,15 +115,17 @@ namespace WebAnnotation.View
 
         public override double ControlPointRadius => LineWidth / 2.0;
 
-        public LocationLineView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper, Texture2D? texture = null) : base(obj, mapper)
+        /// <summary>
+        /// A polyline on the viewed section, drawn through the owner's control points at its scaled width. Throws
+        /// <see cref="ArgumentException"/> when the owner says it cannot be drawn on its section.
+        /// </summary>
+        public LocationLineView(LocationObj obj, LocationVolumeGeometry geometry, Texture2D? texture = null) : base(obj, geometry)
         {
-            bool[] success = mapper.TrySectionToVolume(obj.MosaicShape.ToPoints(), out Geometry.Vector2[] volumePoints);
-            Color lineColor = obj.Parent is null
-                ? Color.Gray.SetAlpha(0.5f)
-                : ColorForStructure(obj.Parent, 0.5f);
-            polyLineView = success.All(s => s == true)
-                ? new PolyLineView(volumePoints, lineColor, texture)
-                : throw new ArgumentException($"Could not map location {obj.ID} to volume");
+            if (!geometry.CanDrawOnSection)
+                throw new ArgumentException($"Could not map location {obj.ID} to volume");
+
+            Color lineColor = obj.Parent is null ? Color.Gray.SetAlpha(0.5f) : ColorForStructure(obj.Parent, 0.5f);
+            polyLineView = new PolyLineView(VolumeControlPoints, lineColor, texture, geometry.Width);
         }
 
         public static void Draw(Microsoft.Xna.Framework.Graphics.GraphicsDevice device,
@@ -172,7 +174,7 @@ namespace WebAnnotation.View
 
     }
 
-    internal abstract class LocationLineViewBase(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : MultipleControlPointLocationCanvasViewBase(obj, mapper)
+    internal abstract class LocationLineViewBase(LocationObj obj, LocationVolumeGeometry geometry) : MultipleControlPointLocationCanvasViewBase(obj, geometry)
     {
         public override bool IsVisible(VikingXNA.Scene scene) => LocationCanvasView.IsPolygonVisible(BoundingBox, scene) && this.LineWidth >= SmallestRenderedSizeAccessor();
 
@@ -361,29 +363,20 @@ namespace WebAnnotation.View
         }
     }
 
+    /// <summary>
+    /// Base of the views drawn through a location's control points (lines and curves). The points come from
+    /// <see cref="LocationVolumeGeometry"/>; these views never map.
+    /// </summary>
     public abstract class MultipleControlPointLocationCanvasViewBase : LocationCanvasView
     {
         /// <summary>
-        /// Mosaic points composing the polyline, without added points to create a curve
-        /// </summary>
-        internal readonly Geometry.Vector2[] MosaicControlPoints;
-
-        /// <summary>
-        /// Mosaic points composing the polyline, without added points to create a curve
+        /// Volume points composing the polyline, without added points to create a curve (<see cref="LocationVolumeGeometry.ControlPoints"/>).
         /// </summary>
         internal readonly Geometry.Vector2[] VolumeControlPoints;
 
-        public MultipleControlPointLocationCanvasViewBase(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj)
+        public MultipleControlPointLocationCanvasViewBase(LocationObj obj, LocationVolumeGeometry geometry) : base(obj)
         {
-            if (obj.MosaicShape is not IHasControlPoints controlPoints)
-            {
-                throw new ArgumentException(
-                    $"Location {obj.ID} mosaic shape {obj.MosaicShape?.ShapeType} does not expose control points.",
-                    nameof(obj));
-            }
-
-            MosaicControlPoints = [.. controlPoints.ControlPoints.Select(p => p.ToVector2())];
-            VolumeControlPoints = mapper.SectionToVolume(MosaicControlPoints);
+            VolumeControlPoints = [.. geometry.ControlPoints];
         }
     }
 }

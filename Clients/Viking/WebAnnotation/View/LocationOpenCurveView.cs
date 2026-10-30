@@ -23,43 +23,26 @@ namespace WebAnnotation.View
 {
     internal class LocationOpenCurveView : LocationCurveView, IColorView, IRenderedLabelView
     {
-        public static uint NumInterpolationPoints = Global.NumOpenCurveInterpolationPoints;
-
-        private Geometry.Vector2[] _MosaicCurveControlPoints;
-
         private SqlGeometry _RenderedVolumeShape;
 
-        private Geometry.Vector2[] _VolumeCurveControlPoints;
+        private readonly Geometry.Vector2[] _VolumeCurveControlPoints;
         public CurveLabel curveLabel;
         public CurveLabel curveParentLabel;
 
         public CurveView curveView;
 
-        public LocationOpenCurveView(LocationObj obj, IVolumeToSectionTransform mapper, double lineWidth) : base(obj,
-            mapper)
+        /// <summary>
+        /// An open curve on the viewed section: the owner's control points, smoothed as the owner's
+        /// <see cref="LocationVolumeGeometry.Shape"/> is (map, then smooth), drawn at the owner's scaled width.
+        /// </summary>
+        public LocationOpenCurveView(LocationObj obj, LocationVolumeGeometry geometry) : base(obj, geometry)
         {
-            //RegisterForLocationEvents();
-            //RegisterForStructureChangeEvents();
-
             bool hasParent = obj.Parent?.ParentID.HasValue ?? false;
             float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(obj.TypeCode, hasParent);
             Color color = obj.Parent is null ? Color.Gray.SetAlpha(opacity) : ColorForStructure(obj.Parent, opacity);
-            curveView = new CurveView(VolumeControlPoints, color, false, Global.NumOpenCurveInterpolationPoints,
-                lineWidth: lineWidth, lineStyle: LineStyle.Tubular, controlPointRadius: lineWidth / 2.0,
-                ShowControlPoints: !Global.PenMode);
-            CreateLabelViews(VolumeControlPoints, obj.ParentID);
-        }
-
-        public LocationOpenCurveView(LocationObj obj, IVolumeToSectionTransform mapper) : base(obj, mapper)
-        {
-            //RegisterForLocationEvents();
-            //RegisterForStructureChangeEvents();
-
-            bool hasParent = obj.Parent?.ParentID.HasValue ?? false;
-            float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(obj.TypeCode, hasParent);
-            Color color = obj.Parent is null ? Color.Gray.SetAlpha(opacity) : ColorForStructure(obj.Parent, opacity);
-            curveView = new CurveView(VolumeControlPoints, color, false, Global.NumOpenCurveInterpolationPoints,
-                lineWidth: obj.Width.Value, lineStyle: LineStyle.Tubular, controlPointRadius: obj.Width.Value / 2.0,
+            _VolumeCurveControlPoints = geometry.Shape.ToPoints();
+            curveView = new CurveView(VolumeControlPoints, color, false, geometry.InterpolationPoints,
+                lineWidth: geometry.Width, lineStyle: LineStyle.Tubular, controlPointRadius: geometry.Width / 2.0,
                 ShowControlPoints: !Global.PenMode);
             CreateLabelViews(VolumeControlPoints, obj.ParentID);
         }
@@ -82,25 +65,7 @@ namespace WebAnnotation.View
             set => curveParentLabel.Alpha = value;
         }
 
-        public override Geometry.Vector2[] MosaicCurveControlPoints
-        {
-            get
-            {
-                _MosaicCurveControlPoints ??= [.. MosaicControlPoints.CalculateCurvePoints(NumInterpolationPoints, false)];
-
-                return _MosaicCurveControlPoints;
-            }
-        }
-
-        public override Geometry.Vector2[] VolumeCurveControlPoints
-        {
-            get
-            {
-                _VolumeCurveControlPoints ??= [.. VolumeControlPoints.CalculateCurvePoints(NumInterpolationPoints, false)];
-
-                return _VolumeCurveControlPoints;
-            }
-        }
+        public override Geometry.Vector2[] VolumeCurveControlPoints => _VolumeCurveControlPoints;
 
         public override SqlGeometry VolumeShapeAsRendered
         {
@@ -222,8 +187,6 @@ namespace WebAnnotation.View
             IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber)
         {
             List<IAction> listActions = [];
-            IVolumeToSectionTransform mapper =
-                AnnotationOverlay.ActiveSectionToVolumeTransform;
 
             if (path.HasSelfIntersection == false)
             {

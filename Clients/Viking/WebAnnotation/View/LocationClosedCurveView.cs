@@ -65,16 +65,17 @@ namespace WebAnnotation.View
         public double lineWidth = 32;
 
         /// <summary>
-        /// Interpolation count for new closed-curve views. Read when a view is constructed so loading the type does not touch volume settings.
+        /// A closed curve on the viewed section: the owner's control points, drawn and hit-tested as the owner's smoothed
+        /// <see cref="Viking.VolumeModel.LocationVolumeGeometry.Shape"/>.
         /// </summary>
-        public static uint NumInterpolationPoints => Global.NumClosedCurveInterpolationPoints;
-        public LocationClosedCurveView(LocationObj obj, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(obj, mapper)
+        public LocationClosedCurveView(LocationObj obj, Viking.VolumeModel.LocationVolumeGeometry geometry) : base(obj, geometry)
         {
+            _VolumeCurveControlPoints = geometry.Shape.ToPoints();
             _ControlPointRadius = Global.DefaultClosedLineWidth / 2.0;
             bool hasParent = obj.Parent?.ParentID.HasValue ?? false;
             float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(obj.TypeCode, hasParent);
             Color color = obj.Parent is null ? Color.Gray.SetAlpha(opacity) : ColorForStructure(obj.Parent, opacity);
-            curveView = new CurveView(VolumeControlPoints, color, true, lineWidth: VolumeControlPoints.MinDistanceBetweenAnyPoints(), controlPointRadius: ControlPointRadius, lineStyle: LineStyle.HalfTube, numInterpolations: NumInterpolationPoints);
+            curveView = new CurveView(VolumeControlPoints, color, true, lineWidth: VolumeControlPoints.MinDistanceBetweenAnyPoints(), controlPointRadius: ControlPointRadius, lineStyle: LineStyle.HalfTube, numInterpolations: geometry.InterpolationPoints);
 
             long layoutStart = System.Diagnostics.Stopwatch.GetTimestamp();
             Polygon rendered;
@@ -133,27 +134,8 @@ namespace WebAnnotation.View
             }
         }
 
-        private Geometry.Vector2[] _MosaicCurveControlPoints;
-        public override Geometry.Vector2[] MosaicCurveControlPoints
-        {
-            get
-            {
-                _MosaicCurveControlPoints ??= [.. MosaicControlPoints.CalculateCurvePoints(LocationOpenCurveView.NumInterpolationPoints, true)];
-
-                return _MosaicCurveControlPoints;
-            }
-        }
-
-        private Geometry.Vector2[] _VolumeCurveControlPoints;
-        public override Geometry.Vector2[] VolumeCurveControlPoints
-        {
-            get
-            {
-                _VolumeCurveControlPoints ??= [.. VolumeControlPoints.CalculateCurvePoints(LocationOpenCurveView.NumInterpolationPoints, true)];
-
-                return _VolumeCurveControlPoints;
-            }
-        }
+        private readonly Geometry.Vector2[] _VolumeCurveControlPoints;
+        public override Geometry.Vector2[] VolumeCurveControlPoints => _VolumeCurveControlPoints;
 
         private SqlGeometry _RenderedVolumeShape;
         public override SqlGeometry VolumeShapeAsRendered

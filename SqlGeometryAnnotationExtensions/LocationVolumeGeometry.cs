@@ -82,6 +82,17 @@ namespace Viking.VolumeModel
         /// <summary>The volume width of a line or curve: the location's mosaic width times <see cref="Scale"/>.</summary>
         public double Width { get; }
 
+        /// <summary>
+        /// Interpolated points per control-point span in <see cref="Shape"/>: what a curve view draws its curve with, so the
+        /// drawn curve is the hit-tested one. Zero for types that are not smoothed.
+        /// </summary>
+        public uint InterpolationPoints => TypeCode switch
+        {
+            LocationType.OPENCURVE => ShapeSmoothingExtensions.NumOpenCurveInterpolationPoints,
+            LocationType.CLOSEDCURVE or LocationType.CURVEPOLYGON => ShapeSmoothingExtensions.NumClosedCurveInterpolationPoints,
+            _ => 0,
+        };
+
         /// <summary>The smoothed volume shape, the value <see cref="MapShape"/> gives and the stored cache should hold.</summary>
         public SqlGeometry Shape => shape.Value;
 
