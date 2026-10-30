@@ -582,23 +582,25 @@ namespace WebAnnotation.ViewModel
             LocationObj drawnA = CoveringLocation(locA, locB, displayZ, mapProvider) ?? locA;
             LocationObj drawnB = CoveringLocation(locB, locA, displayZ, mapProvider) ?? locB;
 
-            IVolumeToSectionTransform sourceMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(drawnA.Z));
-            IVolumeToSectionTransform targetMapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(drawnB.Z));
-
-            if (!sourceMapper.TrySectionToVolume(drawnA.Position, out Geometry.Vector2 aVolumePosition))
+            // Both ends take their geometry from the owner every view draws with, so a link meets what is drawn.
+            LocationVolumeGeometry geometryA, geometryB;
+            try
+            {
+                geometryA = LocationVolumeGeometry.For(drawnA, mapProvider);
+                geometryB = LocationVolumeGeometry.For(drawnB, mapProvider);
+            }
+            catch (ArgumentException)
+            {
                 return false;
-            if (!targetMapper.TrySectionToVolume(drawnB.Position, out Geometry.Vector2 bVolumePosition))
-                return false;
+            }
 
-            circleA = new Circle(aVolumePosition, drawnA.Radius * (displayZ == drawnA.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
-            circleB = new Circle(bVolumePosition, drawnB.Radius * (displayZ == drawnB.Z ? 1.0 : Global.AdjacentLocationRadiusScalar));
+            circleA = DrawnCircle(drawnA, geometryA, displayZ);
+            circleB = DrawnCircle(drawnB, geometryB, displayZ);
 
-            // A polygon is not the circle made from its centroid and area, so each polygon end is moved to what is drawn:
-            // the marker circle on an adjacent section, then, toward that, the outline on the viewed section.
-            circleA = AdjacentMarkerEnd(drawnA, displayZ, sourceMapper) ?? circleA;
-            circleB = AdjacentMarkerEnd(drawnB, displayZ, targetMapper) ?? circleB;
-            Circle anchoredA = OutlineEnd(drawnA, displayZ, sourceMapper, circleB.Center) ?? circleA;
-            Circle anchoredB = OutlineEnd(drawnB, displayZ, targetMapper, circleA.Center) ?? circleB;
+            // A polygon is not the circle made from its centroid and area, so each polygon end on the viewed section is
+            // moved to its outline, toward the other end.
+            Circle anchoredA = OutlineEnd(drawnA, geometryA, displayZ, circleB.Center) ?? circleA;
+            Circle anchoredB = OutlineEnd(drawnB, geometryB, displayZ, circleA.Center) ?? circleB;
             circleA = anchoredA;
             circleB = anchoredB;
 
@@ -606,8 +608,8 @@ namespace WebAnnotation.ViewModel
             // partner's line width when both are lines), and is placed last, toward the partner's settled end.
             bool lineA = IsDrawnAsLine(drawnA, displayZ);
             bool lineB = IsDrawnAsLine(drawnB, displayZ);
-            Circle onLineA = (lineA ? LineEnd(drawnA, displayZ, sourceMapper, circleB.Center, lineB ? LineHalfWidth(drawnB, displayZ) : circleB.Radius) : null) ?? circleA;
-            Circle onLineB = (lineB ? LineEnd(drawnB, displayZ, targetMapper, circleA.Center, lineA ? LineHalfWidth(drawnA, displayZ) : circleA.Radius) : null) ?? circleB;
+            Circle onLineA = (lineA ? LineEnd(drawnA, geometryA, circleB.Center, lineB ? geometryB.Width / 2.0 : circleB.Radius) : null) ?? circleA;
+            Circle onLineB = (lineB ? LineEnd(drawnB, geometryB, circleA.Center, lineA ? geometryA.Width / 2.0 : circleA.Radius) : null) ?? circleB;
             circleA = onLineA;
             circleB = onLineB;
 
@@ -665,33 +667,28 @@ namespace WebAnnotation.ViewModel
         private static bool IsDrawnAsLine(LocationObj loc, int displayZ) =>
             loc.TypeCode == LocationType.POLYLINE || (loc.TypeCode == LocationType.OPENCURVE && displayZ == loc.Z);
 
-        /// <summary>Half the width <paramref name="loc"/>'s line is drawn with, as its views draw it.</summary>
-        private static double LineHalfWidth(LocationObj loc, int displayZ) =>
-            loc.TypeCode == LocationType.POLYLINE && displayZ == loc.Z
-                ? DefaultPolylineWidth / 2.0
-                : (loc.Width ?? DefaultPolylineWidth) / 2.0;
-
-        /// <summary>The width <see cref="LocationLineView"/> draws a polyline on the viewed section with (PolyLineView's default).</summary>
-        private const double DefaultPolylineWidth = 16.0;
+        /// <summary>
+        /// The circle <paramref name="loc"/> is drawn as, or stands for, seen from <paramref name="displayZ"/>: its circle
+        /// (or a circle of its volume radius at its centre) on the viewed section, its marker on an adjacent one.
+        /// </summary>
+        private static Circle DrawnCircle(LocationObj loc, LocationVolumeGeometry geometry, int displayZ) =>
+            displayZ == loc.Z
+                ? geometry.Circle ?? new Circle(geometry.Center, geometry.Radius)
+                : geometry.AdjacentMarker(Global.AdjacentLocationRadiusScalar);
 
         /// <summary>
         /// For a location drawn as a line (<see cref="IsDrawnAsLine"/>), the link end anchored on that line toward
         /// <paramref name="partnerCentre"/> with radius <paramref name="partnerRadius"/> (see <see cref="AnchorOnLine"/>).
-        /// The points are the ones its view draws: the polyline's vertices, or the open curve smoothed the same way. Null
-        /// when the line cannot be mapped or has no length.
+        /// The line is the one its view draws: the polyline's control points, or the open curve's smoothed
+        /// <see cref="LocationVolumeGeometry.Shape"/>, half <see cref="LocationVolumeGeometry.Width"/> either side. Null when
+        /// the line has no length.
         /// </summary>
-        private static Circle? LineEnd(LocationObj loc, int displayZ, IVolumeToSectionTransform mapper, Geometry.Vector2 partnerCentre, double partnerRadius)
+        private static Circle? LineEnd(LocationObj loc, LocationVolumeGeometry geometry, Geometry.Vector2 partnerCentre, double partnerRadius)
         {
             try
             {
-                bool[] mapped = mapper.TrySectionToVolume(loc.MosaicShape.ToPoints(), out Geometry.Vector2[] points);
-                if (mapped.Any(ok => !ok))
-                    return null;
-
-                if (loc.TypeCode == LocationType.OPENCURVE)
-                    points = points.CalculateCurvePoints(Global.NumOpenCurveInterpolationPoints, false);
-
-                return AnchorOnLine(points, LineHalfWidth(loc, displayZ), partnerCentre, partnerRadius);
+                IReadOnlyList<Geometry.Vector2> points = loc.TypeCode == LocationType.OPENCURVE ? geometry.Shape.ToPoints() : geometry.ControlPoints;
+                return AnchorOnLine(points, geometry.Width / 2.0, partnerCentre, partnerRadius);
             }
             catch (ArgumentException)
             {
@@ -734,44 +731,22 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// For a polygon-like location or an open curve on an adjacent section, the volume circle its marker is drawn as
-        /// (<see cref="LocationVolumeGeometry.AdjacentMarker"/>, the circle <see cref="AnnotationViewFactory.CreateAdjacent"/>
-        /// draws). Null for any other end, or when the location cannot be mapped.
+        /// For a polygon-like location on the viewed section, the link end anchored on its drawn
+        /// <see cref="LocationVolumeGeometry.Outline"/> toward <paramref name="partnerCentre"/> (see <see cref="AnchorOnOutline"/>).
+        /// Null for any other end, or when the outline cannot be anchored.
         /// </summary>
-        private static Circle? AdjacentMarkerEnd(LocationObj loc, int displayZ, IVolumeToSectionTransform mapper)
-        {
-            if (displayZ == loc.Z || !(IsPolygonLike(loc.TypeCode) || loc.TypeCode == LocationType.OPENCURVE))
-                return null;
-
-            try
-            {
-                Circle marker = LocationVolumeGeometry.For(loc, mapper).AdjacentMarker(Global.AdjacentLocationRadiusScalar);
-                return marker.Radius > 0 ? marker : null;
-            }
-            catch (ArgumentException)
-            {
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// For a polygon-like location on the viewed section, the link end anchored on its outline toward
-        /// <paramref name="partnerCentre"/> (see <see cref="AnchorOnOutline"/>). Null for any other end, or when the shape
-        /// cannot be mapped or anchored.
-        /// </summary>
-        private static Circle? OutlineEnd(LocationObj loc, int displayZ, IVolumeToSectionTransform mapper, Geometry.Vector2 partnerCentre)
+        private static Circle? OutlineEnd(LocationObj loc, LocationVolumeGeometry geometry, int displayZ, Geometry.Vector2 partnerCentre)
         {
             if (displayZ != loc.Z || !IsPolygonLike(loc.TypeCode))
                 return null;
 
             try
             {
-                SqlGeometry? mapped = mapper.TryMapShapeSectionToVolume(loc.MosaicShape.ToSqlGeometry());
-                return mapped is null ? null : AnchorOnOutline(mapped.ToPolygon(), partnerCentre);
+                return geometry.Outline is SqlGeometry outline ? AnchorOnOutline(outline.ToPolygon(), partnerCentre) : null;
             }
             catch (ArgumentException)
             {
-                // Not a polygon SQL can give us (a closed curve stored as a line, a bad ring): keep the circle.
+                // Not a polygon SQL can give us (a bad ring): keep the circle.
                 return null;
             }
         }
@@ -973,25 +948,23 @@ namespace WebAnnotation.ViewModel
         {
             IVolumeToSectionTransform mapper = mapProvider.GetSectionToVolumeTransform((int)Math.Round(location.Z));
             bool onViewedSection = location.Z == displayZ;
-            // On the viewed section a polygon view reports its mapped polygon as VolumeShapeAsRendered, so map the
-            // shape directly and skip a view that smooths and triangulates the ring in the background. A closed
-            // curve view builds its rendered shape from its own control points, so it still goes through the view.
-            bool mapDirectly = onViewedSection
+            // On the viewed section a polygon view hit-tests the owner's Outline, so use it directly and skip a view that
+            // smooths and triangulates the ring in the background. Off the viewed section a polygon-like end is tested with
+            // that same outline, not the marker circle. Only an exact mapping counts; otherwise the drawn shape is tested.
+            bool useOutline = onViewedSection
                 ? location.TypeCode is LocationType.POLYGON or LocationType.CURVEPOLYGON
                 : IsPolygonType(location.TypeCode);
-            if (mapDirectly)
+            if (useOutline)
             {
                 try
                 {
-                    // gRPC LocationObj.MosaicShape is an IShape2D; convert it so the SQL mapper and STIntersects
-                    // see the same polygon the WCF client tested.
-                    SqlGeometry? mapped = mapper.TryMapShapeSectionToVolume(location.MosaicShape.ToSqlGeometry());
-                    if (mapped is not null)
-                        return mapped;
+                    LocationVolumeGeometry geometry = LocationVolumeGeometry.For(location, mapper);
+                    if (geometry.IsExact && geometry.Outline is SqlGeometry outline)
+                        return outline;
                 }
                 catch (ArgumentException)
                 {
-                    // A polygon SQL cannot represent is tested by its circle, the shape it is drawn with.
+                    // Falls through to the shape it is drawn with.
                 }
             }
 

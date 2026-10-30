@@ -44,6 +44,7 @@
     <Compile Include="Tools\CircleLocationScaleTests.cs" />
     <Compile Include="Tools\TestTransforms.cs" />
     <Compile Include="Tools\LocationVolumeGeometryTests.cs" />
+    <Compile Include="Tools\LocationLinkEndGeometryTests.cs" />
     <Compile Include="View\LinkedLocationShapeMappingTests.cs" />
     <Compile Include="Commands\RetraceAndReplaceMappingTests.cs" />
     <Compile Include="Commands\PolygonVertexCommandMappingTests.cs" />
