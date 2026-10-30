@@ -262,7 +262,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 switch (other.TypeCode)
                 {
                     case LocationType.CIRCLE:
-                        if (transform.TryMapShapeSectionToVolume(new Circle(other.Position, other.Radius)) is Circle volumeCircle)
+                        if (ExactGeometry(other, transform)?.Circle is Circle volumeCircle)
                             shapes.AddCircle(volumeCircle);
                         break;
                     case LocationType.POLYGON:
@@ -287,29 +287,39 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// A line annotation's unsmoothed mosaic points mapped to volume space, its width carried by the five-point mean scale
-        /// at the line's centre. Skipped when a point fails to map (a partial line would misdraw the background).
+        /// The other annotation's geometry as it is drawn (<see cref="LocationVolumeGeometry"/>), or null when it cannot be
+        /// mapped exactly: a partial or extrapolated shape would misdraw the background.
+        /// </summary>
+        private static LocationVolumeGeometry? ExactGeometry(LocationObj location, IVolumeToSectionTransform transform)
+        {
+            if (location.MosaicShape is null)
+                return null;
+
+            try
+            {
+                LocationVolumeGeometry geometry = LocationVolumeGeometry.For(location, transform);
+                return geometry.IsExact ? geometry : null;
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// A line annotation's unsmoothed control points and width as the forward owner draws them (the width carried by the
+        /// five-point mean scale). Skipped when it cannot be mapped exactly.
         /// </summary>
         private static void AddVolumeLine(
             SegmentationBackgroundShapes shapes, LocationObj location, IVolumeToSectionTransform transform, Func<bool, uint> curveInterpolations)
         {
             try
             {
-                Vector2[]? mosaicPoints = location.MosaicShape?.ToPoints();
-                if (mosaicPoints is null || mosaicPoints.Length < 2)
+                if (ExactGeometry(location, transform) is not LocationVolumeGeometry geometry || geometry.ControlPoints.Count < 2)
                     return;
 
-                IReadOnlyList<Vector2> volumePoints = ToVolumePoints(mosaicPoints, transform);
-                if (volumePoints.Count != mosaicPoints.Length)
-                    return;
-
-                double mosaicWidth = location.Width ?? 0;
-                double volumeWidth = 0;
-                if (mosaicWidth > 0 &&
-                    transform.TryMapShapeSectionToVolume(new Circle(Rectangle.GetBoundingBox(mosaicPoints).Center, mosaicWidth / 2)) is Circle widthCircle)
-                {
-                    volumeWidth = widthCircle.Radius * 2;
-                }
+                IReadOnlyList<Vector2> volumePoints = geometry.ControlPoints;
+                double volumeWidth = (location.Width ?? 0) > 0 ? geometry.Width : 0;
 
                 bool closed = location.TypeCode == LocationType.CLOSEDCURVE;
                 uint? interpolations = location.TypeCode == LocationType.POLYLINE
@@ -323,28 +333,25 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// A polygon annotation's unsmoothed mosaic exterior ring and holes mapped to volume space. False when the
-        /// shape is not a polygon, a ring is too short, or any vertex fails to map (a partial ring would misdraw the background).
+        /// A polygon annotation's unsmoothed exterior ring and holes as the forward owner draws them
+        /// (<see cref="LocationVolumeGeometry.ControlPolygon"/>). False when the shape is not a polygon, a ring is too short,
+        /// or it cannot be mapped exactly (a partial ring would misdraw the background).
         /// </summary>
         private static bool TryToVolumeRings(LocationObj location, IVolumeToSectionTransform transform, out List<Vector2[]> rings)
         {
             rings = [];
             try
             {
-                if (location.MosaicShape is null)
+                if (ExactGeometry(location, transform) is not LocationVolumeGeometry geometry)
                     return false;
 
-                Polygon mosaic = location.MosaicShape.ToPolygon();
-                foreach (Vector2[] mosaicRing in new[] { mosaic.ExteriorRing }.Concat(mosaic.InteriorRings))
+                Polygon volume = geometry.ControlPolygon();
+                foreach (Vector2[] volumeRing in new[] { volume.ExteriorRing }.Concat(volume.InteriorRings))
                 {
-                    if (mosaicRing is null || mosaicRing.Length < 3)
+                    if (volumeRing is null || volumeRing.Length < 3)
                         return false;
 
-                    IReadOnlyList<Vector2> volumeRing = ToVolumePoints(mosaicRing, transform);
-                    if (volumeRing.Count != mosaicRing.Length)
-                        return false;
-
-                    rings.Add([.. volumeRing]);
+                    rings.Add(volumeRing);
                 }
 
                 return rings.Count > 0;

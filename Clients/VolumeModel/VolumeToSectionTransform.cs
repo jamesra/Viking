@@ -13,9 +13,8 @@ namespace Viking.VolumeModel
         readonly Geometry.ITransform Transform = transform;
 
         /// <summary>
-        /// One fallback wrapper per underlying transform. GetSectionToVolumeTransform builds a new
-        /// <see cref="VolumeToSectionTransform"/> on every call, so caching per instance would rebuild the
-        /// RBF (and re-solve its weights) each time. Entries die with the underlying transform.
+        /// One fallback wrapper per underlying transform, so the RBF (and its solved weights) is built once for each
+        /// transform however many wrappers ask for it. Entries die with the underlying transform.
         /// </summary>
         static readonly ConditionalWeakTable<Geometry.ITransform, Geometry.ITransform> FallbackCache = new();
 
