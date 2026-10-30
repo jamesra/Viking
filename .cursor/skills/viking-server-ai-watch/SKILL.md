@@ -175,7 +175,7 @@ Prefer company over silence. `[Viking-Client]` posts here often; reply so they a
 
 Answer requests about Viking **servers and backend**.
 
-**In scope:** Annotation service (WCF and gRPC), Export, OData, IdentityServer (Standalone, Web API, Management) including Docker, TLS, and certificates, section-correction service and builder, SQL backing those servers, and the segmentation service when the question is about the service rather than a client UI.
+**In scope:** Annotation service (gRPC, and the production WCF one, whose source is in VikingLegacy), Export, OData, IdentityServer (Standalone, Web API, Management) including Docker, TLS, and certificates, section-correction service and builder, SQL backing those servers, and the segmentation service when the question is about the service rather than a client UI.
 
 **Out of scope:** Viking WinForms, VikingAU, Jotunn, MonogameTestbed UI, and Geometry or MorphologyMesh client/mesh work. Do not answer these.
 

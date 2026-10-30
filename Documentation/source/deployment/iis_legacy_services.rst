@@ -17,8 +17,8 @@ from ``Run/viking-iis/viking-iis.run.env`` (``deploy/examples/example.viking-iis
 ================  ==========================================================  ====================
 Action            What it does                                                Where it runs
 ================  ==========================================================  ====================
-``Annotation``    ``Servers/AnnotationService/DeployProduction.cmd``:         build machine
-                  robocopy the WCF ``bin`` to
+``Annotation``    ``Servers/AnnotationService/DeployProduction.cmd`` in       build machine
+                  VikingLegacy: robocopy the WCF ``bin`` to
                   ``<VIKING_IIS_DEPLOY_ROOT>\Release\AnnotationService\bin``
                   (``web.config`` kept). The default action.
 ``Export``        ``Scripts/Deploy-ExportApplication.ps1`` for each volume    IIS host, admin

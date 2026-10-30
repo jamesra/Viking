@@ -14,7 +14,7 @@ alwaysApply: true
 - **Jotunn** (`Clients/Jotunn/`) — Active WPF client and intended Viking successor. Shares `Viking.Scene` / `WebAnnotation` / MonoGame `SectionSceneRenderer` with Viking; do not add a second annotation renderer.
 
 **Servers**
-- **AnnotationService** — WCF; planned replacement by gRPC. Working gRPC implementation lives in the gRPC_Protos-based services (sibling to this solution folder).
+- **Annotation** — the gRPC annotation service (`Servers/GrpcAnnotationService`, protos in gRPC_Protos). The retired WCF AnnotationService, still in production for the WCF clients, lives in VikingLegacy (`Servers/AnnotationService`).
 - **Export** — Converts annotations to common file formats.
 - **OData** — Exposes annotations as OData. Proto definitions live in gRPC_Protos (see grpc-protos-folder rule).
 - **Segmentation Server** — Python-based gRPC segmentation service; separate repo/solution (e.g. SAM2-Docker).

@@ -7,7 +7,7 @@
 | `MorphologyMesh/` | Core Bajaj generator, slice graph, region graph, Collada serialization |
 | `Geometry/` | Primitives, Delaunay, medial axis, meshing helpers |
 | `Clients/MonogameTestbed/` | Visual testbed, BajajMultiTest, MeshTest, MeshAssemblyPlanner UI |
-| `AnnotationVizLib*` | Load morphology graphs from OData/WCF |
+| `AnnotationVizLib*` | Load morphology graphs from OData |
 | `Clients/VolumeModel/` | Volume transforms (mesh coords tie to volume space) |
 
 ## MorphologyMesh — key types
