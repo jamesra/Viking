@@ -168,6 +168,28 @@ namespace WebAnnotationTests.Tools
             }
         }
 
+        /// <summary>
+        /// A save writes the stored cache under the volume's default transform while the views draw under the active one; the
+        /// save's geometry must not evict the drawn one (it did when the cache kept one geometry per location).
+        /// </summary>
+        [TestMethod]
+        public void AGeometryUnderAnotherTransformDoesNotEvictTheDrawnOne()
+        {
+            AffineTransform active = Transforms[0].Transform;
+            AffineTransform defaultTransform = Transforms[1].Transform;
+            LocationObj location = Fixture(LocationType.POLYGON);
+
+            LocationVolumeGeometry drawn = LocationVolumeGeometry.For(location, active);
+            LocationVolumeGeometry saved = LocationVolumeGeometry.For(location, defaultTransform);
+
+            Assert.AreSame(drawn, LocationVolumeGeometry.For(location, active), "the drawn geometry survives the save's");
+            Assert.AreSame(saved, LocationVolumeGeometry.For(location, defaultTransform), "and the save's survives the drawn one");
+
+            location.MosaicShape = Wkt("POLYGON ((0 0, 10 0, 10 10, 0 10, 0 0))").ToShape2D();
+            Assert.AreNotSame(drawn, LocationVolumeGeometry.For(location, active), "a shape change rebuilds every transform's geometry");
+            Assert.AreNotSame(saved, LocationVolumeGeometry.For(location, defaultTransform));
+        }
+
         [TestMethod]
         public void ALineOrCurveIsAsWideAsItsWidthTimesTheFivePointMeanScale()
         {

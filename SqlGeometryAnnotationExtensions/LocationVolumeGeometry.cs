@@ -35,10 +35,22 @@ namespace Viking.VolumeModel
     /// </remarks>
     public sealed partial class LocationVolumeGeometry
     {
+        /// <summary>
+        /// A location's cached geometries, most recent first, one per transform object. More than one, because a save writes
+        /// the stored cache under the volume's default transform (<c>VolumeCache</c>) while the views draw under the active
+        /// one: with a single entry each save under a non-default active transform evicted the views' geometry. Replaced as a
+        /// whole (copy on write), so readers on other threads see a complete array.
+        /// </summary>
         private sealed class Slot
         {
-            public volatile LocationVolumeGeometry? Value;
+            public volatile LocationVolumeGeometry[] Values = [];
         }
+
+        /// <summary>
+        /// Geometries kept per location: the active transform's (drawn), the default's (saved) and one more, so switching
+        /// between two transforms does not rebuild either.
+        /// </summary>
+        private const int SlotCapacity = 3;
 
         private static readonly ConditionalWeakTable<LocationObj, Slot> Cache = new();
 
@@ -190,12 +202,24 @@ namespace Viking.VolumeModel
 
             Slot slot = Cache.GetValue(location, _ => new Slot());
             IShape2D mosaic = location.MosaicShape;
-            LocationVolumeGeometry? cached = slot.Value;
-            if (cached is not null && cached.Matches(location, mosaic, transform))
-                return cached;
+            LocationVolumeGeometry[] cached = slot.Values;
+            foreach (LocationVolumeGeometry geometry in cached)
+            {
+                if (geometry.Matches(location, mosaic, transform))
+                    return geometry;
+            }
 
             LocationVolumeGeometry created = new(location, mosaic, transform);
-            slot.Value = created;
+
+            // A shape, width or type change leaves the older entries stale; only other transforms' current entries are kept.
+            List<LocationVolumeGeometry> kept = [created];
+            foreach (LocationVolumeGeometry geometry in cached)
+            {
+                if (kept.Count < SlotCapacity && geometry.MatchesShapeOf(location, mosaic) && !ReferenceEquals(geometry.transform, transform))
+                    kept.Add(geometry);
+            }
+
+            slot.Values = [.. kept];
             return created;
         }
 
@@ -279,6 +303,10 @@ namespace Viking.VolumeModel
         /// <see cref="Polygon"/> is mutable and this geometry is shared.
         /// </summary>
         public Polygon ControlPolygon() => controlShape.ToPolygon();
+
+        /// <summary>True when this was built from <paramref name="location"/>'s current mosaic shape, width and type.</summary>
+        private bool MatchesShapeOf(LocationObj location, IShape2D mosaic) =>
+            ReferenceEquals(mosaicShape, mosaic) && TypeCode == location.TypeCode && mosaicWidth == location.Width;
 
         private bool Matches(LocationObj location, IShape2D mosaic, IVolumeToSectionTransform t) =>
             ReferenceEquals(mosaicShape, mosaic) && ReferenceEquals(transform, t) &&

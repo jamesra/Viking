@@ -56,7 +56,9 @@ mapped forward for drawing. It carries:
 
 It is cached per location, keyed by the `MosaicShape` instance (the `IShape2D`, converted to SQL geometry once by
 `LocationVolumeGeometry.ToSqlGeometry`, which also takes a point's `Vector2`), width, type and the transform **object** (a
-reloaded `.stos` is a new object), so a shape edit or a transform change rebuilds it. A transform provider must therefore
+reloaded `.stos` is a new object), so a shape edit or a transform change rebuilds it. Up to three geometries are kept per
+location, one per transform object, so a save under the default transform does not evict the one drawn under a
+non-default active transform. A transform provider must therefore
 hand out the same object for a section until its `.stos` changes (`VolumeViewModel`'s mappings; `VolumeTransformProvider`
 keeps one per section). One documented mapping-failure policy lives
 on the class (circles extrapolate the centre and keep the mosaic radius; other shapes extrapolate with scale 1;
