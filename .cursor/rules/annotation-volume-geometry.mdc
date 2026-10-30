@@ -19,11 +19,14 @@ alwaysApply: false
   (`VolumeViewModel`). `VolumeCache.Basis(location, transform)` resolves it for a save; the viewer registers the open
   volume (`VolumeCache.DefaultTransforms`, set by `AnnotationOverlay`); without an open volume (VikingAU, unit tests) the
   transform passed is the basis, and the caller must pass the default.
-- Policies, documented on `VolumeCache`: a section the default has no entry for (the reference section) maps by identity,
-  as the viewer and `MappingManager` place it; a default transform that did not load while others did is never replaced
-  by identity (a save keeps the transform it was made under, the refresh refuses); a location the default cannot map
-  exactly gets the owner's failure policy (extrapolated). The client never sends a null `VolumeShape`: the WCF server
-  would store a circle of the mosaic radius at the old `VolumePosition`.
+- Policies, documented on `VolumeCache`: a section the volume does not align (the reference section, a
+  `NonStosSectionNumbers` section: no entry in the default) maps by identity, as the viewer and `MappingManager` place it;
+  a section whose default `.stos` failed to load (`Volume.StosLoadFailed`), or a default transform that did not
+  load at all while others did, has **no basis** (`GetDefaultSectionToVolumeTransform` null): the save is refused with a
+  message and the refresh stops at that section. Neither identity nor the transform on screen is ever written instead.
+  A location the default cannot map exactly gets the owner's failure policy (extrapolated), so the refresh writes it
+  rather than leaving a stale cache. The client never sends a null `VolumeShape`: the WCF server would store a circle of
+  the mosaic radius at the old `VolumePosition`.
 - **After a `.stos` change, refresh the cache** with **Update Volume Positions** (`VolumePositionUpdateJob`, Annotation
   menu, review access) or VikingAU. Both write `VolumeCache.Shape` under the default transform, exactly what a save writes;
   the job has no transform picker.

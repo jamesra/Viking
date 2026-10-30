@@ -110,14 +110,18 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
   Why: server queries, OData and export read the cache, and before this a save under another transform (or a refresh run
   with a picked transform) left sections, even locations on one section, in different spaces. The cache value is
   `LocationVolumeGeometry.CacheShape`: a circle's exact five-point-mean circle, not the smoothed ring's inscribed circle,
-  which the old refresh wrote about 2% smaller than the client save. Policies: a section the default has no entry for (the
-  reference section) maps by identity, as the viewer and `MappingManager` place it; a default transform that did not load
-  while others did is never replaced by identity (the save keeps the transform it was made under, the refresh refuses);
+  which the old refresh wrote about 2% smaller than the client save. Policies: a section the volume does not align (the reference
+  section, a `NonStosSectionNumbers` section) maps by identity, as the viewer and `MappingManager` place it; a section
+  whose default `.stos` failed to load, or a default transform that did not load at all while others did, has no basis:
+  the save is refused with a message and the refresh stops at that section (review 2026-10-30: the first version fell
+  back to the transform on screen, a non-default cache, and mapped a failed `.stos` by identity, which would have stored
+  section positions for a whole section after a transient server failure);
   a location the default cannot map exactly gets the owner's one failure policy (extrapolated), not "no cache", because
   the WCF server fills a missing `VolumeShape` with a circle of the *mosaic* radius at the old `VolumePosition`
   (Viking `Servers/AnnotationService/.../LocationExtensions.cs`), wrong for every non-circle type. Rejected: sending no
   `VolumeShape` (that server fallback), caching under the active transform (inconsistent basis), keeping the smoothed
-  circle (two cache values for one circle). Where: `SqlGeometryAnnotationExtensions/VolumeCache.cs`,
+  circle (two cache values for one circle), saving mosaic with the previous `VolumeShape` when the default is missing (a
+  new location has none, so the server fallback would apply). Where: `SqlGeometryAnnotationExtensions/VolumeCache.cs`,
   `LocationObjExtensions.SetShapeFromGeometryInSection`, `VolumeViewModel.GetDefaultSectionToVolumeTransform`,
   `Clients/Viking/WebAnnotation/VolumePositionUpdateJob.cs`, `Clients/VikingAU/Program.cs`.
 

@@ -952,6 +952,36 @@ namespace Viking.VolumeModel
             get { lock (_StosLoadFailures) return _StosLoadFailures.ToArray(); }
         }
 
+        /// <summary>Not readonly: tests build the volume without its constructor, so it is created on first use.</summary>
+        private HashSet<(string Group, int MappedSection)> _StosLoadFailedSections;
+
+        private HashSet<(string Group, int MappedSection)> StosLoadFailedSections =>
+            _StosLoadFailedSections ?? System.Threading.Interlocked.CompareExchange(ref _StosLoadFailedSections, new(), null) ?? _StosLoadFailedSections;
+
+        /// <summary>
+        /// True when the .stos that maps <paramref name="mappedSection"/> in the transform group <paramref name="transformGroup"/>
+        /// failed to load (<see cref="StosLoadFailures"/>): the volume aligns the section, but the group has no entry for it.
+        /// It is drawn by identity, as the reference section is, but it has no volume basis, so the stored volume cache
+        /// must not be written for it (<c>IDefaultVolumeTransformProvider</c>).
+        /// </summary>
+        public bool StosLoadFailed(string transformGroup, int mappedSection)
+        {
+            if (transformGroup is null)
+                return false;
+
+            var failed = StosLoadFailedSections;
+            lock (failed)
+                return failed.Contains((transformGroup, mappedSection));
+        }
+
+        /// <summary>Records that the .stos mapping <paramref name="mappedSection"/> in <paramref name="transformGroup"/> did not load (<see cref="StosLoadFailed"/>).</summary>
+        public void RecordStosLoadFailure(string transformGroup, int mappedSection)
+        {
+            var failed = StosLoadFailedSections;
+            lock (failed)
+                failed.Add((transformGroup, mappedSection));
+        }
+
         private readonly SemaphoreSlim StosTransformLoadSemaphore = new(1);
         private async Task OnStosTransformLoadComplete(ITransform Transform, XElement element, string stosGroupName = null)
         {
@@ -1013,6 +1043,8 @@ namespace Viking.VolumeModel
                 else
                 {
                     Trace.WriteLine($"Could not load stos file: {element}");
+                    if (int.TryParse(element?.GetAttributeCaseInsensitive("mappedSection")?.Value, out int failedSection))
+                        RecordStosLoadFailure(groupName, failedSection);
                 }
             }
             finally

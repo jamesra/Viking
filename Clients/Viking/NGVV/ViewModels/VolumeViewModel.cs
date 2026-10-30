@@ -195,13 +195,18 @@ namespace Viking.ViewModels
         /// <summary>
         /// The volume's default transform for a section (<see cref="DefaultVolumeTransform"/>), whatever transform is active:
         /// the basis the stored volume cache is written in (<see cref="IDefaultVolumeTransformProvider"/>). The same object
-        /// <see cref="GetSectionToVolumeTransform(int)"/> returns while the default transform is the active one. Null when the
-        /// volume names a default transform that did not load while others did.
+        /// <see cref="GetSectionToVolumeTransform(int)"/> returns while the default transform is the active one. Null, no basis,
+        /// when the volume names a default transform that did not load while others did, or when the section's .stos in the
+        /// default transform failed to load (<see cref="Volume.StosLoadFailed"/>): such a section is drawn by identity, but
+        /// writing identity to the cache would store section positions for an aligned section.
         /// </summary>
         public IVolumeToSectionTransform? GetDefaultSectionToVolumeTransform(int SectionNumber)
         {
             string? defaultTransform = this.DefaultVolumeTransform;
             if (defaultTransform is not null && _Volume.Transforms.Count > 0 && !_Volume.Transforms.ContainsKey(defaultTransform))
+                return null;
+
+            if (_Volume.StosLoadFailed(defaultTransform, SectionNumber))
                 return null;
 
             return GetSectionToVolumeTransform(defaultTransform, SectionNumber);

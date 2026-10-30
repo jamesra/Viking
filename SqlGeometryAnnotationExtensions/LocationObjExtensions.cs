@@ -41,8 +41,8 @@ namespace Viking.VolumeModel
         /// <param name="mapper">The transform the edit was made under (the one on screen); the shape must map onto the volume
         /// under it. Without an open volume it is also the cache's basis (<see cref="VolumeCache.Basis"/>).</param>
         /// <exception cref="ArgumentException">The shape is not valid SQL geometry, it does not map onto the volume under
-        /// <paramref name="mapper"/>, or the default transform cannot place it even by extrapolation; a location that had a
-        /// shape keeps it.</exception>
+        /// <paramref name="mapper"/>, the open volume has no default transform for the section (<see cref="VolumeCache.NoBasisMessage"/>),
+        /// or the default transform cannot place it even by extrapolation; a location that had a shape keeps it.</exception>
         public static void SetShapeFromGeometryInSection(this WebAnnotationModel.LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
             if (!shape.STIsValid().Value)
@@ -51,13 +51,16 @@ namespace Viking.VolumeModel
             if (LocationVolumeGeometry.MapShape(location.TypeCode, shape, mapper) is null)
                 throw new ArgumentException("The shape lies partly outside the region this section's transform maps, so it cannot be drawn on the volume.");
 
+            // Resolved before anything changes: a section without a default basis refuses the save (throws).
+            Viking.VolumeModel.IVolumeToSectionTransform basis = VolumeCache.Basis(location, mapper);
+
             Microsoft.SqlServer.Types.SqlGeometry oldShape = location.MosaicShape;
             location.MosaicShape = shape;
 
             Microsoft.SqlServer.Types.SqlGeometry cache;
             try
             {
-                cache = VolumeCache.Shape(location, VolumeCache.Basis(location, mapper));
+                cache = VolumeCache.Shape(location, basis);
             }
             catch (ArgumentException e)
             {

@@ -92,7 +92,7 @@ namespace WebAnnotation
                     {
                         return new VolumePositionUpdateResult(
                             cancelled: false,
-                            error: "The volume's default transform is not loaded, so volume positions were not updated.",
+                            error: $"The volume's default transform for section {sectionNumber} is not loaded, so volume positions were not updated from that section on. Reopen the volume once it loads.",
                             corrections: corrections);
                     }
 
