@@ -124,13 +124,16 @@ namespace Viking.VolumeModel
             if (LocationVolumeGeometry.MapShape(location.TypeCode, shape, mapper) is null)
                 throw new ArgumentException("The shape lies partly outside the region this section's transform maps, so it cannot be drawn on the volume.");
 
+            // Resolved before anything changes: a section without a default basis refuses the save (throws).
+            IVolumeToSectionTransform basis = VolumeCache.Basis(location, mapper);
+
             IShape2D oldShape = location.MosaicShape;
             location.MosaicShape = (exactCircle ?? ExactCircle(shape)) is Circle circle ? circle : shape.ToShape2D();
 
             IShape2D cache;
             try
             {
-                cache = VolumeCache.Shape(location, VolumeCache.Basis(location, mapper));
+                cache = VolumeCache.Shape(location, basis);
             }
             catch (ArgumentException e)
             {

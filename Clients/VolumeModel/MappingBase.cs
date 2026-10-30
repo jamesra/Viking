@@ -26,9 +26,11 @@ namespace Viking.VolumeModel
     {
         /// <summary>
         /// The default transform's mapping of <paramref name="SectionNumber"/> into the volume. A volume without transforms,
-        /// or a section the default transform has no entry for (the reference section), maps by identity, as the viewer and
-        /// <c>MappingManager</c> place such a section. Null when the volume names a default transform that did not load while
-        /// others did: identity would then replace aligned positions with section positions.
+        /// or a section the volume does not align (the reference section, a NonStosSectionNumbers section), maps by identity,
+        /// as the viewer and <c>MappingManager</c> place such a section. Null, no basis, when the volume names a default
+        /// transform that did not load while others did: identity would then replace aligned positions with section positions,
+        /// so a save is refused and the refresh stops. (A .stos that fails to load fails the whole volume load on this client,
+        /// so no section is left without its entry.)
         /// </summary>
         IVolumeToSectionTransform? GetDefaultSectionToVolumeTransform(int SectionNumber);
     }

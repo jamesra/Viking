@@ -503,6 +503,25 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   width scale at the position and radius dev's `LocationObj` computes (they differ from Legacy's WCF object), measured by
   the non-linear warp round-trip test, which failed by 0.003 units until they matched. Where:
   `SqlGeometryAnnotationExtensions/LocationVolumeGeometry.Inverse.cs`, `LocationObjExtensions.TryApply`.
+- **2026-10-30 The stored volume cache always holds the volume's default transform** (port of VikingLegacy be9753f6..e9be69cf
+  to the gRPC client). Decision (James, approved design): mosaic is the truth and is what is saved; `VolumeShape` (and the
+  `VolumeX`/`VolumeY` the server computes from it) is a cache, written by every save and by the refresh after a `.stos`
+  change (Update Volume Positions, VikingAU) as the forward owner's geometry under the volume's *default*
+  section-to-volume transform, whatever transform is on screen. Why: server queries, OData and export read the cache; a
+  save under another transform left locations in different spaces. Measured on dev: a save of every location type under
+  a rotate/scale/shear active transform cached the active transform's geometry, 3069 units from the default's
+  (`VolumeCacheTests`). The cache value is the owner's exact five-point-mean circle for circles (stored as a
+  `Geometry.Circle`), not the smoothed ring's inscribed circle about 2% smaller. Policies: a section the default has no
+  entry for (the reference section) maps by identity, as the viewer and `MappingManager` place it; a default transform
+  that did not load while others did leaves no basis, so the save is refused (`VolumeCache.NoBasisMessage`) and the
+  refresh stops; a location the default cannot map exactly gets the owner's one failure policy (extrapolated), not "no
+  cache", because both servers would otherwise fill the cache from the mosaic shape (see the server fallback entry).
+  Dev difference: a `.stos` that fails to load fails the volume load on this client, so Legacy's per-section
+  `Volume.StosLoadFailed` is not ported. Rejected: sending no `VolumeShape`, caching under the active transform,
+  keeping the smoothed circle, saving mosaic with the previous `VolumeShape` when the default is missing. Where:
+  `SqlGeometryAnnotationExtensions/VolumeCache.cs`, `LocationObjExtensions.SetMosaicShape`,
+  `VolumeViewModel.GetDefaultSectionToVolumeTransform`, `Clients/Viking/WebAnnotation/VolumePositionUpdateJob.cs`,
+  `Clients/VikingAU/Program.cs`.
 
 ## Discussion points
 

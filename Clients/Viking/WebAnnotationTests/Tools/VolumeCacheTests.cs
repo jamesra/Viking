@@ -172,5 +172,38 @@ namespace WebAnnotationTests.Tools
             volume.Transforms.Clear();
             Assert.AreEqual(new Vector2(12, 34), model.GetDefaultSectionToVolumeTransform(5)!.SectionToVolume(new Vector2(12, 34)), "a volume without transforms: identity");
         }
+
+        /// <summary>
+        /// When the open volume has no default transform for the section (its default transform did not load), a save is refused
+        /// and the location is unchanged. The first version fell back to the transform on screen, which wrote a cache in
+        /// another transform's space; identity would store section positions for an aligned section.
+        /// </summary>
+        [TestMethod]
+        public void ASaveWithoutADefaultBasisIsRefusedAndNeverUsesTheTransformOnScreen()
+        {
+            VolumeCache.DefaultTransforms = () => new NoDefault();
+
+            LocationObj circle = LocationVolumeGeometryTests.Fixture(LocationType.CIRCLE);
+            IShape2D mosaicBefore = circle.MosaicShape;
+            IShape2D volumeBefore = circle.VolumeShape;
+            Circle shown = LocationVolumeGeometry.For(circle, ActiveTransform).Circle!.Value;
+            Circle moved = new(shown.Center + new Vector2(40, -25), shown.Radius);
+
+            ArgumentException refused = Assert.ThrowsException<ArgumentException>(
+                () => circle.TryApply(LocationVolumeGeometry.ToMosaic(moved, ActiveTransform), ActiveTransform));
+            Assert.AreEqual(VolumeCache.NoBasisMessage, refused.Message);
+            Assert.AreSame(mosaicBefore, circle.MosaicShape, "the mosaic shape is unchanged");
+            Assert.AreSame(volumeBefore, circle.VolumeShape, "the cache is unchanged");
+
+            Assert.ThrowsException<ArgumentException>(() => VolumeCache.Basis(circle, ActiveTransform), "no basis, not the transform on screen");
+
+            VolumeCache.DefaultTransforms = () => null;
+            Assert.AreSame(ActiveTransform, VolumeCache.Basis(circle, ActiveTransform), "without an open volume the caller's transform is the basis");
+        }
+
+        private sealed class NoDefault : IDefaultVolumeTransformProvider
+        {
+            public IVolumeToSectionTransform? GetDefaultSectionToVolumeTransform(int SectionNumber) => null;
+        }
     }
 }
