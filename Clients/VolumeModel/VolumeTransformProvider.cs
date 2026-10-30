@@ -52,7 +52,8 @@ namespace Viking.VolumeModel
         /// <summary>
         /// The section's mapping under the volume's default transform, whatever <see cref="TransformName"/> is. Identity for a
         /// volume without transforms or a section the default has no entry for (the reference section); null, no basis, when
-        /// the volume names a default transform that did not load while others did.
+        /// the volume names a default transform that did not load while others did, or when the section's own .stos in it
+        /// failed to load (<see cref="Volume.StosLoadFailed"/>: drawn by identity, but identity is not its basis).
         /// </summary>
         public IVolumeToSectionTransform GetDefaultSectionToVolumeTransform(int SectionNumber)
         {
@@ -62,6 +63,9 @@ namespace Viking.VolumeModel
             {
                 return null;
             }
+
+            if (_volume?.StosLoadFailed(defaultTransform, SectionNumber) == true)
+                return null;
 
             return GetMapping(defaultTransform, SectionNumber);
         }

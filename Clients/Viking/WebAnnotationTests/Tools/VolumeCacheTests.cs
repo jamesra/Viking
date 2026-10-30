@@ -166,6 +166,12 @@ namespace WebAnnotationTests.Tools
             IVolumeToSectionTransform reference = model.GetDefaultSectionToVolumeTransform(1)!;
             Assert.AreEqual(new Vector2(12, 34), reference.SectionToVolume(new Vector2(12, 34)), "no entry: identity");
 
+            volume.RecordStosLoadFailure("Grid", 1);
+            Assert.IsNull(model.GetDefaultSectionToVolumeTransform(1), "a section whose default .stos failed to load: none, not identity");
+            Assert.IsNotNull(model.GetSectionToVolumeTransform(1), "it is still drawn (by identity) under the active transform");
+            volume.RecordStosLoadFailure("Rigid", 5);
+            Assert.AreSame(grid, model.GetDefaultSectionToVolumeTransform(5), "a failure in another group does not touch the default");
+
             volume.DefaultVolumeTransform = "Not loaded";
             Assert.IsNull(model.GetDefaultSectionToVolumeTransform(5), "a default that did not load while others did: none, not identity");
 
@@ -207,6 +213,11 @@ namespace WebAnnotationTests.Tools
             provider.TransformName = null;
             Assert.AreSame(grid, provider.GetSectionToVolumeTransform(10), "null selects the default again");
 
+            volume.RecordStosLoadFailure("Grid", 11);
+            Assert.IsNull(provider.GetDefaultSectionToVolumeTransform(11), "a section whose default .stos failed to load: no basis");
+            Assert.IsNotNull(provider.GetSectionToVolumeTransform(11), "it is still drawn (by identity) on screen");
+            Assert.AreSame(grid, provider.GetDefaultSectionToVolumeTransform(10), "other sections keep their basis");
+
             volume.DefaultVolumeTransform = "Not loaded";
             Assert.IsNull(provider.GetDefaultSectionToVolumeTransform(10), "a default that did not load while others did: no basis");
         }
@@ -237,6 +248,53 @@ namespace WebAnnotationTests.Tools
 
             VolumeCache.DefaultTransforms = () => null;
             Assert.AreSame(ActiveTransform, VolumeCache.Basis(circle, ActiveTransform), "without an open volume the caller's transform is the basis");
+        }
+
+        /// <summary>
+        /// Jotunn's scene follows the volume transform its tiles are drawn with: <c>AnnotationScene.SetVolumeTransform</c> sets
+        /// the provider's transform and rebuilds the section views (a reload, which asks for a render) when the name changes,
+        /// and does nothing when it is the one already on screen. Null or empty is the volume's default.
+        /// </summary>
+        [TestMethod]
+        public void JotunnsSceneRebuildsItsViewsWhenTheTransformOnScreenChanges()
+        {
+            Volume volume = (Volume)FormatterServices.GetUninitializedObject(typeof(Volume));
+            volume.Sections = [];
+            volume.Transforms = new SortedList<string, SortedList<int, ITransform>>
+            {
+                ["Grid"] = new() { [10] = new Geometry.Transforms.IdentityTransform() },
+                ["Rigid"] = new() { [10] = new Geometry.Transforms.IdentityTransform() },
+            };
+            volume.DefaultVolumeTransform = "Grid";
+
+            Func<int, WebAnnotation.ViewModel.SectionAnnotationsView> savedLookup = WebAnnotation.AnnotationOverlay.SectionViewLookup;
+            Action? savedRender = Viking.TileLoadEnvironment.RequestRender;
+            int rebuilds = 0;
+            try
+            {
+                Viking.TileLoadEnvironment.RequestRender = () => rebuilds++;
+                WebAnnotation.AnnotationScene scene = new(volume);
+                Assert.AreEqual("Grid", scene.Transforms.TransformName, "the scene starts in the default transform");
+
+                scene.SetVolumeTransform("Grid");
+                Assert.AreEqual(0, rebuilds, "the transform on screen did not change");
+
+                scene.SetVolumeTransform("Rigid");
+                Assert.AreEqual("Rigid", scene.Transforms.TransformName, "annotations follow the tiles");
+                Assert.AreEqual(1, rebuilds, "the section views are rebuilt in the new transform");
+
+                scene.SetVolumeTransform("Rigid");
+                Assert.AreEqual(1, rebuilds, "the same transform again rebuilds nothing");
+
+                scene.SetVolumeTransform(null);
+                Assert.AreEqual("Grid", scene.Transforms.TransformName, "null selects the default");
+                Assert.AreEqual(2, rebuilds);
+            }
+            finally
+            {
+                WebAnnotation.AnnotationOverlay.SectionViewLookup = savedLookup;
+                Viking.TileLoadEnvironment.RequestRender = savedRender;
+            }
         }
 
         private sealed class NoDefault : IDefaultVolumeTransformProvider

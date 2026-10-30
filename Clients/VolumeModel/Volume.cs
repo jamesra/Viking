@@ -948,7 +948,9 @@ namespace Viking.VolumeModel
             {
             }
 
-            if (result?.Transform != null)
+            // Also when the transform is null (ParseStos answers a server error or a NaN file with null): the failure is
+            // recorded per section (StosLoadFailed) so the section has no volume basis instead of identity.
+            if (result != null)
             {
                 try
                 {
@@ -960,6 +962,37 @@ namespace Viking.VolumeModel
             }
 
             return result;
+        }
+
+        /// <summary>Not readonly: tests build the volume without its constructor, so it is created on first use.</summary>
+        private HashSet<(string Group, int MappedSection)> _StosLoadFailedSections;
+
+        private HashSet<(string Group, int MappedSection)> StosLoadFailedSections =>
+            _StosLoadFailedSections ?? System.Threading.Interlocked.CompareExchange(ref _StosLoadFailedSections, new(), null) ?? _StosLoadFailedSections;
+
+        /// <summary>
+        /// True when the .stos that maps <paramref name="mappedSection"/> in the transform group <paramref name="transformGroup"/>
+        /// failed to load (<c>TransformFactory.ParseStos</c> returned null: a server error after retries, or a NaN file): the
+        /// volume aligns the section, but the group has no entry for it. It is drawn by identity, as the reference section is,
+        /// but it has no volume basis, so the stored volume cache must not be written for it
+        /// (<see cref="IDefaultVolumeTransformProvider"/>). Port of VikingLegacy e9be69cf.
+        /// </summary>
+        public bool StosLoadFailed(string transformGroup, int mappedSection)
+        {
+            if (transformGroup is null)
+                return false;
+
+            var failed = StosLoadFailedSections;
+            lock (failed)
+                return failed.Contains((transformGroup, mappedSection));
+        }
+
+        /// <summary>Records that the .stos mapping <paramref name="mappedSection"/> in <paramref name="transformGroup"/> did not load (<see cref="StosLoadFailed"/>).</summary>
+        public void RecordStosLoadFailure(string transformGroup, int mappedSection)
+        {
+            var failed = StosLoadFailedSections;
+            lock (failed)
+                failed.Add((transformGroup, mappedSection));
         }
 
         private readonly SemaphoreSlim StosTransformLoadSemaphore = new(1);
@@ -1023,6 +1056,8 @@ namespace Viking.VolumeModel
                 else
                 {
                     Trace.WriteLine($"Could not load stos file: {element}");
+                    if (int.TryParse(element?.GetAttributeCaseInsensitive("mappedSection")?.Value, out int failedSection))
+                        RecordStosLoadFailure(groupName, failedSection);
                 }
             }
             finally

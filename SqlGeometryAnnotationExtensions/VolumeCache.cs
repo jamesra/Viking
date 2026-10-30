@@ -20,8 +20,9 @@ namespace Viking.VolumeModel
     /// <c>MappingManager</c> place such a section (<see cref="IDefaultVolumeTransformProvider"/>). A default transform that
     /// did not load at all while others did leaves <b>no basis</b>: <see cref="Basis"/> throws, the save is refused and the
     /// refresh stops. Neither identity nor the transform on screen is written instead; the first would store section
-    /// positions for aligned sections, the second a cache in another transform's space. (On this client a .stos that fails to
-    /// load fails the volume load, so no single section is left without its entry.)</para>
+    /// positions for aligned sections, the second a cache in another transform's space. A section whose own .stos in the
+    /// default group failed to load (<c>Volume.StosLoadFailed</c>) also has no basis: it is drawn by identity, as the reference
+    /// section is, but a save for it is refused.</para>
     /// <para><b>Mapping failure.</b> A location the default transform cannot map exactly (a point outside the .stos hull)
     /// gets the forward owner's one mapping-failure policy (extrapolated points; see <see cref="LocationVolumeGeometry"/>), not
     /// no cache: the WCF server writes a circle of the mosaic radius at the old <c>VolumePosition</c> when no

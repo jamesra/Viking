@@ -516,8 +516,10 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   that did not load while others did leaves no basis, so the save is refused (`VolumeCache.NoBasisMessage`) and the
   refresh stops; a location the default cannot map exactly gets the owner's one failure policy (extrapolated), not "no
   cache", because both servers would otherwise fill the cache from the mosaic shape (see the server fallback entry).
-  Dev difference: a `.stos` that fails to load fails the volume load on this client, so Legacy's per-section
-  `Volume.StosLoadFailed` is not ported. Rejected: sending no `VolumeShape`, caching under the active transform,
+  Review correction (2026-10-30): a `.stos` that fails to load does not fail the volume load on this client either
+  (`TransformFactory.ParseStos` returns null on a server error after retries or a NaN file, and `Volume.LoadStos` carries
+  on), so Legacy's per-section `Volume.StosLoadFailed` is ported: `VolumeViewModel` and Jotunn's `VolumeTransformProvider`
+  give no basis for such a section. Rejected: sending no `VolumeShape`, caching under the active transform,
   keeping the smoothed circle, saving mosaic with the previous `VolumeShape` when the default is missing. Where:
   `SqlGeometryAnnotationExtensions/VolumeCache.cs`, `LocationObjExtensions.SetMosaicShape`,
   `VolumeViewModel.GetDefaultSectionToVolumeTransform`, `Clients/Viking/WebAnnotation/VolumePositionUpdateJob.cs`,

@@ -38,9 +38,13 @@ namespace gRPCAnnotationService
         /// <summary>
         /// Converts an exception caught by an RPC's catch-all into the <see cref="RpcException"/> to throw.
         /// An <see cref="RpcException"/> is a status the service chose (InvalidArgument for a missing region,
-        /// NotFound, ...): it is returned unchanged, status and detail intact, and logged at Debug.
-        /// An <see cref="OperationCanceledException"/> while <paramref name="context"/>'s token is cancelled
-        /// (the caller cancelled, its deadline passed, or the request was aborted) becomes
+        /// NotFound, ...): it is returned unchanged, status and detail intact, and logged at Debug. An
+        /// <see cref="ArgumentException"/> is a request the proto conversion refused (<c>Location.EF.Conversion.ToLocation</c>:
+        /// a circle without its volume circle, a location without its volume shape): it becomes
+        /// <see cref="StatusCode.InvalidArgument"/> with the reason as the detail, logged at Warning, so the client can show
+        /// why its save was refused instead of "Unknown". An <see cref="OperationCanceledException"/> while
+        /// <paramref name="context"/>'s token is cancelled (the caller cancelled, its deadline passed, or the request was
+        /// aborted) becomes
         /// <see cref="StatusCode.Cancelled"/> logged at Debug, since it is not a server fault. Anything else,
         /// including a cancellation the caller did not request (an internal timeout or a library bug),
         /// becomes <see cref="StatusCode.Unknown"/> logged at Error so the fault is not hidden.
@@ -53,6 +57,12 @@ namespace gRPCAnnotationService
             {
                 logger.LogDebug("{Operation} refused: {Status}", operation, refusal.Status);
                 return refusal;
+            }
+
+            if (e is ArgumentException refusedRequest)
+            {
+                logger.LogWarning("{Operation} refused: {Reason}", operation, refusedRequest.Message);
+                return new RpcException(new Status(StatusCode.InvalidArgument, refusedRequest.Message, e));
             }
 
             if (e is OperationCanceledException && context.CancellationToken.IsCancellationRequested)

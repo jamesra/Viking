@@ -29,8 +29,8 @@ namespace Viking.VolumeModel
         /// or a section the volume does not align (the reference section, a NonStosSectionNumbers section), maps by identity,
         /// as the viewer and <c>MappingManager</c> place such a section. Null, no basis, when the volume names a default
         /// transform that did not load while others did: identity would then replace aligned positions with section positions,
-        /// so a save is refused and the refresh stops. (A .stos that fails to load fails the whole volume load on this client,
-        /// so no section is left without its entry.)
+        /// so a save is refused and the refresh stops. So is a section whose own .stos in the default group failed to load
+        /// (<c>Volume.StosLoadFailed</c>): the viewer draws it by identity, but it has no basis.
         /// </summary>
         IVolumeToSectionTransform? GetDefaultSectionToVolumeTransform(int SectionNumber);
     }

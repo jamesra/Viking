@@ -6,10 +6,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Viking.AnnotationServiceTypes.gRPC.V1;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.DataModel.Annotation;
 using Xunit;
 using static ConnectomeDataModelCoreTests.RpcCancellationStatusTests;
+using ProtoLocation = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location;
 
 namespace ConnectomeDataModelCoreTests
 {
@@ -49,7 +52,19 @@ namespace ConnectomeDataModelCoreTests
             yield return Case("Structure.GetStructuresInVolumeRegion without region", "A region is required",
                 (db, log, ctx) => new StructureService(db, log.For<StructureService>())
                     .GetStructuresInVolumeRegion(new GetStructuresInVolumeRegionRequest { Z = 1 }, ctx));
+            // The proto conversion refuses with ArgumentException (Location.EF.Conversion), before any query.
+            yield return Case("Location.CreateLocation polygon without its volume shape",
+                "POLYGON locations require a volume shape: the client derives it from the mosaic shape under the volume's default transform.",
+                (db, log, ctx) => new LocationService(db, log.For<LocationService>())
+                    .CreateLocation(new CreateLocationRequest { Obj = PolygonWithoutVolumeShape() }, ctx));
         }
+
+        private static ProtoLocation PolygonWithoutVolumeShape() => new()
+        {
+            Section = 12,
+            MosaicGeometry = AnnotationShapes.PolygonShape(LocationType.POLYGON, Viking.gRPC.Geometry.V1.CoordinateSpace.Mosaic,
+                new global::Geometry.Vector2[] { new(0, 0), new(10, 0), new(5, 5), new(0, 0) }, System.Array.Empty<global::Geometry.Vector2[]>(), null),
+        };
 
         [Theory]
         [MemberData(nameof(RefusedCalls))]
@@ -86,6 +101,21 @@ namespace ConnectomeDataModelCoreTests
 
             Assert.Equal((code, "why"), (ex.StatusCode, ex.Status.Detail));
             Assert.Equal(new[] { LogLevel.Debug }, log.Levels);
+        }
+
+        /// <summary>
+        /// A request the proto conversion refuses (an <see cref="ArgumentException"/>) reaches the caller as InvalidArgument
+        /// with the reason, logged as a warning, not as Unknown with the RPC's name and an error log.
+        /// </summary>
+        [Fact]
+        public void FailureTurnsARefusedRequestIntoInvalidArgument()
+        {
+            var log = new RecordingLogger();
+
+            var ex = AnnotationRpc.Failure(log.For<RpcRefusalStatusTests>(), "Op", new ArgumentException("why"), new LocationServiceUpdateDeleteTests.TestCallContext());
+
+            Assert.Equal((StatusCode.InvalidArgument, "why"), (ex.StatusCode, ex.Status.Detail));
+            Assert.Equal(new[] { LogLevel.Warning }, log.Levels);
         }
 
         private static object[] Case(string name, string detail, Func<AnnotationContext, RecordingLogger, ServerCallContext, Task> call) =>

@@ -34,8 +34,9 @@ paths:
   `NonStosSectionNumbers` section: no entry in the default) maps by identity, as the viewer and `MappingManager` place it;
   a default transform that did not load at all while others did leaves **no basis** (`GetDefaultSectionToVolumeTransform`
   null): the save is refused with `VolumeCache.NoBasisMessage` and the refresh stops. Neither identity nor the transform on
-  screen is ever written instead. (On this client a `.stos` that fails to load fails the volume load, so Legacy's
-  per-section `Volume.StosLoadFailed` is not needed.)
+  screen is ever written instead. A section whose own `.stos` in the default group failed to load (`Volume.StosLoadFailed`,
+  recorded when `TransformFactory.ParseStos` returns null: a server error after retries, or a NaN file) also has no basis:
+  the viewer draws it by identity, but a save for it is refused.
   A location the default cannot map exactly gets the owner's failure policy (extrapolated), so the refresh writes it
   rather than leaving a stale cache. The client never sends a null `VolumeShape`: the gRPC service refuses a non-point
   location without one (`Location.EF.Conversion.ToLocation`, as it refuses a circle without its volume circle), and the
