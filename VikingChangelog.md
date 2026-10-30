@@ -24,6 +24,8 @@ Documentation/source/Client/versionhistory.rst.
 ## 1.2.136 — not yet released
 
 * **Fix: pen loop merges only circles.** After a pen loop turns a circle into a polygon, only the structure's other circle annotations it touches join the merge as disks. Points, lines and curves of the same structure are no longer swept into the merged polygon.
+* **Fix: sizes on warped sections.** Where a section's alignment stretches or shrinks it, a location link that ends on a polygon or curve on the next section now meets the circle drawn for it there, instead of a circle of the unstretched size.
+<!-- Phase 1 of the annotation volume-geometry redesign: every view takes its volume geometry from LocationVolumeGeometry. -->
 
 ## 1.2.135 — 2026-10-29 (Viking Test, unsigned)
 

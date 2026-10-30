@@ -134,16 +134,28 @@ namespace WebAnnotationModel
                 if (ParentID.HasValue == false)
                     return null;
 
-                StructureObj _Parent = Store.Structures.GetObjectByID(ParentID.Value, false);
-
-                //Queue a request for later
-                if (_Parent is null)
-                {
-                    RequestParentOnce(ParentID.Value, id => Store.Structures.GetObjectByID(id));
-                }
-
-                return _Parent;
+                return ParentLookup(ParentID.Value);
             }
+        }
+
+        /// <summary>
+        /// How <see cref="Parent"/> finds a structure: the local store, queueing one background fetch when it is missing.
+        /// Tests that build location views replace it, because the WCF stores cannot start without a service configuration.
+        /// </summary>
+        internal static Func<long, StructureObj> ParentLookup = DefaultParentLookup;
+
+        /// <summary>The production <see cref="ParentLookup"/>.</summary>
+        internal static StructureObj DefaultParentLookup(long parentID)
+        {
+            StructureObj parent = Store.Structures.GetObjectByID(parentID, false);
+
+            //Queue a request for later
+            if (parent is null)
+            {
+                RequestParentOnce(parentID, id => Store.Structures.GetObjectByID(id));
+            }
+
+            return parent;
         }
 
 

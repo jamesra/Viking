@@ -17,26 +17,6 @@ namespace WebAnnotationTests.Tools
     [TestClass]
     public class CircleLocationScaleTests
     {
-        /// <summary>volume = scale * mosaic + offset, in both directions.</summary>
-        private sealed class ScaleTransform(double scale, Vector2 offset) : IVolumeToSectionTransform
-        {
-            public long ID => 0;
-            public Rectangle? SectionBounds => null;
-            public Rectangle? VolumeBounds => null;
-
-            private Vector2 Forward(Vector2 p) => new(p.X * scale + offset.X, p.Y * scale + offset.Y);
-            private Vector2 Inverse(Vector2 p) => new((p.X - offset.X) / scale, (p.Y - offset.Y) / scale);
-
-            public bool TrySectionToVolume(Vector2 P, out Vector2 transformedP) { transformedP = Forward(P); return true; }
-            public bool TryVolumeToSection(Vector2 P, out Vector2 transformedP) { transformedP = Inverse(P); return true; }
-            public bool[] TrySectionToVolume(in Vector2[] Points, out Vector2[] transformedP) { transformedP = [.. Points.Select(Forward)]; return [.. Points.Select(_ => true)]; }
-            public bool[] TryVolumeToSection(in Vector2[] Points, out Vector2[] transformedP) { transformedP = [.. Points.Select(Inverse)]; return [.. Points.Select(_ => true)]; }
-            public Vector2 SectionToVolume(Vector2 P) => Forward(P);
-            public Vector2 VolumeToSection(Vector2 P) => Inverse(P);
-            public Vector2[] SectionToVolume(Vector2[] Points) => [.. Points.Select(Forward)];
-            public Vector2[] VolumeToSection(Vector2[] Points) => [.. Points.Select(Inverse)];
-        }
-
         private static double Radius(Microsoft.SqlServer.Types.SqlGeometry shape) => shape.ToCircle().Radius;
 
         [TestMethod]
@@ -90,7 +70,9 @@ namespace WebAnnotationTests.Tools
             // The mosaic circle that saving a 100-unit volume circle produces (UpdateCircleLocationNoSaveCallback maps it this way).
             Circle mosaic = (Circle)section.TryMapShapeVolumeToSection(new Circle(new Vector2(3000, 4000), 100));
 
-            Circle rendered = WebAnnotation.View.LocationCircleViewBase.MapToVolume(section, mosaic);
+            LocationObj location = new(new AnnotationService.Types.Location { ID = 4, TypeCode = (short)LocationType.CIRCLE, MosaicShapeWKB = mosaic.ToSqlGeometry().AsBinary() });
+
+            Circle rendered = LocationVolumeGeometry.For(location, section).Circle!.Value;
 
             Assert.AreEqual(100, rendered.Radius, 0.01, "the saved circle is drawn at the radius that was previewed");
             Assert.AreEqual(3000, rendered.Center.X, 0.01);

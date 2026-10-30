@@ -727,9 +727,8 @@ namespace WebAnnotation.ViewModel
 
         /// <summary>
         /// For a polygon-like location or an open curve on an adjacent section, the volume circle its marker is drawn as
-        /// (<see cref="AnnotationViewFactory.AdjacentPolygonMarkerCircle"/> or
-        /// <see cref="AnnotationViewFactory.AdjacentOpenCurveMarkerCircle"/>, mapped as the marker maps it). Null for any
-        /// other end, or when the circle cannot be found or mapped.
+        /// (<see cref="LocationVolumeGeometry.AdjacentMarker"/>, the circle <see cref="AnnotationViewFactory.CreateAdjacent"/>
+        /// draws). Null for any other end, or when the location cannot be mapped.
         /// </summary>
         private static Circle? AdjacentMarkerEnd(LocationObj loc, int displayZ, IVolumeToSectionTransform mapper)
         {
@@ -738,12 +737,8 @@ namespace WebAnnotation.ViewModel
 
             try
             {
-                Circle marker = loc.TypeCode == LocationType.OPENCURVE
-                    ? AnnotationViewFactory.AdjacentOpenCurveMarkerCircle(loc)
-                    : AnnotationViewFactory.AdjacentPolygonMarkerCircle(loc);
-                return mapper.TrySectionToVolume(marker.Center, out Geometry.Vector2 centre) && marker.Radius > 0
-                    ? new Circle(centre, marker.Radius)
-                    : null;
+                Circle marker = LocationVolumeGeometry.For(loc, mapper).AdjacentMarker(Global.AdjacentLocationRadiusScalar);
+                return marker.Radius > 0 ? marker : null;
             }
             catch (ArgumentException)
             {

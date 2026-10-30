@@ -7,18 +7,43 @@ using System.Collections.Generic;
 using System.Linq;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
+using WebAnnotation;
+using WebAnnotation.View;
 using WebAnnotationModel;
 
 namespace WebAnnotationTests.Tools
 {
     /// <summary>
-    /// <see cref="LocationVolumeGeometry"/> is the one forward owner of a location's volume geometry, under a pure scale and
-    /// under a transform that rotates, scales and shears.
+    /// <see cref="LocationVolumeGeometry"/> is the one forward owner of a location's volume geometry, and every view draws
+    /// and hit-tests exactly what it gives, under a pure scale and under a transform that rotates, scales and shears.
     /// </summary>
     [TestClass]
     public class LocationVolumeGeometryTests
     {
         private const double Tolerance = 1e-6;
+
+        private Microsoft.Xna.Framework.Graphics.SpriteFont? savedFont;
+
+        /// <summary>
+        /// Views read Global's settings, their parent structure (never in a store here) and a font for their labels (there
+        /// is no content manager here; a font object with no glyphs is enough to build them).
+        /// </summary>
+        [TestInitialize]
+        public void BuildViewsWithoutStoresOrContent()
+        {
+            SegmentationServiceSessionTests.EnsureVolumeCachePathAvailable();
+            LocationObj.ParentLookup = _ => null;
+            savedFont = VikingXNAGraphics.Global.TryGetDefaultFont();
+            VikingXNAGraphics.Global.DefaultFont = savedFont ?? (Microsoft.Xna.Framework.Graphics.SpriteFont)
+                System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(Microsoft.Xna.Framework.Graphics.SpriteFont));
+        }
+
+        [TestCleanup]
+        public void RestoreStoresAndContent()
+        {
+            LocationObj.ParentLookup = LocationObj.DefaultParentLookup;
+            VikingXNAGraphics.Global.DefaultFont = savedFont!;
+        }
 
         /// <summary>The transforms every property is checked under, by name.</summary>
         internal static readonly (string Name, AffineTransform Transform)[] Transforms =
@@ -107,6 +132,19 @@ namespace WebAnnotationTests.Tools
         }
 
         [TestMethod]
+        public void AnAdjacentPolygonMarkerIsTheInscribedCircleOfTheMappedShape()
+        {
+            ScaleTransform doubled = new(2, new Vector2(0, 0));
+            LocationObj square = NewLocation(LocationType.POLYGON, Wkt("POLYGON ((0 0, 100 0, 100 100, 0 100, 0 0))"));
+
+            var marker = (AdjacentLocationCircleView)AnnotationViewFactory.CreateAdjacent(square, doubled);
+
+            Assert.AreEqual(100, marker.VolumeCircle.Radius, 1, "a 100 pixel square is 200 units across at scale 2");
+            Assert.AreEqual(100, marker.VolumeCircle.Center.X, 1);
+            Assert.AreEqual(100, marker.VolumeCircle.Center.Y, 1);
+        }
+
+        [TestMethod]
         public void ALineOrCurveIsAsWideAsItsWidthTimesTheFivePointMeanScale()
         {
             foreach (var (name, transform) in Transforms)
@@ -149,6 +187,73 @@ namespace WebAnnotationTests.Tools
             LocationType.CIRCLE, LocationType.POINT, LocationType.POLYGON, LocationType.CURVEPOLYGON,
             LocationType.POLYLINE, LocationType.OPENCURVE, LocationType.CLOSEDCURVE,
         ];
+
+        /// <summary>The (type, on an adjacent section) pairs <see cref="EveryViewDrawsAndHitTestsTheOwnersGeometry"/> covers.</summary>
+        internal static IEnumerable<(LocationType Type, bool Adjacent)> CoveredCases =>
+            from type in ViewTypes
+            from adjacent in new[] { false, true }
+            where RenderedGeometry.IsChecked(type, adjacent)
+            select (type, adjacent);
+
+        [TestMethod]
+        public void EveryViewDrawsAndHitTestsTheOwnersGeometry()
+        {
+            foreach (var (name, transform) in Transforms)
+            {
+                foreach (var (type, adjacent) in CoveredCases)
+                {
+                    LocationObj location = Fixture(type);
+                    LocationCanvasView view = adjacent
+                        ? AnnotationViewFactory.CreateAdjacent(location, transform)
+                        : AnnotationViewFactory.Create(location, transform);
+
+                    RenderedGeometry.AssertMatchesOwner(view, LocationVolumeGeometry.For(location, transform), adjacent, $"{type} {(adjacent ? "adjacent" : "on section")} under {name}");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reads what a view draws and hit-tests and compares it with <see cref="LocationVolumeGeometry"/>. A view type it does
+    /// not know fails, so a new view cannot skip the property test.
+    /// </summary>
+    internal static class RenderedGeometry
+    {
+        private const double Tolerance = 1e-6;
+
+        /// <summary>True for the (type, adjacent) pairs whose view <see cref="AssertMatchesOwner"/> knows.</summary>
+        public static bool IsChecked(LocationType type, bool adjacent) =>
+            adjacent ? type != LocationType.POLYLINE : type is LocationType.CIRCLE or LocationType.POINT;
+
+        public static void AssertMatchesOwner(LocationCanvasView view, LocationVolumeGeometry owner, bool adjacent, string message)
+        {
+            switch (view)
+            {
+                case AdjacentLocationCircleView marker:
+                    Assert.IsTrue(adjacent, message);
+                    AssertCircle(owner.AdjacentMarker(WebAnnotation.Global.AdjacentLocationRadiusScalar), marker.VolumeCircle, message);
+                    AssertCircle(marker.VolumeCircle, marker.VolumeShapeAsRendered.ToCircle(), message + " (hit test)");
+                    break;
+                case LocationCircleView circle:
+                    Assert.IsFalse(adjacent, message);
+                    AssertCircle(owner.Circle!.Value, circle.VolumeCircle, message);
+                    Assert.AreEqual(owner.Circle.Value.Radius, circle.Radius, Tolerance, message);
+                    AssertCircle(circle.VolumeCircle, circle.VolumeShapeAsRendered.ToCircle(), message + " (hit test)");
+                    break;
+                default:
+                    Assert.Fail($"{message}: {view.GetType().Name} is not checked against LocationVolumeGeometry");
+                    break;
+            }
+        }
+
+        /// <summary>Equal to 1e-5 of the radius, at least 1e-3: a circle read back from SQL geometry carries rounding.</summary>
+        public static void AssertCircle(Circle expected, Circle actual, string message)
+        {
+            double tolerance = Math.Max(1e-3, expected.Radius * 1e-5);
+            Assert.AreEqual(expected.Center.X, actual.Center.X, tolerance, message + " centre X");
+            Assert.AreEqual(expected.Center.Y, actual.Center.Y, tolerance, message + " centre Y");
+            Assert.AreEqual(expected.Radius, actual.Radius, tolerance, message + " radius");
+        }
     }
 
     /// <summary>Wraps a transform so no strict (Try...) mapping succeeds while the unchecked mapping still answers.</summary>
