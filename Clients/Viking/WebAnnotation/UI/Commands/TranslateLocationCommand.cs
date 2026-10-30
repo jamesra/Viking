@@ -16,10 +16,10 @@ namespace WebAnnotation.UI.Commands
 {
     internal class TranslateClosedCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
                                     Geometry.Vector2 VolumePosition,
-                                    Geometry.Vector2[] OriginalMosaicControlPoints,
+                                    Geometry.Vector2[] StartVolumeControlPoints,
                                     Microsoft.Xna.Framework.Color color,
                                     double LineWidth,
-TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurveLocationCommand(parent, VolumePosition, OriginalMosaicControlPoints, color, LineWidth, success_callback)
+TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurveLocationCommand(parent, VolumePosition, StartVolumeControlPoints, color, LineWidth, success_callback)
     {
         protected override double SizeScale { get; set; } = 1.0;
 
@@ -28,17 +28,17 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
         protected double LineWidth => curveView.ControlPoints.ToPolygon().CalculateInscribedCircle().Radius;
 
 
-        protected override void OnAngleChanged() => curveView = CreateView(CalculateTranslatedMosaicControlPoints(), curveView.Color);
+        protected override void OnAngleChanged() => curveView = CreateView(CalculateTranslatedVolumeControlPoints(), curveView.Color);
 
-        protected override void OnSizeScaleChanged() => curveView = CreateView(CalculateTranslatedMosaicControlPoints(), curveView.Color);
+        protected override void OnSizeScaleChanged() => curveView = CreateView(CalculateTranslatedVolumeControlPoints(), curveView.Color);
 
-        protected override void OnTranslationChanged() => curveView = CreateView(CalculateTranslatedMosaicControlPoints(), curveView.Color);
+        protected override void OnTranslationChanged() => curveView = CreateView(CalculateTranslatedVolumeControlPoints(), curveView.Color);
 
         protected override double CalculateFinalLineWidth() => Global.DefaultClosedLineWidth;
 
         protected override CurveView CreateView(Geometry.Vector2[] ControlPoints, Microsoft.Xna.Framework.Color color) => new CurveView([.. ControlPoints], color, true, numInterpolations: Global.NumClosedCurveInterpolationPoints, lineWidth: OriginalVolumeControlPoints.MinDistanceBetweenAnyPoints() * SizeScale, controlPointRadius: Global.DefaultClosedLineWidth / 2.0, lineStyle: LineStyle.HalfTube);
 
-        protected override Geometry.Vector2[] CalculateTranslatedMosaicControlPoints()
+        protected override Geometry.Vector2[] CalculateTranslatedVolumeControlPoints()
         {
             //Geometry.Vector2 centroid = OriginalVolumeControlPoints.Centroid();
             ICollection<Geometry.Vector2> rotatedPoints = OriginalVolumeControlPoints.Rotate(Angle, VolumeRotationOrigin);
@@ -51,21 +51,9 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
         {
             if (success_callback != null)
             {
-                Geometry.Vector2[] TranslatedOriginalControlPoints = CalculateTranslatedMosaicControlPoints();
-                Geometry.Vector2[] MosaicControlPoints = null;
-
-                try
-                {
-                    MosaicControlPoints = mapping.VolumeToSection(TranslatedOriginalControlPoints);
-                }
-                catch (ArgumentOutOfRangeException)
-                {
-                    Trace.WriteLine("TranslateLocationCommand: Could not map world point on Execute: " + TranslatedVolumePosition.ToString(), "Command");
-                    return;
-                }
-
+                Geometry.Vector2[] TranslatedOriginalControlPoints = CalculateTranslatedVolumeControlPoints();
                 Circle circle = TranslatedOriginalControlPoints.ToPolygon().CalculateInscribedCircle();
-                success_callback(TranslatedOriginalControlPoints, MosaicControlPoints, circle.Radius * 2);
+                success_callback(TranslatedOriginalControlPoints, circle.Radius * 2);
             }
 
             base.Execute();
@@ -75,10 +63,10 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
 
     internal class TranslateOpenCurveCommand(Viking.UI.Controls.SectionViewerControl parent,
                                     Geometry.Vector2 VolumePosition,
-                                    Geometry.Vector2[] OriginalMosaicControlPoints,
+                                    Geometry.Vector2[] StartVolumeControlPoints,
                                     Microsoft.Xna.Framework.Color color,
                                     double LineWidth,
-TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurveLocationCommand(parent, VolumePosition, OriginalMosaicControlPoints, color, LineWidth, success_callback), Viking.Common.IHelpStrings
+TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurveLocationCommand(parent, VolumePosition, StartVolumeControlPoints, color, LineWidth, success_callback), Viking.Common.IHelpStrings
     {
         private double _lineWidthScale = 1.0;
         protected double LineWidthScale
@@ -96,13 +84,13 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
 
         protected override void OnAngleChanged()
         {
-            curveView = CreateView(CalculateTranslatedMosaicControlPoints(),
+            curveView = CreateView(CalculateTranslatedVolumeControlPoints(),
                                           curveView.Color);
         }
 
         protected override void OnSizeScaleChanged()
         {
-            curveView = CreateView(CalculateTranslatedMosaicControlPoints(),
+            curveView = CreateView(CalculateTranslatedVolumeControlPoints(),
                                           curveView.Color);
         }
 
@@ -145,7 +133,7 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
             return new CurveView([.. ControlPoints], color, false, Global.NumOpenCurveInterpolationPoints, lineWidth: lineWidth, lineStyle: LineStyle.Tubular, controlPointRadius: lineWidth / 2.0);
         }
 
-        protected override Geometry.Vector2[] CalculateTranslatedMosaicControlPoints()
+        protected override Geometry.Vector2[] CalculateTranslatedVolumeControlPoints()
         {
             Geometry.Vector2 centroid = OriginalVolumeControlPoints.Average();
             ICollection<Geometry.Vector2> rotatedPoints = OriginalVolumeControlPoints.Rotate(Angle, centroid);
@@ -159,20 +147,7 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
         {
             if (success_callback != null)
             {
-                Geometry.Vector2[] TranslatedOriginalControlPoints = CalculateTranslatedMosaicControlPoints();
-                Geometry.Vector2[] MosaicControlPoints = null;
-
-                try
-                {
-                    MosaicControlPoints = mapping.VolumeToSection(TranslatedOriginalControlPoints);
-                }
-                catch (ArgumentOutOfRangeException)
-                {
-                    Trace.WriteLine("TranslateLocationCommand: Could not map world point on Execute: " + TranslatedVolumePosition.ToString(), "Command");
-                    return;
-                }
-
-                success_callback(TranslatedOriginalControlPoints, MosaicControlPoints, LineWidthScale * OriginalLineWidth);
+                success_callback(CalculateTranslatedVolumeControlPoints(), LineWidthScale * OriginalLineWidth);
             }
 
             base.Execute();
@@ -187,10 +162,14 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
         protected double OriginalLineWidth;
 
 
-        public delegate void OnCommandSuccess(Geometry.Vector2[] VolumeControlPoints, Geometry.Vector2[] MosaicControlPoints, double LineWidth);
+        /// <summary>
+        /// The control points and line width the user left on screen, in volume space. The callback maps them back to mosaic
+        /// through the inverse owner (<c>LocationActions.SaveVolumeLineEdit</c>); the command never maps them itself.
+        /// </summary>
+        public delegate void OnCommandSuccess(Geometry.Vector2[] VolumeControlPoints, double LineWidth);
         protected OnCommandSuccess success_callback;
 
-        protected abstract Geometry.Vector2[] CalculateTranslatedMosaicControlPoints();
+        protected abstract Geometry.Vector2[] CalculateTranslatedVolumeControlPoints();
         protected abstract double CalculateFinalLineWidth();
 
         string[] IHelpStrings.HelpStrings
@@ -219,23 +198,28 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
 
         protected override Geometry.Vector2 VolumeRotationOrigin => curveView.ControlPoints.Average();
 
+        /// <summary>
+        /// Starts a move of a line or curve from the control points and width the forward owner draws
+        /// (<c>LocationVolumeGeometry.ControlPoints</c>, <c>Width</c>), so the preview starts exactly where the location is drawn.
+        /// </summary>
+        /// <param name="OriginalVolumeControlPoints">The control points in volume space.</param>
+        /// <param name="LineWidth">The drawn width, in volume units.</param>
         public TranslateCurveLocationCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Geometry.Vector2 VolumePosition,
-                                        Geometry.Vector2[] OriginalMosaicControlPoints,
+                                        Geometry.Vector2[] OriginalVolumeControlPoints,
                                         Microsoft.Xna.Framework.Color color,
                                         double LineWidth,
                                         OnCommandSuccess success_callback) : base(parent, VolumePosition)
         {
-            //this.OriginalVolumePosition = mapping.SectionToVolume(MosaicPosition);
             OriginalLineWidth = LineWidth;
-            OriginalVolumeControlPoints = mapping.SectionToVolume(OriginalMosaicControlPoints);
+            this.OriginalVolumeControlPoints = OriginalVolumeControlPoints;
             curveView = CreateView(OriginalVolumeControlPoints, color);
             this.success_callback = success_callback;
         }
 
         protected abstract CurveView CreateView(Geometry.Vector2[] ControlPoints, Microsoft.Xna.Framework.Color color);
 
-        protected override void OnTranslationChanged() => curveView = CreateView(CalculateTranslatedMosaicControlPoints(), curveView.Color);
+        protected override void OnTranslationChanged() => curveView = CreateView(CalculateTranslatedVolumeControlPoints(), curveView.Color);
 
         /// <summary>
         /// Picks the hit nearest the query point, so Ctrl-copy takes the curve under the mouse instead of whichever the R-tree listed first.
@@ -261,7 +245,7 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
                 Geometry.Vector2 translatedPosition = TranslatedVolumePosition;
                 OriginalVolumePosition = OriginalVolumeControlPoints.Average();
                 VolumePositionDeltaSum = new Geometry.Vector2(0, 0);
-                curveView = CreateView(CalculateTranslatedMosaicControlPoints(), curveView.Color);
+                curveView = CreateView(CalculateTranslatedVolumeControlPoints(), curveView.Color);
             }
             else
             {

@@ -3,6 +3,7 @@ using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows.Forms;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
@@ -208,12 +209,18 @@ namespace WebAnnotation
                 case LocationAction.NONE:
                     return null;
                 case LocationAction.TRANSLATE:
-                    return new TranslateOpenCurveCommand(Parent,
-                                                             volumePosition,
-                                                             loc.MosaicShape.ToPoints(),
-                                                             loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                             loc.Width ?? 16.0,
-                                                             (VolumeControlPoints, MosaicControlPoints, LineWidth) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints, LineWidth));
+                    {
+                        IVolumeToSectionTransform section_mapper = Parent.Section.ActiveSectionToVolumeTransform;
+                        if (EditableGeometry(loc, section_mapper) is not LocationVolumeGeometry geometry)
+                            return null;
+
+                        return new TranslateOpenCurveCommand(Parent,
+                                                                 volumePosition,
+                                                                 [.. geometry.ControlPoints],
+                                                                 loc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                                 geometry.Width,
+                                                                 (VolumeControlPoints, LineWidth) => UpdateLineLocationCallback(Parent, loc, section_mapper, VolumeControlPoints, LineWidth));
+                    }
                 case LocationAction.SCALE:
                     return null;
                 case LocationAction.ADJUST:
@@ -234,39 +241,19 @@ namespace WebAnnotation
                                                       IsClosedCurve(loc),
                                                       (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
                 case LocationAction.CREATELINKEDLOCATION:
+                    {
+                        // The source is on another section: the command starts from the line as that section draws it, centred
+                        // on the click, and the result is mapped back to this section's mosaic.
+                        if (LinkedLineStart(Parent, loc, volumePosition) is not (Geometry.Vector2[] startPoints, double startWidth))
+                            return null;
 
-                    //The section we are linking from is on another section, so we have to:
-                    // 0. Position the mosaic shape where we want the command to begin
-                    // 1. Warp the mosaic using the correct transform for the source section
-                    // 2. Warp the volume shape back to our section using the current transform
-
-                    IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
-                    Geometry.Vector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
-
-                    SqlGeometry MosaicShape = TryTransformMosaicShapeToSection(mapper, Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number), loc.MosaicShape.MoveTo(MosaicPosition), out SqlGeometry VolumeShape);
-                    if (MosaicShape is null)
-                        return null;
-
-                    return new TranslateOpenCurveCommand(Parent,
-                                                             volumePosition,
-                                                             MosaicShape.ToPoints(),
-                                                             loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                             loc.Width ?? 16.0,
-                                                             (NewVolumeControlPoints, NewMosaicControlPoints, NewWidth) =>
-                                                                {
-                                                                    LocationObj newLoc = new(loc.Parent,
-                                                                       MosaicShape,
-                                                                       VolumeShape,
-                                                                       Parent.Section.Number,
-                                                                       loc.TypeCode);
-
-                                                                    IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number);
-                                                                    NewMosaicControlPoints = section_mapper.VolumeToSection(NewVolumeControlPoints);
-
-                                                                    UpdateLineLocationNoSaveCallback(newLoc, NewVolumeControlPoints, NewMosaicControlPoints, NewWidth);
-                                                                    Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [Parent, loc, newLoc]);
-                                                                }
-                                                             );
+                        return new TranslateOpenCurveCommand(Parent,
+                                                                 volumePosition,
+                                                                 startPoints,
+                                                                 loc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                                 startWidth,
+                                                                 (NewVolumeControlPoints, NewWidth) => QueueLinkedLine(Parent, loc, NewVolumeControlPoints, NewWidth));
+                    }
                 default:
                     return null;
             }
@@ -290,12 +277,18 @@ namespace WebAnnotation
                 case LocationAction.NONE:
                     return null;
                 case LocationAction.TRANSLATE:
-                    return new TranslateClosedCurveCommand(Parent,
-                                                             loc.MosaicShape.Centroid(),
-                                                             loc.MosaicShape.ToPoints(),
-                                                             loc.Parent.Type.Color.ToXNAColor().SetAlpha(0.5f),
-                                                             loc.Width ?? 16.0,
-                                                             (VolumeControlPoints, MosaicControlPoints, LineWidth) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints, LineWidth));
+                    {
+                        IVolumeToSectionTransform section_mapper = Parent.Section.ActiveSectionToVolumeTransform;
+                        if (EditableGeometry(loc, section_mapper) is not LocationVolumeGeometry geometry)
+                            return null;
+
+                        return new TranslateClosedCurveCommand(Parent,
+                                                                 volumePosition,
+                                                                 [.. geometry.ControlPoints],
+                                                                 loc.Parent.Type.Color.ToXNAColor().SetAlpha(0.5f),
+                                                                 geometry.Width,
+                                                                 (VolumeControlPoints, LineWidth) => UpdateLineLocationCallback(Parent, loc, section_mapper, VolumeControlPoints, LineWidth));
+                    }
                 case LocationAction.SCALE:
                     return null;
                 case LocationAction.ADJUST:
@@ -316,40 +309,17 @@ namespace WebAnnotation
                                                       IsClosedCurve(loc),
                                                       (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
                 case LocationAction.CREATELINKEDLOCATION:
+                    {
+                        if (LinkedLineStart(Parent, loc, volumePosition) is not (Geometry.Vector2[] startPoints, double startWidth))
+                            return null;
 
-                    //The section we are linking from is on another section, so we have to:
-                    // 0. Position the mosaic shape where we want the command to begin
-                    // 1. Warp the mosaic using the correct transform for the source section
-                    // 2. Warp the volume shape back to our section using the current transform
-
-                    IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
-                    Geometry.Vector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
-
-                    SqlGeometry MosaicShape = TryTransformMosaicShapeToSection(mapper, Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number), loc.MosaicShape.MoveTo(MosaicPosition), out SqlGeometry VolumeShape);
-                    if (MosaicShape is null)
-                        return null;
-
-                    return new TranslateClosedCurveCommand(Parent,
-                                                             MosaicShape.Centroid(),
-                                                             MosaicShape.ToPoints(),
-                                                             loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                             loc.Width ?? 16.0,
-                                                             (NewVolumeControlPoints, NewMosaicControlPoints, NewWidth) =>
-                                                             {
-                                                                 LocationObj newLoc = new(loc.Parent,
-                                                                    MosaicShape,
-                                                                    VolumeShape,
-                                                                    Parent.Section.Number,
-                                                                    loc.TypeCode);
-
-                                                                 IVolumeToSectionTransform section_mapper = Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number);
-                                                                 NewMosaicControlPoints = section_mapper.VolumeToSection(NewVolumeControlPoints);
-
-                                                                 UpdateLineLocationNoSaveCallback(newLoc, NewVolumeControlPoints, NewMosaicControlPoints, NewWidth);
-
-                                                                 Parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [Parent, loc, newLoc]);
-                                                             }
-                                                             );
+                        return new TranslateClosedCurveCommand(Parent,
+                                                                 volumePosition,
+                                                                 startPoints,
+                                                                 loc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                                 startWidth,
+                                                                 (NewVolumeControlPoints, NewWidth) => QueueLinkedLine(Parent, loc, NewVolumeControlPoints, NewWidth));
+                    }
                 default:
                     return null;
             }
@@ -373,6 +343,8 @@ namespace WebAnnotation
                 case LocationAction.NONE:
                     return null;
                 case LocationAction.TRANSLATE:
+                    // Mosaic-first: the command moves the mosaic polygon by the inverse of the volume drag and previews it
+                    // through the forward owner, so what is saved is what was shown.
                     return new TranslatePolygonCommand(Parent,
                                                                loc.MosaicShape.ToPolygon(),
                                                                volumePosition,
@@ -380,10 +352,22 @@ namespace WebAnnotation
                                                                (mosaicPolygon, points) =>
                                                                     {
                                                                         SqlGeometry undoShape = loc.MosaicShape;
-                                                                        loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, mosaicPolygon.ToSqlGeometry());
+                                                                        try
+                                                                        {
+                                                                            loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, mosaicPolygon.ToSqlGeometry());
+                                                                        }
+                                                                        catch (ArgumentException e)
+                                                                        {
+                                                                            ShowPolygonSaveError(Parent, e);
+                                                                            return;
+                                                                        }
+
                                                                         if (AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
                                                                             UndoManager.PushLocationShape("Move", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode);
-                                                                    });
+                                                                    })
+                    {
+                        PreviewType = loc.TypeCode
+                    };
                 case LocationAction.SCALE:
                     return null;
                 case LocationAction.ADJUST:
@@ -526,9 +510,10 @@ namespace WebAnnotation
                         // 2. Warp the volume shape back to our section using the current transform
 
                         IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
-                        Geometry.Vector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
+                        if (!LocationVolumeGeometry.TryMapPointsToMosaic([volumePosition], mapper, out Geometry.Vector2[] mosaicPosition, out _))
+                            return null;
 
-                        SqlGeometry MosaicShape = TryTransformMosaicShapeToSection(mapper, Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number), loc.MosaicShape.MoveTo(MosaicPosition), out _);
+                        SqlGeometry MosaicShape = TryTransformMosaicShapeToSection(mapper, Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number), loc.MosaicShape.MoveTo(mosaicPosition[0]), out _);
                         if (MosaicShape is null)
                             return null;
 
@@ -568,7 +553,7 @@ namespace WebAnnotation
                             color,
                             (polygon, _) =>
                             {
-                                Polygon volumeFallback = Parent.Section.ActiveSectionToVolumeTransform.TryMapShapeSectionToVolume(polygon);
+                                Polygon volumeFallback = LocationVolumeGeometry.TryMapPolygon(polygon, Parent.Section.ActiveSectionToVolumeTransform);
                                 if (volumeFallback is null || volumeFallback.ExteriorRing.Length < 3)
                                 {
                                     PlaceLinkedMosaicPolygon(polygon);
@@ -669,11 +654,6 @@ namespace WebAnnotation
                 return;
 
             IVolumeToSectionTransform destination = parent.Volume.GetSectionToVolumeTransform(parent.Section.Number);
-            if (!destination.TryVolumeToSection(newVolumePosition, out Geometry.Vector2 mosaic))
-            {
-                MessageBox.Show(parent, "The chosen point is outside mappable volume space, location not created", "Recoverable Error");
-                return;
-            }
 
             // newRadius is a volume radius (the drag happened in volume space); the open section's mosaic radius is mapped from it.
             LocationObj newLoc = new(source.Parent, parent.Section.Number, source.TypeCode);
@@ -700,15 +680,103 @@ namespace WebAnnotation
                                                                      SqlGeometry sourceShape,
                                                                      out SqlGeometry volumeShape)
         {
-            volumeShape = source.TryMapShapeSectionToVolume(sourceShape);
-            SqlGeometry? mosaicShape = volumeShape is null ? null : destination.TryMapShapeVolumeToSection(volumeShape);
-            if (mosaicShape is null)
-                System.Diagnostics.Trace.WriteLine("Linked location: shape lies partly outside the section mapping; no command created.", "WebAnnotation");
+            volumeShape = LocationVolumeGeometry.TryMapControlShape(sourceShape, source);
+            LocationType type = sourceShape.GeometryType() == SupportedGeometryType.CURVEPOLYGON ? LocationType.CIRCLE : LocationType.POLYGON;
+            MosaicGeometry? mosaic = volumeShape is null ? null : LocationVolumeGeometry.ToMosaic(type, volumeShape, destination);
+            if (mosaic?.Succeeded != true)
+                System.Diagnostics.Trace.WriteLine($"Linked location: shape lies partly outside the section mapping; no command created. {mosaic?.Failure}", "WebAnnotation");
 
-            return mosaicShape;
+            return mosaic?.Shape;
         }
 
         private static bool IsClosedCurve(LocationObj loc) => loc.TypeCode == LocationType.CLOSEDCURVE;
+
+        /// <summary>
+        /// The location's geometry as the forward owner draws it, for a command to start editing from; null, so no command
+        /// starts, when it cannot be mapped exactly (the failure policy's extrapolated outline is not editable).
+        /// </summary>
+        private static LocationVolumeGeometry? EditableGeometry(LocationObj loc, IVolumeToSectionTransform transform)
+        {
+            try
+            {
+                LocationVolumeGeometry geometry = LocationVolumeGeometry.For(loc, transform);
+                return geometry.IsExact ? geometry : null;
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Where a line or curve linked from <paramref name="source"/> on another section starts: the source's control points
+        /// as its own section draws them, moved so their centroid is at <paramref name="volumePosition"/>, and its drawn
+        /// width. Null when the source cannot be mapped.
+        /// </summary>
+        private static (Geometry.Vector2[] Points, double Width)? LinkedLineStart(Viking.UI.Controls.SectionViewerControl parent, LocationObj source, Geometry.Vector2 volumePosition)
+        {
+            if (EditableGeometry(source, parent.Volume.GetSectionToVolumeTransform((int)source.Z)) is not LocationVolumeGeometry geometry)
+                return null;
+
+            Geometry.Vector2[] points = [.. geometry.ControlPoints];
+            Geometry.Vector2 offset = volumePosition - points.ToSqlGeometry().Centroid();
+            return ([.. points.Select(p => p + offset)], geometry.Width);
+        }
+
+        /// <summary>
+        /// Queues a line or curve on the open section, linked to <paramref name="source"/>, from the control points and width
+        /// the user left on screen, mapped back to this section's mosaic by the inverse owner. Shows why when they cannot be.
+        /// </summary>
+        private static void QueueLinkedLine(Viking.UI.Controls.SectionViewerControl parent, LocationObj source, Geometry.Vector2[] volumeControlPoints, double volumeWidth)
+        {
+            if (source?.Parent is null || parent?.Section is null)
+                return;
+
+            LocationObj newLoc = new(source.Parent, parent.Section.Number, source.TypeCode);
+            if (!SaveVolumeLineEdit(newLoc, parent.Section.ActiveSectionToVolumeTransform, volumeControlPoints, volumeWidth, out string failure))
+            {
+                ShowUnmappedEdit(parent, failure, "Could not create linked annotation");
+                return;
+            }
+
+            parent.CommandQueue.EnqueueCommand(typeof(CreateNewLinkedLocationCommand), [parent, source, newLoc]);
+        }
+
+        /// <summary>
+        /// Saves a line or curve the user edited in volume space: the control points and width are mapped back to mosaic by the
+        /// inverse owner (<see cref="LocationVolumeGeometry.ToMosaic(LocationType, IReadOnlyList{Geometry.Vector2}, IVolumeToSectionTransform, double?, IReadOnlyCollection{Geometry.Vector2[]})"/>),
+        /// so the mosaic width is the volume width divided by the local scale, and the volume shape is the forward owner's.
+        /// Called by the line and curve command callbacks.
+        /// </summary>
+        /// <param name="volumeWidth">The width the user saw, in volume units; null keeps the location's width.</param>
+        /// <param name="failure">Why the edit could not be saved, for the user; null on success.</param>
+        /// <returns>False, with the location unchanged, when any point cannot be mapped.</returns>
+        internal static bool SaveVolumeLineEdit(LocationObj loc, IVolumeToSectionTransform transform, Geometry.Vector2[] volumeControlPoints, double? volumeWidth, out string failure)
+        {
+            MosaicGeometry mosaic = LocationVolumeGeometry.ToMosaic(loc.TypeCode, volumeControlPoints, transform, volumeWidth);
+            failure = mosaic.Failure;
+            if (!mosaic.Succeeded)
+                return false;
+
+            try
+            {
+                return loc.TryApply(mosaic, transform);
+            }
+            catch (ArgumentException e)
+            {
+                failure = e.Message;
+                return false;
+            }
+        }
+
+        /// <summary>Saves a line or curve edit (<see cref="SaveVolumeLineEdit"/>) and the store, or shows why it was not saved.</summary>
+        private static void UpdateLineLocationCallback(IWin32Window owner, LocationObj loc, IVolumeToSectionTransform transform, Geometry.Vector2[] volumeControlPoints, double? volumeWidth)
+        {
+            if (SaveVolumeLineEdit(loc, transform, volumeControlPoints, volumeWidth, out string failure))
+                AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+            else
+                ShowUnmappedEdit(owner, failure, "Could not save annotation");
+        }
 
         private static void UpdateLineLocationCallback(LocationObj loc, Geometry.Vector2[] VolumeControlPoints, Geometry.Vector2[] MosaicControlPoints)
         {
@@ -723,18 +791,6 @@ namespace WebAnnotation
 
             loc.VolumeShape = updatedVolumeShape;
             loc.MosaicShape = updatedMosaicShape;
-        }
-
-        private static void UpdateLineLocationCallback(LocationObj loc, Geometry.Vector2[] VolumeControlPoints, Geometry.Vector2[] MosaicControlPoints, double NewWidth)
-        {
-            UpdateLineLocationNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints, NewWidth);
-            AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
-        }
-
-        private static void UpdateLineLocationNoSaveCallback(LocationObj loc, Geometry.Vector2[] VolumeControlPoints, Geometry.Vector2[] MosaicControlPoints, double NewWidth)
-        {
-            UpdateLineLocationNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints);
-            loc.Width = NewWidth;
         }
 
         /// <summary>
