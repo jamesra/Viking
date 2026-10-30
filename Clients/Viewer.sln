@@ -46,8 +46,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonogameTestbed", "Monogame
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebAnnotationModel", "WebAnnotationModel\WebAnnotationModel.csproj", "{709A3C16-7218-4FF0-9A2D-6BF015C243BF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationServiceTypes", "..\AnnotationServiceTypes\AnnotationServiceTypes.csproj", "{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeometryTests", "..\GeometryTests\GeometryTests.csproj", "{5DE6C405-B488-4DAB-B18F-162979E084DD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonogameMathNetExtensions", "MonogameMathNetExtensions.cs\MonogameMathNetExtensions.csproj", "{0D32D6C4-4D76-4D2B-BDE7-6061D18FCA04}"
@@ -444,24 +442,6 @@ Global
 		{709A3C16-7218-4FF0-9A2D-6BF015C243BF}.ReleaseWithSymbols|x64.Build.0 = ReleaseWithSymbols|Any CPU
 		{709A3C16-7218-4FF0-9A2D-6BF015C243BF}.ReleaseWithSymbols|x86.ActiveCfg = ReleaseWithSymbols|Any CPU
 		{709A3C16-7218-4FF0-9A2D-6BF015C243BF}.ReleaseWithSymbols|x86.Build.0 = ReleaseWithSymbols|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Debug|x64.Build.0 = Debug|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Debug|x86.Build.0 = Debug|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Release|x64.ActiveCfg = Release|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Release|x64.Build.0 = Release|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Release|x86.ActiveCfg = Release|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Release|x86.Build.0 = Release|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.ReleaseWithSymbols|x64.ActiveCfg = Release|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.ReleaseWithSymbols|x64.Build.0 = Release|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.ReleaseWithSymbols|x86.ActiveCfg = Release|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.ReleaseWithSymbols|x86.Build.0 = Release|Any CPU
 		{5DE6C405-B488-4DAB-B18F-162979E084DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5DE6C405-B488-4DAB-B18F-162979E084DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5DE6C405-B488-4DAB-B18F-162979E084DD}.Debug|x64.ActiveCfg = Debug|Any CPU

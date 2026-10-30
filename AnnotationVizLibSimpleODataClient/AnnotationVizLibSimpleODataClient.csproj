@@ -16,7 +16,7 @@
 	</ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Geometry\Geometry.csproj" />
-    <ProjectReference Include="..\AnnotationServiceTypes\AnnotationServiceTypes.WCF.csproj" />
+    <ProjectReference Include="..\AnnotationInterfaces\AnnotationInterfaces.csproj" />
     <ProjectReference Include="..\SqlGeometryAnnotationExtensions\SqlGeometryAnnotationExtensions.csproj" />
     <ProjectReference Include="..\SqlGeometryUtils\SqlGeometryUtils.csproj" />
     <ProjectReference Include="..\AnnotationVizLib\AnnotationVizLib.csproj" />

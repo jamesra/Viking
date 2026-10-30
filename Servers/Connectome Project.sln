@@ -17,8 +17,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationVizLibTests", "..
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphLib", "..\GraphLib\GraphLib.csproj", "{D6F219FC-733B-481F-BF78-D34A7CB893EC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationService", "AnnotationService\AnnotationService\AnnotationService.csproj", "{1483085C-F381-4252-B2AE-FFFBF1ABD7A2}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConnectomeOpenData", "ConnectomeOpenData\ConnectomeOpenData.csproj", "{25F5D47B-74C1-46EA-8EE1-DDE17E12047A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataExport", "DataExport\DataExport.csproj", "{73CB157C-8882-480E-A70A-23D2A4CBA7E9}"
@@ -26,8 +24,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataExport.Tests", "DataExport.Tests\DataExport.Tests.csproj", "{E353CD96-8B73-46A1-AE33-3E64CEA1C43F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VikingWebAppSettings", "WebAppSettings\VikingWebAppSettings.csproj", "{CD19DFB6-2201-431D-9DB3-C8AD6AD629BF}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceTest", "AnnotationService\ServiceTest\ServiceTest.csproj", "{4F8E1FA6-5D27-49F6-B78B-6C0B98E7FD4C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{A12CB399-4EA3-411B-9CF8-02A847B22963}"
 	ProjectSection(SolutionItems) = preProject
@@ -59,8 +55,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationVizLibODataClient", "..\AnnotationVizLibODataClient\AnnotationVizLibODataClient.csproj", "{FF2C1828-20CA-47C0-9B69-85694CCCECD3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationVizLibSimpleODataClient", "..\AnnotationVizLibSimpleODataClient\AnnotationVizLibSimpleODataClient.csproj", "{B3A4F95D-A8AC-4094-9DDA-22DC972D7E5D}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnotationServiceTypes", "..\AnnotationServiceTypes\AnnotationServiceTypes.csproj", "{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neo4JGenerator", "Neo4JGenerator\Neo4JGenerator.csproj", "{A53614BA-5CBF-416D-B233-F610CA15D5CB}"
 EndProject
@@ -110,12 +104,6 @@ Global
 		{D6F219FC-733B-481F-BF78-D34A7CB893EC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D6F219FC-733B-481F-BF78-D34A7CB893EC}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
 		{D6F219FC-733B-481F-BF78-D34A7CB893EC}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
-		{1483085C-F381-4252-B2AE-FFFBF1ABD7A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1483085C-F381-4252-B2AE-FFFBF1ABD7A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1483085C-F381-4252-B2AE-FFFBF1ABD7A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1483085C-F381-4252-B2AE-FFFBF1ABD7A2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1483085C-F381-4252-B2AE-FFFBF1ABD7A2}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
-		{1483085C-F381-4252-B2AE-FFFBF1ABD7A2}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
 		{25F5D47B-74C1-46EA-8EE1-DDE17E12047A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{25F5D47B-74C1-46EA-8EE1-DDE17E12047A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{25F5D47B-74C1-46EA-8EE1-DDE17E12047A}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -139,12 +127,6 @@ Global
 		{CD19DFB6-2201-431D-9DB3-C8AD6AD629BF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{CD19DFB6-2201-431D-9DB3-C8AD6AD629BF}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
 		{CD19DFB6-2201-431D-9DB3-C8AD6AD629BF}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
-		{4F8E1FA6-5D27-49F6-B78B-6C0B98E7FD4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4F8E1FA6-5D27-49F6-B78B-6C0B98E7FD4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4F8E1FA6-5D27-49F6-B78B-6C0B98E7FD4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4F8E1FA6-5D27-49F6-B78B-6C0B98E7FD4C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4F8E1FA6-5D27-49F6-B78B-6C0B98E7FD4C}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
-		{4F8E1FA6-5D27-49F6-B78B-6C0B98E7FD4C}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
 		{7AFF7330-3C9C-4611-B06B-AC7B0301D304}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{7AFF7330-3C9C-4611-B06B-AC7B0301D304}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7AFF7330-3C9C-4611-B06B-AC7B0301D304}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -222,12 +204,6 @@ Global
 		{B3A4F95D-A8AC-4094-9DDA-22DC972D7E5D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B3A4F95D-A8AC-4094-9DDA-22DC972D7E5D}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
 		{B3A4F95D-A8AC-4094-9DDA-22DC972D7E5D}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.ReleaseWithSymbols|Any CPU.ActiveCfg = Release|Any CPU
-		{55FF8936-D9BC-4AC6-AA29-FC0D7A7640EC}.ReleaseWithSymbols|Any CPU.Build.0 = Release|Any CPU
 		{A53614BA-5CBF-416D-B233-F610CA15D5CB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A53614BA-5CBF-416D-B233-F610CA15D5CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A53614BA-5CBF-416D-B233-F610CA15D5CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
