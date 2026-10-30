@@ -52,6 +52,27 @@ namespace Viking.VolumeModel
             SetMosaicShape(location, mapper, SqlGeometryUtils.Extensions.ToCircle(mosaicCircle.Center.X, mosaicCircle.Center.Y, 0, mosaicCircle.Radius), mosaicCircle);
 
         /// <summary>
+        /// The circle a <c>CURVEPOLYGON</c> built by <c>SqlGeometryUtils.Extensions.ToCircle</c> describes, read from its
+        /// defining points (east, north, west, south, east): the centre is midway between the east and west points and the
+        /// radius half their distance. <c>ToShape2D</c> reads a circle from its bounding box, which SQL geometry computes for
+        /// curves only approximately (about 2e-6 of the radius). Null for any other shape.
+        /// </summary>
+        private static Circle? ExactCircle(Microsoft.SqlServer.Types.SqlGeometry shape)
+        {
+            if (shape.GeometryType() != SupportedGeometryType.CURVEPOLYGON)
+                return null;
+
+            Microsoft.SqlServer.Types.SqlGeometry ring = shape.STExteriorRing();
+            if (ring.IsNull || ring.STNumPoints().Value != 5)
+                return null;
+
+            Vector2 east = new(ring.STPointN(1).STX.Value, ring.STPointN(1).STY.Value);
+            Vector2 west = new(ring.STPointN(3).STX.Value, ring.STPointN(3).STY.Value);
+            double radius = Vector2.Distance(east, west) / 2.0;
+            return radius > 0 ? new Circle((east + west) / 2.0, radius) : null;
+        }
+
+        /// <summary>
         /// Saves an edit made in volume space after <see cref="LocationVolumeGeometry.ToMosaic(Viking.AnnotationServiceTypes.Interfaces.LocationType, Microsoft.SqlServer.Types.SqlGeometry, IVolumeToSectionTransform, double?)"/>
         /// mapped it back: the mosaic shape (and width) become the truth and the forward owner derives the volume shape
         /// (<see cref="SetShapeFromGeometryInSection"/>). Set <c>TypeCode</c> first.
@@ -104,7 +125,7 @@ namespace Viking.VolumeModel
                 throw new ArgumentException("The shape lies partly outside the region this section's transform maps, so it cannot be drawn on the volume.");
 
             IShape2D oldShape = location.MosaicShape;
-            location.MosaicShape = exactCircle is Circle circle ? circle : shape.ToShape2D();
+            location.MosaicShape = (exactCircle ?? ExactCircle(shape)) is Circle circle ? circle : shape.ToShape2D();
 
             IShape2D cache;
             try

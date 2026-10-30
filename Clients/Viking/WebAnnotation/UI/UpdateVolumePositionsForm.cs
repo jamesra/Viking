@@ -5,23 +5,25 @@ using System.Windows.Forms;
 namespace WebAnnotation.UI
 {
     /// <summary>
-    /// Chooses the volume transform and section ranges for a volume-position correction.
+    /// Chooses the sections for Update Volume Positions (<see cref="VolumePositionUpdateJob"/>), which always writes the stored
+    /// volume positions under the volume's default transform; there is no transform to choose.
     /// Cancel closes the dialog without starting a job. Start is enabled when the range text parses and at least one requested section exists in the volume
     /// (or the box is blank and the volume has sections). Requested numbers missing from the volume are skipped and reported in the dialog; <see cref="Sections"/> holds only the ones that exist.
     /// </summary>
     internal sealed class UpdateVolumePositionsForm : Form
     {
-        private readonly ComboBox? _transformCombo;
-        private readonly string? _fixedTransform;
+        /// <summary>What the job does and when to run it, shown at the top of the dialog.</summary>
+        internal const string HelpText =
+            "Recomputes the stored volume positions of the annotations on the chosen sections from their section positions, " +
+            "using the volume's default alignment. Run it after a section's alignment (.stos) changes, so searches, " +
+            "exports and other programs that read the stored positions match the new alignment. Annotations are not moved.";
+
         private readonly HashSet<int> _volumeSections;
         private readonly TextBox _sectionsText;
         private readonly TextBox _interpretation;
         private readonly Button _start;
         private SectionRangeParse _parse;
         private VolumeSectionSelection _selection;
-
-        /// <summary>Transform group name, or null when the volume has no named transform and mosaic space is used.</summary>
-        public string? TransformName { get; private set; }
 
         /// <summary>True when the section box was left blank.</summary>
         public bool IsAllSections { get; private set; }
@@ -32,10 +34,9 @@ namespace WebAnnotation.UI
         /// <summary>
         /// Called from the Annotation menu on the UI thread.
         /// </summary>
-        /// <param name="transformNames">Named transforms on the open volume. Empty means mosaic-only.</param>
-        /// <param name="preferredTransform">Active or default transform to select when there is more than one.</param>
+        /// <param name="defaultTransform">The volume's default transform, or null when the volume has none and mosaic space is used.</param>
         /// <param name="volumeSectionNumbers">Section numbers that exist in the open volume.</param>
-        public UpdateVolumePositionsForm(string[] transformNames, string? preferredTransform, IEnumerable<int> volumeSectionNumbers)
+        public UpdateVolumePositionsForm(string? defaultTransform, IEnumerable<int> volumeSectionNumbers)
         {
             _volumeSections = volumeSectionNumbers as HashSet<int> ?? new HashSet<int>(volumeSectionNumbers);
 
@@ -49,47 +50,29 @@ namespace WebAnnotation.UI
             ClientSize = new System.Drawing.Size(540, 468);
             AutoScaleMode = AutoScaleMode.Font;
 
-            var transformCaption = new Label
+            Controls.Add(new Label
             {
-                AutoSize = true,
-                Location = new System.Drawing.Point(12, 12),
-                Text = "Volume transform"
-            };
-            Controls.Add(transformCaption);
-
-            if (transformNames.Length > 1)
-            {
-                _transformCombo = new ComboBox
-                {
-                    DropDownStyle = ComboBoxStyle.DropDownList,
-                    Location = new System.Drawing.Point(12, 32),
-                    Width = 516
-                };
-                _transformCombo.Items.AddRange(transformNames);
-                int preferred = Array.IndexOf(transformNames, preferredTransform);
-                _transformCombo.SelectedIndex = preferred >= 0 ? preferred : 0;
-                Controls.Add(_transformCombo);
-            }
-            else
-            {
-                _fixedTransform = transformNames.Length == 1 ? transformNames[0] : null;
-                string caption = _fixedTransform is null
-                    ? "No volume transform. Mosaic positions are copied into volume space."
-                    : "Transform: " + _fixedTransform;
-                Controls.Add(new Label
-                {
-                    AutoSize = false,
-                    Location = new System.Drawing.Point(12, 32),
-                    Size = new System.Drawing.Size(516, 32),
-                    Text = caption
-                });
-            }
+                AutoSize = false,
+                Location = new System.Drawing.Point(12, 8),
+                Size = new System.Drawing.Size(516, 44),
+                Text = HelpText
+            });
 
             Controls.Add(new Label
             {
                 AutoSize = false,
-                Location = new System.Drawing.Point(12, 72),
-                Size = new System.Drawing.Size(516, 52),
+                Location = new System.Drawing.Point(12, 54),
+                Size = new System.Drawing.Size(516, 16),
+                Text = defaultTransform is null
+                    ? "No volume transform: section positions are stored as volume positions."
+                    : "Default transform: " + defaultTransform
+            });
+
+            Controls.Add(new Label
+            {
+                AutoSize = false,
+                Location = new System.Drawing.Point(12, 76),
+                Size = new System.Drawing.Size(516, 48),
                 Text = "Sections (blank = all). Separate numbers or ranges with commas, spaces, or new lines. Example: 1-100, 250, 400-410. A range can cross missing sections; those numbers are skipped."
             });
 
@@ -153,9 +136,6 @@ namespace WebAnnotation.UI
             if (!_start.Enabled)
                 return;
 
-            TransformName = _transformCombo is null
-                ? _fixedTransform
-                : _transformCombo.SelectedItem as string;
             IsAllSections = _parse.IsAllSections;
             Sections = _parse.IsAllSections ? _parse.Sections : _selection.Present;
             DialogResult = DialogResult.OK;

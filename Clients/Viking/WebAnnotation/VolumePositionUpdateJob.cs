@@ -18,23 +18,6 @@ using WebAnnotationModel.Objects;
 
 namespace WebAnnotation
 {
-    /// <summary>
-    /// One section the volume-position job should correct. Captured on the UI thread before the background task starts.
-    /// </summary>
-    internal readonly struct VolumePositionSection
-    {
-        public int Number { get; }
-        public string? DefaultChannel { get; }
-        public string? DefaultPyramidTransform { get; }
-
-        public VolumePositionSection(int number, string? defaultChannel, string? defaultPyramidTransform)
-        {
-            Number = number;
-            DefaultChannel = defaultChannel;
-            DefaultPyramidTransform = defaultPyramidTransform;
-        }
-    }
-
     /// <summary>How many locations on one section were saved with a new volume shape.</summary>
     internal readonly struct SectionCorrectionCount
     {
@@ -66,24 +49,32 @@ namespace WebAnnotation
     }
 
     /// <summary>
-    /// Remaps each location's mosaic shape into volume space and writes VolumeShape, matching VikingAU without the translation file.
-    /// Runs on a background task. Reads and writes each section through its own gRPC <see cref="ILocationsClient"/>, not the
-    /// viewer's store, so the viewer's unsaved edits are not saved with the correction.
-    /// Sections are processed one at a time so the status line can name the current section and its update count.
-    /// A cancel discards the section in progress. Sections already saved stay saved.
+    /// Update Volume Positions: the refresh of the stored volume cache after a section's alignment (.stos) changes. Writes each
+    /// location's <c>VolumeShape</c> as <see cref="VolumeCache.Shape"/> under the volume's default transform, the value every
+    /// client save writes (circles as the owner's exact circle), so the cache that server queries, OData and export read
+    /// matches the new alignment. Mosaic shapes are not changed, except to repair a location whose type does not match its
+    /// shape. VikingAU does the same without the viewer (plus its translation file). See
+    /// <c>.cursor/rules/annotation-volume-geometry.mdc</c>.
     /// </summary>
+    /// <remarks>
+    /// Runs on a background task. Reads and writes each section through its own gRPC <see cref="ILocationsClient"/>, not the
+    /// viewer's store, so the viewer's unsaved edits are not saved with the correction. Sections are processed one at a time so
+    /// the status line can name the current section and its update count. A cancel discards the section in progress. Sections
+    /// already saved stay saved.
+    /// </remarks>
     internal static class VolumePositionUpdateJob
     {
         private const double EpsilonSquared = 0.25;
         private static readonly TimeSpan ProgressInterval = TimeSpan.FromMilliseconds(250);
 
         /// <summary>
-        /// Called via Task.Run from <see cref="UI.VolumePositionUpdateLauncher"/>. Does not touch the UI thread.
+        /// Called on a worker thread (Task.Run) from <see cref="UI.VolumePositionUpdateLauncher"/>. Does not touch the UI thread.
         /// </summary>
+        /// <param name="transforms">The open volume's default transforms (<see cref="IDefaultVolumeTransformProvider"/>).</param>
+        /// <param name="sections">The section numbers to refresh.</param>
         public static async Task<VolumePositionUpdateResult> RunAsync(
-            MappingManager mappings,
-            IReadOnlyList<VolumePositionSection> sections,
-            string? volumeTransformName,
+            IDefaultVolumeTransformProvider transforms,
+            IReadOnlyList<int> sections,
             IProgress<ViewerTaskProgress>? progress,
             CancellationToken cancellationToken)
         {
@@ -104,32 +95,23 @@ namespace WebAnnotation
                     if (cancellationToken.IsCancellationRequested)
                         return Cancelled(corrections);
 
-                    VolumePositionSection section = sections[index];
+                    int sectionNumber = sections[index];
                     int position = index + 1;
                     Report(progress, ref lastProgressUtc, index, sections.Count,
-                        SectionMessage(section.Number, position, sections.Count, 0), force: true);
+                        SectionMessage(sectionNumber, position, sections.Count, 0), force: true);
 
                     ServerUpdate<long, ILocation[]> sectionLocations =
-                        await client.GetAsync(section.Number, null, cancellationToken).ConfigureAwait(false);
+                        await client.GetAsync(sectionNumber, null, cancellationToken).ConfigureAwait(false);
                     List<LocationObj> onSection = (sectionLocations.NewOrUpdated ?? Array.Empty<ILocation>())
                         .Select(toClient.Convert)
                         .ToList();
-                    MappingBase? mapper = mappings.GetMapping(
-                        volumeTransformName,
-                        section.Number,
-                        section.DefaultChannel,
-                        section.DefaultPyramidTransform);
-                    if (mapper is null)
+                    if (transforms.GetDefaultSectionToVolumeTransform(sectionNumber) is not IVolumeToSectionTransform defaultTransform)
                     {
                         return new VolumePositionUpdateResult(
                             cancelled: false,
-                            error: $"No mapping found for section {section.Number}.",
+                            error: $"The volume's default transform for section {sectionNumber} is not loaded, so volume positions were not updated from that section on. Reopen the volume once it loads.",
                             corrections: corrections);
                     }
-
-                    await mapper.Initialize(cancellationToken).ConfigureAwait(false);
-                    if (cancellationToken.IsCancellationRequested)
-                        return Cancelled(corrections);
 
                     int updated = 0;
                     List<LocationObj> changed = [];
@@ -140,7 +122,7 @@ namespace WebAnnotation
 
                         try
                         {
-                            if (TryUpdateVolumeShape(location, mapper))
+                            if (TryUpdateVolumeShape(location, defaultTransform))
                             {
                                 location.DBAction = DBACTION.UPDATE;
                                 changed.Add(location);
@@ -149,15 +131,15 @@ namespace WebAnnotation
                         }
                         catch (Exception ex)
                         {
-                            Trace.WriteLine($"Location {location.ID} on section {section.Number} was skipped: {ex.Message}");
+                            Trace.WriteLine($"Location {location.ID} on section {sectionNumber} was skipped: {ex.Message}");
                         }
 
                         Report(progress, ref lastProgressUtc, index, sections.Count,
-                            SectionMessage(section.Number, position, sections.Count, updated), force: false);
+                            SectionMessage(sectionNumber, position, sections.Count, updated), force: false);
                     }
 
                     Report(progress, ref lastProgressUtc, index, sections.Count,
-                        SectionMessage(section.Number, position, sections.Count, updated), force: true);
+                        SectionMessage(sectionNumber, position, sections.Count, updated), force: true);
 
                     if (cancellationToken.IsCancellationRequested)
                         return Cancelled(corrections);
@@ -170,19 +152,18 @@ namespace WebAnnotation
                         }
                         catch (Exception ex)
                         {
-                            Trace.WriteLine($"Failed to save section {section.Number}: {ex}");
+                            Trace.WriteLine($"Failed to save section {sectionNumber}: {ex}");
                             return new VolumePositionUpdateResult(
                                 cancelled: false,
-                                error: $"Section {section.Number} failed to save: {ex.Message}",
+                                error: $"Section {sectionNumber} failed to save: {ex.Message}",
                                 corrections: corrections);
                         }
 
-                        corrections.Add(new SectionCorrectionCount(section.Number, updated));
+                        corrections.Add(new SectionCorrectionCount(sectionNumber, updated));
                     }
 
-                    mappings.SectionMappingCache.Remove(section.Number);
                     Report(progress, ref lastProgressUtc, position, sections.Count,
-                        SectionMessage(section.Number, position, sections.Count, updated), force: true);
+                        SectionMessage(sectionNumber, position, sections.Count, updated), force: true);
                 }
             }
             catch (OperationCanceledException)
@@ -225,17 +206,21 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Returns true when the location should be saved. Same shape test as VikingAU: control points farther than ε² = 0.25, a geometry-type change, or a repaired location type.
+        /// Sets the location's <c>VolumeShape</c> to <see cref="VolumeCache.Shape"/> under <paramref name="defaultTransform"/>
+        /// and returns true when the location should be saved. Same shape test as VikingAU: control points farther than
+        /// ε² = 0.25, a geometry-type change, or a repaired location type.
         /// </summary>
-        private static bool TryUpdateVolumeShape(LocationObj location, MappingBase mapper)
+        /// <exception cref="ArgumentException">Even the owner's mapping-failure policy cannot place the location.</exception>
+        internal static bool TryUpdateVolumeShape(LocationObj location, IVolumeToSectionTransform defaultTransform)
         {
             if (location.MosaicShape is null)
                 return false;
 
+            SqlGeometry? original = location.VolumeShape is null ? null : LocationVolumeGeometry.ToSqlGeometry(location.VolumeShape);
             bool typeUpdated = false;
             if (!IsLocationTypeValid(location))
             {
-                if (TryRepairLocationType(location))
+                if (TryRepairLocationType(location, defaultTransform))
                 {
                     Trace.WriteLine($"Repaired type for location {location.ID}");
                     typeUpdated = true;
@@ -246,21 +231,15 @@ namespace WebAnnotation
                 }
             }
 
-            // The same forward mapping every view draws with, so the cache it writes is what the viewer shows.
-            SqlGeometry? updatedVolumeShape = LocationVolumeGeometry.MapShape(location.TypeCode, location.MosaicShape.ToSqlGeometry(), mapper);
-            if (updatedVolumeShape is null)
-            {
-                Trace.WriteLine("Could not map location ID : " + location.ID);
-                return false;
-            }
-
+            // The value every client save writes: the forward owner's cache shape under the default transform.
+            IShape2D cache = VolumeCache.Shape(location, defaultTransform);
+            SqlGeometry updatedVolumeShape = LocationVolumeGeometry.ToSqlGeometry(cache);
             if (!updatedVolumeShape.STIsValid().IsTrue)
             {
                 Trace.WriteLine($"Location {location.ID} invalid : {updatedVolumeShape.IsValidDetailed()} ");
                 return false;
             }
 
-            SqlGeometry? original = location.VolumeShape?.ToSqlGeometry();
             bool shapeChanged = original is null
                 || !original.STIsValid().IsTrue
                 || updatedVolumeShape.GeometryType() != original.GeometryType()
@@ -268,7 +247,7 @@ namespace WebAnnotation
 
             if (shapeChanged)
             {
-                location.VolumeShape = updatedVolumeShape.ToShape2D();
+                location.VolumeShape = cache;
                 return true;
             }
 
@@ -277,7 +256,7 @@ namespace WebAnnotation
 
         private static bool IsLocationTypeValid(LocationObj location)
         {
-            switch (location.MosaicShape.ToSqlGeometry().GeometryType())
+            switch (LocationVolumeGeometry.ToSqlGeometry(location.MosaicShape).GeometryType())
             {
                 case SupportedGeometryType.POINT:
                     return location.TypeCode == LocationType.POINT;
@@ -295,10 +274,13 @@ namespace WebAnnotation
             }
         }
 
-        /// <summary>Returns true when the location type or mosaic shape was changed so it matches the stored geometry.</summary>
-        private static bool TryRepairLocationType(LocationObj location)
+        /// <summary>
+        /// Returns true when the location type or mosaic shape was changed so it matches the stored geometry. A new mosaic
+        /// shape is saved through the owner (<see cref="TrySetRepairedShape"/>).
+        /// </summary>
+        private static bool TryRepairLocationType(LocationObj location, IVolumeToSectionTransform defaultTransform)
         {
-            switch (location.MosaicShape.ToSqlGeometry().GeometryType())
+            switch (LocationVolumeGeometry.ToSqlGeometry(location.MosaicShape).GeometryType())
             {
                 case SupportedGeometryType.POINT:
                     if (location.TypeCode != LocationType.POINT)
@@ -327,34 +309,45 @@ namespace WebAnnotation
 
                     if (location.TypeCode == LocationType.POLYGON || location.TypeCode == LocationType.CURVEPOLYGON)
                     {
-                        SqlGeometry newShape = location.MosaicShape.ToSqlGeometry().ToPoints().ToPolygon();
-                        if (newShape.STIsValid().IsTrue)
-                        {
-                            location.MosaicShape = newShape.ToShape2D();
-                            location.Width = null;
-                            return true;
-                        }
-
-                        return false;
+                        SqlGeometry newShape = LocationVolumeGeometry.ToSqlGeometry(location.MosaicShape).ToPoints().ToPolygon();
+                        return TrySetRepairedShape(location, defaultTransform, newShape, null);
                     }
                     break;
                 case SupportedGeometryType.POLYGON:
                     if (location.TypeCode == LocationType.CLOSEDCURVE || location.TypeCode == LocationType.POLYLINE)
                     {
-                        SqlGeometry newShape = location.MosaicShape.ToSqlGeometry().ToPoints().ToSqlGeometry();
-                        if (newShape.STIsValid().IsTrue)
-                        {
-                            location.MosaicShape = newShape.ToShape2D();
-                            location.Width = 8;
-                            return true;
-                        }
-
-                        return false;
+                        SqlGeometry newShape = LocationVolumeGeometry.ToSqlGeometry(location.MosaicShape).ToPoints().ToSqlGeometry();
+                        return TrySetRepairedShape(location, defaultTransform, newShape, 8);
                     }
                     break;
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Saves a repaired mosaic shape through the owner (<see cref="LocationObjExtensions.SetShapeFromGeometryInSection"/>)
+        /// with its new <paramref name="width"/>. The width is set first because the cache is derived for it; when the shape is
+        /// invalid or cannot be saved, the location keeps both its shape and its old width.
+        /// </summary>
+        private static bool TrySetRepairedShape(LocationObj location, IVolumeToSectionTransform defaultTransform, SqlGeometry newShape, double? width)
+        {
+            if (!newShape.STIsValid().IsTrue)
+                return false;
+
+            double? oldWidth = location.Width;
+            location.Width = width;
+            try
+            {
+                location.SetShapeFromGeometryInSection(defaultTransform, newShape);
+                return true;
+            }
+            catch (ArgumentException e)
+            {
+                location.Width = oldWidth;
+                Trace.WriteLine($"Location {location.ID}: the repaired shape could not be saved: {e.Message}");
+                return false;
+            }
         }
 
         private static bool AnyPointsAreDifferent(Vector2[] original, Vector2[] updated)

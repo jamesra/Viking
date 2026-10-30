@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
@@ -138,10 +139,20 @@ namespace WebAnnotation.UI
                 return;
             }
 
-            using var dialog = new UpdateVolumePositionsForm(
-                volume.TransformNames,
-                string.IsNullOrEmpty(volume.ActiveVolumeTransform) ? volume.DefaultVolumeTransform : volume.ActiveVolumeTransform,
-                volume.SectionViewModels.Keys);
+            // The stored positions are always written under the default transform. A volume without transforms stores section
+            // positions; one whose default transform did not load must not, or every aligned position would be lost.
+            string? defaultTransform = volume.TransformNames.Contains(volume.DefaultVolumeTransform) ? volume.DefaultVolumeTransform : null;
+            if (defaultTransform is null && volume.TransformNames.Length > 0)
+            {
+                MessageBox.Show(
+                    $"The volume's default transform ({volume.DefaultVolumeTransform ?? "none"}) is not loaded, so volume positions cannot be updated. Reopen the volume once it loads.",
+                    "Update Volume Positions",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            using var dialog = new UpdateVolumePositionsForm(defaultTransform, volume.SectionViewModels.Keys);
             if (dialog.ShowDialog(State.ViewerForm) != DialogResult.OK)
                 return;
 
@@ -150,11 +161,10 @@ namespace WebAnnotation.UI
 
         private static void Launch(VolumeViewModel volume, BeginProgressDisplay beginProgress, UpdateVolumePositionsForm dialog)
         {
-            var sections = new List<VolumePositionSection>();
+            var sections = new List<int>();
             if (dialog.IsAllSections)
             {
-                foreach (SectionViewModel section in volume.SectionViewModels.Values)
-                    sections.Add(ToTarget(section));
+                sections.AddRange(volume.SectionViewModels.Keys);
             }
             else
             {
@@ -162,9 +172,8 @@ namespace WebAnnotation.UI
                 {
                     if (number < int.MinValue || number > int.MaxValue)
                         continue;
-                    if (!volume.SectionViewModels.TryGetValue((int)number, out SectionViewModel? section))
-                        continue;
-                    sections.Add(ToTarget(section));
+                    if (volume.SectionViewModels.ContainsKey((int)number))
+                        sections.Add((int)number);
                 }
             }
 
@@ -191,17 +200,14 @@ namespace WebAnnotation.UI
                 return;
             }
 
-            MappingManager mappings = volume.CreateMappingManager();
-            string? transformName = dialog.TransformName;
             _activeCancellation = cancellation;
             HookExitConfirmation(State.ViewerForm);
-            _activeRun = FinishAsync(mappings, sections, transformName, handle.Value.Progress, handle.Value.Finish, cancellation);
+            _activeRun = FinishAsync(volume, sections, handle.Value.Progress, handle.Value.Finish, cancellation);
         }
 
         private static async Task FinishAsync(
-            MappingManager mappings,
-            List<VolumePositionSection> sections,
-            string? transformName,
+            IDefaultVolumeTransformProvider transforms,
+            List<int> sections,
             IProgress<ViewerTaskProgress> progress,
             IDisposable finish,
             CancellationTokenSource cancellation)
@@ -211,9 +217,8 @@ namespace WebAnnotation.UI
             {
                 result = await Task.Run(async () =>
                     await VolumePositionUpdateJob.RunAsync(
-                        mappings,
+                        transforms,
                         sections,
-                        transformName,
                         progress,
                         cancellation.Token).ConfigureAwait(false)).ConfigureAwait(true);
             }
@@ -235,11 +240,6 @@ namespace WebAnnotation.UI
             }
 
             VolumePositionUpdateSummary.Show(State.ViewerForm, result);
-        }
-
-        private static VolumePositionSection ToTarget(SectionViewModel section)
-        {
-            return new VolumePositionSection(section.Number, section.DefaultChannel, section.DefaultPyramidTransform);
         }
     }
 
