@@ -30,6 +30,7 @@ Documentation/source/Client/versionhistory.rst.
 * **Fix: no silent refusal to edit.** Moving, resizing or reshaping an annotation that lies partly outside its section's alignment now shows a message saying it cannot be edited on that section, instead of doing nothing.
 <!-- Phase 1 of the annotation volume-geometry redesign: every view takes its volume geometry from LocationVolumeGeometry. -->
 <!-- Phase 2: every command maps its edit back to mosaic through LocationVolumeGeometry.ToMosaic and saves mosaic. -->
+<!-- Phase 3: the stored volume cache is always written under the default transform (VolumeCache); the job and VikingAU are the refresh after a .stos change. -->
 
 ## 1.2.135 — 2026-10-29 (Viking Test, unsigned)
 

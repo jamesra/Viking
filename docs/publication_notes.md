@@ -103,6 +103,24 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
 
 ## Algorithmic decisions
 
+- **2026-10-30 The stored volume cache always holds the volume's default transform.** Decision (James, approved design):
+  mosaic is the truth and is what is saved; `VolumeShape` (and the `VolumeX`/`VolumeY` the server computes from it) is a
+  cache, written by every save and by the refresh after a `.stos` change (Update Volume Positions, VikingAU) as the
+  forward owner's geometry under the volume's *default* section-to-volume transform, whatever transform is on screen.
+  Why: server queries, OData and export read the cache, and before this a save under another transform (or a refresh run
+  with a picked transform) left sections, even locations on one section, in different spaces. The cache value is
+  `LocationVolumeGeometry.CacheShape`: a circle's exact five-point-mean circle, not the smoothed ring's inscribed circle,
+  which the old refresh wrote about 2% smaller than the client save. Policies: a section the default has no entry for (the
+  reference section) maps by identity, as the viewer and `MappingManager` place it; a default transform that did not load
+  while others did is never replaced by identity (the save keeps the transform it was made under, the refresh refuses);
+  a location the default cannot map exactly gets the owner's one failure policy (extrapolated), not "no cache", because
+  the WCF server fills a missing `VolumeShape` with a circle of the *mosaic* radius at the old `VolumePosition`
+  (Viking `Servers/AnnotationService/.../LocationExtensions.cs`), wrong for every non-circle type. Rejected: sending no
+  `VolumeShape` (that server fallback), caching under the active transform (inconsistent basis), keeping the smoothed
+  circle (two cache values for one circle). Where: `SqlGeometryAnnotationExtensions/VolumeCache.cs`,
+  `LocationObjExtensions.SetShapeFromGeometryInSection`, `VolumeViewModel.GetDefaultSectionToVolumeTransform`,
+  `Clients/Viking/WebAnnotation/VolumePositionUpdateJob.cs`, `Clients/VikingAU/Program.cs`.
+
 - **2026-10-30 Annotation edits are saved by one inverse owner, solved against the forward rule.** Why: mosaic is the
   truth and every view draws the forward owner's mapping, so an edit made on screen must save the mosaic geometry whose
   forward mapping is what the user saw. The one-step inverse five-point mean is not the inverse of the forward one under

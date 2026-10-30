@@ -1,5 +1,5 @@
 ---
-description: Annotation volume geometry - mosaic is the truth, the stored volume columns are a cache, every view draws from one forward owner (LocationVolumeGeometry), and every edit is mapped back by one inverse owner (LocationVolumeGeometry.ToMosaic); views and commands never map or read the stored cache themselves.
+description: Annotation volume geometry - mosaic is the truth, the stored volume columns are a cache always written under the volume's default transform (VolumeCache), every view draws from one forward owner (LocationVolumeGeometry), and every edit is mapped back by one inverse owner (LocationVolumeGeometry.ToMosaic); views and commands never map or read the stored cache themselves, and only the owner writes MosaicShape.
 globs: Clients/Viking/WebAnnotation/**,Clients/VolumeModel/**,**/SqlGeometryAnnotationExtensions/**,**/WebAnnotationModel/**
 alwaysApply: false
 ---
@@ -8,15 +8,32 @@ alwaysApply: false
 ## The model
 - A location is stored in **mosaic** (section) space: `MosaicShape`, `X`, `Y`, `Radius`, `Width`. Mosaic is the truth.
 - `VolumeShape`, `VolumeX`, `VolumeY` (and the volume radius inside a circle's `VolumeShape`) are a **cache**: the mosaic
-  geometry mapped through a section-to-volume transform. The persisted cache holds the volume's **default** transform
-  (enforced in phase 3).
+  geometry mapped through a section-to-volume transform.
 - A changed `.stos` must re-render every annotation at once, so nothing that draws may trust the cache.
+
+## The cache basis: the default transform (`VolumeCache`)
+- The persisted cache **always** holds the volume's **default** transform, whatever transform is on screen, so server
+  queries, OData and export see one space. Its value is `VolumeCache.Shape(location, default)` =
+  `LocationVolumeGeometry.For(location, default).CacheShape`: a circle's exact owner circle, otherwise `Shape`.
+- The default transform comes from one helper: `IDefaultVolumeTransformProvider.GetDefaultSectionToVolumeTransform`
+  (`VolumeViewModel`). `VolumeCache.Basis(location, transform)` resolves it for a save; the viewer registers the open
+  volume (`VolumeCache.DefaultTransforms`, set by `AnnotationOverlay`); without an open volume (VikingAU, unit tests) the
+  transform passed is the basis, and the caller must pass the default.
+- Policies, documented on `VolumeCache`: a section the default has no entry for (the reference section) maps by identity,
+  as the viewer and `MappingManager` place it; a default transform that did not load while others did is never replaced
+  by identity (a save keeps the transform it was made under, the refresh refuses); a location the default cannot map
+  exactly gets the owner's failure policy (extrapolated). The client never sends a null `VolumeShape`: the WCF server
+  would store a circle of the mosaic radius at the old `VolumePosition`.
+- **After a `.stos` change, refresh the cache** with **Update Volume Positions** (`VolumePositionUpdateJob`, Annotation
+  menu, review access) or VikingAU. Both write `VolumeCache.Shape` under the default transform, exactly what a save writes;
+  the job has no transform picker.
 
 ## The forward owner: `LocationVolumeGeometry` (SqlGeometryAnnotationExtensions)
 `LocationVolumeGeometry.For(location, transform)` (or `For(location, provider)`) is the only place mosaic geometry is
 mapped forward for drawing. It carries:
-- `Shape`: `MapShape(type, mosaic, transform)` = `GetSmoothedShape(TryMapShapeSectionToVolume(mosaic))`. The same
-  function `VolumePositionUpdateJob` writes into the cache, so the cache and the views always agree.
+- `Shape`: `MapShape(type, mosaic, transform)` = `GetSmoothedShape(TryMapShapeSectionToVolume(mosaic))`.
+  `CacheShape` is what the stored cache holds: `Shape`, except a circle is its exact `Circle` (the smoothed ring is the
+  inscribed circle of its polygon, about 2% smaller).
 - `ControlPoints` / `ControlPolygon()`: the mapped, unsmoothed control points (edit handles, polylines, polygons).
 - `Circle` (circles, points): centre from `X,Y`, radius by the five-point mean (`circle-mapping-scale.mdc`).
 - `Scale`: the local five-point mean scale. `Width` = mosaic width x `Scale`; `Radius` = mosaic radius x `Scale` (the
@@ -39,7 +56,8 @@ on the class (circles extrapolate the centre and keep the mosaic radius; other s
 - A link, label or marker that belongs to a location takes its geometry from that location's owner, so it meets what is
   drawn.
 - `VolumeGeometryGuardTests` enforces this for `View/`, `ViewModel/` and `UI/` (commands, actions, auto-polygonize); each
-  exception is a read-only entry on its named, commented allow-list. `LocationVolumeGeometryTests` checks every view and
+  exception is a read-only entry on its named, commented allow-list. It also flags any `.MosaicShape =` write in
+  WebAnnotation, VikingAU and SqlGeometryAnnotationExtensions outside `LocationObjExtensions`. `LocationVolumeGeometryTests` checks every view and
   every factory branch against the owner (property and closed-set tests); add a new view there.
 
 ## Commands and edits: the inverse rule (in force)
@@ -54,13 +72,17 @@ The user edits in volume space (what is on screen). Every command and save path 
    the forward five-point mean and a width is the volume width divided by the forward owner's local scale, so
    forward(inverse(v)) == v, also under shear and non-rigid warps.
 3. **Save mosaic, derive volume.** `LocationObjExtensions.TryApply` (or `SetShapeFromGeometryInSection` for an edit made in
-   mosaic space, such as a polygon move or a hole removal) sets `MosaicShape` (and `Width`) and takes `VolumeShape` from the
-   forward owner. A command never copies a volume value into the mosaic columns and never keeps the user's volume shape.
+   mosaic space, such as a polygon move, a hole removal or Simplify Polygon) sets `MosaicShape` (and `Width`) and writes
+   `VolumeShape` as `VolumeCache.Shape` under the **default** transform. The edit is checked and mapped back under the
+   transform on screen; only the cache uses the default. **No code writes `MosaicShape` directly**, and no code builds a
+   location from a volume shape it kept (`new LocationObj(parent, mosaic, volume, …)`): a command never copies a volume
+   value into the mosaic columns and never keeps the user's volume shape.
 4. **Failure is explicit.** When any point does not map, `MosaicGeometry.Failure` says why; the command refuses, the
-   location keeps its shape, and the user is shown the reason (`LocationActions.ShowUnmappedEdit`), or the pen choice is not
-   offered. Nothing partial or extrapolated is saved.
+   location keeps its shape, and the user is shown the reason (`LocationActions.ShowUnmappedEdit`). An edit attempted on a
+   location the owner cannot map exactly (`IsExact` false) starts no command and shows `LocationActions.UneditableMessage`
+   (`EditableGeometry(loc, transform, reportTo)`). Nothing partial or extrapolated is saved as mosaic.
+   - Exception, by design: a pen choice (cut piece, linked location, contour change) whose points cannot be mapped is not
+     offered and is only traced, since the user never picked it.
 
 Mosaic-first edits that keep stored control points (pen splice cuts, region cuts, hole removal, polygon moves by the
-mapped drag) stay mosaic-first and map only their new points back. Which `VolumeShape` is written to the server (default
-transform only) and `VolumePositionUpdateJob` pinning are left to phase 3; until then commands send the forward owner's
-shape (a circle as the owner's circle).
+mapped drag) stay mosaic-first and map only their new points back.
