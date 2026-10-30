@@ -15,9 +15,12 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.UI.Commands
 {
+    /// <summary>
+    /// Drags a vertex of the polygon the forward owner draws (<c>LocationVolumeGeometry.ControlPolygon</c>) and saves the
+    /// result mapped back to mosaic by the inverse owner.
+    /// </summary>
     internal class AdjustPolygonVertexCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
-        private readonly Polygon OriginalMosaicPolygon;
         private readonly Polygon OriginalVolumePolygon;
 
         private Polygon OutputVolumePolygon;
@@ -43,14 +46,14 @@ namespace WebAnnotation.UI.Commands
 
         public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
 
+        /// <param name="volume_polygon">The location's control polygon in volume space, from the forward owner.</param>
         public AdjustPolygonVertexCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        Polygon mosaic_polygon,
+                                        Polygon volume_polygon,
                                         Microsoft.Xna.Framework.Color color,
                                         OnCommandSuccess success_callback) : base(parent)
         {
             mapping = parent.Section.ActiveSectionToVolumeTransform;
-            OriginalMosaicPolygon = mosaic_polygon;
-            OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
+            OriginalVolumePolygon = volume_polygon;
             _color = color;
 
             //this.SmoothedVolumePolygon = OriginalVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints);
@@ -155,7 +158,7 @@ namespace WebAnnotation.UI.Commands
         {
             try
             {
-                TryApplyInSection(mapping, OutputVolumePolygon, mosaic_polygon => success_callback(mosaic_polygon, OutputVolumePolygon), nameof(AdjustPolygonVertexCommand));
+                TryApplyInSection(mapping, OutputVolumePolygon, mosaic_polygon => success_callback(mosaic_polygon, OutputVolumePolygon), nameof(AdjustPolygonVertexCommand), ShowRefusedEdit);
             }
             catch (ArgumentOutOfRangeException)
             {

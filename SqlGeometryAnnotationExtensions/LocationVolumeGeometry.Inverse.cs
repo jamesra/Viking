@@ -204,6 +204,39 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
+        /// Maps an edited volume polygon with holes back to a mosaic <see cref="Polygon"/>, all or none: the
+        /// <see cref="TryMapPointsToMosaic"/> of every ring, for commands and cuts that go on working with the mosaic polygon
+        /// (and save it with <c>SetShapeFromGeometryInSection</c>).
+        /// </summary>
+        /// <param name="failure">Why the polygon could not be mapped, in words for the user; null on success.</param>
+        /// <returns>False, with <paramref name="mosaicPolygon"/> null, when any point does not map.</returns>
+        public static bool TryMapPolygonToMosaic(Polygon volumePolygon, IVolumeToSectionTransform transform, out Polygon? mosaicPolygon, out string? failure)
+        {
+            if (volumePolygon is null)
+                throw new ArgumentNullException(nameof(volumePolygon));
+
+            mosaicPolygon = null;
+            if (!TryMapPointsToMosaic(volumePolygon.ExteriorRing, transform, out Vector2[] exterior, out failure))
+                return false;
+
+            List<Vector2[]> holes = new(volumePolygon.InteriorRings.Count);
+            foreach (Vector2[] hole in volumePolygon.InteriorRings)
+            {
+                if (!TryMapPointsToMosaic(hole, transform, out Vector2[] mosaicHole, out failure))
+                    return false;
+
+                holes.Add(mosaicHole);
+            }
+
+            Polygon mapped = new(exterior);
+            foreach (Vector2[] hole in holes)
+                mapped.AddInteriorRing(new Polygon(hole));
+
+            mosaicPolygon = mapped;
+            return true;
+        }
+
+        /// <summary>
         /// The mosaic width whose forward width is <paramref name="volumeWidth"/>: volume width divided by the five-point mean
         /// scale the forward owner samples at the shape's centre. For lines and open curves that sample radius is half the
         /// width itself, so the width is found by a short fixed-point iteration (one step for an affine transform).

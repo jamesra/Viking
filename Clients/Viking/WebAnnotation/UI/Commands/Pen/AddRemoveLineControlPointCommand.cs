@@ -5,18 +5,23 @@ using System.Windows.Forms;
 
 namespace WebAnnotation.UI.Commands
 {
+    /// <summary>
+    /// Adds a control point to a line or curve where the cursor is, on the control points the forward owner draws
+    /// (<c>LocationVolumeGeometry.ControlPoints</c>), and hands the new volume control points to the callback, which maps
+    /// them back to mosaic through the inverse owner.
+    /// </summary>
     internal class AddLineControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                    Vector2[] OriginalMosaicControlPoints,
+                                    Vector2[] OriginalVolumeControlPoints,
 AddLineControlPointCommand.OnCommandSuccess success_callback) : AnnotationCommandBase(parent)
     {
-        private readonly Vector2[] OriginalControlPoints = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(OriginalMosaicControlPoints);
+        private readonly Vector2[] OriginalControlPoints = OriginalVolumeControlPoints;
         private Vector2[] NewControlPoints;
         private int iNewControlPoint = -1;
 
-        public delegate void OnCommandSuccess(Vector2[] VolumeControlPoints, Vector2[] MosaicControlPoints);
+        /// <summary>The control points with the new one, in volume space.</summary>
+        public delegate void OnCommandSuccess(Vector2[] VolumeControlPoints);
 
         private readonly OnCommandSuccess success_callback = success_callback;
-        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping = parent.Section.ActiveSectionToVolumeTransform;
 
         public static Vector2[] AddControlPoint(Vector2[] OriginalControlPoints, Vector2 NewControlPointPosition, out int iNewControlPoint)
         {
@@ -40,36 +45,29 @@ AddLineControlPointCommand.OnCommandSuccess success_callback) : AnnotationComman
 
         protected override void Execute()
         {
-            Vector2[] MosaicControlPoints;
-            try
-            {
-                MosaicControlPoints = mapping.VolumeToSection(NewControlPoints);
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-                Trace.WriteLine("TranslateLocationCommand: Could not map world point on Execute: " + NewControlPoints.ToString(), "Command");
-                return;
-            }
-
-            success_callback(NewControlPoints, MosaicControlPoints);
+            success_callback(NewControlPoints);
 
             base.Execute();
         }
     }
 
+    /// <summary>
+    /// Removes the control point of a line or curve nearest the cursor, on the control points the forward owner draws, and
+    /// hands the remaining volume control points to the callback, which maps them back to mosaic through the inverse owner.
+    /// </summary>
     internal class RemoveLineControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                    Vector2[] OriginalMosaicControlPoints,
+                                    Vector2[] OriginalVolumeControlPoints,
                                     bool IsClosed,
 RemoveLineControlPointCommand.OnCommandSuccess success_callback) : AnnotationCommandBase(parent)
     {
-        private readonly Vector2[] OriginalControlPoints = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(OriginalMosaicControlPoints);
+        private readonly Vector2[] OriginalControlPoints = OriginalVolumeControlPoints;
         private Vector2[] NewControlPoints;
         private readonly bool IsClosedShape = IsClosed;
 
-        public delegate void OnCommandSuccess(Vector2[] VolumeControlPoints, Vector2[] MosaicControlPoints);
+        /// <summary>The control points without the removed one, in volume space.</summary>
+        public delegate void OnCommandSuccess(Vector2[] VolumeControlPoints);
 
         private readonly OnCommandSuccess success_callback = success_callback;
-        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping = parent.Section.ActiveSectionToVolumeTransform;
 
         public static Vector2[] RemoveControlPoint(Vector2[] OriginalControlPoints, Vector2 RemovedControlPointPosition, bool IsClosedShape)
         {
@@ -97,18 +95,7 @@ RemoveLineControlPointCommand.OnCommandSuccess success_callback) : AnnotationCom
 
         protected override void Execute()
         {
-            Vector2[] MosaicControlPoints;
-            try
-            {
-                MosaicControlPoints = mapping.VolumeToSection(NewControlPoints);
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-                Trace.WriteLine("TranslateLocationCommand: Could not map world point on Execute: " + NewControlPoints.ToString(), "Command");
-                return;
-            }
-
-            success_callback(NewControlPoints, MosaicControlPoints);
+            success_callback(NewControlPoints);
 
             base.Execute();
         }

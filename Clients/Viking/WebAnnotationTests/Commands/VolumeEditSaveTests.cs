@@ -142,6 +142,64 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual(drawn.Radius, location.VolumeShape.ToCircle().Radius, 0.01, "the volume shape is the forward owner's circle");
         }
 
+        /// <summary>
+        /// Adjust, add or remove a control point of a line or curve: the edited volume control points are what the forward
+        /// owner draws afterwards, and the mosaic width is left as it was.
+        /// </summary>
+        [TestMethod]
+        public void AControlPointEditOfALineIsDrawnBackAsEditedAndKeepsItsWidth()
+        {
+            foreach (var (name, transform) in Transforms)
+            {
+                LocationObj location = LocationVolumeGeometryTests.NewLocation(LocationType.OPENCURVE, Wkt("LINESTRING (1800 2800, 1950 3050, 2100 2900, 2300 3150)"), width: 10);
+                Vector2[] edited = [.. LocationVolumeGeometry.For(location, transform).ControlPoints];
+                edited[2] += new Vector2(-60, 85);
+                Vector2[] added = AddLineControlPointCommand.AddControlPoint(edited, (edited[0] + edited[1]) / 2 + new Vector2(5, 5), out _);
+
+                Assert.IsTrue(LocationActions.SaveVolumeLineEdit(location, transform, added, null, out string failure), failure);
+
+                AssertSamePoints(added, LocationVolumeGeometry.For(location, transform).ControlPoints, name);
+                Assert.AreEqual(10, location.Width, $"{name}: an edit without a width keeps the mosaic width");
+            }
+        }
+
+        /// <summary>
+        /// Adjust, add or remove a polygon vertex: the polygon the user edited on the forward owner's control polygon is
+        /// mapped back and drawn again as edited, holes included.
+        /// </summary>
+        [TestMethod]
+        public void AVertexEditOfAPolygonIsDrawnBackAsEdited()
+        {
+            foreach (var (name, transform) in Transforms)
+            {
+                LocationObj location = LocationVolumeGeometryTests.Fixture(LocationType.CURVEPOLYGON);
+                Polygon control = LocationVolumeGeometry.For(location, transform).ControlPolygon();
+                Vector2[] ring = [.. control.ExteriorRing];
+                ring[1] += new Vector2(40, -25);
+                Polygon edited = new(ring);
+                foreach (Vector2[] hole in control.InteriorRings)
+                    edited.AddInteriorRing(hole);
+
+                Assert.IsTrue(AnnotationCommandBase.TryApplyInSection(transform, edited, mosaic => location.SetShapeFromGeometryInSection(transform, mosaic.ToSqlGeometry()), name));
+
+                Polygon drawn = LocationVolumeGeometry.For(location, transform).ControlPolygon();
+                AssertSamePoints(edited.ExteriorRing, drawn.ExteriorRing, name);
+                AssertSamePoints(edited.InteriorRings[0], drawn.InteriorRings[0], $"{name}: hole");
+            }
+        }
+
+        [TestMethod]
+        public void APolygonEditOffTheTransformIsRefusedWithTheReason()
+        {
+            IVolumeToSectionTransform transform = new ClippedTransform(new ScaleTransform(1, Vector2.Zero), new Rectangle(0, 2000, 0, 2000));
+            Polygon edited = new([new(100, 100), new(2500, 100), new(300, 300), new(100, 100)]);
+            string? reason = null;
+
+            Assert.IsFalse(AnnotationCommandBase.TryApplyInSection(transform, edited, _ => Assert.Fail("applied"), nameof(VolumeEditSaveTests), r => reason = r));
+
+            StringAssert.Contains(reason, "1 of 4 points");
+        }
+
         internal sealed class SingleTransformProvider(IVolumeToSectionTransform transform) : IVolumeTransformProvider
         {
             public IVolumeToSectionTransform GetSectionToVolumeTransform(int SectionNumber) => transform;

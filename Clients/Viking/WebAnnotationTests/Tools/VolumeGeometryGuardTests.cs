@@ -24,7 +24,6 @@ namespace WebAnnotationTests.Tools
         /// </summary>
         private static readonly (string File, string Line, string Why)[] AllowList =
         [
-            ("View/LocationActions.cs", "", "command factory and save helpers: edits, which map back to mosaic (phase 2)"),
             ("ViewModel/Location_ViewModelBase.cs", "TrySectionToVolume(ring", "Edit mask: an edit that saves (phase 2)"),
             ("ViewModel/Location_ViewModelBase.cs", "VolumeX => modelObj.VolumePosition.X", "the VolumeX property column shows the stored cache itself"),
             ("ViewModel/Location_ViewModelBase.cs", "VolumeY => modelObj.VolumePosition.Y", "the VolumeY property column shows the stored cache itself"),
