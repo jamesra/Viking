@@ -81,7 +81,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (transform is null)
                 return false;
 
-            Circle? volumeCircle = transform.TryMapShapeSectionToVolume(mosaicCircle);
+            Circle? volumeCircle = LocationVolumeGeometry.TryMapCircle(mosaicCircle, transform);
             return volumeCircle.HasValue && TryCreateStartingPrompt(volumeCircle.Value, out prompt);
         }
 
@@ -130,7 +130,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private const int AxisPointCount = 4;
 
         /// <summary>
-        /// Drops points the section-to-volume transform fails to map.
+        /// Maps mosaic prompt points forward with <see cref="LocationVolumeGeometry.TryMapPoints"/> and drops the points the
+        /// section-to-volume transform fails to map.
         /// </summary>
         public static IReadOnlyList<Vector2> ToVolumePoints(
             IReadOnlyList<Vector2> mosaicPoints,
@@ -139,7 +140,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (mosaicPoints is null || mosaicPoints.Count == 0 || transform is null)
                 return [];
 
-            bool[] success = transform.TrySectionToVolume([.. mosaicPoints], out Vector2[] volumePoints);
+            bool[] success = LocationVolumeGeometry.TryMapPoints(mosaicPoints, transform, out Vector2[] volumePoints);
             return [.. volumePoints.Where((p, i) => i < success.Length && success[i])];
         }
 

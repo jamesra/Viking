@@ -455,8 +455,22 @@ namespace WebAnnotation.ViewModel
             switch (targetShape)
             {
                 case Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE:
-                    this.modelObj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
-                    LocationActions.UpdateCircleLocationNoSaveCallback(this.modelObj, new Geometry.Vector2(VolumeX, VolumeY), new Geometry.Vector2(X, Y));
+                    {
+                        // The circle is the old shape's mosaic centre and equal-area mosaic radius; the forward owner draws it.
+                        // Dev's LocationObj.Radius of a polygon is the square root of its area, not the equal-area radius.
+                        Viking.VolumeModel.IVolumeToSectionTransform? transform = LocationVolumeGeometryExtensions.Provider()?.GetSectionToVolumeTransform((int)Math.Round(this.modelObj.Z));
+                        if (transform is null)
+                            break;
+
+                        Geometry.Vector2 mosaicCenter = this.modelObj.Position;
+                        double mosaicRadius = this.modelObj.MosaicShape is Geometry.IPolygon2D polygon
+                            ? Math.Sqrt(polygon.Area / Math.PI)
+                            : this.modelObj.Radius;
+                        Viking.AnnotationServiceTypes.Interfaces.LocationType oldType = this.modelObj.TypeCode;
+                        this.modelObj.TypeCode = Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
+                        if (!LocationActions.UpdateCircleLocationFromMosaicNoSaveCallback(this.modelObj, transform, mosaicCenter, mosaicRadius))
+                            this.modelObj.TypeCode = oldType;
+                    }
                     break;
             }
         }

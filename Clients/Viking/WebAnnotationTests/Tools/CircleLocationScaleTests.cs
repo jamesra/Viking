@@ -49,7 +49,7 @@ namespace WebAnnotationTests.Tools
         public void ACircleDrawnInVolumeSpaceGetsAMosaicRadiusThatFollowsTheScale()
         {
             ScaleTransform section = new(scale: 1.25, offset: new Vector2(500, -200));
-            LocationObj location = new(1);
+            LocationObj location = new(1) { TypeCode = LocationType.CIRCLE };
 
             bool updated = LocationActions.UpdateCircleLocationNoSaveCallback(location, section, new Vector2(3000, 4000), 100);
 
@@ -65,7 +65,7 @@ namespace WebAnnotationTests.Tools
         public void ACircleStartedInMosaicSpaceGetsAVolumeRadiusThatFollowsTheScale()
         {
             ScaleTransform section = new(scale: 0.5, offset: new Vector2(10, 20));
-            LocationObj location = new(2);
+            LocationObj location = new(2) { TypeCode = LocationType.CIRCLE };
 
             bool updated = LocationActions.UpdateCircleLocationFromMosaicNoSaveCallback(location, section, new Vector2(1000, 2000), 60);
 
@@ -78,7 +78,7 @@ namespace WebAnnotationTests.Tools
         public void TheVolumeCircleOfALocationIsMappedFromItsMosaicCircleNotItsStoredVolumeShape()
         {
             ScaleTransform section = new(scale: 2, offset: new Vector2(0, 0));
-            LocationObj location = new(3);
+            LocationObj location = new(3) { TypeCode = LocationType.CIRCLE };
             LocationActions.UpdateCircleLocationFromMosaicNoSaveCallback(location, section, new Vector2(100, 100), 10);
             // A stored VolumeShape that carries the mosaic radius (as the gRPC read does) must not be trusted.
             location.VolumeShape = new Circle(new Vector2(200, 200), 10);
@@ -114,6 +114,78 @@ namespace WebAnnotationTests.Tools
 
             Assert.AreEqual(5, Radius(location.MosaicShape), 1e-9);
             Assert.AreEqual(50, Radius(location.VolumeShape), 1e-9);
+        }
+
+        private static readonly IVolumeToSectionTransform[] NonRigid = [AffineTransform.RotateScaleShear(), new WarpTransform()];
+
+        private static LocationObj CircleAt(IVolumeToSectionTransform transform, Vector2 mosaicCenter, double mosaicRadius, long id)
+        {
+            LocationObj location = new(id) { TypeCode = LocationType.CIRCLE };
+            Assert.IsTrue(LocationActions.UpdateCircleLocationFromMosaicNoSaveCallback(location, transform, mosaicCenter, mosaicRadius));
+            return location;
+        }
+
+        /// <summary>
+        /// Resize and create: the circle the user sized on screen is drawn back at that size. Under shear the old one-step
+        /// inverse five-point mean saved a mosaic circle that the forward rule drew about 10% larger.
+        /// </summary>
+        [TestMethod]
+        public void ACircleSizedInVolumeSpaceIsDrawnAtThatSizeUnderANonRigidTransform()
+        {
+            foreach (IVolumeToSectionTransform transform in NonRigid)
+            {
+                LocationObj location = new(5) { TypeCode = LocationType.CIRCLE };
+
+                Assert.IsTrue(LocationActions.UpdateCircleLocationNoSaveCallback(location, transform, new Vector2(3000, 2500), 150));
+
+                Circle drawn = LocationVolumeGeometry.For(location, transform).Circle!.Value;
+                Assert.AreEqual(150, drawn.Radius, 0.01, transform.GetType().Name);
+                Assert.AreEqual(0, Vector2.Distance(new Vector2(3000, 2500), drawn.Center), 0.01, transform.GetType().Name);
+            }
+        }
+
+        /// <summary>
+        /// Translate: the command starts from the circle the forward owner draws and saves the circle left on screen, so the
+        /// mosaic circle moves by the inverse of the volume drag and the drawn circle keeps its size.
+        /// </summary>
+        [TestMethod]
+        public void TranslatingACircleMovesTheMosaicCircleByTheInverseOfTheVolumeDrag()
+        {
+            foreach (IVolumeToSectionTransform transform in NonRigid)
+            {
+                LocationObj location = CircleAt(transform, new Vector2(2000, 2000), 90, 6);
+                Circle start = LocationActions.TryGetVolumeCircle(location, transform)!.Value;
+                Vector2 drag = new(350, -220);
+
+                Assert.IsTrue(LocationActions.UpdateCircleLocationNoSaveCallback(location, transform, start.Center + drag, start.Radius));
+
+                Circle drawn = LocationVolumeGeometry.For(location, transform).Circle!.Value;
+                Assert.AreEqual(0, Vector2.Distance(start.Center + drag, drawn.Center), 0.01, transform.GetType().Name);
+                Assert.AreEqual(start.Radius, drawn.Radius, 0.01, transform.GetType().Name);
+                Assert.AreEqual(0, Vector2.Distance(transform.VolumeToSection(start.Center + drag), location.Position), 0.01, "the mosaic centre is the dragged point mapped back");
+            }
+        }
+
+        [TestMethod]
+        public void ACircleWhoseCentreCannotBeMappedIsRefusedWithAReasonAndKeepsItsShape()
+        {
+            IVolumeToSectionTransform transform = new ClippedTransform(new ScaleTransform(1, Vector2.Zero), new Rectangle(0, 5000, 0, 5000));
+            LocationObj location = CircleAt(transform, new Vector2(2000, 2000), 90, 7);
+            IShape2D before = location.MosaicShape;
+
+            Assert.IsFalse(LocationActions.UpdateCircleLocationNoSaveCallback(location, transform, new Vector2(6000, 2000), 90, out string failure));
+
+            StringAssert.Contains(failure, "outside");
+            Assert.AreSame(before, location.MosaicShape);
+        }
+
+        [TestMethod]
+        public void ACircleSetFromMosaicTakesItsVolumeShapeFromTheForwardOwner()
+        {
+            IVolumeToSectionTransform transform = new WarpTransform();
+            LocationObj location = CircleAt(transform, new Vector2(2000, 2000), 90, 8);
+
+            Assert.AreEqual(LocationVolumeGeometry.For(location, transform).Circle!.Value.Radius, Radius(location.VolumeShape), 0.01);
         }
     }
 }

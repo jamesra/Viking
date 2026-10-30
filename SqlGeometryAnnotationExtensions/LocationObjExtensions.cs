@@ -41,6 +41,14 @@ namespace Viking.VolumeModel
             SetMosaicShape(location, mapper, shape, null);
 
         /// <summary>
+        /// <see cref="SetShapeFromGeometryInSection"/> for a circle in mosaic space, stored as that exact
+        /// <see cref="Circle"/>.
+        /// </summary>
+        /// <exception cref="ArgumentException">The circle does not map onto the volume; the location is then unchanged.</exception>
+        public static void SetShapeFromCircleInSection(this WebAnnotationModel.Objects.LocationObj location, IVolumeToSectionTransform mapper, Circle mosaicCircle) =>
+            SetMosaicShape(location, mapper, SqlGeometryUtils.Extensions.ToCircle(mosaicCircle.Center.X, mosaicCircle.Center.Y, 0, mosaicCircle.Radius), mosaicCircle);
+
+        /// <summary>
         /// Saves an edit made in volume space after <see cref="LocationVolumeGeometry.ToMosaic(Viking.AnnotationServiceTypes.Interfaces.LocationType, Microsoft.SqlServer.Types.SqlGeometry, IVolumeToSectionTransform, double?)"/>
         /// mapped it back: the mosaic shape (and width) become the truth and the forward owner derives the volume shape
         /// (<see cref="SetShapeFromGeometryInSection"/>). Set <c>TypeCode</c> first.
