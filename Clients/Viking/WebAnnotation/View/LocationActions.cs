@@ -411,46 +411,13 @@ namespace WebAnnotation
                                                                 Microsoft.Xna.Framework.Color.White.SetAlpha(0.5f),//loc.Parent.Type.Color.ToXNAColor(0.5f),
                                                                 volumePosition,
                                                                 loc.Width ?? Global.DefaultClosedLineWidth,
-                                                                (sender, volume_points) =>
-                                                                {
-                                                                    Geometry.Vector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
-                                                                    SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
-                                                                    SqlGeometry undoShape = loc.MosaicShape.ToSqlGeometry();
-
-                                                                    try
-                                                                    {
-                                                                        loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, updatedMosaicShape);
-                                                                    }
-                                                                    catch (ArgumentException e)
-                                                                    {
-                                                                        MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                                                    }
-
-                                                                    _ = SaveThen(() => UndoManager.PushLocationShape("Cut Hole", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode));
-                                                                }
-                                                                );
+                                                                (sender, volume_points) => CutVolumeHole(Parent, loc, volume_points));
 
                         }
                         else
                         {
-                            return new PlaceClosedCurveCommand(Parent, Microsoft.Xna.Framework.Color.White, volumePosition, Global.DefaultClosedLineWidth, (sender, volume_points) =>
-                            {
-                                Geometry.Vector2[] mosaic_points = Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volume_points);
-                                SqlGeometry updatedMosaicShape = loc.MosaicShape.AddInteriorPolygon(mosaic_points);
-                                SqlGeometry undoShape = loc.MosaicShape.ToSqlGeometry();
-
-                                try
-                                {
-                                    loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, updatedMosaicShape);
-                                }
-                                catch (ArgumentException e)
-                                {
-                                    MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                }
-
-                                _ = SaveThen(() => UndoManager.PushLocationShape("Cut Hole", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode));
-                            }
-                            );
+                            return new PlaceClosedCurveCommand(Parent, Microsoft.Xna.Framework.Color.White, volumePosition, Global.DefaultClosedLineWidth,
+                                                               (sender, volume_points) => CutVolumeHole(Parent, loc, volume_points));
                         }
                     }
                 case LocationAction.REMOVEHOLE:
@@ -566,10 +533,6 @@ namespace WebAnnotation
                     }
                 case LocationAction.CHANGEBOUNDARY:
                     {
-                        IVolumeToSectionTransform mapper = Parent.Volume.GetSectionToVolumeTransform((int)loc.Z);
-                        Geometry.Vector2 MosaicPosition = mapper.VolumeToSection(volumePosition);
-                        //SqlGeometry MosaicShape = TransformMosaicShapeToSection(Parent.Volume, loc.MosaicShape.MoveTo(MosaicPosition), (int)loc.Z, Parent.Section.Number, out VolumeShape);
-
                         RetraceAndReplacePathCommand retracecmd = new(Parent,
                                                                  loc.MosaicShape.ToPolygon(),
                                                                  loc.Parent.Type.Color.ToXNAColor(0.5f),
@@ -601,6 +564,34 @@ namespace WebAnnotation
                 default:
                     return null;
             }
+        }
+
+        /// <summary>
+        /// Cuts the hole the user drew in volume space into the location: mosaic-first, the stored polygon keeps its own points
+        /// and only the new ring is mapped back by the inverse owner. A ring that cannot be mapped, or a shape that is not
+        /// valid, is shown and nothing is saved. Called by the pen and click Cut Hole commands.
+        /// </summary>
+        private static void CutVolumeHole(Viking.UI.Controls.SectionViewerControl Parent, LocationObj loc, Geometry.Vector2[] volume_points)
+        {
+            IVolumeToSectionTransform section_mapper = Parent.Section.ActiveSectionToVolumeTransform;
+            if (!LocationVolumeGeometry.TryMapPointsToMosaic(volume_points, section_mapper, out Geometry.Vector2[] mosaic_points, out string failure))
+            {
+                ShowUnmappedEdit(Parent, failure, "Could not cut hole");
+                return;
+            }
+
+            SqlGeometry undoShape = loc.MosaicShape.ToSqlGeometry();
+            try
+            {
+                loc.SetShapeFromGeometryInSection(section_mapper, loc.MosaicShape.AddInteriorPolygon(mosaic_points));
+            }
+            catch (ArgumentException e)
+            {
+                ShowPolygonSaveError(Parent, e);
+                return;
+            }
+
+            _ = SaveThen(() => UndoManager.PushLocationShape("Cut Hole", loc, section_mapper, undoShape, loc.TypeCode));
         }
 
         /// <summary>

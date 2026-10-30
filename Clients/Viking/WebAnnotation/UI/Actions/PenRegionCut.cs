@@ -61,7 +61,7 @@ namespace WebAnnotation.UI.Actions
             Polygon drawn = null;
             for (int r = 0; r < storedRings.Count; r++)
             {
-                if (transform.TrySectionToVolume(storedRings[r], out Vector2[] volumeRing).Any(mapped => !mapped))
+                if (LocationVolumeGeometry.TryMapPoints(storedRings[r], transform, out Vector2[] volumeRing).Any(mapped => !mapped))
                     return Rejected(output, location.ID, "the outline is partly outside the section mapping");
 
                 ControlRingCurve curve;
@@ -237,7 +237,7 @@ namespace WebAnnotation.UI.Actions
             Vector2[] controls = [.. indices.Select(i => points[i])];
             Vector2[] newPoints = [.. indices.Where(i => !IsStoredControl(origin[i])).Select(i => points[i])];
             Vector2[] mapped = [];
-            if (newPoints.Length > 0 && transform.TryVolumeToSection(newPoints, out mapped).Any(ok => !ok))
+            if (newPoints.Length > 0 && !LocationVolumeGeometry.TryMapPointsToMosaic(newPoints, transform, out mapped, out _))
                 return false;
 
             Vector2[] section = new Vector2[indices.Count];

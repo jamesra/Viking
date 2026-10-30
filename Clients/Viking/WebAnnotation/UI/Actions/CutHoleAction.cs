@@ -59,11 +59,24 @@ namespace WebAnnotation.UI.Actions
         public async void OnExecute()
         {
             SqlGeometry original_mosaic_shape = Location.MosaicShape.ToSqlGeometry();
-            Geometry.Vector2[] mosaic_points = Transform.VolumeToSection(NewVolumeInteriorPolygon.ExteriorRing);
+            if (!LocationVolumeGeometry.TryMapPointsToMosaic(NewVolumeInteriorPolygon.ExteriorRing, Transform, out Geometry.Vector2[] mosaic_points, out string failure))
+            {
+                System.Diagnostics.Trace.WriteLine($"CutHoleAction: location {Location.ID} unchanged: {failure}", "WebAnnotation");
+                return;
+            }
+
             SqlGeometry updatedMosaicShape = Location.MosaicShape.AddInteriorPolygon(mosaic_points);
 
             WebAnnotation.View.PolygonViewTimingLog.MarkBoundaryChange(Location.ID, "CutHole");
-            Location.SetShapeFromGeometryInSection(Transform, updatedMosaicShape);
+            try
+            {
+                Location.SetShapeFromGeometryInSection(Transform, updatedMosaicShape);
+            }
+            catch (ArgumentException e)
+            {
+                System.Diagnostics.Trace.WriteLine($"CutHoleAction: location {Location.ID} unchanged: {e.Message}", "WebAnnotation");
+                return;
+            }
 
             try
             {

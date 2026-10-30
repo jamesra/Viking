@@ -143,7 +143,7 @@ namespace WebAnnotation.UI.Commands
             }
 
             OriginalMosaicPolygon = mosaic_polygon;
-            OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
+            OriginalVolumePolygon = LocationVolumeGeometry.TryMapPolygon(mosaic_polygon, mapping);
 
             if (OriginalVolumePolygon is null)
             {
@@ -190,8 +190,8 @@ namespace WebAnnotation.UI.Commands
                 OutputVolumePolygon = original_copy;
 
                 // The stored outline keeps its own points; only the new hole is mapped to the section
-                Polygon mosaicHole = mapping.TryMapShapeVolumeToSection(proposed_hole);
-                Polygon mosaic = null;
+                Polygon mosaicHole = LocationVolumeGeometry.TryMapPolygonToMosaic(proposed_hole, mapping);
+                Polygon? mosaic = null;
                 if (mosaicHole is not null)
                 {
                     mosaic = (Polygon)OriginalMosaicPolygon.Clone();
@@ -290,8 +290,8 @@ namespace WebAnnotation.UI.Commands
                 if (!TrySpliceOutput(keptPiece, discardedPiece))
                 {
                     // The stroke could not be spliced into the stored points; save the walked pieces as they are
-                    OutputMosaicPolygon = mapping.TryMapShapeVolumeToSection(OutputVolumePolygon);
-                    SplitOffMosaicPolygon = discardedVolume is null ? null : mapping.TryMapShapeVolumeToSection(discardedVolume);
+                    OutputMosaicPolygon = LocationVolumeGeometry.TryMapPolygonToMosaic(OutputVolumePolygon, mapping);
+                    SplitOffMosaicPolygon = discardedVolume is null ? null : LocationVolumeGeometry.TryMapPolygonToMosaic(discardedVolume, mapping);
                 }
             }
             catch (ArgumentException e)

@@ -43,7 +43,7 @@ namespace WebAnnotation.UI.Actions
                 return false;
 
             Vector2[] mosaicRing = ring.IsInner ? mosaicControl.InteriorRings[ring.InnerShapeIndex.Value] : mosaicControl.ExteriorRing;
-            if (transform.TrySectionToVolume(mosaicRing, out Vector2[] volumeRing).Any(mapped => !mapped))
+            if (LocationVolumeGeometry.TryMapPoints(mosaicRing, transform, out Vector2[] volumeRing).Any(mapped => !mapped))
                 return false;
 
             ControlRingCurve curve;
@@ -97,7 +97,7 @@ namespace WebAnnotation.UI.Actions
 
             Vector2[] newPoints = [.. side.ControlRing.Where((p, i) => side.OriginalIndex[i] < 0)];
             Vector2[] mappedNew = [];
-            if (newPoints.Length > 0 && transform.TryVolumeToSection(newPoints, out mappedNew).Any(mapped => !mapped))
+            if (newPoints.Length > 0 && !LocationVolumeGeometry.TryMapPointsToMosaic(newPoints, transform, out mappedNew, out _))
                 return null;
 
             Vector2[] mosaicPoints = new Vector2[side.ControlRing.Length];
@@ -118,7 +118,7 @@ namespace WebAnnotation.UI.Actions
                         if (!mosaic.Covers(mosaicHole[0]))
                             continue;
 
-                        if (transform.TrySectionToVolume(mosaicHole, out Vector2[] volumeHole).Any(mapped => !mapped))
+                        if (LocationVolumeGeometry.TryMapPoints(mosaicHole, transform, out Vector2[] volumeHole).Any(mapped => !mapped))
                             return null;
 
                         mosaic.AddInteriorRing(mosaicHole);

@@ -43,7 +43,7 @@ namespace WebAnnotation.UI.Actions
             Transform = transform ?? AnnotationOverlay.ActiveSectionToVolumeTransform;
 
             NewMosaicShape = newMosaicPolygon;
-            NewVolumeShape = newVolumePolygon ?? Transform.TryMapShapeSectionToVolume(newMosaicPolygon.ToSqlGeometry()).ToIShape2D();
+            NewVolumeShape = newVolumePolygon ?? LocationVolumeGeometry.TryMapControlShape(newMosaicPolygon.ToSqlGeometry(), Transform).ToIShape2D();
         }
 
         /// <summary>
@@ -59,8 +59,8 @@ namespace WebAnnotation.UI.Actions
         {
             IShape2D mosaicShape = volumeShape switch
             {
-                Polygon polygon => transform.TryMapShapeVolumeToSection(polygon),
-                Polyline line => transform.TryMapShapeVolumeToSection(line),
+                Polygon polygon => LocationVolumeGeometry.TryMapPolygonToMosaic(polygon, transform),
+                Polyline line => LocationVolumeGeometry.TryMapPolylineToMosaic(line, transform),
                 _ => throw new ArgumentException("Expected a Polygon or Polyline, got " + volumeShape?.GetType().Name, nameof(volumeShape))
             };
 
