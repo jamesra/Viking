@@ -16,8 +16,8 @@ namespace WebAnnotationTests.Tools
     [TestClass]
     public class CircleLocationScaleTests
     {
-        /// <summary>volume = scale * mosaic + offset, in both directions.</summary>
-        private sealed class ScaleTransform(double scale, Vector2 offset) : IVolumeToSectionTransform
+        /// <summary>volume = scale * mosaic + offset, in both directions. Also used by <see cref="Commands.SameStructureMergeTests"/>.</summary>
+        internal sealed class ScaleTransform(double scale, Vector2 offset) : IVolumeToSectionTransform
         {
             public long ID => 0;
             public Rectangle? SectionBounds => null;

@@ -46,8 +46,11 @@ namespace WebAnnotation.Tools
             });
         }
 
-        /// <summary>Viking's "Convert to Polygon": a 24-sided ring on the circle's outline, without segmentation.</summary>
-        public static Task ConvertCircleToPolygonAsync(AnnotationToolContext context, LocationObj circle)
+        /// <summary>
+        /// Viking's "Convert to Polygon": a 24-sided ring on the circle's outline, without segmentation. Once saved, the polygon
+        /// merges with the overlapping polygons of its structure on the section, as in Viking.
+        /// </summary>
+        public static async Task ConvertCircleToPolygonAsync(AnnotationToolContext context, LocationObj circle)
         {
             IVolumeToSectionTransform mapper = context.Mapper;
             double downsample = context.Host.Downsample;
@@ -65,14 +68,16 @@ namespace WebAnnotation.Tools
             if (volumeRing.Count != mosaicRing.Length)
             {
                 context.SetStatus("This circle could not be mapped onto the volume");
-                return Task.CompletedTask;
+                return;
             }
 
-            return ChangeAndSaveAsync(context, circle, "Change Shape", () =>
+            bool saved = await ChangeAndSaveAsync(context, circle, "Change Shape", () =>
             {
                 LocationShapeUpdate.AssignSimplifiedVolumePolygon(circle, new Polygon(volumeRing.ToArray()), mapper, downsample);
                 return true;
             });
+            if (saved)
+                await AnnotationToolActions.MergeOverlappingSiblingsAsync(context, circle, mapper);
         }
 
         /// <summary>Viking's "Simplify Shape": drops exterior vertices within the pen simplify threshold.</summary>
@@ -113,7 +118,8 @@ namespace WebAnnotation.Tools
         }
 
         /// <summary>Applies <paramref name="change"/> (false leaves the location alone), saves, and records the old shape.</summary>
-        static async Task ChangeAndSaveAsync(AnnotationToolContext context, LocationObj location, string description, Func<bool> change)
+        /// <returns>True when the change was made and saved.</returns>
+        static async Task<bool> ChangeAndSaveAsync(AnnotationToolContext context, LocationObj location, string description, Func<bool> change)
         {
             IVolumeToSectionTransform mapper = context.Mapper;
             SqlGeometry undoShape = location.MosaicShape.ToSqlGeometry();
@@ -121,17 +127,17 @@ namespace WebAnnotation.Tools
             try
             {
                 if (!change())
-                    return;
+                    return false;
             }
             catch (ArgumentException ex)
             {
                 Trace.WriteLine($"{description} failed: {ex}");
                 context.SetStatus($"{description} failed: {ex.Message}");
-                return;
+                return false;
             }
 
             context.Invalidate();
-            await AnnotationToolActions.SaveShapeEditAsync(context, location, description, mapper, undoShape, undoType);
+            return await AnnotationToolActions.SaveShapeEditAsync(context, location, description, mapper, undoShape, undoType);
         }
     }
 }

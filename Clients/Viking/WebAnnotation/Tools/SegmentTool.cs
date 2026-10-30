@@ -373,7 +373,10 @@ namespace WebAnnotation.Tools
             }
         }
 
-        /// <summary>As Viking's segment-a-circle accept: the location becomes a curve polygon; the old shape is kept for Ctrl+Z.</summary>
+        /// <summary>
+        /// As Viking's segment-a-circle accept: the location becomes a curve polygon; the old shape is kept for Ctrl+Z. Once
+        /// saved, it merges with the overlapping polygons of its structure on the section (that merge is not undone by Ctrl+Z).
+        /// </summary>
         async Task ReplaceShapeAsync(LocationObj location, Polygon volumePolygon, double downsample)
         {
             Viking.VolumeModel.IVolumeToSectionTransform mapper = _context.Mapper;
@@ -389,7 +392,8 @@ namespace WebAnnotation.Tools
                 return;
             }
 
-            await AnnotationToolActions.SaveShapeEditAsync(_context, location, "Segment", mapper, undoShape, undoType);
+            if (await AnnotationToolActions.SaveShapeEditAsync(_context, location, "Segment", mapper, undoShape, undoType))
+                await AnnotationToolActions.MergeOverlappingSiblingsAsync(_context, location, mapper);
         }
 
         public void DrawPreview(GraphicsDevice device, VikingXNA.Scene scene, RoundLineCode.RoundLineManager lineManager, OverlayShaderEffect overlayEffect)

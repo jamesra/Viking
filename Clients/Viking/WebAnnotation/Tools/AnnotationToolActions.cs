@@ -259,7 +259,8 @@ namespace WebAnnotation.Tools
         /// <paramref name="description"/>. Refused or failed: the location gets its old shape and type back, so the next
         /// save of anything else does not commit the edit that failed.
         /// </summary>
-        public static async Task SaveShapeEditAsync(AnnotationToolContext context, LocationObj location, string description,
+        /// <returns>True when the edit was saved.</returns>
+        public static async Task<bool> SaveShapeEditAsync(AnnotationToolContext context, LocationObj location, string description,
             IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry undoShape, LocationType undoType)
         {
             // A later edit of the same location (saved on its own) must not be undone by this save failing.
@@ -280,14 +281,14 @@ namespace WebAnnotation.Tools
                 UndoManager.PushLocationShape(description, location, mapper, undoShape, undoType);
                 Global.LastEditedAnnotationID = location.ID;
                 context.Invalidate();
-                return;
+                return true;
             }
 
             if (!ReferenceEquals(location.MosaicShape, savingShape))
             {
                 Exception laterFault = Store.IsInitialized ? Store.Locations.LastSaveFault : null;
                 context.SetStatus($"Could not save an earlier edit of location {location.ID}" + (laterFault is null ? "" : $" ({laterFault.Message})"));
-                return;
+                return false;
             }
 
             try
@@ -303,6 +304,26 @@ namespace WebAnnotation.Tools
             Exception fault = Store.IsInitialized ? Store.Locations.LastSaveFault : null;
             context.SetStatus($"Could not save location {location.ID}; its shape was put back" + (fault is null ? "" : $" ({fault.Message})"));
             context.Invalidate();
+            return false;
+        }
+
+        /// <summary>
+        /// After a manual polygon (Segment to Polygon, Resegment, Convert to Polygon, an edited mask) was saved on
+        /// <paramref name="location"/>: merges it with the overlapping polygons of its structure on the section, as Viking's
+        /// context menu does (<see cref="UI.AutoPolygonize.SameStructureMerge.MergeOverlappingSiblingsAsync"/>). A failure is
+        /// reported in the status bar; the saved shape stays.
+        /// </summary>
+        public static async Task MergeOverlappingSiblingsAsync(AnnotationToolContext context, LocationObj location, IVolumeToSectionTransform mapper)
+        {
+            try
+            {
+                await UI.AutoPolygonize.SameStructureMerge.MergeOverlappingSiblingsAsync(location, mapper, context.Host.Downsample, context.Invalidate);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Merging location {location.ID} with its structure's overlapping polygons failed: {ex}");
+                context.SetStatus($"Could not merge location {location.ID} with the overlapping polygons of its structure: {ex.Message}");
+            }
         }
 
         public static async Task DeleteLocationAsync(AnnotationToolContext context, LocationObj location)

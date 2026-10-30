@@ -846,11 +846,26 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// Update the location's shape from the segmented polygon and save
+        /// Update the location's shape from the segmented polygon and save. Once saved, the location merges into the
+        /// overlapping polygons of its structure on this section, as auto-segmentation accept does
+        /// (<see cref="WebAnnotation.UI.AutoPolygonize.SameStructureMerge"/>).
         /// </summary>
         private async void UpdateLocationShapeFromVolumePolygon(Polygon volume_poly)
         {
-            await LocationShapeUpdate.ApplyVolumePolygon(modelObj, volume_poly, AnnotationOverlay.CurrentOverlay.Parent);
+            try
+            {
+                Viking.UI.Controls.SectionViewerControl parent = AnnotationOverlay.CurrentOverlay.Parent;
+                if (await LocationShapeUpdate.ApplyVolumePolygon(modelObj, volume_poly, parent))
+                {
+                    await WebAnnotation.UI.AutoPolygonize.SameStructureMerge.MergeOverlappingSiblingsAsync(
+                        modelObj, parent.Section.ActiveSectionToVolumeTransform, parent.Downsample, parent.Invalidate);
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Updating location {modelObj.ID} from a volume polygon failed: {ex}");
+                MessageBox.Show($"Failed to update location shape: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         protected async void ContextMenu_OnOffEdge(object sender, EventArgs e)
