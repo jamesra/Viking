@@ -2522,12 +2522,15 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             HashSet<long> proposalIds = [.. distinct.SelectMany(item => item.LocationIds)];
             List<OverlapCandidate> candidates = [.. distinct.Select(ToOverlapCandidate)];
-            candidates.AddRange(AutoPolygonizeSelection.CollectSavedSameCellPolygonCandidates(
-                CollectVisibleLocationObjs(GetCurrentViewportBounds()),
-                seed.ParentID.Value,
-                seed.SectionNumber,
-                proposalIds,
-                parent.Section?.ActiveSectionToVolumeTransform));
+            if (parent.Section?.ActiveSectionToVolumeTransform is IVolumeToSectionTransform transform)
+            {
+                candidates.AddRange(AutoPolygonizeSelection.CollectSavedSameCellPolygonCandidates(
+                    CollectVisibleLocationObjs(GetCurrentViewportBounds()),
+                    seed.ParentID.Value,
+                    seed.SectionNumber,
+                    proposalIds,
+                    transform));
+            }
 
             OverlapCandidate seedCandidate = ToOverlapCandidate(seed);
             List<OverlapCandidate> component = AutoPolygonizeSelection.CollectOverlappingSameCellComponent(
@@ -2672,7 +2675,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     continue;
 
                 LocationObj loc = Store.Locations.GetObjectByID(id, false);
-                if (AutoPolygonizeSelection.TryGetVolumePolygon(loc, transform, out Polygon? saved) && saved is not null)
+                if (transform is not null && AutoPolygonizeSelection.TryGetVolumePolygon(loc, transform, out Polygon? saved) && saved is not null)
                     polygons.Add(saved);
             }
 
@@ -2697,8 +2700,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             List<Polygon> existing = AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
                 nearby,
                 proposed,
-                excludeLocationIds,
                 parent.Section.ActiveSectionToVolumeTransform,
+                excludeLocationIds,
                 parent.Section.Number,
                 excludeParentId);
             // Circle annotations of other structures count as well, so a cell that is still only a circle is not painted over.

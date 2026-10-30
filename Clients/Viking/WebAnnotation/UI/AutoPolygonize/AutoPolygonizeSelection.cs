@@ -453,40 +453,33 @@ namespace WebAnnotation.UI.AutoPolygonize
             (relation & (ShapeRelation.Touching | ShapeRelation.Exterior)) == ShapeRelation.Touching;
 
         /// <summary>
-        /// Volume-space polygon for a saved POLYGON or CURVEPOLYGON. Circles and curves are
-        /// skipped. With a transform it is the forward owner's control polygon (what LocationPolygonView
-        /// outlines), never the stored VolumeShape; only without one (no open volume, unit tests) is the
-        /// stored shape the geometry there is.
+        /// Volume-space polygon for a saved POLYGON or CURVEPOLYGON: the forward owner's control polygon (what
+        /// LocationPolygonView outlines), never the stored VolumeShape. Circles and curves are skipped, as is a polygon
+        /// the owner cannot map exactly.
         /// </summary>
         public static bool TryGetVolumePolygon(
             LocationObj? location,
-            IVolumeToSectionTransform? transform,
+            IVolumeToSectionTransform transform,
             out Polygon? polygon)
         {
+            if (transform is null)
+                throw new ArgumentNullException(nameof(transform));
+
             polygon = null;
             if (location is null || !location.TypeCode.AllowsInteriorHoles())
                 return false;
 
             try
             {
-                if (transform is not null)
-                {
-                    if (location.MosaicShape is null || location.MosaicShape.IsNull)
-                        return false;
-
-                    LocationVolumeGeometry geometry = LocationVolumeGeometry.For(location, transform);
-                    if (!geometry.IsExact)
-                        return false;
-
-                    polygon = geometry.ControlPolygon();
-                    return true;
-                }
-
-                if (location.VolumeShape is null || location.VolumeShape.IsNull)
+                if (location.MosaicShape is null || location.MosaicShape.IsNull)
                     return false;
 
-                polygon = location.VolumeShape.ToPolygon();
-                return polygon is not null;
+                LocationVolumeGeometry geometry = LocationVolumeGeometry.For(location, transform);
+                if (!geometry.IsExact)
+                    return false;
+
+                polygon = geometry.ControlPolygon();
+                return true;
             }
             catch (ArgumentException)
             {
@@ -523,8 +516,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         public static List<Polygon> CollectOverlappingExistingPolygons(
             IEnumerable<LocationObj>? annotations,
             Polygon proposed,
+            IVolumeToSectionTransform transform,
             IReadOnlyCollection<long>? excludeLocationIds = null,
-            IVolumeToSectionTransform? transform = null,
             int? sectionNumber = null,
             long? excludeParentId = null,
             Func<long, long?>? structureParentLookup = null)
@@ -706,8 +699,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             IEnumerable<LocationObj>? annotations,
             long parentId,
             int sectionNumber,
-            IReadOnlyCollection<long>? excludeLocationIds = null,
-            IVolumeToSectionTransform? transform = null)
+            IReadOnlyCollection<long>? excludeLocationIds,
+            IVolumeToSectionTransform transform)
         {
             List<OverlapCandidate> result = [];
             if (annotations is null)
