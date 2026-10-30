@@ -83,6 +83,21 @@ namespace WebAnnotationTests.Tools
         }
 
         [TestMethod]
+        public void TheRenderedVolumeCircleHasTheSameRadiusAsThePreviewedOne()
+        {
+            ScaleTransform section = new(scale: 1.25, offset: new Vector2(500, -200));
+            LocationObj location = new(4) { TypeCode = LocationType.CIRCLE };
+            // Saving a 100-unit volume circle stores the mosaic circle UpdateCircleLocationNoSaveCallback maps it to.
+            LocationActions.UpdateCircleLocationNoSaveCallback(location, section, new Vector2(3000, 4000), 100);
+
+            Circle rendered = LocationVolumeGeometry.For(location, section).Circle!.Value;
+
+            Assert.AreEqual(100, rendered.Radius, 0.01, "the saved circle is drawn at the radius that was previewed");
+            Assert.AreEqual(3000, rendered.Center.X, 0.01);
+            Assert.AreEqual(4000, rendered.Center.Y, 0.01);
+        }
+
+        [TestMethod]
         public void TheShapeConstructorKeepsMosaicAndVolumeShapesApart()
         {
             Circle mosaic = new(new Vector2(10, 20), 5);
