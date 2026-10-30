@@ -32,10 +32,8 @@ alwaysApply: false
   recorded when `TransformFactory.ParseStos` returns null: a server error after retries, or a NaN file) also has no basis:
   the viewer draws it by identity, but a save for it is refused.
   A location the default cannot map exactly gets the owner's failure policy (extrapolated), so the refresh writes it
-  rather than leaving a stale cache. The client never sends a null `VolumeShape`: the gRPC service refuses a non-point
-  location without one (`Location.EF.Conversion.ToLocation`, as it refuses a circle without its volume circle), and the
-  WCF server would store a circle of the mosaic radius, or a point, at the old `VolumePosition` (kept, with a comment,
-  for its older callers).
+  rather than leaving a stale cache. The client never sends a null `VolumeShape`: the gRPC service refuses any location
+  without one, a point included (`Location.EF.Conversion.ToLocation`, as it refuses a circle without its volume circle).
 - **After a `.stos` change, refresh the cache** with **Update Volume Positions** (`VolumePositionUpdateJob`, Annotation
   menu, review access; it reads and writes each section through its own gRPC client) or VikingAU. Both write
   `VolumeCache.Shape` under the default transform, exactly what a save writes; the job has no transform picker.

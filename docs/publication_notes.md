@@ -536,6 +536,9 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   and unknown WCF callers whose saves a refusal would fail outright, while the Viking clients never send a null volume
   shape. Rejected: deriving a volume shape on the server (no transform there); refusing on WCF (risk to unknown callers
   outweighs a wrong cache that Update Volume Positions or VikingAU can refresh).
+  Later the same day WCF was retired on dev: gRPC now refuses a point without a volume shape too (its volume position is
+  no longer used; the only caller, the gRPC client, always sends the shape), and the WCF service, with its fallback, lives
+  in VikingLegacy.
 
 ## Discussion points
 

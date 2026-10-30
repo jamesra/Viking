@@ -28,12 +28,12 @@ namespace gRPCAnnotationService.Protos
         /// <summary>
         /// Builds the EF location from the proto. The type comes from the mosaic shape. The volume shape is the client's
         /// stored volume cache (the mosaic shape mapped under the volume's default transform), which only the client can
-        /// derive, so it must be sent; a point's volume shape may come from its volume position. Circles store their east
-        /// rim points here (see the class remarks).
+        /// derive, so it must be sent; the volume position is never used in its place. Circles store their east rim points
+        /// here (see the class remarks).
         /// </summary>
         /// <exception cref="ArgumentException">The location has no mosaic shape or position, is a circle without a positive
-        /// mosaic and volume radius, or is any other type without a volume shape (a point: without a volume shape or
-        /// position). The mosaic shape is never stored as the volume shape: it is in another space.</exception>
+        /// mosaic and volume radius, or is any other type without a volume shape. The mosaic shape is never stored as the
+        /// volume shape: it is in another space.</exception>
         public static Viking.DataModel.Annotation.Location ToLocation(this global::Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location src)
         {
             var mosaic = src.MosaicGeometry;
@@ -47,16 +47,11 @@ namespace gRPCAnnotationService.Protos
             var type = mosaic.LocationTypeOf();
 
             var volume = src.VolumeGeometry;
-            if (volume == null || volume.KindCase == ProtoShape.KindOneofCase.None)
-            {
-                // Refused like a circle without its volume circle. The old fallbacks stored the mosaic shape, or a point at
-                // the volume position, as the volume shape: section coordinates in volume space, or a polygon cached as a
-                // point, which server queries, OData and export then read as the location's volume geometry.
-                if (type == LocationType.POINT && src.VolumePosition != null)
-                    volume = AnnotationShapes.PointShape(src.VolumePosition.X, src.VolumePosition.Y);
-                else if (type != LocationType.CIRCLE)
-                    throw new ArgumentException($"{type} locations require a volume shape: the client derives it from the mosaic shape under the volume's default transform.");
-            }
+            // Refused like a circle without its volume circle (checked in ResolveCircles). The old fallbacks stored the
+            // mosaic shape, or a point at the volume position, as the volume shape: section coordinates in volume space, or
+            // a polygon cached as a point, which server queries, OData and export then read as the location's volume geometry.
+            if ((volume == null || volume.KindCase == ProtoShape.KindOneofCase.None) && type != LocationType.CIRCLE)
+                throw new ArgumentException($"{type} locations require a volume shape: the client derives it from the mosaic shape under the volume's default transform.");
 
             NtsGeometry mosaicShape;
             NtsGeometry volumeShape;

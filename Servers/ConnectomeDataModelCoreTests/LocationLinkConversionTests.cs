@@ -1,4 +1,5 @@
 using gRPCAnnotationService.Protos;
+using Viking.AnnotationServiceTypes.gRPC.V1;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
 using Xunit;
 using ProtoLocation = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location;
@@ -15,6 +16,7 @@ namespace ConnectomeDataModelCoreTests
                 Id = 0,
                 MosaicPosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 1, Y = 2 },
                 VolumePosition = new Viking.gRPC.Geometry.V1.Vector2 { X = 1, Y = 2 },
+                VolumeGeometry = AnnotationShapes.PointShape(1, 2),
             };
             proto.Links.Add(42);
 

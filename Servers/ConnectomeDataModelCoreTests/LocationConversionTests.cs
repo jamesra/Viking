@@ -15,8 +15,8 @@ using ProtoLocation = Viking.AnnotationServiceTypes.gRPC.V1.Protos.Location;
 namespace ConnectomeDataModelCoreTests
 {
     /// <summary>
-    /// Pins the non-circle Location proto-to-EF conversions used on every location save and fetch: a point's shape
-    /// from its position fields, the refusal of a location sent without its volume shape, blank attributes, width and
+    /// Pins the non-circle Location proto-to-EF conversions used on every location save and fetch: a point's mosaic shape
+    /// from its mosaic position, the refusal of a location sent without its volume shape, blank attributes, width and
     /// closed from the shape, timestamps and link direction.
     /// Circle behavior is covered by <see cref="LocationCircleConversionTests"/>.
     /// </summary>
@@ -29,11 +29,12 @@ namespace ConnectomeDataModelCoreTests
             Section = 12,
             MosaicPosition = new ProtoVector2 { X = 1.5, Y = 2.5 },
             VolumePosition = new ProtoVector2 { X = 100.25, Y = 200.75 },
+            VolumeGeometry = AnnotationShapes.PointShape(100.25, 200.75),
             Username = "u",
         };
 
         [Fact]
-        public void ToLocation_WithoutShapes_FallsBackToPositionPoints()
+        public void ToLocation_WithoutMosaicShape_TakesThePointFromTheMosaicPosition()
         {
             var entity = PolygonProto().ToLocation();
 
@@ -45,16 +46,21 @@ namespace ConnectomeDataModelCoreTests
 
         /// <summary>
         /// The volume shape is the client's cache of the mosaic shape under the volume's default transform; the server
-        /// cannot derive it. A point without a volume shape or position used to store its mosaic position as its volume
-        /// position (section coordinates in volume space); it is refused.
+        /// cannot derive it. A point without a volume shape used to take it from its volume position, or without that
+        /// from its mosaic position (section coordinates in volume space); it is refused either way, like every other type.
         /// </summary>
-        [Fact]
-        public void ToLocation_PointWithoutVolumeShapeOrPosition_IsRefused()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ToLocation_PointWithoutVolumeShape_IsRefused(bool withVolumePosition)
         {
             var proto = PolygonProto();
-            proto.VolumePosition = null;
+            proto.VolumeGeometry = null;
+            if (!withVolumePosition)
+                proto.VolumePosition = null;
 
-            Assert.Throws<ArgumentException>(() => proto.ToLocation());
+            ArgumentException refused = Assert.Throws<ArgumentException>(() => proto.ToLocation());
+            Assert.Contains("volume shape", refused.Message);
         }
 
         /// <summary>
@@ -70,6 +76,7 @@ namespace ConnectomeDataModelCoreTests
             var proto = PolygonProto();
             proto.MosaicGeometry = AnnotationShapes.PolygonShape(LocationType.POLYGON, Viking.gRPC.Geometry.V1.CoordinateSpace.Mosaic,
                 new global::Geometry.Vector2[] { new(0, 0), new(10, 0), new(5, 5), new(0, 0) }, System.Array.Empty<global::Geometry.Vector2[]>(), null);
+            proto.VolumeGeometry = null;
             if (!withVolumePosition)
                 proto.VolumePosition = null;
 
