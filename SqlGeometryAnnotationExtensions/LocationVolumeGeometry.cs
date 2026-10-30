@@ -242,6 +242,13 @@ namespace Viking.VolumeModel
             (transform ?? throw new ArgumentNullException(nameof(transform))).TryMapShapeSectionToVolume(mosaicPolygon);
 
         /// <summary>
+        /// A mosaic shape that is not a saved location's (a linked location being placed from another section) mapped
+        /// forward unsmoothed, as the owner maps a location's control shape; null when any point fails to map.
+        /// </summary>
+        public static SqlGeometry? TryMapControlShape(SqlGeometry mosaicShape, IVolumeToSectionTransform transform) =>
+            (transform ?? throw new ArgumentNullException(nameof(transform))).TryMapShapeSectionToVolume(mosaicShape);
+
+        /// <summary>
         /// The circle drawn for this location on an adjacent section, in volume space: a circle or point at
         /// <paramref name="circleRadiusScalar"/> times its radius; an open curve or polyline at <see cref="Center"/>, half
         /// its mapped length across; a polygon, curve polygon or closed curve as the inscribed circle of <see cref="Shape"/>.

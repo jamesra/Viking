@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Viking.Input;
 using Viking.UI;
+using Viking.VolumeModel;
 using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
@@ -50,16 +51,12 @@ namespace WebAnnotation.UI.Commands
             get; private set;
         }
 
-        protected Vector2 OriginalMosaicPosition;
-        protected Vector2 MosaicPositionDeltaSum = new(0, 0);
-
         /// <summary>
-        /// Position of mosaic origin after applying this translation command
+        /// The volume drag mapped back to mosaic space: the inverse of the dragged origin minus the inverse of the origin
+        /// (<see cref="TryMosaicDelta"/>). A mosaic-first command (moving a polygon) translates the mosaic shape by it. It
+        /// keeps its last value while the cursor is over a region the transform cannot map.
         /// </summary>
-        protected Vector2 TranslatedMosaicPosition
-        {
-            get; private set;
-        }
+        protected Vector2 MosaicPositionDeltaSum = new(0, 0);
 
         protected abstract void OnTranslationChanged();
 
@@ -70,25 +67,35 @@ namespace WebAnnotation.UI.Commands
         protected void ResetCommandVolumeOrigin(Vector2 VolumePoint)
         {
             OriginalVolumePosition = VolumePoint;
-            OriginalMosaicPosition = mapping.VolumeToSection(VolumePoint);
             VolumePositionDeltaSum = new Vector2(0, 0);
             MosaicPositionDeltaSum = new Vector2(0, 0);
             TranslatedVolumePosition = OriginalVolumePosition + VolumePositionDeltaSum;
-            TranslatedMosaicPosition = OriginalMosaicPosition;
         }
 
         /// <summary>
-        /// Resets the command to have an origin at the given point
+        /// The mosaic translation that follows a volume drag from <paramref name="volumeOrigin"/> to
+        /// <paramref name="volumeTarget"/>: both points mapped back by the inverse owner, so the grabbed point of a mosaic
+        /// shape moved by it is drawn under the cursor. False when either point does not map.
         /// </summary>
-        /// <param name="VolumePoint"></param>
-        protected void ResetCommandMosaicOrigin(Vector2 MosaicPoint)
+        internal static bool TryMosaicDelta(IVolumeToSectionTransform transform, Vector2 volumeOrigin, Vector2 volumeTarget, out Vector2 mosaicDelta)
         {
-            OriginalVolumePosition = mapping.SectionToVolume(MosaicPoint);
-            OriginalMosaicPosition = MosaicPoint;
-            VolumePositionDeltaSum = new Vector2(0, 0);
-            MosaicPositionDeltaSum = new Vector2(0, 0);
+            if (LocationVolumeGeometry.TryMapPointsToMosaic([volumeOrigin, volumeTarget], transform, out Vector2[] mosaic, out _))
+            {
+                mosaicDelta = mosaic[1] - mosaic[0];
+                return true;
+            }
+
+            mosaicDelta = Vector2.Zero;
+            return false;
+        }
+
+        /// <summary>Moves the command's volume origin by <paramref name="volumeDelta"/> and follows it in mosaic space.</summary>
+        private void AddVolumeDelta(Vector2 volumeDelta)
+        {
+            VolumePositionDeltaSum += volumeDelta;
             TranslatedVolumePosition = OriginalVolumePosition + VolumePositionDeltaSum;
-            TranslatedMosaicPosition = OriginalMosaicPosition;
+            if (TryMosaicDelta(mapping, OriginalVolumePosition, TranslatedVolumePosition, out Vector2 mosaicDelta))
+                MosaicPositionDeltaSum = mosaicDelta;
         }
 
 
@@ -183,14 +190,7 @@ namespace WebAnnotation.UI.Commands
                     Vector2 LastVolumePosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
                     Vector2 NewVolumePosition = Parent.ScreenToWorld(e.X, e.Y);
 
-                    VolumePositionDeltaSum += NewVolumePosition - LastVolumePosition;
-
-                    Vector2 NewMosaicPosition = mapping.VolumeToSection(OriginalVolumePosition + VolumePositionDeltaSum);
-
-                    MosaicPositionDeltaSum = NewMosaicPosition - OriginalMosaicPosition;
-
-                    TranslatedVolumePosition = OriginalVolumePosition + VolumePositionDeltaSum;
-                    TranslatedMosaicPosition = NewMosaicPosition;
+                    AddVolumeDelta(NewVolumePosition - LastVolumePosition);
 
                     //UpdateViewPosition(NewVolumePosition - LastVolumePosition);
                     OnTranslationChanged();
@@ -237,15 +237,7 @@ namespace WebAnnotation.UI.Commands
                     Vector2 LastVolumePosition = Parent.ScreenToWorld(oldPen.X, oldPen.Y);
                     Vector2 NewVolumePosition = Parent.ScreenToWorld(e.X, e.Y);
 
-                    VolumePositionDeltaSum += NewVolumePosition - LastVolumePosition;
-
-                    Vector2 NewMosaicPosition =
-                        mapping.VolumeToSection(OriginalVolumePosition + VolumePositionDeltaSum);
-
-                    MosaicPositionDeltaSum = NewMosaicPosition - OriginalMosaicPosition;
-
-                    TranslatedVolumePosition = OriginalVolumePosition + VolumePositionDeltaSum;
-                    TranslatedMosaicPosition = NewMosaicPosition;
+                    AddVolumeDelta(NewVolumePosition - LastVolumePosition);
                 }
                 else
                 {

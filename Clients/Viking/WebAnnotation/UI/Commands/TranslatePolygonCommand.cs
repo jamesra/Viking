@@ -4,6 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Microsoft.SqlServer.Types;
+using SqlGeometryUtils;
+using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
@@ -52,7 +55,15 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         public bool SmoothPolygon = false;
 
-        protected override Geometry.Vector2 VolumeRotationOrigin => mapping.SectionToVolume(TransformedMosaicPolygon.Centroid);
+        /// <summary>
+        /// The type the moved polygon is saved as. The preview is the forward owner's shape for it
+        /// (<see cref="LocationVolumeGeometry.MapShape"/>), so what is shown while moving is what is drawn after the save.
+        /// </summary>
+        public LocationType PreviewType { get; init; } = LocationType.CURVEPOLYGON;
+
+        /// <summary>The moved polygon's centroid as the forward owner maps it; the drag origin when it does not map.</summary>
+        protected override Geometry.Vector2 VolumeRotationOrigin =>
+            LocationVolumeGeometry.TryMapPoints([TransformedMosaicPolygon.Centroid], mapping, out Geometry.Vector2[] mapped)[0] ? mapped[0] : TranslatedVolumePosition;
 
         public TranslatePolygonCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Polygon MosaicPolygon,
@@ -187,10 +198,10 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         protected void CreateUpdateView()
         {
-            Polygon TransformedVolumePolygon = mapping.TryMapShapeSectionToVolume(TransformedMosaicPolygon);
-            if (TransformedVolumePolygon is not null)
+            SqlGeometry? TransformedVolumeShape = LocationVolumeGeometry.MapShape(PreviewType, TransformedMosaicPolygon.ToSqlGeometry(), mapping);
+            if (TransformedVolumeShape is not null)
             {
-                _mesh = TransformedVolumePolygon.Smooth(Global.NumClosedCurveInterpolationPoints).CreateMeshForPolygon2D(Color.ConvertToHCL());
+                _mesh = TransformedVolumeShape.ToPolygon().CreateMeshForPolygon2D(Color.ConvertToHCL());
             }
 
             OriginalVolumePositionView = new CircleView(new Circle(OriginalVolumePosition, 16), Microsoft.Xna.Framework.Color.Red);
@@ -198,7 +209,7 @@ namespace WebAnnotation.UI.Commands
 
             if (TransformedExtraMosaicPoints != null)
             {
-                var mapped = mapping.TrySectionToVolume([.. this.TransformedExtraMosaicPoints], out Geometry.Vector2[] transformedVolumePoints);
+                bool[] mapped = LocationVolumeGeometry.TryMapPoints(this.TransformedExtraMosaicPoints, mapping, out Geometry.Vector2[] transformedVolumePoints);
 
                 _extraPointsView.Points = [.. transformedVolumePoints];
                 _extraPointsView.UpdateViews();
@@ -213,7 +224,7 @@ namespace WebAnnotation.UI.Commands
         {
             if (success_callback != null)
             {
-                if (mapping.TryMapShapeSectionToVolume(TransformedMosaicPolygon) is null)
+                if (LocationVolumeGeometry.TryMapPolygon(TransformedMosaicPolygon, mapping) is null)
                 {
                     Trace.WriteLine("TranslatePolygonCommand: polygon released over an unmapped region at " + TranslatedVolumePosition.ToString() + "; not applied.", "Command");
                 }
