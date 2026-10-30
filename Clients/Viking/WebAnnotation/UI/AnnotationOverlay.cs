@@ -206,7 +206,7 @@ namespace WebAnnotation
             Viking.UI.State.GoToLocationIdHandler = locationId => GoToLocation(locationId);
 
             // Every save writes the stored volume cache under the open volume's default transform, whatever is on screen.
-            Viking.VolumeModel.VolumeCache.DefaultTransforms = () => Viking.UI.State.volume;
+            Viking.VolumeModel.VolumeCache.DefaultTransforms = LocationVolumeGeometryExtensions.DefaultBasisProvider;
         }
 
         private System.Windows.Forms.Timer _startupLocationRetryTimer;

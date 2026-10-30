@@ -89,6 +89,7 @@ gained from about 2026-10-20 on. Earlier changes are not listed.
 <!-- Phase 3 (port of Legacy 51dfc5a6..e9be69cf): the stored volume cache is always written under the default transform (VolumeCache); the job and VikingAU are the refresh after a .stos change. Dev's job reads and writes each section through its own gRPC client and threw on POINT locations (IShape2D Vector2 had no SQL conversion). -->
 * **Fix: no silent refusal to edit.** Moving, resizing or reshaping an annotation that lies partly outside its section's alignment now shows a message saying it cannot be edited on that section, instead of doing nothing.
 * Editing on a section is refused with a message while the volume's default alignment is not loaded, so stored volume positions are never written without it.
+* **Jotunn:** annotations are drawn in the alignment chosen in the section list, the one the images are drawn with. They were always drawn in the volume's default alignment, so with another alignment chosen they sat off the images. Edits made in the chosen alignment are still stored under the default one.
 <!--
 Developer notes for 1.2.111: the Del/Insert hiding, Visuals section, pen-on-overlay fix and this change log are ports of
 VikingLegacy 57dd42bd..f946d5b0, 200003d6, 402c7da1 and 5c33f0a4. Location link rendering mirrors Legacy (a83fce1b, 1df31a12).

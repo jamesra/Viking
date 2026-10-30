@@ -22,6 +22,12 @@ namespace WebAnnotation
     {
         public static Volume Volume { get; private set; }
 
+        /// <summary>
+        /// The annotation transforms of a host without Viking's viewer (Jotunn): the volume transform on screen, which
+        /// <c>AnnotationScene.SetVolumeTransform</c> changes, and the volume's default (<see cref="IDefaultVolumeTransformProvider"/>),
+        /// the basis every save writes the stored volume cache in. Null in Viking, whose open volume
+        /// (<c>Viking.UI.State.volume</c>) plays both parts.
+        /// </summary>
         public static VolumeTransformProvider Transforms { get; private set; }
 
         /// <summary>
@@ -49,6 +55,9 @@ namespace WebAnnotation
         {
             Volume = volume;
             Transforms = volume == null ? null : new VolumeTransformProvider(volume);
+
+            // Every save writes the stored volume cache under the volume's default transform, whatever is on screen.
+            VolumeCache.DefaultTransforms = LocationVolumeGeometryExtensions.DefaultBasisProvider;
             if (volume?.VolumeElement is null)
                 return false;
 

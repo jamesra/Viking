@@ -44,7 +44,11 @@ namespace WebAnnotation
         public AnnotationScene(Volume volume)
         {
             _volume = volume;
-            _transforms = new VolumeTransformProvider(volume);
+            // One provider with the bootstrap, so the tools, the shared actions (AnnotationOverlay.ActiveSectionToVolumeTransform)
+            // and LocationVolumeGeometryExtensions draw and edit in the same transform as this scene.
+            _transforms = ReferenceEquals(AnnotationBootstrap.Volume, volume) && AnnotationBootstrap.Transforms is not null
+                ? AnnotationBootstrap.Transforms
+                : new VolumeTransformProvider(volume);
             // Jotunn has no WinForms overlay; shared actions and views find this scene's section views through the lookup.
             // Like Viking's overlay cache, the lookup returns views already built and never builds one: shared code walks
             // every section of the volume through it (recoloring), which must not create a view per section.
@@ -73,6 +77,21 @@ namespace WebAnnotation
         }
 
         public VolumeTransformProvider Transforms => _transforms;
+
+        /// <summary>
+        /// Draws the annotations in the volume transform the tiles are drawn with (<paramref name="volumeTransformName"/>; null
+        /// or empty is the volume's default) and rebuilds every section view when it changes, so annotations and tiles stay in
+        /// one space. Saves still write the stored volume cache under the default transform (<c>VolumeCache</c>). UI thread.
+        /// </summary>
+        public void SetVolumeTransform(string volumeTransformName)
+        {
+            string previous = _transforms.TransformName;
+            _transforms.TransformName = volumeTransformName;
+            if (string.Equals(previous, _transforms.TransformName, StringComparison.Ordinal))
+                return;
+
+            Reload();
+        }
 
         public bool Visible { get; set; } = true;
 

@@ -174,6 +174,44 @@ namespace WebAnnotationTests.Tools
         }
 
         /// <summary>
+        /// Jotunn's <see cref="VolumeTransformProvider"/> draws in the transform on screen (<see cref="VolumeTransformProvider.TransformName"/>,
+        /// which <c>AnnotationScene.SetVolumeTransform</c> sets) and gives the volume's default as the cache basis. Before,
+        /// Jotunn's annotations always used the default transform while its tiles used the active one.
+        /// </summary>
+        [TestMethod]
+        public void JotunnsProviderDrawsTheActiveTransformAndSavesUnderTheDefault()
+        {
+            Volume volume = (Volume)FormatterServices.GetUninitializedObject(typeof(Volume));
+            volume.Sections = [];
+            volume.Transforms = new SortedList<string, SortedList<int, ITransform>>
+            {
+                ["Grid"] = new() { [10] = new Geometry.Transforms.IdentityTransform() },
+                ["Rigid"] = new() { [10] = new Geometry.Transforms.IdentityTransform() },
+            };
+            volume.DefaultVolumeTransform = "Grid";
+            VolumeTransformProvider provider = new(volume);
+
+            IVolumeToSectionTransform grid = provider.GetSectionToVolumeTransform(10);
+            Assert.AreSame(grid, provider.GetSectionToVolumeTransform(10), "one object per section, so the owner's cache hits");
+            Assert.AreSame(grid, provider.GetDefaultSectionToVolumeTransform(10), "the default is on screen: the same object");
+
+            provider.TransformName = "Rigid";
+            IVolumeToSectionTransform rigid = provider.GetSectionToVolumeTransform(10);
+            Assert.AreNotSame(grid, rigid, "the transform on screen changed");
+            Assert.AreSame(grid, provider.GetDefaultSectionToVolumeTransform(10), "the cache basis did not");
+
+            VolumeCache.DefaultTransforms = () => provider;
+            LocationObj location = LocationVolumeGeometryTests.Fixture(LocationType.POLYGON);
+            Assert.AreSame(grid, VolumeCache.Basis(location, rigid), "a save made on screen is cached under the default");
+
+            provider.TransformName = null;
+            Assert.AreSame(grid, provider.GetSectionToVolumeTransform(10), "null selects the default again");
+
+            volume.DefaultVolumeTransform = "Not loaded";
+            Assert.IsNull(provider.GetDefaultSectionToVolumeTransform(10), "a default that did not load while others did: no basis");
+        }
+
+        /// <summary>
         /// When the open volume has no default transform for the section (its default transform did not load), a save is refused
         /// and the location is unchanged. The first version fell back to the transform on screen, which wrote a cache in
         /// another transform's space; identity would store section positions for an aligned section.

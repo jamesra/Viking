@@ -23,6 +23,15 @@ namespace WebAnnotation
             (IVolumeTransformProvider?)AnnotationBootstrap.Transforms ?? Viking.UI.State.volume;
 
         /// <summary>
+        /// The open volume's default transforms, the basis every save writes the stored volume cache in
+        /// (<see cref="VolumeCache.DefaultTransforms"/>): Jotunn's <see cref="AnnotationBootstrap.Transforms"/>, else Viking's open
+        /// volume; null when no volume is open. Viking's overlay and the bootstrap both register it, so the order they start
+        /// in does not matter.
+        /// </summary>
+        internal static IDefaultVolumeTransformProvider? DefaultBasisProvider() =>
+            (IDefaultVolumeTransformProvider?)AnnotationBootstrap.Transforms ?? Viking.UI.State.volume;
+
+        /// <summary>
         /// The location's volume geometry under the open volume's transform for its section, or null when no volume is
         /// open or the location cannot be mapped (see the mapping failure policy on <see cref="LocationVolumeGeometry"/>).
         /// </summary>

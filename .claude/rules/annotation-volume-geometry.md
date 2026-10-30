@@ -24,9 +24,12 @@ paths:
   the default transform, a circle as its exact `Geometry.Circle` (`CacheShape`; the smoothed ring is the inscribed circle
   of its polygon, about 2% smaller), any other type as `Shape`.
 - The default transform comes from one helper: `IDefaultVolumeTransformProvider.GetDefaultSectionToVolumeTransform`
-  (`VolumeViewModel`). `VolumeCache.Basis(location, transform)` resolves it for a save; the viewer registers the open
-  volume (`VolumeCache.DefaultTransforms`, set by `AnnotationOverlay`); without an open volume (VikingAU, unit tests) the
-  transform passed is the basis, and the caller must pass the default.
+  (`VolumeViewModel` in Viking; `VolumeTransformProvider` in Jotunn). `VolumeCache.Basis(location, transform)` resolves it
+  for a save; Viking's `AnnotationOverlay` and `AnnotationBootstrap` (Jotunn) both register
+  `LocationVolumeGeometryExtensions.DefaultBasisProvider` as `VolumeCache.DefaultTransforms`; without an open volume
+  (VikingAU, unit tests) the transform passed is the basis, and the caller must pass the default.
+- Jotunn draws annotations in the transform its tiles use: `AnnotationScene.SetVolumeTransform` sets the shared
+  `AnnotationBootstrap.Transforms.TransformName` from the section list's active transform and rebuilds the section views.
 - Policies, documented on `VolumeCache`: a section the volume does not align (the reference section, a
   `NonStosSectionNumbers` section: no entry in the default) maps by identity, as the viewer and `MappingManager` place it;
   a default transform that did not load at all while others did leaves **no basis** (`GetDefaultSectionToVolumeTransform`

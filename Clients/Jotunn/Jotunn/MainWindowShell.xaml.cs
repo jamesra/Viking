@@ -76,6 +76,11 @@ namespace Jotunn
 
             VolumeVM volume = (VolumeVM)_sectionGrid.DataContext;
             AnnotationScene scene = new(model);
+            // Annotations follow the volume transform the tiles are drawn with; the scene rebuilds its views when it changes.
+            scene.SetVolumeTransform(volume.ActiveVolumeTransform);
+            System.ComponentModel.DependencyPropertyDescriptor
+                .FromProperty(VolumeVM.ActiveVolumeTransformProperty, typeof(VolumeVM))
+                ?.AddValueChanged(volume, (_, _) => scene.SetVolumeTransform(volume.ActiveVolumeTransform));
             _sectionGrid.SceneHostControl.Annotations = scene;
             _tools = new AnnotationToolHost(_sectionGrid.SceneHostControl, scene);
             _tools.GoToRequested += (_, loc) => GoToLocation(loc);
