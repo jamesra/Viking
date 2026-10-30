@@ -476,86 +476,102 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// Simplify the shape by removing verticies
+        /// Simplify the shape by removing vertices: the exterior when the menu item's tag is null, else the hole it names.
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        public async void ContextMenu_SimplifyPolygon(object sender, EventArgs e)
+        public void ContextMenu_SimplifyPolygon(object sender, EventArgs e)
         {
-            //If tag is None, we simplify the exterior.  If tag is a number, we simplify that internal polygon
-            ToolStripMenuItem item = sender as ToolStripMenuItem;
-            int? innerPoly = item.Tag is null ? new int?() : (int?)item.Tag;
+            int? innerPoly = (sender as ToolStripMenuItem)?.Tag as int?;
+            SaveMosaicPolygonEdit("Could not simplify polygon", transform => TrySimplifyPolygon(modelObj, innerPoly, transform));
+        }
 
-            Polygon poly = modelObj.MosaicShape.ToPolygon();
+        /// <summary>
+        /// Removes the hole the menu item's tag names.
+        /// </summary>
+        public void ContextMenu_RemoveInnerPolygon(object sender, EventArgs e)
+        {
+            if ((sender as ToolStripMenuItem)?.Tag is not int innerPoly)
+            {
+                Trace.WriteLine($"No inner polygon parameter provided");
+                return;
+            }
+
+            SaveMosaicPolygonEdit("Could not remove hole", transform => TryRemoveInnerPolygon(modelObj, innerPoly, transform));
+        }
+
+        /// <summary>
+        /// Runs a mosaic-space polygon edit under the open volume's transform for this location's section and saves it; a
+        /// shape the owner refuses is reported to the user and the location keeps its shape.
+        /// </summary>
+        private async void SaveMosaicPolygonEdit(string caption, Func<Viking.VolumeModel.IVolumeToSectionTransform, bool> edit)
+        {
+            Viking.VolumeModel.IVolumeToSectionTransform? transform = LocationVolumeGeometryExtensions.Provider()?.GetSectionToVolumeTransform((int)Math.Round(this.modelObj.Z));
+            if (transform is null)
+                return;
 
             try
             {
-                if (!innerPoly.HasValue)
-                {
-                    Polygon outer_poly = new(poly.ExteriorRing);
-                    Polygon simple_poly = outer_poly.Simplify(Global.PenSimplifyThreshold);
-                    poly.ExteriorRing = simple_poly.ExteriorRing;
-                    modelObj.MosaicShape = poly.ToSqlGeometry().ToShape2D();
-                }
-                else
-                {
-                    if (innerPoly.Value >= poly.InteriorRings.Count)
-                    {
-                        Trace.WriteLine($"Inner polygon {innerPoly.Value} does not exist");
-                        return;
-                    }
-
-                    Polygon inner_poly = poly.InteriorPolygons[innerPoly.Value];
-                    Polygon simple_inner_poly = inner_poly.Simplify(Global.PenSimplifyThreshold / 2.0);
-                    poly.ReplaceInteriorRing(innerPoly.Value, simple_inner_poly);
-                    modelObj.MosaicShape = poly.ToSqlGeometry().ToShape2D();
-                }
-
-                await Store.Locations.Save();
+                if (edit(transform))
+                    await AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
             }
-            catch (Exception)
+            catch (ArgumentException ex)
             {
-                Trace.WriteLine("Could not simplify polygon");
+                LocationActions.ShowUnmappedEdit(Viking.UI.State.ViewerForm, ex.Message, caption);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"{caption}: {ex}");
             }
         }
 
         /// <summary>
-        /// Simplify the shape by removing verticies
+        /// Simplifies the exterior ring (<paramref name="innerPoly"/> null) or one hole of a polygon location and saves the
+        /// mosaic shape through the owner (<see cref="Viking.VolumeModel.LocationObjExtensions.SetShapeFromGeometryInSection"/>),
+        /// which derives the stored volume shape again.
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        public async void ContextMenu_RemoveInnerPolygon(object sender, EventArgs e)
+        /// <returns>False when there is no such hole.</returns>
+        /// <exception cref="ArgumentException">The simplified shape is not valid or does not map; the location is unchanged.</exception>
+        internal static bool TrySimplifyPolygon(LocationObj location, int? innerPoly, Viking.VolumeModel.IVolumeToSectionTransform transform)
         {
-            //If tag is None, we simplify the exterior.  If tag is a number, we simplify that internal polygon
-            ToolStripMenuItem item = sender as ToolStripMenuItem;
-            int? innerPoly = item.Tag is null ? new int?() : (int?)item.Tag;
-
-            Polygon poly = modelObj.MosaicShape.ToPolygon();
-
-            try
+            Polygon poly = location.MosaicShape.ToPolygon();
+            if (!innerPoly.HasValue)
             {
-                if (!innerPoly.HasValue)
+                Polygon outer_poly = new(poly.ExteriorRing);
+                poly.ExteriorRing = outer_poly.Simplify(Global.PenSimplifyThreshold).ExteriorRing;
+            }
+            else
+            {
+                if (innerPoly.Value >= poly.InteriorRings.Count)
                 {
-                    Trace.WriteLine($"No inner polygon parameter provided");
-                }
-                else
-                {
-                    if (innerPoly.Value >= poly.InteriorRings.Count)
-                    {
-                        Trace.WriteLine($"Inner polygon {innerPoly.Value} does not exist");
-                        return;
-                    }
-
-                    poly.RemoveInteriorRing(innerPoly.Value);
-                    modelObj.MosaicShape = poly.ToSqlGeometry().ToShape2D();
+                    Trace.WriteLine($"Inner polygon {innerPoly.Value} does not exist");
+                    return false;
                 }
 
-                await Store.Locations.Save();
+                Polygon inner_poly = poly.InteriorPolygons[innerPoly.Value];
+                poly.ReplaceInteriorRing(innerPoly.Value, inner_poly.Simplify(Global.PenSimplifyThreshold / 2.0));
             }
-            catch (Exception)
+
+            location.SetShapeFromGeometryInSection(transform, poly.ToSqlGeometry());
+            return true;
+        }
+
+        /// <summary>
+        /// Removes one hole of a polygon location and saves the mosaic shape through the owner, which derives the stored volume
+        /// shape again.
+        /// </summary>
+        /// <returns>False when there is no such hole.</returns>
+        /// <exception cref="ArgumentException">The shape is not valid or does not map; the location is unchanged.</exception>
+        internal static bool TryRemoveInnerPolygon(LocationObj location, int innerPoly, Viking.VolumeModel.IVolumeToSectionTransform transform)
+        {
+            Polygon poly = location.MosaicShape.ToPolygon();
+            if (innerPoly >= poly.InteriorRings.Count)
             {
-                Trace.WriteLine("Could not simplify polygon");
+                Trace.WriteLine($"Inner polygon {innerPoly} does not exist");
+                return false;
             }
+
+            poly.RemoveInteriorRing(innerPoly);
+            location.SetShapeFromGeometryInSection(transform, poly.ToSqlGeometry());
+            return true;
         }
 
         /// <summary>
