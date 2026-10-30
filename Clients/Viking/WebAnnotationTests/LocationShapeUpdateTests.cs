@@ -151,5 +151,47 @@ namespace WebAnnotationTests
             Assert.AreEqual(slow.MosaicShape.ToString(), fast.MosaicShape.ToString());
             Assert.AreEqual(slow.VolumeShape.ToString(), fast.VolumeShape.ToString());
         }
+
+        /// <summary>
+        /// Segmentation accept with an edge the section cannot map (the grid ends at 200): the result is refused with the
+        /// reason and nothing is saved, the type included. The old accept changed the type first and mapped with the
+        /// unchecked VolumeToSection.
+        /// </summary>
+        [TestMethod]
+        public void AssignRefusesAPolygonWithAPointThatCannotBeMappedAndChangesNothing()
+        {
+            LocationObj location = PolylineLocation();
+            IShape2D mosaicBefore = location.MosaicShape;
+            IShape2D volumeBefore = location.VolumeShape;
+
+            ArgumentException refused = Assert.ThrowsException<ArgumentException>(() =>
+                LocationShapeUpdate.AssignSimplifiedVolumePolygon(location, new Polygon(Square(120, 260)), ChangeTypeActionTests.CreateBoundedTransform(), 1));
+
+            StringAssert.Contains(refused.Message, "outside the region this section's transform maps");
+            Assert.AreEqual(LocationType.POLYLINE, location.TypeCode);
+            Assert.AreSame(mosaicBefore, location.MosaicShape);
+            Assert.AreSame(volumeBefore, location.VolumeShape);
+        }
+
+        /// <summary>
+        /// Segmentation accept under a non-linear warp: the saved mosaic control polygon is drawn by the forward owner as the
+        /// simplified volume polygon that was shown, and the volume shape is the forward owner's.
+        /// </summary>
+        [TestMethod]
+        public void AnAcceptedPolygonIsDrawnAsTheSimplifiedResult()
+        {
+            IVolumeToSectionTransform transform = new WebAnnotationTests.Tools.WarpTransform();
+            LocationObj location = PolylineLocation();
+            Polygon result = new([new(2000, 2000), new(2400, 2050), new(2450, 2400), new(2100, 2380), new(2000, 2000)]);
+            Polygon shown = WebAnnotation.UI.AutoPolygonize.AutoPolygonizeSelection.SimplifyForSave(result);
+
+            LocationShapeUpdate.AssignSimplifiedVolumePolygon(location, result, transform, 1);
+
+            LocationVolumeGeometry drawn = LocationVolumeGeometry.For(location, transform);
+            Assert.AreEqual(shown.ExteriorRing.Length, drawn.ControlPoints.Count);
+            for (int i = 0; i < shown.ExteriorRing.Length; i++)
+                Assert.AreEqual(0, Vector2.Distance(shown.ExteriorRing[i], drawn.ControlPoints[i]), 1e-6, $"point {i}");
+            Assert.IsTrue(LocationVolumeGeometry.ToSqlGeometry(location.VolumeShape).STEquals(drawn.Shape).IsTrue);
+        }
     }
 }

@@ -762,7 +762,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             Polygon? toApply = CarveAgainstExistingPolygons(
                 polygon,
                 proposal.LocationIds,
-                survivor.VolumePosition,
+                survivor.VolumeCenter(),
                 survivor.ParentID);
             if (toApply is null)
             {
@@ -1306,7 +1306,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 LiveView startView = await ReadLiveViewAsync().ConfigureAwait(false);
                 Vector2 priority = AutoPolygonizeSelection.QueuePriorityPoint(startView.Cursor, startView.Bounds);
                 List<Rectangle> regions = [];
-                foreach (LocationObj circle in queue.OrderBy(circle => Vector2.DistanceSquared(circle.VolumePosition, priority)))
+                foreach (LocationObj circle in queue.OrderBy(circle => Vector2.DistanceSquared(circle.VolumeCenter(), priority)))
                 {
                     if (TryPrefetchRegion(circle, transform, out Rectangle region))
                         regions.Add(region);
@@ -1470,7 +1470,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 new(center.X + reach, center.Y + reach),
                 new(center.X - reach, center.Y + reach),
             ];
-            bool[] mapped = transform.TrySectionToVolume(corners, out Vector2[] volumeCorners);
+            bool[] mapped = LocationVolumeGeometry.TryMapPoints(corners, transform, out Vector2[] volumeCorners);
             List<Vector2> points = [];
             for (int i = 0; i < corners.Length; i++)
             {
@@ -1512,7 +1512,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             int index = AutoPolygonizeSelection.IndexOfNearest(
                 queue,
-                circle => circle.VolumePosition,
+                circle => circle.VolumeCenter(),
                 AutoPolygonizeSelection.QueuePriorityPoint(cursor, liveBounds));
             if (index < 0)
                 return null;
@@ -1603,7 +1603,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 Polygon? carved = CarveAgainstExistingPolygons(
                     processed.Polygon,
                     [circle.ID],
-                    circle.VolumePosition,
+                    circle.VolumeCenter(),
                     circle.ParentID);
                 if (carved is null)
                 {
@@ -1863,7 +1863,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         {
             return AutoPolygonizeSelection.IsEligibleCircle(
                 loc.TypeCode,
-                loc.VolumePosition,
+                loc.VolumeCenter(),
                 inset,
                 viewBounds,
                 loc.Radius,
@@ -2127,7 +2127,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             Rectangle inset = AutoPolygonizeSelection.InsetBounds(viewBounds);
             if (!AutoPolygonizeSelection.IsEligibleCircle(
                     circle.TypeCode,
-                    circle.VolumePosition,
+                    circle.VolumeCenter(),
                     inset,
                     viewBounds,
                     circle.Radius,
@@ -2632,7 +2632,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     continue;
 
                 LocationObj seed = Store.Locations.GetCachedObject(other.LocationId);
-                Vector2 keep = seed is not null ? seed.VolumePosition : other.Polygon.Centroid;
+                Vector2 keep = seed is not null ? seed.VolumeCenter() : other.Polygon.Centroid;
                 Polygon? carved = CarveAgainstExistingPolygons(other.Polygon, other.LocationIds, keep, other.ParentID);
                 if (carved is null)
                 {
@@ -2765,7 +2765,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     if (polygon is not null)
                     {
                         LocationObj? keepLocation = Store.Locations.GetCachedObject(locationIds[0]);
-                        Vector2 keepPoint = keepLocation?.VolumePosition ?? unionKeepPoint;
+                        Vector2 keepPoint = keepLocation?.VolumeCenter() ?? unionKeepPoint;
                         polygon = CarveAgainstExistingPolygons(polygon, locationIds, keepPoint, parentId);
                         if (polygon is not null)
                             polygon = AutoPolygonizeSelection.SimplifyProposal(polygon, simplifyTolerance);

@@ -407,8 +407,9 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Volume-space polygon for a saved POLYGON or CURVEPOLYGON. Circles and curves are
-        /// skipped. Prefers MosaicShape mapped through <paramref name="transform"/> so the
-        /// cut matches what LocationPolygonView draws when VolumeShape is stale.
+        /// skipped. With a transform it is the forward owner's control polygon (what LocationPolygonView
+        /// outlines), never the stored VolumeShape; only without one (no open volume, unit tests) is the
+        /// stored shape the geometry there is.
         /// </summary>
         public static bool TryGetVolumePolygon(
             LocationObj? location,
@@ -421,14 +422,17 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             try
             {
-                if (transform is not null && location.MosaicShape is not null)
+                if (transform is not null)
                 {
-                    SqlGeometry mapped = transform.TryMapShapeSectionToVolume(location.MosaicShape.ToSqlGeometry());
-                    if (mapped is not null && !mapped.IsNull)
-                    {
-                        polygon = mapped.ToPolygon();
-                        return polygon is not null;
-                    }
+                    if (location.MosaicShape is null)
+                        return false;
+
+                    LocationVolumeGeometry geometry = LocationVolumeGeometry.For(location, transform);
+                    if (!geometry.IsExact)
+                        return false;
+
+                    polygon = geometry.ControlPolygon();
+                    return true;
                 }
 
                 if (location.VolumeShape is null)

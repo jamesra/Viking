@@ -14,20 +14,22 @@ namespace Viking.VolumeModel
     {
 
         /// <summary>
-        /// Takes unsmoothed points and sets both the mosaic and volume shape for a locationObj
+        /// Sets a location from unsmoothed control points the user drew or accepted in volume space (a placed curve or polygon,
+        /// a segmentation result): the inverse owner (<see cref="LocationVolumeGeometry.ToMosaic(Viking.AnnotationServiceTypes.Interfaces.LocationType, IReadOnlyList{Vector2}, IVolumeToSectionTransform, double?, IReadOnlyCollection{Vector2[]})"/>)
+        /// maps them back to the mosaic shape that is saved and the forward owner derives the volume shape. Set
+        /// <c>TypeCode</c> first.
         /// </summary>
-        /// <param name="mapper"></param>
-        /// <param name="location"></param>
-        /// <param name="volumePoints"></param>
-        /// <param name="volume_innerRingPoints"></param>
-        public static void SetShapeFromPointsInVolume(this WebAnnotationModel.Objects.LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, Vector2[] volumePoints, ICollection<Vector2[]> volume_innerRingPoints)
+        /// <param name="volumeWidth">The line width the user saw, in volume units, saved as the mosaic width; null keeps the width.</param>
+        /// <exception cref="ArgumentException">A point cannot be mapped (the message says which) or the shape is not valid; the
+        /// location is then unchanged.</exception>
+        public static void SetShapeFromPointsInVolume(this WebAnnotationModel.Objects.LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, Vector2[] volumePoints, ICollection<Vector2[]> volume_innerRingPoints, double? volumeWidth = null)
         {
-            Vector2[] mosaic_points = mapper.VolumeToSection(volumePoints);
+            MosaicGeometry mosaic = LocationVolumeGeometry.ToMosaic(location.TypeCode, volumePoints, mapper, volumeWidth,
+                                                                    volume_innerRingPoints is null ? null : [.. volume_innerRingPoints]);
+            if (!mosaic.Succeeded)
+                throw new ArgumentException(mosaic.Failure);
 
-            location.VolumeShape = location.TypeCode.GetSmoothedShape(volumePoints, volume_innerRingPoints).ToShape2D();
-            location.MosaicShape = location.TypeCode.GetShape(mosaic_points, VolumeInnerRingPointsToSection(mapper, volume_innerRingPoints)).ToShape2D();
-
-            return;
+            location.TryApply(mosaic, mapper);
         }
 
         /// <summary>
@@ -109,40 +111,5 @@ namespace Viking.VolumeModel
             geometry.TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE && geometry.Circle is Circle circle
                 ? circle
                 : geometry.Shape.ToShape2D();
-
-        /// <summary>
-        /// Takes unsmoothed points and sets both the mosaic and volume shape for a locationObj
-        /// </summary>
-        /// <param name="mapper"></param>
-        /// <param name="location"></param>
-        /// <param name="volumePoints"></param>
-        /// <param name="volume_innerRingPoints"></param>
-        public static void SetShapeFromGeometryInVolume(this WebAnnotationModel.Objects.LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry volume_shape)
-        {
-            if (!volume_shape.STIsValid().Value)
-                throw new ArgumentException("Shape must be valid SQL Geometry " + volume_shape.IsValidDetailed());
-
-            Microsoft.SqlServer.Types.SqlGeometry mosaic_shape = mapper.TryMapShapeVolumeToSection(volume_shape);
-
-            location.VolumeShape = location.TypeCode.GetSmoothedShape(volume_shape).ToShape2D();
-            location.MosaicShape = mosaic_shape.ToShape2D();
-
-            return;
-        }
-
-        private static List<Vector2[]> VolumeInnerRingPointsToSection(Viking.VolumeModel.IVolumeToSectionTransform mapper, ICollection<Vector2[]> volume_innerRingPoints)
-        {
-            if (volume_innerRingPoints is null)
-                return null;
-
-            List<Vector2[]> mosaic_innerRingPoints = new(volume_innerRingPoints.Count);
-            foreach (Vector2[] volume_ring in volume_innerRingPoints)
-            {
-                mosaic_innerRingPoints.Add(mapper.VolumeToSection(volume_ring));
-            }
-
-            return mosaic_innerRingPoints;
-        }
-
     }
 }

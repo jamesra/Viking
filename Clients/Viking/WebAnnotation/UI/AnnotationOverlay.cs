@@ -2184,18 +2184,14 @@ break;
                                                             new ControlPointCommandBase.OnCommandSuccess((object sender, Geometry.Vector2[] points) => {
                                                                     PlaceOpenCurveWithPenCommand cmd = (PlaceOpenCurveWithPenCommand)sender;
                                                                     newLocation.TypeCode = typecode;
-                                                                    newLocation.Width = LineWidth;
-                                                                    newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, cmd.PenInput.SimplifiedPath, null);
-                                                                    if(SaveToStore) { _ = SaveLocationsWithMessageBoxOnError(); } }) });
+                                                                    PlaceFromVolume(Parent, newLocation, cmd.PenInput.SimplifiedPath, LineWidth, SaveToStore); }) });
             }
             else
             {
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceOpenCurveCommand), new object[] { Parent, typecolor, origin,  LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((object sender, Geometry.Vector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
-                                                                    newLocation.Width = LineWidth;
-                                                                    newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
-                                                                    if(SaveToStore) { _ = SaveLocationsWithMessageBoxOnError(); } }) });
+                                                                    PlaceFromVolume(Parent, newLocation, points, LineWidth, SaveToStore); }) });
             }
         }
 
@@ -2214,18 +2210,14 @@ break;
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveWithPenCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((object sender, Geometry.Vector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
-                                                                    newLocation.Width = LineWidth;
-                                                                    newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
-                                                                    if(SaveToStore) { _ = SaveLocationsWithMessageBoxOnError(); } }) });
+                                                                    PlaceFromVolume(Parent, newLocation, points, LineWidth, SaveToStore); }) });
             }
             else
             {
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((object sender, Geometry.Vector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
-                                                                    newLocation.Width = LineWidth;
-                                                                    newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
-                                                                    if(SaveToStore) { _ = SaveLocationsWithMessageBoxOnError(); } }) });
+                                                                    PlaceFromVolume(Parent, newLocation, points, LineWidth, SaveToStore); }) });
             }
 
         }
@@ -2244,10 +2236,8 @@ break;
             {
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveWithPenCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((object sender, Geometry.Vector2[] points) => {
-                                                                    PlaceClosedCurveWithPenCommand cmd = sender as PlaceClosedCurveWithPenCommand;
                                                                     newLocation.TypeCode = typecode;
-                                                                    newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
-                                                                    if(SaveToStore) { _ = SaveLocationsWithMessageBoxOnError(); } }) });
+                                                                    PlaceFromVolume(Parent, newLocation, points, null, SaveToStore); }) });
             }
             else
             {
@@ -2256,9 +2246,32 @@ break;
                 Parent.CommandQueue.EnqueueCommand(typeof(PlaceClosedCurveCommand), new object[] { Parent, typecolor, origin, LineWidth,
                                                             new ControlPointCommandBase.OnCommandSuccess((object sender, Geometry.Vector2[] points) => {
                                                                     newLocation.TypeCode = typecode;
-                                                                    newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null);
-                                                                    if(SaveToStore) { _ = SaveLocationsWithMessageBoxOnError(); } }) });
+                                                                    PlaceFromVolume(Parent, newLocation, points, null, SaveToStore); }) });
             }
+        }
+
+        /// <summary>
+        /// Gives a location being placed the control points (and line width) the user drew in volume space, mapped back to
+        /// mosaic by the inverse owner (<see cref="Viking.VolumeModel.LocationObjExtensions.SetShapeFromPointsInVolume"/>),
+        /// and saves when <paramref name="saveToStore"/>. When a point cannot be mapped the user is told why, nothing is saved
+        /// and the rest of the placement (structure creation, linking) is dropped from the command queue.
+        /// </summary>
+        /// <param name="volumeWidth">The width the placement command drew, in volume units; null for shapes without one.</param>
+        private static void PlaceFromVolume(Viking.UI.Controls.SectionViewerControl Parent, LocationObj newLocation, Geometry.Vector2[] points, double? volumeWidth, bool saveToStore)
+        {
+            try
+            {
+                newLocation.SetShapeFromPointsInVolume(Parent.Section.ActiveSectionToVolumeTransform, points, null, volumeWidth);
+            }
+            catch (ArgumentException e)
+            {
+                Parent.CommandQueue.ClearQueue();
+                LocationActions.ShowUnmappedEdit(Parent, e.Message, "Could not place annotation");
+                return;
+            }
+
+            if (saveToStore)
+                _ = SaveLocationsWithMessageBoxOnError();
         }
 
 
