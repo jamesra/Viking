@@ -62,6 +62,14 @@ namespace WebAnnotation.UI.AutoPolygonize
             Merge(saved, parent, includeCircles: true, confirmPolygons);
 
         /// <summary>
+        /// True when <paramref name="other"/>, not a polygon, joins a merge as its disk: only a circle annotation does, and only when
+        /// <paramref name="includeCircles"/>. Every location has a position and radius, so without the type check a point, line or
+        /// curve of the structure would be swept into the merged polygon as a disk.
+        /// </summary>
+        internal static bool JoinsAsDisk(LocationObj other, bool includeCircles) =>
+            includeCircles && other.TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE;
+
+        /// <summary>
         /// Finds the same-structure, same-section locations whose outline overlaps <paramref name="saved"/>'s (chains of overlaps
         /// included; edge contact alone is not an overlap), writes the union of all of them onto the survivor and removes the rest,
         /// moving their links. Does nothing when nothing overlaps.
@@ -94,7 +102,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 if (AutoPolygonizeSelection.TryGetVolumePolygon(other, transform, out Polygon? polygon) && polygon is not null)
                     pool.Add(new Piece(other, polygon, IsCircle: false));
-                else if (includeCircles && LocationActions.TryGetVolumeCircle(other, transform) is Circle disk)
+                else if (JoinsAsDisk(other, includeCircles) && LocationActions.TryGetVolumeCircle(other, transform) is Circle disk)
                     pool.Add(new Piece(other, AutoPolygonizeSelection.CircleToPolygon(disk.Center, disk.Radius), IsCircle: true));
             }
 
