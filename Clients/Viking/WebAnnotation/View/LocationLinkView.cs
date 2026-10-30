@@ -844,11 +844,6 @@ namespace WebAnnotation.ViewModel
 
         private LineView CreateView()
         {
-            //IVolumeToSectionMapper sourceMapper = mapProvider.GetMapping((int)Math.Round(A.Z));
-            //IVolumeToSectionMapper targetMapper = mapProvider.GetMapping((int)Math.Round(B.Z));
-            //Geometry.Vector2 sourceVolumePosition = sourceMapper.SectionToVolume(A.Position);
-            //Geometry.Vector2 targetVolumePosition = targetMapper.SectionToVolume(B.Position); 
-
             LineView line = new(A.Center, B.Center, LineWidth, Color, LineStyle.Standard);
             return line;
         }

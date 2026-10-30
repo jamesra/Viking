@@ -195,6 +195,54 @@ namespace WebAnnotationTests.Tools
             where RenderedGeometry.IsChecked(type, adjacent)
             select (type, adjacent);
 
+        /// <summary>Location views the factory never builds, each with why the property test does not cover it.</summary>
+        private static readonly IReadOnlyDictionary<Type, string> NotBuiltByTheFactory = new Dictionary<Type, string>
+        {
+            // Never constructed in production; its creator would hand it a volume circle (tests build it uninitialized).
+            [typeof(OverlappedLocationView)] = "no production constructor call",
+        };
+
+        [TestMethod]
+        public void EveryLocationViewTypeIsCheckedAgainstTheOwner()
+        {
+            string[] unchecked_ = [.. typeof(LocationCanvasView).Assembly.GetTypes()
+                .Where(t => typeof(LocationCanvasView).IsAssignableFrom(t) && !t.IsAbstract)
+                .Where(t => !RenderedGeometry.CheckedViewTypes.Contains(t) && !NotBuiltByTheFactory.ContainsKey(t))
+                .Select(t => t.Name)];
+
+            Assert.AreEqual(0, unchecked_.Length, "views the property test does not check: " + string.Join(", ", unchecked_));
+        }
+
+        [TestMethod]
+        public void EveryFactoryBranchIsCoveredByThePropertyTest()
+        {
+            AffineTransform transform = Transforms[0].Transform;
+            foreach (LocationType type in Enum.GetValues(typeof(LocationType)))
+            {
+                foreach (bool adjacent in new[] { false, true })
+                {
+                    string message = $"{type} {(adjacent ? "adjacent" : "on section")}";
+                    if (!ViewTypes.Contains(type))
+                    {
+                        // A type with no fixture must have no factory branch either.
+                        LocationObj other = Fixture(LocationType.CIRCLE);
+                        other.TypeCode = type;
+                        Assert.ThrowsException<NotImplementedException>(() => adjacent
+                            ? AnnotationViewFactory.CreateAdjacent(other, transform)
+                            : AnnotationViewFactory.Create(other, transform), message);
+                        continue;
+                    }
+
+                    Assert.IsTrue(CoveredCases.Contains((type, adjacent)), message + " is not in the property test");
+                    LocationObj location = Fixture(type);
+                    LocationCanvasView view = adjacent
+                        ? AnnotationViewFactory.CreateAdjacent(location, transform)
+                        : AnnotationViewFactory.Create(location, transform);
+                    Assert.IsTrue(RenderedGeometry.CheckedViewTypes.Contains(view.GetType()), $"{message} builds an unchecked {view.GetType().Name}");
+                }
+            }
+        }
+
         [TestMethod]
         public void EveryViewDrawsAndHitTestsTheOwnersGeometry()
         {
@@ -230,6 +278,13 @@ namespace WebAnnotationTests.Tools
     internal static class RenderedGeometry
     {
         private const double Tolerance = 1e-6;
+
+        /// <summary>The view types <see cref="AssertMatchesOwner"/> compares with the owner.</summary>
+        public static readonly IReadOnlyCollection<Type> CheckedViewTypes =
+        [
+            typeof(AdjacentLocationCircleView), typeof(LocationCircleView), typeof(AdjacentLocationLineView), typeof(LocationLineView),
+            typeof(LocationOpenCurveView), typeof(LocationClosedCurveView), typeof(LocationPolygonView),
+        ];
 
         /// <summary>True for the (type, adjacent) pairs whose view <see cref="AssertMatchesOwner"/> knows.</summary>
         public static bool IsChecked(LocationType type, bool adjacent) => true;

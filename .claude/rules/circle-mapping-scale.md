@@ -49,9 +49,9 @@ radius) derives `VolumeShape` the same way. Use the `LocationActions` helpers th
 translation (`MoveTo`) keeps each shape's own radius.
 
 ## Other languages and services
-- The gRPC read path currently rebuilds the volume circle with the mosaic `Radius` (`Location.EF.Conversion.ShapeToProtobuf`),
-  because the SQL read substitutes a centroid point for circle shapes. A client must not trust a circle's volume radius from
-  there; map it from the mosaic circle with the rule above.
+- The gRPC read path returns the stored volume circle; it no longer rebuilds it from the mosaic `Radius`. That stored
+  circle is still only a cache of the mosaic circle (`annotation-volume-geometry.mdc`), so a viewer draws the circle from
+  the mosaic one with the rule above (`LocationVolumeGeometry`), not from the stored volume radius.
 - Python (gallery, converter, nornir `segmentationtraining`): read the centre from `X`, `Y` (select them in the OData query).
   These tools work in mosaic space only, so they must not mix in a volume radius.
 

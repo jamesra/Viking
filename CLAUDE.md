@@ -10,12 +10,14 @@ Rules and skills are authored for Cursor in `.cursor/` and imported here by refe
 @.cursor/rules/user-changelog.mdc
 
 ## Conditional rules (read the file when the situation matches)
-Rules with `globs:` (`circle-mapping-scale`, `coordinate-precision`, `docker-config-and-builds-location`) also load
+Rules with `globs:` (`annotation-volume-geometry`, `circle-mapping-scale`, `coordinate-precision`,
+`docker-config-and-builds-location`) also load
 automatically: `.claude/sync_claude_rules.py` mirrors them into `.claude/rules/<name>.md` with a `paths:` list. After
 adding or editing a `.cursor/rules` `.mdc` file, rerun `python .claude/sync_claude_rules.py` and commit the result;
 never edit `.claude/rules/` by hand (`python .claude/sync_claude_rules.py --check` reports drift). The rules without
 globs below must be read by hand.
 
+- `.cursor/rules/annotation-volume-geometry.mdc` — before touching how annotations are drawn, hit-tested or mapped between mosaic and volume: mosaic is the truth, the stored volume columns are a cache, every view draws from `LocationVolumeGeometry` (`Clients/Viking/WebAnnotation`, `Clients/VolumeModel`, `SqlGeometryAnnotationExtensions`, `WebAnnotationModel`).
 - `.cursor/rules/async-returns-tasks.mdc` — before writing or editing C# async methods.
 - `.cursor/rules/circle-mapping-scale.mdc` — before touching circle annotations: centre from `X,Y`/`VolumeX,VolumeY`; radius across mosaic/volume by five-point mean scale (`Clients/VolumeModel`, mapping/annotation geometry, `WebAnnotation`).
 - `.cursor/rules/coordinate-precision.mdc` — before touching `Geometry/Transforms`, `Geometry/Primitives`, `Geometry.Core/Primitives`, `Geometry/CurveFitting`, `Geometry/Meshing`, `Clients/VolumeModel`.
