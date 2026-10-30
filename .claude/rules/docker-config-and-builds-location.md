@@ -11,7 +11,8 @@ paths:
 
 # Docker host layout for Viking stacks
 
-VikingLegacy runs no servers: the stacks, `deploy/stacks.psd1` and `deploy/examples/` live in Viking
+VikingLegacy runs no containers (its one server, the WCF AnnotationService, is an IIS site deployed by Viking's
+`deploy/Deploy-VikingIis.ps1`): the stacks, `deploy/stacks.psd1` and `deploy/examples/` live in Viking
 (`d:\src\git\Viking`, branch `dev`), which keeps the canonical copy of this rule. Make Docker changes there.
 
 Real secrets and filled-in config **must not** be stored in the repo. Every host uses one layout root,
