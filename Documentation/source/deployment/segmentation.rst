@@ -209,7 +209,10 @@ and IP"):
    SEGMENTATION_MAC_ADDRESS=02:5e:10:00:00:01
    SEGMENTATION_LAN_IP=10.20.30.40
 
-Docker gives the container that MAC and the reserved IP. A small ``segmentation-net`` container holds the network (``segmentation-server`` shares
+Docker gives the container that MAC and the reserved IP. For a VLAN, set
+``SEGMENTATION_MACVLAN_PARENT`` to the tagged sub-interface (``eno1.1811`` for VLAN 1811): Docker creates it, the
+switch port must carry that VLAN tagged, and the subnet, gateway and reservation are the VLAN's; keep the plain NIC
+when the port is an access port in that VLAN. A small ``segmentation-net`` container holds the network (``segmentation-server`` shares
 it) and runs a DHCP client, so the DHCP server and any DHCP snooping on the switch see a real lease for
 the MAC. Its log shows each lease; if DHCP offers a different address it logs an error and turns
 unhealthy, and the container keeps the reserved IP. While no DHCP server answers, it keeps serving.
