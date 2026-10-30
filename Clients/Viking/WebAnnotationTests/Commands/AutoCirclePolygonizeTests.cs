@@ -7,17 +7,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Viking.AnnotationServiceTypes.Interfaces;
+using Viking.VolumeModel;
 using WebAnnotation;
 using WebAnnotation.UI.AutoPolygonize;
 using WebAnnotation.UI.Commands.Segmentation;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
+using WebAnnotationTests.Tools;
 
 namespace WebAnnotationTests.Commands
 {
     [TestClass]
     public class AutoCirclePolygonizeTests
     {
+        /// <summary>Volume space is mosaic space: the saved polygons below are drawn where their mosaic shapes are.</summary>
+        private static readonly IVolumeToSectionTransform Identity = new ScaleTransform(1, Vector2.Zero);
+
         [TestMethod]
         public void InsetBoundsShrinksFivePercentOnEachEdge()
         {
@@ -1383,24 +1388,24 @@ namespace WebAnnotationTests.Commands
         {
             LocationObj polygon = new(0, 0);
             polygon.TypeCode = LocationType.POLYGON;
-            polygon.VolumeShape = Square(0, 0, 10);
+            polygon.MosaicShape = Square(0, 0, 10);
 
             LocationObj curve = new(0, 0);
             curve.TypeCode = LocationType.CURVEPOLYGON;
-            curve.VolumeShape = Square(20, 0, 10);
+            curve.MosaicShape = Square(20, 0, 10);
 
             LocationObj circle = new(0, 0);
             circle.TypeCode = LocationType.CIRCLE;
-            circle.VolumeShape = Square(40, 0, 10);
+            circle.MosaicShape = Square(40, 0, 10);
 
-            Assert.IsTrue(AutoPolygonizeSelection.TryGetVolumePolygon(polygon, null, out Polygon? fromPolygon));
+            Assert.IsTrue(AutoPolygonizeSelection.TryGetVolumePolygon(polygon, Identity, out Polygon? fromPolygon));
             Assert.IsNotNull(fromPolygon);
             Assert.IsTrue(fromPolygon.Contains(new Vector2(5, 5)));
 
-            Assert.IsTrue(AutoPolygonizeSelection.TryGetVolumePolygon(curve, null, out Polygon? fromCurve));
+            Assert.IsTrue(AutoPolygonizeSelection.TryGetVolumePolygon(curve, Identity, out Polygon? fromCurve));
             Assert.IsNotNull(fromCurve);
 
-            Assert.IsFalse(AutoPolygonizeSelection.TryGetVolumePolygon(circle, null, out _));
+            Assert.IsFalse(AutoPolygonizeSelection.TryGetVolumePolygon(circle, Identity, out _));
         }
 
         [TestMethod]
@@ -1408,19 +1413,20 @@ namespace WebAnnotationTests.Commands
         {
             LocationObj overlap = new(0, 0);
             overlap.TypeCode = LocationType.POLYGON;
-            overlap.VolumeShape = Square(5, 0, 10);
+            overlap.MosaicShape = Square(5, 0, 10);
 
             LocationObj far = new(0, 0);
             far.TypeCode = LocationType.POLYGON;
-            far.VolumeShape = Square(100, 0, 10);
+            far.MosaicShape = Square(100, 0, 10);
 
             LocationObj circle = new(0, 0);
             circle.TypeCode = LocationType.CIRCLE;
-            circle.VolumeShape = Square(0, 0, 10);
+            circle.MosaicShape = Square(0, 0, 10);
 
             List<Polygon> collected = AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
                 [overlap, far, circle],
-                Square(0, 0, 10));
+                Square(0, 0, 10),
+                Identity);
 
             Assert.AreEqual(1, collected.Count);
             Assert.IsTrue(collected[0].Contains(new Vector2(7, 5)));
@@ -1431,17 +1437,19 @@ namespace WebAnnotationTests.Commands
         {
             LocationObj sibling = new(0, 0);
             sibling.TypeCode = LocationType.POLYGON;
-            sibling.VolumeShape = Square(5, 0, 10);
+            sibling.MosaicShape = Square(5, 0, 10);
 
             List<Polygon> carved = AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
                 [sibling],
                 Square(0, 0, 10),
+                Identity,
                 excludeParentId: 0);
             Assert.AreEqual(0, carved.Count);
 
             List<Polygon> otherCell = AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
                 [sibling],
                 Square(0, 0, 10),
+                Identity,
                 excludeParentId: 9,
                 structureParentLookup: _ => null);
             Assert.AreEqual(1, otherCell.Count);
@@ -1450,25 +1458,25 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void CollectOverlappingExistingPolygonsSkipsChildAndParentStructuresButKeepsOtherCells()
         {
-            // The annotation is in structure 0 (built with parent ID 0).
+            // The annotation is in structure 0 (built with parent ID 0); its mosaic shape is what the forward owner maps.
             LocationObj annotation = new(0, 0) { TypeCode = LocationType.POLYGON };
-            annotation.VolumeShape = Square(5, 0, 10);
+            annotation.MosaicShape = Square(5, 0, 10);
             Polygon proposed = Square(0, 0, 10);
 
             static long? Child(long id) => id == 0 ? 9 : null;
             static long? Grandchild(long id) => id switch { 0 => 5, 5 => 9, _ => null };
 
             Assert.AreEqual(0, AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
-                [annotation], proposed, excludeParentId: 9, structureParentLookup: Child).Count, "a child of the proposal's structure");
+                [annotation], proposed, Identity, excludeParentId: 9, structureParentLookup: Child).Count, "a child of the proposal's structure");
             Assert.AreEqual(0, AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
-                [annotation], proposed, excludeParentId: 9, structureParentLookup: Grandchild).Count, "a grandchild of it");
+                [annotation], proposed, Identity, excludeParentId: 9, structureParentLookup: Grandchild).Count, "a grandchild of it");
             Assert.AreEqual(1, AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
-                [annotation], proposed, excludeParentId: 7, structureParentLookup: Child).Count, "an unrelated structure is still subtracted");
+                [annotation], proposed, Identity, excludeParentId: 7, structureParentLookup: Child).Count, "an unrelated structure is still subtracted");
 
             // Now the annotation is the parent: the proposal is in structure 3, whose parent is 0.
             static long? ProposalIsChildOfAnnotation(long id) => id == 3 ? 0 : null;
             Assert.AreEqual(0, AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
-                [annotation], proposed, excludeParentId: 3, structureParentLookup: ProposalIsChildOfAnnotation).Count, "the parent is not subtracted from its child");
+                [annotation], proposed, Identity, excludeParentId: 3, structureParentLookup: ProposalIsChildOfAnnotation).Count, "the parent is not subtracted from its child");
         }
 
         [TestMethod]
@@ -1490,16 +1498,18 @@ namespace WebAnnotationTests.Commands
         {
             LocationObj polygon = new(0, 0);
             polygon.TypeCode = LocationType.POLYGON;
-            polygon.VolumeShape = Square(0, 0, 10);
+            polygon.MosaicShape = Square(0, 0, 10);
 
             LocationObj circle = new(0, 0);
             circle.TypeCode = LocationType.CIRCLE;
-            circle.VolumeShape = Square(0, 0, 10);
+            circle.MosaicShape = Square(0, 0, 10);
 
             List<OverlapCandidate> saved = AutoPolygonizeSelection.CollectSavedSameCellPolygonCandidates(
                 [polygon, circle],
                 parentId: 0,
-                sectionNumber: 0);
+                sectionNumber: 0,
+                excludeLocationIds: null,
+                transform: Identity);
 
             Assert.AreEqual(1, saved.Count);
             Assert.IsTrue(saved[0].Polygon.Contains(new Vector2(5, 5)));

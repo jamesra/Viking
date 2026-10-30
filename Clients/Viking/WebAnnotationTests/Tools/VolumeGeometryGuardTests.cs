@@ -41,7 +41,6 @@ namespace WebAnnotationTests.Tools
             ("ViewModel/Location_ViewModelBase.cs", "VolumeY => modelObj.VolumePosition.Y", "the VolumeY property column shows the stored cache itself"),
             ("ViewModel/Structure.cs", "VolumePosition", "Structure.Center picks the location nearest the structure's weighted mean for navigation; not drawn"),
             ("UI/AutoPolygonize/AutoPolygonizeSelection.cs", "nameof(LocationObj.VolumeShape)", "IsGeometryProperty names the property in a change filter; it reads nothing"),
-            ("UI/AutoPolygonize/AutoPolygonizeSelection.cs", "location.VolumeShape", "TryGetVolumePolygon without a transform (no open volume, unit tests), where the stored shape is the only geometry; with one it is the forward owner's"),
         ];
 
         private static string WebAnnotationDirectory([CallerFilePath] string thisFile = "") =>
