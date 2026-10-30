@@ -17,6 +17,13 @@ namespace WebAnnotationTests.Tools
     [TestClass]
     public class CircleLocationScaleTests
     {
+        /// <summary>
+        /// LocationActions reads WebAnnotation.Global, whose static initializer needs an open volume's cache path; without
+        /// this the class only passes when an earlier test happened to open one.
+        /// </summary>
+        [TestInitialize]
+        public void OpenAVolumeForGlobal() => SegmentationServiceSessionTests.EnsureVolumeCachePathAvailable();
+
         private static double Radius(Microsoft.SqlServer.Types.SqlGeometry shape) => shape.ToCircle().Radius;
 
         [TestMethod]
