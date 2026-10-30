@@ -117,23 +117,27 @@ namespace WebAnnotation.ViewModel
 
         public bool Bidirectional => modelObj.Bidirectional;
 
-        /// <summary>
-        /// Use this version only for searches
-        /// </summary>
-        /// <param name="linkObj"></param>
-        public StructureLinkViewModelBase(SectionStructureLinkViewKey linkKey, Viking.VolumeModel.IVolumeToSectionTransform mapper)
-            : this(linkKey)
-        {
-            CreateView(linkKey, mapper);
-        }
+        /// <summary>The volume geometry of <see cref="SourceLocation"/>, which the link is drawn from.</summary>
+        protected readonly LocationVolumeGeometry SourceGeometry;
 
-        private StructureLinkViewModelBase(SectionStructureLinkViewKey linkKey) : base()
+        /// <summary>The volume geometry of <see cref="TargetLocation"/>, which the link is drawn to.</summary>
+        protected readonly LocationVolumeGeometry TargetGeometry;
+
+        /// <summary>
+        /// A structure link drawn between two locations on one section, from their <see cref="LocationVolumeGeometry"/>
+        /// (<see cref="AnnotationViewFactory.Create(SectionStructureLinkViewKey, IVolumeToSectionTransform)"/> makes them).
+        /// </summary>
+        public StructureLinkViewModelBase(SectionStructureLinkViewKey linkKey, LocationVolumeGeometry sourceGeometry, LocationVolumeGeometry targetGeometry)
+            : base()
         {
             modelObj = Store.StructureLinks[linkKey.LinkID];
             SourceLocation = Store.Locations[linkKey.SourceLocID];
             TargetLocation = Store.Locations[linkKey.TargetLocID];
+            SourceGeometry = sourceGeometry;
+            TargetGeometry = targetGeometry;
 
             ContextMenuGenerator = StructureLink_CanvasContextMenuView.ContextMenuGenerator;
+            CreateView(linkKey);
         }
 
         public override System.Windows.Forms.ContextMenuStrip ContextMenu
@@ -277,17 +281,18 @@ namespace WebAnnotation.ViewModel
 
         int ICanvasView.VisualHeight => 0;
 
-        protected abstract void CreateView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper);
+        protected abstract void CreateView(SectionStructureLinkViewKey key);
 
         public abstract double Distance(SqlGeometry Position);
     }
 
-    internal class StructureLinkCirclesView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper) : StructureLinkViewModelBase(key, mapper), IColorView
+    internal class StructureLinkCirclesView(SectionStructureLinkViewKey key, LocationVolumeGeometry source, LocationVolumeGeometry target) : StructureLinkViewModelBase(key, source, target), IColorView
     {
         public LineView lineView;
         public Geometry.LineSegment lineSegment;
 
-        public double LineWidth => ((SourceLocation.Radius + TargetLocation.Radius));
+        /// <summary>The sum of the two ends' volume radii.</summary>
+        public double LineWidth => SourceGeometry.Radius + TargetGeometry.Radius;
 
         public double Radius => LineWidth / 2.0;
 
@@ -333,16 +338,14 @@ namespace WebAnnotation.ViewModel
 
         public override Geometry.Rectangle BoundingBox => Geometry.Rectangle.Pad(lineSegment.BoundingBox, LineWidth);
 
-        protected override void CreateView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper)
+        protected override void CreateView(SectionStructureLinkViewKey key)
         {
             StructureLinkObj link = Store.StructureLinks[key.LinkID];
-            LocationObj source = Store.Locations[key.SourceLocID];
-            LocationObj target = Store.Locations[key.TargetLocID];
 
-            Geometry.Vector2 sourceVolumePosition = mapper.SectionToVolume(source.Position);
-            Geometry.Vector2 targetVolumePosition = mapper.SectionToVolume(target.Position);
+            Geometry.Vector2 sourceVolumePosition = SourceGeometry.Center;
+            Geometry.Vector2 targetVolumePosition = TargetGeometry.Center;
 
-            lineView = new LineView(sourceVolumePosition, targetVolumePosition, Math.Min(source.Radius, target.Radius), DefaultColor,
+            lineView = new LineView(sourceVolumePosition, targetVolumePosition, Math.Min(SourceGeometry.Radius, TargetGeometry.Radius), DefaultColor,
                                     link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear);
             lineSegment = new LineSegment(sourceVolumePosition, targetVolumePosition);
         }
@@ -368,7 +371,8 @@ namespace WebAnnotation.ViewModel
         public Geometry.LineSegment[] lineSegments;
         public static float DefaultLineWidth = 16.0f;
 
-        public double LineWidth => ((SourceLocation.Width.Value + TargetLocation.Width.Value) / 2.0);
+        /// <summary>The mean of the two ends' volume widths.</summary>
+        public double LineWidth => (SourceGeometry.Width + TargetGeometry.Width) / 2.0;
 
         public double Radius => LineWidth / 2.0;
 
@@ -398,7 +402,7 @@ namespace WebAnnotation.ViewModel
                 255,
                 192);
 
-        public StructureLinkCurvesView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper) : base(key, mapper)
+        public StructureLinkCurvesView(SectionStructureLinkViewKey key, LocationVolumeGeometry source, LocationVolumeGeometry target) : base(key, source, target)
         {
             CreateLineSegments();
         }
@@ -437,16 +441,11 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        protected override void CreateView(SectionStructureLinkViewKey key, Viking.VolumeModel.IVolumeToSectionTransform mapper)
+        protected override void CreateView(SectionStructureLinkViewKey key)
         {
             StructureLinkObj link = Store.StructureLinks[key.LinkID];
-            LocationObj source = Store.Locations[key.SourceLocID];
-            LocationObj target = Store.Locations[key.TargetLocID];
 
-            SqlGeometry sourceShape = mapper.TryMapShapeSectionToVolume(source.MosaicShape);
-            SqlGeometry targetShape = mapper.TryMapShapeSectionToVolume(target.MosaicShape);
-
-            lineView = new LinkedPolyLineSimpleView(sourceShape.ToPoints(), targetShape.ToPoints(), (float)LineWidth, DefaultColor, link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear);
+            lineView = new LinkedPolyLineSimpleView([.. SourceGeometry.ControlPoints], [.. TargetGeometry.ControlPoints], (float)LineWidth, DefaultColor, link.Bidirectional ? LineStyle.AnimatedBidirectional : LineStyle.AnimatedLinear);
         }
 
         public static void Draw(GraphicsDevice device,

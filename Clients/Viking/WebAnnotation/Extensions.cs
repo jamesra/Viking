@@ -236,16 +236,12 @@ namespace WebAnnotation
     {
         public static double DistanceToPoint3D(this WebAnnotationModel.LocationObj l, Vector3 origin)
         {
-            Viking.VolumeModel.IVolumeToSectionTransform mapper = Viking.UI.State.volume.GetSectionToVolumeTransform((int)l.Z);
-            if (mapper is null)
+            if (l.VolumeGeometry() is not Viking.VolumeModel.LocationVolumeGeometry geometry || !geometry.IsExact)
             {
                 return double.MaxValue;
             }
 
-            if (!mapper.TrySectionToVolume(l.Position, out Vector2 vPos))
-            {
-                return double.MaxValue;
-            }
+            Vector2 vPos = geometry.Center;
 
             Vector3 p = new(vPos.X * Global.Scale.X, vPos.Y * Global.Scale.Y, l.Z * Global.Scale.Z);
             return Vector3.Distance(p, origin);

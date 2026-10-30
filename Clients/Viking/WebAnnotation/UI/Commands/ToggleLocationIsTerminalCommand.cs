@@ -19,7 +19,7 @@ namespace WebAnnotation.UI.Commands
             {
                 Store.Locations.Save();
                 if (target.Terminal)
-                    AnnotationOverlay.CurrentOverlay?.PlayFlagFeedback(FlagFeedbackKind.Celebration, target.VolumePosition);
+                    AnnotationOverlay.CurrentOverlay?.PlayFlagFeedback(FlagFeedbackKind.Celebration, target.VolumeCenter());
             }
             catch (FaultException ex)
             {

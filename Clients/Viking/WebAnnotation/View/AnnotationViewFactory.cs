@@ -103,24 +103,22 @@ namespace WebAnnotation.View
         {
             LocationObj sourceLocation = Store.Locations[key.SourceLocID];
             LocationObj targetLocation = Store.Locations[key.TargetLocID];
+            LocationVolumeGeometry source = LocationVolumeGeometry.For(sourceLocation, mapper);
+            LocationVolumeGeometry target = LocationVolumeGeometry.For(targetLocation, mapper);
 
             //If the location types don't match then use the default circle view, which all annotations are compatible with
             if (sourceLocation.TypeCode != targetLocation.TypeCode)
             {
-                return new StructureLinkCirclesView(key, mapper);
+                return new StructureLinkCirclesView(key, source, target);
             }
 
             switch (sourceLocation.TypeCode)
             {
-                case LocationType.CIRCLE:
-                    return new StructureLinkCirclesView(key, mapper);
                 case LocationType.OPENCURVE:
-                    StructureLinkCurvesView view = new(key, mapper);
-                    return view;
                 case LocationType.POLYLINE:
-                    return new StructureLinkCurvesView(key, mapper);
+                    return new StructureLinkCurvesView(key, source, target);
                 default:
-                    return new StructureLinkCirclesView(key, mapper);
+                    return new StructureLinkCirclesView(key, source, target);
                     throw new NotImplementedException("StructureLink View for type " + sourceLocation.TypeCode.ToString() + " is not implemented");
             }
         }
