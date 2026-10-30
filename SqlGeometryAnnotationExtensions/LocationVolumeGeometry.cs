@@ -211,6 +211,36 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
+        /// The forward mapping of mosaic points that are not a saved location's geometry: an edit preview, a segmentation
+        /// prompt, a region to load. The strict mapping the owner itself uses; a location's own geometry comes from
+        /// <see cref="For(LocationObj, IVolumeToSectionTransform)"/>.
+        /// </summary>
+        /// <returns>Whether each point mapped; <paramref name="volumePoints"/> holds every mapped point at its index.</returns>
+        public static bool[] TryMapPoints(IReadOnlyList<Vector2> mosaicPoints, IVolumeToSectionTransform transform, out Vector2[] volumePoints)
+        {
+            if (mosaicPoints is null)
+                throw new ArgumentNullException(nameof(mosaicPoints));
+            if (transform is null)
+                throw new ArgumentNullException(nameof(transform));
+
+            return transform.TrySectionToVolume(mosaicPoints as Vector2[] ?? [.. mosaicPoints], out volumePoints);
+        }
+
+        /// <summary>
+        /// A mosaic circle that is not a saved location's (a prompt, a preview) mapped forward by the rule
+        /// <see cref="Circle"/> uses (<see cref="CircleMapping"/>); null when its centre or every rim point fails to map.
+        /// </summary>
+        public static Circle? TryMapCircle(Circle mosaicCircle, IVolumeToSectionTransform transform) =>
+            (transform ?? throw new ArgumentNullException(nameof(transform))).TryMapShapeSectionToVolume(mosaicCircle);
+
+        /// <summary>
+        /// A mosaic polygon that is not a saved location's (a preview while it is moved, a cut piece) mapped forward
+        /// unsmoothed, holes included, as <see cref="ControlPolygon"/> maps a location's; null when any point fails to map.
+        /// </summary>
+        public static Polygon? TryMapPolygon(Polygon mosaicPolygon, IVolumeToSectionTransform transform) =>
+            (transform ?? throw new ArgumentNullException(nameof(transform))).TryMapShapeSectionToVolume(mosaicPolygon);
+
+        /// <summary>
         /// The circle drawn for this location on an adjacent section, in volume space: a circle or point at
         /// <paramref name="circleRadiusScalar"/> times its radius; an open curve or polyline at <see cref="Center"/>, half
         /// its mapped length across; a polygon, curve polygon or closed curve as the inscribed circle of <see cref="Shape"/>.

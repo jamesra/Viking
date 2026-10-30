@@ -46,7 +46,14 @@ namespace Viking.VolumeModel
                 throw new ArgumentException("The shape lies partly outside the region this section's transform maps, so it cannot be drawn on the volume.");
 
             location.MosaicShape = shape;
-            location.VolumeShape = LocationVolumeGeometry.For(location, mapper).Shape;
+            LocationVolumeGeometry geometry = LocationVolumeGeometry.For(location, mapper);
+
+            // A circle is sent as the owner's volume circle, as circle edits always sent it. Shape (MapShape, which
+            // VolumePositionUpdateJob writes) smooths a circle into the inscribed circle of its polygon, about 2% smaller;
+            // TODO: settle which one the stored cache holds when the client's VolumeShape writes are reworked.
+            location.VolumeShape = location.TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE && geometry.Circle is Circle circle
+                ? SqlGeometryUtils.Extensions.ToCircle(circle.Center.X, circle.Center.Y, 0, circle.Radius)
+                : geometry.Shape;
         }
 
         /// <summary>

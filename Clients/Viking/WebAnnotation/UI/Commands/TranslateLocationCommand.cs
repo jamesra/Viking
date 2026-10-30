@@ -293,7 +293,11 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
             }
         }
 
-        public delegate void OnCommandSuccess(Geometry.Vector2 VolumePosition, Geometry.Vector2 MosaicPosition, double NewRadius);
+        /// <summary>
+        /// The circle the user left on screen, in volume space. The callback saves it through the inverse owner
+        /// (<c>LocationActions.UpdateCircleLocationCallback</c>), which maps it back to the mosaic circle.
+        /// </summary>
+        public delegate void OnCommandSuccess(Geometry.Vector2 VolumePosition, double NewRadius);
 
         private readonly OnCommandSuccess success_callback;
 
@@ -340,7 +344,7 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
         {
             if (success_callback != null)
             {
-                success_callback(TranslatedVolumePosition, TranslatedMosaicPosition, circleView.Radius);
+                success_callback(TranslatedVolumePosition, circleView.Radius);
             }
 
             base.Execute();
@@ -355,18 +359,7 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
                                     VikingXNA.Scene scene,
                                     Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect) =>
             //TODO: Translate the LocationCanvasView before it is drawn
-            CircleView.Draw(graphicsDevice, scene, OverlayStyle.Luma, new CircleView[] { circleView });//LocationObjRenderer.DrawBackgrounds(items, graphicsDevice, basicEffect, Parent.annotationOverlayEffect, Parent.LumaOverlayLineManager, scene, Parent.Section.Number);            
-        public static void DefaultSuccessCallback(LocationObj loc, Geometry.Vector2 WorldPosition, Geometry.Vector2 MosaicPosition)
-        {
-            DefaultSuccessNoSaveCallback(loc, WorldPosition, MosaicPosition);
-            AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
-        }
-
-        public static void DefaultSuccessNoSaveCallback(LocationObj loc, Geometry.Vector2 WorldPosition, Geometry.Vector2 MosaicPosition)
-        {
-            loc.MosaicShape = loc.MosaicShape.MoveTo(MosaicPosition);
-            loc.VolumeShape = loc.VolumeShape.MoveTo(WorldPosition);
-        }
+            CircleView.Draw(graphicsDevice, scene, OverlayStyle.Luma, new CircleView[] { circleView });//LocationObjRenderer.DrawBackgrounds(items, graphicsDevice, basicEffect, Parent.annotationOverlayEffect, Parent.LumaOverlayLineManager, scene, Parent.Section.Number);
     }
 
 }

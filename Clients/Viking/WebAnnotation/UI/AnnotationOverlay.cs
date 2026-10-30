@@ -2211,7 +2211,7 @@ break;
 
                                     newLocation.TypeCode = LocationType.CIRCLE;
                                     // The user sized the circle in volume space; the mosaic circle is mapped from it.
-                                    LocationActions.UpdateCircleLocationCallback(newLocation,
+                                    LocationActions.UpdateCircleLocationCallback(Parent, newLocation,
                                         Parent.Volume.GetSectionToVolumeTransform(Parent.Section.Number), worldPos, radius);
                                     newLocation.Width = null;
 

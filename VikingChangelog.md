@@ -25,7 +25,9 @@ Documentation/source/Client/versionhistory.rst.
 
 * **Fix: pen loop merges only circles.** After a pen loop turns a circle into a polygon, only the structure's other circle annotations it touches join the merge as disks. Points, lines and curves of the same structure are no longer swept into the merged polygon.
 * **Fix: sizes on warped sections.** Where a section's alignment stretches or shrinks it, lines and open curves are now drawn as wide as their width stretched by the alignment, as circles already were, and a polyline on the viewed section uses its own width instead of a fixed one. Location links end on the circles, markers, outlines and line edges as they are drawn, instead of at their unstretched sizes, and structure links and the lines shown while linking are as wide as the stretched annotations they join.
+* **Fix: edits on warped sections land where drawn.** Where a section's alignment stretches, rotates or shears it, a circle you move, resize or create stays where and as large as you left it, instead of coming back up to about a tenth larger or smaller. **Change Shape > Circle** now makes a circle at the annotation's centre and size.
 <!-- Phase 1 of the annotation volume-geometry redesign: every view takes its volume geometry from LocationVolumeGeometry. -->
+<!-- Phase 2: every command maps its edit back to mosaic through LocationVolumeGeometry.ToMosaic and saves mosaic. -->
 
 ## 1.2.135 — 2026-10-29 (Viking Test, unsigned)
 
