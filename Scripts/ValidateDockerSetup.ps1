@@ -116,16 +116,6 @@ Test-Check -Name "Volume Annotation Services Dockerfile" -Test {
   -FailureMessage "Servers/VolumeAnnotationServices/Dockerfile not found" `
   -FixSuggestion "Ensure you're in the solution root directory"
 
-Test-Check -Name "docker-compose.combined.yml" -Test {
-    Test-Path (Join-Path $SolutionRoot "docker-compose.combined.yml")
-} -SuccessMessage "Docker Compose file found" `
-  -FailureMessage "docker-compose.combined.yml not found"
-
-Test-Check -Name "AnnotationService Config" -Test {
-    Test-Path (Join-Path $SolutionRoot "Servers/AnnotationService/AnnotationService/web.config.docker")
-} -SuccessMessage "AnnotationService Docker config found" `
-  -FailureMessage "web.config.docker not found for AnnotationService"
-
 Test-Check -Name "ConnectomeOData Config" -Test {
     Test-Path (Join-Path $SolutionRoot "Servers/ConnectomeODataV4/Web.config.docker")
 } -SuccessMessage "ConnectomeOData Docker config found" `
@@ -145,10 +135,6 @@ Test-Check -Name "DataExport Web.config" -Test {
 Write-Host ""
 Write-Host "Checking project files..." -ForegroundColor Yellow
 Write-Host ""
-
-Test-Check -Name "AnnotationService Project" -Test {
-    Test-Path (Join-Path $SolutionRoot "Servers/AnnotationService/AnnotationService/AnnotationService.csproj")
-} -SuccessMessage "AnnotationService.csproj found"
 
 Test-Check -Name "ConnectomeODataV4 Project" -Test {
     Test-Path (Join-Path $SolutionRoot "Servers/ConnectomeODataV4/ConnectomeODataV4.csproj")
@@ -175,9 +161,7 @@ if ($failed -eq 0) {
     Write-Host "✓ All checks passed! You're ready to build." -ForegroundColor Green
     Write-Host ""
     Write-Host "Next steps:" -ForegroundColor Cyan
-    Write-Host "  1. Review docker-compose.combined.yml and update database connection string" -ForegroundColor White
-    Write-Host "  2. Run: .\Scripts\BuildAndRunCombined.ps1" -ForegroundColor White
-    Write-Host "     or: docker-compose -f docker-compose.combined.yml up --build" -ForegroundColor White
+    Write-Host "  Run: .\Scripts\BuildAndRunCombined.ps1 -DBServer <server> -DBName <database>" -ForegroundColor White
     Write-Host ""
     exit 0
 }

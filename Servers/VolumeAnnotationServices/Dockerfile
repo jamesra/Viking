@@ -2,17 +2,19 @@
 # Viking Volume Annotation Services - Combined Docker Image
 # ==============================================================================
 #
-# This Dockerfile creates a single container hosting three interconnected 
-# services for volume annotation and connectome data management:
+# This Dockerfile creates a single container hosting two services for
+# connectome data access:
 #
-# 1. AnnotationService (WCF) - Handles volume annotation CRUD operations
-# 2. ConnectomeODataV4 (Web API) - Provides OData v4 access to connectome data
-# 3. DataExport (ASP.NET Core) - Exports morphology and network data
+# 1. ConnectomeODataV4 (Web API) - Provides OData v4 access to connectome data
+# 2. DataExport (ASP.NET Core) - Exports morphology and network data
 #
-# All services are hosted on IIS and accessible via different URL paths:
-#   - /annotation - WCF service for annotation management
+# Both services are hosted on IIS and accessible via different URL paths:
 #   - /odata      - OData v4 RESTful API for data queries
 #   - /dataexport - Network and morphology export endpoints
+#
+# The WCF AnnotationService is no longer part of this image: it is retired on
+# dev and built and deployed from VikingLegacy. Annotation reads and writes use
+# the gRPC annotation service (Servers/GrpcAnnotationService).
 #
 # Build from solution root:
 #   docker build -f Servers/VolumeAnnotationServices/Dockerfile -t viking-annotation-services .
@@ -23,7 +25,7 @@
 # escape=`
 
 # ==============================================================================
-# Stage 1: Build .NET Framework services (AnnotationService, ConnectomeODataV4)
+# Stage 1: Build the .NET Framework service (ConnectomeODataV4)
 # ==============================================================================
 FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2022 AS build-framework
 WORKDIR /src
@@ -35,7 +37,6 @@ COPY NuGet.Config .
 
 # Copy all project files for restore
 COPY AnnotationInterfaces/*.csproj ./AnnotationInterfaces/
-COPY AnnotationServiceTypes/*.csproj ./AnnotationServiceTypes/
 COPY AnnotationVizLib/*.csproj ./AnnotationVizLib/
 COPY AnnotationVizLibODataClient/*.csproj ./AnnotationVizLibODataClient/
 COPY UnitsAndScale/*.csproj ./UnitsAndScale/
@@ -51,7 +52,6 @@ COPY SqlGeometryAnnotationExtensions/*.csproj ./SqlGeometryAnnotationExtensions/
 # Copy server projects
 COPY Servers/ConnectomeDataModel/*.csproj ./Servers/ConnectomeDataModel/
 COPY Servers/WebAppSettings/*.csproj ./Servers/WebAppSettings/
-COPY Servers/AnnotationService/AnnotationService/*.csproj ./Servers/AnnotationService/AnnotationService/
 COPY Servers/ConnectomeODataV4/*.csproj ./Servers/ConnectomeODataV4/
 
 # Restore NuGet packages for .NET Framework projects
@@ -59,10 +59,6 @@ RUN nuget restore Everything.sln -ConfigFile NuGet.Config
 
 # Copy all source files
 COPY . .
-
-# Build and publish AnnotationService
-WORKDIR /src/Servers/AnnotationService/AnnotationService
-RUN msbuild AnnotationService.csproj /p:Configuration=Release /p:OutDir=C:\app\annotation\ /t:Build
 
 # Build and publish ConnectomeODataV4
 WORKDIR /src/Servers/ConnectomeODataV4
@@ -106,12 +102,12 @@ WORKDIR /src/Servers/DataExport
 RUN dotnet publish DataExport.csproj -c Release -o /app/dataexport --no-restore
 
 # ==============================================================================
-# Stage 3: Runtime stage with IIS hosting all three services
+# Stage 3: Runtime stage with IIS hosting both services
 # ==============================================================================
 FROM mcr.microsoft.com/dotnet/framework/aspnet:4.8-windowsservercore-ltsc2022 AS runtime
 
 LABEL maintainer="Viking Development Team"
-LABEL description="Viking Volume Annotation Services - AnnotationService, ConnectomeODataV4, DataExport"
+LABEL description="Viking Volume Annotation Services - ConnectomeODataV4, DataExport"
 LABEL version="1.0"
 
 # Install .NET 9 Runtime and ASP.NET Core Module (required for DataExport)
@@ -136,12 +132,10 @@ RUN powershell -Command `
     Add-WindowsFeature Web-Mgmt-Console
 
 # Copy published applications from build stages
-COPY --from=build-framework /app/annotation /inetpub/wwwroot/annotation
 COPY --from=build-framework /app/odata /inetpub/wwwroot/odata
 COPY --from=build-core /app/dataexport /inetpub/wwwroot/dataexport
 
 # Copy Docker-specific configuration files
-COPY Servers/AnnotationService/AnnotationService/web.config.docker /inetpub/wwwroot/annotation/web.config
 COPY Servers/ConnectomeODataV4/Web.config.docker /inetpub/wwwroot/odata/Web.config
 COPY Servers/DataExport/appsettings.Docker.json /inetpub/wwwroot/dataexport/appsettings.json
 COPY Servers/DataExport/web.config /inetpub/wwwroot/dataexport/web.config
@@ -154,10 +148,6 @@ RUN powershell -Command `
     Remove-Item 'C:\inetpub\wwwroot\iisstart.*' -Force -ErrorAction SilentlyContinue; `
     `
     # Create application pools `
-    New-WebAppPool -Name 'AnnotationServicePool' -Force; `
-    Set-ItemProperty IIS:\AppPools\AnnotationServicePool -Name managedRuntimeVersion -Value 'v4.0'; `
-    Set-ItemProperty IIS:\AppPools\AnnotationServicePool -Name enable32BitAppOnWin64 -Value $false; `
-    `
     New-WebAppPool -Name 'ConnectomeODataPool' -Force; `
     Set-ItemProperty IIS:\AppPools\ConnectomeODataPool -Name managedRuntimeVersion -Value 'v4.0'; `
     Set-ItemProperty IIS:\AppPools\ConnectomeODataPool -Name enable32BitAppOnWin64 -Value $false; `
@@ -167,7 +157,6 @@ RUN powershell -Command `
     Set-ItemProperty IIS:\AppPools\DataExportPool -Name enable32BitAppOnWin64 -Value $false; `
     `
     # Create IIS applications `
-    New-WebApplication -Name 'annotation' -Site 'Default Web Site' -PhysicalPath 'C:\inetpub\wwwroot\annotation' -ApplicationPool 'AnnotationServicePool' -Force; `
     New-WebApplication -Name 'odata' -Site 'Default Web Site' -PhysicalPath 'C:\inetpub\wwwroot\odata' -ApplicationPool 'ConnectomeODataPool' -Force; `
     New-WebApplication -Name 'dataexport' -Site 'Default Web Site' -PhysicalPath 'C:\inetpub\wwwroot\dataexport' -ApplicationPool 'DataExportPool' -Force
 
@@ -190,7 +179,7 @@ ADD https://dotnetbinaries.blob.core.windows.net/servicemonitor/2.0.1.10/Service
 RUN powershell -Command `
     $script = @' `
 Write-Host 'Starting Viking Volume Annotation Services...' `
-Write-Host 'Services: AnnotationService, ConnectomeODataV4, DataExport' `
+Write-Host 'Services: ConnectomeODataV4, DataExport' `
 Start-Service W3SVC `
 Write-Host 'IIS Started' `
 Get-Service W3SVC `

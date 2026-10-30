@@ -14,7 +14,8 @@
       Export        Scripts/Deploy-ExportApplication.ps1 once per volume (RC1, RC2, ...).
                     Runs on the IIS host as Administrator.
       ConfigureIIS  Scripts/ConfigureIIS.ps1 (pools + applications). Runs on the IIS host as
-                    Administrator. Destructive: it recreates the three pools and applications.
+                    Administrator. Destructive: it recreates the odata and dataexport pools and
+                    applications (the WCF annotation application is left alone).
       Certificate   deploy/Install-IisCertificate.ps1 with the cert.pfx viking-certs publishes.
                     Runs on the IIS host as Administrator.
       Status        Prints the resolved settings and exits.
@@ -177,7 +178,7 @@ foreach ($a in $Action) {
 
         'ConfigureIIS' {
             $script = Join-Path $repo 'Scripts\ConfigureIIS.ps1'
-            if ($PSCmdlet.ShouldProcess("$SiteName ($WebRoot)", 'Recreate annotation/odata/dataexport pools and applications, then iisreset')) {
+            if ($PSCmdlet.ShouldProcess("$SiteName ($WebRoot)", 'Recreate odata/dataexport pools and applications, then iisreset')) {
                 & $script -WebRoot $WebRoot -SiteName $SiteName
             }
         }

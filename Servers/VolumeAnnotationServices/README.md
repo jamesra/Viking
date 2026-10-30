@@ -1,22 +1,14 @@
 # Viking Volume Annotation Services - Docker Container
 
-This directory contains the Dockerfile and configuration for building a unified Docker container that hosts **three interconnected services for volume annotation and connectome data management**.
+This directory contains the Dockerfile and configuration for building a unified Docker container that hosts **two services for connectome data access**: OData and DataExport.
+
+The WCF AnnotationService used to be a third service in this image. WCF is retired on dev: the WCF server is built and
+deployed from VikingLegacy (`Servers/AnnotationService`), and annotation reads and writes go through the gRPC annotation
+service (`Servers/GrpcAnnotationService`).
 
 ## Services Included
 
-### 1. **AnnotationService** (`/annotation`)
-- **Type**: WCF Service (.NET Framework 4.8)
-- **Purpose**: Handles CRUD operations for volume annotations
-- **Endpoints**: Multiple WCF service endpoints for:
-  - Structure management
-  - Location management  
-  - Structure type management
-  - Permitted structure links
-  - Volume metadata
-- **Authentication**: JWT via IdentityServer or ASP.NET Membership
-- **Protocol**: Binary over HTTPS with protobuf serialization
-
-### 2. **ConnectomeODataV4** (`/odata`)
+### 1. **ConnectomeODataV4** (`/odata`)
 - **Type**: ASP.NET Web API with OData v4 (.NET Framework 4.8)
 - **Purpose**: Provides RESTful OData access to connectome data
 - **Endpoints**: OData v4 compliant API for:
@@ -29,7 +21,7 @@ This directory contains the Dockerfile and configuration for building a unified 
 - **Features**: Full OData query capabilities ($filter, $select, $expand, etc.)
 - **CORS**: Enabled for cross-origin access
 
-### 3. **DataExport** (`/dataexport`)
+### 2. **DataExport** (`/dataexport`)
 - **Type**: ASP.NET Core Web API (.NET 9.0)
 - **Purpose**: Exports morphology and network data
 - **Endpoints**: RESTful API for:
@@ -40,7 +32,7 @@ This directory contains the Dockerfile and configuration for building a unified 
 
 ## Architecture
 
-All three services are hosted in a single Windows Server Core container using IIS:
+Both services are hosted in a single Windows Server Core container using IIS:
 
 ```
 ┌─────────────────────────────────────────┐
@@ -48,11 +40,6 @@ All three services are hosted in a single Windows Server Core container using II
 ├─────────────────────────────────────────┤
 │  ┌───────────────────────────────────┐  │
 │  │  Default Web Site (Port 80/443)   │  │
-│  ├───────────────────────────────────┤  │
-│  │  /annotation                      │  │
-│  │  ├─ AnnotationServicePool         │  │
-│  │  │  (.NET 4.8, WCF)               │  │
-│  │  └─ AnnotationService.dll          │  │
 │  ├───────────────────────────────────┤  │
 │  │  /odata                           │  │
 │  │  ├─ ConnectomeODataPool           │  │
@@ -100,8 +87,6 @@ Once running, services are available at:
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| **AnnotationService WSDL** | http://localhost:8080/annotation/Annotate.svc?wsdl | Service metadata |
-| **AnnotationService Endpoint** | http://localhost:8080/annotation/Annotate.svc | WCF service endpoint |
 | **OData Root** | http://localhost:8080/odata | OData service document |
 | **OData Metadata** | http://localhost:8080/odata/$metadata | Entity model |
 | **OData Structures** | http://localhost:8080/odata/Structures | Example query |
@@ -113,7 +98,7 @@ Once running, services are available at:
 
 ### Database Connection (Required)
 
-All three services require a SQL Server database connection. Configure via:
+Both services require a SQL Server database connection. Configure via:
 
 **Environment Variable** (recommended):
 ```yaml
@@ -122,7 +107,6 @@ environment:
 ```
 
 **Configuration Files**:
-- `/inetpub/wwwroot/annotation/web.config`
 - `/inetpub/wwwroot/odata/Web.config`
 - `/inetpub/wwwroot/dataexport/appsettings.json`
 
@@ -153,7 +137,6 @@ Validate the deployment:
 .\Scripts\TestDockerImage.ps1
 
 # Manual tests
-Invoke-WebRequest http://localhost:8080/annotation/Annotate.svc?wsdl
 Invoke-WebRequest http://localhost:8080/odata/$metadata
 Invoke-WebRequest http://localhost:8080/dataexport
 ```
@@ -189,7 +172,7 @@ docker exec -it viking-annotation-services powershell
 
 The Dockerfile uses a multi-stage build:
 
-1. **build-framework**: Builds .NET Framework 4.8 services (AnnotationService, ConnectomeODataV4)
+1. **build-framework**: Builds the .NET Framework 4.8 service (ConnectomeODataV4)
 2. **build-core**: Builds .NET 9.0 service (DataExport)
 3. **runtime**: Creates final image with IIS hosting all services
 

@@ -1,5 +1,5 @@
 # Build and Run Viking Combined Services
-# This script builds and runs all three Viking services in a single Docker container
+# This script builds and runs the Viking OData and DataExport services in a single Docker container
 
 param(
     [Parameter(Mandatory=$false)]
@@ -127,7 +127,6 @@ function Start-CombinedServices {
         Write-Host "Container started successfully!" -ForegroundColor Green
         Write-Host ""
         Write-Host "Services are available at:" -ForegroundColor Cyan
-        Write-Host "  - AnnotationService: http://localhost:$HttpPort/annotation/Annotate.svc" -ForegroundColor White
         Write-Host "  - ConnectomeOData:   http://localhost:$HttpPort/odata" -ForegroundColor White
         Write-Host "  - DataExport:        http://localhost:$HttpPort/dataexport" -ForegroundColor White
         Write-Host ""

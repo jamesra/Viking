@@ -24,8 +24,9 @@ Action            What it does                                                Wh
 ``Export``        ``Scripts/Deploy-ExportApplication.ps1`` for each volume    IIS host, admin
                   in ``VIKING_IIS_VOLUMES``, URL base
                   ``https://<VIKING_HOSTNAME_WEBSVC>/``.
-``ConfigureIIS``  ``Scripts/ConfigureIIS.ps1`` (recreates the annotation,     IIS host, admin
-                  odata and dataexport pools and applications).
+``ConfigureIIS``  ``Scripts/ConfigureIIS.ps1`` (recreates the odata and       IIS host, admin
+                  dataexport pools and applications; the WCF annotation
+                  application is left alone).
 ``Certificate``   ``deploy/Install-IisCertificate.ps1`` with                  IIS host, admin
                   ``VIKING_IIS_PFX_PATH``.
 ``Status``        Prints the resolved settings.                               anywhere

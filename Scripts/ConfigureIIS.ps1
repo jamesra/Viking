@@ -3,34 +3,36 @@
     Configures IIS application pools and applications for the Viking combined services.
 
 .DESCRIPTION
-    Creates the AnnotationService (WCF, .NET 4.8), ConnectomeODataV4 (.NET 4.8) and DataExport
-    (ASP.NET Core) application pools and applications under one IIS site, sets MIME types and
-    folder permissions, then restarts IIS. Used by the VolumeAnnotationServices Windows container
-    and by deploy/Deploy-VikingIis.ps1 -Action ConfigureIIS. The defaults reproduce the original
-    hard-coded paths.
+    Creates the ConnectomeODataV4 (.NET 4.8) and DataExport (ASP.NET Core) application pools and
+    applications under one IIS site, sets MIME types and folder permissions, then restarts IIS.
+    Used by the VolumeAnnotationServices Windows container and by deploy/Deploy-VikingIis.ps1
+    -Action ConfigureIIS. The defaults reproduce the original hard-coded paths.
+
+    The WCF AnnotationService is retired on dev and built and deployed from VikingLegacy; this
+    script does not create, remove or change its pool or application.
 
 .PARAMETER WebRoot
-    Folder holding the annotation, odata and dataexport application folders. Default C:\inetpub\wwwroot.
+    Folder holding the odata and dataexport application folders. Default C:\inetpub\wwwroot.
 
 .PARAMETER SiteName
     IIS site that receives the applications. Default "Default Web Site".
 
 .EXAMPLE
     .\ConfigureIIS.ps1
-    Configures C:\inetpub\wwwroot\{annotation,odata,dataexport} under Default Web Site.
+    Configures C:\inetpub\wwwroot\{odata,dataexport} under Default Web Site.
 
 .EXAMPLE
     .\ConfigureIIS.ps1 -WebRoot D:\inetpub\viking -SiteName "Viking"
 
 .NOTES
-    Run as Administrator on the IIS host. Removes and recreates the three pools and applications.
+    Run as Administrator on the IIS host. Removes and recreates the two pools and applications.
 #>
 param(
     [string]$WebRoot = "C:\inetpub\wwwroot",
     [string]$SiteName = "Default Web Site"
 )
 # Script to configure IIS for Viking Combined Services
-# This script sets up the three services under different application paths
+# This script sets up the two services under different application paths
 
 Import-Module WebAdministration
 
@@ -40,7 +42,6 @@ Write-Host "Configuring IIS for Viking Combined Services..." -ForegroundColor Gr
 Start-Service W3SVC -ErrorAction SilentlyContinue
 
 # Application paths
-$annotationPath = Join-Path $WebRoot "annotation"
 $odataPath = Join-Path $WebRoot "odata"
 $dataexportPath = Join-Path $WebRoot "dataexport"
 
@@ -51,16 +52,6 @@ Remove-Item (Join-Path $WebRoot "index.html") -Force -ErrorAction SilentlyContin
 
 # Create Application Pools
 Write-Host "Creating Application Pools..." -ForegroundColor Yellow
-
-# AnnotationService Pool (WCF Service - .NET 4.8)
-if (Test-Path "IIS:\AppPools\AnnotationServicePool") {
-    Remove-WebAppPool -Name "AnnotationServicePool"
-}
-New-WebAppPool -Name "AnnotationServicePool" -Force
-Set-ItemProperty "IIS:\AppPools\AnnotationServicePool" -Name "managedRuntimeVersion" -Value "v4.0"
-Set-ItemProperty "IIS:\AppPools\AnnotationServicePool" -Name "enable32BitAppOnWin64" -Value $false
-Set-ItemProperty "IIS:\AppPools\AnnotationServicePool" -Name "processModel.identityType" -Value "ApplicationPoolIdentity"
-Set-ItemProperty "IIS:\AppPools\AnnotationServicePool" -Name "processModel.loadUserProfile" -Value $true
 
 # ConnectomeOData Pool (Web API - .NET 4.8)
 if (Test-Path "IIS:\AppPools\ConnectomeODataPool") {
@@ -84,9 +75,6 @@ Set-ItemProperty "IIS:\AppPools\DataExportPool" -Name "processModel.identityType
 Write-Host "Creating Web Applications..." -ForegroundColor Yellow
 
 # Remove existing applications if they exist
-if (Test-Path "IIS:\Sites\$SiteName\annotation") {
-    Remove-WebApplication -Name "annotation" -Site $SiteName
-}
 if (Test-Path "IIS:\Sites\$SiteName\odata") {
     Remove-WebApplication -Name "odata" -Site $SiteName
 }
@@ -95,7 +83,6 @@ if (Test-Path "IIS:\Sites\$SiteName\dataexport") {
 }
 
 # Create new applications
-New-WebApplication -Name "annotation" -Site $SiteName -PhysicalPath $annotationPath -ApplicationPool "AnnotationServicePool" -Force
 New-WebApplication -Name "odata" -Site $SiteName -PhysicalPath $odataPath -ApplicationPool "ConnectomeODataPool" -Force
 New-WebApplication -Name "dataexport" -Site $SiteName -PhysicalPath $dataexportPath -ApplicationPool "DataExportPool" -Force
 
@@ -106,10 +93,7 @@ Add-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter "system.w
 
 # Set proper permissions
 Write-Host "Setting permissions..." -ForegroundColor Yellow
-$acl = Get-Acl $annotationPath
 $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("IIS_IUSRS", "ReadAndExecute", "ContainerInherit,ObjectInherit", "None", "Allow")
-$acl.SetAccessRule($accessRule)
-Set-Acl $annotationPath $acl
 
 $acl = Get-Acl $odataPath
 $acl.SetAccessRule($accessRule)
@@ -128,7 +112,6 @@ iisreset /restart
 
 Write-Host "IIS Configuration Complete!" -ForegroundColor Green
 Write-Host "Services are now available at:" -ForegroundColor Cyan
-Write-Host "  - http://localhost/annotation   (AnnotationService - WCF)" -ForegroundColor White
 Write-Host "  - http://localhost/odata        (ConnectomeODataV4 - Web API)" -ForegroundColor White
 Write-Host "  - http://localhost/dataexport   (DataExport - ASP.NET Core)" -ForegroundColor White
 

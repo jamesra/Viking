@@ -74,12 +74,6 @@ Write-Host ""
 # Test each service
 $tests = @(
     @{
-        Name = "AnnotationService WSDL"
-        Url = "http://localhost:$HttpPort/annotation/Annotate.svc?wsdl"
-        ExpectedStatus = 200
-        ExpectedContent = "wsdl:definitions"
-    },
-    @{
         Name = "ConnectomeOData Metadata"
         Url = "http://localhost:$HttpPort/odata/`$metadata"
         ExpectedStatus = 200
@@ -162,7 +156,7 @@ catch {
 
 # Check application pools
 Write-Host "Checking application pools..." -ForegroundColor Yellow
-$pools = @("AnnotationServicePool", "ConnectomeODataPool", "DataExportPool")
+$pools = @("ConnectomeODataPool", "DataExportPool")
 
 foreach ($pool in $pools) {
     Write-Host "  $pool..." -NoNewline
@@ -195,7 +189,6 @@ if ($failed -eq 0) {
     Write-Host "✓ All tests passed! Services are running correctly." -ForegroundColor Green
     Write-Host ""
     Write-Host "Service URLs:" -ForegroundColor Cyan
-    Write-Host "  - AnnotationService: http://localhost:$HttpPort/annotation/Annotate.svc" -ForegroundColor White
     Write-Host "  - ConnectomeOData:   http://localhost:$HttpPort/odata" -ForegroundColor White
     Write-Host "  - DataExport:        http://localhost:$HttpPort/dataexport" -ForegroundColor White
     Write-Host ""

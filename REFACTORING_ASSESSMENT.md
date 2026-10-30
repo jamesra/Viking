@@ -39,7 +39,7 @@ Refactoring assessment of the Viking monorepo. Items marked **Status: completed*
 ## 2. Cross-cutting themes
 
 1. **Dead / orphaned product surfaces** — Identity `source/` (IS3/net45, **completed**), Bifrost, ConnectomicsWebsite, ConnectomeOpenData (**completed**), WebVisualization (moved to VikingLegacy, **completed**), Neo4j island, `gRPCSegmentAnything`, SmoothMesh (MeshXNAVizLib completed), orphan WCF client projects.
-2. **Dual WCF / gRPC stacks** — Combined docker still ships WCF AnnotationService + ODataV4 (net48) beside gRPC + DataExport; first-party clients already bootstrap gRPC.
+2. **Dual WCF / gRPC stacks** — Combined docker ships ODataV4 (net48) + DataExport (its WCF AnnotationService stage was removed; the WCF server is built and deployed from VikingLegacy); first-party clients already bootstrap gRPC.
 3. **Annotation draw / tile-path fork** — WinForms `AnnotationOverlay.Draw` vs Jotunn `AnnotationScene.Draw`; Viking tile draw still bypasses shared `SectionSceneRenderer` (deduped C15-002/C16-012 and C16-001/C15-003/C17-024).
 4. **Triple (plus) OData clients** — Generated `ODataClient`, `AnnotationVizLibODataClient`, SimpleOData (MorphologyView), unused WCF viz client, dead server OData stub.
 5. **Committed secrets / credential debt** — Identity archive configs, Neo4j tests, CreateUpdateDatabase logins, anonymous `"connectome"` defaults; modern hosts already use env resolvers.
