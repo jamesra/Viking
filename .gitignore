@@ -63,3 +63,6 @@ Clients/Viking/VikingCoreTests/stryker-util-coords-config.json
 
 # A WebAnnotationModel build that resolves the Viking output path relative to itself drops its gRPC native libraries here
 Clients/WebAnnotationModel/Viking/
+
+# Private signing keys never belong in the repo (production signing uses the YubiKey HSM cert).
+*.pfx
