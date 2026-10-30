@@ -1906,6 +1906,7 @@ Refactoring assessment of the Viking monorepo. Items marked **Status: completed*
 - **Evidence:** Only WCF Proxy* uses them.
 
 #### C10-025 — Drop unused AnnotationServiceTypes.WCF from Jotunn AnnotationViewModel
+- **Status:** moot — Jotunn AnnotationViewModel deleted
 - **Paths:** that csproj
 - **Category:** delete
 - **Recommendation:** Audit and drop.
@@ -3291,6 +3292,7 @@ Refactoring assessment of the Viking monorepo. Items marked **Status: completed*
 - **Evidence:** csproj Compile/Page Remove; converters only from PyramidViewer.
 
 #### C16-011 — Quarantined Jotunn AnnotationView / AnnotationViewModel
+- **Status:** completed — both projects deleted (AnnotationScene draws section annotations through the gRPC stores)
 - **Paths:** `Clients/Jotunn/AnnotationView/` (+ QUARANTINED.md); `AnnotationViewModel/`
 - **Category:** archive
 - **Recommendation:** Keep quarantined; never revive as second renderer.
@@ -3628,6 +3630,7 @@ Refactoring assessment of the Viking monorepo. Items marked **Status: completed*
 - **Evidence:** QUARANTINED.md; net48 + Prism.Mef; not in .sln; hardcoded OData URL.
 
 #### C18-002 — Delete quarantined AnnotationView + AnnotationViewModel
+- **Status:** completed — both projects deleted (AnnotationScene draws section annotations through the gRPC stores)
 - **Paths:** `AnnotationView/**`, `AnnotationViewModel/**`
 - **Category:** delete
 - **Recommendation:** Delete both; live path WebAnnotation/AnnotationScene.
