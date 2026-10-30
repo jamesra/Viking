@@ -522,6 +522,18 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   `SqlGeometryAnnotationExtensions/VolumeCache.cs`, `LocationObjExtensions.SetMosaicShape`,
   `VolumeViewModel.GetDefaultSectionToVolumeTransform`, `Clients/Viking/WebAnnotation/VolumePositionUpdateJob.cs`,
   `Clients/VikingAU/Program.cs`.
+- **2026-10-30 Server fallbacks for a location saved without its volume shape** (Viking dev, the gRPC and WCF annotation
+  services). The volume shape is the client's cache of the mosaic shape under the volume's default transform; neither
+  server has the `.stos`, so neither can derive it. gRPC (`Servers/GrpcAnnotationService/Protos/Location.EF.Conversion.cs`
+  `ToLocation`): a non-circle location without a volume shape used to store the mosaic shape (section coordinates in
+  volume space) or a point at the volume position (a polygon cached as a point) as its volume shape; it is now refused
+  (ArgumentException, as a circle without its volume circle already was), except that a point's volume shape may come
+  from its volume position, which is exact for a point. Pinned by `LocationConversionTests`. WCF
+  (`Servers/AnnotationService/.../LocationExtensions.cs`): its fallback stores a circle of the *mosaic* radius at the old
+  `VolumePosition` (a point for other types); it is left in place with a comment, because the deployed service has older
+  and unknown WCF callers whose saves a refusal would fail outright, while the Viking clients never send a null volume
+  shape. Rejected: deriving a volume shape on the server (no transform there); refusing on WCF (risk to unknown callers
+  outweighs a wrong cache that Update Volume Positions or VikingAU can refresh).
 
 ## Discussion points
 
