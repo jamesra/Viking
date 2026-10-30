@@ -431,13 +431,6 @@ namespace WebAnnotation.ViewModel
 
         public override string ToString() => $"Section {SectionNumber} annotations";
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="section"></param>
-        /// <param name="Parent"></param>
-        private readonly bool SubmitUpdatedVolumePositions = false;
-
         public SectionAnnotationsView(SectionViewModel section)
         {
             Trace.WriteLine("Create SectionLocationsViewModel for " + section.Number.ToString());
@@ -463,8 +456,6 @@ namespace WebAnnotation.ViewModel
 
             SectionLocationLinks = new SectionLocationLinkAnnotationsViewModel(section);
             SectionStructureLinks = new SectionStructureLinkAnnotationsViewModel(this);
-
-            SubmitUpdatedVolumePositions = section.VolumeViewModel.UpdateServerVolumePositions;
 
             if (Section.ReferenceSectionAbove != null)
             {
@@ -756,40 +747,19 @@ namespace WebAnnotation.ViewModel
             SectionBelow?.AddLocations(listLocations.Where(l => l.Section == SectionBelow.SectionNumber));
         }
 
-        /// <summary>   
+        /// <summary>
         ///  Keys have been added to the locations store
         /// </summary>
+        /// <remarks>
+        /// Loading never writes the stored volume cache. The 2016 version re-saved volume positions here under whatever
+        /// transform was on screen (its TODO asked to do so only under the default one); now every save writes the cache under
+        /// the volume's default transform (<see cref="Viking.VolumeModel.VolumeCache"/>) and Update Volume Positions
+        /// (<see cref="VolumePositionUpdateJob"/>) refreshes it after a .stos change.
+        /// </remarks>
         protected void AddLocationsOnThisSection(IEnumerable<LocationObj> listLocations)
         {
-            bool UpdateVolumeLocations = false;
-            bool HaveUpdatedVolumePositionsToSubmit = false;
-            long VolumePositionUpdatedCount = 0;
-            /*
-             * 10/17/2016: This update feature was replaced by the VikingAU command-line tool
-            if (this.SubmitUpdatedVolumePositions)// && this.mapper.ID == this.Section.VolumeViewModel.DefaultVolumeTransform) TODO: Add the line back in to prevent saving transforms when the mosaic transform has been changed
-            {
-                UpdateVolumeLocations = true;
-            }  
-               */
-
             foreach (LocationObj loc in listLocations)
-            { 
-                if (AddLocation(loc, UpdateVolumeLocations))
-                {
-                    VolumePositionUpdatedCount++;
-                    HaveUpdatedVolumePositionsToSubmit |= true;
-                }
-            }
-            /*
-            if (UpdateVolumeLocations && HaveUpdatedVolumePositionsToSubmit)
-            {
-                //System.Threading.ThreadPool.QueueUserWorkItem( f => { Store.Locations.Save(); } );
-
-                //System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Func<bool>(Store.Locations.Save), System.Windows.Threading.DispatcherPriority.Background, null);
-
-                Trace.WriteLine("Updated " + VolumePositionUpdatedCount.ToString() + " volume positions");
-                Store.Locations.Save(); 
-            }*/
+                AddLocation(loc);
         }
 
         /// <summary>
@@ -798,8 +768,7 @@ namespace WebAnnotation.ViewModel
         /// from that object.
         /// </summary>
         /// <param name="loc">Location to add</param>
-        /// <param name="UpdateVolumeLocations">Return True if the volume position of the location was updated</param>
-        private bool AddLocation(LocationObj loc, bool UpdateVolumeLocations)
+        private bool AddLocation(LocationObj loc)
         {
             if (loc.Section != Section.Number)
             {

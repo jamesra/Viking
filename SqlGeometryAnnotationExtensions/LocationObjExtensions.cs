@@ -7,8 +7,8 @@ namespace Viking.VolumeModel
 {
 
     /// <summary>
-    /// Sets a location's shapes. Mosaic is the truth and the volume shape is always the forward owner's
-    /// (<see cref="LocationVolumeGeometry"/>); see <c>.cursor/rules/annotation-volume-geometry.mdc</c>.
+    /// Sets a location's shapes. Mosaic is the truth and the volume shape is always the forward owner's under the volume's
+    /// default transform (<see cref="VolumeCache"/>); see <c>.cursor/rules/annotation-volume-geometry.mdc</c>.
     /// </summary>
     public static class LocationObjExtensions
     {
@@ -34,11 +34,15 @@ namespace Viking.VolumeModel
 
         /// <summary>
         /// Sets a location from a mosaic shape, the truth: <c>MosaicShape</c> is <paramref name="shape"/> and <c>VolumeShape</c>
-        /// is what the forward owner (<see cref="LocationVolumeGeometry"/>) derives from it, never a volume shape the caller
-        /// kept. Set <c>TypeCode</c> (and <c>Width</c>) first: the volume shape is smoothed for the type.
+        /// is the cache the forward owner derives from it under the volume's <b>default</b> transform
+        /// (<see cref="VolumeCache"/>), never a volume shape the caller kept and never one under the transform on screen. Set
+        /// <c>TypeCode</c> (and <c>Width</c>) first: the volume shape is smoothed for the type.
         /// </summary>
-        /// <exception cref="ArgumentException">The shape is not valid SQL geometry, or it does not map onto the volume under
-        /// <paramref name="mapper"/>; the location is then unchanged.</exception>
+        /// <param name="mapper">The transform the edit was made under (the one on screen); the shape must map onto the volume
+        /// under it. Without an open volume it is also the cache's basis (<see cref="VolumeCache.Basis"/>).</param>
+        /// <exception cref="ArgumentException">The shape is not valid SQL geometry, it does not map onto the volume under
+        /// <paramref name="mapper"/>, or the default transform cannot place it even by extrapolation; a location that had a
+        /// shape keeps it.</exception>
         public static void SetShapeFromGeometryInSection(this WebAnnotationModel.LocationObj location, Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
             if (!shape.STIsValid().Value)
@@ -47,15 +51,23 @@ namespace Viking.VolumeModel
             if (LocationVolumeGeometry.MapShape(location.TypeCode, shape, mapper) is null)
                 throw new ArgumentException("The shape lies partly outside the region this section's transform maps, so it cannot be drawn on the volume.");
 
+            Microsoft.SqlServer.Types.SqlGeometry oldShape = location.MosaicShape;
             location.MosaicShape = shape;
-            LocationVolumeGeometry geometry = LocationVolumeGeometry.For(location, mapper);
 
-            // A circle is sent as the owner's volume circle, as circle edits always sent it. Shape (MapShape, which
-            // VolumePositionUpdateJob writes) smooths a circle into the inscribed circle of its polygon, about 2% smaller;
-            // TODO: settle which one the stored cache holds when the client's VolumeShape writes are reworked.
-            location.VolumeShape = location.TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE && geometry.Circle is Circle circle
-                ? SqlGeometryUtils.Extensions.ToCircle(circle.Center.X, circle.Center.Y, 0, circle.Radius)
-                : geometry.Shape;
+            Microsoft.SqlServer.Types.SqlGeometry cache;
+            try
+            {
+                cache = VolumeCache.Shape(location, VolumeCache.Basis(location, mapper));
+            }
+            catch (ArgumentException e)
+            {
+                if (oldShape is not null)
+                    location.MosaicShape = oldShape;
+
+                throw new ArgumentException("The shape lies outside the region the volume's default section alignment can place, so its stored volume position cannot be computed.", e);
+            }
+
+            location.VolumeShape = cache;
         }
 
         /// <summary>
