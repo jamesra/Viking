@@ -26,6 +26,9 @@ namespace WebAnnotation.UI.Commands
         /// New Locations position in world space
         /// </summary>
         private Geometry.Vector2 transformedPos;
+
+        /// <summary>The volume radius of the location being linked, drawn while it has no view.</summary>
+        private readonly double transformedRadius;
         private readonly StructureObj putativeStruct;
         private readonly LocationObj putativeLoc;
         private LocationObj nearestParent;
@@ -51,7 +54,9 @@ namespace WebAnnotation.UI.Commands
             linecolor = LocType != null ? LocType.Color.ToXNAColor(0.5f) : Microsoft.Xna.Framework.Color.Green;
 
             //Transform the location position to the correct coordinates
-            transformedPos = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(new Geometry.Vector2(putativeLoc.Position.X, putativeLoc.Position.Y));
+            Viking.VolumeModel.LocationVolumeGeometry geometry = Viking.VolumeModel.LocationVolumeGeometry.For(putativeLoc, parent.Section.ActiveSectionToVolumeTransform);
+            transformedPos = geometry.Center;
+            transformedRadius = geometry.Radius;
 
             parent.Cursor = Cursors.Cross;
 
@@ -169,14 +174,14 @@ namespace WebAnnotation.UI.Commands
             }
             else
             {
-                GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, transformedPos, putativeLoc.Radius, linecolor);
+                GlobalPrimitives.DrawCircle(graphicsDevice, basicEffect, transformedPos, transformedRadius, linecolor);
             }
 
             Geometry.Vector2 target;
             if (nearestParent != null)
             {
                 //Snap the line to a nearby target if it exists
-                target = nearestParent.VolumePosition;
+                target = nearestParent.VolumeCenter();
             }
             else
             {

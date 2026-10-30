@@ -23,12 +23,11 @@ namespace WebAnnotation.UI.ActionViews
 
         public void CreateDefaultVisuals()
         {
-            LineView view = new(model.Source.VolumePosition, model.Target.VolumePosition,
-                Math.Min(model.Source.Radius, model.Target.Radius),
+            double width = Math.Min(model.Source.VolumeRadius(), model.Target.VolumeRadius());
+            LineView view = new(model.Source.VolumeCenter(), model.Target.VolumeCenter(), width,
                 Color.White.SetAlpha(0.5f), LineStyle.AnimatedLinear);
             Passive = view;
-            Active = new LineView(model.Source.VolumePosition, model.Target.VolumePosition,
-                Math.Min(model.Source.Radius, model.Target.Radius),
+            Active = new LineView(model.Source.VolumeCenter(), model.Target.VolumeCenter(), width,
                 Color.White.SetAlpha(1f), LineStyle.AnimatedLinear);
         }
     }

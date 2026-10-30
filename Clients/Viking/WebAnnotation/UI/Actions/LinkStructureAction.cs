@@ -54,9 +54,10 @@ namespace WebAnnotation.UI.Actions
 
         public void CreateDefaultVisuals()
         {
-            LineView view = new(Source.VolumePosition, Target.VolumePosition, Math.Min(Source.Radius, Target.Radius), Color.White.SetAlpha(0.5f), LineStyle.AnimatedLinear);
+            double width = Math.Min(Source.VolumeRadius(), Target.VolumeRadius());
+            LineView view = new(Source.VolumeCenter(), Target.VolumeCenter(), width, Color.White.SetAlpha(0.5f), LineStyle.AnimatedLinear);
             Passive = view;
-            Active = new LineView(Source.VolumePosition, Target.VolumePosition, Math.Min(Source.Radius, Target.Radius), Color.White.SetAlpha(1f), LineStyle.AnimatedLinear);
+            Active = new LineView(Source.VolumeCenter(), Target.VolumeCenter(), width, Color.White.SetAlpha(1f), LineStyle.AnimatedLinear);
         }
 
 

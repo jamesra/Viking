@@ -102,7 +102,7 @@ namespace WebAnnotation.UI.Commands
             //Draw a line from the selected location to the new location if we are holding left button down
             if (oldMouse.Button == MouseButtons.Left)
             {
-                Geometry.Vector2 selectedPos = selected.VolumePosition;
+                Geometry.Vector2 selectedPos = selected.VolumeCenter();
                 /*bool found = sectionAnnotations.TryGetPositionForLocation(selected, out selectedPos);
                 if (found == false)
                     return; 

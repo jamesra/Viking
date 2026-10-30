@@ -176,7 +176,7 @@ namespace WebAnnotation.View
             foreach (bool up in new[] { true, false })
             {
                 LocationObj[] links = [.. OverlappingLinks.Where(loc => up ? loc.Z > ZCut : loc.Z < ZCut)
-                                                          .OrderBy(loc => Geometry.Vector2.Dot(loc.VolumePosition, axis))];
+                                                          .OrderBy(loc => Geometry.Vector2.Dot(loc.VolumeCenter(), axis))];
                 MarkerSlot[] directionSlots = [.. slots.Where(s => s.IsUp == up).OrderBy(s => Geometry.Vector2.Dot(s.Center, axis))];
                 for (int i = 0; i < Math.Min(links.Length, directionSlots.Length); i++)
                 {
@@ -200,9 +200,8 @@ namespace WebAnnotation.View
             List<LocationObj> listLinksBelow = [.. OverlappingLinks.Where(loc => loc.Z < ZCut)];
             //List<LocationObj> listLinksEqual = OverlappingLinks.Where(loc => loc.Z == ZCut).ToList();
 
-            listLinksAbove = [.. listLinksAbove.OrderBy(L => -L.VolumePosition.X).ThenBy(L => L.VolumePosition.Y)];
-            listLinksBelow = [.. listLinksBelow.OrderBy(L => L.VolumePosition.X).ThenBy(L => L.VolumePosition.Y)];
-            //listLinksEqual = listLinksBelow.OrderBy(L => L.VolumePosition.X).ThenBy(L => L.VolumePosition.Y).ToList();
+            listLinksAbove = [.. listLinksAbove.OrderBy(L => -L.VolumeCenter().X).ThenBy(L => L.VolumeCenter().Y)];
+            listLinksBelow = [.. listLinksBelow.OrderBy(L => L.VolumeCenter().X).ThenBy(L => L.VolumeCenter().Y)];
 
             //Figure out how large link images would be
             double linkRadius = OuterCircle.Radius / 6;

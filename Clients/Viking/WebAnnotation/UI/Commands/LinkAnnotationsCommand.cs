@@ -46,15 +46,16 @@ namespace WebAnnotation.UI.Commands
 
         public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
 
+        /// <summary>Where the feedback line starts: the middle point of a line or curve as drawn, else the location's volume centre.</summary>
         private static Geometry.Vector2 GetOriginForLocation(LocationObj obj)
         {
+            if (obj.VolumeGeometry() is not Viking.VolumeModel.LocationVolumeGeometry geometry)
+                return obj.Position;
+
             return obj.TypeCode switch
             {
-                LocationType.CIRCLE => obj.VolumePosition,
-                LocationType.POLYGON or LocationType.CURVEPOLYGON => obj.VolumePosition,
-                LocationType.OPENCURVE => Midpoint(obj.VolumeShape.ToPoints()),
-                LocationType.POLYLINE => Midpoint(obj.VolumeShape.ToPoints()),
-                _ => obj.VolumePosition,
+                LocationType.OPENCURVE or LocationType.POLYLINE => Midpoint(geometry.Shape.ToPoints()),
+                _ => geometry.Center,
             };
         }
 
