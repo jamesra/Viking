@@ -17,26 +17,31 @@ namespace WebAnnotation.UI.Commands
         private readonly Vector2[] OriginalControlPoints;
         private int iAdjustedControlPoint = -1;
 
-        public delegate void OnCommandSuccess(Vector2[] VolumeControlPoints, Vector2[] MosaicControlPoints);
+        /// <summary>
+        /// The control points the user left on screen, in volume space; the callback maps them back to mosaic through the
+        /// inverse owner (<c>LocationActions.SaveVolumeLineEdit</c>).
+        /// </summary>
+        public delegate void OnCommandSuccess(Geometry.Vector2[] VolumeControlPoints);
 
         private readonly OnCommandSuccess success_callback;
-        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
         public string[] HelpStrings => ["Release Left Mouse Button to place control point"];
 
         public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
 
+        /// <summary>Drags one control point of a line or curve, starting from the control points the forward owner draws.</summary>
+        /// <param name="OriginalVolumeControlPoints">The location's control points in volume space (<c>LocationVolumeGeometry.ControlPoints</c>).</param>
+        /// <param name="LineWidth">The drawn width, in volume units.</param>
         public AdjustCurveControlPointCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        Vector2[] OriginalMosaicControlPoints,
+                                        Geometry.Vector2[] OriginalVolumeControlPoints,
                                         Microsoft.Xna.Framework.Color color,
                                         double LineWidth,
                                         bool IsClosedCurve,
                                         OnCommandSuccess success_callback) : base(parent)
         {
-            OriginalControlPoints = parent.Section.ActiveSectionToVolumeTransform.SectionToVolume(OriginalMosaicControlPoints);
+            OriginalControlPoints = OriginalVolumeControlPoints;
             CreateView(OriginalControlPoints, color.ConvertToHCL(0.5f), LineWidth, IsClosedCurve);
             this.success_callback = success_callback;
-            mapping = parent.Section.ActiveSectionToVolumeTransform;
         }
 
         private void CreateView(Vector2[] ControlPoints, Microsoft.Xna.Framework.Color color, double LineWidth, bool IsClosed)
@@ -97,8 +102,7 @@ namespace WebAnnotation.UI.Commands
         {
             if (success_callback != null)
             {
-                Vector2[] TranslatedOriginalControlPoints;
-                Vector2[] MosaicControlPoints = null;
+                Geometry.Vector2[] TranslatedOriginalControlPoints;
 
                 if (curveView.TryCloseCurve)
                 {
@@ -115,17 +119,7 @@ namespace WebAnnotation.UI.Commands
                     TranslatedOriginalControlPoints = [.. curveView.ControlPoints];
                 }
 
-                try
-                {
-                    MosaicControlPoints = mapping.VolumeToSection(TranslatedOriginalControlPoints);
-                }
-                catch (ArgumentOutOfRangeException)
-                {
-                    Trace.WriteLine("TranslateLocationCommand: Could not map world point on Execute: " + TranslatedOriginalControlPoints.ToString(), "Command");
-                    return;
-                }
-
-                success_callback(TranslatedOriginalControlPoints, MosaicControlPoints);
+                success_callback(TranslatedOriginalControlPoints);
             }
 
             base.Execute();

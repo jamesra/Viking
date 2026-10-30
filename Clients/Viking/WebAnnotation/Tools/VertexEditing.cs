@@ -14,7 +14,9 @@ namespace WebAnnotation.Tools
 {
     /// <summary>
     /// The control points Viking edits for a location: polygon rings for polygons and curve polygons, a point list for
-    /// polylines and curves. Edits are made in volume space and mapped back to the section, as Viking's commands do.
+    /// polylines and curves. Edits start from the forward owner's geometry (<see cref="LocationVolumeGeometry"/>), are made in
+    /// volume space and are mapped back to the section by the inverse owner, as Viking's commands do
+    /// (<c>.cursor/rules/annotation-volume-geometry.mdc</c>).
     /// </summary>
     sealed class VertexEditTarget
     {
@@ -52,16 +54,29 @@ namespace WebAnnotation.Tools
             if (location?.MosaicShape == null || mapper == null)
                 return null;
 
+            LocationVolumeGeometry geometry;
+            try
+            {
+                geometry = LocationVolumeGeometry.For(location, mapper);
+            }
+            catch (System.ArgumentException)
+            {
+                return null;
+            }
+
+            // The failure policy's extrapolated outline is not editable.
+            if (!geometry.IsExact)
+                return null;
+
             switch (location.TypeCode)
             {
                 case LocationType.POLYGON:
                 case LocationType.CURVEPOLYGON:
-                    Polygon polygon = mapper.TryMapShapeSectionToVolume(location.MosaicShape.ToPolygon());
-                    return polygon == null ? null : new VertexEditTarget(location, mapper, polygon, null);
+                    return new VertexEditTarget(location, mapper, geometry.ControlPolygon(), null);
                 case LocationType.POLYLINE:
                 case LocationType.OPENCURVE:
                 case LocationType.CLOSEDCURVE:
-                    return new VertexEditTarget(location, mapper, null, mapper.SectionToVolume(location.MosaicShape.ToPoints()));
+                    return new VertexEditTarget(location, mapper, null, [.. geometry.ControlPoints]);
                 default:
                     return null;
             }
@@ -93,18 +108,28 @@ namespace WebAnnotation.Tools
             if (volumePolygon == null)
                 return false;
 
-            return AnnotationCommandBase.TryApplyInSection(Mapper, volumePolygon,
-                mosaic => Location.SetShapeFromGeometryInSection(Mapper, mosaic.ToSqlGeometry()), nameof(VertexEditTarget));
+            try
+            {
+                return AnnotationCommandBase.TryApplyInSection(Mapper, volumePolygon,
+                    mosaic => Location.SetShapeFromGeometryInSection(Mapper, mosaic.ToSqlGeometry()), nameof(VertexEditTarget));
+            }
+            catch (System.ArgumentException)
+            {
+                // The mapped polygon is not valid geometry or does not map forward again; the location keeps its shape.
+                return false;
+            }
         }
 
-        /// <summary>Sets the location's shape from edited volume control points.</summary>
+        /// <summary>
+        /// Sets the location's shape from edited volume control points through the inverse owner
+        /// (<see cref="LocationActions.SaveVolumeLineEdit"/>); false, with the shape unchanged, when a point does not map.
+        /// </summary>
         public bool ApplyPoints(Vector2[] volumePoints)
         {
             if (volumePoints == null || volumePoints.Length < 2)
                 return false;
 
-            LocationActions.UpdateLineLocationNoSaveCallback(Location, volumePoints, Mapper.VolumeToSection(volumePoints));
-            return true;
+            return LocationActions.SaveVolumeLineEdit(Location, Mapper, volumePoints, null, out _);
         }
 
         /// <summary>Saves the edit and records it for Ctrl+Z.</summary>

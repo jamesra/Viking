@@ -6,9 +6,12 @@ using Viking.VolumeModel;
 
 namespace WebAnnotation.UI.Commands
 {
+    /// <summary>
+    /// Adds a vertex to the polygon the forward owner draws (<c>LocationVolumeGeometry.ControlPolygon</c>) where the cursor is
+    /// and saves the result mapped back to mosaic by the inverse owner.
+    /// </summary>
     internal class AddPolygonVertexCommand : AnnotationCommandBase
     {
-        private readonly Polygon OriginalMosaicPolygon;
         private readonly Polygon OriginalVolumePolygon;
         private Polygon UpdatedVolumePolygon;
 
@@ -22,13 +25,13 @@ namespace WebAnnotation.UI.Commands
         private readonly OnCommandSuccess success_callback;
         private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
+        /// <param name="volume_polygon">The location's control polygon in volume space, from the forward owner.</param>
         public AddPolygonVertexCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        Polygon mosaic_polygon,
+                                        Polygon volume_polygon,
                                         OnCommandSuccess success_callback) : base(parent)
         {
             mapping = parent.Section.ActiveSectionToVolumeTransform;
-            OriginalMosaicPolygon = mosaic_polygon;
-            OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
+            OriginalVolumePolygon = volume_polygon;
 
             this.success_callback = success_callback;
         }
@@ -63,7 +66,7 @@ namespace WebAnnotation.UI.Commands
         {
             try
             {
-                TryApplyInSection(mapping, UpdatedVolumePolygon, mosaic_polygon => success_callback(mosaic_polygon, UpdatedVolumePolygon), nameof(AddPolygonVertexCommand));
+                TryApplyInSection(mapping, UpdatedVolumePolygon, mosaic_polygon => success_callback(mosaic_polygon, UpdatedVolumePolygon), nameof(AddPolygonVertexCommand), ShowRefusedEdit);
             }
             catch (ArgumentOutOfRangeException)
             {
@@ -75,9 +78,12 @@ namespace WebAnnotation.UI.Commands
         }
     }
 
+    /// <summary>
+    /// Removes the vertex of the polygon the forward owner draws nearest the cursor and saves the result mapped back to
+    /// mosaic by the inverse owner.
+    /// </summary>
     internal class RemovePolygonVertexCommand : AnnotationCommandBase
     {
-        private readonly Polygon OriginalMosaicPolygon;
         private readonly Polygon OriginalVolumePolygon;
         private Polygon UpdatedVolumePolygon;
 
@@ -86,15 +92,15 @@ namespace WebAnnotation.UI.Commands
         private readonly OnCommandSuccess success_callback;
         private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
+        /// <param name="volume_polygon">The location's control polygon in volume space, from the forward owner.</param>
         public RemovePolygonVertexCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                        Polygon mosaic_polygon,
+                                        Polygon volume_polygon,
                                         OnCommandSuccess success_callback) : base(parent)
         {
             this.success_callback = success_callback;
 
             mapping = parent.Section.ActiveSectionToVolumeTransform;
-            OriginalMosaicPolygon = mosaic_polygon;
-            OriginalVolumePolygon = mapping.TryMapShapeSectionToVolume(mosaic_polygon);
+            OriginalVolumePolygon = volume_polygon;
         }
 
         public static Polygon RemoveControlPoint(Polygon polygon, Vector2 RemovedControlPointPosition)
@@ -138,7 +144,7 @@ namespace WebAnnotation.UI.Commands
 
             try
             {
-                TryApplyInSection(mapping, UpdatedVolumePolygon, mosaic_polygon => success_callback(mosaic_polygon, UpdatedVolumePolygon), nameof(RemovePolygonVertexCommand));
+                TryApplyInSection(mapping, UpdatedVolumePolygon, mosaic_polygon => success_callback(mosaic_polygon, UpdatedVolumePolygon), nameof(RemovePolygonVertexCommand), ShowRefusedEdit);
             }
             catch (ArgumentOutOfRangeException)
             {

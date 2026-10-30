@@ -11,14 +11,12 @@ namespace WebAnnotation.UI.Commands
         private readonly Polygon UpdatedMosaicPolygon;
 
         /// <summary>
-        /// Returns unsmoothed mosaic and volume polygons with the new point
+        /// The mosaic polygon without the hole (mosaic-first: the hole is removed from the stored polygon, so no point is
+        /// mapped back); the callback saves it with <c>SetShapeFromGeometryInSection</c>.
         /// </summary>
-        /// <param name="MosaicPolygon"></param>
-        /// <param name="VolumePolygon"></param>
-        public delegate void OnCommandSuccess(Polygon MosaicPolygon, Polygon VolumePolygon);
+        public delegate void OnCommandSuccess(Polygon MosaicPolygon);
 
         private readonly OnCommandSuccess success_callback;
-        private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
         private readonly Polygon? VolumePolygon;
         private readonly Vector2 VolumeClick;
         private readonly Vector2 MosaicClick;
@@ -28,7 +26,7 @@ namespace WebAnnotation.UI.Commands
         /// BeginInvoke avoids executing (and completing) during construction.
         /// </summary>
         /// <param name="hole_mosaic_position">Click mapped to mosaic space; may miss if hover used volume/smoothed geometry.</param>
-        /// <param name="volume_polygon">Volume-space polygon the fill-bucket hover tested, when available.</param>
+        /// <param name="volume_polygon">The location's control polygon as the forward owner draws it, when it maps.</param>
         /// <param name="hole_volume_position">Click in volume space, same coordinates as hover.</param>
         public RemovePolygonHoleCommand(Viking.UI.Controls.SectionViewerControl parent,
                                         Polygon mosaic_polygon,
@@ -37,7 +35,6 @@ namespace WebAnnotation.UI.Commands
                                         Polygon? volume_polygon = null,
                                         Vector2 hole_volume_position = default) : base(parent)
         {
-            mapping = parent.Section.ActiveSectionToVolumeTransform;
             OriginalMosaicPolygon = mosaic_polygon;
             UpdatedMosaicPolygon = (Polygon)mosaic_polygon.Clone();
             this.success_callback = success_callback;
@@ -70,18 +67,7 @@ namespace WebAnnotation.UI.Commands
 
         protected override void Execute()
         {
-            Polygon UpdatedVolumePolygon;
-            try
-            {
-                UpdatedVolumePolygon = mapping.TryMapShapeSectionToVolume(UpdatedMosaicPolygon);
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-                Trace.WriteLine("TranslateLocationCommand: Could not map polygon to section on Execute", "Command");
-                return;
-            }
-
-            success_callback(UpdatedMosaicPolygon, UpdatedVolumePolygon);
+            success_callback(UpdatedMosaicPolygon);
 
             base.Execute();
         }

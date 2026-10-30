@@ -227,22 +227,11 @@ namespace WebAnnotation
                 case LocationAction.SCALE:
                     return null;
                 case LocationAction.ADJUST:
-                    return new AdjustCurveControlPointCommand(Parent, loc.MosaicShape.ToPoints(),
-                                                                      loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                                      loc.Width ?? 16.0,
-                                                                      IsClosedCurve(loc),
-                                                                      (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
+                case LocationAction.ADDCONTROLPOINT:
+                case LocationAction.REMOVECONTROLPOINT:
+                    return CreateControlPointCommand(action, Parent, loc, adjustLineWidth: null);
                 case LocationAction.CREATELINK:
                     return new LinkAnnotationsCommand(Parent, loc);
-                case LocationAction.ADDCONTROLPOINT:
-                    return new AddLineControlPointCommand(Parent,
-                                                      loc.MosaicShape.ToPoints(),
-                                                      (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
-                case LocationAction.REMOVECONTROLPOINT:
-                    return new RemoveLineControlPointCommand(Parent,
-                                                      loc.MosaicShape.ToPoints(),
-                                                      IsClosedCurve(loc),
-                                                      (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
                 case LocationAction.CREATELINKEDLOCATION:
                     {
                         // The source is on another section: the command starts from the line as that section draws it, centred
@@ -260,6 +249,37 @@ namespace WebAnnotation
                 default:
                     return null;
             }
+        }
+
+        /// <summary>
+        /// The adjust, add and remove control point commands of a line or curve. Each starts from the control points the
+        /// forward owner draws and saves the edited volume control points through the inverse owner
+        /// (<see cref="UpdateLineLocationCallback"/>); none starts when the location cannot be mapped exactly.
+        /// </summary>
+        /// <param name="adjustLineWidth">The line width the adjust preview draws; null for the location's drawn width.</param>
+        private static Viking.UI.Commands.Command? CreateControlPointCommand(LocationAction action,
+                                                                            Viking.UI.Controls.SectionViewerControl Parent,
+                                                                            LocationObj loc,
+                                                                            double? adjustLineWidth)
+        {
+            IVolumeToSectionTransform section_mapper = Parent.Section.ActiveSectionToVolumeTransform;
+            if (EditableGeometry(loc, section_mapper) is not LocationVolumeGeometry geometry)
+                return null;
+
+            Geometry.Vector2[] controlPoints = [.. geometry.ControlPoints];
+            void Save(Geometry.Vector2[] VolumeControlPoints) => UpdateLineLocationCallback(Parent, loc, section_mapper, VolumeControlPoints, null);
+
+            return action switch
+            {
+                LocationAction.ADJUST => new AdjustCurveControlPointCommand(Parent, controlPoints,
+                                                                          loc.Parent.Type.Color.ToXNAColor(0.5f),
+                                                                          adjustLineWidth ?? geometry.Width,
+                                                                          IsClosedCurve(loc),
+                                                                          Save),
+                LocationAction.ADDCONTROLPOINT => new AddLineControlPointCommand(Parent, controlPoints, Save),
+                LocationAction.REMOVECONTROLPOINT => new RemoveLineControlPointCommand(Parent, controlPoints, IsClosedCurve(loc), Save),
+                _ => null,
+            };
         }
 
         /// <summary>
@@ -295,22 +315,11 @@ namespace WebAnnotation
                 case LocationAction.SCALE:
                     return null;
                 case LocationAction.ADJUST:
-                    return new AdjustCurveControlPointCommand(Parent, loc.MosaicShape.ToPoints(),
-                                                                      loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                                      Global.DefaultClosedLineWidth,
-                                                                      IsClosedCurve(loc),
-                                                                      (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
+                case LocationAction.ADDCONTROLPOINT:
+                case LocationAction.REMOVECONTROLPOINT:
+                    return CreateControlPointCommand(action, Parent, loc, adjustLineWidth: Global.DefaultClosedLineWidth);
                 case LocationAction.CREATELINK:
                     return new LinkAnnotationsCommand(Parent, loc);
-                case LocationAction.ADDCONTROLPOINT:
-                    return new AddLineControlPointCommand(Parent,
-                                                      loc.MosaicShape.ToPoints(),
-                                                      (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
-                case LocationAction.REMOVECONTROLPOINT:
-                    return new RemoveLineControlPointCommand(Parent,
-                                                      loc.MosaicShape.ToPoints(),
-                                                      IsClosedCurve(loc),
-                                                      (VolumeControlPoints, MosaicControlPoints) => UpdateLineLocationCallback(loc, VolumeControlPoints, MosaicControlPoints));
                 case LocationAction.CREATELINKEDLOCATION:
                     {
                         if (LinkedLineStart(Parent, loc, volumePosition) is not (Geometry.Vector2[] startPoints, double startWidth))
@@ -373,67 +382,25 @@ namespace WebAnnotation
                 case LocationAction.SCALE:
                     return null;
                 case LocationAction.ADJUST:
-                    return new AdjustPolygonVertexCommand(Parent, loc.MosaicShape.ToPolygon(),
-                                                                      loc.Parent.Type.Color.ToXNAColor(0.5f),
-                                                                       (MosaicPolygon, VolumePolygon) =>
-                                                                       {
-                                                                           try
-                                                                           {
-                                                                               SqlGeometry undoShape = loc.MosaicShape.ToSqlGeometry();
-                                                                               loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
-                                                                               _ = SaveThen(() => UndoManager.PushLocationShape("Edit Shape", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode));
-                                                                           }
-                                                                           catch (ArgumentException e)
-                                                                           {
-                                                                               MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                                                           }
-                                                                           catch (System.ServiceModel.FaultException e)
-                                                                           {
-                                                                               AnnotationOverlay.ShowFaultExceptionMsgBox(e);
-                                                                           }
-                                                                       });
+                case LocationAction.ADDCONTROLPOINT:
+                case LocationAction.REMOVECONTROLPOINT:
+                    {
+                        // The commands edit the polygon the forward owner draws and hand back the edit mapped to mosaic by
+                        // the inverse owner (AnnotationCommandBase.TryApplyInSection); none starts on an unmappable polygon.
+                        if (EditableGeometry(loc, Parent.Section.ActiveSectionToVolumeTransform) is not LocationVolumeGeometry geometry)
+                            return null;
+
+                        void Save(Polygon MosaicPolygon, Polygon VolumePolygon) => SaveMosaicPolygonEdit(Parent, loc, MosaicPolygon);
+
+                        return action switch
+                        {
+                            LocationAction.ADJUST => new AdjustPolygonVertexCommand(Parent, geometry.ControlPolygon(), loc.Parent.Type.Color.ToXNAColor(0.5f), Save),
+                            LocationAction.ADDCONTROLPOINT => new AddPolygonVertexCommand(Parent, geometry.ControlPolygon(), Save),
+                            _ => new RemovePolygonVertexCommand(Parent, geometry.ControlPolygon(), Save),
+                        };
+                    }
                 case LocationAction.CREATELINK:
                     return new LinkAnnotationsCommand(Parent, loc);
-                case LocationAction.ADDCONTROLPOINT:
-                    return new AddPolygonVertexCommand(Parent,
-                                                      loc.MosaicShape.ToPolygon(),
-                                                      (MosaicPolygon, VolumePolygon) =>
-                                                      {
-                                                          try
-                                                          {
-                                                              SqlGeometry undoShape = loc.MosaicShape.ToSqlGeometry();
-                                                              loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
-                                                              _ = SaveThen(() => UndoManager.PushLocationShape("Edit Shape", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode));
-                                                          }
-                                                          catch (ArgumentException e)
-                                                          {
-                                                              MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                                          }
-                                                          catch (System.ServiceModel.FaultException e)
-                                                          {
-                                                              AnnotationOverlay.ShowFaultExceptionMsgBox(e);
-                                                          }
-                                                      });
-                case LocationAction.REMOVECONTROLPOINT:
-                    return new RemovePolygonVertexCommand(Parent,
-                                                      loc.MosaicShape.ToPolygon(),
-                                                      (MosaicPolygon, VolumePolygon) =>
-                                                      {
-                                                          try
-                                                          {
-                                                              SqlGeometry undoShape = loc.MosaicShape.ToSqlGeometry();
-                                                              loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
-                                                              _ = SaveThen(() => UndoManager.PushLocationShape("Edit Shape", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode));
-                                                          }
-                                                          catch (ArgumentException e)
-                                                          {
-                                                              MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                                          }
-                                                          catch (System.ServiceModel.FaultException e)
-                                                          {
-                                                              AnnotationOverlay.ShowFaultExceptionMsgBox(e);
-                                                          }
-                                                      });
                 case LocationAction.CUTHOLE:
                     {
                         if (Global.PenMode)
@@ -487,17 +454,20 @@ namespace WebAnnotation
                         }
                     }
                 case LocationAction.REMOVEHOLE:
-                    return new RemovePolygonHoleCommand(Parent,
-                                                        loc.MosaicShape.ToPolygon(),
-                                                        Parent.Section.ActiveSectionToVolumeTransform.VolumeToSection(volumePosition),
-                                                        (MosaicPolygon, VolumePolygon) =>
-                                                        {
-                                                            SqlGeometry undoShape = loc.MosaicShape.ToSqlGeometry();
-                                                            loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
-                                                            _ = SaveThen(() => UndoManager.PushLocationShape("Edit Shape", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode));
-                                                        },
-                                                        loc.VolumeShape?.ToPolygon(),
-                                                        volumePosition);
+                    {
+                        // Mosaic-first: the hole is removed from the stored polygon. The click is matched in mosaic space (when
+                        // it maps) and against the polygon the forward owner draws, never the stored volume cache.
+                        IVolumeToSectionTransform section_mapper = Parent.Section.ActiveSectionToVolumeTransform;
+                        Geometry.Vector2 mosaicClick = LocationVolumeGeometry.TryMapPointsToMosaic([volumePosition], section_mapper, out Geometry.Vector2[] mappedClick, out _)
+                            ? mappedClick[0]
+                            : new Geometry.Vector2(double.NaN, double.NaN);
+                        return new RemovePolygonHoleCommand(Parent,
+                                                            loc.MosaicShape.ToPolygon(),
+                                                            mosaicClick,
+                                                            MosaicPolygon => SaveMosaicPolygonEdit(Parent, loc, MosaicPolygon),
+                                                            EditableGeometry(loc, section_mapper)?.ControlPolygon(),
+                                                            volumePosition);
+                    }
                 case LocationAction.CREATELINKEDLOCATION:
                     {
                         //The section we are linking from is on another section, so we have to:
@@ -634,8 +604,31 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Shows why a polygon edit was refused (<see cref="Viking.VolumeModel.LocationObjExtensions.SetShapeFromGeometryInSection"/>
-        /// throws <see cref="ArgumentException"/> for a shape the transform cannot map); the location keeps its shape.
+        /// Saves a polygon edit already mapped to mosaic (by the inverse owner, or made in mosaic space) as the location's
+        /// shape, the forward owner deriving its volume shape, then saves the store and records the undo step. An invalid or
+        /// unmappable shape is shown and not saved. Called by the polygon vertex and hole commands.
+        /// </summary>
+        private static void SaveMosaicPolygonEdit(Viking.UI.Controls.SectionViewerControl Parent, LocationObj loc, Polygon MosaicPolygon)
+        {
+            SqlGeometry undoShape = loc.MosaicShape.ToSqlGeometry();
+            try
+            {
+                loc.SetShapeFromGeometryInSection(Parent.Section.ActiveSectionToVolumeTransform, MosaicPolygon.ToSqlGeometry());
+            }
+            catch (ArgumentException e)
+            {
+                ShowPolygonSaveError(Parent, e);
+                return;
+            }
+
+            _ = SaveThen(() => UndoManager.PushLocationShape("Edit Shape", loc, Parent.Section.ActiveSectionToVolumeTransform, undoShape, loc.TypeCode));
+        }
+
+        /// <summary>
+        /// Shows the error box for a polygon edit rejected with an <see cref="ArgumentException"/>, such as an invalid shape from
+        /// SetShapeFromGeometryInSection or RetraceAndReplacePathCommand.ApplyCut. Called by the polygon edit callbacks in
+        /// <see cref="CreateCommandForPolygon"/>; each caller decides what happens after the box closes.
+        /// The WPF windows show the same box through Extensions.TrySetShapeFromGeometryInSectionShowErrorDialog.
         /// </summary>
         /// <param name="parent">The section viewer that owns the box.</param>
         /// <param name="e">The rejection; its message is the box text.</param>
@@ -759,24 +752,9 @@ namespace WebAnnotation
         private static void UpdateLineLocationCallback(IWin32Window owner, LocationObj loc, IVolumeToSectionTransform transform, Geometry.Vector2[] volumeControlPoints, double? volumeWidth)
         {
             if (SaveVolumeLineEdit(loc, transform, volumeControlPoints, volumeWidth, out string failure))
-                AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
+                _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
             else
                 ShowUnmappedEdit(owner, failure, "Could not save annotation");
-        }
-
-        private static void UpdateLineLocationCallback(LocationObj loc, Geometry.Vector2[] VolumeControlPoints, Geometry.Vector2[] MosaicControlPoints)
-        {
-            UpdateLineLocationNoSaveCallback(loc, VolumeControlPoints, MosaicControlPoints);
-            _ = AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
-        }
-
-        internal static void UpdateLineLocationNoSaveCallback(LocationObj loc, Geometry.Vector2[] VolumeControlPoints, Geometry.Vector2[] MosaicControlPoints)
-        {
-            SqlGeometry updatedMosaicShape = loc.TypeCode.GetShape(MosaicControlPoints);
-            SqlGeometry updatedVolumeShape = loc.TypeCode.GetSmoothedShape(VolumeControlPoints);
-
-            loc.VolumeShape = updatedVolumeShape.ToShape2D();
-            loc.MosaicShape = updatedMosaicShape.ToShape2D();
         }
 
         /// <summary>
