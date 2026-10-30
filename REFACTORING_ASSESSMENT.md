@@ -38,7 +38,7 @@ Refactoring assessment of the Viking monorepo. Items marked **Status: completed*
 
 ## 2. Cross-cutting themes
 
-1. **Dead / orphaned product surfaces** — Identity `source/` (IS3/net45, **completed**), Bifrost, ConnectomicsWebsite, ConnectomeOpenData, WebVisualization (moved to VikingLegacy, **completed**), Neo4j island, `gRPCSegmentAnything`, SmoothMesh (MeshXNAVizLib completed), orphan WCF client projects.
+1. **Dead / orphaned product surfaces** — Identity `source/` (IS3/net45, **completed**), Bifrost, ConnectomicsWebsite, ConnectomeOpenData (**completed**), WebVisualization (moved to VikingLegacy, **completed**), Neo4j island, `gRPCSegmentAnything`, SmoothMesh (MeshXNAVizLib completed), orphan WCF client projects.
 2. **Dual WCF / gRPC stacks** — Combined docker still ships WCF AnnotationService + ODataV4 (net48) beside gRPC + DataExport; first-party clients already bootstrap gRPC.
 3. **Annotation draw / tile-path fork** — WinForms `AnnotationOverlay.Draw` vs Jotunn `AnnotationScene.Draw`; Viking tile draw still bypasses shared `SectionSceneRenderer` (deduped C15-002/C16-012 and C16-001/C15-003/C17-024).
 4. **Triple (plus) OData clients** — Generated `ODataClient`, `AnnotationVizLibODataClient`, SimpleOData (MorphologyView), unused WCF viz client, dead server OData stub.
@@ -925,6 +925,7 @@ Refactoring assessment of the Viking monorepo. Items marked **Status: completed*
 - **Evidence:** In Everything.sln + Viewer.sln; no ProjectReferences from Viking/Jotunn; empty Bifrost/Jotunn; no docker/CI product use.
 
 #### C05-002 — ConnectomeOpenData — DELETE
+- **Status:** completed — folder and Connectome Project.sln entry deleted
 - **Paths:** `Servers/ConnectomeOpenData/`
 - **Category:** delete
 - **Recommendation:** Delete folder; remove dead entry from Connectome Project.sln.

@@ -114,7 +114,6 @@ Servers/AnnotationDatabase/
 Servers/AnnotationService/
 Servers/ConnectomeDataModel/
 Servers/ConnectomeODataV4/
-Servers/ConnectomeOpenData/
 Servers/ConnectomicsWebsite/
 Servers/DataExport/
 Servers/gRPCSegmentAnything/

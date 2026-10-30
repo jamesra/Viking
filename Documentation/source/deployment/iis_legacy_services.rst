@@ -65,7 +65,7 @@ existing one.
 Publish to the deployment directory:
 
 * **Annotation Service**, built as both Release and Debug (``-Action Annotation`` copies Release).
-* **ConnectomeOpenData**, Production and Test configurations.
+* **ConnectomeODataV4**, Release and Debug publish profiles.
 * **DataExport**, Production and Test configurations.
 
 All volumes share one copy of the binaries: the deployment directory lives outside IIS and every
