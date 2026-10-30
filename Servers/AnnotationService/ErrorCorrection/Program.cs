@@ -66,8 +66,8 @@ namespace ErrorCorrection
             List<DBLocation> listA = new List<DBLocation>(); 
             List<DBLocation> listB = new List<DBLocation>(); 
 
-            List<GridVector3> pointsA = new List<GridVector3>();
-            List<GridVector3> pointsB = new List<GridVector3>();
+            List<Vector3> pointsA = new List<Vector3>();
+            List<Vector3> pointsB = new List<Vector3>();
 
             //Scale values
             double XYScale = 2.18;
@@ -76,13 +76,13 @@ namespace ErrorCorrection
             foreach(DBLocation l in LocsA)
             {
                 listA.Add(l);
-                pointsA.Add( new GridVector3(l.VolumeX * XYScale, l.VolumeY * XYScale, l.Z * ZScale) );
+                pointsA.Add( new Vector3(l.VolumeX * XYScale, l.VolumeY * XYScale, l.Z * ZScale) );
             }
 
             foreach (DBLocation l in LocsB)
             {
                 listB.Add(l);
-                pointsB.Add(new GridVector3(l.VolumeX * XYScale, l.VolumeY * XYScale, l.Z * ZScale));
+                pointsB.Add(new Vector3(l.VolumeX * XYScale, l.VolumeY * XYScale, l.Z * ZScale));
             }
 
             if (listB.Count == 0 || listA.Count == 0)
@@ -94,7 +94,7 @@ namespace ErrorCorrection
             int iA;
             int iB;
             double distance;
-            GridVector3.Nearest(pointsA.ToArray(), pointsB.ToArray(), out iA, out iB, out distance); 
+            Vector3.Nearest(pointsA.ToArray(), pointsB.ToArray(), out iA, out iB, out distance); 
 
             if(distance < listA[iA].Radius + listB[iB].Radius)
             {

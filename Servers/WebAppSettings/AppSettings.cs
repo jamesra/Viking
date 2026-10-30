@@ -41,6 +41,22 @@ namespace VikingWebAppSettings
 
         public static string GetIdentityServerURLString() => GetApplicationSetting("IdentityServer");
 
+        /// <summary>
+        /// Shared Identity Server client secret for token introspection. Prefers IDENTITY_SERVER_SECRET, then web.config IdentityServerClientSecret.
+        /// </summary>
+        public static string GetIdentityServerClientSecret()
+        {
+            var fromEnv = Environment.GetEnvironmentVariable("IDENTITY_SERVER_SECRET");
+            if (!string.IsNullOrWhiteSpace(fromEnv))
+                return fromEnv;
+
+            var setting = WebConfigurationManager.AppSettings["IdentityServerClientSecret"];
+            if (!string.IsNullOrWhiteSpace(setting))
+                return setting;
+
+            throw new ArgumentException("Identity Server client secret is not configured. Set IDENTITY_SERVER_SECRET or IdentityServerClientSecret in app settings.");
+        }
+
         public static string GetDefaultConnectionString() => GetConnectionString(GetDefaultDatabaseConnectionStringName());
 
         public static string[] GetAllowedOrganizations() => GetStringList("AllowedOrganizations");

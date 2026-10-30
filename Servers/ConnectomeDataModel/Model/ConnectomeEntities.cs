@@ -1,4 +1,4 @@
-
+﻿
 using System;
 using System.Collections.Generic;
 using System.Data.Entity;
@@ -563,8 +563,138 @@ namespace ConnectomeDataModel
             return Links.AsQueryable<StructureLink>();
         }
 
+        private static IEnumerable<long[]> ChunkBy(IEnumerable<long> source, int size)
+        {
+            List<long> buffer = new(size);
+            foreach (long v in source)
+            {
+                buffer.Add(v);
+                if (buffer.Count == size)
+                {
+                    yield return buffer.ToArray();
+                    buffer.Clear();
+                }
+            }
+            if (buffer.Count > 0)
+                yield return buffer.ToArray();
+        }
 
+        /// <summary>
+        /// Value of the <c>depth</c> argument of <see cref="SelectStructureFreshness"/> meaning "no depth limit".
+        /// </summary>
+        public const int UnlimitedFreshnessDepth = -1;
 
+        /// <summary>
+        /// Batched freshness for cache keys: for each requested id, max LastModified and
+        /// location count over that structure and its descendants down to <paramref name="depth"/>
+        /// levels (1 = direct children, 0 = the structure only, <see cref="UnlimitedFreshnessDepth"/> = whole subtree).
+        /// Unknown ids omitted. Called by OData <c>StructureFreshness(IDs=...,Depth=...)</c>.
+        /// </summary>
+        public IList<StructureFreshness> SelectStructureFreshness(IEnumerable<long> IDs, int depth = 1)
+        {
+            List<long> idList = IDs?.Distinct().ToList() ?? [];
+            if (idList.Count == 0)
+                return [];
+
+            if (depth < 0)
+                depth = int.MaxValue;
+
+            const int ChunkSize = 1000; // stay under the SQL Server 2100 parameter limit
+
+            Dictionary<long, DateTime> structureLastModified = [];
+            Dictionary<long, List<long>> childrenByParent = [];
+
+            foreach (long[] chunk in ChunkBy(idList, ChunkSize))
+            {
+                foreach (var s in this.Structures.AsNoTracking().Where(s => chunk.Contains(s.ID)).Select(s => new { s.ID, s.LastModified }).ToList())
+                    structureLastModified[s.ID] = s.LastModified;
+            }
+
+            // Walk the tree one level at a time; the visited set guards against ParentID cycles.
+            HashSet<long> visited = [.. structureLastModified.Keys];
+            List<long> frontier = [.. visited];
+            for (int level = 0; level < depth && frontier.Count > 0; level++)
+            {
+                List<long> next = [];
+                foreach (long[] chunk in ChunkBy(frontier, ChunkSize))
+                {
+                    var children = this.Structures.AsNoTracking()
+                        .Where(s => s.ParentID != null && chunk.Contains(s.ParentID.Value))
+                        .Select(s => new { s.ID, ParentID = s.ParentID.Value, s.LastModified })
+                        .ToList();
+
+                    foreach (var c in children)
+                    {
+                        if (!childrenByParent.TryGetValue(c.ParentID, out var list))
+                            childrenByParent[c.ParentID] = list = [];
+                        list.Add(c.ID);
+
+                        if (visited.Add(c.ID))
+                        {
+                            structureLastModified[c.ID] = c.LastModified;
+                            next.Add(c.ID);
+                        }
+                    }
+                }
+                frontier = next;
+            }
+
+            Dictionary<long, (DateTime MaxLastModified, long Count)> locationByParent = [];
+            foreach (long[] chunk in ChunkBy(structureLastModified.Keys, ChunkSize))
+            {
+                var rows = this.Locations.AsNoTracking()
+                    .Where(l => chunk.Contains(l.ParentID))
+                    .GroupBy(l => l.ParentID)
+                    .Select(g => new { ParentID = g.Key, MaxLastModified = g.Max(l => l.LastModified), Count = g.LongCount() })
+                    .ToList();
+                foreach (var r in rows)
+                    locationByParent[r.ParentID] = (r.MaxLastModified, r.Count);
+            }
+
+            List<StructureFreshness> results = [];
+            foreach (long rootId in idList)
+            {
+                if (!structureLastModified.ContainsKey(rootId))
+                    continue;
+
+                DateTime maxLastModified = DateTime.MinValue;
+                long annotationCount = 0;
+
+                HashSet<long> seen = [rootId];
+                List<long> level = [rootId];
+                for (int d = 0; d <= depth && level.Count > 0; d++)
+                {
+                    List<long> nextLevel = [];
+                    foreach (long id in level)
+                    {
+                        if (structureLastModified[id] > maxLastModified)
+                            maxLastModified = structureLastModified[id];
+
+                        if (locationByParent.TryGetValue(id, out var loc))
+                        {
+                            if (loc.MaxLastModified > maxLastModified)
+                                maxLastModified = loc.MaxLastModified;
+                            annotationCount += loc.Count;
+                        }
+
+                        if (d < depth && childrenByParent.TryGetValue(id, out var kids))
+                            foreach (long k in kids)
+                                if (seen.Add(k))
+                                    nextLevel.Add(k);
+                    }
+                    level = nextLevel;
+                }
+
+                results.Add(new StructureFreshness
+                {
+                    StructureID = rootId,
+                    LastModified = maxLastModified,
+                    AnnotationCount = annotationCount
+                });
+            }
+
+            return results;
+        }
 
         /// <summary>
         /// Add the links to the locations in the dictionary

@@ -106,7 +106,8 @@ namespace Annotation.Identity
                         }
 
                         // Also set it in the HttpContext if available
-                        HttpContext.Current?.User = wcfPrincipal;
+                        if (HttpContext.Current != null)
+                            HttpContext.Current.User = wcfPrincipal;
 
                         // Set Thread.CurrentPrincipal directly (backup in case RoleAuthorizationManager doesn't run)
                         Thread.CurrentPrincipal = wcfPrincipal;
@@ -241,7 +242,7 @@ namespace Annotation.Identity
                 c.Type == ClaimTypes.Role ||
                 c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role");
 
-            List<Claim> scopeClaims = [.. claimsPrincipal.FindAll(c => c.Type == "scope").Where(c => c.Value.StartsWith(this._volumeName))];
+            List<Claim> scopeClaims = [.. claimsPrincipal.FindAll(c => c.Type == "scope").Where(c => c.Value.StartsWith(this._volumeName?.Replace(' ', '-') ?? string.Empty))];
 
             // Debug: Log all scope claims
             System.Diagnostics.Debug.WriteLine($"Found {scopeClaims.Count} scope claims for volume '{_volumeName}':");
@@ -251,7 +252,7 @@ namespace Annotation.Identity
             }
 
             //Remove the name of the volume from the scope and save the name of the role
-            int volumeNameLength = _volumeName.Length;
+            int volumeNameLength = (_volumeName?.Replace(' ', '-') ?? string.Empty).Length;
             var volumeRoleClaims = scopeClaims.Select(c => c.Value.Substring(volumeNameLength + 1));
 
             List<string> roles = [.. roleClaims.Select(c => c.Value)];

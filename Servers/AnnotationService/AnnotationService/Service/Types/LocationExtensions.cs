@@ -108,6 +108,13 @@ namespace AnnotationService.Types
 
             //See above comment before adding UpdateUserName test...
             //UpdateUserName |= db.VolumeShape != loc.VolumeShape;
+            // VolumeShape is the client's cache of the mosaic shape under the volume's default transform, which this server
+            // cannot compute (it has no .stos). This fallback for a caller that sends none is wrong: it stores a circle of the
+            // MOSAIC radius (a circle's volume radius differs by the section's scale) or a point (wrong for every polygon, line
+            // and curve) at the old VolumePosition. The Viking clients never send null (annotation-volume-geometry.mdc,
+            // VolumeCache), so it is dead from them. It is kept rather than refused because this deployed service has older
+            // and unknown WCF callers whose saves a refusal would fail outright; refresh their cache with Update Volume
+            // Positions or VikingAU. The gRPC service (Viking dev) refuses any location without a volume shape.
             db.VolumeShape = loc.VolumeShape is null
                 ? loc.Radius > 0 ? Extensions.ToCircle(loc.VolumePosition.X, loc.VolumePosition.Y, loc.VolumePosition.Z, loc.Radius).ToDbGeometry() :
                                                   Extensions.ToGeometryPoint(loc.VolumePosition.X, loc.VolumePosition.Y).ToDbGeometry()

@@ -15,7 +15,6 @@ namespace Annotation.Identity
     public class AuthenticationManager : ServiceAuthenticationManager
     {
         private static BearerTokenHelper _tokenHelper;
-        private const string Secret = "CorrectHorseBatteryStaple";
 
         private static BearerTokenHelper GetTokenHelper()
         {
@@ -24,17 +23,18 @@ namespace Annotation.Identity
                 _tokenHelper = BearerTokenHelper.CreateFromAppSettings();
                 if (_tokenHelper is null)
                 {
-                    // Fallback: create from settings directly
                     string IdentityServerEndpoint = VikingWebAppSettings.AppSettings.GetIdentityServerURLString();
                     if (Uri.TryCreate(IdentityServerEndpoint, UriKind.Absolute, out Uri identityServerUrl))
                     {
                         _tokenHelper = new BearerTokenHelper
                         {
-                            IdentityServerURL = identityServerUrl,
-                            ClientSecret = Secret
+                            IdentityServerURL = identityServerUrl
                         };
                     }
                 }
+
+                if (_tokenHelper != null)
+                    _tokenHelper.ClientSecret = VikingWebAppSettings.AppSettings.GetIdentityServerClientSecret();
             }
             return _tokenHelper;
         }
@@ -62,12 +62,11 @@ namespace Annotation.Identity
                 {
                     Address = disco.IntrospectionEndpoint,
                     ClientId = null, //TODO: Pull required volume and right from configuration.
-                    ClientSecret = Secret,
+                    ClientSecret = VikingWebAppSettings.AppSettings.GetIdentityServerClientSecret(),
                     Token = AccessToken,
                 }).Result;
 
-                //var validationClient = new IntrospectionClient(IdentityServerHelper.Discovery.IntrospectionEndpoint, "Viking.Annotation", Secret);
-                //var validation = validationClient.SendAsync(new IntrospectionRequest() { Token = AccessToken, ClientId = "Viking.Annotation", ClientSecret = Secret }).Result;
+                //var validationClient = new IntrospectionClient(IdentityServerHelper.Discovery.IntrospectionEndpoint, "Viking.Annotation", helper.ClientSecret);
 
                 if (validation.IsError)
                 {

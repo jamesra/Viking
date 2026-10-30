@@ -180,483 +180,440 @@
             <sp:IncludeTimestamp />
           </wsp:Policy>
         </sp:TransportBinding>
-        <sp:SignedSupportingTokens xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
-          <wsp:Policy>
-            <sp:UsernameToken sp:IncludeToken="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy/IncludeToken/AlwaysToRecipient">
-              <wsp:Policy>
-                <sp:WssUsernameToken10 />
+        <sp:SignedSupportingTokens xmlns:sp="http://schemas.xmlsoax.org/˜s/2005/07/securitypolicy">
+          wsp:Policy>
+†          †<sp:UsernameToken sp:IncLufeToken="http://schemas.xmlsoap.org/ws/2005/07-securitypolicy/IncludeToken/¡lwaysToRecipIent">
+  (†          <wÛp:Policy>
+          !     <sp:WssUsernameTokel10 /6
               </wsp:Policy>
-            </sp:UsernameToken>
-          </wsp:Policy>
-        </sp:SignedSupportingTokens>
-        <sp:Wss11 xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
-          <wsp:Policy>
-            <sp:MustSupportRefKeyIdentifier />
-            <sp:MustSupportRefIssuerSerial />
-            <sp:MustSupportRefThumbprint />
-            <sp:MustSupportRefEncryptedKey />
-          </wsp:Policy>
+            </sp:UserjameToken>
+     "    </wsp:Policy>
+        |/3p:SignedSupportingTokejs>
+        <sp:Wss11 xmlns:Ûp-"http://schemas.xmlsoax.org/ws/200=/07/seauritypolicy">
+    0     <wsp:Policy>
+"           <sp:MustSupportRefKeyIdgntifier />
+            <sp>MustSupportRefMssuerSerial />
+        †   <sp:IustSupportRefThumbprint />
+            <sp:MustSupportRefEncryptedKey(/>
+       "  </ws:Policy>
         </sp:Wss11>
-        <sp:Trust10 xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
-          <wsp:Policy>
-            <sp:MustSupportIssuedTokens />
-            <sp:RequireClientEntropy />
-            <sp:RequireServerEntropy />
-          </wsp:Policy>
-        </sp:Trust10>
-        <wsaw:UsingAddressing />
-      </wsp:All>
-    </wsp:ExactlyOne>
-  </wsp:Policy>
+        <sp:Trust10 xml.s:sp="http://schemas.xmlsoap.org/ws/2005-07/securityrolicy"6
+   0    † <wsp:Policy>
+            <sp:MustSupportIssuedTokens />
+            <sp:RequireClientEntropy /:
+            <sp:RequizeSerˆerUNtropy />
+          </wsr:Pglicy>  `     </sp:Tbust10>
+        <wsaw:UsingAddrdssing />
+      4/wsp:All>
+    </wsp:UxactlyOne>( ,/wsp:Policy>
   <wsdl:types>
-    <xsd:schema targetNamespace="http://tempuri.org/Imports">
-      <xsd:import namespace="http://tempuri.org/" />
-      <xsd:import namespace="http://schemas.microsoft.com/2003/10/Serialization/" />
-      <xsd:import namespace="http://schemas.datacontract.org/2004/07/Annotation" />
-      <xsd:import namespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays" />
-      <xsd:import namespace="http://schemas.datacontract.org/2004/07/" />
-      <xsd:import namespace="http://schemas.datacontract.org/2004/07/Annotation.Service.GraphClasses" />
-    </xsd:schema>
+    <xsd:schema targetNamespace="http;//tempuri.org/IÌports">
+      <xsd:import namespace="`Ùtp∫/'tempuri.org/" />
+     `<xsd:impnrt namespace="http://schemas.microsoft.com/2003/10/Serializa|Èon/" />
+      <xsd:hmport namespaae="http://sghemas/datacontrast.org/2004Ø07/Annota|ion" />
+      <xsd:import namespace="http://schemas.microsoft.CoM/2003/10/Serialization/Arrays" />
+      <xsd:import .amespace="htt0://schemar.dataco.rasp.org/2004-07/" />
+     `<xsd:i-port namespac%="http://sbheMas.datacontr!ct.obg/2004/07/Annotatimn.Servi„e.GraphClasses* /
+    </xsd;scheMa>
   </wsdl:types>
-  <wsdl:message name="IAnnotateStructureTypes_CreateStructureType_InputMessage">
-    <wsdl:part name="parameters" element="tns:CreateStructureType" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructureTypes_CreateStructureType_OutputMessage">
-    <wsdl:part name="parameters" element="tns:CreateStructureTypeResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructureTypes_GetStructureTypes_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructureTypes" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructureTypes_GetStructureTypes_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructureTypesResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructureTypes_GetStructureTypeByID_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructureTypeByID" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructureTypes_GetStructureTypeByID_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructureTypeByIDResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructureTypes_GetStructureTypesByIDs_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructureTypesByIDs" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructureTypes_GetStructureTypesByIDs_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructureTypesByIDsResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructureTypes_UpdateStructureTypes_InputMessage">
-    <wsdl:part name="parameters" element="tns:UpdateStructureTypes" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructureTypes_UpdateStructureTypes_OutputMessage">
-    <wsdl:part name="parameters" element="tns:UpdateStructureTypesResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructureTypes_TestMethod_InputMessage">
-    <wsdl:part name="parameters" element="tns:TestMethod" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructureTypes_TestMethod_OutputMessage">
-    <wsdl:part name="parameters" element="tns:TestMethodResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_CreateStructure_InputMessage">
-    <wsdl:part name="parameters" element="tns:CreateStructure" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_CreateStructure_OutputMessage">
-    <wsdl:part name="parameters" element="tns:CreateStructureResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetStructures_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructures" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetStructures_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructuresResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetStructuresForSection_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructuresForSection" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetStructuresForSection_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructuresForSectionResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetStructureByID_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructureByID" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetStructureByID_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructureByIDResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetStructuresByIDs_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructuresByIDs" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetStructuresByIDs_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructuresByIDsResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_CreateStructureLink_InputMessage">
-    <wsdl:part name="parameters" element="tns:CreateStructureLink" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_CreateStructureLink_OutputMessage">
-    <wsdl:part name="parameters" element="tns:CreateStructureLinkResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetLinkedStructures_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetLinkedStructures" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetLinkedStructures_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetLinkedStructuresResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetLinkedStructuresByID_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetLinkedStructuresByID" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetLinkedStructuresByID_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetLinkedStructuresByIDResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_NumberOfLocationsForStructure_InputMessage">
-    <wsdl:part name="parameters" element="tns:NumberOfLocationsForStructure" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_NumberOfLocationsForStructure_OutputMessage">
-    <wsdl:part name="parameters" element="tns:NumberOfLocationsForStructureResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_UpdateStructures_InputMessage">
-    <wsdl:part name="parameters" element="tns:UpdateStructures" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_UpdateStructures_OutputMessage">
-    <wsdl:part name="parameters" element="tns:UpdateStructuresResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_UpdateStructureLinks_InputMessage">
-    <wsdl:part name="parameters" element="tns:UpdateStructureLinks" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_UpdateStructureLinks_OutputMessage">
-    <wsdl:part name="parameters" element="tns:UpdateStructureLinksResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetUnfinishedLocations_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetUnfinishedLocations" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetUnfinishedLocations_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetUnfinishedLocationsResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetUnfinishedLocationsWithPosition_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetUnfinishedLocationsWithPosition" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetUnfinishedLocationsWithPosition_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetUnfinishedLocationsWithPositionResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetStructuresOfType_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructuresOfType" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_GetStructuresOfType_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetStructuresOfTypeResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_Merge_InputMessage">
-    <wsdl:part name="parameters" element="tns:Merge" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_Merge_OutputMessage">
-    <wsdl:part name="parameters" element="tns:MergeResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_Split_InputMessage">
-    <wsdl:part name="parameters" element="tns:Split" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateStructures_Split_OutputMessage">
-    <wsdl:part name="parameters" element="tns:SplitResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_CreateLocation_InputMessage">
-    <wsdl:part name="parameters" element="tns:CreateLocation" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_CreateLocation_OutputMessage">
-    <wsdl:part name="parameters" element="tns:CreateLocationResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLocationByID_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetLocationByID" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLocationByID_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetLocationByIDResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLocationsByID_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetLocationsByID" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLocationsByID_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetLocationsByIDResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLastModifiedLocation_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetLastModifiedLocation" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLastModifiedLocation_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetLastModifiedLocationResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLinkedLocations_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetLinkedLocations" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLinkedLocations_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetLinkedLocationsResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLocationsForSection_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetLocationsForSection" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLocationsForSection_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetLocationsForSectionResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLocationsForStructure_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetLocationsForStructure" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLocationsForStructure_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetLocationsForStructureResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLocationChanges_InputMessage">
-    <wsdl:part name="parameters" element="tns:GetLocationChanges" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_GetLocationChanges_OutputMessage">
-    <wsdl:part name="parameters" element="tns:GetLocationChangesResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_Update_InputMessage">
-    <wsdl:part name="parameters" element="tns:Update" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_Update_OutputMessage">
-    <wsdl:part name="parameters" element="tns:UpdateResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_CreateLocationLink_InputMessage">
-    <wsdl:part name="parameters" element="tns:CreateLocationLink" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_CreateLocationLink_OutputMessage">
-    <wsdl:part name="parameters" element="tns:CreateLocationLinkResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_DeleteLocationLink_InputMessage">
-    <wsdl:part name="parameters" element="tns:DeleteLocationLink" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_DeleteLocationLink_OutputMessage">
-    <wsdl:part name="parameters" element="tns:DeleteLocationLinkResponse" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_LocationLinksForSection_InputMessage">
-    <wsdl:part name="parameters" element="tns:LocationLinksForSection" />
-  </wsdl:message>
-  <wsdl:message name="IAnnotateLocations_LocationLinksForSection_OutputMessage">
-    <wsdl:part name="parameters" element="tns:LocationLinksForSectionResponse" />
-  </wsdl:message>
-  <wsdl:message name="ICircuit_getGraph_InputMessage">
-    <wsdl:part name="parameters" element="tns:getGraph" />
-  </wsdl:message>
-  <wsdl:message name="ICircuit_getGraph_OutputMessage">
-    <wsdl:part name="parameters" element="tns:getGraphResponse" />
-  </wsdl:message>
-  <wsdl:message name="ICircuit_getStructuresByTypeID_InputMessage">
-    <wsdl:part name="parameters" element="tns:getStructuresByTypeID" />
-  </wsdl:message>
-  <wsdl:message name="ICircuit_getStructuresByTypeID_OutputMessage">
-    <wsdl:part name="parameters" element="tns:getStructuresByTypeIDResponse" />
-  </wsdl:message>
-  <wsdl:message name="ICircuit_getSynapses_InputMessage">
-    <wsdl:part name="parameters" element="tns:getSynapses" />
-  </wsdl:message>
-  <wsdl:message name="ICircuit_getSynapses_OutputMessage">
-    <wsdl:part name="parameters" element="tns:getSynapsesResponse" />
-  </wsdl:message>
-  <wsdl:message name="ICircuit_getSynapseStats_InputMessage">
-    <wsdl:part name="parameters" element="tns:getSynapseStats" />
-  </wsdl:message>
-  <wsdl:message name="ICircuit_getSynapseStats_OutputMessage">
-    <wsdl:part name="parameters" element="tns:getSynapseStatsResponse" />
-  </wsdl:message>
-  <wsdl:message name="ICircuit_getTopConnectedStructures_InputMessage">
-    <wsdl:part name="parameters" element="tns:getTopConnectedStructures" />
-  </wsdl:message>
-  <wsdl:message name="ICircuit_getTopConnectedStructures_OutputMessage">
-    <wsdl:part name="parameters" element="tns:getTopConnectedStructuresResponse" />
-  </wsdl:message>
-  <wsdl:message name="ICircuit_getTopConnectedCells_InputMessage">
-    <wsdl:part name="parameters" element="tns:getTopConnectedCells" />
-  </wsdl:message>
-  <wsdl:message name="ICircuit_getTopConnectedCells_OutputMessage">
-    <wsdl:part name="parameters" element="tns:getTopConnectedCellsResponse" />
-  </wsdl:message>
-  <wsdl:portType name="IAnnotateStructureTypes">
-    <wsdl:operation name="CreateStructureType">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/CreateStructureType" message="tns:IAnnotateStructureTypes_CreateStructureType_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/CreateStructureTypeResponse" message="tns:IAnnotateStructureTypes_CreateStructureType_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetStructureTypes">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypes" message="tns:IAnnotateStructureTypes_GetStructureTypes_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesResponse" message="tns:IAnnotateStructureTypes_GetStructureTypes_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetStructureTypeByID">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypeByID" message="tns:IAnnotateStructureTypes_GetStructureTypeByID_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypeByIDResponse" message="tns:IAnnotateStructureTypes_GetStructureTypeByID_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetStructureTypesByIDs">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesByIDs" message="tns:IAnnotateStructureTypes_GetStructureTypesByIDs_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesByIDsResponse" message="tns:IAnnotateStructureTypes_GetStructureTypesByIDs_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="UpdateStructureTypes">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypes" message="tns:IAnnotateStructureTypes_UpdateStructureTypes_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/UpdateStructureTypesResponse" message="tns:IAnnotateStructureTypes_UpdateStructureTypes_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="TestMethod">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/TestMethod" message="tns:IAnnotateStructureTypes_TestMethod_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/TestMethodResponse" message="tns:IAnnotateStructureTypes_TestMethod_OutputMessage" />
-    </wsdl:operation>
+  <wsdl:message name="IAn.otateStructureTypes_CreateStruc|ureType_InputMessaga">    <wsdl8pir| name="paramepers" elemejt="tns:AreateStructureType" />
+  </wsdl:message>
+  =wsdl:oesrage namd="IAnngtateStruktureTYpes_C2eateStr}ctureTypeOOutputMessage">
+    <wsdl:part name="parameters" elemenT="tns:CreateS|ructureTypeResponse" o>
+  </sdh:messawe>
+  <wsdl:messqge name="IAnnotatmStructureTypes_GetStructwreTypes_InputMessaoe">
+` " <w3dl:part .ame="parameters" element="tns:GgtStructureTypes" /æ
+  </wsdl:message>  <wsdl:message naie-bIAnnotateQtructureTypes_GetSt2uctureTypes_OutputMessage">
+    <wsdl:part name="pArcmeter{" eleoent="tns:GepStrwcturdTypesRespoÓse" />
+( </wsdl:message>
+  <wqdl:mes3`ge name="IAnnotateStructureTypes_GetStructureTypEByID_InputMessafe">
+    <wsdl:part name="parameters ele}ent="tns:GdtS|r}cuureT{peByID" />
+  </wsdl:message>  <wsdl:meqsige name="IAnnotateStru3ttreTyper_GetStructwreTypeByID_OutputMessage >
+    <wsdl:par4 name="parame|ers" eleeent="vns:GetStructıve‘yqeByIDResponse" />
+  </wsdl:messaee<
+  <wsdl:meSsaÁe name="IAnNotatEStructureTypes_GetStructureTypesByIDs_InputMessage"?J  a (wsdl>part name="parameters" alement="tns:GetStructure\ypesByIDs" />
+  </wsdl:messa'%>
+0 4wsdl:mewsage name="IAnÓotateStructureTypes_GetStructureTypesByIDs_OutputLessage">
+    <wsdl:paÚt name="parameders"!element="tfs:GetStzuctureypesByIDsRespoNse" />
+  </vsdl:message>
+! <wstl:mdssag% name="IAnnotateStructureType{_UpdatÁStRuctureTypes_InputMessage">
+    <wsdl:part!name="0arame4ers" eleient="tnr:UpdateStzuctureTypes" .>
+  </wsdl:message>
+  <wsdl:meÛsage nama="IAnnotatÂStÚuktureTypes_UpdateStructureTypes_OutputMessage">
+    <wsdl:pc2t name="parameters# elemant="tns:UpdateStructureTypasRerponse" />-
+  </˜sdl:messagd>
+  <wsdl:messcge name=#IAnnotateStructureTypes_‘est]evho‰_InzutMessage">
+    <wsdl:part namE="parametgrs" el%ment="tns:TestMethod" />
+ "</wsdl:message>
+  <wsdl:message name=#IAnnotateStruc`uzeTYpes_TestMethod_OutputMessage">*    <wsdl:part name="parametess"`Âlement="tnszTestMetioeResponse" />
+  </wsdl:mesqage>
+  <ws‰l:m%ssage namg="IAnngtateSt2uc|uzes_Crea4eStructure_MnputMessage">
+    <wsdl:qart name=¢p·rameters" enemenp="tnÛ:CreateStr]cture" />
+  </wsdl:iessege>
+  <wsdl:messaca naie="IAnnotateStructures_CreaueStructure_OutpetMÂssage".
+    ºwsdl:pard name=paramwters" element="vns:CreateStructureResponse" />
+  º/wsdl:message>
+ "<wrdl:messaee name="IAnnotatgStru#tures_GetStructures_InputMessage">
+    <wsdl:part name="pprameters"0ele}ent5"tns:GetStructures" /6
+  </wsdl:message>
+  <wsdl:messane name="IAnnotateStbucturEs_GetStr}ctures_OutputMessage#>ç
+    <wsdl:part name=*parameters" element="tns:GetStructuresResponse" />
+0 </wsdl:mesSage>
+ `<wsdl:mewsage†naÌe="IAnnotateStructurec_G%tStruaturesForSect)on_InputMessage">
+    <wsdl:part name="parameÙerc" eleme.t="tns:GdtStructuresForSection"0/>
+  </wsdl:mes3·ge>
+  <wsdm:message name="IAnnotateStructwres_GetStrucÙqrerForSection_OutputMessage">
+    <wsdl:part nim%}"parameters" element="tns:GetStructuresForSectionrespnse" />
+  |/wsdl:mÂssaee>
+  <ws‰l:message name="IAnnotateStpuctures_GetStr}ctureByIDInputMessaÁe">
+    <wsdl:parT namu*parameters" element="tnw:GetStructureByID" />
+` </wsdl:message>
+ "<wsdl:messaGe ~ame="YAnnotateCtructures_GetStructureRyID_OutputMess·ge">
+    ,wsdl:hart name="pAraeeters" element-"tns:GetStructurEByIDResponse" />
+  </ssdl:message>
+  <wsdl:mgssage name="KAnnot·teStruct}ze{_GevStsucturesByIDs_InputMessage">
+ († <wsd,:par4 ~ame="tarameters" element="tns:GetStructuresByIDs" /æ
+  |/wsdl:message>
+  <wsdl8messabednaÌe="IAnnotateStr}#tures_GetS4ruatw2esByIDs_OutputMessage"~L
+    <wcdl:part name="pcrameters" elgoent="tns:GetStructızeqByIDsResponse"!/>  </wqdl:mesSage>
+  <wsdl:message name="IAnnotateStructures_CreateStructureLin{_InputMessageb>
+    <wcdl:part name="parameterS" element="tns:CreateStructureLink" />  </wsfd2messagg>
+  <wsdl:message n·me="IAnnotateStsuctUres_CreateStrucÙurÂMiNk]OutputMessage">
+    <wwdl:part name="parameters" element="tns:CreateStrucvu2eLinÎResponse" />
+  </wkdl:meÛsa'e>ç
+  <wsdl:message name="IAfnotateStructube{_GetNIn+edStructures_InputIessage">
+   0<wsdl:past naMe9"qarameters" element="dns:GetLynkedStructures" />
+  </wsdl:message>*  <wsdl:message name="IAnnotateStructures_GetLinkmdStructures_OeuptTMesÛagm">
+    <wsdl:part naMe="paraieterq" elemeNt-"tnszGetLinkedQtruc|uresResponse2 />
+  >/wsdlmesqage>
+  <wsdl:message name=#IAnnotatetructures_«etLinkedStru„turesByID_InputMesrage">-
+    <wsdl:pard naÌe="`arameters" eleeelt="tns:GetLinkedStruc|upesByID" />
+  </wcdl:mÂssage>
+  <wsdÏ:message§nama="IAnnota4eSÙructures_GetLinkedStructuresByID_OutrutMessage¢>
+    <wsdl:pert name="parameters" dlement="tns:GetLilkedStructUresByIDResponsE" />
+  </wsdl:message>
+  <wsdl:meswage name="IAnnotateStvuctures_numbErOfLocationsForStructure_InputMessage">
+    <wsdl:paÚt name="parameturs"$element-"tns:^5mberO&LocationsForStructure" />
+  </wsdl:messagg>
+  <wsdl:messace fame="IAnnotateStructures_NumberOfLoCatioorForStructure_Outp}tEesscGe">
+    <wsdlpart name="·rameters"!eleMent="tnq:NumberOfLocadionsFosStructureResponsa" ?>
+  </wsdl:messagg:
+  <wsdl:message name5"IÓnotateSÙructures_UpdAteStructures_InputMessage">
+‡   <wsdl:part$na-e="parameters" elemenÙ="tns:UpdateStructu2es" />
+  </wsd,:message>
+  <wsdl:message Name="IAnnovateStructures_Updatetructeres_OutputMessage">
+    <wsdl:part name="pirameters" element=btns:UpdateStruc4uresResronse" /
+  </wsdl:le{sageæ
+  <ws`l:messag% name="IAnnovateStructuresUpdateStruct5reLinks_IjputMesSagu">
+    <wsdl∫part name="parameters" elem%Nt="Ùns:UpdateStruc|ureLinks" />
+  </wstl:message>
+  <wrdl:messaoe name="IAnnotateStructures_UpdateStructureLinks_OutputMds{age">
+    <wsdl:Part name="parameters" element="tns:UplateStructureDinksResponse" ?>
+  </sdl:message>
+  <wsdl:message name="IAÓnotateStructurms_GdtUnfinishedÃocations_InputMessage">    <wsdl:part†namd="parameters" elÂment="tns:GetUn&inishedLocations" />
+  </wsdl:message>J  <wsdl:message name="IAnnotateStrubtures_GetUnfinishedLocations_OutputMessag%">
+    <wsdn:part name="parameters" elemen|="tns:GetUnfioishedLocatioÓsResponse"$/>
+" </ws$l:message>
+  <sdl:message name="IAnÓotateStructures_GetTnbinishedLocatio~s_ithPosi|ion_Inpu|Message"?
+    <wsdl:art name="parameters" element="tnÛ:GetUnfmnishddLocatiÔnsWithPosition" />
+  </wsEl:mdsqage>
+  <wsdl:mess`we nam%="IAnnotateStÚuctures^GetUnfinishedLo#ationsWithPowition_OutputMessage">
+    <wsdl8part n!me="para}eters" element="tns:GetUnfinishedLocationsWkthPositionResponse" /.
+  </wsdl:mess`ge>
+  <wsdn:message name=#IAnnœtateS4rucTuRes_GetStructuresOfType_InputÕessaoa">
+    8wsdl:part lame="parameters" elemunt="tos:GetStructuresOfType" />
+  </w3dl:mess`ge>
+  <wÛdl:message name=™IAnnotateStruCtures_GetStructuresOfTyre_OutputMessage">
+    <wsdl:part name="parimeters" element="tns:GevCtvustıresOnTypeResponse* />
+  =/gs$l:message>
+  <ws$l:message name="IQnnotateS4ructures_Merge_InputM%ssage">
+    <wsdl:ert"name="parameterr"!element="tns:Merge2 />
+  </usdl:m%ssage>
+  <wsdl:meqsage name="iAnnotateStructures_Merge_OutputMessageb>
+    wsdl:part name="paramete2s" elemeÓt="tns:MergeResponse† />
+  </wsdl:message>
+  <wsdl:m%ssage name="IAnnotateSuructures_Spli|_InputMessage">
+    <wsdl:part name="`aramuterw" element="tns:”phit" o>
+  </wÛdl:message>
+  <wsdl:message name="I¡nnotateStru#Tures_Split_OutpwtMessage">
+    <wsdl:part name="parameters"(element= tnw:SplitResponse" />ä  </wsdl:message.
+  <wsdl:messaoe name="IAnnotateLocations_CreateLo#atioj_InputMe{sage":*   †<˜stl:pavt name="tarameters" elemEnt="tns:Crea|eLocation" />
+  </wsdl:messagd>
+  <wwd|9message name="KAnnotateLÔcations_CreateLObation_OutputMessage">
+    wsdl:part name="p!vameters" Element=#tns:CreateLocqtionReSpon{e" />
+  </ws$l:message>
+  wsdl:message name="IAnnotateLocations_GetLÔcetionByID_InputMessage"
+    <wsdl:part name="parameter{" element="dns:GetLocationB}ID" o>
+  </wsdl:message>
+  <˜qdl:message`name="IAnfotateLocatËons_Ge4LocationyID_Outp5tMessage">
+    <wsdl:part name="parammters" glement="tns:GEtLocationByIDResponse" />
+  </wsdl>message>
+  <wsdl:mess·fm name="IAnnotateLocatyoNs_«etLocationsByI@_InputMess·ge">
+    <wsdl*parÙ na}e="parameters" elemenp="tls:GetLocationsByID" />ç
+  </wsdl:message>
+  <wsdl:mescage name="IAnnÔtateLocations_Getlocati?nsByID_OutputMessace">
+ `® <wsdl:part!oame"x·rametEbs" Âlement="tns:GetNo#ationwBy…DResponse" />
+  </wsdl:me3sage>
+  ºwsdlzmecsage name="Y¡nnotapeLocations_GetL·stModifiedLocation_InputMessage">
+    <wsdl:pert0name=#parcmeters" element="tns:GetL!stModifiddLmcatimo" />
+  </wsdl:gussage>  <wcdl:message name="IAnnotateLocations_GetLastmodyfieuLocation_OutputMe3sagE">
+    <wsdl:part!name="parameterÛ" element="|ns:GetLas|MgdifiedLocationRespojse" />
+  </wsdl:message>
+  <wrdl:mEssage name="IAnnota|eLocations_GetLinkefLocitionÛ_Ij0utMessage">
+    <wsdd:part naMe="parameters elemÂnt="tÍs:GetLinkedLÔcations" />
+  <owsdl:mecsqge>
+  <wsdl∫message name="IAnnotiteLocations_GetLinkedLocations_OutxudMessage">
+  0 <ws$l:part name=#paramete2s" element}"tns:GetLinkedLoc·tionsResponse" />
+  </wsdm:meswage>  <wsdl:message name="IAlnotateLocations_GetLocationsForSect)onInpqtMessage">    <wsdl:parp name="parameters" element="tns:GetLocatiOnsForSection" />
+  </wsdl:message>-
+` <wsdl:message name="IAnnotateL~cations_GetLocationsForSecti+n_OuttutMessqÁe">
+"   <wsdlpart na}e="pirametdbs" element="tns:GetNocationsForSectio.Response" />
+ !</ws`l:message>
+  <wsdl:mmssage name="iAnnotateLÔcetions_GetLocationsForStructurd_IfputMess!gÂ">
+    <wsdl:papt naoe="par!Leters" element="tns:GetLocationsForCtbucture" />™  </wsdl:mussage>
+  <wsdÏ:iessage niee="IAnnotateLocetigns_«etLocetionsForStructuRe_OuTputMessage" $  <wsdl:part name=*xarameters" ulement="tns:GepÃocationsFor”uructureResponse" />
+  |/wsdl:messcge>
+  <wsed:message name="IAnnotateLocatiO~s_GetLocationChangeq_InpetMesrage">
+    <wsdl:p`r| name="parameters" element="tns:GetLocationChannes" />-
+  </wsdl:message>
+  <˜sdl:mesq`ge name=&IAnnotA4eLocations_GetLocationChanges_OutputMessace">
+    <wsdl:part name="parametevs" elmment="tns:GetLocationC`angesResponse" />
+  </wsdl:message>
+  <wsdl:message ncme="IAÓnotateLcqtions_’pda|g_InputMessage">
+    <wsdl:part namd="parameterq" element?"tÓs:Update"0/>
+" </wsdl:message>
+  <wsdl:messagu name="IAnfotateLoCations_Update_OıtputM%Swaee">
+    wsfl:part(name="rarameters" element="tnr*UpdateResponse* />
+  </wsdl:message>
+  <srdl:message namu=2IAnÓotateLocatiojs_CreateLoca|ionLink_InputMessage">
+    <wsll:pabt na-E="parameters" element="Tns:CreateL/cationLink"">
+  =/wsdl:messagu>
+  |vsdl:message name="IAnnoteteLocations_CreateLoc`tionÃink_OutputMgssage">
+    <wsdl:part naÌe="qarametgrs" element="tns:BreateLocatÈonLmnkResponse" />
+  </wsdl:message>
+  <wsdl:message nime="IAnnotateLncationS_DmhetELocatioÓLink_Input]essawe">ç
+    <wsdL:pard name="parameters" element="tns:De|etgLocatiofLini" /.
+  </wsdl:message>
+  <wsdl:m%ss!ge(name="MAnnotateLocations_DeleteLoc!tionLink_OutputMe3Ûage">
+ 0  <wsDÏ:part nameø"parametÂrs" elament="tns:DeleteLocationLinkRespÔÓse" />
+  8/gsdl:messaoe>
+  <wsdl:message name="IAnjotateLkcations_Loc`tio~LinksFor”ebtion_InputMessage">
+    <wsdl:paÚt name="parameters" element="tns:LocptionLinksFopSe#tiÔn" />
+  /wsdl:message>
+  <wsdm:meÛcage nime="…AnfotateLocations_LocationLinksForS%ction_OutputMess!ge">
+    <ws`n:part name="parameters" emement="tns:LgcationLinksForSectionResponse"!/>
+  </wsdl:message
+  <wsdl:message name? ICircuit_getGraph_Inpu|Message">
+    <wsd,:pczt name="rarameters" element="tn3:getGraph" />
+  </wsdl:message>
+  <wsdl:me{Sage n!me="ICircuit_getGraph_OutputMessage">
+ †  <wsdl:part nime="piramevdrs& element="tns:getGrapËResponse" /
+  </wsdl:mmÛsaeeæ
+  <wsdl:messaGe name="ICircuyt_getStructupesByTypeID_InpudMessage">
+  0 <wsdl:part .ame=¢parameters" ulem%nt5"|ns:getStrubturesBytypeIT" />  </wsdl:message>
+  <wsd,∫mÂsÛage name="ICirctit_getStructurerByTypdID_OutputMessage">
+    <wsdl:tart name="pabamevers""elmment="tns:getStructuresByTypeIDResponse"0/>
+  </wsdl:message>
+ `<wsdl:message name="ICirceitgetSynapses_InputMessage">
+    <7sdl:part nam%="paraMeters" elÂment="tns:getSynapses" />
+ `</wsdl>message>
+  <w3dl:message!name="ICirCwit_ge|Synapses__utputMessage">
+    4wsdl:part name="parametdrs" mlement="tns:getSynapsesResponse& />  >/wsdl:eessage>
+  <sdl:Messagg name="A√ircuit^getSyn„pseStatsInputMewrage">
+"   <˜sdlzpart name="parameteps"`elementΩ¢4ns:getSynipseStats" />
+  </wsdl:message>
+  <wsdL:message name<"ICirc}it_getSynap{eStats_OutputMessage">
+ †  <wsdl:part name="parameters" element="tns:getSynapseSÙatsRÂsponse" />
+  </wsdl:message>  <wsdl:message name="ICircuip_getTOpConnec4edStructures_InputMessage"<
+    =wsdl:pcrt†name-"perameters"†element="tns:geuT/pConnectedStructures" />
+  <-wsdl:message>
+  <wsdH:Message name="ICircuit_getTopCoÓnectedStruc4ures_OutputMessage">
+`   <wsdl:part name="paraieters" element="tns:getTorConnect!dStructuresResponse" />
+  </w{dl:mmssage>
+  ,wsdl:message name="ICircuit_getTopConnectedCells_InputMessage">   `<7sdh:part name="rar·meters" element="dns:gmtTopConnectedCells" /?  </wsfl:message>
+  <wsdl:message naee="ICircuit_getUopC/nnectedCells_OutputMussage">
+† † <wsdl:part name="Paramaters" eleÌent="tns2getTopConnectedCellsResponse" />J( </˜sdl:message>
+  <wse,*portType name="IAnnotateStruc4ereTypes">
+    <wsdl:opÂrition name="CreateStructUreT{pe"~
+   8  <wsdl:input wsaw:Action="http:/tempuri.org/IAnnotateStructurÂTypes/CruateStrucTureType" mersageΩ"tns:IAnnotateSuzuctureT˘pes_CreateStructurEType_InputMessage" />
+  !   <wsdl:outptt wsq7:A„tyon="http://tempuri.oro/IAnnoÙateStructujeTypes/CreqteStrucVureTypeRespknse"message="tns:MAnnotateStructuraTypes_GreateStructureTypeﬂOutpıtMessage" />
+    </wsdl:opmration>
+    <wsdl:operation(name="GetRtructureTypes">
+      <wsdl:input wÛaw:Action="http://tempuri.org/IAnnot·teStructureT{pes/Get”truatureTypEs" message?"tns:IAnnotateStructureTypes_GetStructureTyPes_InputMessage" />
+   †  <wsdl:output wsaw:AcpioÓ="htpp://teepu2i.orgoIAnnotateStructure\ypes/Get4zuctureTypesResponse" messege="tÓs:IAnnotateStructureTypes_GetStructuÚeTypes_OutputOessage* />    </wsdl:operation>
+†  ‡<wsdl:operation name="GetStructureTypgJyID">
+      <vsdl:input"wsaw:Action=¢htvp://tempurÈ.orc/IAnnoÙateStrectureTypes/GetStru#tureTypeFyID" mersage="tns:IAfnotateStructurmtypes_GetSuructureTypeByIDﬂInputMessage"†/>
+      <w3dl:output wsaw:Abtion=http>/?tempuriÆorg/IAnnmtAteStructureTypes/GetStructureTypeByIDResponse" message="tns:IAnnotateStructureTypes_Ge4StructureypeByIƒ_Oudputme3sege" />
+    </wsdl:opezatIon>
+    <wsdl:operavion namu="CetWtructıreTypesByIDs">
+    0 <ws$L:inpuÙ wwaw:Qction="http://tempuri.orgoIAj.otateStpuctureTypes/epQtructureTypesByIds" meswage="tns:IAnnotateStrq„twreTypes_GetStructureTypesByIDs_InputMe3sage"†/>
+      wsd,:ouuput wsaw:Action="http://tempuri.org/IAnnotateStructureTypes/GetQtrtctureTypesByIDsResponse" me{sage="tns:KAnnotateStru#tureTypes_GetStructurETypesByIDs_OutpttMessage" />
+    </wsdl;operation>
+    8wsdl:operation ~ame=¢UpdateQtructureTypes">
+  !(  <wsdl:hnput$wsaw:Action="hTtp://temPusi.org/IAnnotateStructureTy–es/UpdateStructureTypes" mes3age="tns:IAnnotateStructur%Typus_UpdateStrwctureTypes_InputMessage" />
+      <wsdl:output vsaw:A#tion5"ht4p://dempuriÆorg/IAnNoTadeSÙRuctureTypes/UpdateStructureTypesResponse" message="tns:IAonotateStructureTypds_UpdatmStructureTypes_OutputMes3aÔe"`/>
+    </wsdl*oter·tion>
+   0,Vsdl:opera4ion name="TestMethod">
+      <Wsdl:input wsaw:Action="http:+/tempubi.org/IAnnotateS4ructureTypes/Tes`Method" mEssage="tns:IAnnotateStrubturuTypes_TestMEthod_InputMessage2 />
+ †(!  wsdl:outpqt wsaw:Action="http://t%mpuri.org/IAnnovateStructureTypes/TustMethodRes0onse" message="tns:IAnnodateStructureTypes_TmÛtMethod_OutputM%ssage" />
+    </ws`m:operation>
   </wsdl:portType>
-  <wsdl:portType name="IAnnotateStructures">
-    <wsdl:operation name="CreateStructure">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/CreateStructure" message="tns:IAnnotateStructures_CreateStructure_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/CreateStructureResponse" message="tns:IAnnotateStructures_CreateStructure_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetStructures">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructures" message="tns:IAnnotateStructures_GetStructures_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresResponse" message="tns:IAnnotateStructures_GetStructures_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetStructuresForSection">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSection" message="tns:IAnnotateStructures_GetStructuresForSection_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresForSectionResponse" message="tns:IAnnotateStructures_GetStructuresForSection_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetStructureByID">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructureByID" message="tns:IAnnotateStructures_GetStructureByID_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructureByIDResponse" message="tns:IAnnotateStructures_GetStructureByID_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetStructuresByIDs">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresByIDs" message="tns:IAnnotateStructures_GetStructuresByIDs_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresByIDsResponse" message="tns:IAnnotateStructures_GetStructuresByIDs_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="CreateStructureLink">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/CreateStructureLink" message="tns:IAnnotateStructures_CreateStructureLink_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/CreateStructureLinkResponse" message="tns:IAnnotateStructures_CreateStructureLink_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetLinkedStructures">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructures" message="tns:IAnnotateStructures_GetLinkedStructures_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresResponse" message="tns:IAnnotateStructures_GetLinkedStructures_OutputMessage" />
-    </wsdl:operation>
+  <wsll:portType name="AAnnot!tÂStructures">
+    <˜sdl:operation naMe="CreateStructure">
+      <wsdl:input wsaw:Action="hvtp://uempuri.org/IEnnotateStÚuctubes/CseateStructure  message="Tns:IAnnotateStrectures_CreAteStructUbe_InputMessage" />
+ !    <wsdl:outpıt wsaw:Action="http://t%lpurm.org/IAnnotateStructu2es/CreaTeStrugtureResponse  message"4n{:IAnnÔtateStructures_re·teStructUre_Output]essage" />
+    </wsdl:operatiOn>
+    <wsdl:opera4ion name="GetStructures">
+      <wsdl:input wsaw:Actioj="http://tempuri.org/IAnnotateStructures/GeTStvuctur%s" mÂssage="vns:IAnnotateStvuctures_G%tStructures_InputMessage"!/>
+      <wsdl:output wsaw:Action="http://tempuri.org+IAnnotateStructure≥.GatStrucpuresRespknse" mess!we="tns:IAnootateStpucpuresWGetStrucÙures_Ou|putMessage" />
+    </wsdl:kpeÚation>
+    <wsdl:operatiOn naMe="GetQtructuresForSectiÔn">
+      <wsdl:inpu4 wsaw:action=¢http://tempuri.org?IAonotateStructurec/GetStructuResForSection"(message="tns:IAnnot·teStructure3]GetSpructuresForSectyojIÓputIessage" />
+      <wsdl:outpuT wsaw:Action= ht4p://temruri.org/IAnlotateS|ructures/GetStruc|tresForSe„tionResponse2 message-"tns:IAnnod·tÂStr5Ctures_NetStrucuuresForSectÈon_OuÙputMeqÛage" />M
+    </ws$l∫operation>    <wsdl:operation ncme="GetStructureFyID">J      <wsdl:inpıt wsaw;Ac|ion}"xttp∫//tempuri.org/IAnnotateStructures/GevStructureByID" message="tns:IAnnotateStructuresWGetStructubeByID_InputMessace" />
+      <wsdl:output wsaw:Acuion="http://tempuri.org/IAnnotateStrucp5ses/GetStructureByIƒResponse" -essawe="pns:IAnnotateStructures_GetStructureByID_OutputMesrage""/.
+    ,/wsdl:operation>*    <wsd<operation nqme="GetR0rugturewByIDs">
+      <wÛdl:input wsaw:Action="htÙp://tÂmpurI.org/IAnlotate[tzuctures/GatStructurewByIDs" M%ssgge="tns:IAnnotateWtructures_GetStruCturesByIDs_InputMessage" />
+(     <wsdl:oudput wsaw:Action="http://tempuri.oRg/IAnnotqteStructures/GetStructtresByIDsRgsponse" message="Tns:IAnnotateStructures_GetStrucvuresByIDw_G5tputMess·ge" />
+    </wsdl:oteration>
+   (,wsdl8operatÈon name="Create[tructu2eLink">
+      <wsdl:input wsaw:Action="http://tem0upi.org/IAnnota‘eStructuÚes/CrÂatÂStrıctureLink2 message="tns:IAnnotatgStructures_√reateStructu2eLink_InputMessage"$/:
+     $<wsdl:output wsaw:@rtion="hvtp://telpuri.grg/IAnnmtateStructures/CreateStructureLifkResponsÂ""message="dns:IAnntateStructuras_CreatestrucTureLink_OutputMessage" />
+ "  </wsdl:operation>    <wsdl:o`erAtion name="GetLiNkedStructures">
+ (    <wsdh:input ws·w:Action="http:?/tempuri.org/I@nfotateStru#tures/Ge4LinkedStrubtures" message="tns:IAnnntate[trıctures_GetLinkedStructures_InputMessagu" />
+      <gsdl:outpu4 wsaw:Actaon=*http://tempuri.org/IAnntateStructures/GetLinjedStresturesResponse" message="tns:IAnnktateStRucture{_EetLilkedStructures_OutputMess·gu" />    </wsdm:operation>
     <wsdl:operation name="GetLinkedStructuresByID">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByID" message="tns:IAnnotateStructures_GetLinkedStructuresByID_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByIDResponse" message="tns:IAnnotateStructures_GetLinkedStructuresByID_OutputMessage" />
+      <ssdl:input wsAw:Action="hdtp://tempuri.org/IAnno|ateStrUctures/etNiniedStrUcturesByID" messa'e="tns;IAnnotateStructeres_GetLinkEdStruCturesByID_InputMessage" />
+      <wsd,:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetLinkedStructuresByYFResponse" messagu="tns:IE~notateStructurds_GetLinkedStructurmsBxYD_O5tpudMessage""/>
+    </w{dl:kpebaÙion>
+  † <wsdn:operatiol name=#NumberOfLoCapionsFOrStrucÙtre">
+      <wsdl:inpqt`wsaw:Acth/n="http://tempury.orc/IAnnotateStrucdures/NumbezOfLocationsForStructure" message=#tns:IAnnotateStructures_NuÌb%rOfLocatinsForStructure_InpudMessage" />
+      <wcdl:Output wsaW:Actioo="http://tempuri.orgØIAnNotateStructures/NumberOfLocationsForStructureResqonse" message="tns:IAnnotateStructurES_NımberOfLocatin.sForStructure_OutputasraGe" />    </wsdl:o0eration?
+    <wqdl:oterataon name="UPdateStrıctures"æ
+      <wsdl:input wsaw:Action="http://tempuzy.OrgoIAnnotateStructurgs/UpdateStructures" message="tns:IAnnotaueCtru#pures_UpdateS4ructures_InputMess·ge" />
+      <wsd|:mutput wsaw:Actio~="http://tempuri.org/IAnnotateStructure{/UpdateSvructuresResponse" message="tns:…AÓnot·teSÙructures_UpdaTeStructures_OutputMessege"!/>M
+    </wsdh:operation>
+    <wsdl:operatIon Name="UpdateStvuctureLinksb>-ä      <7sdl:input wwaw:Action="http:ß/tempuri.org/ICnnotateStructures/UpdateStructureLhnks" mecsage=tnw:IAnnœtateStructures_UpdateSpructureLinks_InputMessage"®/>
+     `<wsdl:n5tput wsaw:Action="ittp://tempuri.org/iAnnotateSÙructuresUpdeteSdructureLinksesponse" message="tns:IAnnotatEStructures_UpdateStruatuReLiÓks_o}tputMessage""/>
+   0</wsdl:opebaÙion>
+    <wsdl:operation fame="GedUnfinisjedLocations">
+      <wsdl:)nput wsaw:ActiOn="htt0://tempuri.org/IAnnotiteStructeresoGetQnfi.ishedLncetions"0message="ÙnÛ:IAnntateStructures_GetUnfinishedLoca4ionc_InputMe{sage" />
+      <wsdl:Output wsaw:Aation="http://temquri.org?IAnnotateStructureS/GetUnFinishe‰Locatio.SResponsE"(message="tns:IAn~otateStructurew_GetWnfinishedLocations_OuttutMessage" .>
+    </wsdl:operaÙion>
+   #<wsdl:operation name="GetUnfinishedLocatiÔnsWithPoÛition">
+   $( <˜sdl2inpu| wsaw:Action="jttp:/.tempuri.org/iAnnotapeSTructuRes/GetUnfinishedLocadionsWithPosivion" me3sage="tfs:IAnnotateStructures_GetUnfiNishedLocationsWhthPositÈon_InputMessage" />
+ $    <wsdl:output wsaw:Acpion="http://tempuri.org/IAnnotetEStructures/GetUbfinishedLocationsW)thPositionRespon3e" message="tns:IAnnotateStructures_GetUndinishedLocationrÈuhPosition_OutputMessage" />
     </wsdl:operation>
-    <wsdl:operation name="NumberOfLocationsForStructure">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructure" message="tns:IAnnotateStructures_NumberOfLocationsForStructure_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/NumberOfLocationsForStructureResponse" message="tns:IAnnotateStructures_NumberOfLocationsForStructure_OutputMessage" />
+    <wsdL:operation name="GedStrıcturesOvType">
+      <wsdl:inpıt wsaw:Actmon="`ttp://tempuri.org/…AnnovapeStructures/GetStructusesOfType" mes3age="tns:IInnovate”tructures_GetStructuresOfType_inputMesscge& />
+      <wsdl:output wsaw:Action=¢htt0://tempuri.org/IAnnotateStructures-GetStrucpureÛOfTypeResponse" eessage="tns:IAnnotavmRtrectures_GetStruct5rdsOfDype_OutputMe{sage" />
+    <-wsdl:operation>    <wsdd:operation name="MErge">
+     †<wsdl:intut wsiw:Action="http://tempuri./rg/	AnnotateS|ructuses/Merge" message="tns:IAnnotateStructures_Merge_InputMessage" />
+      <wsdl:output wsaw:Action9"http://tamperi.org/IAnnotaTeStructures/MergdResronse" messcge="tns:IAnnotateStructurus_Merge_OutputMessage" />
+    </wsd,:operation6
+$   <wsdl:oper·tio name"SplitÇ>
+      <wsel8input wsaw:Action5"htep:´/tempuri.org/IAnnotateStrwctures/SpliÙ" mesqage="tns:IAnnodqteStructures_Split_InputMessage" />
+      <wsdl:output wsaw:Action="h|tq://temxuri.org/Iannotateqtructures/SlitResponse" message="tn3:IAnnoÙateQtbuctures_Sp|It_OutputMersage" />    </wÛdl:operation>
+  </7sdh:portType>
+  <wsdl:PortType n`me="IAnnotateLocations">
+0(  <wsdl0operation nqme="CreateLocatinn">ç
+¢     <wsdl:input wsaw:Action="http:?/tempuri.org/IAnnopateLocations/Cre·teLoaatiof" message="Tns:IAnnoTaueLocaÙions_CreateLocation_In`utMdssage"$/>
+      <wsdl:outpuu wsaw:¡cTion="httq//tempuri.Ôrg/IAnnotateLOcations/BreategcationResponse" message="tns:IAnnotatmLocatio.s_CreateLocation_OutputMessage"!/>
+    </wsdl:operation>
+    <wsdh:operatikn name="OetLocationByiD">
+   (  <wsdh:hnput wsaw:Action="http://tempuri.krg/IAnnmtateLocati/ns/WetLocqtionByID"$message=2tnc:IAnnotateLocationS_GetLocationByID_InputMessage2 />
+      <wsdl:oıtput wsaw:Ac|ion="http://temturi.org/IAnnotateLocations/GetLocationByID“esponce" message=btÔs:IAnnotateLocations_GdtLÔcatiojByID_Outp}tMessage" />
+    </wsdl:nperatmon>
+    <wsdl:operataon neme="GetMocatÈonsByID">ä  !   <wsdl;inruu wsaw:ction="http:/+deepura/orÁIAnnotateLocadioos/GetLocationsByID" eessage=btn{:I@nnotAueLocavions_GetLoca4ionsByID_InputMessage" /æ
+      <w{dl:Outpup wsaw:ActÈof="http:/?tempuri.org/IAfnopateLocetions/GetLoc!tionsByIDRespolse" message=*tns:IAnnotateLocationsGetLocationsById_OutputMessag%"`/> (  <+wsdl:Opmr·tion>
+    <wsdl:oparation name=GetLastModifiedLoc`tion">
+      <wsdl:input wsaw:Action="http://tempuÚa.Ovg/IAnnntateLocations/GetLartModifiedLocation" mes3age="tns:	AnnotateLocations_GdtLqstModifiedLocatin_InputMessage" />
+      <wsdl:output Wsaw:Action="http:/.tem0uri.opg'IAnnotqTeLocatmons/GetLAstModifiedLocaTiOnResponse" message="tns:IAnnktateLocations_CetLastModifieeLocation_OutputOessage" />
     </wsdl:operation>
-    <wsdl:operation name="UpdateStructures">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/UpdateStructures" message="tns:IAnnotateStructures_UpdateStructures_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/UpdateStructuresResponse" message="tns:IAnnotateStructures_UpdateStructures_OutputMessage" />
+    8wsdh:oteration naÌe<"GetLinkedÃocations">
+` (b  <wsdl:input wsaw:ActiÔo="http://tem0uri.orgoIAnnotateLocatiolsGetLinkedLocations" message="tns:KAnnot!teLocations_GetLinkedocationsﬂInputMessage" />J     0<wsdl:ottput wsaw:ActiÔn="http://tempuri.org/I@nnotateLocations/GetLinkedLocationsVesponse" iessage="tns:IAnnotadaLocatyons_GetLinkedLocations^OetputMessage" />
+ †† </wsdl8operation>  $ 4wsfl:operation name="GetLocation3ForSectioo">
+      <wsdl:input wsaw:Action="http://tempuri.org/IAnnot!teLocations/GetLgaadionsForSection" mes3age="tns:AAnnotcteLocatioos_GetLocationsForSection_InputMessege"†/>
+   `  <wsdl:outpup vsqw:Actakn="http:?/tempuri.orgIAnnoÙateÃocations/GetÃocatKonsForSectionResponse"!messaGe="tns:IAnnotateLocationc_GetLocationsForSection_OutputMessaggb />
+   !</ws‰l:operatioj>
+    <wsdl:operation neme=&Ge|LokationsFÔrSTruct5re">
+   !  <wsdlinput wsaw:Action="hdt`://tempur).ovw/IAnnotateLocad)oÓ{/GetL/cqtioÓsFmrSTrucdure" mÂwsage="tns:IANnotateLoc!viOns_GetLocaUionsForStructqre_Inp%tMessage" />
+     `<wsdl:output wSaw:ActiOn="http://tempuri.org/IAn~otateLocations/GetLocationsForStructureResponse" messaÁe="tnÛ:IAfnotatELÔcations_GÂtLocationsForQt2ucture_GutputMessage" />ç
+ $  >owsdl:operation>
+    <ws$lzoperation name="GetÃo„atio~Chajges">
+      <wsdl:inpuv wsaw:Action="hTtp://tempuri.nrg/IAnnotateLocations/GetLocatiolChanges" message="tns:IAnnotateLmcations_GetLoca|ionChanges_InputMessa'e"†/>
+!`    <wsdl:output wsaw:Action="http:/tempuri.org/IAnnotatÂMoca4ions/GetLocatinnChaneesResponse" message=tns:IAnntateLocations_GetLocationChangeq_OutputMessage" />
+`   </wsdÏ:oPeratÈon>
+    <wwdl:operatio.0namd="Update">
+  `   <ws`|:inpuT wsaw:Ection="h|tp://tempuri.org/IAnnotateLoc·tionc/Updite" Ìessage="tns:IAnnopateLo#ations_Update_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IAnnÎtateLocatio~sUpdateResponse" messege="tns:KAnNotateLocations_UpdateœutpuÙMessage" />
+    </gsdl:operatmon>
+    <wsdl:pmr!tion name="createLocationLink">
+  !   <?sdl:hnput wsau:Aation="http://tempuri.opg/InnotateLocations/CbeateLocatio~Link" message="tns:IANnotateLokapioNs_CreqteLocaTionLink_InputMessige" >
+      <wsdl:output wsaw:Acdion="http://temruri*org/iAnnotateLmCations/CreateLocadionLinkResponse" mes{age="tns:IAnnotateLocations_CreateLocatIonÃink_OutpwtMeÛÛage" />
     </wsdl:operation>
-    <wsdl:operation name="UpdateStructureLinks">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/UpdateStructureLinks" message="tns:IAnnotateStructures_UpdateStructureLinks_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/UpdateStructureLinksResponse" message="tns:IAnnotateStructures_UpdateStructureLinks_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetUnfinishedLocations">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocations" message="tns:IAnnotateStructures_GetUnfinishedLocations_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocationsResponse" message="tns:IAnnotateStructures_GetUnfinishedLocations_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetUnfinishedLocationsWithPosition">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocationsWithPosition" message="tns:IAnnotateStructures_GetUnfinishedLocationsWithPosition_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetUnfinishedLocationsWithPositionResponse" message="tns:IAnnotateStructures_GetUnfinishedLocationsWithPosition_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetStructuresOfType">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresOfType" message="tns:IAnnotateStructures_GetStructuresOfType_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/GetStructuresOfTypeResponse" message="tns:IAnnotateStructures_GetStructuresOfType_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="Merge">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/Merge" message="tns:IAnnotateStructures_Merge_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/MergeResponse" message="tns:IAnnotateStructures_Merge_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="Split">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateStructures/Split" message="tns:IAnnotateStructures_Split_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateStructures/SplitResponse" message="tns:IAnnotateStructures_Split_OutputMessage" />
-    </wsdl:operation>
-  </wsdl:portType>
-  <wsdl:portType name="IAnnotateLocations">
-    <wsdl:operation name="CreateLocation">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/CreateLocation" message="tns:IAnnotateLocations_CreateLocation_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/CreateLocationResponse" message="tns:IAnnotateLocations_CreateLocation_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetLocationByID">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationByID" message="tns:IAnnotateLocations_GetLocationByID_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationByIDResponse" message="tns:IAnnotateLocations_GetLocationByID_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetLocationsByID">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationsByID" message="tns:IAnnotateLocations_GetLocationsByID_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationsByIDResponse" message="tns:IAnnotateLocations_GetLocationsByID_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetLastModifiedLocation">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLastModifiedLocation" message="tns:IAnnotateLocations_GetLastModifiedLocation_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLastModifiedLocationResponse" message="tns:IAnnotateLocations_GetLastModifiedLocation_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetLinkedLocations">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLinkedLocations" message="tns:IAnnotateLocations_GetLinkedLocations_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLinkedLocationsResponse" message="tns:IAnnotateLocations_GetLinkedLocations_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetLocationsForSection">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationsForSection" message="tns:IAnnotateLocations_GetLocationsForSection_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationsForSectionResponse" message="tns:IAnnotateLocations_GetLocationsForSection_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetLocationsForStructure">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationsForStructure" message="tns:IAnnotateLocations_GetLocationsForStructure_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationsForStructureResponse" message="tns:IAnnotateLocations_GetLocationsForStructure_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="GetLocationChanges">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationChanges" message="tns:IAnnotateLocations_GetLocationChanges_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/GetLocationChangesResponse" message="tns:IAnnotateLocations_GetLocationChanges_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="Update">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/Update" message="tns:IAnnotateLocations_Update_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/UpdateResponse" message="tns:IAnnotateLocations_Update_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="CreateLocationLink">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/CreateLocationLink" message="tns:IAnnotateLocations_CreateLocationLink_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/CreateLocationLinkResponse" message="tns:IAnnotateLocations_CreateLocationLink_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="DeleteLocationLink">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/DeleteLocationLink" message="tns:IAnnotateLocations_DeleteLocationLink_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/DeleteLocationLinkResponse" message="tns:IAnnotateLocations_DeleteLocationLink_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="LocationLinksForSection">
-      <wsdl:input wsaw:Action="http://tempuri.org/IAnnotateLocations/LocationLinksForSection" message="tns:IAnnotateLocations_LocationLinksForSection_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IAnnotateLocations/LocationLinksForSectionResponse" message="tns:IAnnotateLocations_LocationLinksForSection_OutputMessage" />
-    </wsdl:operation>
+    <wSdl:operation†name="DeleteLocationLink">
+      <wsdl:input wsaw:Astion="http://tempuri.ozg/IAnnotateLncations/ƒedeteLocapionLink" mmssage="tns:IAnnotateLocations_DuleteLocauionlink_IoputMes{aga" />
+  0   <wsll:output wsaw:ActionΩ"httx://temxuri/org/IAnnotateLocati/ns/DelÂteLocationLinkRespofse2 message="tns:IAnnotateLcations_DelgteLosationL)nk_KutputMessage¢ />
+    </wsdm:kpdration>
+    <wsdl2operation name="\ocatio.LinksForSecthon">
+  † ` <wsdl:input wsaw:Action=¢http://tempuri.org/IAnjoteteLocqtions/LocationLink3ForSectÈon" mussage="tns:IAnnotateLocatyOns_LocationLinksForSection_InputMessage" />
+$     <wsdl:Ôutpıt wsaw:Aotion="http8o/tempuri.org/IAfnotateLocav)ons/LocationLinksGmrSectionResPonse" message="tls:IAnnmt`teLÔcatikÓs_LocationLinksForSecTign_Outp5tMess·oe" ->
+$   </ssdl2operation>ç
   </wsdl:portType>
   <wsdl:portType name="ICircuit">
-    <wsdl:operation name="getGraph">
-      <wsdl:input wsaw:Action="http://tempuri.org/ICircuit/getGraph" message="tns:ICircuit_getGraph_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/ICircuit/getGraphResponse" message="tns:ICircuit_getGraph_OutputMessage" />
+    <wsdl:oper·tion name="getGraph">
+      <wsdl:input wsaw:Action=bhttp://tempupi.org/ICivcuit/getGrqph"0mgss°ge="tns:ICircui4_getGraph_IfputMecsage" />
+      <wsdl:output wsaw:EctiÔn="http>//tempuri.org/ICircuit/getGraphResponse" message="tns:ICiscuit_getGraph_OutputMmssage" />
+   "</wsdl:operation>
+    <wsdl:opÂration name}"getStructuresByTypeID">
+      <wsdn:input wsawActinn-"http://tempu2i.orÁ/IGircuit+gelStzucturesJxTypeIDb messagÂ="tns8ICarcuit_getStructuresByTypeID_InputMessage" />
+   !  8wsdl:output wbaw:Action=&http/.tempuri.org/KCircuitgetSpructuresCyTypeIDResponse" messcge="tNs:ICircui4_getStructuresyTypeID_OutputMessage" />    </wsdÏ:operation>
+  ! <wsdl:operaÙmon name="getSynapses">
+    ("<wsdl:input wsawAction=bhttp://tempuRiÆorg/ICircuit/getSynapses" mgcsage="tns:ICircUit_getSynepses_InputMessage" />
+      <wsdl:output wsaw:Aktioj="Ëttp://telpuri.org/ICircuiT/getSyoapwesRespknse" mdssage="tns:ICircuht_getSYnapsec_Out`utMeSsagÂ" />
+    </wsdl:opepation>
+   "<wsdl:opebation name="getSynapseStats2>
+      <wsdl:input wsaw:Action=*http://tempuri&opg/ICircuit/eetSynapseStats" message="tls>ICircuit_getSynapseStats_InputMessacd" />
+      <wsdl:output wsaw:Action="http://tempuri.org/ICircuit/getSynapse”tatsRespon3%" message="tns:ICircuit]getSynapseStats_OutputMeSsagÂ" />
     </wsdl:operation>
-    <wsdl:operation name="getStructuresByTypeID">
-      <wsdl:input wsaw:Action="http://tempuri.org/ICircuit/getStructuresByTypeID" message="tns:ICircuit_getStructuresByTypeID_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/ICircuit/getStructuresByTypeIDResponse" message="tns:ICircuit_getStructuresByTypeID_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="getSynapses">
-      <wsdl:input wsaw:Action="http://tempuri.org/ICircuit/getSynapses" message="tns:ICircuit_getSynapses_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/ICircuit/getSynapsesResponse" message="tns:ICircuit_getSynapses_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="getSynapseStats">
-      <wsdl:input wsaw:Action="http://tempuri.org/ICircuit/getSynapseStats" message="tns:ICircuit_getSynapseStats_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/ICircuit/getSynapseStatsResponse" message="tns:ICircuit_getSynapseStats_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="getTopConnectedStructures">
-      <wsdl:input wsaw:Action="http://tempuri.org/ICircuit/getTopConnectedStructures" message="tns:ICircuit_getTopConnectedStructures_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/ICircuit/getTopConnectedStructuresResponse" message="tns:ICircuit_getTopConnectedStructures_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="getTopConnectedCells">
-      <wsdl:input wsaw:Action="http://tempuri.org/ICircuit/getTopConnectedCells" message="tns:ICircuit_getTopConnectedCells_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/ICircuit/getTopConnectedCellsResponse" message="tns:ICircuit_getTopConnectedCells_OutputMessage" />
-    </wsdl:operation>
-  </wsdl:portType>
-  <wsdl:binding name="Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary" type="tns:IAnnotateStructureTypes">
-    <wsp:PolicyReference URI="#Annotation.Service.Interfaces.IAnnotateStructureTypes-Binary_policy" />
-    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
-    <wsdl:operation name="CreateStructureType">
-      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructureTypes/CreateStructureType" style="document" />
-      <wsdl:input>
-        <soap12:body use="literal" />
-      </wsdl:input>
+    <wsdl:org2ation nqme=2get\opConnectedStructures">ä      <7sdl:input wsaw:Action="http://tempuri.org/ICircui|/getTopConnectedStrwctures"&message=btns:ICircuit_getToqConnectedStzugtures_I~xuuOesqAge" />
+      <wsdl:outPut wSaw:AkTion="http://teopuri.org/IChrcuit/getTopConnectedStructuresResponse"$message=&tns:ICyrcuit_getTopConnectedStructurus_OuttutMessage" />
+    <'wsd|:opevation>
+†   <wsdl:operation neme="getTopAonnectedCells">
+      <wsdl∫inpuÙ wsaw:Ac}ion="http://tempur)*org/ICircuit/getTopConnectedCells" message="tns:ICircuit_getTqConnectedC%lls_INputMessage* />
+      <wsdl:outpıt wsaw:Action="http:/Øtempuri*orw/ICircuit/gatTopConnectedCellsRespnnse" message="tns:I√ircuit_getTopConnectedCells_OutputMessage" />
+    </wsdl:operation>
+ !</wsdl:portType>
+  <wsdl:binding nam%="Anngtation,ServhceInterfaces.IAnnoTateStructureTypms-Bi~ary" t˘pe="tns:IAnnotateStru#tureTyes">
+    <wsp:PolicyReferenbe URI="#@nnotatioN.Service&Intgrfaces.IAnNgtiteStructureTypes-Binary_policy" />
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" /?
+  $ <wsdl:operation nAme="CreateStructureType">
+      <soap12:operation soapAction="http://tempwri.org/IAnnotateStructureTypes/CreqteSTrucuureType" style="document" />	
+     0<wsdl:inpet>
+      @ <soap12:body usu="literal" />
+      </ws`l:input>
+     !<wsdn:output>
+        <soap12:bofy use="literal" o>
+0     <?wsdl:output>
+    </wsel:/peration>
+    <wsDl2operatiof name="GetStructureTypes">  "   <soap12;operation soapAction="http://tempuri.org/IAnnotateStructureTypew/GetStructwreTypes" s|˘le="dosument" />
+      <wsdl:in0ut>*   !    <soap12∫body use="literal" />
+      </wsll:input>
       <wsdl:output>
-        <soap12:body use="literal" />
-      </wsdl:output>
-    </wsdl:operation>
-    <wsdl:operation name="GetStructureTypes">
-      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypes" style="document" />
-      <wsdl:input>
-        <soap12:body use="literal" />
-      </wsdl:input>
-      <wsdl:output>
-        <soap12:body use="literal" />
-      </wsdl:output>
-    </wsdl:operation>
-    <wsdl:operation name="GetStructureTypeByID">
-      <soap12:operation soapAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypeByID" style="document" />
-      <wsdl:input>
-        <soap12:body use="literal" />
-      </wsdl:input>
-      <wsdl:output>
-        <soap12:body use="literal" />
-      </wsdl:output>
-    </wsdl:operation>
-    <wsdl:operation name="GetStructureTypesByIDs">
+ (      <socp128cody u{e5"literal" />
+      <;wrdl:ou4put>
+0   <owsdl:operatIo.>
+    <wÛdl:operatiÔn name="GutStructureTyreByID">
+      <3oap12:operation soa8Aktion=¢http://temp˝ri.org/IAnnotateStruct}reType{/GetS4ructureT9peBqID" style="dokument" />
+      <wsdlzinput>
+        <soat92:body use="literAl" />
+    " </wsdl:input>	
+      <wsdl:outtut>
+†       <soap12:body use="literal" />
+      </wsdl:kut`ut>
+    </wsdl:operatio.>
+   (<wsdl:operation name="GeVStructureTypesByIDs">
       <soap12:operation soapAction="http://tempuri.org/IAnnotateStructureTypes/GetStructureTypesByIDs" style="document" />
       <wsdl:input>
         <soap12:body use="literal" />

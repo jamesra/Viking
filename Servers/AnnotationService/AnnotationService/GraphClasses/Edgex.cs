@@ -50,7 +50,16 @@ namespace AnnotationService.Types
 
         }
 
-        public override int GetHashCode() => System.Convert.ToInt32(SourceID);
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + SourceID.GetHashCode();
+                hash = hash * 23 + TargetID.GetHashCode();
+                return hash;
+            }
+        }
 
         public override bool Equals(object obj)
         {
