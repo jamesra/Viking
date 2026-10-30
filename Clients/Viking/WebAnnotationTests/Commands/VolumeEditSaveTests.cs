@@ -261,6 +261,42 @@ namespace WebAnnotationTests.Commands
             }
         }
 
+        /// <summary>
+        /// An edit attempt on a location the owner cannot map exactly (drawn by the mapping-failure policy) starts no command
+        /// and tells the user why. It used to start nothing silently.
+        /// </summary>
+        [TestMethod]
+        public void AnEditOnALocationThatCannotBeMappedExactlyShowsAMessage()
+        {
+            List<(string Text, string Caption)> shown = [];
+            Action<IWin32Window, string, string> savedWarning = LocationActions.ShowWarning;
+            LocationActions.ShowWarning = (_, text, caption) => shown.Add((text, caption));
+            try
+            {
+                // The curve runs from x = 1800 to 2300; the transform maps only x < 2100 and extrapolates beyond.
+                IVolumeToSectionTransform transform = new ClippedTransform(new ScaleTransform(1, Vector2.Zero), new Rectangle(0, 2100, 0, 5000), extrapolate: true);
+                LocationObj curve = LocationVolumeGeometryTests.Fixture(LocationType.OPENCURVE);
+                Assert.IsFalse(LocationVolumeGeometry.For(curve, transform).IsExact, "drawn by the failure policy");
+
+                Assert.IsNull(LocationActions.EditableGeometry(curve, transform, new Owner()));
+                Assert.AreEqual(1, shown.Count, "one message");
+                Assert.AreEqual(LocationActions.UneditableMessage, shown[0].Text);
+
+                Assert.IsNull(LocationActions.EditableGeometry(curve, transform, reportTo: null), "no edit attempted");
+                Assert.IsNotNull(LocationActions.EditableGeometry(curve, new ScaleTransform(1, Vector2.Zero), new Owner()), "an exact location is editable");
+                Assert.AreEqual(1, shown.Count, "and neither shows a message");
+            }
+            finally
+            {
+                LocationActions.ShowWarning = savedWarning;
+            }
+        }
+
+        private sealed class Owner : IWin32Window
+        {
+            public IntPtr Handle => IntPtr.Zero;
+        }
+
         internal sealed class SingleTransformProvider(IVolumeToSectionTransform transform) : IVolumeTransformProvider
         {
             public IVolumeToSectionTransform GetSectionToVolumeTransform(int SectionNumber) => transform;
