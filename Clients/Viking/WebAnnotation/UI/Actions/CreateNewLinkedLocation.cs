@@ -79,15 +79,16 @@ namespace WebAnnotation.UI.Actions
             {
                 LocationObj existingLoc = Store.Locations[ExistingLocID];
                 LocationObj newLoc = new(existingLoc.Parent,
-                                                     NewMosaicShape,
-                                                     NewVolumeShape,
-                                                     SectionNumber,
-                                                     NewMosaicShape.ShapeType.IsClosed() ? Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON : Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYLINE);
+                                         SectionNumber,
+                                         NewMosaicShape.ShapeType.IsClosed() ? Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON : Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYLINE);
+
+                // Mosaic is saved; the stored volume shape is derived by the forward owner under the default transform.
+                newLoc.SetShapeFromGeometryInSection(Transform, NewMosaicShape.ToSqlGeometry());
 
                 LocationObj NewLocation = await Store.Locations.Create(newLoc, [ExistingLocID]);
                 Global.LastEditedAnnotationID = NewLocation.ID;
             }
-            catch (ArgumentOutOfRangeException)
+            catch (ArgumentException)
             {
                 Trace.WriteLine("The chosen point is outside mappable volume space, location not created", "Recoverable Error");
             }

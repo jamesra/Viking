@@ -201,9 +201,12 @@ namespace WebAnnotation
             Store.Locations.OnCollectionChanged += new NotifyCollectionChangedEventHandler(OnLocationCollectionChanged);
             Store.LocationLinks.OnCollectionChanged += new NotifyCollectionChangedEventHandler(OnLocationLinksCollectionChanged);
 
-            //    AnnotationCache.AnnotationChanged += AnnotationChangedEventHandler;      
+            //    AnnotationCache.AnnotationChanged += AnnotationChangedEventHandler;
             _CurrentOverlay = this;
             Viking.UI.State.GoToLocationIdHandler = locationId => GoToLocation(locationId);
+
+            // Every save writes the stored volume cache under the open volume's default transform, whatever is on screen.
+            Viking.VolumeModel.VolumeCache.DefaultTransforms = () => Viking.UI.State.volume;
         }
 
         private System.Windows.Forms.Timer _startupLocationRetryTimer;

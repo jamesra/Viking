@@ -19,8 +19,8 @@ namespace Viking.VolumeModel
     /// </summary>
     /// <remarks>
     /// <para>The shape is <see cref="MapShape"/>: the mosaic shape mapped with <c>TryMapShapeSectionToVolume</c> and then
-    /// smoothed with <c>GetSmoothedShape</c>, the same function <c>VolumePositionUpdateJob</c> writes into the cache. A
-    /// circle's centre comes from the location's X,Y and its radius from the five-point mean scale (<see cref="CircleMapping"/>).
+    /// smoothed with <c>GetSmoothedShape</c>. The stored cache is <see cref="CacheShape"/> under the volume's default transform
+    /// (<see cref="VolumeCache"/>), written by every save and by <c>VolumePositionUpdateJob</c>. A circle's centre comes from the location's X,Y and its radius from the five-point mean scale (<see cref="CircleMapping"/>).
     /// Line and curve widths scale by the five-point mean scale at the location's centre, as a circle radius does.</para>
     /// <para><b>Mapping failure policy.</b> When the strict mapping fails (a point outside the transform's hull):
     /// circles and points take the centre from the transform's unchecked <c>SectionToVolume</c> and keep the mosaic
@@ -96,8 +96,18 @@ namespace Viking.VolumeModel
             _ => 0,
         };
 
-        /// <summary>The smoothed volume shape, the value <see cref="MapShape"/> gives and the stored cache should hold.</summary>
+        /// <summary>The smoothed volume shape, the value <see cref="MapShape"/> gives.</summary>
         public SqlGeometry Shape => shape.Value;
+
+        /// <summary>
+        /// The value the stored <c>VolumeShape</c> holds when this is the geometry under the volume's default transform
+        /// (<see cref="VolumeCache"/>): a circle location's exact <see cref="Circle"/>, otherwise <see cref="Shape"/>.
+        /// <see cref="Shape"/> smooths a circle's ring into the inscribed circle of its polygon, about 2% smaller, so a circle is
+        /// stored as the circle every view draws and every circle edit saves.
+        /// </summary>
+        public SqlGeometry CacheShape => TypeCode == LocationType.CIRCLE && Circle is Circle circle
+            ? SqlGeometryUtils.Extensions.ToCircle(circle.Center.X, circle.Center.Y, 0, circle.Radius)
+            : Shape;
 
         /// <summary>
         /// The polygon a polygon, curve polygon or closed curve is hit-tested as on its own section, and the outline its
@@ -201,9 +211,9 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
-        /// The forward mapping of the volume cache: <paramref name="mosaic"/> mapped into volume space and smoothed for
-        /// <paramref name="type"/>. <c>VolumePositionUpdateJob</c> writes this into <c>VolumeShape</c>, and
-        /// <see cref="Shape"/> is the same value, so the two always agree. Null when the shape cannot be mapped.
+        /// <paramref name="mosaic"/> mapped into volume space and smoothed for <paramref name="type"/>, the value
+        /// <see cref="Shape"/> has: for geometry that is not a saved location's (a preview), and to check that an edited mosaic
+        /// shape maps. Null when the shape cannot be mapped. The stored cache is <see cref="CacheShape"/> (<see cref="VolumeCache"/>).
         /// </summary>
         public static SqlGeometry? MapShape(LocationType type, SqlGeometry mosaic, IVolumeToSectionTransform transform)
         {

@@ -7,8 +7,8 @@ namespace Viking.VolumeModel
 {
 
     /// <summary>
-    /// Sets a location's shapes. Mosaic is the truth and the volume shape is always the forward owner's
-    /// (<see cref="LocationVolumeGeometry"/>); see <c>.cursor/rules/annotation-volume-geometry.mdc</c>.
+    /// Sets a location's shapes. Mosaic is the truth and the volume shape is always the forward owner's under the volume's
+    /// default transform (<see cref="VolumeCache"/>); see <c>.cursor/rules/annotation-volume-geometry.mdc</c>.
     /// </summary>
     public static class LocationObjExtensions
     {
@@ -34,8 +34,9 @@ namespace Viking.VolumeModel
 
         /// <summary>
         /// Sets a location from a mosaic shape, the truth: <c>MosaicShape</c> is <paramref name="shape"/> and <c>VolumeShape</c>
-        /// is what the forward owner (<see cref="LocationVolumeGeometry"/>) derives from it, never a volume shape the caller
-        /// kept. Set <c>TypeCode</c> (and <c>Width</c>) first: the volume shape is smoothed for the type.
+        /// is the cache the forward owner derives from it under the volume's <b>default</b> transform
+        /// (<see cref="VolumeCache"/>), never a volume shape the caller kept and never one under the transform on screen. Set
+        /// <c>TypeCode</c> (and <c>Width</c>) first: the volume shape is smoothed for the type.
         /// </summary>
         /// <exception cref="ArgumentException">The shape is not valid SQL geometry, or it does not map onto the volume under
         /// <paramref name="mapper"/>; the location is then unchanged.</exception>
@@ -86,7 +87,10 @@ namespace Viking.VolumeModel
 
         /// <summary>
         /// The one place a location's <c>MosaicShape</c> is written from a mosaic shape, followed by the volume cache the
-        /// forward owner derives. <paramref name="exactCircle"/> is the mosaic circle when <paramref name="shape"/> is one:
+        /// forward owner derives under the volume's <b>default</b> transform (<see cref="VolumeCache"/>), never under the
+        /// transform on screen. The shape must map onto the volume under <paramref name="mapper"/>, the transform the edit was
+        /// made under; without an open volume that is also the cache's basis (<see cref="VolumeCache.Basis"/>). A location
+        /// that had a shape keeps it when the save is refused. <paramref name="exactCircle"/> is the mosaic circle when <paramref name="shape"/> is one:
         /// the gRPC <c>LocationObj</c> stores a <see cref="Circle"/>, and one read back from SQL geometry takes a bounding-box
         /// radius that carries rounding.
         /// </summary>
@@ -99,17 +103,24 @@ namespace Viking.VolumeModel
             if (LocationVolumeGeometry.MapShape(location.TypeCode, shape, mapper) is null)
                 throw new ArgumentException("The shape lies partly outside the region this section's transform maps, so it cannot be drawn on the volume.");
 
+            IShape2D oldShape = location.MosaicShape;
             location.MosaicShape = exactCircle is Circle circle ? circle : shape.ToShape2D();
-            location.VolumeShape = VolumeCacheShape(LocationVolumeGeometry.For(location, mapper));
+
+            IShape2D cache;
+            try
+            {
+                cache = VolumeCache.Shape(location, VolumeCache.Basis(location, mapper));
+            }
+            catch (ArgumentException e)
+            {
+                if (oldShape is not null)
+                    location.MosaicShape = oldShape;
+
+                throw new ArgumentException("The shape lies outside the region the volume's default section alignment can place, so its stored volume position cannot be computed.", e);
+            }
+
+            location.VolumeShape = cache;
         }
 
-        /// <summary>
-        /// The value the stored volume cache holds for a location: a circle's exact volume circle (the smoothed ring is the
-        /// inscribed circle of its polygon, slightly smaller), otherwise the forward owner's smoothed <c>Shape</c>.
-        /// </summary>
-        internal static IShape2D VolumeCacheShape(LocationVolumeGeometry geometry) =>
-            geometry.TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CIRCLE && geometry.Circle is Circle circle
-                ? circle
-                : geometry.Shape.ToShape2D();
     }
 }

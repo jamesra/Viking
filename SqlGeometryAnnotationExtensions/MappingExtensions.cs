@@ -11,35 +11,6 @@ namespace Viking.VolumeModel
 
     public static class MappingExtensions
     {
-        /// <summary>
-        /// A faster mapping technique for geometries that do not use control points such as circles and points.
-        /// </summary>
-        /// <param name="loc"></param>
-        /// <returns></returns>
-        private static bool MapLocationCentroidToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, WebAnnotationModel.Objects.LocationObj loc)
-        {
-            //Don't bother mapping if the location was already mapped
-            if (loc.VolumeTransformID == mapper.ID)
-                return true;
-
-            Vector2 VolumePosition = new(-1, -1);
-
-            bool mappedPosition = mapper.TrySectionToVolume(loc.Position, out VolumePosition);
-            if (!mappedPosition) //Remove locations we can't map
-            {
-                Trace.WriteLine("MapLocationToVolumeByCentroid: Location #" + loc.ID.ToString() + " was unmappable.", "WebAnnotation");
-                return false;
-            }
-
-            loc.VolumeTransformID = mapper.ID;
-            if (VolumePosition != loc.VolumePosition)
-                loc.VolumeShape = loc.VolumeShape.MoveTo(VolumePosition);
-
-            //loc.VolumePosition = VolumePosition;
-
-            return true;
-        }
-
         public static Microsoft.SqlServer.Types.SqlGeometry TryMapShapeSectionToVolume(this Viking.VolumeModel.IVolumeToSectionTransform mapper, Microsoft.SqlServer.Types.SqlGeometry shape)
         {
             List<Vector2[]> VolumeInnerRings = null;
