@@ -47,8 +47,8 @@ Always deploy **both** Debug and Release builds, each to its own folder.
 | Export | `Servers/DataExport/DataExport.csproj` (net9.0) | `dotnet publish -c <Config> -o <scratch>\export-<Config>` | the publish folder | `<Config>\Export` | `web.config`, `appsettings*.json`, `logs\`, `Output\`, `Resources\` | `GET /RC1/Export/` → 200 |
 
 `deploy/Deploy-VikingIis.ps1` wraps older scripts (`-Action Annotation` copies Release only; `Export`,
-`ConfigureIIS` and `Certificate` must run on the IIS host as Administrator; `ConfigureIIS` recreates the pools and
-applications). It has no OData action and no Debug deploy, so use the steps below for binaries and keep that script
+`ConfigureIIS` and `Certificate` must run on the IIS host as Administrator; `ConfigureIIS` recreates the odata and
+dataexport pools and applications, and leaves the WCF annotation application alone). It has no OData action and no Debug deploy, so use the steps below for binaries and keep that script
 for IIS setup and certificates.
 
 A new IIS-hosted service gets a row here: its project, build command, output folder, target folder, the
