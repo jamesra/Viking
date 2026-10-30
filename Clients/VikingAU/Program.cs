@@ -495,18 +495,20 @@ namespace Viking.AU
         }
 
         /// <summary>
-        /// Returns true if the new volume shape is significantly different than the old one
+        /// Sets the location's <c>VolumeShape</c> to the cache every Viking save writes, <see cref="VolumeCache.Shape"/> under
+        /// <paramref name="mapper"/> (the volume's default transform), and returns true if it is significantly different
+        /// than the old one, or the type was repaired or the location translated. A translation moves the location in volume
+        /// space: the forward owner's geometry is moved, mapped back by the inverse owner and saved as the mosaic shape.
+        /// See <c>.cursor/rules/annotation-volume-geometry.mdc</c>.
         /// </summary>
-        /// <param name="Location"></param>
-        /// <param name="mapping"></param>
-        /// <returns></returns>
         static bool UpdateVolumeShape(LocationObj loc, MappingBase mapper, SectionTranslation? translation)
         {
+            SqlGeometry originalVolumeShape = loc.VolumeShape is null ? null : LocationVolumeGeometry.ToSqlGeometry(loc.VolumeShape);
             bool TypeUpdated = false;
             bool Translated = false;
             if (!IsLocationTypeValid(loc))
             {
-                if (TryRepairLocationType(loc))
+                if (TryRepairLocationType(loc, mapper))
                 {
                     Console.WriteLine($"Repaired Type for Location {loc.ID}");
                     TypeUpdated = true;
@@ -515,22 +517,26 @@ namespace Viking.AU
                     Console.WriteLine($"Unable to repair type for Location {loc.ID}");
             }
 
-            SqlGeometry updatedVolumeShape = VolumeShapeForLocation(loc, mapper);
-            if (updatedVolumeShape is null)
+            //Translate if needed
+            if (translation is not null && loc.LastModified < translation.Value.TranslateBefore)
+            {
+                if (TryTranslate(loc, mapper, translation.Value.Offset, out string failure))
+                    Translated = true;
+                else
+                    Console.WriteLine($"Location {loc.ID} was not translated: {failure}");
+            }
+
+            IShape2D cache;
+            SqlGeometry updatedVolumeShape;
+            try
+            {
+                cache = VolumeCache.Shape(loc, mapper);
+                updatedVolumeShape = LocationVolumeGeometry.ToSqlGeometry(cache);
+            }
+            catch (ArgumentException)
             {
                 Console.WriteLine("Could not map location ID : " + loc.ID.ToString());
                 return false;
-            }
-
-            //Translate if needed
-            if (translation is not null)
-            {
-                if (loc.LastModified < translation.Value.TranslateBefore)
-                {
-                    updatedVolumeShape = updatedVolumeShape.Translate(translation.Value.Offset);
-                    loc.MosaicShape = mapper.TryMapShapeVolumeToSection(updatedVolumeShape).ToShape2D();
-                    Translated = true;
-                }
             }
 
             if (!updatedVolumeShape.STIsValid())
@@ -539,39 +545,56 @@ namespace Viking.AU
                 return false;
             }
 
-            Vector2[] OriginalVolumeControlPoints = loc.VolumeShape.ToPoints();
-            Vector2[] UpdatedVolumeControlPoints = updatedVolumeShape.ToPoints();
-
-            if (AnyPointsAreDifferent(OriginalVolumeControlPoints, UpdatedVolumeControlPoints) ||
-                updatedVolumeShape.GeometryType() != loc.VolumeShape.ToSqlGeometry().GeometryType())
+            if (originalVolumeShape is null ||
+                AnyPointsAreDifferent(originalVolumeShape.ToPoints(), updatedVolumeShape.ToPoints()) ||
+                updatedVolumeShape.GeometryType() != originalVolumeShape.GeometryType())
             {
-                loc.VolumeShape = updatedVolumeShape.ToShape2D();
+                loc.VolumeShape = cache;
                 return true;
             }
 
             return TypeUpdated || Translated;
         }
 
-        static Vector2[] MosaicPointsForLocation(LocationObj loc)
+        /// <summary>
+        /// Moves the location by <paramref name="offset"/> in volume space: its geometry as the forward owner maps it, moved,
+        /// mapped back to mosaic by <see cref="LocationVolumeGeometry.ToMosaic(Circle, IVolumeToSectionTransform)"/> and its
+        /// overloads, and saved with <see cref="LocationObjExtensions.TryApply"/>. Lines keep the width they are drawn with.
+        /// </summary>
+        static bool TryTranslate(LocationObj loc, MappingBase mapper, Vector2 offset, out string failure)
         {
-            Vector2[] mosaicPoints = loc.TypeCode switch
+            LocationVolumeGeometry geometry = LocationVolumeGeometry.For(loc, mapper);
+            if (!geometry.IsExact)
             {
-                LocationType.POINT or LocationType.CIRCLE => [loc.Position],
-                LocationType.POLYGON or LocationType.POLYLINE or LocationType.OPENCURVE or LocationType.CLOSEDCURVE or LocationType.CURVEPOLYGON => loc.MosaicShape.ToPoints(),
-                _ => loc.MosaicShape.ToPoints(),
+                failure = "it lies partly outside the region the section's transform maps";
+                return false;
+            }
+
+            MosaicGeometry mosaic = loc.TypeCode switch
+            {
+                LocationType.CIRCLE => LocationVolumeGeometry.ToMosaic(new Circle(geometry.Circle!.Value.Center + offset, geometry.Circle.Value.Radius), mapper),
+                LocationType.POLYGON or LocationType.CURVEPOLYGON => LocationVolumeGeometry.ToMosaic(loc.TypeCode, geometry.ControlPolygon().Translate(offset), mapper),
+                LocationType.POLYLINE or LocationType.OPENCURVE or LocationType.CLOSEDCURVE =>
+                    LocationVolumeGeometry.ToMosaic(loc.TypeCode, geometry.ControlPoints.Select(p => p + offset).ToArray(), mapper, geometry.Width),
+                _ => LocationVolumeGeometry.ToMosaic(loc.TypeCode, geometry.ControlPoints.Select(p => p + offset).ToArray(), mapper),
             };
-            return mosaicPoints;
-        }
 
-        static SqlGeometry VolumeShapeForLocation(LocationObj loc, MappingBase mapper)
-        {
-            SqlGeometry UnsmoothedVolumeShape = mapper.TryMapShapeSectionToVolume(loc.MosaicShape.ToSqlGeometry());
-            if (UnsmoothedVolumeShape is null)
-                return null;
+            try
+            {
+                if (!loc.TryApply(mosaic, mapper))
+                {
+                    failure = mosaic.Failure;
+                    return false;
+                }
+            }
+            catch (ArgumentException e)
+            {
+                failure = e.Message;
+                return false;
+            }
 
-            //Check a rare case where points are stored as circles 
-            SqlGeometry SmoothedVolumeShape = loc.TypeCode.GetSmoothedShape(UnsmoothedVolumeShape);
-            return SmoothedVolumeShape;
+            failure = null;
+            return true;
         }
 
         /// <summary>
@@ -580,7 +603,7 @@ namespace Viking.AU
         /// <returns></returns>
         static bool IsLocationTypeValid(LocationObj loc)
         {
-            switch (loc.MosaicShape.ToSqlGeometry().GeometryType())
+            switch (LocationVolumeGeometry.ToSqlGeometry(loc.MosaicShape).GeometryType())
             {
                 case SupportedGeometryType.POINT:
                     if (loc.TypeCode != LocationType.POINT)
@@ -609,13 +632,39 @@ namespace Viking.AU
         }
 
         /// <summary>
+        /// Saves a repaired mosaic shape through the owner (<see cref="LocationObjExtensions.SetShapeFromGeometryInSection"/>),
+        /// which also derives its volume shape, with its new <paramref name="width"/>. False, with the location (its width
+        /// included) unchanged, when the shape is invalid or unmappable.
+        /// </summary>
+        static bool TrySetRepairedShape(LocationObj loc, MappingBase mapper, SqlGeometry newShape, double? width)
+        {
+            if (!newShape.STIsValid().IsTrue)
+                return false;
+
+            // The width is set first because the cache is derived for it; a failed repair puts the old width back.
+            double? oldWidth = loc.Width;
+            loc.Width = width;
+            try
+            {
+                loc.SetShapeFromGeometryInSection(mapper, newShape);
+                return true;
+            }
+            catch (ArgumentException e)
+            {
+                loc.Width = oldWidth;
+                Console.WriteLine($"Location {loc.ID}: the repaired shape could not be saved: {e.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Return true if the location type was repaired
         /// </summary>
         /// <param name="loc"></param>
         /// <returns></returns>
-        static bool TryRepairLocationType(LocationObj loc)
+        static bool TryRepairLocationType(LocationObj loc, MappingBase mapper)
         {
-            switch (loc.MosaicShape.ToSqlGeometry().GeometryType())
+            switch (LocationVolumeGeometry.ToSqlGeometry(loc.MosaicShape).GeometryType())
             {
                 case SupportedGeometryType.POINT:
                     if (loc.TypeCode != LocationType.POINT)
@@ -641,30 +690,16 @@ namespace Viking.AU
                     //Convert a polyline to a polygon to match the location typecode
                     if (loc.TypeCode == LocationType.POLYGON || loc.TypeCode == LocationType.CURVEPOLYGON)
                     {
-                        SqlGeometry newShape = loc.MosaicShape.ToPoints().ToPolygon();
-                        if (newShape.STIsValid().IsTrue)
-                        {
-                            loc.MosaicShape = newShape.ToShape2D();
-                            loc.Width = new long?();
-                            return true;
-                        }
-
-                        return false;
+                        SqlGeometry newShape = LocationVolumeGeometry.ToSqlGeometry(loc.MosaicShape).ToPoints().ToPolygon();
+                        return TrySetRepairedShape(loc, mapper, newShape, null);
 
                     }
                     break;
                 case SupportedGeometryType.POLYGON:
                     if (loc.TypeCode == LocationType.CLOSEDCURVE || loc.TypeCode == LocationType.POLYLINE)
                     {
-                        SqlGeometry newShape = loc.MosaicShape.ToPoints().ToSqlGeometry();
-                        if (newShape.STIsValid().IsTrue)
-                        {
-                            loc.MosaicShape = newShape.ToShape2D();
-                            loc.Width = 8;
-                            return true;
-                        }
-
-                        return false;
+                        SqlGeometry newShape = LocationVolumeGeometry.ToSqlGeometry(loc.MosaicShape).ToPoints().ToSqlGeometry();
+                        return TrySetRepairedShape(loc, mapper, newShape, 8);
                     }
                     break;
                 default:
