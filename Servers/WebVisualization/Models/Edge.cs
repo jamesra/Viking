@@ -86,7 +86,13 @@ namespace ConnectomeViz.Models
 
         public override int GetHashCode()
         {
-            return System.Convert.ToInt32(SourceID);
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + SourceID.GetHashCode();
+                hash = hash * 23 + TargetID.GetHashCode();
+                return hash;
+            }
         }
 
         public override bool Equals(object obj)
