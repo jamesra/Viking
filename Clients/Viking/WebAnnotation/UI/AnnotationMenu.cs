@@ -112,7 +112,10 @@ namespace WebAnnotation
             menuSelectSegmentation.Click += OnSelectSegmentationService;
             menuRoot.DropDownItems.Add(menuSelectSegmentation);
 
-            ToolStripMenuItem menuUpdateVolumePositions = new("Update Volume Positions…");
+            ToolStripMenuItem menuUpdateVolumePositions = new("Update Volume Positions…")
+            {
+                ToolTipText = "Recomputes the stored volume positions under the volume's default alignment. Run it after a section's alignment (.stos) changes."
+            };
             menuUpdateVolumePositions.Click += OnUpdateVolumePositions;
             ToolStripSeparator menuUpdateVolumePositionsSeparator = new();
             menuUpdateVolumePositions.Visible = VolumeAccessRoles.HasReviewAccess();

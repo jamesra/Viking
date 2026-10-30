@@ -48,6 +48,7 @@
         <Compile Include="Tools\StoredVolumeCacheReaderTests.cs" />
         <Compile Include="Tools\VolumeGeometryGuardTests.cs" />
         <Compile Include="Tools\VolumeCacheTests.cs" />
+        <Compile Include="Tools\VolumePositionUpdateJobTests.cs" />
         <Compile Include="View\LinkedLocationShapeMappingTests.cs" />
         <Compile Include="Commands\RetraceAndReplaceMappingTests.cs" />
         <Compile Include="Commands\SameStructureMergeDiskTests.cs" />

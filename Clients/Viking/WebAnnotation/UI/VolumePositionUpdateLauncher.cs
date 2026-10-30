@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,7 +14,8 @@ using Viking.VolumeModel;
 namespace WebAnnotation.UI
 {
     /// <summary>
-    /// Annotation-menu entry for correcting volume positions.
+    /// Annotation-menu entry for Update Volume Positions (<see cref="VolumePositionUpdateJob"/>), the refresh of the stored
+    /// volume cache under the volume's default transform after a section's .stos changes.
     /// A second launch while a pass is running asks before cancelling it. The summary dialog is part of the running task, so the replacement pass waits until that dialog closes.
     /// </summary>
     internal static class VolumePositionUpdateLauncher
@@ -111,10 +113,20 @@ namespace WebAnnotation.UI
                 return;
             }
 
-            using var dialog = new UpdateVolumePositionsForm(
-                volume.TransformNames,
-                string.IsNullOrEmpty(volume.ActiveVolumeTransform) ? volume.DefaultVolumeTransform : volume.ActiveVolumeTransform,
-                volume.SectionViewModels.Keys);
+            // The stored positions are always written under the default transform. A volume without transforms stores section
+            // positions; one whose default transform did not load must not, or every aligned position would be lost.
+            string? defaultTransform = volume.TransformNames.Contains(volume.DefaultVolumeTransform) ? volume.DefaultVolumeTransform : null;
+            if (defaultTransform is null && volume.TransformNames.Length > 0)
+            {
+                MessageBox.Show(
+                    $"The volume's default transform ({volume.DefaultVolumeTransform ?? "none"}) is not loaded, so volume positions cannot be updated. Reopen the volume once it loads.",
+                    "Update Volume Positions",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            using var dialog = new UpdateVolumePositionsForm(defaultTransform, volume.SectionViewModels.Keys);
             if (dialog.ShowDialog(State.ViewerForm) != DialogResult.OK)
                 return;
 
@@ -123,11 +135,10 @@ namespace WebAnnotation.UI
 
         private static void Launch(VolumeViewModel volume, SectionViewerControl viewer, UpdateVolumePositionsForm dialog)
         {
-            var sections = new List<VolumePositionSection>();
+            var sections = new List<int>();
             if (dialog.IsAllSections)
             {
-                foreach (SectionViewModel section in volume.SectionViewModels.Values)
-                    sections.Add(ToTarget(section));
+                sections.AddRange(volume.SectionViewModels.Keys);
             }
             else
             {
@@ -135,9 +146,8 @@ namespace WebAnnotation.UI
                 {
                     if (number < int.MinValue || number > int.MaxValue)
                         continue;
-                    if (!volume.SectionViewModels.TryGetValue((int)number, out SectionViewModel? section))
-                        continue;
-                    sections.Add(ToTarget(section));
+                    if (volume.SectionViewModels.ContainsKey((int)number))
+                        sections.Add((int)number);
                 }
             }
 
@@ -164,30 +174,26 @@ namespace WebAnnotation.UI
                 return;
             }
 
-            MappingManager mappings = volume.CreateMappingManager();
-            string? transformName = dialog.TransformName;
             _activeCancellation = cancellation;
             HookExitConfirmation(State.ViewerForm);
-            _activeRun = FinishAsync(mappings, sections, transformName, handle, cancellation);
+            _activeRun = FinishAsync(volume, sections, handle, cancellation);
         }
 
         private static async Task FinishAsync(
-            MappingManager mappings,
-            List<VolumePositionSection> sections,
-            string? transformName,
+            IDefaultVolumeTransformProvider transforms,
+            List<int> sections,
             ViewerTaskHandle handle,
             CancellationTokenSource cancellation)
         {
             VolumePositionUpdateResult result;
             try
             {
-                result = await Task.Run(async () =>
-                    await VolumePositionUpdateJob.RunAsync(
-                        mappings,
+                result = await Task.Run(() =>
+                    VolumePositionUpdateJob.Run(
+                        transforms,
                         sections,
-                        transformName,
                         handle.Progress,
-                        cancellation.Token).ConfigureAwait(false)).ConfigureAwait(true);
+                        cancellation.Token)).ConfigureAwait(true);
             }
             catch (OperationCanceledException)
             {
@@ -207,11 +213,6 @@ namespace WebAnnotation.UI
             }
 
             VolumePositionUpdateSummary.Show(State.ViewerForm, result);
-        }
-
-        private static VolumePositionSection ToTarget(SectionViewModel section)
-        {
-            return new VolumePositionSection(section.Number, section.DefaultChannel, section.DefaultPyramidTransform);
         }
     }
 
