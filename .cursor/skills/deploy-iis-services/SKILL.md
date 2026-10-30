@@ -19,7 +19,7 @@ updates **every volume at once**. Docker services are not deployed this way (see
 A fix that is only in a working tree, or only on a side branch, is not deployed and will regress: RC1 served
 `Scale()` HTTP 500 for a day because its fix sat uncommitted. Before deploying:
 
-- Commit the change on `dev` in `D:\src\git\Viking`. If the work was done on a worktree branch, merge `dev`
+- Commit the change on `dev` in `D:\src\git\Viking` (Annotation: on `Legacy` in `D:\src\git\VikingLegacy`). If the work was done on a worktree branch, merge `dev`
   into it, then fast-forward `dev` (`git merge --ff-only <branch>` in the main checkout). No feature branches.
 - Build from the main checkout as it stands. Uncommitted edits from other sessions are included; that is expected.
 - Commit locally only; push only when the user asks.
@@ -56,7 +56,7 @@ server-owned files to keep, and an URL that proves it runs.
 
 ## 2. Build
 
-From `D:\src\git\Viking`, for each config:
+From `D:\src\git\Viking` (Annotation from `D:\src\git\VikingLegacy`; VS MSBuild if `dotnet build` fails), for each config:
 
 ```bash
 dotnet build Servers/ConnectomeODataV4/ConnectomeODataV4.csproj -c Release -nologo -v q
