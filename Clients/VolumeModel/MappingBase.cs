@@ -12,6 +12,21 @@ namespace Viking.VolumeModel
         IVolumeToSectionTransform GetSectionToVolumeTransform(int SectionNumber);
     }
 
+    /// <summary>
+    /// The volume's default section-to-volume transforms: the basis the stored volume cache (<c>VolumeShape</c>,
+    /// <c>VolumeX</c>, <c>VolumeY</c>) is always written in, whatever transform is shown on screen, so server queries, OData
+    /// and export see one consistent space. See <c>.cursor/rules/annotation-volume-geometry.mdc</c>.
+    /// </summary>
+    public interface IDefaultVolumeTransformProvider
+    {
+        /// <summary>
+        /// The default transform's mapping of <paramref name="SectionNumber"/> into the volume. A volume without transforms,
+        /// or a section the default transform has no entry for (the reference section), maps by identity, as the viewer and
+        /// <c>MappingManager</c> place such a section.
+        /// </summary>
+        IVolumeToSectionTransform GetDefaultSectionToVolumeTransform(int SectionNumber);
+    }
+
     public interface IVolumeToSectionTransform
     {
         /// <summary>
