@@ -21,15 +21,18 @@ namespace Viking.VolumeModel
     /// <c>VolumeX</c>, <c>VolumeY</c>) is always written in, whatever transform is shown on screen, so server queries, OData
     /// and export see one consistent space. See <c>.cursor/rules/annotation-volume-geometry.mdc</c>.
     /// </summary>
+#nullable enable
     public interface IDefaultVolumeTransformProvider
     {
         /// <summary>
         /// The default transform's mapping of <paramref name="SectionNumber"/> into the volume. A volume without transforms,
         /// or a section the default transform has no entry for (the reference section), maps by identity, as the viewer and
-        /// <c>MappingManager</c> place such a section.
+        /// <c>MappingManager</c> place such a section. Null when the volume names a default transform that did not load while
+        /// others did: identity would then replace aligned positions with section positions.
         /// </summary>
-        IVolumeToSectionTransform GetDefaultSectionToVolumeTransform(int SectionNumber);
+        IVolumeToSectionTransform? GetDefaultSectionToVolumeTransform(int SectionNumber);
     }
+#nullable restore
 
     /// <summary>
     /// Mosaic/section ↔ volume. Mosaic-only mappings are identity. Stos ITransform.Transform
