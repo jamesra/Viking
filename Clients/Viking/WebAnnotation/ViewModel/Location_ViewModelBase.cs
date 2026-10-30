@@ -502,14 +502,15 @@ namespace WebAnnotation.ViewModel
         /// Runs a mosaic-space polygon edit under the open volume's transform for this location's section and saves it; a
         /// shape the owner refuses is reported to the user and the location keeps its shape.
         /// </summary>
+        /// <remarks>async void because the menu handlers that call it are; every exception is caught here.</remarks>
         private async void SaveMosaicPolygonEdit(string caption, Func<Viking.VolumeModel.IVolumeToSectionTransform, bool> edit)
         {
-            Viking.VolumeModel.IVolumeToSectionTransform? transform = LocationVolumeGeometryExtensions.Provider()?.GetSectionToVolumeTransform((int)Math.Round(this.modelObj.Z));
-            if (transform is null)
-                return;
-
             try
             {
+                Viking.VolumeModel.IVolumeToSectionTransform? transform = LocationVolumeGeometryExtensions.Provider()?.GetSectionToVolumeTransform((int)Math.Round(this.modelObj.Z));
+                if (transform is null)
+                    return;
+
                 if (edit(transform))
                     await AnnotationOverlay.SaveLocationsWithMessageBoxOnError();
             }
