@@ -73,6 +73,30 @@ namespace WebAnnotationTests.Commands
             }
         }
 
+        /// <summary>
+        /// Translate with the mouse wheel changing the line width: the width the user left on screen is saved as the mosaic
+        /// width divided by the local scale. The unchanged-width move above only catches a save that drops the width where
+        /// the warp's scale differs between the old and the new place; a changed width catches it under every transform.
+        /// </summary>
+        [TestMethod]
+        public void TranslatingALineWithAChangedWidthSavesTheShownWidthDividedByTheLocalScale()
+        {
+            foreach (var (name, transform) in Transforms)
+            {
+                LocationObj location = LocationVolumeGeometryTests.NewLocation(LocationType.OPENCURVE, Wkt("LINESTRING (1800 2800, 1950 3050, 2100 2900, 2300 3150)"), width: 12);
+                LocationVolumeGeometry before = LocationVolumeGeometry.For(location, transform);
+                Vector2[] moved = [.. before.ControlPoints.Select(p => p + new Vector2(240, -130))];
+                double shownWidth = before.Width * 1.5;
+
+                Assert.IsTrue(LocationActions.SaveVolumeLineEdit(location, transform, moved, shownWidth, out string failure), failure);
+
+                LocationVolumeGeometry after = LocationVolumeGeometry.For(location, transform);
+                Assert.AreEqual(shownWidth, after.Width, 1e-6 * shownWidth, $"{name}: drawn width");
+                Assert.AreEqual(shownWidth, location.Width!.Value * after.Scale, 1e-6 * shownWidth, $"{name}: mosaic width times the local scale");
+                Assert.AreNotEqual(12, location.Width, $"{name}: the mosaic width changed");
+            }
+        }
+
         [TestMethod]
         public void ALineEditWithAPointOutsideTheTransformIsRefusedAndNothingIsSaved()
         {

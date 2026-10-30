@@ -165,6 +165,32 @@ namespace WebAnnotationTests.Tools
             Assert.AreEqual(15, mosaic.Width!.Value, 1e-9, "30 volume units at scale 2 is 15 mosaic pixels, not 30");
         }
 
+        /// <summary>
+        /// Placing a curve (<c>SetShapeFromPointsInVolume</c>, as <c>AnnotationOverlay.PlaceFromVolume</c> calls it) with the
+        /// 16-unit width the placement drew saves the mosaic width divided by the local scale, so the curve is drawn 16 wide
+        /// and not 16 times the scale.
+        /// </summary>
+        [TestMethod]
+        public void APlacedCurveSavesItsDrawnWidthDividedByTheLocalScale()
+        {
+            foreach (var (name, transform) in Transforms)
+            {
+                LocationObj location = Blank(LocationType.OPENCURVE);
+                Vector2[] drawn = [new(2000, 2000), new(2300, 2100), new(2500, 1900)];
+
+                location.SetShapeFromPointsInVolume(transform, drawn, null, 16);
+
+                LocationVolumeGeometry geometry = LocationVolumeGeometry.For(location, transform);
+                AssertSamePoints(drawn, geometry.ControlPoints, name);
+                Assert.AreEqual(16, geometry.Width, 1e-6, $"{name}: drawn width");
+                Assert.AreEqual(16 / geometry.Scale, location.Width!.Value, 1e-9, $"{name}: mosaic width");
+            }
+
+            LocationObj placed = Blank(LocationType.OPENCURVE);
+            placed.SetShapeFromPointsInVolume(new ScaleTransform(2.0, Vector2.Zero), [new(100, 100), new(400, 300)], null, 16);
+            Assert.AreEqual(8, placed.Width!.Value, 1e-9, "16 volume units at scale 2 is 8 mosaic pixels, not 16");
+        }
+
         [TestMethod]
         public void APolygonWithHolesSavedFromVolumeDrawsBackAsTheEditedPolygon()
         {
