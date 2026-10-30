@@ -55,6 +55,8 @@ translation (`MoveTo`) keeps each shape's own radius.
   `Location.EF.Conversion` takes each radius as the distance from that point to `X, Y` or `VolumeX, VolumeY`. Writes go
   through `PersistCircleShapesAsync` from both circles; a circle sent without a volume circle is refused, never filled
   with the mosaic radius.
+- The stored volume circle is still only a cache of the mosaic circle (`annotation-volume-geometry.mdc`), so a viewer draws
+  the circle from the mosaic one with the rule above (`LocationVolumeGeometry`), not from the stored volume radius.
 - Python (gallery, converter, nornir `segmentationtraining`): read the centre from `X`, `Y` (select them in the OData query).
   These tools work in mosaic space only, so they must not mix in a volume radius.
 
