@@ -284,7 +284,7 @@ the adjacent-section overlays used during tracing.
 
 Rather than loading all annotations on a section, the client loads only those
 within the current view. The `RegionLoader`
-([`Clients/WebAnnotationModel/RegionLoader/RegionLoader.cs`](../../../Clients/WebAnnotationModel/RegionLoader/RegionLoader.cs))
+([`Clients/WebAnnotationModel/Store/Spatial/RegionLoader.cs`](../../../Clients/WebAnnotationModel/Store/Spatial/RegionLoader.cs))
 divides space into a pyramid of grid cells and issues asynchronous queries per
 cell as the view changes, refreshing on an interval so that other annotators'
 edits appear. The visible volume rectangle is converted to mosaic-space bounds
@@ -312,7 +312,7 @@ annotation fills do not obscure the underlying electron micrograph.
 
 Annotations are read and written through a service layer. The established
 implementation is a WCF service
-([`Servers/AnnotationService/`](../../../Servers/AnnotationService/)) exposing
+([`Servers/AnnotationService/`](https://github.com/jamesra/Viking/tree/Legacy/Servers/AnnotationService)) exposing
 contracts for structures, structure types, locations, permitted links, circuit
 queries, and volume metadata, with role-based authorization (Read, Write,
 Annotate, Review, Modify). A gRPC replacement is under active development

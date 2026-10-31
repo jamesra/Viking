@@ -172,5 +172,5 @@ flowchart TD
   [`MorphologyMesh/`](../../../MorphologyMesh/)
 - Servers: [`Servers/ConnectomeODataV4/`](../../../Servers/ConnectomeODataV4/),
   [`Servers/DataExport/`](../../../Servers/DataExport/),
-  [`Servers/AnnotationService/`](../../../Servers/AnnotationService/),
+  [`Servers/AnnotationService/`](https://github.com/jamesra/Viking/tree/Legacy/Servers/AnnotationService),
   [`Servers/GrpcAnnotationService/`](../../../Servers/GrpcAnnotationService/)

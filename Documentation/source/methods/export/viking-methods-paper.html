@@ -362,7 +362,7 @@ index rather than a full scan.</p>
 change tracking</h3>
 <p>The database is created and upgraded by a single idempotent script
 that applies numbered migrations and records each in a
-<code>DBVersion</code> table; the script currently reaches version 83.
+<code>DBVersion</code> table; the script currently reaches version 86.
 Change Data Capture is enabled on annotation tables, which supports
 auditing and downstream replication. Region queries are served by stored
 procedures such as
@@ -387,7 +387,7 @@ tracing.</p>
 loading</h3>
 <p>Rather than loading all annotations on a section, the client loads
 only those within the current view. The <code>RegionLoader</code> (<a
-href="../../../Clients/WebAnnotationModel/RegionLoader/RegionLoader.cs"><code>Clients/WebAnnotationModel/RegionLoader/RegionLoader.cs</code></a>)
+href="../../../Clients/WebAnnotationModel/Store/Spatial/RegionLoader.cs"><code>Clients/WebAnnotationModel/Store/Spatial/RegionLoader.cs</code></a>)
 divides space into a pyramid of grid cells and issues asynchronous
 queries per cell as the view changes, refreshing on an interval so that
 other annotators’ edits appear. The visible volume rectangle is
@@ -414,14 +414,14 @@ APIs</h2>
 gRPC)</h3>
 <p>Annotations are read and written through a service layer. The
 established implementation is a WCF service (<a
-href="../../../Servers/AnnotationService/"><code>Servers/AnnotationService/</code></a>)
+href="https://github.com/jamesra/Viking/tree/Legacy/Servers/AnnotationService"><code>Servers/AnnotationService/</code></a>)
 exposing contracts for structures, structure types, locations, permitted
 links, circuit queries, and volume metadata, with role-based
 authorization (Read, Write, Annotate, Review, Modify). A gRPC
 replacement is under active development (<a
 href="../../../Servers/GrpcAnnotationService/"><code>Servers/GrpcAnnotationService/</code></a>),
 with protocol definitions for the same domain under <a
-href="../../../gRPCAnnotationServiceTypes/Protos/"><code>gRPCAnnotationServiceTypes/Protos/</code></a>.
+href="../../../gRPC_Protos/Annotation/"><code>gRPC_Protos/Annotation/</code></a>.
 The migration to gRPC is ongoing; both services target the same
 database.</p>
 <h3 id="odata-read-api">7.2 OData read API</h3>

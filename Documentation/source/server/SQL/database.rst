@@ -16,5 +16,5 @@ Deploy the database from using the `CreateUpdateDatabase.sql`_ script.  Find/rep
 When this is complete you need to ensure the following users have been created.
    **<Annotation Account>** - Either an ActiveDirectory, IIS application identity, or local SQL account that the web service application pool can be configured to use to talk to the database.  Must have write access to the database.
 
-.. _CreateUpdateDatabase.sql: http://github.com/jamesra/Viking/blob/master/Servers/AnnotationService/SQL/DatabaseCreateUpdate/CreateUpdateDatabase.sql
+.. _CreateUpdateDatabase.sql: http://github.com/jamesra/Viking/blob/dev/Servers/SQL/DatabaseCreateUpdate/CreateUpdateDatabase.sql
 
