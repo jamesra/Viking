@@ -1,6 +1,6 @@
 # gRPC client parity with the WCF client
 
-The goal: the gRPC Viking client (`d:\src\git\Viking\Clients\WebAnnotationModel.gRPC`, branch `dev`) matches the WCF client (`d:\src\git\VikingLegacy\Clients\WebAnnotationModel`, branch `Legacy`, read-only) in features and in speed, so Viking can switch transports without a user noticing. Read by the scout and implementer on Parity and gRPC-client wakes.
+The goal: the gRPC Viking client (`d:\src\git\Viking\Clients\WebAnnotationModel.gRPC`, branch `dev`) matches the WCF client (`d:\src\git\VikingLegacy\Clients\WebAnnotationModel`, branch `Net4.8`, read-only) in features and in speed, so Viking can switch transports without a user noticing. Read by the scout and implementer on Parity and gRPC-client wakes.
 
 ## Parity matrix
 

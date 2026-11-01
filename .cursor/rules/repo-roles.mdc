@@ -10,7 +10,7 @@ Two checkouts share this product. Put the change in the repo that owns that kind
 | Work | Repo | Path | Branch |
 |------|------|------|--------|
 | Servers, Docker, containers, identity, annotation, export, OData, segmentation, section correction, `gRPC_Protos`, and the gRPC clients (the gRPC Viking, Jotunn) | **Viking** | `d:\src\git\Viking` | `dev` |
-| WCF clients (Viking, VikingAU, MonogameTestbed, shared client libraries) and the production WCF annotation server (`Servers/AnnotationService`, built and deployed from here); Viking Test builds are packed from here | **VikingLegacy** | `d:\src\git\VikingLegacy` | `Legacy` |
+| WCF clients (Viking, VikingAU, MonogameTestbed, shared client libraries) and the production WCF annotation server (`Servers/AnnotationService`, built and deployed from here); Viking Test builds are packed from here | **VikingLegacy** | `d:\src\git\VikingLegacy` | `Net4.8` |
 
 ## Keep clients in parallel
 

@@ -7,7 +7,7 @@ Code does not read Cursor frontmatter, so each rule with ``globs`` and ``alwaysA
 Always-applied rules stay as ``@`` imports in ``CLAUDE.md``; rules with neither globs nor alwaysApply are loaded on
 request, so ``CLAUDE.md`` must name them. This script checks both.
 
-The same file lives in nornir, Viking (``dev``), VikingLegacy (``Legacy``) and Sam2Trainer; keep the copies identical.
+The same file lives in nornir, Viking (``dev``), VikingLegacy (``Net4.8``) and Sam2Trainer; keep the copies identical.
 
 Usage (from the repository root):
     python .claude/sync_claude_rules.py          # write .claude/rules/

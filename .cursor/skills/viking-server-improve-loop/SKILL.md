@@ -52,7 +52,7 @@ Keep the parent transcript thin:
 
 ## Scope
 
-One repo, one branch: `d:\src\git\Viking` on `dev`, edited through the tracks in [scope.md](scope.md). Parity reads the WCF client in `d:\src\git\VikingLegacy` (`Legacy`) and never edits it. The scout picks the track as well as the category, rotating so no track starves; `STEERING.md` `focus:` wins.
+One repo, one branch: `d:\src\git\Viking` on `dev`, edited through the tracks in [scope.md](scope.md). Parity reads the WCF client in `d:\src\git\VikingLegacy` (`Net4.8`) and never edits it. The scout picks the track as well as the category, rotating so no track starves; `STEERING.md` `focus:` wins.
 
 Priority when several tracks have candidates: a bug likely in real use, then a parity gap (`missing` before `partial` before a performance row over the line), then deploy and docs mismatches, then the rest.
 
@@ -111,7 +111,7 @@ The main session only launches the subagents, talks to the user when needed, and
 
 ## Mirror to the WCF client
 
-Fixes in code the WCF client in `d:\src\git\VikingLegacy` also has (shared libraries such as Geometry, AnnotationVizLib and the WebAnnotation views, or the same logic in its WCF stores) belong in Legacy too, but this loop never edits Legacy. After such a commit, append `{ sha, summary, legacyPaths }` to `mirrorPending` in the ledger, list it in every report until it is gone, and tell the user once so the client loop or a client session can port it. Remove an entry when its port lands on Legacy (search Legacy's log for the sha).
+Fixes in code the WCF client in `d:\src\git\VikingLegacy` also has (shared libraries such as Geometry, AnnotationVizLib and the WebAnnotation views, or the same logic in its WCF stores) belong in Net4.8 too, but this loop never edits Net4.8. After such a commit, append `{ sha, summary, legacyPaths }` to `mirrorPending` in the ledger, list it in every report until it is gone, and tell the user once so the client loop or a client session can port it. Remove an entry when its port lands on Net4.8 (search Net4.8's log for the sha).
 
 ## Steering
 

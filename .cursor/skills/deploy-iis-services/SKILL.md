@@ -19,7 +19,7 @@ updates **every volume at once**. Docker services are not deployed this way (see
 A fix that is only in a working tree, or only on a side branch, is not deployed and will regress: RC1 served
 `Scale()` HTTP 500 for a day because its fix sat uncommitted. Before deploying:
 
-- Commit the change on `dev` in `D:\src\git\Viking` (Annotation: on `Legacy` in `D:\src\git\VikingLegacy`). If the work was done on a worktree branch, merge `dev`
+- Commit the change on `dev` in `D:\src\git\Viking` (Annotation: on `Net4.8` in `D:\src\git\VikingLegacy`). If the work was done on a worktree branch, merge `dev`
   into it, then fast-forward `dev` (`git merge --ff-only <branch>` in the main checkout). No feature branches.
 - Build from the main checkout as it stands. Uncommitted edits from other sessions are included; that is expected.
 - Commit locally only; push only when the user asks.
@@ -43,7 +43,7 @@ Always deploy **both** Debug and Release builds, each to its own folder.
 | Service | Project | Build | Output to copy | Target | Keep on target (never overwrite) | Check |
 |---|---|---|---|---|---|---|
 | OData | `Servers/ConnectomeODataV4/ConnectomeODataV4.csproj` (SDK, net48) | `dotnet build -c <Config>` | `Servers/ConnectomeODataV4/bin/<Config>/net48/` | `<Config>\OData\bin` | `..\Web.config`, `..\Global.asax`, `bin\SqlServerTypes\` (only on the server) | `GET /RC1/OData/Scale()` → 200 with X/Y/Z |
-| Annotation (WCF) | `Servers/AnnotationService/AnnotationService/AnnotationService.csproj` in **VikingLegacy** (`D:\src\git\VikingLegacy`, branch `Legacy`; SDK, net48) | `dotnet build -c <Config>` | the folder under `bin/<Config>/` that holds `AnnotationService.dll` (check; `DeployProduction.cmd`'s default `...\bin` source is stale) | `<Config>\AnnotationService\bin` | `web.config`, `webText.config`, `..\SqlServerTypes\`, `..\GraphClasses\`, `..\Service\`, `..\*.svc` | `GET /RC1/Annotation/Service.svc` → 200 |
+| Annotation (WCF) | `Servers/AnnotationService/AnnotationService/AnnotationService.csproj` in **VikingLegacy** (`D:\src\git\VikingLegacy`, branch `Net4.8`; SDK, net48) | `dotnet build -c <Config>` | the folder under `bin/<Config>/` that holds `AnnotationService.dll` (check; `DeployProduction.cmd`'s default `...\bin` source is stale) | `<Config>\AnnotationService\bin` | `web.config`, `webText.config`, `..\SqlServerTypes\`, `..\GraphClasses\`, `..\Service\`, `..\*.svc` | `GET /RC1/Annotation/Service.svc` → 200 |
 | Export | `Servers/DataExport/DataExport.csproj` (net9.0) | `dotnet publish -c <Config> -o <scratch>\export-<Config>` | the publish folder | `<Config>\Export` | `web.config`, `appsettings*.json`, `logs\`, `Output\`, `Resources\` | `GET /RC1/Export/` → 200 |
 
 `deploy/Deploy-VikingIis.ps1` wraps older scripts (`-Action Annotation` copies Release only; `Export`,
