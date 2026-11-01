@@ -58,7 +58,7 @@ Docs:
 
 ## Bug patterns
 
-Defect shapes this loop and its server counterpart have fixed. Category 13 searches for these first, and each bug fix adds its pattern here if it is new (Bug fixes step 6 in [gates.md](gates.md)). Each line gives the pattern, what to search for, and an example fix; a sha marked (Viking) is on `dev` in `d:\src\git\Viking`, the rest are on `Legacy`.
+Defect shapes this loop and its server counterpart have fixed. Category 13 searches for these first, and each bug fix adds its pattern here if it is new (Bug fixes step 6 in [gates.md](gates.md)). Each line gives the pattern, what to search for, and an example fix; a sha marked (Viking) is on `dev` in `d:\src\git\Viking`, the rest are on `Net4.8` (named `Legacy` before 2026-11-01).
 
 - **A second action queued after the first ran.** Code calls the server directly, then also marks the object for the next batched save, which repeats the action or undoes a later one. Search: a direct WCF call followed by a base `Remove`/`Update` or a `DBAction` set on the same object in the stores (`Clients/WebAnnotationModel/Store`). Fix: update local state without queueing (`b184370c`, Viking, in the gRPC client; the WCF `LocationLinkStore.DeleteLink` already does this).
 - **Identity keyed by ID while objects can be replaced.** Subscriptions, caches or views keyed by ID go stale when a store evicts and reloads an object under the same ID. Search: `Dictionary<long, ...>` of subscriptions or views beside a store that can evict. Fix: key by object, and build from the store's current object (`4353c0b1`).

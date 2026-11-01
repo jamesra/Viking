@@ -451,7 +451,7 @@ First 1.2 line on .NET Framework 4.8 / 64-bit (XNA removed). Highlights from tha
 * **Linked polygons and recent volumes.** Linked-location polygon medial axis in the correct coordinate space; volume name saved in recent volumes; cancellation of blank segmentation screen captures.
 * **Random annotation colors.** Random annotation color menu; polygon control-point view refactor.
 
-<!-- See git history on Legacy for commit-level detail. -->
+<!-- See git history on Net4.8 for commit-level detail. -->
 
 ## 1.1.x (through 1.1.280, 2019-04-23)
 

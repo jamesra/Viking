@@ -42,7 +42,7 @@ Compile-time switch: MSBuild `/p:VikingTestChannel=true` → `VIKING_TEST_CHANNE
 
 ## Sync from git before publish (required)
 
-Work in the **VikingClient** checkout on the Legacy / VikingLegacy line (`Clients/Viking/Viking`). Before packing:
+Work in the **VikingLegacy** checkout on branch `Net4.8` (`Clients/Viking/Viking`). Before packing:
 
 1. `git fetch` from the remote (origin / github.com/jamesra/Viking).
 2. Attempt to integrate remote updates into the branch you will pack (`git pull --ff-only` when clean; otherwise a normal pull/merge or rebase onto the tracked upstream). Prefer a fast-forward when possible.
@@ -57,7 +57,7 @@ Work in the **VikingClient** checkout on the Legacy / VikingLegacy line (`Client
 
 ## Client publish (unsigned)
 
-Working directory: `Clients/Viking/Viking` in the Viking client checkout (Legacy / VikingClient tree).
+Working directory: `Clients/Viking/Viking` in the Viking client checkout (VikingLegacy, `Net4.8`).
 
 ```powershell
 .\PublishVelopack.ps1 -TestChannel
@@ -155,7 +155,7 @@ One announce per successful deploy. If deploy failed, do not post a release note
 
 ## Quick checklist
 
-1. In VikingClient (Legacy): `git fetch` / pull upstream; on hard conflicts, abort merge, keep a buildable local tree, and plan to notify James.
+1. In VikingLegacy (`Net4.8`): `git fetch` / pull upstream; on hard conflicts, abort merge, keep a buildable local tree, and plan to notify James.
 2. Changes land under `Clients/Viking/Viking` (or the tree you can still pack after step 1).
 3. `VikingChangelog.md` ships in the install (Help > Change Log, and shown on each version's first start): before packing, make its newest heading the version being packed, with today's date and `(Viking Test, unsigned)`, and check its bullets cover the changes since the last test version. Commit that with the release.
 4. `.\PublishVelopack.ps1 -TestChannel` → `releases-test\Viking-win-Setup.exe` exists (alias of Velopack’s pack-id Setup).
