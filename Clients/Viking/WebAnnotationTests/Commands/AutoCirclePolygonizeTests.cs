@@ -586,6 +586,58 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void CreatedShapeSimplifyWorldFloorsAtPenThresholdWhenZoomedIn()
+        {
+            int floor = WebAnnotation.Properties.Settings.Default.PenSimplifyThreshold;
+            if (floor < 1)
+                floor = 1;
+            Assert.AreEqual(floor, AutoPolygonizeSelection.CreatedShapeSimplifyWorld(0.1));
+            Assert.AreEqual(
+                AutoPolygonizeSelection.CreatedShapeSimplifyPixels * 16,
+                AutoPolygonizeSelection.CreatedShapeSimplifyWorld(16));
+        }
+
+        [TestMethod]
+        public void FitMinErrorCurvePolygonTracksDenseEllipseWithinTolerance()
+        {
+            List<Vector2> ring = [];
+            const int samples = 120;
+            for (int i = 0; i < samples; i++)
+            {
+                double t = 2 * Math.PI * i / samples;
+                // ~4-unit spacing on a gentle ellipse (edge-snap / logit sample density).
+                ring.Add(new Vector2(80 * Math.Cos(t), 50 * Math.Sin(t)));
+            }
+
+            ring.Add(ring[0]);
+            Polygon original = new(ring);
+            const double tolerance = 3.0;
+
+            Polygon fitted = AutoPolygonizeSelection.FitMinErrorCurvePolygon(original, tolerance);
+            Polygon viaProposal = AutoPolygonizeSelection.SimplifyProposal(original, tolerance);
+
+            Assert.IsTrue(fitted.TotalUniqueVertices < original.TotalUniqueVertices,
+                $"Min-error fit should reduce vertices {original.TotalUniqueVertices} -> {fitted.TotalUniqueVertices}");
+            Assert.IsFalse(fitted.ExteriorSegments.SelfIntersects(LineSetOrdering.Closed));
+
+            Polygon fittedCurve = new(fitted.ExteriorRing.CalculateCurvePoints(8, true));
+            double maxDistance = 0;
+            foreach (Vector2 p in original.ExteriorRing)
+            {
+                double distance = fittedCurve.Distance(p);
+                if (distance > maxDistance)
+                    maxDistance = distance;
+            }
+
+            Assert.IsTrue(maxDistance <= tolerance + 0.5,
+                $"Min-error curve drifted {maxDistance} from original (limit {tolerance + 0.5})");
+
+            // Distinct from SimplifyProposal: both must remain callable for comparison.
+            Assert.IsNotNull(viaProposal);
+            Assert.IsTrue(viaProposal.TotalUniqueVertices < original.TotalUniqueVertices);
+        }
+
+        [TestMethod]
         public void SimplifyRingsCollapsesColinearEdgeSamples()
         {
             List<Vector2> ring = [];

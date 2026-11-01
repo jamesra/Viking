@@ -313,7 +313,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 Polygon? traced = source.CreatePolygon(holeDropFraction, edgeCleanupRadius);
                 if (traced is not null)
-                    parts.Add(AutoPolygonizeSelection.SimplifyProposal(traced, simplifyTolerance, mustContain));
+                    parts.Add(AutoPolygonizeSelection.FitMinErrorCurvePolygon(traced, simplifyTolerance, mustContain));
 
                 // The picture is the server's mask; cleanup and snapping change only the outline.
                 cleaned.Add(new AutoPolygonizeMaskOverlay(
@@ -344,7 +344,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return false;
 
             if (parts.Count > 1)
-                merged = AutoPolygonizeSelection.SimplifyProposal(merged, simplifyTolerance, mustContain);
+                merged = AutoPolygonizeSelection.FitMinErrorCurvePolygon(merged, simplifyTolerance, mustContain);
 
             polygon = merged;
             displayMask = AutoPolygonizeMaskOverlay.TryOr(cleaned);

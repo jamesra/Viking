@@ -1649,7 +1649,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     return;
                 }
 
-                Polygon ready = AutoPolygonizeSelection.SimplifyProposal(carved, simplifyTolerance, foreground);
+                Polygon ready = AutoPolygonizeSelection.FitMinErrorCurvePolygon(carved, simplifyTolerance, foreground);
                 IReadOnlyList<Vector2> sourceKeepPoints = extraKeepPoints is { Count: > 0 }
                     ? [.. foreground, .. extraKeepPoints]
                     : foreground;
@@ -2847,7 +2847,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     if (maskSources.Count == 0)
                     {
                         Polygon? union = AutoPolygonizeSelection.UnionPolygons([.. originalPolygons], unionKeepPoint);
-                        return union is null ? null : AutoPolygonizeSelection.SimplifyProposal(union, simplifyTolerance, foreground);
+                        return union is null ? null : AutoPolygonizeSelection.FitMinErrorCurvePolygon(union, simplifyTolerance, foreground);
                     }
 
                     return AutoPolygonizeMaskRetrace.TryCreate(
@@ -2887,7 +2887,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                         Vector2 keepPoint = keepLocation?.VolumeCenter() ?? unionKeepPoint;
                         polygon = CarveAgainstExistingPolygons(polygon, locationIds, keepPoint, parentId, foreground);
                         if (polygon is not null)
-                            polygon = AutoPolygonizeSelection.SimplifyProposal(polygon, simplifyTolerance, foreground);
+                            polygon = AutoPolygonizeSelection.FitMinErrorCurvePolygon(polygon, simplifyTolerance, foreground);
                     }
 
                     // Members keep their upload so the group does not lose the image its masks were captured from.

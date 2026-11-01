@@ -171,29 +171,83 @@ namespace WebAnnotation.UI.AutoPolygonize
             => annotationOrNull ?? proposalOrNull;
 
         /// <summary>
-        /// Screen-pixel travel for autoseg preview rings and saved mask shapes. Tight enough
-        /// that the Catmull ring tracks the mask; pen strokes use
-        /// <see cref="Global.PenSimplifyThreshold"/> instead.
+        /// Screen-pixel travel for autoseg preview rings when zoomed out. Never used alone when
+        /// zoomed in: <see cref="CreatedShapeSimplifyWorld"/> floors at
+        /// <see cref="Global.PenSimplifyThreshold"/> so SAM rings match pen / Simplify Polygon fidelity.
         /// </summary>
         internal const double CreatedShapeSimplifyPixels = 2.0;
 
         /// <summary>
-        /// World-unit pixel-travel for autoseg rings (preview and save).
+        /// World-unit travel for autoseg preview rings:
+        /// <c>max(2 × camera downsample, PenSimplifyThreshold)</c>.
+        /// Floors at the pen threshold so zooming in cannot keep denser control points than pen strokes.
+        /// Reads the setting from <see cref="Properties.Settings"/> (same value as
+        /// <see cref="Global.PenSimplifyThreshold"/>) so unit tests need not initialize <see cref="Global"/>.
         /// </summary>
-        public static double CreatedShapeSimplifyWorld(double downsample) =>
-            CreatedShapeSimplifyPixels * (downsample > 0 ? downsample : 1);
+        public static double CreatedShapeSimplifyWorld(double downsample)
+        {
+            double screenBudget = CreatedShapeSimplifyPixels * (downsample > 0 ? downsample : 1);
+            int penFloor = Properties.Settings.Default.PenSimplifyThreshold;
+            if (penFloor < 1)
+                penFloor = 1;
+            else if (penFloor > 100)
+                penFloor = 100;
+            return Math.Max(screenBudget, penFloor);
+        }
 
         /// <summary>
-        /// Single Catmull-Rom control-point fit at <see cref="CreatedShapeSimplifyWorld"/>.
-        /// Run once on the final volume ring (after carve/union), then persist via
-        /// <see cref="ViewModel.LocationShapeUpdate"/> which maps those control points to mosaic.
-        /// Preview may use the same fit so the on-screen ring matches what will be saved.
+        /// Fits a closed CURVEPOLYGON to a dense auto-segmentation ring by choosing Catmull-Rom
+        /// control points that stay within <paramref name="tolerance"/> of the input (both ways),
+        /// using the full budget on that fit alone.
+        /// </summary>
+        /// <remarks>
+        /// Distinct from <see cref="SimplifyProposal"/>, which first Douglas-Peucker–reduces the ring
+        /// at half tolerance and then fits Catmull-Rom at the other half. This path skips the DP
+        /// pre-pass so the curve tracks the SAM / edge-snap samples directly under one max-error
+        /// budget (<see cref="CatmullRomControlPointSimplification.IdentifyControlPoints"/>).
+        /// Kept as its own entry point so the two results can be compared; SAM preview uses this one.
+        /// </remarks>
+        public static Polygon FitMinErrorCurvePolygon(
+            Polygon polygon,
+            double tolerance,
+            IReadOnlyList<Vector2>? mustContain = null)
+        {
+            if (polygon is null || tolerance <= 0)
+                return polygon;
+
+            double current = tolerance;
+            for (int attempt = 0; attempt < 4; attempt++, current /= 2.0)
+            {
+                Polygon fitted = FitMinErrorCurvePolygonAt(polygon, current);
+                if (KeepsCoveredPoints(polygon, fitted, mustContain))
+                    return fitted;
+            }
+
+            return polygon;
+        }
+
+        private static Polygon FitMinErrorCurvePolygonAt(Polygon polygon, double tolerance)
+        {
+            Polygon fitted = FitCurveControlPoints(polygon, tolerance);
+            if (fitted is not null &&
+                fitted.ExteriorRing.Length >= 4 &&
+                !fitted.ExteriorSegments.SelfIntersects(LineSetOrdering.Closed))
+            {
+                return fitted;
+            }
+
+            return polygon;
+        }
+
+        /// <summary>
+        /// Autoseg preview / created-shape fit at <see cref="CreatedShapeSimplifyWorld"/> via
+        /// <see cref="FitMinErrorCurvePolygon"/>. Persist still uses <see cref="SimplifyForSave"/>.
         /// </summary>
         public static Polygon SimplifyForCreatedShape(
             Polygon polygon,
             double downsample,
             IReadOnlyList<Vector2>? mustContain = null) =>
-            SimplifyProposal(polygon, CreatedShapeSimplifyWorld(downsample), mustContain);
+            FitMinErrorCurvePolygon(polygon, CreatedShapeSimplifyWorld(downsample), mustContain);
 
         /// <summary>
         /// True when every point of <paramref name="required"/> that <paramref name="original"/> covers is still covered
@@ -219,6 +273,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// user no longer has to simplify by hand. The input should not already have been through
         /// this method; the preview rings only use the finer <see cref="SimplifyForCreatedShape"/>.
         /// Returns the input unchanged if a reduced ring self-intersects.
+        /// Reads the setting from <see cref="Properties.Settings"/> (same value as
+        /// <see cref="Global.PenSimplifyThreshold"/>) so unit tests need not initialize <see cref="Global"/>.
         /// </summary>
         public static Polygon SimplifyForSave(Polygon polygon, IReadOnlyList<Vector2>? mustContain = null)
         {
@@ -227,7 +283,12 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             // The user's green points are certain to be part of the cell, so the reduction may not cut one off:
             // retry finer, and keep the unreduced ring if even that loses one.
-            double tolerance = Global.PenSimplifyThreshold;
+            // Read from Properties.Settings.Default directly (same backing store as Global.PenSimplifyThreshold)
+            // to avoid triggering the outer Global class type initializer in test isolation.
+            int penThreshold = Properties.Settings.Default.PenSimplifyThreshold;
+            if (penThreshold < 1) penThreshold = 1;
+            else if (penThreshold > 100) penThreshold = 100;
+            double tolerance = penThreshold;
             for (int attempt = 0; attempt < 4; attempt++, tolerance /= 2.0)
             {
                 Polygon reduced = SimplifyForSaveAt(polygon, tolerance);
