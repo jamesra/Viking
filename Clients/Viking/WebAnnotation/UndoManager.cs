@@ -51,6 +51,36 @@ namespace WebAnnotation
         }
 
         /// <summary>
+        /// Record one edit that changed several locations and created others, as a single Ctrl+Z step: the created
+        /// locations are removed first, then every edited location gets its old shape and type back.
+        /// </summary>
+        public static void PushLocationEdits(
+            string description,
+            IReadOnlyList<(LocationObj Location, SqlGeometry OldShape, LocationType OldType)> edited,
+            IVolumeToSectionTransform transform,
+            IReadOnlyList<LocationObj> created)
+        {
+            Push(description, () =>
+            {
+                foreach (LocationObj location in created)
+                {
+                    LocationObj current = Store.Locations.Contains(location.ID) ? Store.Locations.GetObjectByID(location.ID, false) : null;
+                    if (current is not null)
+                        Store.Locations.Remove(current);
+                }
+
+                foreach ((LocationObj location, SqlGeometry oldShape, LocationType oldType) in edited)
+                {
+                    RestoreLocation(location.ID, location, loc =>
+                    {
+                        loc.TypeCode = oldType;
+                        loc.SetShapeFromGeometryInSection(transform, oldShape);
+                    });
+                }
+            });
+        }
+
+        /// <summary>
         /// Record that <paramref name="location"/> had the given terminal/off-edge flags before an edit that has already been saved.
         /// </summary>
         public static void PushLocationFlags(string description, LocationObj location, bool oldTerminal, bool oldOffEdge)

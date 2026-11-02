@@ -973,7 +973,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
         }
 
-        private static SqlGeometry EnsureValid(SqlGeometry geometry)
+        internal static SqlGeometry EnsureValid(SqlGeometry geometry)
         {
             if (geometry is null || geometry.IsNull)
                 return geometry;

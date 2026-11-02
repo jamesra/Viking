@@ -117,6 +117,9 @@ namespace WebAnnotation
         private readonly MouseOverLocationCanvasViewEffect mouseOverEffect = new();
         private AutoCirclePolygonizeController autoPolygonizeController;
 
+        /// <summary>Checkered shading and menu for overlaps between cells; created by the first draw.</summary>
+        private WebAnnotation.UI.CellOverlap.CellOverlapOverlay cellOverlap;
+
         private readonly FlagFeedbackRenderer flagFeedback = new();
 
         /// <summary>
@@ -647,11 +650,21 @@ namespace WebAnnotation
             MouseButtons button,
             Geometry.Vector2 worldPosition)
         {
-            if (!IsCommandDefault() ||
-                autoPolygonizeController?.TryHit(worldPosition, out AutoPolygonizeProposal proposal, out _) != true)
-            {
+            if (!IsCommandDefault())
                 return false;
+
+            // A right double-click on a shaded overlap gives the area to one of the two cells; Shift opens the cell's own menu instead.
+            if ((button == MouseButtons.Right || button == MouseButtons.Middle) &&
+                (Control.ModifierKeys & Keys.Shift) == 0 &&
+                autoPolygonizeController?.TryHit(worldPosition, out _, out _) != true &&
+                cellOverlap is not null && cellOverlap.TryHit(worldPosition, out WebAnnotation.UI.CellOverlap.CellOverlapRegion region) && region is not null)
+            {
+                WebAnnotation.UI.CellOverlap.CellOverlapOverlay.CreateMenu(region, _Parent).Show(Control.MousePosition);
+                return true;
             }
+
+            if (autoPolygonizeController?.TryHit(worldPosition, out AutoPolygonizeProposal proposal, out _) != true)
+                return false;
 
             if (button == MouseButtons.Left)
                 return proposal.HandleMouseDoubleClick(button, worldPosition);
@@ -926,6 +939,8 @@ namespace WebAnnotation
                 _Parent.Disposed -= OnParentDisposed;
 
             flagFeedback.Dispose();
+            cellOverlap?.Dispose();
+            cellOverlap = null;
 
             Store.Locations.OnCollectionChanged -= OnLocationCollectionChanged;
             Store.LocationLinks.OnCollectionChanged -= OnLocationLinksCollectionChanged;
@@ -3219,6 +3234,13 @@ break;
             // A label easing to a new placement needs the following frames until it lands; then the viewer goes idle.
             if (StructureLabelsBase.TakeAnimatingFrame())
                 _Parent.Invalidate();
+
+            // Where two cells' outlines overlap (they should not), checkered in both cells' colors.
+            cellOverlap ??= new WebAnnotation.UI.CellOverlap.CellOverlapOverlay();
+            cellOverlap.Update(
+                listLocationsToDraw.Select(view => Store.Locations.GetObjectByID(view.ID, false)).Where(location => location is not null),
+                _Parent.Section.ActiveSectionToVolumeTransform);
+            cellOverlap.Draw(graphicsDevice, scene);
 
             autoPolygonizeController?.Draw(graphicsDevice, scene);
 

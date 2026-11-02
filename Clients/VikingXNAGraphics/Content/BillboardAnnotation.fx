@@ -908,3 +908,51 @@ technique StripeOverlayEffect
 		PixelShader = compile ps_4_0 StripePixelShaderFunction();
 	}
 }
+
+////////////////////////////////////////
+// Checker effect (CheckerOverlayEffect)
+////////////////////////////////////////
+
+//Two-color checkerboard inside the same clip mask the stripe effect uses (StripeClipTexture, stripeTexelCount, stripeClipLevel).
+//Marks where two cells' outlines overlap. Squares are measured in mask texels, so they scale with zoom like the stripes.
+
+//Colors of the two kinds of square; rgb is the color, a is unused.
+uniform const float4 checkerColorA = float4(1, 0, 0, 1);
+uniform const float4 checkerColorB = float4(0, 0, 1, 1);
+//Width of one square in mask texels.
+uniform const float checkerCell = 8;
+//Alpha inside the clip area.
+uniform const float checkerAlpha = 0.7;
+
+PixelShaderOutput CheckerPixelShaderFunction(TexturePixelShaderInput input)
+{
+	PixelShaderOutput output;
+	output.Depth = saturate((input.CenterDistance.x + input.CenterDistance.y) * 0.5 + 0.5);
+
+	float2 texel = input.TexCoord * stripeTexelCount;
+
+	float clipValue = tex2D(StripeClipSampler, input.TexCoord).a - stripeClipLevel;
+	float clipCoverage = saturate(clipValue / max(fwidth(clipValue), 1e-5) + 0.5);
+
+	float2 cell = texel / max(checkerCell, 1e-3);
+	float parity = fmod(floor(cell.x) + floor(cell.y), 2.0);
+	float3 color = lerp(checkerColorA.rgb, checkerColorB.rgb, parity);
+	//Squares only a few pixels wide would alias, so fade them toward the average of the two colors.
+	float2 cellWidth = fwidth(cell);
+	float fade = saturate((max(cellWidth.x, cellWidth.y) - 0.25) * 4.0);
+	color = lerp(color, 0.5 * (checkerColorA.rgb + checkerColorB.rgb), fade);
+
+	float alpha = clipCoverage * checkerAlpha;
+	clip(alpha <= 0.0 ? -1.0 : 1.0);
+	output.Color = float4(color, alpha);
+	return output;
+}
+
+technique CheckerOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_4_0 TextureShaderFunction();
+		PixelShader = compile ps_4_0 CheckerPixelShaderFunction();
+	}
+}
