@@ -136,6 +136,13 @@ namespace VikingXNAGraphics
             /// Output limited to unit circle
             /// </summary>
             CircleVertexColorTextureLumaOverlayEffect,
+            /// <summary>
+            /// As <see cref="CircleSingleColorTextureLumaOverlayEffect"/>, over a contrasting border set by
+            /// <see cref="OverlayShaderEffect.SetMarkerBorder"/>, a fixed number of screen pixels wide.
+            /// The texture must be a <see cref="MarkerOutlineMap"/>.
+            /// Output limited to unit circle
+            /// </summary>
+            CircleSingleColorTextureLumaOutlinedOverlayEffect,
 
             /// <summary>
             /// Color defined by effect (hue/chroma), luma set relative to the background by <see cref="OverlayShaderEffect.RingContrast"/>.
@@ -186,6 +193,10 @@ namespace VikingXNAGraphics
         private EffectParameter _StripeGlow;
         private EffectParameter _StripeRipple;
         private EffectParameter _StripeRipple2;
+
+        private EffectParameter _MarkerBorderColor;
+        private EffectParameter _MarkerBorderWidth;
+        private EffectParameter _MarkerBorderBlur;
 
         private EffectParameter _InputLumaAlpha;
 
@@ -358,6 +369,20 @@ namespace VikingXNAGraphics
             set => _StripeRipple2?.SetValue(value);
         }
 
+        /// <summary>
+        /// Border of <see cref="Techniques.CircleSingleColorTextureLumaOutlinedOverlayEffect"/>: its color, and its width and blur in
+        /// screen pixels (as a label's, <see cref="LabelOutlineEffect.OutlineWidth"/>). Null-safe so an older compiled shader still works.
+        /// </summary>
+        public void SetMarkerBorder(Color color, float width, float blur)
+        {
+            _MarkerBorderColor?.SetValue(color.ToVector3());
+            _MarkerBorderWidth?.SetValue(width);
+            _MarkerBorderBlur?.SetValue(blur);
+        }
+
+        /// <summary>True when the compiled shader has <paramref name="technique"/>; an older build of the content may not.</summary>
+        public bool HasTechnique(Techniques technique) => effect?.Techniques[technique.ToString()] is not null;
+
         public float InputLumaAlphaValue
         {
             get => _InputLumaAlpha.GetValueSingle();
@@ -431,6 +456,10 @@ namespace VikingXNAGraphics
             _StripeGlow = effect.Parameters["stripeGlow"];
             _StripeRipple = effect.Parameters["stripeRipple"];
             _StripeRipple2 = effect.Parameters["stripeRipple2"];
+
+            _MarkerBorderColor = effect.Parameters["markerBorderColor"];
+            _MarkerBorderWidth = effect.Parameters["markerBorderWidth"];
+            _MarkerBorderBlur = effect.Parameters["markerBorderBlur"];
 
             _InputLumaAlpha = effect.Parameters["InputLumaAlpha"];
             _AnnotationHSLColor = effect.Parameters["AnnotationHSLColor"];

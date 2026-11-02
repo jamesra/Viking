@@ -86,6 +86,35 @@ namespace VikingXNAGraphics
         public static Texture2D CircleXTexture;
         public static Texture2D ScissorsTexture;
 
+        /// <summary>
+        /// <see cref="UpArrowTexture"/> and <see cref="DownArrowTexture"/> as <see cref="MarkerOutlineMap"/>s, for arrows drawn with a
+        /// contrasting border (<see cref="TextureCircleView.CreateOutlinedUpArrow"/>). Null until the host builds them with <see cref="CreateOutlinedMarker"/>.
+        /// </summary>
+        public static Texture2D UpArrowOutlinedTexture;
+        public static Texture2D DownArrowOutlinedTexture;
+
+        /// <summary>
+        /// Builds the <see cref="MarkerOutlineMap"/> of a loaded icon texture on its device. The caller owns the result and must rebuild it
+        /// after a device reset.
+        /// </summary>
+        public static Texture2D CreateOutlinedMarker(Texture2D icon)
+        {
+            Color[] pixels = new Color[icon.Width * icon.Height];
+            icon.GetData(pixels);
+            byte[] rgba = new byte[pixels.Length * 4];
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                rgba[i * 4] = pixels[i].R;
+                rgba[i * 4 + 1] = pixels[i].G;
+                rgba[i * 4 + 2] = pixels[i].B;
+                rgba[i * 4 + 3] = pixels[i].A;
+            }
+
+            Texture2D map = new(icon.GraphicsDevice, icon.Width, icon.Height, false, SurfaceFormat.Color);
+            map.SetData(MarkerOutlineMap.Build(rgba, icon.Width, icon.Height));
+            return map;
+        }
+
         public static Texture2D GetTexture(this BuiltinTexture tex)
         {
             return tex switch

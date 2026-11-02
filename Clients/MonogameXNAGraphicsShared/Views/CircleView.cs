@@ -22,6 +22,27 @@ namespace VikingXNAGraphics
             return view;
         }
 
+        /// <summary>
+        /// An up arrow in <paramref name="color"/> with a border in <paramref name="borderColor"/> round it, a label's outline width in
+        /// screen pixels. A plain up arrow when the outlined texture or shader is not available.
+        /// </summary>
+        public static TextureCircleView CreateOutlinedUpArrow(Circle circle, Color color, Color borderColor) =>
+            GlobalPrimitives.UpArrowOutlinedTexture is null
+                ? CreateUpArrow(circle, color)
+                : new TextureCircleView(GlobalPrimitives.UpArrowOutlinedTexture, circle, color) { BorderColor = borderColor };
+
+        /// <inheritdoc cref="CreateOutlinedUpArrow"/>
+        public static TextureCircleView CreateOutlinedDownArrow(Circle circle, Color color, Color borderColor) =>
+            GlobalPrimitives.DownArrowOutlinedTexture is null
+                ? CreateDownArrow(circle, color)
+                : new TextureCircleView(GlobalPrimitives.DownArrowOutlinedTexture, circle, color) { BorderColor = borderColor };
+
+        /// <summary>
+        /// The color of the border drawn round the icon, or null for none. Only an icon whose <see cref="Texture"/> is a
+        /// <see cref="MarkerOutlineMap"/> can have one.
+        /// </summary>
+        public Color? BorderColor { get; set; }
+
         public static TextureCircleView CreatePlusCircle(Circle circle, Color color) => new TextureCircleView(GlobalPrimitives.PlusTexture, circle, color);
 
         public static TextureCircleView CreateMinusCircle(Circle circle, Color color) => new TextureCircleView(GlobalPrimitives.MinusTexture, circle, color);
@@ -158,10 +179,20 @@ namespace VikingXNAGraphics
             {
                 TextureCircleView[] views = [.. textureGroup];
                 overlayEffect.AnnotationTexture = textureGroup.Key;
-                overlayEffect.Technique = OverlayShaderEffect.Techniques.CircleSingleColorTextureLumaOverlayEffect;
 
                 foreach (TextureCircleView cv in textureGroup)
                 {
+                    // An outlined icon's texture is a MarkerOutlineMap; an older compiled shader without the technique draws it plain
+                    if (cv.BorderColor is Color border && overlayEffect.HasTechnique(OverlayShaderEffect.Techniques.CircleSingleColorTextureLumaOutlinedOverlayEffect))
+                    {
+                        overlayEffect.Technique = OverlayShaderEffect.Techniques.CircleSingleColorTextureLumaOutlinedOverlayEffect;
+                        overlayEffect.SetMarkerBorder(border, LabelOutlineEffect.OutlineWidth, LabelOutlineEffect.OutlineBlur);
+                    }
+                    else
+                    {
+                        overlayEffect.Technique = OverlayShaderEffect.Techniques.CircleSingleColorTextureLumaOverlayEffect;
+                    }
+
                     overlayEffect.AnnotationColorHSL = cv.HSLColor;
                     overlayEffect.WorldViewProjMatrix = (cv.ModelMatrix * scene.World) * scene.ViewProj;
                     overlayEffect.InputLumaAlphaValue = 0f;

@@ -25,6 +25,14 @@ uniform const float ringAdaptMid = 0.5;
 //Overall ring opacity (0..1), multiplied with the annotation color's alpha.
 uniform const float ringOpacity = 0.85;
 
+//Outlined icon (CircleSingleColorTextureLumaOutlinedOverlayEffect): a contrasting border round a single-colour icon, as labels have.
+//The texture is a MarkerOutlineMap: G is 1 on the icon and falls linearly with distance from it.
+uniform const float3 markerBorderColor = float3(1, 1, 1);
+//Screen pixels from the icon's edge to the middle of the border's fade.
+uniform const float markerBorderWidth = 1.5;
+//Screen pixels the border takes to fade out, centred on markerBorderWidth.
+uniform const float markerBorderBlur = 2;
+
 //The convention for annotation textures is that they built from two 8-bit images, one image is loaded to the RGB coordinates of the texture.
 //The other image is loaded into the alpha channel.
 //The verticies contain an RGB color which is converted to HSL space. 
@@ -489,6 +497,39 @@ PixelShaderOutput CircleGrayscaleTextureOverBackgroundLumaPixelShaderFunction(Lu
 }
 
 
+//As CircleGrayscaleTextureOverBackgroundLumaPixelShaderFunction, over a contrasting border in markerBorderColor that is
+//markerBorderWidth screen pixels wide however large the icon is drawn. The texture is a MarkerOutlineMap (see MarkerOutlineMap.cs);
+//the screen-space slope of its G ramp converts the fall in G into screen pixels, as LabelOutline.fx does for labels.
+PixelShaderOutput CircleGrayscaleTextureOutlinedOverBackgroundLumaPixelShaderFunction(LumaTexturePixelShaderInput input)
+{
+	PixelShaderOutput output;
+	float4 map = tex2D(AnnotationTextureSampler, input.TexCoord);
+	//Derivatives before any clip, so neighbouring pixels still supply them
+	float perPixel = max(length(float2(ddx(map.g), ddy(map.g))), 0.00001);
+
+	float CenterDistSquared = CenterDistanceSquared(input.CenterDistance);
+	clip(CenterDistSquared > radiusSquared ? -1 : 1); //remove pixels outside the circle
+
+	float edgeDistance = (1 - map.g) / perPixel;
+	float halfBlur = max(markerBorderBlur, 1) * 0.5;
+	float borderAlpha = 1 - smoothstep(markerBorderWidth - halfBlur, markerBorderWidth + halfBlur, edgeDistance);
+	float fillAlpha = map.r;
+	float alpha = fillAlpha + borderAlpha * (1 - fillAlpha);
+	clip(alpha <= 0.0 ? -1.0 : 1.0);
+
+	float2 ScreenTexCoord = input.Position.xy / input.Position.w;
+	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((ScreenTexCoord.xy) / (RenderTargetSize.xy)));
+	float4 fill = BlendHCLColorOverBackground(input.HSLColor, RGBBackgroundColor, 1.0f - map.a);
+
+	//The icon over its border, unpremultiplied like the plain icon's output
+	output.Color.rgb = ((fill.rgb * fillAlpha) + (markerBorderColor * borderAlpha * (1 - fillAlpha))) / alpha;
+	output.Color.a = alpha * input.HSLColor.a;
+	output.Depth = CenterDistSquared;
+
+	return output;
+}
+
+
 
 ////////////////////////////////////////////
 // Standard alpha blending billboard effects
@@ -695,6 +736,16 @@ technique CircleSingleColorTextureLumaOverlayEffect
 	{
 		VertexShader = compile vs_4_0 EffectColorLumaTextureVertexShaderFunction();
 		PixelShader = compile ps_4_0 CircleGrayscaleTextureOverBackgroundLumaPixelShaderFunction();
+	}
+}
+
+
+technique CircleSingleColorTextureLumaOutlinedOverlayEffect
+{
+	pass
+	{
+		VertexShader = compile vs_4_0 EffectColorLumaTextureVertexShaderFunction();
+		PixelShader = compile ps_4_0 CircleGrayscaleTextureOutlinedOverBackgroundLumaPixelShaderFunction();
 	}
 }
 

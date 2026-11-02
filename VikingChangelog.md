@@ -23,6 +23,11 @@ version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. 
 Documentation/source/Client/versionhistory.rst.
 -->
 
+## 1.2.137 — not yet released
+
+* **Link markers have a border.** The up and down arrow markers for links to locations on the sections above and below now have a thin border in the label outline color (**Annotation Preferences**), so they stand out from the image as labels do.
+<!-- MarkerOutlineMap (arrow shrunk to 0.85 with a distance ramp in G) + BillboardAnnotation.fx CircleSingleColorTextureLumaOutlinedOverlayEffect; width and blur are LabelOutlineEffect.OutlineWidth / OutlineBlur in screen pixels. Viking.exe is now built x64 and packed --runtime win-x64. -->
+
 ## 1.2.136 — 2026-11-02 (release)
 
 * **Fix: Go To Location zoom on scaled sections.** Jumping to a location now zooms to its size as drawn in the volume. On sections that map into the volume at a different scale, such as CMP sections, it used the size on the section image and opened far too close, often at the closest zoom.
