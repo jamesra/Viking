@@ -197,6 +197,7 @@ namespace VikingXNAGraphics
         private EffectParameter _MarkerBorderColor;
         private EffectParameter _MarkerBorderWidth;
         private EffectParameter _MarkerBorderBlur;
+        private EffectParameter _MarkerDistanceRange;
 
         private EffectParameter _InputLumaAlpha;
 
@@ -378,6 +379,7 @@ namespace VikingXNAGraphics
             _MarkerBorderColor?.SetValue(color.ToVector3());
             _MarkerBorderWidth?.SetValue(width);
             _MarkerBorderBlur?.SetValue(blur);
+            _MarkerDistanceRange?.SetValue(MarkerOutlineMap.DistanceRange);
         }
 
         /// <summary>True when the compiled shader has <paramref name="technique"/>; an older build of the content may not.</summary>
@@ -460,6 +462,7 @@ namespace VikingXNAGraphics
             _MarkerBorderColor = effect.Parameters["markerBorderColor"];
             _MarkerBorderWidth = effect.Parameters["markerBorderWidth"];
             _MarkerBorderBlur = effect.Parameters["markerBorderBlur"];
+            _MarkerDistanceRange = effect.Parameters["markerDistanceRange"];
 
             _InputLumaAlpha = effect.Parameters["InputLumaAlpha"];
             _AnnotationHSLColor = effect.Parameters["AnnotationHSLColor"];

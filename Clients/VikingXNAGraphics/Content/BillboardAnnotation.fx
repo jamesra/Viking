@@ -26,12 +26,26 @@ uniform const float ringAdaptMid = 0.5;
 uniform const float ringOpacity = 0.85;
 
 //Outlined icon (CircleSingleColorTextureLumaOutlinedOverlayEffect): a contrasting border round a single-colour icon, as labels have.
-//The texture is a MarkerOutlineMap: G is 1 on the icon and falls linearly with distance from it.
+//The texture is a MarkerOutlineMap: G is the icon's signed distance field, 0.5 on its edge.
 uniform const float3 markerBorderColor = float3(1, 1, 1);
 //Screen pixels from the icon's edge to the middle of the border's fade.
 uniform const float markerBorderWidth = 1.5;
 //Screen pixels the border takes to fade out, centred on markerBorderWidth.
 uniform const float markerBorderBlur = 2;
+//Texture coordinates G spans either side of the edge (MarkerOutlineMap.DistanceRange).
+uniform const float markerDistanceRange = 0.0625;
+
+//Linear filtering in both directions: the distance field must interpolate smoothly when the marker is drawn larger than its texture,
+//where AnnotationTextureSampler's point magnification would turn every texel into a step in the edge.
+uniform const sampler MarkerMapSampler : register(s3) = sampler_state
+{
+    Texture = (AnnotationTexture);
+    MipFilter = POINT;
+    MinFilter = LINEAR;
+    MagFilter = LINEAR;
+    AddressU = CLAMP;
+    AddressV = CLAMP;
+};
 
 //The convention for annotation textures is that they built from two 8-bit images, one image is loaded to the RGB coordinates of the texture.
 //The other image is loaded into the alpha channel.
@@ -498,24 +512,27 @@ PixelShaderOutput CircleGrayscaleTextureOverBackgroundLumaPixelShaderFunction(Lu
 
 
 //As CircleGrayscaleTextureOverBackgroundLumaPixelShaderFunction, over a contrasting border in markerBorderColor that is
-//markerBorderWidth screen pixels wide however large the icon is drawn. The texture is a MarkerOutlineMap (see MarkerOutlineMap.cs);
-//the screen-space slope of its G ramp converts the fall in G into screen pixels, as LabelOutline.fx does for labels.
+//markerBorderWidth screen pixels wide however large the icon is drawn. The texture is a MarkerOutlineMap (see MarkerOutlineMap.cs):
+//its G is a distance in texture coordinates, which the screen-space slope of the texture coordinates turns into screen pixels, so the
+//icon's edge and the border are both antialiased over one screen pixel at any size. Pixels with neither are clipped, so the gaps
+//inside the icon are transparent and write no depth.
 PixelShaderOutput CircleGrayscaleTextureOutlinedOverBackgroundLumaPixelShaderFunction(LumaTexturePixelShaderInput input)
 {
 	PixelShaderOutput output;
-	float4 map = tex2D(AnnotationTextureSampler, input.TexCoord);
-	//Derivatives before any clip, so neighbouring pixels still supply them
-	float perPixel = max(length(float2(ddx(map.g), ddy(map.g))), 0.00001);
+	float4 map = tex2D(MarkerMapSampler, input.TexCoord);
+	float texturePerPixel = max(0.5 * (length(ddx(input.TexCoord)) + length(ddy(input.TexCoord))), 0.0000001);
 
 	float CenterDistSquared = CenterDistanceSquared(input.CenterDistance);
 	clip(CenterDistSquared > radiusSquared ? -1 : 1); //remove pixels outside the circle
 
-	float edgeDistance = (1 - map.g) / perPixel;
+	//Screen pixels from the icon's edge, negative inside
+	float edgeDistance = (0.5 - map.g) * 2 * markerDistanceRange / texturePerPixel;
+	float fillAlpha = saturate(0.5 - edgeDistance);
 	float halfBlur = max(markerBorderBlur, 1) * 0.5;
-	float borderAlpha = 1 - smoothstep(markerBorderWidth - halfBlur, markerBorderWidth + halfBlur, edgeDistance);
-	float fillAlpha = map.r;
+	//G clamps to 0 beyond the field's range, which a small marker can reach within the border: no border there
+	float borderAlpha = (1 - smoothstep(markerBorderWidth - halfBlur, markerBorderWidth + halfBlur, edgeDistance)) * saturate(map.g * 255);
 	float alpha = fillAlpha + borderAlpha * (1 - fillAlpha);
-	clip(alpha <= 0.0 ? -1.0 : 1.0);
+	clip(alpha <= (1.0 / 255.0) ? -1.0 : 1.0);
 
 	float2 ScreenTexCoord = input.Position.xy / input.Position.w;
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((ScreenTexCoord.xy) / (RenderTargetSize.xy)));
