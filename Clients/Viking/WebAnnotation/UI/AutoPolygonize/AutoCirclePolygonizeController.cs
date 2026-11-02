@@ -133,6 +133,17 @@ namespace WebAnnotation.UI.AutoPolygonize
         private int maskRefreshGeneration;
 
         /// <summary>
+        /// Other cells' locations whose geometry changes re-clip the proposals (<see cref="OnWatchedLocationChanged"/>).
+        /// Filled as proposals are clipped; emptied by <see cref="Stop"/>. Guarded by itself.
+        /// </summary>
+        private readonly HashSet<LocationObj> watchedLocations = [];
+
+        /// <summary>Sections whose proposals wait for the next re-clip; one UI post handles every change made before it runs.</summary>
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<int, byte> sectionsToReclip = new();
+
+        private int reclipPosted;
+
+        /// <summary>
         /// Next request ticket. Taken when a segmentation request starts, so a larger ticket always
         /// means a request the user asked for later, whatever order the answers arrive in.
         /// </summary>
@@ -247,6 +258,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             Store.Locations.OnCollectionChanged -= OnLocationsChanged;
             cache.GeometryInvalidated -= OnCacheGeometryInvalidated;
             cache.LocationForgotten -= OnCacheLocationForgotten;
+            UnwatchAllLocations();
             CancelUploadPhase();
             CancelProcessPhase();
             StopSettleTimers();
@@ -448,19 +460,27 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>
         /// Retraces on-screen proposals from the raw server masks at the current edge-cleanup
         /// radius and hole-drop fraction. Called when those preferences are applied. Proposals
-        /// that never stored a mask are left as they are.
+        /// that never stored a mask are left as they are. Every trace is clipped against the other cells as they are now,
+        /// so it also gives back area a cell that has since shrunk no longer claims.
         /// </summary>
-        public void RefreshFromStoredMasks()
+        /// <param name="sectionNumber">Only proposals on this section when set.</param>
+        public void RefreshFromStoredMasks(int? sectionNumber = null)
         {
             if (parent.InvokeRequired)
             {
-                parent.BeginInvoke(new Action(RefreshFromStoredMasks));
+                parent.BeginInvoke(new Action(() => RefreshFromStoredMasks(sectionNumber)));
                 return;
             }
 
             AutoPolygonizeProposal[] snapshot;
             lock (proposalLock)
-                snapshot = [.. DistinctProposalsUnlocked().Where(proposal => proposal.MaskSources.Count > 0)];
+            {
+                snapshot =
+                [
+                    .. DistinctProposalsUnlocked().Where(proposal =>
+                        proposal.MaskSources.Count > 0 && (!sectionNumber.HasValue || proposal.SectionNumber == sectionNumber.Value))
+                ];
+            }
 
             if (snapshot.Length == 0)
                 return;
@@ -524,7 +544,12 @@ namespace WebAnnotation.UI.AutoPolygonize
                             proposal.ParentID,
                             proposal.ForegroundPrompts);
                         if (carved is null)
+                        {
+                            // Other cells cover all of it: cell boundaries never overlap, so nothing is left to propose.
+                            RemoveProposal(proposal.LocationId);
+                            changed = true;
                             continue;
+                        }
 
                         proposal.ReplacePolygon(
                             AutoPolygonizeSelection.SimplifyForCreatedShape(carved, parent.Downsample, proposal.ForegroundPrompts),
@@ -2690,6 +2715,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return proposed;
 
             IReadOnlyCollection<LocationObj> nearby = [.. CollectVisibleLocationObjs(proposed.BoundingBox)];
+            WatchForGeometryChanges(nearby, excludeLocationIds, excludeParentId);
             List<Polygon> existing = AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
                 nearby,
                 proposed,
@@ -2715,6 +2741,95 @@ namespace WebAnnotation.UI.AutoPolygonize
                     ? "result=null (existing annotations cover the proposal)"
                     : $"result area={carved.Area:F0} bbox={carved.BoundingBox} vertices={carved.TotalUniqueVertices}"));
             return carved;
+        }
+
+        /// <summary>
+        /// Listens to <paramref name="locations"/> of other cells so that a change to one of their outlines (a pen
+        /// refinement, a move, a delete) re-clips the proposals, not only an accept. Cell boundaries never overlap.
+        /// </summary>
+        private void WatchForGeometryChanges(IEnumerable<LocationObj> locations, IReadOnlyCollection<long> excludeLocationIds, long? excludeParentId)
+        {
+            lock (watchedLocations)
+            {
+                foreach (LocationObj location in locations)
+                {
+                    if (location is null || excludeLocationIds.Contains(location.ID))
+                        continue;
+                    if (excludeParentId.HasValue && location.ParentID == excludeParentId)
+                        continue;
+
+                    if (watchedLocations.Add(location))
+                        location.PropertyChanged += OnWatchedLocationChanged;
+                }
+            }
+        }
+
+        private void UnwatchAllLocations()
+        {
+            lock (watchedLocations)
+            {
+                foreach (LocationObj location in watchedLocations)
+                    location.PropertyChanged -= OnWatchedLocationChanged;
+
+                watchedLocations.Clear();
+            }
+
+            sectionsToReclip.Clear();
+        }
+
+        /// <summary>
+        /// A pen edit sets several properties in a row, so this only notes the section; one posted <see cref="ReclipProposals"/>
+        /// handles all of them once the edit has finished.
+        /// </summary>
+        private void OnWatchedLocationChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (!enabled || sender is not LocationObj location || !AutoPolygonizeSelection.IsGeometryProperty(e.PropertyName))
+                return;
+
+            sectionsToReclip[location.Section] = 0;
+            if (Interlocked.Exchange(ref reclipPosted, 1) == 0)
+                parent.BeginInvoke(new Action(ReclipProposals));
+        }
+
+        /// <summary>
+        /// Clips every proposal on the changed sections against the other cells as they are now. A proposal with a stored
+        /// mask is retraced first (<see cref="RefreshFromStoredMasks"/>), so area a cell has given up returns to it; one
+        /// without can only lose area. UI thread.
+        /// </summary>
+        private void ReclipProposals()
+        {
+            Interlocked.Exchange(ref reclipPosted, 0);
+            List<int> sections = [.. sectionsToReclip.Keys];
+            foreach (int section in sections)
+                sectionsToReclip.TryRemove(section, out _);
+
+            if (!enabled || sections.Count == 0)
+                return;
+
+            RefreshFromStoredMasks(sections.Count == 1 ? sections[0] : null);
+
+            List<AutoPolygonizeProposal> withoutMask;
+            lock (proposalLock)
+            {
+                withoutMask =
+                [
+                    .. DistinctProposalsUnlocked().Where(item => item.MaskSources.Count == 0 && sections.Contains(item.SectionNumber))
+                ];
+            }
+
+            double downsample = GetCurrentDownsample();
+            foreach (AutoPolygonizeProposal proposal in withoutMask)
+            {
+                LocationObj seed = Store.Locations.GetObjectByID(proposal.LocationId, false);
+                Vector2 keep = seed is not null ? seed.VolumeCenter() : proposal.Polygon.Centroid;
+                Polygon? carved = CarveAgainstExistingPolygons(proposal.Polygon, proposal.LocationIds, keep, proposal.ParentID, proposal.ForegroundPrompts);
+                if (carved is null)
+                    RemoveProposal(proposal.LocationId);
+                else if (!ReferenceEquals(carved, proposal.Polygon))
+                    proposal.ReplacePolygon(AutoPolygonizeSelection.SimplifyForCreatedShape(carved, downsample, proposal.ForegroundPrompts), downsample);
+            }
+
+            parent.Invalidate();
         }
 
         /// <summary>

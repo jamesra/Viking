@@ -27,7 +27,10 @@ Documentation/source/Client/versionhistory.rst.
 
 * **Link markers have a border.** The up and down arrow markers for links to locations on the sections above and below now have a thin border in the label outline color (**Annotation Preferences**), so they stand out from the image as labels do.
 * **Auto-polygonize only outlines cells.** It no longer proposes outlines for the circles of child structures such as caveolae, synapses and other organelles, which keep their circles.
+* **Fix: auto-polygonize outlines follow edits to neighbouring cells.** Cell outlines never overlap, so a proposed outline already stays clear of the cells beside it. It now also adjusts when you change one of those cells (for example refining its boundary with the pen), instead of only when you accept a proposal: it gives up the area the cell now covers and takes back area the cell no longer covers.
 <!-- AutoPolygonizeSelection.IsCell: the location's structure has no parent; a structure not loaded yet is skipped until a later pass. -->
+<!-- AutoCirclePolygonizeController.WatchForGeometryChanges / ReclipProposals: PropertyChanged on the other-cell locations a proposal was clipped against; proposals with a stored mask are retraced and re-clipped (RefreshFromStoredMasks(section)), proposals without one are only clipped further. Rule: .cursor/rules/cell-boundaries-never-overlap.mdc. -->
+
 <!-- MarkerOutlineMap (arrow shrunk to 0.85 with a distance ramp in G) + BillboardAnnotation.fx CircleSingleColorTextureLumaOutlinedOverlayEffect; width and blur are LabelOutlineEffect.OutlineWidth / OutlineBlur in screen pixels. Viking.exe is now built x64 and packed --runtime win-x64. -->
 
 ## 1.2.136 — 2026-11-02 (release)
