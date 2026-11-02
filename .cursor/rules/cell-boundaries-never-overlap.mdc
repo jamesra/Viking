@@ -1,0 +1,31 @@
+---
+description: Cell boundaries never overlap - the area of one cell on a section belongs to that cell alone; every path that creates, proposes or edits an outline clips against the other cells and re-clips when one of them changes.
+globs: Clients/Viking/WebAnnotation/**,Clients/VikingAU/**,Clients/WebAnnotationModel*/**,Clients/VolumeModel/**
+alwaysApply: false
+---
+# Cell boundaries never overlap
+
+On one section, the area enclosed by one cell's outline belongs to that cell alone. Outlines of two different cells
+(structures with different `ParentID`) never overlap, whoever drew them: pen, Segment, auto-polygonize, a move, a
+contour change, a paint-mask accept, a merge.
+
+## What follows
+- **Existing annotations win.** A new or edited outline is clipped against every other cell's polygon and circle disk on
+  that section (`AutoPolygonizeSelection.SubtractOverlappingPolygons`, `CollectOverlappingCircleDisks`). The other cell is
+  never the one that gives way, however strong the new outline's evidence is.
+- **Same cell is exempt.** Locations of one structure on one section may overlap; they are merged into one outline
+  (`SameStructureMerge`), not clipped against each other. Child structures and their parent are not "other cells"
+  (`IsRelatedStructure`).
+- **Pending outlines follow the store.** A proposal on screen is a claim on area, so it is re-clipped whenever a saved
+  location of another cell changes its geometry (a pen refinement, a move, a delete), not only when a proposal is accepted.
+  A proposal that was clipped by an outline that has since shrunk grows back from its stored mask; one that has no mask
+  can only be clipped further.
+- **Clip from the unclipped source.** Re-clipping starts from the traced mask (`MaskSources`), never from an already
+  clipped ring, or a region that was given back is lost.
+- **No "keep it anyway" exceptions** that leave two cells overlapping. A clip that would leave nothing removes the
+  proposal; it does not fall back to the overlapping outline.
+
+## Checklist when adding a path that writes an outline
+Does it clip against the other cells before saving? Does it re-clip pending outlines after saving? Does it work from the
+volume geometry the user sees (`annotation-volume-geometry.mdc`) and save mosaic? A new view or command that skips the
+clip is a bug even when the overlap is small.
