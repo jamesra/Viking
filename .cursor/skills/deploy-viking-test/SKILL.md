@@ -157,7 +157,7 @@ One announce per successful deploy. If deploy failed, do not post a release note
 
 1. In VikingLegacy (`Net4.8`): `git fetch` / pull upstream; on hard conflicts, abort merge, keep a buildable local tree, and plan to notify James.
 2. Changes land under `Clients/Viking/Viking` (or the tree you can still pack after step 1).
-3. `VikingChangelog.md` ships in the install (Help > Change Log, and shown on each version's first start): before packing, make its newest heading the version being packed, with today's date and `(Viking Test, unsigned)`, and check its bullets cover the changes since the last test version. Commit that with the release.
+3. `VikingChangelog.md` ships in the install (Help > Change Log, and shown on each version's first start): before packing, make its newest heading the version being packed, with today's date and `(Viking Test, unsigned)`, and check its bullets cover the changes since the last test version. Mark each fix for a bug that only an earlier test build had with `<!-- test-regression: <version> -->` (the `user-changelog` rule), so the signed release's notes can leave it out. Commit that with the release.
 4. `.\PublishVelopack.ps1 -TestChannel` → `releases-test\Viking-win-Setup.exe` exists (alias of Velopack’s pack-id Setup).
 5. Feed folder `Software\VikingTest` exists on the websvc host.
 6. `.\DeployVelopack.ps1 -TestChannel -ServerPath …\Software\VikingTest`.

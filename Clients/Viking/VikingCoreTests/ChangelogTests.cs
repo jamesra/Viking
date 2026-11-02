@@ -94,6 +94,65 @@ namespace VikingCoreTests
                 "the newest heading is the version being built; rename it when Viking.csproj's version changes");
         }
 
+        /// <summary>
+        /// A fix for a bug only test builds had is marked <c>&lt;!-- test-regression: X.Y.Z --&gt;</c>, naming an earlier version.
+        /// Those bullets are dropped when the test sections are folded into a signed release, so only Viking Test sections
+        /// may hold one.
+        /// </summary>
+        [TestMethod]
+        public void TestRegressionFixesAppearOnlyInVikingTestSections()
+        {
+            string markdown = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "VikingChangelog.md"));
+            Assert.AreEqual(0, TestRegressionMarkerProblems(markdown).Count, string.Join("\n", TestRegressionMarkerProblems(markdown)));
+        }
+
+        [TestMethod]
+        public void TestRegressionMarkersAreCheckedPerSection()
+        {
+            const string markdown = "# Viking changelog\n\n" +
+                "## 1.2.5 — 2026-01-05 (release)\n\n* **Fix: kept.** Detail. <!-- test-regression: 1.2.4 -->\n\n" +
+                "## 1.2.4 — 2026-01-04 (Viking Test, unsigned)\n\n* **Fix: fine.** Detail. <!-- test-regression: 1.2.3 -->\n" +
+                "* **Fix: newer.** Detail. <!-- test-regression: 1.2.4 -->\n* **Fix: bad.** Detail. <!-- test-regression: soon -->\n";
+
+            IReadOnlyList<string> problems = TestRegressionMarkerProblems(markdown);
+
+            Assert.AreEqual(3, problems.Count, string.Join("\n", problems));
+            Assert.IsTrue(problems[0].Contains("1.2.5"), "a signed release section holds no marker");
+            Assert.IsTrue(problems[1].Contains("not earlier"), "the bug came from an earlier build than the fix");
+            Assert.IsTrue(problems[2].Contains("soon"), "the marker names a version");
+        }
+
+        /// <summary>One line per <c>test-regression</c> marker that is out of place or malformed.</summary>
+        private static IReadOnlyList<string> TestRegressionMarkerProblems(string markdown)
+        {
+            List<string> problems = [];
+            string? section = null;
+            Version? sectionVersion = null;
+            foreach (string line in markdown.Split('\n'))
+            {
+                Match heading = Regex.Match(line, @"^## (\d+\.\d+\.\d+)\b");
+                if (heading.Success)
+                {
+                    section = line.Substring(3).Trim();
+                    sectionVersion = Version.Parse(heading.Groups[1].Value);
+                    continue;
+                }
+
+                foreach (Match marker in Regex.Matches(line, @"<!--\s*test-regression:\s*(.*?)\s*-->"))
+                {
+                    string named = marker.Groups[1].Value;
+                    if (section is null || sectionVersion is null || !section.Contains("(Viking Test"))
+                        problems.Add($"\"{section}\" is not a Viking Test build but holds a test-regression bullet: {line.Trim()}");
+                    else if (!Version.TryParse(named, out Version? introduced) || introduced is null || introduced.Build < 0)
+                        problems.Add($"test-regression marker \"{named}\" is not a version: {line.Trim()}");
+                    else if (introduced >= sectionVersion)
+                        problems.Add($"test-regression {named} is not earlier than \"{section}\": {line.Trim()}");
+                }
+            }
+
+            return problems;
+        }
+
         private static string FindRepositoryRoot()
         {
             for (DirectoryInfo dir = new(AppDomain.CurrentDomain.BaseDirectory); dir is not null; dir = dir.Parent)

@@ -13,6 +13,16 @@ the first time each version starts, so it is written for the people who use Viki
   The newest heading is the version in `Clients/Viking/Viking/Viking.csproj` (`ChangelogTests` in `VikingCoreTests` checks
   this): when that version changes, rename the unreleased heading. When a version ships, replace "not yet released" with
   the date and channel, for example `2026-10-26 (Viking Test, unsigned)`.
+- **Bugs that only test builds had.** When a fix is for a bug that a Viking Test build introduced (it was never in a signed
+  release), end its bullet line with `<!-- test-regression: <first test version that had the bug> -->`, for example
+  `<!-- test-regression: 1.2.133 -->`. The bullet still shows in Viking Test builds and in the `#betatest` announcement,
+  because test users had the bug. If you cannot tell where the bug came from, leave the marker off.
+- **Signed releases.** Before the signed (production) build is packed, fold the sections since the last signed release
+  into one `## <version> — <date> (release)` section for the people who did not run the test builds: drop every bullet
+  marked `test-regression`, and where a later bullet changes something an earlier one added, write one bullet with the
+  final behaviour. Keep the developer comments. Delete the folded test sections and record in the file's top comment
+  which test builds were folded. `ChangelogTests` fails if a `test-regression` marker is left in a section that is not a
+  Viking Test build.
 - Write bullets for users: what changed and how to use it, naming menus, buttons, hotkeys and preferences as Viking shows
   them. Leave out internal refactors and build changes. Notes only developers need go in an HTML comment (`<!-- -->`),
   which Viking does not show.
