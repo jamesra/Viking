@@ -471,8 +471,8 @@ namespace WebAnnotation
                 return;
             }
 
-            //Adjust downsample so the location fits nicely in the view
-            double downsample = (loc.MosaicShape.BoundingBox.Width / Viking.UI.State.ViewerForm.Width) * Global.DefaultLocationJumpDownsample;
+            //Adjust downsample so the location fits nicely in the view. The viewer shows volume space, so the size is the volume width.
+            double downsample = (loc.VolumeWidth() / Viking.UI.State.ViewerForm.Width) * Global.DefaultLocationJumpDownsample;
 
             //SectionViewerForm.Show(section);
             Viking.UI.State.ViewerForm.GoToLocation(new Microsoft.Xna.Framework.Vector2((float)loc.Position.X, (float)loc.Position.Y), (int)loc.Z, true, downsample);

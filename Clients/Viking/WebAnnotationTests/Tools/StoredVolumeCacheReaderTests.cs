@@ -50,6 +50,17 @@ namespace WebAnnotationTests.Tools
             Assert.AreNotEqual(circle.VolumePosition, circle.VolumeCenter(), "the stored cache is stale on purpose");
         }
 
+        /// <summary>Go To Location sizes its zoom from this width: the drawn volume shape, not the mosaic shape.</summary>
+        [TestMethod]
+        public void TheVolumeWidthIsTheDrawnShapesNotTheMosaicShapes()
+        {
+            LocationObj circle = StaleCircle(1, 2000);
+            LocationVolumeGeometry owner = LocationVolumeGeometry.For(circle, Transform);
+
+            Assert.AreEqual(SqlGeometryUtils.Extensions.BoundingBox(owner.Shape).Width, circle.VolumeWidth(), 1e-9);
+            Assert.AreNotEqual(circle.MosaicShape.BoundingBox.Width, circle.VolumeWidth(), 1.0, "the warp scales the circle");
+        }
+
         [TestMethod]
         public void ALinkPreviewJoinsTheDrawnCentresAtTheSmallerDrawnRadius()
         {

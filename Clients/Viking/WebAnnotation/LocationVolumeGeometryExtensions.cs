@@ -59,5 +59,14 @@ namespace WebAnnotation
 
         /// <summary>The location's volume radius (<see cref="LocationVolumeGeometry.Radius"/>), or its mosaic radius without one.</summary>
         public static double VolumeRadius(this LocationObj location) => location.VolumeGeometry()?.Radius ?? location.Radius;
+
+        /// <summary>
+        /// The width of the location's drawn shape in volume space (<see cref="LocationVolumeGeometry.Shape"/>), or its mosaic
+        /// width without volume geometry. A mosaic width is not a volume size: CMP sections map into the volume at about 30x.
+        /// </summary>
+        public static double VolumeWidth(this LocationObj location) =>
+            location.VolumeGeometry()?.Shape is { IsNull: false } shape
+                ? SqlGeometryUtils.Extensions.BoundingBox(shape).Width
+                : location.MosaicShape.BoundingBox.Width;
     }
 }

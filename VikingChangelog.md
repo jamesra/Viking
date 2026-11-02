@@ -19,6 +19,7 @@ gained from about 2026-10-20 on. Earlier changes are not listed.
 
 ## 1.2.111 — not yet released
 
+* **Fix: Go To Location zoom on scaled sections.** Jumping to a location now zooms to its size as drawn in the volume. On sections that map into the volume at a different scale, such as CMP sections, it used the size on the section image and opened far too close, often at the closest zoom.
 * **Change Log in the Help menu.** **Help > Change Log** shows this list of changes, and Viking opens it the first time each new version starts.
 * **Hide what is under the mouse.** **Del** hides the annotation, location link or auto-segmentation ring under the mouse for a while, so the one beneath it (for example a location on an adjacent section that you want to drag onto this section) can be picked. Near the end of the time it fades back in, and it can be clicked again once it is fully back. **Insert** over a hidden one brings it back early. The time is **Hide annotation time (seconds)** in Annotation Preferences (default 30 seconds). The F1 help lists both keys.
 * **Visual settings grouped together.** Annotation Preferences has a new **Visuals** section, under Basic Settings, for the settings that only change how the view looks: text sizes, annotation opacities and sizes, control points, location links and the auto-segmentation shimmer. Several preferences now show their effect in the view while the dialog is still open.
