@@ -483,7 +483,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                             radius,
                             simplifyTolerance,
                             out Polygon? polygon,
-                            out AutoPolygonizeMaskOverlay? display) ||
+                            out AutoPolygonizeMaskOverlay? display,
+                            proposal.ForegroundPrompts) ||
                         polygon is null)
                     {
                         continue;
@@ -514,12 +515,13 @@ namespace WebAnnotation.UI.AutoPolygonize
                             polygon,
                             proposal.LocationIds,
                             keepPoint,
-                            proposal.ParentID);
+                            proposal.ParentID,
+                            proposal.ForegroundPrompts);
                         if (carved is null)
                             continue;
 
                         proposal.ReplacePolygon(
-                            AutoPolygonizeSelection.SimplifyForCreatedShape(carved, parent.Downsample),
+                            AutoPolygonizeSelection.SimplifyForCreatedShape(carved, parent.Downsample, proposal.ForegroundPrompts),
                             parent.Downsample);
                         proposal.SetDisplayMask(display, parent.Device);
                         changed = true;
@@ -763,7 +765,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                 polygon,
                 proposal.LocationIds,
                 survivor.VolumeCenter(),
-                survivor.ParentID);
+                survivor.ParentID,
+                proposal.ForegroundPrompts);
             if (toApply is null)
             {
                 ClearParkedIf(proposal);
@@ -773,7 +776,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
 
             // Carve/union densifies; LocationShapeUpdate fits once then maps control points to mosaic.
-            if (!await LocationShapeUpdate.ApplyVolumePolygon(survivor, toApply, parent.ActiveSectionToVolumeTransform, parent.Downsample))
+            if (!await LocationShapeUpdate.ApplyVolumePolygon(survivor, toApply, parent.ActiveSectionToVolumeTransform, parent.Downsample, proposal.ForegroundPrompts))
             {
                 // Overlay Accept keeps the ring; Add points restores the parked proposal so the user can retry.
                 parent.ShowTransientStatus("Could not save the auto-segment outline for this annotation.");
@@ -1604,14 +1607,15 @@ namespace WebAnnotation.UI.AutoPolygonize
                     processed.Polygon,
                     [circle.ID],
                     circle.VolumeCenter(),
-                    circle.ParentID);
+                    circle.ParentID,
+                    foreground);
                 if (carved is null)
                 {
                     RememberEmptyMask(circle, sectionNumber, session, downsample);
                     return;
                 }
 
-                Polygon ready = AutoPolygonizeSelection.FitMinErrorCurvePolygon(carved, simplifyTolerance);
+                Polygon ready = AutoPolygonizeSelection.FitMinErrorCurvePolygon(carved, simplifyTolerance, foreground);
                 IReadOnlyList<Vector2> sourceKeepPoints = extraKeepPoints is { Count: > 0 }
                     ? [.. foreground, .. extraKeepPoints]
                     : foreground;
@@ -2576,7 +2580,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             Polygon proposed,
             IReadOnlyCollection<long> excludeLocationIds,
             Vector2 keepPoint,
-            long? excludeParentId = null)
+            long? excludeParentId = null,
+            IReadOnlyList<Vector2>? mustContain = null)
         {
             if (proposed is null || !parent.HasSection)
                 return proposed;
@@ -2598,7 +2603,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 excludeParentId,
                 keepPoint);
             existing.AddRange(circleDisks);
-            Polygon? carved = AutoPolygonizeSelection.SubtractOverlappingPolygons(proposed, existing, keepPoint);
+            Polygon? carved = AutoPolygonizeSelection.SubtractOverlappingPolygons(proposed, existing, keepPoint, mustContain);
             SegmentationDiag.Log(
                 $"Carve exclude=[{string.Join(",", excludeLocationIds)}] keepPoint={keepPoint} " +
                 $"proposed area={proposed.Area:F0} bbox={proposed.BoundingBox} vertices={proposed.TotalUniqueVertices}; " +
@@ -2636,7 +2641,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 LocationObj seed = Store.Locations.GetCachedObject(other.LocationId);
                 Vector2 keep = seed is not null ? seed.VolumeCenter() : other.Polygon.Centroid;
-                Polygon? carved = CarveAgainstExistingPolygons(other.Polygon, other.LocationIds, keep, other.ParentID);
+                Polygon? carved = CarveAgainstExistingPolygons(other.Polygon, other.LocationIds, keep, other.ParentID, other.ForegroundPrompts);
                 if (carved is null)
                 {
                     RemoveProposal(other.LocationId);
@@ -2646,7 +2651,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (!ReferenceEquals(carved, other.Polygon))
                 {
                     other.ReplacePolygon(
-                        AutoPolygonizeSelection.SimplifyForCreatedShape(carved, downsample),
+                        AutoPolygonizeSelection.SimplifyForCreatedShape(carved, downsample, other.ForegroundPrompts),
                         downsample);
                 }
             }
@@ -2732,7 +2737,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     if (maskSources.Count == 0)
                     {
                         Polygon? union = AutoPolygonizeSelection.UnionPolygons([.. originalPolygons], unionKeepPoint);
-                        return union is null ? null : AutoPolygonizeSelection.FitMinErrorCurvePolygon(union, simplifyTolerance);
+                        return union is null ? null : AutoPolygonizeSelection.FitMinErrorCurvePolygon(union, simplifyTolerance, foreground);
                     }
 
                     return AutoPolygonizeMaskRetrace.TryCreate(
@@ -2743,7 +2748,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                         cleanupRadius,
                         simplifyTolerance,
                         out Polygon? traced,
-                        out _)
+                        out _,
+                        foreground)
                         ? traced
                         : null;
                 }).ConfigureAwait(false);
@@ -2769,9 +2775,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                     {
                         LocationObj? keepLocation = Store.Locations.GetCachedObject(locationIds[0]);
                         Vector2 keepPoint = keepLocation?.VolumeCenter() ?? unionKeepPoint;
-                        polygon = CarveAgainstExistingPolygons(polygon, locationIds, keepPoint, parentId);
+                        polygon = CarveAgainstExistingPolygons(polygon, locationIds, keepPoint, parentId, foreground);
                         if (polygon is not null)
-                            polygon = AutoPolygonizeSelection.FitMinErrorCurvePolygon(polygon, simplifyTolerance);
+                            polygon = AutoPolygonizeSelection.FitMinErrorCurvePolygon(polygon, simplifyTolerance, foreground);
                     }
 
                     // Members keep their upload so the group does not lose the image its masks were captured from.

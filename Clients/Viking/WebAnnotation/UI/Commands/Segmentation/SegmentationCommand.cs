@@ -1136,7 +1136,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
-            polygons = SimplifyPreviewRings(polygons);
+            polygons = SimplifyPreviewRings(polygons, foreground);
 
             if (cancellationToken.IsCancellationRequested || !requestCoalescer.ShouldApply(generation))
                 return;
@@ -1206,7 +1206,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 holeDropFraction,
                 lastSegmentationBackground,
                 edgeCleanupRadius,
-                keepComponentsContainingWorldPoints: lastSegmentationForeground));
+                keepComponentsContainingWorldPoints: lastSegmentationForeground), lastSegmentationForeground);
             ApplyPolygonViews(polygons, polygons.Count);
 #if DEBUG
             CreateDebugMaskOverlay(response, edgeCleanupRadius);
@@ -1217,13 +1217,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// One mask pixel-travel fit (<see cref="AutoPolygonizeSelection.SimplifyForCreatedShape"/>)
         /// before the ring is drawn. Persist fits again in <see cref="LocationShapeUpdate"/>.
         /// </summary>
-        private IReadOnlyList<Polygon> SimplifyPreviewRings(IReadOnlyList<Polygon> polygons)
+        private IReadOnlyList<Polygon> SimplifyPreviewRings(
+            IReadOnlyList<Polygon> polygons,
+            IReadOnlyList<Geometry.Vector2> foreground)
         {
             if (polygons is null || polygons.Count == 0)
                 return polygons;
 
             return [.. polygons.Select(polygon =>
-                AutoPolygonizeSelection.SimplifyForCreatedShape(polygon, Parent.Downsample))];
+                AutoPolygonizeSelection.SimplifyForCreatedShape(polygon, Parent.Downsample, foreground))];
         }
 
         /// <summary>

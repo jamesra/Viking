@@ -21,7 +21,7 @@ namespace WebAnnotation.UI.AutoPolygonize
     /// <remarks>
     /// Overlaps are tested in volume space, on shapes derived from the authoritative mosaic shapes: a polygon is its mosaic
     /// shape mapped through the section transform (<see cref="AutoPolygonizeSelection.TryGetVolumePolygon"/>). The union is
-    /// written with <see cref="LocationShapeUpdate.ApplyVolumePolygon(LocationObj, Polygon, IVolumeToSectionTransform, double)"/>,
+    /// written with <see cref="LocationShapeUpdate.ApplyVolumePolygon(LocationObj, Polygon, IVolumeToSectionTransform, double, IReadOnlyList{Vector2})"/>,
     /// which maps it back to mosaic space before the save, so no volume coordinate is saved as a mosaic one. A circle joins as
     /// its disk: its mosaic circle mapped with the five-point scale rule (<see cref="LocationActions.TryGetVolumeCircle"/>).
     /// </remarks>
@@ -60,7 +60,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// that overlap it (see <see cref="MergeAsync"/>). Circles are left alone.
         /// </summary>
         /// <param name="transform">Section-to-volume transform of <paramref name="saved"/>'s section.</param>
-        /// <param name="downsample">The view's downsample, passed on to <see cref="LocationShapeUpdate.ApplyVolumePolygon(LocationObj, Polygon, IVolumeToSectionTransform, double)"/>.</param>
+        /// <param name="downsample">The view's downsample, passed on to <see cref="LocationShapeUpdate.ApplyVolumePolygon(LocationObj, Polygon, IVolumeToSectionTransform, double, IReadOnlyList{Vector2})"/>.</param>
         /// <param name="invalidate">Redraws the view once locations were merged; may be null.</param>
         /// <returns>True when locations were merged.</returns>
         public static Task<bool> MergeOverlappingSiblingsAsync(LocationObj saved, IVolumeToSectionTransform transform, double downsample, Action? invalidate = null) =>

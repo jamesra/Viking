@@ -208,11 +208,27 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// budget (<see cref="CatmullRomControlPointSimplification.IdentifyControlPoints"/>).
         /// Kept as its own entry point so the two results can be compared; SAM preview uses this one.
         /// </remarks>
-        public static Polygon FitMinErrorCurvePolygon(Polygon polygon, double tolerance)
+        public static Polygon FitMinErrorCurvePolygon(
+            Polygon polygon,
+            double tolerance,
+            IReadOnlyList<Vector2>? mustContain = null)
         {
             if (polygon is null || tolerance <= 0)
                 return polygon;
 
+            double current = tolerance;
+            for (int attempt = 0; attempt < 4; attempt++, current /= 2.0)
+            {
+                Polygon fitted = FitMinErrorCurvePolygonAt(polygon, current);
+                if (KeepsCoveredPoints(polygon, fitted, mustContain))
+                    return fitted;
+            }
+
+            return polygon;
+        }
+
+        private static Polygon FitMinErrorCurvePolygonAt(Polygon polygon, double tolerance)
+        {
             Polygon fitted = FitCurveControlPoints(polygon, tolerance);
             if (fitted is not null &&
                 fitted.ExteriorRing.Length >= 4 &&
@@ -228,8 +244,28 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// Autoseg preview / created-shape fit at <see cref="CreatedShapeSimplifyWorld"/> via
         /// <see cref="FitMinErrorCurvePolygon"/>. Persist still uses <see cref="SimplifyForSave"/>.
         /// </summary>
-        public static Polygon SimplifyForCreatedShape(Polygon polygon, double downsample) =>
-            FitMinErrorCurvePolygon(polygon, CreatedShapeSimplifyWorld(downsample));
+        public static Polygon SimplifyForCreatedShape(
+            Polygon polygon,
+            double downsample,
+            IReadOnlyList<Vector2>? mustContain = null) =>
+            FitMinErrorCurvePolygon(polygon, CreatedShapeSimplifyWorld(downsample), mustContain);
+
+        /// <summary>
+        /// True when every point of <paramref name="required"/> that <paramref name="original"/> covers is still covered
+        /// by <paramref name="result"/>. A point the original never covered is not the result's to keep.
+        /// </summary>
+        internal static bool KeepsCoveredPoints(Polygon original, Polygon? result, IReadOnlyList<Vector2>? required)
+        {
+            if (required is null || required.Count == 0 || original is null)
+                return true;
+            foreach (Vector2 point in required)
+            {
+                if (original.Covers(point) && (result is null || !result.Covers(point)))
+                    return false;
+            }
+
+            return true;
+        }
 
         /// <summary>
         /// Same reduction as the "Simplify Polygon" context menu: exterior at
@@ -241,15 +277,29 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// Reads the setting from <see cref="Properties.Settings"/> (same value as
         /// <see cref="Global.PenSimplifyThreshold"/>) so unit tests need not initialize <see cref="Global"/>.
         /// </summary>
-        public static Polygon SimplifyForSave(Polygon polygon)
+        public static Polygon SimplifyForSave(Polygon polygon, IReadOnlyList<Vector2>? mustContain = null)
         {
             if (polygon is null)
                 return polygon;
 
+            // The user's green points are certain to be part of the cell, so the reduction may not cut one off:
+            // retry finer, and keep the unreduced ring if even that loses one.
             int penThreshold = Properties.Settings.Default.PenSimplifyThreshold;
             if (penThreshold < 1) penThreshold = 1;
             else if (penThreshold > 100) penThreshold = 100;
             double tolerance = penThreshold;
+            for (int attempt = 0; attempt < 4; attempt++, tolerance /= 2.0)
+            {
+                Polygon reduced = SimplifyForSaveAt(polygon, tolerance);
+                if (KeepsCoveredPoints(polygon, reduced, mustContain))
+                    return reduced;
+            }
+
+            return polygon;
+        }
+
+        private static Polygon SimplifyForSaveAt(Polygon polygon, double tolerance)
+        {
             try
             {
                 Polygon result = new(polygon.ExteriorRing);
@@ -281,11 +331,25 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// ~2× drift (DP spent the full travel, then the curve fit spent it again).
         /// Falls back to full-budget Douglas-Peucker when the curve fit fails.
         /// </summary>
-        public static Polygon SimplifyProposal(Polygon polygon, double tolerance)
+        public static Polygon SimplifyProposal(Polygon polygon, double tolerance, IReadOnlyList<Vector2>? mustContain = null)
         {
             if (polygon is null || tolerance <= 0)
                 return polygon;
 
+            // A reduction may not cut off a point the user placed as certainly inside: retry finer, else keep the input.
+            double current = tolerance;
+            for (int attempt = 0; attempt < 4; attempt++, current /= 2.0)
+            {
+                Polygon reduced = SimplifyProposalAt(polygon, current);
+                if (KeepsCoveredPoints(polygon, reduced, mustContain))
+                    return reduced;
+            }
+
+            return polygon;
+        }
+
+        private static Polygon SimplifyProposalAt(Polygon polygon, double tolerance)
+        {
             double stage = tolerance * 0.5;
             Polygon reduced = SegmentationMaskPolygonizer.SimplifyRings(polygon, stage);
             Polygon fitted = FitCurveControlPoints(reduced, stage);
@@ -770,11 +834,14 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// Returns the original instance when nothing occupies area; null when
         /// the existing annotations cover the proposal. STDifference failures
         /// leave the last successful remainder so a preview is not dropped.
+        /// A subtraction that would cut off a point of <paramref name="mustContain"/> (the user's green points) is not
+        /// made: the proposal overlaps that annotation there rather than lose a point the user called part of the cell.
         /// </summary>
         public static Polygon? SubtractOverlappingPolygons(
             Polygon? proposed,
             IEnumerable<Polygon>? existingPolygons,
-            Vector2? keepPoint = null)
+            Vector2? keepPoint = null,
+            IReadOnlyList<Vector2>? mustContain = null)
         {
             if (proposed is null)
                 return null;
@@ -810,14 +877,22 @@ namespace WebAnnotation.UI.AutoPolygonize
                     if (!HasPositiveAreaOverlap(remaining, other))
                         continue;
 
-                    remaining = EnsureValid(remaining.STDifference(other));
-                    if (remaining is null || remaining.IsNull || remaining.STIsEmpty().IsTrue)
+                    SqlGeometry difference = EnsureValid(remaining.STDifference(other));
+                    if (difference is null || difference.IsNull || difference.STIsEmpty().IsTrue)
+                    {
+                        // Covering the whole proposal only matters when a green point would go with it.
+                        if (mustContain is { Count: > 0 } && KeepsCoveredPoints(lastGood, null, mustContain) is false)
+                            continue;
                         return null;
+                    }
 
-                    Polygon? converted = TrySelectPolygonPart(remaining, keepPoint);
+                    Polygon? converted = TrySelectPolygonPart(difference, keepPoint);
+                    if (!KeepsCoveredPoints(lastGood, converted, mustContain))
+                        continue;
                     if (converted is null)
                         return null;
 
+                    remaining = difference;
                     lastGood = converted;
                 }
             }

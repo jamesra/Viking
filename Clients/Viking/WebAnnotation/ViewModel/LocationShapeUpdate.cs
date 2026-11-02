@@ -30,13 +30,22 @@ namespace WebAnnotation.ViewModel
         /// this is the choke point that keeps the database ring at CreatedShapeSimplify size.
         /// </summary>
         /// <returns>False when the location, polygon, or section is missing, a point cannot be mapped, or the save fails.</returns>
-        public static Task<bool> ApplyVolumePolygon(LocationObj modelObj, Polygon volumePolygon, SectionViewerControl parent) =>
+        public static Task<bool> ApplyVolumePolygon(
+            LocationObj modelObj,
+            Polygon volumePolygon,
+            SectionViewerControl parent,
+            IReadOnlyList<Vector2>? mustContain = null) =>
             parent?.Section is null
                 ? Task.FromResult(false)
-                : ApplyVolumePolygon(modelObj, volumePolygon, parent.Section.ActiveSectionToVolumeTransform, parent.Downsample);
+                : ApplyVolumePolygon(modelObj, volumePolygon, parent.Section.ActiveSectionToVolumeTransform, parent.Downsample, mustContain);
 
         /// <summary>As above, for a view given by its section transform and downsample (Jotunn's scene host).</summary>
-        public static async Task<bool> ApplyVolumePolygon(LocationObj modelObj, Polygon volumePolygon, IVolumeToSectionTransform transform, double downsample)
+        public static async Task<bool> ApplyVolumePolygon(
+            LocationObj modelObj,
+            Polygon volumePolygon,
+            IVolumeToSectionTransform transform,
+            double downsample,
+            IReadOnlyList<Vector2>? mustContain = null)
         {
             if (modelObj is null || volumePolygon is null || transform is null)
                 return false;
@@ -47,7 +56,8 @@ namespace WebAnnotation.ViewModel
                     modelObj,
                     volumePolygon,
                     transform,
-                    downsample);
+                    downsample,
+                    mustContain);
                 if (!await Store.Locations.Save())
                 {
                     MessageBox.Show($"Failed to save the new shape of location {modelObj.ID}.",
@@ -73,6 +83,7 @@ namespace WebAnnotation.ViewModel
         /// One <see cref="AutoPolygonizeSelection.SimplifyForSave"/> pass (the context-menu
         /// "Simplify Polygon" tolerance), then mosaic control points + smoothed volume shape.
         /// <paramref name="downsample"/> is retained for callers but no longer affects the fit.
+        /// <paramref name="mustContain"/> (the user's green points) must stay inside the reduced ring; see <see cref="AutoPolygonizeSelection.SimplifyForSave"/>.
         /// Callers that enqueue a later Save (new structure create) use this; Accept uses
         /// <see cref="ApplyVolumePolygon"/> which saves immediately.
         /// </summary>
@@ -82,7 +93,8 @@ namespace WebAnnotation.ViewModel
             LocationObj modelObj,
             Polygon volumePolygon,
             IVolumeToSectionTransform transform,
-            double downsample)
+            double downsample,
+            IReadOnlyList<Vector2>? mustContain = null)
         {
             if (modelObj is null)
                 throw new ArgumentNullException(nameof(modelObj));
@@ -92,7 +104,7 @@ namespace WebAnnotation.ViewModel
                 throw new ArgumentNullException(nameof(transform));
 
             // Single save-time pass at the "Simplify Polygon" menu tolerance; no second fit follows.
-            Polygon simplified = AutoPolygonizeSelection.SimplifyForSave(volumePolygon);
+            Polygon simplified = AutoPolygonizeSelection.SimplifyForSave(volumePolygon, mustContain);
 
             // Mapped before anything changes, so a refused result leaves the location as it was.
             MosaicGeometry mosaic = LocationVolumeGeometry.ToMosaic(LocationType.CURVEPOLYGON, simplified, transform);
