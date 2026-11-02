@@ -19,6 +19,7 @@ gained from about 2026-10-20 on. Earlier changes are not listed.
 
 ## 1.2.111 — not yet released
 
+* **Softer shimmer, and a choice of shimmer style.** The shimmer on a new auto-polygonize proposal no longer has stripes: a white glow fades in over the proposal and out again along a sine curve, with a soft band sweeping across it at a random angle. A new **Shimmer style** preference (Annotation Preferences, Visuals, next to Shimmer brightness and duration) picks **Sweep**, **Ripple** (rings spreading from the middle like a drop of water, the first ring widest) or **Random**, which picks one each time and is the default.
 * **Fix: Go To Location zoom on scaled sections.** Jumping to a location now zooms to its size as drawn in the volume. On sections that map into the volume at a different scale, such as CMP sections, it used the size on the section image and opened far too close, often at the closest zoom.
 * **Fewer points on auto-segmented polygons.** Auto-polygonize and **Segment** rings no longer keep denser control points than **Pen Simplify Threshold** (Annotation Preferences) when zoomed in. The outline still follows the segmentation within that same tolerance as pen / **Simplify Polygon**.
 <!-- CreatedShapeSimplifyWorld floors at PenSimplifyThreshold; FitMinErrorCurvePolygon on the SAM preview path. -->

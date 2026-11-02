@@ -238,7 +238,8 @@ namespace WebAnnotation
                 locationLinkVisibilityPercent: Global.AnnotationSettings.LocationLinkVisibilityPercent,
                 locationLinkLabels: Global.AnnotationSettings.LocationLinkLabels,
                 hideAnnotationSeconds: Global.AnnotationSettings.HideAnnotationSeconds,
-                labelRotation: Global.AnnotationSettings.LabelRotation
+                labelRotation: Global.AnnotationSettings.LabelRotation,
+                autoPolygonizeShimmerStyle: Global.AnnotationSettings.AutoPolygonizeShimmerStyle
             );
 
             VikingXNA.Scene scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
@@ -394,7 +395,8 @@ namespace WebAnnotation
                     Global.AnnotationSettings.CorrectionShimFadeStartDownsample,
                     Global.AnnotationSettings.CorrectionShimFadeEndDownsample,
                     Global.AnnotationSettings.CorrectionShimShowOffset,
-                    labelRotation: Global.AnnotationSettings.LabelRotation
+                    labelRotation: Global.AnnotationSettings.LabelRotation,
+                    autoPolygonizeShimmerStyle: Global.AnnotationSettings.AutoPolygonizeShimmerStyle
                 );
             };
 
@@ -445,6 +447,8 @@ namespace WebAnnotation
                 Global.AnnotationSettings.AutoPolygonizeShimmerBrightness = viewModel.AutoPolygonizeShimmerBrightness;
             if (Changed(nameof(viewModel.AutoPolygonizeShimmerDurationMs)))
                 Global.AnnotationSettings.AutoPolygonizeShimmerDurationMs = viewModel.AutoPolygonizeShimmerDurationMs;
+            if (Changed(nameof(viewModel.AutoPolygonizeShimmerStyle)))
+                Global.AnnotationSettings.AutoPolygonizeShimmerStyle = viewModel.AutoPolygonizeShimmerStyle;
 
             // The setters copy these into the shim settings the viewer reads; refresh it as Apply does.
             bool shimChanged = false;
@@ -794,6 +798,7 @@ namespace WebAnnotation
             Global.AnnotationSettings.SegmentLinkedAnnotations = viewModel.SegmentLinkedAnnotations;
             Global.AnnotationSettings.AutoPolygonizeShimmerBrightness = viewModel.AutoPolygonizeShimmerBrightness;
             Global.AnnotationSettings.AutoPolygonizeShimmerDurationMs = viewModel.AutoPolygonizeShimmerDurationMs;
+            Global.AnnotationSettings.AutoPolygonizeShimmerStyle = viewModel.AutoPolygonizeShimmerStyle;
             // Setter no-ops when the value is unchanged (e.g. already live-applied from the slider).
             // Always re-arm idle so a view that is now in range starts without a camera nudge.
             if (Global.AnnotationSettings.AutoPolygonizeCircles)

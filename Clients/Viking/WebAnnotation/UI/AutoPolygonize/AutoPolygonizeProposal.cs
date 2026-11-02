@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using Viking.Common;
 using VikingXNAGraphics;
 using WebAnnotation.UI.Commands.Segmentation;
+using WebAnnotation.WPF.Forms;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
 using SegmentationServiceTypes = Viking.gRPC.SegmentationServiceTypes.V1;
@@ -376,14 +377,29 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>Texels per stripe of the refining hatch. Texels are 1 to 4 image pixels, so stripes scale with zoom.</summary>
         private const int RefiningHatchStripeTexels = 2;
 
-        /// <summary>Width of the shimmer band as a fraction of the polygon's diagonal extent (its x+y span in texels).</summary>
+        /// <summary>Width of the shimmer band as a fraction of the polygon's extent along the sweep direction (in texels).</summary>
         private const float ShimmerBandFraction = 0.3f;
 
         /// <summary>
-        /// Texels per line of the shimmer. Lines run along the sweep direction, across the band, and the shader drifts
-        /// them sideways while the band sweeps.
+        /// How many times longer the sweep takes than the Duration preference says. Four thirds makes the white band travel
+        /// at three quarters of the speed it had when the preference was introduced.
         /// </summary>
-        private const int ShimmerLineTexels = 2;
+        private const double ShimmerSweepDurationScale = 4.0 / 3.0;
+
+        /// <summary>How many times longer the ripple takes than the Duration preference says.</summary>
+        private const double ShimmerRippleDurationScale = 4.0;
+
+        /// <summary>Alpha of the shimmer glow at its brightest, as a fraction of the shimmer brightness preference.</summary>
+        private const float ShimmerGlowPeakFraction = 1.0f;
+
+        /// <summary>Smallest ripple ring half width, in mask texels, so small polygons still show a visible ring.</summary>
+        private const float ShimmerRippleMinHalfWidth = 3f;
+
+        /// <summary>Half width of the leading ripple ring as a fraction of the ripple's outer radius; each following ring is half as wide.</summary>
+        private const float ShimmerRippleHalfWidthFraction = 0.12f;
+
+        /// <summary>Distance between successive ripple rings as a fraction of the ripple's outer radius.</summary>
+        private const float ShimmerRippleSpacingFraction = 0.28f;
 
         /// <summary>Most clip texels per mask texel along each axis when the shimmer clip is rasterized from the polygon.</summary>
         private const int ShimmerClipMaxSupersample = 8;
@@ -432,6 +448,21 @@ namespace WebAnnotation.UI.AutoPolygonize
         private AutoPolygonizeMaskOverlay? shimmerClipSource;
         private float shimmerDiagonalLow;
         private float shimmerDiagonalHigh;
+
+        /// <summary>Angle, in radians, that sets which way this proposal's shimmer band sweeps. Chosen when the shimmer starts.</summary>
+        private double shimmerAngle;
+
+        private Vector2 shimmerGlowCentre;
+        private float shimmerGlowSigma;
+
+        /// <summary>Look of this proposal's shimmer (Sweep or Ripple, never Random). Chosen when the shimmer starts.</summary>
+        private AutoPolygonizeShimmerStyle shimmerStyle;
+
+        /// <summary>Ripple centre in mask texels; the middle of the polygon's bounding box. Set with the clip texture.</summary>
+        private Vector2 shimmerRippleCentre;
+
+        /// <summary>Ripple outer radius in mask texels: half the polygon bounding box's diagonal. Set with the clip texture.</summary>
+        private float shimmerRippleOuterRadius;
 
         public AutoPolygonizeProposal(
             AutoCirclePolygonizeController controller,
@@ -813,8 +844,10 @@ namespace WebAnnotation.UI.AutoPolygonize
         public bool IsShimmering => shimmerStartTimestamp != 0 && !shimmerDone;
 
         /// <summary>
-        /// Sweeps a band of white lines across the mask once, starting on the first frame this proposal is drawn in
-        /// its final (non-refining) form. Duration and brightness come from the preferences and are read when the
+        /// Plays the shimmer once, starting on the first frame this proposal is drawn in its final (non-refining) form.
+        /// Sweep style: a soft white band crosses the mask at a random angle over a white glow that fades in and out.
+        /// Ripple style: three rings spread from the polygon's centre to its edges like a drop of water. The style
+        /// preference (Random picks one of the two) is read when the shimmer starts. Duration and brightness come from the preferences and are read when the
         /// shimmer starts. Skipped for good when the preference is off at that moment. Never replays for the same
         /// proposal, including after a mask rebuild. Needs the decoded mask bytes; without them it is skipped.
         /// Must run on the graphics thread.
@@ -840,11 +873,13 @@ namespace WebAnnotation.UI.AutoPolygonize
                 }
 
                 shimmerDurationMs = Global.AnnotationSettings.AutoPolygonizeShimmerDurationMs;
+                shimmerAngle = NextShimmerRandom() * 2.0 * Math.PI;
+                shimmerStyle = ChooseShimmerStyle(Global.AnnotationSettings.AutoPolygonizeShimmerStyle, NextShimmerRandom());
                 shimmerPeakAlpha = (float)Global.AnnotationSettings.AutoPolygonizeShimmerBrightness;
                 shimmerStartTimestamp = Stopwatch.GetTimestamp();
             }
 
-            double progress = (Stopwatch.GetTimestamp() - shimmerStartTimestamp) * 1000.0 / Stopwatch.Frequency / shimmerDurationMs;
+            double progress = (Stopwatch.GetTimestamp() - shimmerStartTimestamp) * 1000.0 / Stopwatch.Frequency / (shimmerDurationMs * (shimmerStyle == AutoPolygonizeShimmerStyle.Ripple ? ShimmerRippleDurationScale : ShimmerSweepDurationScale));
             if (progress >= 1.0)
             {
                 shimmerDone = true;
@@ -861,7 +896,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 {
                     DisposeShimmer();
                     int supersample = ShimmerClipSupersample(shown);
-                    bool[] inside = RasterizePolygon(Polygon, shown, out int low, out int high, supersample);
+                    bool[] inside = RasterizePolygon(Polygon, shown, out _, out _, supersample);
                     byte[] clip = new byte[inside.Length];
                     for (int i = 0; i < inside.Length; i++)
                         clip[i] = inside[i] ? byte.MaxValue : byte.MinValue;
@@ -872,9 +907,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                     shimmerView = new TextureOverlayView(shimmerClipTexture, shown.WorldBounds, Color.White);
                     shimmerClipSource = shown;
 
-                    // The shader measures from texel corners, so a texel centre's x + y is its index sum plus one.
-                    shimmerDiagonalLow = (low + 1f) / supersample;
-                    shimmerDiagonalHigh = (high + 1f) / supersample;
+                    (shimmerGlowCentre, shimmerGlowSigma) = ShimmerGlowShape(inside, shown.Width * supersample, shown.Height * supersample, supersample);
+                    (shimmerDiagonalLow, shimmerDiagonalHigh) = ShimmerSweepRange(
+                        inside, shown.Width * supersample, shown.Height * supersample, supersample, ShimmerSweepDirection(shimmerAngle));
+                    (shimmerRippleCentre, shimmerRippleOuterRadius) = ShimmerRippleShape(inside, shown.Width * supersample, shown.Height * supersample, supersample);
                 }
             }
             catch (Exception)
@@ -884,17 +920,42 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return;
             }
 
+            if (shimmerStyle == AutoPolygonizeShimmerStyle.Ripple)
+            {
+                float ringHalfWidth = ShimmerRippleHalfWidth(shimmerRippleOuterRadius);
+                float ringSpacing = ShimmerRippleSpacing(shimmerRippleOuterRadius);
+                float leadingRadius = ShimmerRippleRadius(progress, shimmerRippleOuterRadius, ringSpacing, ringHalfWidth);
+                DrawStripes(
+                    graphicsDevice,
+                    scene,
+                    shimmerView!,
+                    new Vector2(shown.Width, shown.Height),
+                    new Vector2(1, 1),
+                    0f,
+                    Vector2.Zero,
+                    0.5f,
+                    shimmerPeakAlpha,
+                    glow: default,
+                    ripple: new Vector4(shimmerRippleCentre.X, shimmerRippleCentre.Y, leadingRadius, ringHalfWidth),
+                    ripple2: new Vector4(ringSpacing, shimmerRippleOuterRadius, 0, 0));
+                return;
+            }
+
+            // The band and the glow share one sine envelope, so the whole sweep rises from nothing to full brightness
+            // halfway through and falls back to nothing, instead of holding at full brightness while the band crosses.
+            float envelope = ShimmerGlowAlpha(shimmerPeakAlpha, progress);
             (float center, float halfWidth) = ShimmerBand(shimmerDiagonalLow, shimmerDiagonalHigh, progress);
             DrawStripes(
                 graphicsDevice,
                 scene,
                 shimmerView!,
                 new Vector2(shown.Width, shown.Height),
-                new Vector2(1, -1),
-                2 * ShimmerLineTexels,
+                ShimmerStripeNormal(shimmerAngle),
+                0f,
                 new Vector2(center, halfWidth),
                 0.5f,
-                shimmerPeakAlpha);
+                envelope,
+                new Vector4(shimmerGlowCentre.X, shimmerGlowCentre.Y, shimmerGlowSigma, envelope));
         }
 
         /// <summary>Releases the shimmer clip texture. Does not rearm the shimmer.</summary>
@@ -975,8 +1036,182 @@ namespace WebAnnotation.UI.AutoPolygonize
             return inside;
         }
 
+        private static readonly Random ShimmerRandom = new();
+
+        /// <summary>A random number in [0, 1) for choosing a shimmer angle or style. Random is not thread safe and net48 has no Random.Shared.</summary>
+        private static double NextShimmerRandom()
+        {
+            lock (ShimmerRandom)
+                return ShimmerRandom.NextDouble();
+        }
+
         /// <summary>
-        /// Centre and half width, in mask texels along x + y, of the shimmer band at <paramref name="progress"/>.
+        /// Direction handed to the stripe shader for a shimmer angle of <paramref name="angle"/> radians. The shimmer draws
+        /// no stripes (period zero), so this only fixes which way the band sweeps: the shader sweeps along it turned a
+        /// quarter turn, see <see cref="ShimmerSweepDirection"/>. Its length is the square root of two, like the (1, -1)
+        /// normal the shimmer used when it had stripes, so the band keeps the same scale at every angle.
+        /// </summary>
+        internal static Vector2 ShimmerStripeNormal(double angle)
+        {
+            double length = Math.Sqrt(2.0);
+            return new Vector2((float)(length * Math.Cos(angle)), (float)(length * Math.Sin(angle)));
+        }
+
+        /// <summary>
+        /// Direction the shimmer band travels for the direction <see cref="ShimmerStripeNormal"/>: rotated a quarter turn
+        /// from it, with the same length. The stripe shader derives the same
+        /// vector from its stripe direction, so keep the two in step. The (1, -1) normal gives (1, 1), the x + y sweep.
+        /// </summary>
+        internal static Vector2 ShimmerSweepDirection(double angle)
+        {
+            Vector2 normal = ShimmerStripeNormal(angle);
+            return new Vector2(-normal.Y, normal.X);
+        }
+
+        /// <summary>
+        /// Brightness of the sweep shimmer, both its band and its glow: none when the shimmer starts, the most halfway
+        /// through, none again when it ends, following a sine so it eases in and out.
+        /// </summary>
+        internal static float ShimmerGlowAlpha(float peakAlpha, double progress)
+        {
+            double clamped = Math.Min(1.0, Math.Max(0.0, progress));
+            return (float)(peakAlpha * ShimmerGlowPeakFraction * Math.Sin(Math.PI * clamped));
+        }
+
+        /// <summary>
+        /// Centre and standard deviation, in mask texels, of the round glow under the shimmer: the middle of the marked
+        /// texels' bounding box, with a deviation of a third of its longer side (at least one texel) so the glow fades
+        /// out near the polygon's edge. The grid arguments are as for <see cref="ShimmerSweepRange"/>.
+        /// </summary>
+        internal static (Vector2 Centre, float Sigma) ShimmerGlowShape(bool[] inside, int width, int height, int supersample)
+        {
+            if (!MarkedBounds(inside, width, height, out int minX, out int maxX, out int minY, out int maxY))
+                return (Vector2.Zero, 1f);
+
+            float centreX = (minX + maxX + 1) / 2f / supersample;
+            float centreY = (minY + maxY + 1) / 2f / supersample;
+            float longerSide = Math.Max(maxX - minX + 1, maxY - minY + 1) / (float)supersample;
+            return (new Vector2(centreX, centreY), Math.Max(1f, longerSide / 3f));
+        }
+
+        /// <summary>
+        /// Inclusive bounding box, in clip texels, of the marked texels of a <paramref name="width"/> by
+        /// <paramref name="height"/> grid. False (and the bounds meaningless) when nothing is marked.
+        /// </summary>
+        private static bool MarkedBounds(bool[] inside, int width, int height, out int minX, out int maxX, out int minY, out int maxY)
+        {
+            minX = int.MaxValue;
+            maxX = int.MinValue;
+            minY = int.MaxValue;
+            maxY = int.MinValue;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    if (!inside[(y * width) + x])
+                        continue;
+
+                    minX = Math.Min(minX, x);
+                    maxX = Math.Max(maxX, x);
+                    minY = Math.Min(minY, y);
+                    maxY = Math.Max(maxY, y);
+                }
+            }
+
+            return minX <= maxX;
+        }
+
+        /// <summary>
+        /// Centre and outer radius, in mask texels, of the ripple shimmer: the middle of the marked texels' bounding box
+        /// and half its diagonal (at least one texel), so a ring at the outer radius has left every marked texel. The grid
+        /// arguments are as for <see cref="ShimmerSweepRange"/>.
+        /// </summary>
+        internal static (Vector2 Centre, float OuterRadius) ShimmerRippleShape(bool[] inside, int width, int height, int supersample)
+        {
+            if (!MarkedBounds(inside, width, height, out int minX, out int maxX, out int minY, out int maxY))
+                return (Vector2.Zero, 1f);
+
+            float centreX = (minX + maxX + 1) / 2f / supersample;
+            float centreY = (minY + maxY + 1) / 2f / supersample;
+            float boxWidth = (maxX - minX + 1) / (float)supersample;
+            float boxHeight = (maxY - minY + 1) / (float)supersample;
+            float outerRadius = (float)Math.Sqrt((boxWidth * boxWidth) + (boxHeight * boxHeight)) / 2f;
+            return (new Vector2(centreX, centreY), Math.Max(1f, outerRadius));
+        }
+
+        /// <summary>Half width, in mask texels, of each ripple ring for a ripple of <paramref name="outerRadius"/>.</summary>
+        internal static float ShimmerRippleHalfWidth(float outerRadius) => Math.Max(ShimmerRippleMinHalfWidth, outerRadius * ShimmerRippleHalfWidthFraction);
+
+        /// <summary>Distance, in mask texels, between successive ripple rings for a ripple of <paramref name="outerRadius"/>.</summary>
+        internal static float ShimmerRippleSpacing(float outerRadius) => outerRadius * ShimmerRippleSpacingFraction;
+
+        /// <summary>
+        /// Radius, in mask texels, of the leading ripple ring at <paramref name="progress"/> (0 to 1, clamped). It eases
+        /// out like water: fast at first, slowing as it spreads. At 0 it is 0, so no ring shows yet; at 1 it is
+        /// outerRadius + 2 * spacing + halfWidth, so the last of the three rings has its inner edge on the outer radius,
+        /// where the shader fades rings to nothing, and the ripple has left the polygon.
+        /// </summary>
+        internal static float ShimmerRippleRadius(double progress, float outerRadius, float spacing, float halfWidth)
+        {
+            double clamped = Math.Min(1.0, Math.Max(0.0, progress));
+            double eased = 1.0 - ((1.0 - clamped) * (1.0 - clamped));
+            return (float)(eased * (outerRadius + (2.0 * spacing) + halfWidth));
+        }
+
+        /// <summary>
+        /// Concrete shimmer style for a new shimmer: <paramref name="setting"/> itself for Sweep or Ripple; for Random,
+        /// Sweep when <paramref name="randomValue"/> (expected in [0, 1)) is below one half and Ripple otherwise. Unknown
+        /// values give Sweep. Never returns Random.
+        /// </summary>
+        internal static AutoPolygonizeShimmerStyle ChooseShimmerStyle(AutoPolygonizeShimmerStyle setting, double randomValue) => setting switch
+        {
+            AutoPolygonizeShimmerStyle.Ripple => AutoPolygonizeShimmerStyle.Ripple,
+            AutoPolygonizeShimmerStyle.Random => randomValue < 0.5 ? AutoPolygonizeShimmerStyle.Sweep : AutoPolygonizeShimmerStyle.Ripple,
+            _ => AutoPolygonizeShimmerStyle.Sweep,
+        };
+
+        /// <summary>
+        /// Smallest and largest position of any marked texel along <paramref name="sweep"/>, in mask texels, so the band
+        /// can start just before the polygon and end just past it. <paramref name="inside"/> is a grid of
+        /// <paramref name="width"/> by <paramref name="height"/> clip texels with <paramref name="supersample"/> of them
+        /// per mask texel along each axis. Positions are those of texel centres, matching the shader's
+        /// dot(texel, sweep); both are 0 when nothing is marked.
+        /// </summary>
+        internal static (float Low, float High) ShimmerSweepRange(bool[] inside, int width, int height, int supersample, Vector2 sweep)
+        {
+            double low = double.MaxValue;
+            double high = double.MinValue;
+            for (int y = 0; y < height; y++)
+            {
+                int first = -1;
+                int last = -1;
+                for (int x = 0; x < width; x++)
+                {
+                    if (!inside[(y * width) + x])
+                        continue;
+
+                    if (first < 0)
+                        first = x;
+                    last = x;
+                }
+
+                if (first < 0)
+                    continue;
+
+                // The projection is linear in x, so a row's extremes are at its first and last marked texel.
+                foreach (int x in new[] { first, last })
+                {
+                    double position = ((sweep.X * (x + 0.5)) + (sweep.Y * (y + 0.5))) / supersample;
+                    low = Math.Min(low, position);
+                    high = Math.Max(high, position);
+                }
+            }
+
+            return low > high ? (0f, 0f) : ((float)low, (float)high);
+        }
+
+        /// <summary>
+        /// Centre and half width, in mask texels along the sweep direction, of the shimmer band at <paramref name="progress"/>.
         /// The band starts just before <paramref name="diagonalLow"/> (progress 0) and ends just past
         /// <paramref name="diagonalHigh"/> (progress 1), so it enters and leaves the polygon fully.
         /// </summary>
@@ -1003,7 +1238,10 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// Draws white stripes over <paramref name="view"/> with the stripe shader, inside the area where the view's
         /// texture alpha is above <paramref name="clipLevel"/>. The shader anti-aliases the stripe and clip edges per
         /// pixel. <paramref name="texelCount"/> is the mask size the other lengths are measured in; see
-        /// <see cref="OverlayShaderEffect.Techniques.StripeOverlayEffect"/>.
+        /// <see cref="OverlayShaderEffect.Techniques.StripeOverlayEffect"/>. <paramref name="ripple"/> and
+        /// <paramref name="ripple2"/> are <see cref="OverlayShaderEffect.StripeRipple"/> and
+        /// <see cref="OverlayShaderEffect.StripeRipple2"/>; the default leaves the rings off. Both are written on every
+        /// call because the effect is shared per device, so a ripple must not leak into a later hatch or sweep draw.
         /// </summary>
         private static void DrawStripes(
             GraphicsDevice graphicsDevice,
@@ -1014,7 +1252,10 @@ namespace WebAnnotation.UI.AutoPolygonize
             float period,
             Vector2 band,
             float clipLevel,
-            float alpha)
+            float alpha,
+            Vector4 glow = default,
+            Vector4 ripple = default,
+            Vector4 ripple2 = default)
         {
             OverlayShaderEffect? effect = DeviceEffectsStore<OverlayShaderEffect>.TryGet(graphicsDevice);
             if (effect is null || view.Texture is null)
@@ -1028,6 +1269,9 @@ namespace WebAnnotation.UI.AutoPolygonize
             effect.StripeBand = band;
             effect.StripeClipLevel = clipLevel;
             effect.StripeAlpha = alpha;
+            effect.StripeGlow = glow;
+            effect.StripeRipple = ripple;
+            effect.StripeRipple2 = ripple2 == default ? new Vector4(1, 1, 0, 0) : ripple2;
 
             DepthStencilState previous = graphicsDevice.DepthStencilState;
             graphicsDevice.DepthStencilState = MaskOverlayDepthState;

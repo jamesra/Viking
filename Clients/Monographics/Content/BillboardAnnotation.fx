@@ -787,14 +787,24 @@ uniform const sampler StripeClipSampler : register(s2) = sampler_state
 uniform const float2 stripeTexelCount = float2(1, 1);
 //The stripes run perpendicular to this direction, e.g. (1, 1) or (1, -1).
 uniform const float2 stripeDirection = float2(1, 1);
-//Distance along stripeDirection from one stripe to the next: a lit stripe and a clear gap of equal width.
+//Distance along stripeDirection from one stripe to the next: a lit stripe and a clear gap of equal width. Zero or less lights the
+//whole area instead of stripes (stripeDirection then only sets which way a band sweeps).
 uniform const float stripePeriod = 4;
-//Optional band across x + y that limits the lit stripes: x is its centre, y its half width. y <= 0 lights them all.
+//Optional band that limits the lit stripes and sweeps along them: x is its centre along dot(texel, (-stripeDirection.y, stripeDirection.x)),
+//y its half width. y <= 0 lights them all.
 uniform const float2 stripeBand = float2(0, 0);
 //Clip texture alpha (0..1) at the edge of the clipped area.
 uniform const float stripeClipLevel = 0.5;
 //Alpha of a fully lit stripe.
 uniform const float stripeAlpha = 1;
+//Optional round glow under the stripes: xy is its centre in mask texels, z its standard deviation in texels, w its alpha at the
+//centre. w <= 0 draws none. The stripes and the glow combine as light does, so a lit stripe over the glow is brighter than either.
+uniform const float4 stripeGlow = float4(0, 0, 1, 0);
+//Optional ripple drawn instead of the stripes and band, like a drop of water landing: xy is the centre in mask texels, z the radius
+//of the leading ring in texels, w the ring half width in texels. w <= 0 turns it off and leaves the stripes as they were.
+uniform const float4 stripeRipple = float4(0, 0, 1, 0);
+//Ripple companion: x is the spacing between successive rings in texels, y the radius in texels at which a ring has fully faded.
+uniform const float4 stripeRipple2 = float4(1, 1, 0, 0);
 
 PixelShaderOutput StripePixelShaderFunction(TexturePixelShaderInput input)
 {
@@ -808,21 +818,55 @@ PixelShaderOutput StripePixelShaderFunction(TexturePixelShaderInput input)
 	float clipCoverage = saturate(clipValue / max(fwidth(clipValue), 1e-5) + 0.5);
 
 	//Stripes: edge is the distance to the nearest stripe edge in periods, positive on a stripe and negative in a gap.
-	float u = dot(texel, stripeDirection) / stripePeriod;
+	float u = dot(texel, stripeDirection) / max(stripePeriod, 1e-3);
 	float uWidth = max(fwidth(u), 1e-5);
 	float edge = 0.25 - abs(frac(u + 0.25) - 0.5);
 	float stripe = saturate(edge / uWidth + 0.5);
 	//Stripes only a few pixels apart would alias, so fade them toward their average coverage.
 	stripe = lerp(stripe, 0.5, saturate((uWidth * 4.0) - 1.0));
+	//A period of zero or less means no stripes: the whole area is lit, so only the band and the glow shape it.
+	if (stripePeriod <= 0)
+		stripe = 1;
 
 	float band = 1;
 	if (stripeBand.y > 0)
 	{
-		band = 1 - saturate(abs(texel.x + texel.y - stripeBand.x) / stripeBand.y);
+		//The band sweeps along the stripes: its position is measured along the stripe direction turned a quarter turn,
+		//which for the (1, -1) direction is x + y.
+		float2 sweep = float2(-stripeDirection.y, stripeDirection.x);
+		band = 1 - saturate(abs(dot(texel, sweep) - stripeBand.x) / stripeBand.y);
 		band = band * band * (3 - (2 * band));
 	}
 
-	float alpha = stripeAlpha * clipCoverage * stripe * band;
+	float stripeLit = stripeAlpha * stripe * band;
+	if (stripeRipple.w > 0)
+	{
+		//Three rings trail the leading one by stripeRipple2.x each. Rings combine as light does and dim as they spread,
+		//so the leading ring is brightest. stripeRipple.w is the leading ring's half width; each following ring is half as
+		//wide as the one before it. A ring that has not started yet (radius <= 0) adds nothing.
+		float distanceFromCentre = length(texel - stripeRipple.xy);
+		float halfWidth = max(stripeRipple.w, 1e-3);
+		float outerRadius = max(stripeRipple2.y, 1e-3);
+		float dark = 1;
+		[unroll]
+		for (int k = 0; k < 3; k++)
+		{
+			float radius = stripeRipple.z - (k * stripeRipple2.x);
+			float ring = 1 - saturate(abs(distanceFromCentre - radius) / (halfWidth * exp2(-k)));
+			ring = ring * ring * (3 - (2 * ring));
+			float ringAlpha = radius > 0 ? stripeAlpha * saturate(1 - (radius / outerRadius)) * ring : 0;
+			dark *= 1 - ringAlpha;
+		}
+		stripeLit = 1 - dark;
+	}
+	float glow = 0;
+	if (stripeGlow.w > 0)
+	{
+		float2 fromCentre = (texel - stripeGlow.xy) / max(stripeGlow.z, 1e-3);
+		glow = stripeGlow.w * exp(-0.5 * dot(fromCentre, fromCentre));
+	}
+
+	float alpha = clipCoverage * (1 - ((1 - stripeLit) * (1 - glow)));
 	clip(alpha <= 0.0 ? -1.0 : 1.0);
 	output.Color = float4(1, 1, 1, alpha);
 	return output;
