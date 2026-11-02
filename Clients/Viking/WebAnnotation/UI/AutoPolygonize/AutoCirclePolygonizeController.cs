@@ -1776,6 +1776,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                 SegmentationDiag.Log(
                     $"publish ids=[{string.Join(",", proposal.LocationIds)}] ticket={proposal.RequestTicket} round={proposal.OverlapResubmitRound} " +
                     $"area={proposal.Polygon.Area:F0} replaces=[{string.Join("; ", replaced.Select(item => string.Join(",", item.LocationIds)))}]");
+                // A result for fewer circles than the merge it replaces (a resized circle answering after its group formed)
+                // must not take the other circles' overlays with it: they come back, and the overlap check below merges them again.
+                List<AutoPolygonizeProposal> survivors = [];
                 foreach (AutoPolygonizeProposal old in replaced)
                 {
                     old.DisposeMaskOverlay();
@@ -1783,6 +1786,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                         hoveredProposal = null;
                     foreach (long id in old.LocationIds)
                         proposals.Remove(id);
+
+                    CollectSurvivors(old, proposal.LocationIds, survivors);
                 }
 
                 if (Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
@@ -1790,6 +1795,28 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 foreach (long id in proposal.LocationIds)
                     proposals[id] = proposal;
+
+                List<AutoPolygonizeProposal> restored = [];
+                foreach (AutoPolygonizeProposal survivor in survivors)
+                {
+                    if (survivor.LocationIds.Any(proposals.ContainsKey) || !AreProposalMembersValid(survivor))
+                        continue;
+
+                    survivor.EndRefining();
+                    if (Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
+                        survivor.AttachMaskOverlay(parent.Device);
+
+                    foreach (long id in survivor.LocationIds)
+                        proposals[id] = survivor;
+                    restored.Add(survivor);
+                }
+
+                if (restored.Count > 0)
+                {
+                    SegmentationDiag.Log(
+                        $"publish restored=[{string.Join("; ", restored.Select(item => string.Join(",", item.LocationIds)))}] " +
+                        $"after ids=[{string.Join(",", proposal.LocationIds)}] replaced a merge");
+                }
             }
 
             onPublished?.Invoke();
@@ -2129,6 +2156,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>Cache dropped LastModified skip after a geometry commit. Overlay is stale; force one SegmentImage if still in view.</summary>
         private void OnCacheGeometryInvalidated(long locationId, int sectionNumber, int generation)
         {
+            CancelOverlapJobsContaining(locationId);
             DissolveProposal(locationId);
             if (!enabled)
                 return;
@@ -2136,6 +2164,43 @@ namespace WebAnnotation.UI.AutoPolygonize
             parent.Invalidate();
             refreshQueue ??= new LocationRefreshQueue(RunForLocationAsync, () => enabled, maxConcurrent: 2);
             ObserveFaults(refreshQueue.RefreshAsync(locationId, sectionNumber, generation), "single-ID refresh");
+        }
+
+        /// <summary>
+        /// Cancels every running overlap merge that includes <paramref name="locationId"/>. Its members were captured before
+        /// the circle changed, so it would publish a merge of the old outline over the new one, or, by being in flight, keep
+        /// the merge of the new outline from starting.
+        /// </summary>
+        private static bool IsCancelled(OverlapGroupJob job)
+        {
+            try
+            {
+                return job.Cancellation.IsCancellationRequested;
+            }
+            catch (ObjectDisposedException)
+            {
+                return true;
+            }
+        }
+
+        private void CancelOverlapJobsContaining(long locationId)
+        {
+            lock (overlapResubmitsInFlight)
+            {
+                foreach (OverlapGroupJob job in overlapResubmitsInFlight.Values)
+                {
+                    if (!job.LocationIds.Contains(locationId))
+                        continue;
+
+                    try
+                    {
+                        job.Cancellation.Cancel();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -2434,14 +2499,22 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// The proposals a merged proposal replaced that do not contain <paramref name="changedId"/>. A member that does
         /// contain it and is itself a merge is searched in turn; one that is a single request result is dropped.
         /// </summary>
-        internal static void CollectSurvivors(AutoPolygonizeProposal merged, long changedId, List<AutoPolygonizeProposal> survivors)
+        internal static void CollectSurvivors(AutoPolygonizeProposal merged, long changedId, List<AutoPolygonizeProposal> survivors) =>
+            CollectSurvivors(merged, [changedId], survivors);
+
+        /// <summary>
+        /// As <see cref="CollectSurvivors(AutoPolygonizeProposal, long, List{AutoPolygonizeProposal})"/> for a replacement that
+        /// stands for several locations: the proposals <paramref name="merged"/> replaced that share none of
+        /// <paramref name="replacedIds"/>.
+        /// </summary>
+        internal static void CollectSurvivors(AutoPolygonizeProposal merged, IReadOnlyCollection<long> replacedIds, List<AutoPolygonizeProposal> survivors)
         {
             foreach (AutoPolygonizeProposal member in merged.MergedFrom)
             {
-                if (!member.LocationIds.Contains(changedId))
+                if (!member.LocationIds.Any(replacedIds.Contains))
                     survivors.Add(member);
                 else
-                    CollectSurvivors(member, changedId, survivors);
+                    CollectSurvivors(member, replacedIds, survivors);
             }
         }
 
@@ -2586,7 +2659,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             OverlapGroupJob job = new([.. locationIds], NextRequestTicket());
             lock (overlapResubmitsInFlight)
             {
-                if (overlapResubmitsInFlight.ContainsKey(key))
+                // A cancelled job for the same circles (one of them changed) is still unwinding; it must not block the new one.
+                if (overlapResubmitsInFlight.TryGetValue(key, out OverlapGroupJob? running) && !IsCancelled(running))
                 {
                     job.Cancellation.Dispose();
                     return;
@@ -3053,7 +3127,11 @@ namespace WebAnnotation.UI.AutoPolygonize
             finally
             {
                 lock (overlapResubmitsInFlight)
-                    overlapResubmitsInFlight.Remove(inFlightKey);
+                {
+                    // A newer job for the same circles may have taken the key while this cancelled one unwound.
+                    if (overlapResubmitsInFlight.TryGetValue(inFlightKey, out OverlapGroupJob? registered) && ReferenceEquals(registered, job))
+                        overlapResubmitsInFlight.Remove(inFlightKey);
+                }
                 linkedCancellation?.Dispose();
                 job.Cancellation.Dispose();
                 foreach (AutoPolygonizeProposal member in members)

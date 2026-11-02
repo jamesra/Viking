@@ -77,6 +77,34 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void AResultForOneCircleOfAMergeLeavesTheOtherCirclesToComeBack()
+        {
+            AutoPolygonizeProposal a = Proposal([1]);
+            AutoPolygonizeProposal b = Proposal([2]);
+            AutoPolygonizeProposal merged = Proposal([1, 2], [a, b]);
+            List<AutoPolygonizeProposal> survivors = [];
+
+            // A new single-circle result for circle 1 publishes over the merge: circle 2 must not be lost with it.
+            AutoCirclePolygonizeController.CollectSurvivors(merged, new long[] { 1 }, survivors);
+
+            Assert.AreEqual(1, survivors.Count);
+            Assert.AreSame(b, survivors[0]);
+        }
+
+        [TestMethod]
+        public void AResultThatCoversEveryCircleOfAMergeRestoresNothing()
+        {
+            AutoPolygonizeProposal a = Proposal([1]);
+            AutoPolygonizeProposal b = Proposal([2]);
+            AutoPolygonizeProposal merged = Proposal([1, 2], [a, b]);
+            List<AutoPolygonizeProposal> survivors = [];
+
+            AutoCirclePolygonizeController.CollectSurvivors(merged, new long[] { 1, 2 }, survivors);
+
+            Assert.AreEqual(0, survivors.Count);
+        }
+
+        [TestMethod]
         public void AProposalThatCameFromOneRequestHasNothingToRestore()
         {
             AutoPolygonizeProposal single = Proposal([5]);
