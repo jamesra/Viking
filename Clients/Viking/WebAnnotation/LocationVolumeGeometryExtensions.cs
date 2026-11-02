@@ -1,4 +1,5 @@
 using Geometry;
+using SqlGeometryUtils;
 using System;
 using Viking.VolumeModel;
 using WebAnnotationModel;
@@ -43,5 +44,14 @@ namespace WebAnnotation
 
         /// <summary>The location's volume radius (<see cref="LocationVolumeGeometry.Radius"/>), or its mosaic radius without one.</summary>
         public static double VolumeRadius(this LocationObj location) => location.VolumeGeometry()?.Radius ?? location.Radius;
+
+        /// <summary>
+        /// The width of the location's drawn volume shape, or of its mosaic shape without volume geometry. Zoom to fit uses this,
+        /// because the viewer is in volume space and a section can map into the volume at a scale other than 1.
+        /// </summary>
+        public static double VolumeWidth(this LocationObj location) =>
+            location.VolumeGeometry()?.Shape is { IsNull: false } shape
+                ? shape.BoundingBox().Width
+                : location.MosaicShape.BoundingBox().Width;
     }
 }

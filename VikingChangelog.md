@@ -23,6 +23,7 @@ Documentation/source/Client/versionhistory.rst.
 
 ## 1.2.136 — not yet released
 
+* **Fix: Go To Location zoom on scaled sections.** Jumping to a location now zooms to its size as drawn in the volume. On sections that map into the volume at a different scale, such as CMP sections, it used the size on the section image and opened far too close, often at the closest zoom.
 * **Fewer points on auto-segmented polygons.** Auto-polygonize and **Segment** rings no longer keep denser control points than **Pen Simplify Threshold** (Annotation Preferences) when zoomed in. The outline still follows the segmentation within that same tolerance as pen / **Simplify Polygon**.
 <!-- CreatedShapeSimplifyWorld floors at PenSimplifyThreshold; FitMinErrorCurvePolygon (Catmull full-budget) replaces DP+Catmull half-budget SimplifyProposal on the SAM preview path. -->
 * **Fix: pen loop merges only circles.** After a pen loop turns a circle into a polygon, only the structure's other circle annotations it touches join the merge as disks. Points, lines and curves of the same structure are no longer swept into the merged polygon.

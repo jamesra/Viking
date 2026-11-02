@@ -1,5 +1,6 @@
 using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SqlGeometryUtils;
 using Viking.AnnotationServiceTypes.Interfaces;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
@@ -48,6 +49,16 @@ namespace WebAnnotationTests.Tools
             Assert.AreEqual(owner.Center, circle.VolumeCenter());
             Assert.AreEqual(owner.Radius, circle.VolumeRadius(), 1e-9);
             Assert.AreNotEqual(circle.VolumePosition, circle.VolumeCenter(), "the stored cache is stale on purpose");
+        }
+
+        [TestMethod]
+        public void TheVolumeWidthIsTheDrawnShapesNotTheMosaicShapes()
+        {
+            LocationObj circle = StaleCircle(1, 2000);
+            LocationVolumeGeometry owner = LocationVolumeGeometry.For(circle, Transform);
+
+            Assert.AreEqual(owner.Shape.BoundingBox().Width, circle.VolumeWidth(), 1e-9);
+            Assert.AreNotEqual(circle.MosaicShape.BoundingBox().Width, circle.VolumeWidth(), "the test affine scales the section");
         }
 
         [TestMethod]
