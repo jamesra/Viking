@@ -116,6 +116,12 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
 
 ## Algorithmic decisions
 
+- **2026-11-02 The correction service sends the full TLS chain (leaf plus intermediates), not the leaf alone.** Why:
+  Viking's gRPC client (Grpc.Core, C-core) does not fetch missing intermediates through AIA, so a leaf-only handshake
+  failed with `Unavailable: failed to connect to all addresses` against `corrections.codepharm.net`, while browsers and
+  `curl` (which do chase AIA) succeeded. `openssl s_client` now shows 3 certificates, verify code 0 (leaf, Let's
+  Encrypt YR2, Root YR). Rejected: asking clients to install the intermediate (every machine, every renewal).
+  Where: `Servers/GrpcSectionCorrectionService/DockerTlsCertificate.cs` (`ServerCertificateChain`), commit `4c26dc38`.
 - **2026-10-29 Link markers stay inside the polygon: a staggered second row, then smaller markers, before free space**
   (ported from VikingLegacy 124f3ec8, same day). Why: James's RC2 screenshots of cell C 45733 (location 386775,
   section 645, two links down to 643 and three up to 646). Level, the run's ends held only four markers: five in one
