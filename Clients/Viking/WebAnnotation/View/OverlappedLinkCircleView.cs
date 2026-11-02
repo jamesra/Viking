@@ -284,16 +284,41 @@ namespace WebAnnotation.View
 
         /// <summary>
         /// Draws the markers of <paramref name="listToDraw"/>, skipping those Del hid and all of them while a pen command
-        /// hides location links (<see cref="PenLocationLinks.Hidden"/>). Called by the circle, polygon and closed curve views.
+        /// hides location links (<see cref="PenLocationLinks.Hidden"/>). Called by the circle, polygon and closed curve views
+        /// before they draw their own shape.
         /// </summary>
+        /// <remarks>
+        /// The markers are drawn one stencil value above the host's, and every pixel of a marker's disc writes it, transparent
+        /// ones included, so the host's fill drawn next at its own value cannot colour the gaps inside the arrows.
+        /// </remarks>
         public static void Draw(GraphicsDevice device,
                           VikingXNA.Scene scene,
                           BasicEffect basicEffect,
                           OverlayShaderEffect overlayEffect,
                           OverlappedLinkCircleView[] listToDraw)
         {
-            if (PenLocationLinks.Hidden)
+            if (PenLocationLinks.Hidden || listToDraw.Length == 0)
                 return;
+
+            int stencilValue = DeviceStateManager.GetDepthStencilValue(device);
+            CompareFunction stencilFunction = device.DepthStencilState.StencilFunction;
+            DeviceStateManager.SetDepthStencilValue(device, stencilValue + 1, stencilFunction);
+            try
+            {
+                DrawMarkers(device, scene, basicEffect, overlayEffect, listToDraw);
+            }
+            finally
+            {
+                DeviceStateManager.SetDepthStencilValue(device, stencilValue, stencilFunction);
+            }
+        }
+
+        private static void DrawMarkers(GraphicsDevice device,
+                          VikingXNA.Scene scene,
+                          BasicEffect basicEffect,
+                          OverlayShaderEffect overlayEffect,
+                          OverlappedLinkCircleView[] listToDraw)
+        {
 
             OverlappedLocationLinkView[] linkViewArray = [.. listToDraw.SelectMany(l => l.linkViews)];
             TemporarilyHiddenAnnotations? hidden = Hidden;

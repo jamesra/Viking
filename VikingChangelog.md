@@ -25,7 +25,8 @@ Documentation/source/Client/versionhistory.rst.
 
 ## 1.2.137 — not yet released
 
-* **Link markers have a border.** The up and down arrow markers for links to locations on the sections above and below now have a thin border in the label outline color (**Annotation Preferences**), so they stand out from the image as labels do.
+* **Arrow markers have a border.** The up and down arrows, both the markers for links to locations on the sections above and below and the arrows that show locations on the adjacent sections, now have a thin, smooth border in the label outline color (**Annotation Preferences**), so they stand out from the image as labels do. The gaps inside a link marker show the image, not the colour of the annotation under it.
+<!-- TextureCircleView draws Up/DownArrowTexture from their MarkerOutlineMaps (signed distance field, LINEAR MarkerMapSampler). OverlappedLinkCircleView.Draw raises the stencil for every marker disc so the host's fill skips it. -->
 * **Auto-polygonize only outlines cells.** It no longer proposes outlines for the circles of child structures such as caveolae, synapses and other organelles, which keep their circles.
 * **Fix: auto-polygonize outlines follow edits to neighbouring cells.** Cell outlines never overlap, so a proposed outline already stays clear of the cells beside it. It now also adjusts when you change one of those cells (for example refining its boundary with the pen), instead of only when you accept a proposal: it gives up the area the cell now covers and takes back area the cell no longer covers.
 <!-- AutoPolygonizeSelection.IsCell: the location's structure has no parent; a structure not loaded yet is skipped until a later pass. -->

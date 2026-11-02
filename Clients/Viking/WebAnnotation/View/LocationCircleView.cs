@@ -505,9 +505,6 @@ namespace WebAnnotation.View
                           OverlayShaderEffect overlayEffect,
                           LocationCircleView[] listToDraw)
         {
-            int stencilValue = DeviceStateManager.GetDepthStencilValue(device);
-            DeviceStateManager.SetDepthStencilValue(device, stencilValue + 1);
-
             float[] originalAlpha = [.. listToDraw.Select(loc => loc.Alpha)];
             float[] fadeFactor = [.. listToDraw.Select(loc => loc.GetAlphaFadeScalarForScene(scene))];
             var overlay = AnnotationOverlay.CurrentOverlay;
@@ -523,8 +520,6 @@ namespace WebAnnotation.View
 
             OverlappedLinkCircleView[] overlappedLocations = [.. listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene))];
             OverlappedLinkCircleView.Draw(device, scene, basicEffect, overlayEffect, overlappedLocations);
-
-            DeviceStateManager.SetDepthStencilValue(device, stencilValue);
 
             CircleView[] backgroundCircles = [.. listToDraw.Select(l => l.circleView)];
             overlayEffect.InputLumaAlphaValue = 0.5f;

@@ -87,8 +87,9 @@ namespace VikingXNAGraphics
         public static Texture2D ScissorsTexture;
 
         /// <summary>
-        /// <see cref="UpArrowTexture"/> and <see cref="DownArrowTexture"/> as <see cref="MarkerOutlineMap"/>s, for arrows drawn with a
-        /// contrasting border (<see cref="TextureCircleView.CreateOutlinedUpArrow"/>). Null until the host builds them with <see cref="CreateOutlinedMarker"/>.
+        /// <see cref="UpArrowTexture"/> and <see cref="DownArrowTexture"/> as <see cref="MarkerOutlineMap"/>s, which
+        /// <see cref="TextureCircleView"/> draws in place of either arrow so every arrow gets a contrasting border
+        /// (<see cref="TextureCircleView.ArrowBorderColor"/>). Null until the host builds them with <see cref="CreateOutlinedMarker"/>.
         /// </summary>
         public static Texture2D UpArrowOutlinedTexture;
         public static Texture2D DownArrowOutlinedTexture;

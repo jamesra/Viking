@@ -514,8 +514,9 @@ PixelShaderOutput CircleGrayscaleTextureOverBackgroundLumaPixelShaderFunction(Lu
 //As CircleGrayscaleTextureOverBackgroundLumaPixelShaderFunction, over a contrasting border in markerBorderColor that is
 //markerBorderWidth screen pixels wide however large the icon is drawn. The texture is a MarkerOutlineMap (see MarkerOutlineMap.cs):
 //its G is a distance in texture coordinates, which the screen-space slope of the texture coordinates turns into screen pixels, so the
-//icon's edge and the border are both antialiased over one screen pixel at any size. Pixels with neither are clipped, so the gaps
-//inside the icon are transparent and write no depth.
+//icon's edge and the border are both antialiased over one screen pixel at any size. Pixels with neither are drawn fully transparent
+//but not clipped: every pixel of the disc writes the marker's stencil value, so the annotation drawn under the marker cannot colour
+//the gaps inside the icon (OverlappedLinkCircleView.Draw).
 PixelShaderOutput CircleGrayscaleTextureOutlinedOverBackgroundLumaPixelShaderFunction(LumaTexturePixelShaderInput input)
 {
 	PixelShaderOutput output;
@@ -532,14 +533,13 @@ PixelShaderOutput CircleGrayscaleTextureOutlinedOverBackgroundLumaPixelShaderFun
 	//G clamps to 0 beyond the field's range, which a small marker can reach within the border: no border there
 	float borderAlpha = (1 - smoothstep(markerBorderWidth - halfBlur, markerBorderWidth + halfBlur, edgeDistance)) * saturate(map.g * 255);
 	float alpha = fillAlpha + borderAlpha * (1 - fillAlpha);
-	clip(alpha <= (1.0 / 255.0) ? -1.0 : 1.0);
 
 	float2 ScreenTexCoord = input.Position.xy / input.Position.w;
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((ScreenTexCoord.xy) / (RenderTargetSize.xy)));
 	float4 fill = BlendHCLColorOverBackground(input.HSLColor, RGBBackgroundColor, 1.0f - map.a);
 
 	//The icon over its border, unpremultiplied like the plain icon's output
-	output.Color.rgb = ((fill.rgb * fillAlpha) + (markerBorderColor * borderAlpha * (1 - fillAlpha))) / alpha;
+	output.Color.rgb = ((fill.rgb * fillAlpha) + (markerBorderColor * borderAlpha * (1 - fillAlpha))) / max(alpha, 0.00001);
 	output.Color.a = alpha * input.HSLColor.a;
 	output.Depth = CenterDistSquared;
 

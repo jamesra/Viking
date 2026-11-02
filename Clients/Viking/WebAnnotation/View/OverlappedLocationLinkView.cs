@@ -111,19 +111,7 @@ namespace WebAnnotation.View
                 _Color = labelColor
             };
             Microsoft.Xna.Framework.Color color = linkedObj.Parent.Type.Color.ToXNAColor(0.75f);
-            Microsoft.Xna.Framework.Color border = BorderColor();
-            circleView = Up ? TextureCircleView.CreateOutlinedUpArrow(gridCircle, color, border) : TextureCircleView.CreateOutlinedDownArrow(gridCircle, color, border);
-        }
-
-        /// <summary>
-        /// The arrow's border color: the outline color the label outline preference gives labels (white when it is off, as for link
-        /// labels), so markers stand out from the image as labels do.
-        /// </summary>
-        internal static Microsoft.Xna.Framework.Color BorderColor()
-        {
-            LabelOutlineStyle style = LabelView.OutlineStyleAccessor();
-            return LabelView.OutlineColors(Microsoft.Xna.Framework.Color.Black,
-                style == LabelOutlineStyle.Off ? LabelOutlineStyle.BlackTextWhiteOutline : style).Outline;
+            circleView = Up ? TextureCircleView.CreateUpArrow(gridCircle, color) : TextureCircleView.CreateDownArrow(gridCircle, color);
         }
 
         public static void Draw(GraphicsDevice device,
@@ -132,14 +120,6 @@ namespace WebAnnotation.View
                           OverlayShaderEffect overlayEffect,
                           OverlappedLocationLinkView[] listToDraw)
         {
-            // The preference can change while the view lives, so the border follows it each frame
-            Microsoft.Xna.Framework.Color border = BorderColor();
-            foreach (OverlappedLocationLinkView l in listToDraw)
-            {
-                if (l.circleView.BorderColor.HasValue)
-                    l.circleView.BorderColor = border;
-            }
-
             TextureCircleView[] backgroundCircles = [.. listToDraw.Select(l => l.circleView)];
             TextureCircleView.Draw(device, scene, OverlayStyle.Luma, [.. backgroundCircles]);
         }
