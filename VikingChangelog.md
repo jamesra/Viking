@@ -21,7 +21,7 @@ version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. 
 Documentation/source/Client/versionhistory.rst.
 -->
 
-## 1.2.136 — not yet released
+## 1.2.136 — 2026-11-01 (Viking Test, unsigned)
 
 * **Fix: Go To Location zoom on scaled sections.** Jumping to a location now zooms to its size as drawn in the volume. On sections that map into the volume at a different scale, such as CMP sections, it used the size on the section image and opened far too close, often at the closest zoom.
 * **Fewer points on auto-segmented polygons.** Auto-polygonize and **Segment** rings no longer keep denser control points than **Pen Simplify Threshold** (Annotation Preferences) when zoomed in. The outline still follows the segmentation within that same tolerance as pen / **Simplify Polygon**.
