@@ -12,7 +12,8 @@
 --
 -- X, Y, VolumeX, VolumeY and Radius are computed columns, so only MosaicShape and VolumeShape are written.
 -- Username and LastModified are kept: the Location_update trigger, which stamps LastModified, is disabled inside the
--- transaction and enabled again before it ends. The script stops if dbo.Location has any other UPDATE trigger. While it
+-- transaction and left as it was found before it ends (enabled again only if it was enabled). The script stops if
+-- dbo.Location has any other enabled UPDATE trigger; disabled ones are ignored. While it
 -- runs, its schema lock makes other edits to Location wait.
 -- Each UPDATE matches the row's Version as read at generation time. If any row was edited since, the counts will not match
 -- and everything is rolled back; regenerate the script then.
@@ -38,15 +39,18 @@ DECLARE @Expected int = 44;
 DECLARE @Updated int = 0;
 
 IF EXISTS (SELECT 1 FROM sys.triggers t JOIN sys.trigger_events e ON e.object_id = t.object_id
-           WHERE t.parent_id = OBJECT_ID(N'dbo.Location') AND e.type_desc = N'UPDATE' AND t.name <> N'Location_update')
+           WHERE t.parent_id = OBJECT_ID(N'dbo.Location') AND e.type_desc = N'UPDATE' AND t.name <> N'Location_update'
+             AND t.is_disabled = 0)
 BEGIN
-    RAISERROR(N'dbo.Location has an UPDATE trigger other than Location_update; review it before running this script.', 16, 1);
+    RAISERROR(N'dbo.Location has an enabled UPDATE trigger other than Location_update; review it before running this script.', 16, 1);
     RETURN;
 END
 
 BEGIN TRANSACTION;
 
-IF OBJECT_ID(N'dbo.Location_update', N'TR') IS NOT NULL
+DECLARE @ReenableTrigger bit = CASE WHEN EXISTS (SELECT 1 FROM sys.triggers WHERE parent_id = OBJECT_ID(N'dbo.Location')
+                                                  AND name = N'Location_update' AND is_disabled = 0) THEN 1 ELSE 0 END;
+IF @ReenableTrigger = 1
     DISABLE TRIGGER dbo.Location_update ON dbo.Location;
 -- A: 439   114791 c298     CIRCLE       2018-01-22 rpfeiffer     X,Y=(4147,4131) V=(9783,26723) rM=980.3 rV=980.3
 UPDATE dbo.Location SET MosaicShape = geometry::STGeomFromText(N'CURVEPOLYGON (CIRCULARSTRING (4178.275899751505 4130.686455583668, 4147.202100910184 4161.760254424989, 4116.1283020688625 4130.686455583668, 4147.202100910184 4099.612656742347, 4178.275899751505 4130.686455583668))', 0), VolumeShape = geometry::STGeomFromText(N'CURVEPOLYGON (CIRCULARSTRING (10763.723405457356 26723.082, 9783.452 27703.353405457354, 8803.180594542642 26723.082, 9783.452 25742.810594542643, 10763.723405457356 26723.082))', 0) WHERE ID = 114791 AND Version = 0x00000000002BD769;
@@ -181,7 +185,7 @@ SET @Updated += @@ROWCOUNT;
 UPDATE dbo.Location SET MosaicShape = geometry::STGeomFromText(N'CURVEPOLYGON (CIRCULARSTRING (2148.449731407085 2818.897145955856, 2139.8537283245314 2827.4931490384097, 2131.257725241978 2818.897145955856, 2139.8537283245314 2810.3011428733025, 2148.449731407085 2818.897145955856))', 0), VolumeShape = geometry::STGeomFromText(N'CURVEPOLYGON (CIRCULARSTRING (28551.831412925923 4323.348, 28298.193 4576.986412925923, 28044.554587074075 4323.348, 28298.193 4069.709587074077, 28551.831412925923 4323.348))', 0) WHERE ID = 317624 AND Version = 0x000000000035B5D2;
 SET @Updated += @@ROWCOUNT;
 
-IF OBJECT_ID(N'dbo.Location_update', N'TR') IS NOT NULL
+IF @ReenableTrigger = 1
     ENABLE TRIGGER dbo.Location_update ON dbo.Location;
 
 PRINT CONCAT('Rows updated: ', @Updated, ' of ', @Expected, ' expected.');
