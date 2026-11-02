@@ -12,9 +12,9 @@
     <ManifestTimestampUrl>http://timestamp.digicert.com</ManifestTimestampUrl>
     <ProductName>Viking</ProductName>
     <PublisherName>Marc Lab</PublisherName>
-    <ApplicationVersion>1.2.136.0</ApplicationVersion>
-    <FileVersion>1.2.136.0</FileVersion>
-    <AssemblyVersion>1.2.136.0</AssemblyVersion>
+    <ApplicationVersion>1.2.137.0</ApplicationVersion>
+    <FileVersion>1.2.137.0</FileVersion>
+    <AssemblyVersion>1.2.137.0</AssemblyVersion>
     <Deterministic>True</Deterministic>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <NoWarn>$(NoWarn);CS0436;CA1014;CS3009</NoWarn>
@@ -128,7 +128,8 @@
     <WriteLinesToFile File="$(OutputPath)debug_output.txt" Lines="Debug output will be captured here when Viking runs" Overwrite="true" />
   </Target>
   <PropertyGroup>
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <!-- Viking ships 64-bit only (PublishVelopack.ps1 packs win-x64). -->
+    <PlatformTarget>x64</PlatformTarget>
     <Title>Viking</Title>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

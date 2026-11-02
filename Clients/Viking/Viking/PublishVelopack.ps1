@@ -777,6 +777,8 @@ $packArgs = @(
     "--packVersion", $Version,
     "--packDir", $publishDir,
     "--mainExe", "Viking.exe",
+    # Viking ships 64-bit only; without --runtime vpk labels the package x86.
+    "--runtime", "win-x64",
     "--outputDir", $releaseDir,
     "--verbose"
 )
