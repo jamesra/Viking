@@ -26,6 +26,8 @@ Documentation/source/Client/versionhistory.rst.
 ## 1.2.137 — not yet released
 
 * **Link markers have a border.** The up and down arrow markers for links to locations on the sections above and below now have a thin border in the label outline color (**Annotation Preferences**), so they stand out from the image as labels do.
+* **Auto-polygonize only outlines cells.** It no longer proposes outlines for the circles of child structures such as caveolae, synapses and other organelles, which keep their circles.
+<!-- AutoPolygonizeSelection.IsCell: the location's structure has no parent; a structure not loaded yet is skipped until a later pass. -->
 <!-- MarkerOutlineMap (arrow shrunk to 0.85 with a distance ramp in G) + BillboardAnnotation.fx CircleSingleColorTextureLumaOutlinedOverlayEffect; width and blur are LabelOutlineEffect.OutlineWidth / OutlineBlur in screen pixels. Viking.exe is now built x64 and packed --runtime win-x64. -->
 
 ## 1.2.136 — 2026-11-02 (release)

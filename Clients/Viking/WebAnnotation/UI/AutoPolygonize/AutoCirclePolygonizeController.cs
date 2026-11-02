@@ -1896,12 +1896,12 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// A circle auto-polygonize may send for this view: away from the edges, wholly on screen and above the
-        /// minimum radius. See <see cref="AutoPolygonizeSelection"/>.IsEligibleCircle.
+        /// A circle auto-polygonize may send for this view: a cell's (<see cref="AutoPolygonizeSelection.IsCell"/>), away
+        /// from the edges, wholly on screen and above the minimum radius. See <see cref="AutoPolygonizeSelection"/>.IsEligibleCircle.
         /// </summary>
         private static bool IsEligibleCircleInView(LocationObj loc, Rectangle viewBounds, Rectangle inset)
         {
-            return AutoPolygonizeSelection.IsEligibleCircle(
+            return AutoPolygonizeSelection.IsCell(loc.Parent) && AutoPolygonizeSelection.IsEligibleCircle(
                 loc.TypeCode,
                 loc.VolumeCenter(),
                 inset,
@@ -2165,14 +2165,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             Rectangle viewBounds = GetCurrentViewportBounds();
             Rectangle inset = AutoPolygonizeSelection.InsetBounds(viewBounds);
-            if (!AutoPolygonizeSelection.IsEligibleCircle(
-                    circle.TypeCode,
-                    circle.VolumeCenter(),
-                    inset,
-                    viewBounds,
-                    circle.Radius,
-                    Global.Scale.X,
-                    Global.AnnotationSettings.AutoPolygonizeMinRadiusNanometers))
+            if (!IsEligibleCircleInView(circle, viewBounds, inset))
             {
                 cache.Remove(locationId);
                 return;

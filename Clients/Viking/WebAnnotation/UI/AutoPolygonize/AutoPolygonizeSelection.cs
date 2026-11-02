@@ -82,6 +82,13 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
+        /// True when <paramref name="structure"/> is a cell: a structure with no parent. Only cells are auto-polygonized;
+        /// child structures (synapses, caveolae and other organelles) keep their circles. False while the structure is
+        /// not loaded yet; a later pass picks the circle up once it is.
+        /// </summary>
+        public static bool IsCell(StructureObj? structure) => structure is not null && !structure.ParentID.HasValue;
+
+        /// <summary>
         /// True for a circle whose volume center is inside the inset bounds.
         /// </summary>
         public static bool IsEligibleCircle(LocationType typeCode, Vector2 volumeCenter, Rectangle inset)
