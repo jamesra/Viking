@@ -23,10 +23,21 @@ from grpc.aio import ServicerContext
 from numpy.typing import NDArray
 
 from segmentation_grpc import (
+    CacheInfo,
+    CreateJobRequest,
+    DeleteJobRequest,
+    DeleteJobResponse,
     GridCell,
     HeldTilesRequest,
     HeldTilesResponse,
+    Job,
+    ListJobsRequest,
+    ListJobsResponse,
+    PutReviewedOutlinesRequest,
+    PutReviewedOutlinesResponse,
+    ReviewedOutline,
     SegmentationResponse,
+    Shape,
     SegmentationServiceServicer,
     SegmentResult,
     SegmentTilesRequest,
@@ -78,6 +89,14 @@ from segmentation_server.shapes import Geometry, ShapeError, parse_shape
 from segmentation_server.tile_ref import TileRef, space_name, valid_space
 from segmentation_server.tile_requests import TileRequestRegistry
 from segmentation_server.tile_store import TileStore, open_tile_store
+from segmentation_server.result_store import (
+    CacheKey,
+    JobRow,
+    ResultStore,
+    StoredOutline,
+    cache_key,
+    open_result_store,
+)
 from segmentation_server.tile_source import TileSource, open_tile_source
 from segmentation_server.tile_work import (
     install_sam2_log_filter,
@@ -535,6 +554,14 @@ class RequestLoadTracker:
             return self._in_flight, self._recent_latency_ms
 
 
+def _server_version() -> str:
+    """This server's package version, as GetServerStatus reports it and the result cache keys on it."""
+    try:
+        return importlib.metadata.version("segmentation_server")
+    except importlib.metadata.PackageNotFoundError:
+        return "0.1.0"
+
+
 class SegmentationServicer(SegmentationServiceServicer):
     """gRPC handlers for tile upload, tile-grid segmentation, held tiles and status.
 
@@ -559,6 +586,7 @@ class SegmentationServicer(SegmentationServiceServicer):
         clock: Callable[[], float] = time.monotonic,
         cache_gpu_max_bytes: int = DEFAULT_GPU_MAX_BYTES,
         cache_tile_idle_seconds: float = DEFAULT_TILE_IDLE_SECONDS,
+        result_store: Optional[ResultStore] = None,
     ) -> None:
         """
         Args:
@@ -584,6 +612,8 @@ class SegmentationServicer(SegmentationServiceServicer):
                 poll status every second while the service picker is open, so this keeps the cost per second fixed
                 however many clients are watching.
             clock: Monotonic clock for the status cache (inject in tests).
+            result_store: Finished segmentations by location (:mod:`result_store`); read from the environment if
+                omitted (None there when ``SEGMENTATION_RESULTS_DIR`` is unset: nothing is cached).
         """
         if model is None:
             from segmentation_server.segmentation_service import SegmentationModel as _SegmentationModel
@@ -633,6 +663,7 @@ class SegmentationServicer(SegmentationServiceServicer):
         self._tile_requests = TileRequestRegistry()
         self._tile_store = tile_store if tile_store is not None else open_tile_store()
         self._tile_source = tile_source if tile_source is not None else open_tile_source()
+        self._results = result_store if result_store is not None else open_result_store()
         self._limits = RequestLimits.from_env()
         self._active_streams = 0
         # Image decoding, prompt rasterization and response encoding are CPU work. They get their own small pool so a
@@ -860,10 +891,7 @@ class SegmentationServicer(SegmentationServiceServicer):
 
     async def _build_server_status(self, compile_status: str, encoder_generation: str) -> ServerStatusResponse:
         """A fresh GetServerStatus answer."""
-        try:
-            version = importlib.metadata.version("segmentation_server")
-        except importlib.metadata.PackageNotFoundError:
-            version = "0.1.0"
+        version = _server_version()
         uptime_seconds = time.monotonic() - self._server_start_time if self._server_start_time else 0.0
         cache_stats = await self.image_cache.get_stats()
         device = getattr(self.model, "device", "unknown")
@@ -1050,6 +1078,14 @@ class SegmentationServicer(SegmentationServiceServicer):
         if not await self._read_mask_tiles(request, request_iterator, mask_tiles, context):
             return
 
+        # A request naming its locations may be answered from the result cache: no tiles, no model, no stream limit.
+        key = self._cache_key(request, mask_tiles)
+        if key is not None and not request.refresh:
+            cached = await self._cached_response(request, key)
+            if cached is not None:
+                yield SegmentTilesStreamResponse(result=cached)
+                return
+
         if self._active_streams >= self._limits.max_concurrent_streams:
             await self._abort_over_limit(
                 context,
@@ -1189,6 +1225,9 @@ class SegmentationServicer(SegmentationServiceServicer):
             response = await self._stream_result(
                 request, outcomes, session, start, tag, progress["rounds"], start_time, settings.mask_threshold
             )
+            if key is not None:
+                await self._remember_result(request, key, response)
+                await self._attach_reviewed(request, response)
             yield SegmentTilesStreamResponse(result=response)
         finally:
             reader.close()
@@ -1197,6 +1236,197 @@ class SegmentationServicer(SegmentationServiceServicer):
                 await self.image_cache.release_image(image_id)
             self._active_streams -= 1
             self._load.end(time.perf_counter() - start_time)
+
+    # -- result cache ------------------------------------------------------------------------------------------------
+
+    def _cache_key(self, request: SegmentTilesRequest, mask_tiles: MaskTileCollector) -> Optional[CacheKey]:
+        """The request's result-cache key, or None when there is no cache or the request names no location."""
+        if self._results is None:
+            return None
+        return cache_key(request, mask_tiles.digest(), self._manifest.model_version, _server_version())
+
+    @staticmethod
+    def _job_id(request: SegmentTilesRequest) -> int:
+        return int(request.job_id) if request.HasField("job_id") else 0
+
+    async def _run_store(self, call: Callable[[], Any], what: str) -> Any:
+        """Run one result-store call on the CPU pool. A failure is logged and gives None: the cache never fails a call."""
+        try:
+            return await asyncio.get_running_loop().run_in_executor(self._cpu_executor, call)
+        except Exception:
+            logger.exception("Result cache %s failed", what)
+            return None
+
+    async def _cached_response(self, request: SegmentTilesRequest, key: CacheKey) -> Optional[SegmentationResponse]:
+        """The cached answer for ``key``, made out as this request's answer, or None on a miss."""
+        assert self._results is not None
+        store = self._results
+        volume = request.grid.volume
+        job_id = self._job_id(request)
+        cached = await self._run_store(lambda: store.lookup(volume, key, job_id), "lookup")
+        if cached is None:
+            return None
+        response = SegmentationResponse()
+        try:
+            response.ParseFromString(cached.response)
+        except Exception:
+            logger.exception("Result cache row for %s on %s is unreadable; segmenting anew", key.location_key, volume)
+            return None
+        response.request_id = request.request_id
+        response.cache.CopyFrom(CacheInfo(created_ticks=cached.created_ticks, model_version=key.model_version))
+        await self._attach_reviewed(request, response)
+        logger.info(
+            "SegmentTiles cached req=%s vol=%s sec=%s ds=%s locations=%s key=%s segments=%d reviewed=%s",
+            request.request_id,
+            volume,
+            request.grid.section,
+            request.grid.downsample,
+            list(key.location_ids),
+            key.location_key,
+            len(response.segments),
+            response.HasField("reviewed"),
+        )
+        return response
+
+    async def _remember_result(self, request: SegmentTilesRequest, key: CacheKey, response: SegmentationResponse) -> None:
+        """Keep a fresh answer under ``key``, without the parts that belong to one call."""
+        assert self._results is not None
+        store = self._results
+        kept = SegmentationResponse()
+        kept.CopyFrom(response)
+        kept.request_id = 0
+        kept.ClearField("cache")
+        kept.ClearField("reviewed")
+        payload = kept.SerializeToString()
+        volume = request.grid.volume
+        job_id = self._job_id(request)
+        await self._run_store(lambda: store.store(volume, key, payload, job_id), "store")
+
+    async def _attach_reviewed(self, request: SegmentTilesRequest, response: SegmentationResponse) -> None:
+        """Add the reviewed outline of a single-location request whose location has not been edited since review."""
+        if self._results is None or len(request.locations) != 1:
+            return
+        store = self._results
+        ref = request.locations[0]
+        volume = request.grid.volume
+        stored = await self._run_store(
+            lambda: store.reviewed(volume, int(ref.id), int(ref.last_modified_ticks)), "reviewed lookup"
+        )
+        if stored is None:
+            return
+        outline = Shape()
+        try:
+            outline.ParseFromString(stored.outline)
+        except Exception:
+            logger.exception("Reviewed outline of location %s on %s is unreadable", stored.location_id, volume)
+            return
+        response.reviewed.CopyFrom(
+            ReviewedOutline(
+                location_id=stored.location_id,
+                last_modified_ticks=stored.last_modified_ticks,
+                outline=outline,
+                state=stored.state,
+                reviewed_ticks=stored.reviewed_ticks,
+                reviewer=stored.reviewer,
+            )
+        )
+
+    async def _store_or_abort(self, context: ServicerContext, rpc: str) -> Optional[ResultStore]:
+        if self._results is None:
+            await context.abort(
+                grpc.StatusCode.FAILED_PRECONDITION,
+                f"{rpc}: this server has no result cache (SEGMENTATION_RESULTS_DIR is unset).",
+            )
+            return None
+        return self._results
+
+    async def _volume_or_abort(self, volume: str, context: ServicerContext, rpc: str) -> bool:
+        if not volume.strip():
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, f"{rpc} requires a volume.")
+            return False
+        return True
+
+    async def PutReviewedOutlines(
+        self, request: PutReviewedOutlinesRequest, context: ServicerContext
+    ) -> PutReviewedOutlinesResponse:
+        """Store and remove reviewed outlines; they ride along with later segmentations of their locations."""
+        store = await self._store_or_abort(context, "PutReviewedOutlines")
+        if store is None or not await self._volume_or_abort(request.volume, context, "PutReviewedOutlines"):
+            return PutReviewedOutlinesResponse()
+        outlines: List[StoredOutline] = []
+        for outline in request.outlines:
+            if outline.outline.WhichOneof("kind") not in ("polygon", "line", "circle", "ellipse"):
+                await context.abort(
+                    grpc.StatusCode.INVALID_ARGUMENT,
+                    f"Reviewed outline of location {outline.location_id} needs a polygon, line, circle or ellipse.",
+                )
+                return PutReviewedOutlinesResponse()
+            outlines.append(
+                StoredOutline(
+                    location_id=int(outline.location_id),
+                    last_modified_ticks=int(outline.last_modified_ticks),
+                    outline=outline.outline.SerializeToString(),
+                    state=outline.state or "approved",
+                    reviewed_ticks=int(outline.reviewed_ticks),
+                    reviewer=outline.reviewer,
+                )
+            )
+        volume = request.volume
+        removals = [int(location_id) for location_id in request.remove_location_ids]
+        counts = await self._run_store(lambda: store.put_reviewed(volume, outlines, removals), "reviewed store")
+        if counts is None:
+            await context.abort(grpc.StatusCode.INTERNAL, "Could not store the reviewed outlines.")
+            return PutReviewedOutlinesResponse()
+        logger.info("PutReviewedOutlines vol=%s stored=%d removed=%d", volume, counts[0], counts[1])
+        return PutReviewedOutlinesResponse(stored=counts[0], removed=counts[1])
+
+    @staticmethod
+    def _job_message(volume: str, row: JobRow) -> Job:
+        return Job(
+            job_id=row.job_id,
+            volume=volume,
+            title=row.title,
+            username=row.username,
+            description=row.description,
+            kind=row.kind,
+            created_ticks=row.created_ticks,
+            linked=row.linked,
+        )
+
+    async def CreateJob(self, request: CreateJobRequest, context: ServicerContext) -> Job:
+        """A new job: rows its requests link to it (SegmentTilesRequest.job_id) are kept from eviction."""
+        store = await self._store_or_abort(context, "CreateJob")
+        if store is None or not await self._volume_or_abort(request.volume, context, "CreateJob"):
+            return Job()
+        volume = request.volume
+        row = await self._run_store(
+            lambda: store.create_job(volume, request.title, request.username, request.description, request.kind),
+            "job create",
+        )
+        if row is None:
+            await context.abort(grpc.StatusCode.INTERNAL, "Could not create the job.")
+            return Job()
+        logger.info("CreateJob vol=%s job=%s kind=%s by %s: %s", volume, row.job_id, row.kind, row.username, row.title)
+        return self._job_message(volume, row)
+
+    async def DeleteJob(self, request: DeleteJobRequest, context: ServicerContext) -> DeleteJobResponse:
+        """Remove a job; its rows age out like any other."""
+        store = await self._store_or_abort(context, "DeleteJob")
+        if store is None or not await self._volume_or_abort(request.volume, context, "DeleteJob"):
+            return DeleteJobResponse()
+        volume = request.volume
+        job_id = int(request.job_id)
+        deleted = await self._run_store(lambda: store.delete_job(volume, job_id), "job delete")
+        logger.info("DeleteJob vol=%s job=%s deleted=%s", volume, job_id, bool(deleted))
+        return DeleteJobResponse(deleted=bool(deleted))
+
+    async def ListJobs(self, request: ListJobsRequest, context: ServicerContext) -> ListJobsResponse:
+        store = await self._store_or_abort(context, "ListJobs")
+        if store is None or not await self._volume_or_abort(request.volume, context, "ListJobs"):
+            return ListJobsResponse()
+        volume = request.volume
+        rows = await self._run_store(lambda: store.list_jobs(volume), "job list") or []
+        return ListJobsResponse(jobs=[self._job_message(volume, row) for row in rows])
 
     async def _validate_stream_start(self, request: SegmentTilesRequest, context: ServicerContext) -> Optional[_Start]:
         """Check a ``start`` message and read its prompt. Returns None after an abort.

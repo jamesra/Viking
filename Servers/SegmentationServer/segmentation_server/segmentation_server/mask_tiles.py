@@ -12,6 +12,7 @@ each bitmap is complete once they have arrived: a tile not sent is empty.
 
 from __future__ import annotations
 
+import hashlib
 from typing import Any, List, Optional, Tuple, Union
 
 import cv2
@@ -241,6 +242,8 @@ class MaskTileCollector:
         self.foreground = TiledMaskShape(complete=False)
         self.background = TiledMaskShape(complete=False)
         self.received = 0
+        # One line per tile as sent, for the result cache's prompt key (see digest).
+        self._fingerprints: List[str] = []
 
     @property
     def done(self) -> bool:
@@ -265,7 +268,17 @@ class MaskTileCollector:
                 raise MaskTileError(f"More mask tiles were sent than the {self.announced} announced.")
             shape.settle(key, decode_mask_tile(tile))
             self.received += 1
+            self._fingerprints.append(
+                f"{kind}:{key[0]}:{key[1]}:{int(bool(tile.full))}:{int(tile.scale)}:"
+                f"{hashlib.sha256(bytes(tile.png)).hexdigest()}"
+            )
         return len(message.tiles)
+
+    def digest(self) -> str:
+        """The painted bitmaps as one hash, independent of the order the tiles were sent in. ``-`` when none."""
+        if not self._fingerprints:
+            return "-"
+        return hashlib.sha256("\n".join(sorted(self._fingerprints)).encode("ascii")).hexdigest()
 
     def foreground_shape(self) -> Optional[TiledMaskShape]:
         """The foreground bitmap, complete, or None when it holds no pixel."""

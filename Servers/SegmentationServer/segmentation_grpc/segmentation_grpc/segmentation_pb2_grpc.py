@@ -57,6 +57,26 @@ class SegmentationServiceStub:
                 request_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ServerStatusRequest.SerializeToString,
                 response_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ServerStatusResponse.FromString,
                 _registered_method=True)
+        self.PutReviewedOutlines = channel.unary_unary(
+                '/segmentation.SegmentationService/PutReviewedOutlines',
+                request_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.PutReviewedOutlinesRequest.SerializeToString,
+                response_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.PutReviewedOutlinesResponse.FromString,
+                _registered_method=True)
+        self.CreateJob = channel.unary_unary(
+                '/segmentation.SegmentationService/CreateJob',
+                request_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.CreateJobRequest.SerializeToString,
+                response_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.Job.FromString,
+                _registered_method=True)
+        self.DeleteJob = channel.unary_unary(
+                '/segmentation.SegmentationService/DeleteJob',
+                request_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.DeleteJobRequest.SerializeToString,
+                response_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.DeleteJobResponse.FromString,
+                _registered_method=True)
+        self.ListJobs = channel.unary_unary(
+                '/segmentation.SegmentationService/ListJobs',
+                request_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ListJobsRequest.SerializeToString,
+                response_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ListJobsResponse.FromString,
+                _registered_method=True)
 
 
 class SegmentationServiceServicer:
@@ -107,6 +127,35 @@ class SegmentationServiceServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def PutReviewedOutlines(self, request, context):
+        """Store or remove outlines a person reviewed (approved or retraced) for single locations. A stored outline is sent
+        as SegmentationResponse.reviewed with every later segmentation of that location until the location is edited.
+        Only a pending proposal is ever made from it: nothing is written to the annotation database.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CreateJob(self, request, context):
+        """A job is a reason to keep cached segmentations: rows linked to a job (SegmentTilesRequest.job_id) are never evicted
+        by the cache's size or age limits. Deleting a job only lifts that protection.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DeleteJob(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListJobs(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SegmentationServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -129,6 +178,26 @@ def add_SegmentationServiceServicer_to_server(servicer, server):
                     servicer.GetServerStatus,
                     request_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ServerStatusRequest.FromString,
                     response_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ServerStatusResponse.SerializeToString,
+            ),
+            'PutReviewedOutlines': grpc.unary_unary_rpc_method_handler(
+                    servicer.PutReviewedOutlines,
+                    request_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.PutReviewedOutlinesRequest.FromString,
+                    response_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.PutReviewedOutlinesResponse.SerializeToString,
+            ),
+            'CreateJob': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateJob,
+                    request_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.CreateJobRequest.FromString,
+                    response_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.Job.SerializeToString,
+            ),
+            'DeleteJob': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteJob,
+                    request_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.DeleteJobRequest.FromString,
+                    response_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.DeleteJobResponse.SerializeToString,
+            ),
+            'ListJobs': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListJobs,
+                    request_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ListJobsRequest.FromString,
+                    response_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ListJobsResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -242,6 +311,114 @@ class SegmentationService:
             '/segmentation.SegmentationService/GetServerStatus',
             Segmentation_dot_SAM2_dot_segmentation__pb2.ServerStatusRequest.SerializeToString,
             Segmentation_dot_SAM2_dot_segmentation__pb2.ServerStatusResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def PutReviewedOutlines(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/segmentation.SegmentationService/PutReviewedOutlines',
+            Segmentation_dot_SAM2_dot_segmentation__pb2.PutReviewedOutlinesRequest.SerializeToString,
+            Segmentation_dot_SAM2_dot_segmentation__pb2.PutReviewedOutlinesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CreateJob(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/segmentation.SegmentationService/CreateJob',
+            Segmentation_dot_SAM2_dot_segmentation__pb2.CreateJobRequest.SerializeToString,
+            Segmentation_dot_SAM2_dot_segmentation__pb2.Job.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DeleteJob(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/segmentation.SegmentationService/DeleteJob',
+            Segmentation_dot_SAM2_dot_segmentation__pb2.DeleteJobRequest.SerializeToString,
+            Segmentation_dot_SAM2_dot_segmentation__pb2.DeleteJobResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListJobs(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/segmentation.SegmentationService/ListJobs',
+            Segmentation_dot_SAM2_dot_segmentation__pb2.ListJobsRequest.SerializeToString,
+            Segmentation_dot_SAM2_dot_segmentation__pb2.ListJobsResponse.FromString,
             options,
             channel_credentials,
             insecure,

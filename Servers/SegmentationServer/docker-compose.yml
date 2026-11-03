@@ -21,6 +21,10 @@
 #   SEGMENTATION_MODEL_HOST  weights + <stem>.model.json manifests, mounted read-only at /models
 #   SEGMENTATION_CACHE_DIR   per-model torch inductor and tile-embedding caches (each model needs its
 #                            own: a server deletes other checkpoints' folders it finds in its cache)
+#   SEGMENTATION_RESULTS_HOST finished segmentations by location, one SQLite file per volume, shared by every
+#                            model container of the host (keys name the model); default
+#                            <SEGMENTATION_CACHE_DIR>/segmentation-results. Local disk only: SQLite locking over a
+#                            network share is not safe.
 
 x-segmentation-build: &segmentation-build
   context: ../..
@@ -63,6 +67,11 @@ x-segmentation-env: &segmentation-env
   # Uploaded tile bytes, so a tile the GPU cache dropped is rebuilt without asking a client. Disk copies go under the embedding cache.
   SEGMENTATION_TILE_RAM_BYTES: ${SEGMENTATION_TILE_RAM_BYTES:-}
   SEGMENTATION_TILE_CACHE_MAX_BYTES: ${SEGMENTATION_TILE_CACHE_MAX_BYTES:-}
+  # Finished segmentations by location (SegmentTilesRequest.locations), reviewed outlines and jobs. Both limits are
+  # optional (empty is none); rows linked to a job and reviewed outlines are never evicted.
+  SEGMENTATION_RESULTS_DIR: /var/cache/segmentation-results
+  SEGMENTATION_RESULTS_MAX_BYTES: ${SEGMENTATION_RESULTS_MAX_BYTES:-}
+  SEGMENTATION_RESULTS_MAX_AGE_DAYS: ${SEGMENTATION_RESULTS_MAX_AGE_DAYS:-}
   # 1 writes the newest 40 growth results to <embedding cache>/debug-dumps for offline inspection.
   SEGMENTATION_DEBUG_DUMP: ${SEGMENTATION_DEBUG_DUMP:-}
   # 1 asks SAM2 for three candidate masks on box prompts. Off until judged on real sections.
@@ -88,9 +97,10 @@ services:
         for d in default; do
         mkdir -p /cache/segmentation-$$d-inductor /cache/segmentation-$$d-embeddings;
         done;
-        chown -R user:user /cache
+        chown -R user:user /cache /results
     volumes:
       - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR:?STACK_DATA_DIR must be set (stack.ps1 exports it)}/cache}:/cache
+      - ${SEGMENTATION_RESULTS_HOST:-${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-results}:/results
     restart: "no"
 
   segmentation-server:
@@ -115,6 +125,7 @@ services:
       - ${SEGMENTATION_MODEL_HOST:-${STACK_DATA_DIR}/models}:/models:ro
       - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-default-inductor:/home/user/.cache/torch_inductor
       - ${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-default-embeddings:/var/cache/segmentation-embeddings
+      - ${SEGMENTATION_RESULTS_HOST:-${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-results}:/var/cache/segmentation-results
       - ${SEGMENTATION_CERT_DIR:-${DOCKER_CERTS_DIR:?DOCKER_CERTS_DIR must be set (stack.ps1 exports it)}/${TLS_CERT_NAME:-${VIKING_DOMAIN:-viking}}}:/tls:ro
 
   # Template for the servers generated from models.json; never started itself. Each generated service
@@ -130,4 +141,5 @@ services:
       SEGMENTATION_DEMO_BIND: "0.0.0.0"
     volumes:
       - ${SEGMENTATION_MODEL_HOST:-${STACK_DATA_DIR}/models}:/models:ro
+      - ${SEGMENTATION_RESULTS_HOST:-${SEGMENTATION_CACHE_DIR:-${STACK_DATA_DIR}/cache}/segmentation-results}:/var/cache/segmentation-results
       - ${SEGMENTATION_CERT_DIR:-${DOCKER_CERTS_DIR}/${TLS_CERT_NAME:-${VIKING_DOMAIN:-viking}}}:/tls:ro
