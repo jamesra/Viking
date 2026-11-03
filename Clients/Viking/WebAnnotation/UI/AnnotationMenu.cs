@@ -23,9 +23,9 @@ namespace WebAnnotation
     {
         private static MergeStructuresForm? _MergeStructuresForm = null;
         private static WebAnnotation.WPF.Forms.AnnotationPreferencesDialog? _preferencesDialog = null;
-        private static ToolStripMenuItem menuPenMode;
-        private static ToolStripMenuItem menuShowPenActionButtons;
-        private static ToolStripMenuItem menuAutoPolygonizeCircles;
+        private static ToolStripMenuItem? menuPenMode;
+        private static ToolStripMenuItem? menuShowPenActionButtons;
+        private static ToolStripMenuItem? menuAutoPolygonizeCircles;
         /// <summary>Cancels the running opacity preview pass. Read and replaced only under <see cref="_circleOpacityUpdateLock"/>.</summary>
         private static CancellationTokenSource? _opacityUpdateCancellationTokenSource;
         private static System.Threading.Timer? _circleOpacityUpdateTimer;
@@ -238,11 +238,14 @@ namespace WebAnnotation
                 locationLinkVisibilityPercent: Global.AnnotationSettings.LocationLinkVisibilityPercent,
                 locationLinkLabels: Global.AnnotationSettings.LocationLinkLabels,
                 hideAnnotationSeconds: Global.AnnotationSettings.HideAnnotationSeconds,
+                labelOutlineEnabled: Global.AnnotationSettings.LabelOutlineEnabled,
+                labelOutlineWhiteText: Global.AnnotationSettings.LabelOutlineWhiteText,
+                barrelButton: Viking.UI.BarrelButtonBinding.Format(Global.AnnotationSettings.BarrelButton),
                 labelRotation: Global.AnnotationSettings.LabelRotation,
                 autoPolygonizeShimmerStyle: Global.AnnotationSettings.AutoPolygonizeShimmerStyle
             );
 
-            VikingXNA.Scene scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
+            VikingXNA.Scene? scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
             if (scene != null)
                 viewModel.NanometersPerPixel = scene.ScreenPixelSizeInVolume * Global.Scale.X;
 
@@ -395,6 +398,9 @@ namespace WebAnnotation
                     Global.AnnotationSettings.CorrectionShimFadeStartDownsample,
                     Global.AnnotationSettings.CorrectionShimFadeEndDownsample,
                     Global.AnnotationSettings.CorrectionShimShowOffset,
+                    labelOutlineEnabled: Global.AnnotationSettings.LabelOutlineEnabled,
+                    labelOutlineWhiteText: Global.AnnotationSettings.LabelOutlineWhiteText,
+                    barrelButton: Viking.UI.BarrelButtonBinding.Format(Global.AnnotationSettings.BarrelButton),
                     labelRotation: Global.AnnotationSettings.LabelRotation,
                     autoPolygonizeShimmerStyle: Global.AnnotationSettings.AutoPolygonizeShimmerStyle
                 );
@@ -497,6 +503,10 @@ namespace WebAnnotation
                 () => Global.AnnotationSettings.LocationLinkLabels = viewModel.LocationLinkLabels);
             Drawn(nameof(viewModel.PolygonPointDiameter),
                 () => Global.AnnotationSettings.PolygonPointDiameter = viewModel.PolygonPointDiameter);
+            Drawn(nameof(viewModel.LabelOutlineEnabled),
+                () => Global.AnnotationSettings.LabelOutlineEnabled = viewModel.LabelOutlineEnabled);
+            Drawn(nameof(viewModel.LabelOutlineWhiteText),
+                () => Global.AnnotationSettings.LabelOutlineWhiteText = viewModel.LabelOutlineWhiteText);
             Drawn(nameof(viewModel.PolygonPointOpacity),
                 () => Global.AnnotationSettings.PolygonPointOpacity = viewModel.PolygonPointOpacity);
             Drawn(nameof(viewModel.HidePolygonPointsInPenMode),
@@ -770,6 +780,8 @@ namespace WebAnnotation
             Global.AnnotationSettings.LocationLinkVisibilityPercent = viewModel.LocationLinkVisibilityPercent;
             Global.AnnotationSettings.LocationLinkLabels = viewModel.LocationLinkLabels;
             Global.AnnotationSettings.HideAnnotationSeconds = viewModel.HideAnnotationSeconds;
+            Global.AnnotationSettings.LabelOutlineEnabled = viewModel.LabelOutlineEnabled;
+            Global.AnnotationSettings.LabelOutlineWhiteText = viewModel.LabelOutlineWhiteText;
             // Normally already applied live by the slider; relay labels only if it was not.
             if (Global.AnnotationSettings.LabelRotation != viewModel.LabelRotation)
             {
@@ -807,6 +819,7 @@ namespace WebAnnotation
                 menuAutoPolygonizeCircles.Checked = viewModel.AutoPolygonizeCircles;
             Global.AnnotationSettings.PolygonPointOpacity = viewModel.PolygonPointOpacity;
             Global.AnnotationSettings.HidePolygonPointsInPenMode = viewModel.HidePolygonPointsInPenMode;
+            Global.AnnotationSettings.BarrelButton = Viking.UI.BarrelButtonBinding.Parse(viewModel.BarrelButton);
             Global.AnnotationSettings.SmallestRenderedSize = viewModel.SmallestRenderedSize;
             Global.AnnotationSettings.PolygonVertexPointsVisibleAtWidthFraction = viewModel.PolygonVertexPointsVisibleAtWidthFraction;
             Global.AnnotationSettings.PolygonVertexPointsHiddenAtWidthFraction = viewModel.PolygonVertexPointsHiddenAtWidthFraction;

@@ -55,7 +55,7 @@ namespace LocalBookmarks
 
         internal bool IsDocumentRoot => Document != null;
 
-        protected static event EventHandler OnCreate;
+        protected static event EventHandler? OnCreate;
         protected void CallOnCreate()
         {
             if (OnCreate != null)

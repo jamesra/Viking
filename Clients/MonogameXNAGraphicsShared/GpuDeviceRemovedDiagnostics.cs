@@ -27,7 +27,7 @@ namespace VikingXNAGraphics
 
         public static bool IsDeviceRemovedError(Exception? ex)
         {
-            for (Exception walk = ex; walk != null; walk = walk.InnerException)
+            for (Exception? walk = ex; walk != null; walk = walk.InnerException)
             {
                 if (IsDeviceRemovedHResult(walk.HResult))
                     return true;
@@ -255,7 +255,7 @@ namespace VikingXNAGraphics
 
         static int FindDeviceRemovedHResult(Exception? ex)
         {
-            for (Exception walk = ex; walk != null; walk = walk.InnerException)
+            for (Exception? walk = ex; walk != null; walk = walk.InnerException)
             {
                 if (IsDeviceRemovedHResult(walk.HResult))
                     return walk.HResult;

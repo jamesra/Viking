@@ -38,7 +38,7 @@ namespace WebAnnotation.ReviewFeed
         }
 
         /// <summary>Fired after <see cref="Apply"/> so the list can rebind and backfill can refresh.</summary>
-        public event EventHandler Changed;
+        public event EventHandler? Changed;
 
         /// <summary>When true and no watch list is set, hide rows from the signed-in user.</summary>
         public bool HideOwnChanges { get; private set; }

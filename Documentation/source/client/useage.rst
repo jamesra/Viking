@@ -26,7 +26,7 @@ The volume has a number of structures:
    #. Small arrows within circles indicating links between overlapping annotations on adjacent sections
    #. White lines indicating links between non-overlapping annotations on adjacent sections.
    #. Other colored discs are child structures (synapses etc.) belonging to a parent structure (cell).
-   #. The space bar toggles the annotations on and off
+   #. Hold the space bar to hide the annotations; hold Ctrl+Space to hide the section image and show only the annotations. Annotations and image return when you release the keys
    #. The status bar at bottom gives the location:
 
       * **Section:** slice number
@@ -50,17 +50,18 @@ Keyboard commands
 
 * **+** and **-** move down and up 1 slice
 * **SHIFT +** and **-** move down and up 10 slices
-* **PageUp/PageDown** Increase/Decrease zoom
-* **Home** Roounds the zoom to the nearest integer.  If the zoom rounds to zero we use a zoom of 200%, downsampled by 0.5. 
+* **Arrow keys** pan the view by a quarter of the screen
+* **PageUp/PageDown** zoom in/out by about 15% per press (the same step as one scroll wheel notch)
+* **Home** rounds the magnification to the nearest power of two (1, 2, 4, 8 ... or 0.5, 0.25 ...)
    
 Menu commands
 =============
 
 * Commands → Go to location → lets you to enter or paste (ctrl v) & jump to a site
-* **Ctrl+C** copies a location
+* **Ctrl+C** copies the position of the mouse pointer as tab-separated X, Y, Z (section number) and DS (downsample) values; paste them into the Go To Location form (ctrl v) to return to that spot
 * Annotation → Open Structure → opens a navigation dialogue for a cell
 * Bookmarks can be used (see below)
-* Channels
+* Section → Channel lists the section's channels; Section → Setup Channels... sets the volume's default channels
 
 Channels
 ========
@@ -68,6 +69,6 @@ Channels
 There are two levels at which channel information is stored, volumes and sections. Default channel information is specified in the VolumeXML file. Section channel information overrides volume channel information. When drawing a section Viking first checks to see if the section specifies which channels should be used. If no channel information is present it then defaults to the volume channel setup. If no channel information is specified at all Viking defaults to displaying greyscale images.
 
 Changing channel setup 
-To override channels for a section right-click section number from the list on the left side. Select Properties from the drop down menu. One of the property page tabs be labeled channels. Select Default and click OK. The image should go to grayscale. Then you can switch channels by selecting Section → Channels from the drop down menu at the top menu bar.
+To override channels for a section right-click section number from the list on the left side. Select Properties from the drop down menu. One of the property page tabs be labeled channels. Select Default and click OK. The image should go to grayscale. Then you can switch channels by selecting Section → Channel from the drop down menu at the top menu bar.
 
 .. _install the software on a PC: https://codepharm.net/Software/Viking4/setup.exe

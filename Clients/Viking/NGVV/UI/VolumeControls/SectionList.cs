@@ -28,7 +28,7 @@ namespace Viking.UI.Controls
 
         protected override void OnObjectDoubleClick(IUIObject obj)
         {
-            SectionViewModel section = obj as SectionViewModel;
+            SectionViewModel? section = obj as SectionViewModel;
             Debug.Assert(section != null);
 
             SectionViewerForm.Show(section);

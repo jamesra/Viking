@@ -78,20 +78,6 @@ namespace Viking.UI.BaseClasses
             }
         }
 
-        public ListViewItem FindItem(IUIObject Obj)
-        {
-            if (Obj is null)
-                return null;
-
-            foreach (ListViewItem Item in ListItems.Items)
-            {
-                if (Item.Tag is IUIObject ItemObj && Obj == ItemObj)
-                    return Item;
-            }
-
-            return null;
-        }
-
         public void ClearItems()
         {
             this.ListItems.BeginUpdate();
@@ -114,13 +100,6 @@ namespace Viking.UI.BaseClasses
             }
         }
 
-        public void RemoveItem(ListViewItem Item)
-        {
-            IUIObject Obj = Item.Tag as IUIObject;
-            RemoveEvents(Obj);
-            ListItems.Items.Remove(Item);
-        }
-
         /// <summary>
         /// Displays a standard DBObject context menu if the users mouse is over an item
         /// </summary>
@@ -131,7 +110,7 @@ namespace Viking.UI.BaseClasses
             if (e.Button == MouseButtons.Right)
             {
                 ListViewItem Item = ListItems.GetItemAt(e.X, e.Y);
-                IContextMenu ObjContextMenu = Item?.Tag as IContextMenu;
+                IContextMenu? ObjContextMenu = Item?.Tag as IContextMenu;
 
                 //If we clicked an item on the list, show the context menu for the item.
                 //Otherwise, show the generic context menu for the item type the list shows. 

@@ -31,7 +31,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
     internal sealed partial class SegmentationViewportSession
     {
         private readonly ISegmentationViewport parent;
-        private SegmentationServiceTypes.SegmentationService.SegmentationServiceClient grpcClient;
+        private SegmentationServiceTypes.SegmentationService.SegmentationServiceClient? grpcClient;
 
         private Geometry.Rectangle? uploadedImageBounds;
         private int uploadedImageWidth;
@@ -94,7 +94,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     return tileUploadLifetime.Token;
             }
         }
-        private CancellationTokenSource uploadCancellationTokenSource;
+        private CancellationTokenSource? uploadCancellationTokenSource;
         private readonly TileUploadCache uploadedTileKeys = new();
 
         /// <summary>Blurred grayscale copies of the tiles captured for SAM2, for the edge snap.</summary>
@@ -113,13 +113,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// request while an earlier response is still being polygonized, so mapping a mask to world space reads this.
         /// </summary>
         private readonly SegmentationResultContexts resultContexts = new();
-        private int mosaicOriginX;
-        private int mosaicOriginY;
 
         /// <summary>
         /// The tile level every request is sent at. Every served model is a single-resolution tile grid, so the level does not
         /// follow zoom: a camera coarser than 1 still uploads at this level until
-        /// <see cref="WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>, which cannot exceed 4
+        /// <see cref="WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>, which cannot exceed 6
         /// (default 2). A camera coarser than that preference does not upload.
         /// </summary>
         private const int TileLevel = 1;
@@ -256,7 +254,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// False when this session enforces the auto-polygonize cutoff (<see cref="EnforceAutoDownsampleLimit"/>)
         /// and the live camera is coarser than
         /// <see cref="WebAnnotation.Global.AnnotationSettings.AutoPolygonizeMaxDownsample"/>.
-        /// Equality still submits. The preference is capped at DS 4 (default 2), so a camera at DS 5
+        /// Equality still submits. The preference is capped at DS 6 (default 2), so a camera at DS 7
         /// never uploads. Called by <see cref="UploadCurrentImageAsync"/> and
         /// <see cref="SegmentAsync"/> before any tile is sent. Auto-segment checks the same
         /// cutoff earlier so an idle batch never starts. A manual operation (Resegment, add points,
@@ -411,6 +409,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Creates the gRPC stub from <see cref="ServiceLocator.GrpcChannelManager"/>. Safe to call repeatedly.
+        /// Every call carries <see cref="Viking.ApplicationShutdown.Token"/>, so closing Viking cancels it.
         /// </summary>
         public bool TryInitializeClient()
         {
@@ -423,7 +422,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     return false;
                 }
 
-                grpcClient = new SegmentationServiceTypes.SegmentationService.SegmentationServiceClient(channel);
+                grpcClient = new SegmentationServiceTypes.SegmentationService.SegmentationServiceClient(
+                    Grpc.Core.Interceptors.ChannelExtensions.Intercept(channel, Viking.Services.Grpc.ShutdownCancellationInterceptor.Instance));
                 BeginServerStatusRefresh(grpcClient);
                 SegmentationDiag.Log("TryInitializeClient: ok");
                 return true;
@@ -489,8 +489,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             uploadedTileKeys.Clear();
             tileImages.Clear();
             mosaicDownsample = ResolveTileDownsample(parent.CameraDownsample);
-            mosaicOriginX = 0;
-            mosaicOriginY = 0;
             Interlocked.Exchange(ref isUploadingImage, 0);
         }
 
@@ -585,7 +583,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             if ((foregroundPoints is null || foregroundPoints.Count == 0) &&
-                (backgroundPoints is null || backgroundPoints.Count == 0))
+                (backgroundPoints is null || backgroundPoints.Count == 0) &&
+                (foregroundBoxes is null || foregroundBoxes.Count == 0))
                 return null;
 
             if (!IsCameraWithinTileSubmission())
@@ -697,10 +696,10 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public IReadOnlyList<Polygon> CreatePolygonsFromResponse(
             SegmentationResponse response,
             double? holeDropFraction = null,
-            IReadOnlyList<Geometry.Vector2> preserveHolesContainingWorldPoints = null,
+            IReadOnlyList<Geometry.Vector2>? preserveHolesContainingWorldPoints = null,
             int? edgeCleanupRadius = null,
             CancellationToken cancellationToken = default,
-            IReadOnlyList<Geometry.Vector2> keepComponentsContainingWorldPoints = null,
+            IReadOnlyList<Geometry.Vector2>? keepComponentsContainingWorldPoints = null,
             bool primaryIslandOnly = false)
         {
             if (response is null || response.Segments.Count == 0)

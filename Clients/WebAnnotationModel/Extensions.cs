@@ -9,29 +9,7 @@ using WebAnnotationModel.Objects;
 namespace WebAnnotationModel
 {
     public static class Extensions
-    {  
-        /*
-        public static SqlGeometry ToGeometry(Vector2[] points, double Z, double radius, LocationType type)
-        {
-            if (points is null)
-            {
-                throw new ArgumentNullException(nameof(points));
-            }
-
-            switch (type)
-            {
-                case LocationType.CIRCLE:
-                    if (points.Length == 4)
-                        return points.ToCurvePolygon();
-                    else
-                        return SqlGeometryUtils.Extensions.ToCircle(points[0].X, points[1].Y, Z, radius);
-                case LocationType.OPENCURVE:
-                    return points.ToSqlGeometry();
-            }
-
-            throw new ArgumentException(string.Format("Unknown location type {0}", type));
-        }
-        */
+    {
 
         /// <summary>
         /// A helper function to raise events on the UI thread if needed. 
@@ -53,10 +31,8 @@ namespace WebAnnotationModel
             }
         }
 
-        public static void RaiseEventOnUIThread(this PropertyChangedEventHandler theEvent, PropertyChangedEventArgs args)
-        {
-            theEvent.RaiseEventOnUIThread(new object[] { args });
-        }
+        /// <summary>Raises a PropertyChanged handler with the (sender, args) pair its signature requires.</summary>
+        public static void RaiseEventOnUIThread(this PropertyChangedEventHandler theEvent, object sender, PropertyChangedEventArgs args) => theEvent.RaiseEventOnUIThread([sender, args]);
     }
 
 

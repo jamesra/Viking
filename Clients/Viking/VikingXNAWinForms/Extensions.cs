@@ -44,19 +44,11 @@ namespace VikingXNAWinForms
 
         public static bool Right(this System.Windows.Forms.MouseButtons buttons) => (int)(buttons & System.Windows.Forms.MouseButtons.Right) == (int)System.Windows.Forms.MouseButtons.Right;
 
-        public static bool RightOnly(this System.Windows.Forms.MouseButtons buttons) => buttons == System.Windows.Forms.MouseButtons.Right;
-
         public static bool Middle(this System.Windows.Forms.MouseButtons buttons) => (int)(buttons & System.Windows.Forms.MouseButtons.Middle) == (int)System.Windows.Forms.MouseButtons.Middle;
-
-        public static bool MiddleOnly(this System.Windows.Forms.MouseButtons buttons) => buttons == System.Windows.Forms.MouseButtons.Middle;
 
         public static bool X1(this System.Windows.Forms.MouseButtons buttons) => (int)(buttons & System.Windows.Forms.MouseButtons.XButton1) == (int)System.Windows.Forms.MouseButtons.XButton1;
 
-        public static bool X1Only(this System.Windows.Forms.MouseButtons buttons) => buttons == System.Windows.Forms.MouseButtons.XButton1;
-
         public static bool X2(this System.Windows.Forms.MouseButtons buttons) => (int)(buttons & System.Windows.Forms.MouseButtons.XButton2) == (int)System.Windows.Forms.MouseButtons.XButton2;
-
-        public static bool X2Only(this System.Windows.Forms.MouseButtons buttons) => buttons == System.Windows.Forms.MouseButtons.XButton2;
 
         public static bool None(this System.Windows.Forms.MouseButtons buttons) => buttons == System.Windows.Forms.MouseButtons.None;
     }

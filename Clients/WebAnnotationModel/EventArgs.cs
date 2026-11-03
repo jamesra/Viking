@@ -18,8 +18,6 @@
             this.ID = ID;
         }
     }
-    public delegate void AddUpdateRemoveKeyEventHandler(object sender, AddUpdateRemoveKeyEventArgs e);
-
     /// <summary>
     /// Fires when a key is added or removed from a store class
     /// It is currently used with LocationStore

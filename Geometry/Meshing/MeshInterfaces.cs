@@ -88,7 +88,7 @@ namespace Geometry.Meshing
         /// Given an edge on the vertex, return the vertex edges in either clockwise or counterclockwise order.
         /// With the passed origin edge being the first result as it has an angle of zero
         /// </summary>
-        /// <param name="mesh">Mesh containing the indexed verticies</param>
+        /// <param name="comparer"></param>
         /// <param name="origin_edge">Edge connected vertex indicating the origin line.  Throws an argument exception if the edge doesn't exist.</param>
         /// <param name="clockwise">True if edges should be returned in clockwise order.  Default is counter-clockwise.</param>
         /// <returns>Indices of partner verticies in sorted order.</returns>
@@ -119,7 +119,7 @@ namespace Geometry.Meshing
         /// <summary>
         /// Returns true if the key shares an enpoint with the edge, but is not identical to the edge
         /// </summary>
-        /// <param name="vertex"></param>
+        /// <param name="edge"></param>
         /// <returns></returns>
         bool Adjacent(IEdgeKey edge);
     }

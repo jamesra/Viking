@@ -177,6 +177,29 @@
                                      Text="Size multiplier for reference location text on adjacent sections."/>
                         </Grid>
 
+                        <!-- Label Outline -->
+                        <CheckBox IsChecked="{Binding LabelOutlineEnabled, Mode=TwoWay}"
+                                  Content="Outline annotation text"
+                                  VerticalContentAlignment="Center"/>
+                        <Grid IsEnabled="{Binding LabelOutlineEnabled}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="220"/>
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Column="0" Content="Outline colors:" Margin="20,0,0,0"/>
+                            <ComboBox Grid.Column="1"
+                                      SelectedIndex="{Binding LabelOutlineColorChoice, Mode=TwoWay}"
+                                      Margin="5">
+                                <ComboBoxItem Content="Black text, white outline"/>
+                                <ComboBoxItem Content="White text, black outline"/>
+                            </ComboBox>
+                        </Grid>
+                        <TextBlock Margin="10,0,10,10"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   TextWrapping="Wrap"
+                                   Text="Draws a thin outline around annotation text so it stays readable over both light and dark images."/>
+
                         <!-- Label Rotation -->
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -811,6 +834,24 @@
                                      Text="Smallest allowed radius for circle annotations."/>
                         </Grid>
 
+                        <!-- Barrel button: the user clicks the button on their pen to tell Viking which report it sends -->
+                        <StackPanel Margin="5,0,5,10">
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Barrel button:"/>
+                                <TextBlock Text="{Binding BarrelButtonDescription}" VerticalAlignment="Center" Margin="5,0,10,0"/>
+                                <Button x:Name="CaptureBarrelButton"
+                                        Content="Click your pen button..."
+                                        Padding="8,2"
+                                        Click="CaptureBarrelButton_Click"
+                                        PreviewStylusButtonDown="CaptureBarrelButton_StylusButtonDown"/>
+                            </StackPanel>
+                            <TextBlock Margin="5,0,0,0"
+                                       FontSize="10"
+                                       Foreground="Gray"
+                                       TextWrapping="Wrap"
+                                       Text="Press this button, then press the button on the side of your pen while the pen is over it. Commands that use the barrel button (such as the paintbrush segmentation) will use that button."/>
+                        </StackPanel>
+
                         <!-- Segmentation -->
                         <TextBlock Text="Segmentation" FontWeight="Bold" Margin="5,15,5,2"/>
                         <!-- Segmentation Minimum Feature Width -->
@@ -1027,7 +1068,7 @@
                                 Grid.Row="0"
                                 Grid.Column="1" Grid.ColumnSpan="3"
                                 Minimum="1"
-                                Maximum="4"
+                                Maximum="6"
                                 TickFrequency="0.25"
                                 IsSnapToTickEnabled="True"
                                 SmallChange="0.25"
@@ -1039,7 +1080,7 @@
                                      FontSize="10"
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
-                                     Text="Auto-segment does not run when the view is zoomed out past this downsample. The value itself still runs, so at 2, DS 2 runs and DS 3 does not. The maximum is 4."/>
+                                     Text="Auto-segment does not run when the view is zoomed out past this downsample. The value itself still runs, so at 2, DS 2 runs and DS 3 does not. The maximum is 6."/>
                         </Grid>
 
                         <CheckBox Margin="0,10,0,0"

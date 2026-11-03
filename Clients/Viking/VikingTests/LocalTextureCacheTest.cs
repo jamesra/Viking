@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Viking;
 
 
@@ -16,48 +17,6 @@ namespace VikingTests
         readonly LocalTextureCache cache = new();
 
         public int NumTests = 100;
-
-        public LocalTextureCacheTest()
-        {
-
-            //
-            // TODO: Add constructor logic here
-            //
-        }
-
-        private TestContext testContextInstance;
-
-        /// <summary>
-        ///Gets or sets the test context which provides
-        ///information about and functionality for the current test run.
-        ///</summary>
-        public TestContext TestContext
-        {
-            get => testContextInstance;
-            set => testContextInstance = value;
-        }
-
-        #region Additional test attributes
-        //
-        // You can use the following additional attributes as you write your tests:
-        //
-        // Use ClassInitialize to run code before running the first test in the class
-        // [ClassInitialize()]
-        // public static void MyClassInitialize(TestContext testContext) { }
-        //
-        // Use ClassCleanup to run code after all tests in a class have run
-        // [ClassCleanup()]
-        // public static void MyClassCleanup() { }
-        //
-        // Use TestInitialize to run code before running each test 
-        // [TestInitialize()]
-        // public void MyTestInitialize() { }
-        //
-        // Use TestCleanup to run code after each test has run
-        // [TestCleanup()]
-        // public void MyTestCleanup() { }
-        //
-        #endregion
 
         private IEnumerable<IAsyncResult> ReadEveryFile(List<string> FileList)
         {
@@ -124,6 +83,8 @@ namespace VikingTests
                 TempFiles.Add(TempFile);
             }
 
+            List<Task<bool>> addTasks = new(NumTests);
+
             for (int iTest = 0; iTest < NumTests; iTest++)
             {
                 int NumBytes = (NumTests - iTest) * 100;
@@ -131,7 +92,15 @@ namespace VikingTests
 
                 r.NextBytes(bytes);
 
-                this.cache.AddAsync(TempFiles[iTest], bytes);
+                addTasks.Add(this.cache.AddAsync(TempFiles[iTest], bytes));
+            }
+
+            //Fetch returns null for an entry that is not registered yet, so wait for every add before reading
+            Task.WaitAll(addTasks.ToArray());
+
+            for (int iTest = 0; iTest < NumTests; iTest++)
+            {
+                Assert.IsTrue(addTasks[iTest].Result, "AddAsync should have stored " + TempFiles[iTest]);
             }
 
             //Touch every file so it has a checkpoint flag

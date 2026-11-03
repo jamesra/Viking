@@ -247,13 +247,13 @@ namespace WebAnnotation.View
 
         public override bool Equals(object obj)
         {
-            LocationCanvasView LocObj = obj as LocationCanvasView;
+            LocationCanvasView? LocObj = obj as LocationCanvasView;
             if (LocObj != null)
             {
                 return modelObj.Equals(LocObj.modelObj);
             }
 
-            LocationObj LocObj2 = obj as LocationObj;
+            LocationObj? LocObj2 = obj as LocationObj;
             if (LocObj2 != null)
             {
                 return modelObj.Equals(LocObj2);
@@ -351,6 +351,10 @@ namespace WebAnnotation.View
 
         public int GetHashCode(LocationObj obj) => obj.GetHashCode();
 
+        /// <summary>
+        /// Orders views by 64-bit location ID; a null view sorts first.
+        /// </summary>
+        /// <param name="other">The view to compare with.</param>
         int IComparable<LocationCanvasView>.CompareTo(LocationCanvasView other)
         {
             if (other is null)
@@ -358,7 +362,7 @@ namespace WebAnnotation.View
                 return 1;
             }
 
-            return (int)(ID - other.ID);
+            return ID.CompareTo(other.ID);
         }
 
         /// <summary>

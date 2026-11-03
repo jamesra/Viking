@@ -92,7 +92,7 @@ namespace Viking.UI.Controls
 
         static readonly short[] indicies = [0, 1, 2, 2, 1, 3];
 
-        CommandCompleteEventHandler OnCommandCompleteHandler;
+        CommandCompleteEventHandler? OnCommandCompleteHandler;
 
         ISectionOverlayExtension[] listOverlays = [];
 
@@ -218,7 +218,7 @@ namespace Viking.UI.Controls
                         channelName = this.CurrentChannel;
                     }
 
-                    ToolStripItem tsChannelItem = null;
+                    ToolStripItem? tsChannelItem = null;
                     if (_StatusChannels.Count > i)
                     {
                         tsChannelItem = _StatusChannels[i];
@@ -275,8 +275,8 @@ namespace Viking.UI.Controls
                 if (_Section == value)
                     return;
 
-                SectionViewModel OldSection = _Section;
-                string oldtransform = null;
+                SectionViewModel? OldSection = _Section;
+                string? oldtransform = null;
                 if (_Section != null)
                     oldtransform = this.CurrentTransform;
 
@@ -744,6 +744,12 @@ namespace Viking.UI.Controls
         }
         */
 
+        /// <summary>
+        /// The sideways (tilt) mouse wheel moved. <see cref="MouseEventArgs.Delta"/> is positive for a tilt to the right, in
+        /// multiples of 120; the position is in client coordinates. WinForms has no event for this wheel.
+        /// </summary>
+        public event MouseEventHandler MouseHWheel;
+
         protected override void WndProc(ref Message msg)
         {
             /*
@@ -771,6 +777,13 @@ namespace Viking.UI.Controls
                     break;
             }
             */
+
+            if (HorizontalWheelMessage.IsHorizontalWheel(msg.Msg))
+            {
+                System.Drawing.Point client = PointToClient(HorizontalWheelMessage.ScreenPosition(msg.LParam));
+                MouseHWheel?.Invoke(this, new MouseEventArgs(MouseButtons.None, 0, client.X, client.Y, HorizontalWheelMessage.Delta(msg.WParam)));
+                return;
+            }
 
             if (HandleSectionNumberOverlayPen(ref msg))
                 return;
@@ -1217,7 +1230,7 @@ namespace Viking.UI.Controls
         }
 
         /// <summary>
-        /// Recieves the event from the section when the reference has changed and fires an event to any listeners
+        /// Receives the event from the section when the reference has changed and fires an event to any listeners
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -1245,8 +1258,6 @@ namespace Viking.UI.Controls
         /// <summary>
         /// Activates when the user adds a command to the command queue
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
         private void OnPendingTextureQueueBecameEmpty()
         {
             this.Invalidate();
@@ -1270,7 +1281,7 @@ namespace Viking.UI.Controls
         /// <param name="e"></param>
         private void OnCommandInjected(object sender, CommandInjectedEventHandler e)
         {
-            Command ActiveCommand = this.CurrentCommand;
+            Command? ActiveCommand = this.CurrentCommand;
             CurrentCommand = e.injectedCommand;
 
             if (e.SaveCurrentCommand == true && ActiveCommand is not DefaultCommand && ActiveCommand != null)
@@ -1360,6 +1371,9 @@ namespace Viking.UI.Controls
         /// puts back the section it saw, which with two tiles in flight can be the other tile's. The frame capture export, its caller,
         /// restores the viewed section once all frames are written.
         /// </summary>
+        /// <param name="Filename">Base file name that each tile name is built from.</param>
+        /// <param name="MyRect">Volume-space rectangle to export.</param>
+        /// <param name="Z">Section number to export.</param>
         /// <param name="Downsample">Volume-space pixels per output pixel.</param>
         /// <param name="IncludeOverlays">True to draw annotation overlays on each tile.</param>
         public async Task ExportImage(string Filename, Geometry.Rectangle MyRect, int Z, double Downsample, bool IncludeOverlays)
@@ -1378,7 +1392,7 @@ namespace Viking.UI.Controls
             List<Task> listTasks = [];
             int MaxActiveExports = 2;
             {
-                GraphicsDevice graphicsDevice = this.graphicsDeviceService.GraphicsDevice;
+                GraphicsDevice? graphicsDevice = this.graphicsDeviceService.GraphicsDevice;
 
                 //Figure out how to cut the rectangle into 512x512 cells and take the screenshots
                 for (int iRow = 0; iRow < plan.NumTilesY; iRow++)
@@ -1440,14 +1454,11 @@ namespace Viking.UI.Controls
 
             //            this.CurrentVolumeTransform = null; 
 
-            Scene originalScene = this.Scene;
-
-
             foreach (SectionViewModel S in State.volume.SectionViewModels.Values.Where(S => S.Number >= FirstSection && S.Number <= LastSection))
             {
                 string path = ExportPath + S.VolumeViewModel.Name + "/" + S.Number.ToString("D3") + "/Tiles/" + Downsample.ToString("D3") + "/";
 
-                System.IO.DirectoryInfo dirInfo = System.IO.Directory.Exists(path) == false ? System.IO.Directory.CreateDirectory(path) : new System.IO.DirectoryInfo(path);
+                System.IO.DirectoryInfo dirInfo = System.IO.Directory.CreateDirectory(path);
                 dirInfo.Attributes &= ~System.IO.FileAttributes.ReadOnly;
 
                 //Get the boundaries of the exported section S, not the section on screen; this runs off the UI thread,
@@ -1574,7 +1585,7 @@ namespace Viking.UI.Controls
 
                 }
 
-                System.IO.StreamWriter stream = null;
+                System.IO.StreamWriter? stream = null;
 
                 string XMLString =
                     $"<?xml version=\"1.0\"?>\n<Level FilePostfix=\".png\" FilePrefix=\"\" Downsample=\"{Downsample}\" TileYDim=\"{TileImageSize.Width}\" TileXDim=\"{TileImageSize.Height}\" GridDimY=\"{TileDim.Height}\" GridDimX=\"{TileDim.Width}\"/>";
@@ -1875,7 +1886,7 @@ namespace Viking.UI.Controls
             GraphicsDevice graphicsDevice = Device;
             */
 
-            //TODO: These coordinates on the screen should be from 0 to 1 with a seperate worldviewproj matrix.  However to get this running I'm just
+            //TODO: These coordinates on the screen should be from 0 to 1 with a separate worldviewproj matrix.  However to get this running I'm just
             //calculating in volume spce. 
 
             Geometry.Vector2 TopLeft = scene.ScreenToWorld(0, scene.Viewport.Height);
@@ -1900,7 +1911,7 @@ namespace Viking.UI.Controls
             if (Section is null)
                 return;
 
-            GraphicsDevice graphicsDevice = Device;
+            GraphicsDevice? graphicsDevice = Device;
             RenderTargetBinding[] originalRenderTargets = Device.GetRenderTargets();
             Geometry.Rectangle Bounds = scene.VisibleWorldBounds;
 
@@ -2152,6 +2163,7 @@ namespace Viking.UI.Controls
         /// </summary>
         /// <param name="scene"></param>
         /// <param name="Z"></param>
+        /// <param name="token">Cancels the check.</param>
         /// <returns></returns>
         protected async Task<bool> SceneHasTextures(Scene scene, int Z, CancellationToken token)
         {
@@ -2422,6 +2434,10 @@ namespace Viking.UI.Controls
         /// <summary>
         /// Draws the tiles of one section and channel into a new viewport-sized render target that the caller owns.
         /// </summary>
+        /// <param name="graphicsDevice">Device that creates and draws the render target.</param>
+        /// <param name="section">Section to draw.</param>
+        /// <param name="channel">Channel of the section to draw.</param>
+        /// <param name="scene">Scene that supplies the viewport and downsample.</param>
         /// <returns>The render target (null if the section could not be drawn yet) and whether every visible tile had a texture.</returns>
         protected (Texture2D? texture, bool allVisibleTilesHadTextures) DrawSection(GraphicsDevice graphicsDevice, Section section, string channel, Scene scene)
         {
@@ -2562,7 +2578,7 @@ namespace Viking.UI.Controls
 
             if (Viking.UI.State.ShowStosMesh)
             {
-                ITransform transform = null;
+                ITransform? transform = null;
 
                 if (mapping is SectionToVolumeMapping StosMapping)
                 {
@@ -2844,6 +2860,7 @@ namespace Viking.UI.Controls
         /// </summary>
         /// <param name="graphicsDevice"></param>
         /// <param name="scene"></param>
+        /// <param name="background"></param>
         /// <param name="channels"></param>
         /// <param name="Colors"></param>
         /// <returns></returns>
@@ -2859,8 +2876,8 @@ namespace Viking.UI.Controls
             //this.mergeHSVImagesEffect.HueBeta = renderedBetas.ToArray();
 
             //We cannot read from an active render target.  So we alternate which target is being written to so we can merge the textures. 
-            RenderTarget2D activeRenderTarget = null;
-            RenderTarget2D inactiveRenderTarget = null;
+            RenderTarget2D? activeRenderTarget = null;
+            RenderTarget2D? inactiveRenderTarget = null;
             BlendState oldBlendState = graphicsDevice.BlendState;
 
             try
@@ -3317,17 +3334,8 @@ namespace Viking.UI.Controls
                     int Z = (int)Math.Round(frame.Z);
                     if (State.volume.SectionViewModels.ContainsKey(Z) == false)
                         continue;
-                    // {
-                    //   DialogResult mbResult = MessageBox.Show("Could not location section #" + Z.ToString() + " in volume, skipping", "Info", MessageBoxButtons.OKCancel);
-                    //   if (mbResult == DialogResult.Cancel)
-                    //       break;
-                    //   else
-                    //       continue;
-                    //  }
                     await this.ExportImage(frame.Filename, frame.Rect, Z, frame.downsample, frame.IncludeOverlay);
-                    //task.Wait();
                     progressForm.ShowProgress("Exported frame: " + frame.Filename, (double)i / (double)form.Frames.Length);
-                    //System.Windows.Forms.Application.DoEvents();
                     if (progressForm.DialogResult == DialogResult.Cancel)
                         break;
                 }
@@ -3340,7 +3348,7 @@ namespace Viking.UI.Controls
 
         protected void ShowGoToLocationForm()
         {
-            Viking.UI.Forms.GoToLocationForm form = null;
+            Viking.UI.Forms.GoToLocationForm? form = null;
             try
             {
                 form = new GoToLocationForm

@@ -104,6 +104,8 @@ namespace VikingXNAWinForms
             GlobalPrimitives.ChainTexture = Content.LoadTextureWithAlpha("CircleChain", "CircleChain");
             GlobalPrimitives.UpArrowTexture = Content.LoadTextureWithAlpha("UpArrowV2", "UpArrowMask");
             GlobalPrimitives.DownArrowTexture = Content.LoadTextureWithAlpha("DownArrowV2", "UpArrowMask");
+            GlobalPrimitives.UpArrowOutlinedTexture = GlobalPrimitives.CreateOutlinedMarker(GlobalPrimitives.UpArrowTexture);
+            GlobalPrimitives.DownArrowOutlinedTexture = GlobalPrimitives.CreateOutlinedMarker(GlobalPrimitives.DownArrowTexture);
             GlobalPrimitives.ConnectTexture = Content.LoadTextureWithAlpha("CircleConnect", "CircleConnect");
             GlobalPrimitives.CircleXTexture = Content.LoadTextureWithAlpha("CircleX", "CircleX");
             GlobalPrimitives.ScissorsTexture = ScissorsIconTexture.Create(graphicsDevice);

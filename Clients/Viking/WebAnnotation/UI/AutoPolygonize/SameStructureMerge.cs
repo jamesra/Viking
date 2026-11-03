@@ -146,7 +146,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 if (AutoPolygonizeSelection.TryGetVolumePolygon(other, transform, out Polygon? polygon) && polygon is not null)
                     pool.Add(new Piece(other, polygon));
-                else if (includeCircles && other.TypeCode == LocationType.CIRCLE && LocationActions.TryGetVolumeCircle(other, transform) is Circle disk)
+                else if (JoinsAsDisk(other, includeCircles) && LocationActions.TryGetVolumeCircle(other, transform) is Circle disk)
                     pool.Add(new Piece(other, AutoPolygonizeSelection.CircleToPolygon(disk.Center, disk.Radius), IsCircle: true));
             }
 
@@ -161,6 +161,14 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             return group;
         }
+
+        /// <summary>
+        /// True when <paramref name="other"/>, not a polygon, joins a merge as its disk: only a circle annotation does, and only when
+        /// <paramref name="includeCircles"/>. Every location has a position and radius, so without the type check a point, line or
+        /// curve of the structure would be swept into the merged polygon as a disk.
+        /// </summary>
+        internal static bool JoinsAsDisk(LocationObj other, bool includeCircles) =>
+            includeCircles && other.TypeCode == LocationType.CIRCLE;
 
         /// <summary>The seed and every piece of the pool reachable from it through overlaps.</summary>
         private static List<Piece> Group(Piece seed, IReadOnlyList<Piece> pool)

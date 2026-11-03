@@ -8,7 +8,7 @@ namespace Geometry
     public static class SortingExtensions
     {
         /// sort array 'rg', returning the original index positions
-        public static int[] SortAndIndex<T>(this T[] rg, IComparer<T> comparer = null)
+        public static int[] SortAndIndex<T>(this T[] rg, IComparer<T>? comparer = null)
         {
             int i, c = rg.Length;
             var keys = new int[c];

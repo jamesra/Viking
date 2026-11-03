@@ -42,7 +42,7 @@ namespace LocalBookmarks
 
         #region ISectionOverlayExtension Members
 
-        private SectionViewerControl _parent;
+        private SectionViewerControl? _parent;
 
         public BookmarkOverlay()
         {
@@ -74,7 +74,7 @@ namespace LocalBookmarks
             if (!Global.BookmarksVisible || !Global.HasDocuments)
                 return null;
 
-            BookmarkUIObj nearest = null;
+            BookmarkUIObj? nearest = null;
             foreach (BookmarkDocument document in Global.Documents.Documents)
             {
                 if (document.Root is null)
@@ -94,7 +94,7 @@ namespace LocalBookmarks
 
         BookmarkUIObj RecursiveFindBookmarks(FolderUIObj parentFolder, Geometry.Vector2 position, ref double nearestDistance)
         {
-            BookmarkUIObj nearestBookmark = null;
+            BookmarkUIObj? nearestBookmark = null;
             foreach (BookmarkUIObj bookmark in parentFolder.Bookmarks)
             {
                 if (State.ViewerControl.Section.Number == bookmark.Z)
@@ -123,7 +123,7 @@ namespace LocalBookmarks
             return nearestBookmark;
         }
 
-        private static BasicEffect basicEffect;
+        private static BasicEffect? basicEffect;
         void ISectionOverlayExtension.Draw(GraphicsDevice graphicsDevice, Scene scene, Texture BackgroundLuma, Texture BackgroundColors, ref int nextStencilValue)
         {
 

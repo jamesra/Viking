@@ -16,7 +16,7 @@ namespace Geometry.Transforms
         #region Edges
 
         protected ReaderWriterLockSlim rwLockEdges = new();
-        private PairedLineSearchGrid _LineSegmentGrid;
+        private PairedLineSearchGrid? _LineSegmentGrid;
 
         private List<int>[] _edges;
         public override List<int>[] Edges
@@ -109,7 +109,7 @@ namespace Geometry.Transforms
 
         object ICloneable.Clone()
         {
-            MeshTransform newObj = this.MemberwiseClone() as MeshTransform;
+            MeshTransform? newObj = this.MemberwiseClone() as MeshTransform;
 
             List<MappingVector2> TempList = [];
 

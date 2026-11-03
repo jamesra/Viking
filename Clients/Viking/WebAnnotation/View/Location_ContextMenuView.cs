@@ -8,7 +8,7 @@ namespace WebAnnotation.View
     {
         public static ContextMenuStrip ContextMenuGenerator(IViewLocation loc)
         {
-            Location_CanvasContextMenuView contextMenuView = null;
+            Location_CanvasContextMenuView? contextMenuView = null;
             try
             {
                 contextMenuView = new Location_CanvasContextMenuView(loc.ID);

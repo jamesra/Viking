@@ -120,7 +120,7 @@ namespace WebAnnotation
 
         private static IEnumerable<string> ReadClaimValues(JObject payload, string claimName)
         {
-            JToken token = payload[claimName];
+            JToken? token = payload[claimName];
             if (token is null)
                 yield break;
 

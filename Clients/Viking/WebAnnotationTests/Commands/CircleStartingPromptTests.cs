@@ -32,23 +32,6 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
-        public void TheClicksSitAtNinetyFivePercentOfTheRadiusAlongTheAxes()
-        {
-            Circle circle = new(new Vector2(100, 200), 40);
-            Assert.IsTrue(CircleSegmentationPrompts.TryCreateStartingPrompt(
-                CircleSegmentationPrompts.CreateMosaicRadiusPoints(circle), out CircleSegmentationPrompts.StartingPrompt prompt));
-
-            Assert.AreEqual(100 + 38.0, prompt.Points[0].X, 1e-9);
-            Assert.AreEqual(200.0, prompt.Points[0].Y, 1e-9);
-            Assert.AreEqual(100.0, prompt.Points[1].X, 1e-9);
-            Assert.AreEqual(200 + 38.0, prompt.Points[1].Y, 1e-9);
-            Assert.AreEqual(100 - 38.0, prompt.Points[2].X, 1e-9);
-            Assert.AreEqual(200.0, prompt.Points[2].Y, 1e-9);
-            Assert.AreEqual(100.0, prompt.Points[3].X, 1e-9);
-            Assert.AreEqual(200 - 38.0, prompt.Points[3].Y, 1e-9);
-        }
-
-        [TestMethod]
         public void TheBoxIsTheSquareInscribedInTheCircle()
         {
             Circle circle = new(new Vector2(100, 200), 40);
@@ -65,24 +48,6 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual(200.0, prompt.Center.Y, 1e-9);
             // Its corners lie on the circle.
             Assert.AreEqual(40.0, Vector2.Distance(circle.Center, new Vector2(prompt.Box.Right, prompt.Box.Top)), 1e-9);
-        }
-
-        [TestMethod]
-        public void TheFourClicksAreOutsideTheSquareAndInsideTheCircle()
-        {
-            Circle circle = new(new Vector2(0, 0), 100);
-            Assert.IsTrue(CircleSegmentationPrompts.TryCreateStartingPrompt(
-                CircleSegmentationPrompts.CreateMosaicRadiusPoints(circle), out CircleSegmentationPrompts.StartingPrompt prompt));
-
-            Assert.AreEqual(4, prompt.Points.Count);
-            foreach (Vector2 point in prompt.Points)
-            {
-                Assert.IsFalse(
-                    point.X >= prompt.Box.Left && point.X <= prompt.Box.Right &&
-                    point.Y >= prompt.Box.Bottom && point.Y <= prompt.Box.Top,
-                    "a click inside the square would say nothing the box does not");
-                Assert.IsTrue(Vector2.Distance(circle.Center, point) < circle.Radius);
-            }
         }
 
         [TestMethod]
@@ -115,32 +80,6 @@ namespace WebAnnotationTests.Commands
 
             Assert.AreEqual(2 * 50 * InscribedHalfSide, prompt.Box.Right - prompt.Box.Left, 1e-6);
             Assert.AreEqual(2 * 50 * InscribedHalfSide, prompt.Box.Top - prompt.Box.Bottom, 1e-6);
-        }
-
-        [TestMethod]
-        public void ARotatingTransformStillPutsTheClicksExactlyOnTheVolumeAxes()
-        {
-            Circle circle = new(new Vector2(30, 40), 50);
-            double angle = Math.PI / 5.0;
-            Vector2[] volume =
-            [
-                .. CircleSegmentationPrompts.CreateMosaicRadiusPoints(circle).Select(point => new Vector2(
-                    (point.X * Math.Cos(angle)) - (point.Y * Math.Sin(angle)),
-                    (point.X * Math.Sin(angle)) + (point.Y * Math.Cos(angle))))
-            ];
-            Vector2 center = volume[0];
-
-            Assert.IsTrue(CircleSegmentationPrompts.TryCreateStartingPrompt(volume, out CircleSegmentationPrompts.StartingPrompt prompt));
-
-            double reach = 50 * CircleSegmentationPrompts.StartingPointRadiusFraction;
-            Assert.AreEqual(center.X + reach, prompt.Points[0].X, 1e-6);
-            Assert.AreEqual(center.Y, prompt.Points[0].Y, 1e-6);
-            Assert.AreEqual(center.X, prompt.Points[1].X, 1e-6);
-            Assert.AreEqual(center.Y + reach, prompt.Points[1].Y, 1e-6);
-            Assert.AreEqual(center.X - reach, prompt.Points[2].X, 1e-6);
-            Assert.AreEqual(center.Y, prompt.Points[2].Y, 1e-6);
-            Assert.AreEqual(center.X, prompt.Points[3].X, 1e-6);
-            Assert.AreEqual(center.Y - reach, prompt.Points[3].Y, 1e-6);
         }
 
         [TestMethod]

@@ -49,6 +49,15 @@ namespace WebAnnotationTests.Commands
             Assert.IsFalse(AutoPolygonizeSelection.IsEligibleCircle(LocationType.CIRCLE, new Vector2(2, 50), inset));
         }
 
+        /// <summary>Only cells are auto-polygonized; a child structure such as a caveola (type 247) inside a Muller cell keeps its circle.</summary>
+        [TestMethod]
+        public void OnlyCellsAreAutoPolygonized()
+        {
+            Assert.IsTrue(AutoPolygonizeSelection.IsCell(new StructureObj(1, 1)), "a cell");
+            Assert.IsFalse(AutoPolygonizeSelection.IsCell(new StructureObj(2, 247) { ParentID = 1 }), "a caveola in the cell");
+            Assert.IsFalse(AutoPolygonizeSelection.IsCell(null), "a structure not loaded yet");
+        }
+
         [TestMethod]
         public void NonCirclesAreNotEligible()
         {

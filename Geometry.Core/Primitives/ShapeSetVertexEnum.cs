@@ -9,7 +9,7 @@ namespace Geometry
     /// </summary>
     public class ShapeSetVertexEnum(in IReadOnlyList<IShape2D> shapes, int iStartingShapeIndex = 0) : IEnumerator<IShapeIndex>, IEnumerator, IEnumerable<IShapeIndex>, IEnumerable
     {
-        IShapeIndex _curIndex = null;
+        IShapeIndex? _curIndex = null;
 
         readonly IReadOnlyList<IShape2D> _shapes = shapes;
 
@@ -18,7 +18,7 @@ namespace Geometry
         /// </summary>
         private int _currentShapeIndex = iStartingShapeIndex;
 
-        private IEnumerator _enumerator = null;
+        private IEnumerator? _enumerator = null;
 
         public IShapeIndex Current
         {

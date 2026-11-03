@@ -22,6 +22,7 @@
     <ProjectReference Include="..\Viking.Tokens\Viking.Tokens.csproj" />
     <ProjectReference Include="..\VolumeModel\VolumeModel.csproj" />
     <ProjectReference Include="..\..\Geometry\Geometry.csproj" />
+    <!-- GetServerStatus probe for the segmentation service picker (model, epoch and load per server). -->
     <ProjectReference Include="..\..\SegmentationServiceTypes.gRPC\SegmentationServiceTypes.gRPC.csproj" />
   </ItemGroup>
 

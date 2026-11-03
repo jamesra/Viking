@@ -26,7 +26,7 @@ namespace WebAnnotation.ReviewFeed
             string typeName = parent?.Type?.Name
                 ?? parent?.Type?.Code
                 ?? "Location";
-            string label = parent?.Label;
+            string? label = parent?.Label;
 
             bool useVolume = location.VolumeShape != null;
             Microsoft.SqlServer.Types.SqlGeometry shape = (useVolume ? location.VolumeShape : location.MosaicShape)?.ToSqlGeometry();

@@ -46,13 +46,13 @@ namespace WebAnnotation.ViewModel
 
         public override bool Equals(object obj)
         {
-            Location_ViewModelBase LocObj = obj as Location_ViewModelBase;
+            Location_ViewModelBase? LocObj = obj as Location_ViewModelBase;
             if (LocObj != null)
             {
                 return modelObj.Equals(LocObj.modelObj);
             }
 
-            LocationObj LocObj2 = obj as LocationObj;
+            LocationObj? LocObj2 = obj as LocationObj;
             if (LocObj2 != null)
             {
                 return modelObj.Equals(LocObj2);
@@ -234,17 +234,17 @@ namespace WebAnnotation.ViewModel
             };
             menuNetwork.Click += ContextMenu_ExportNetwork;
 
-            ToolStripMenuItem menuOneHop = new("1 degree  of seperation")
+            ToolStripMenuItem menuOneHop = new("1 degree of separation")
             {
                 Tag = new long?(1)
             };
             menuOneHop.Click += ContextMenu_ExportNetwork;
-            ToolStripMenuItem menuTwoHop = new("2 degrees of seperation")
+            ToolStripMenuItem menuTwoHop = new("2 degrees of separation")
             {
                 Tag = new long?(2)
             };
             menuTwoHop.Click += ContextMenu_ExportNetwork;
-            ToolStripMenuItem menuThreeHop = new("3 degrees of seperation")
+            ToolStripMenuItem menuThreeHop = new("3 degrees of separation")
             {
                 Tag = new long?(3)
             };
@@ -347,17 +347,10 @@ namespace WebAnnotation.ViewModel
                 TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON) &&
                 Global.IsSegmentationServiceAvailable)
             {
+                // Resegmenting starts by growing or shrinking the polygon's mask (dilate/erode), then paints from the result.
                 ToolStripMenuItem menuSegmentPoly = new("Resegment...");
-                menuSegmentPoly.Click += ContextMenu_SegmentPolygon;
+                menuSegmentPoly.Click += ContextMenu_ResegmentPolygon;
                 menuShape.DropDownItems.Add(menuSegmentPoly);
-            }
-
-            if (TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON ||
-                TypeCode == Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON)
-            {
-                ToolStripMenuItem menuEditMask = new("Dilate/erode mask...");
-                menuEditMask.Click += ContextMenu_EditPolygonMask;
-                menuShape.DropDownItems.Add(menuEditMask);
             }
 
             menu.Items.Add(menuShape);
@@ -426,7 +419,11 @@ namespace WebAnnotation.ViewModel
             bool oldOffEdge = modelObj.OffEdge;
             modelObj.Terminal = !modelObj.Terminal;
             if (await AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
+            {
                 UndoManager.PushLocationFlags("Toggle Terminal", modelObj, oldTerminal, oldOffEdge);
+                if (modelObj.Terminal)
+                    AnnotationOverlay.CurrentOverlay?.PlayFlagFeedback(UI.FlagFeedbackKind.Celebration, modelObj.VolumeCenter());
+            }
             else
                 modelObj.Terminal = !modelObj.Terminal;
         }
@@ -441,7 +438,7 @@ namespace WebAnnotation.ViewModel
 
         protected void ContextMenu_ExportNetwork(object sender, EventArgs e)
         {
-            ToolStripMenuItem item = sender as ToolStripMenuItem;
+            ToolStripMenuItem? item = sender as ToolStripMenuItem;
             long? hops = item.Tag as long?;
 
             Global.Export.OpenNetwork(ParentID.Value, hops);
@@ -449,7 +446,7 @@ namespace WebAnnotation.ViewModel
 
         protected void ContextMenu_ConvertShape(object sender, EventArgs e)
         {
-            ToolStripMenuItem item = sender as ToolStripMenuItem;
+            ToolStripMenuItem? item = sender as ToolStripMenuItem;
             Viking.AnnotationServiceTypes.Interfaces.LocationType targetShape = (Viking.AnnotationServiceTypes.Interfaces.LocationType)item.Tag;
 
             switch (targetShape)
@@ -597,28 +594,14 @@ namespace WebAnnotation.ViewModel
                     return;
                 }
 
-                Circle mosaicCircle = GetCircleFromLocation();
-                Geometry.Vector2[] mosaicRing = new Geometry.Vector2[ManualCirclePolygonVertexCount + 1];
-                for (int i = 0; i < ManualCirclePolygonVertexCount; i++)
-                {
-                    double angle = 2.0 * Math.PI * i / ManualCirclePolygonVertexCount;
-                    mosaicRing[i] = new Geometry.Vector2(
-                        mosaicCircle.Center.X + mosaicCircle.Radius * Math.Cos(angle),
-                        mosaicCircle.Center.Y + mosaicCircle.Radius * Math.Sin(angle));
-                }
-
-                mosaicRing[ManualCirclePolygonVertexCount] = mosaicRing[0];
-
-                IReadOnlyList<Geometry.Vector2> volumeRing = CircleSegmentationPrompts.ToVolumePoints(
-                    mosaicRing,
-                    parent.Section.ActiveSectionToVolumeTransform);
-                if (volumeRing.Count != mosaicRing.Length)
+                Geometry.Vector2[]? volumeRing = TryGetCircleVolumeRing(parent);
+                if (volumeRing is null)
                 {
                     MessageBox.Show("This circle could not be mapped onto the volume.", "Convert to Polygon", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
-                UpdateLocationShapeFromVolumePolygon(new Polygon(volumeRing.ToArray()));
+                UpdateLocationShapeFromVolumePolygon(new Polygon(volumeRing));
             }
             catch (Exception ex)
             {
@@ -629,7 +612,32 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// Launch segmentation command to convert a circle location to a polygon using AI segmentation
+        /// This circle's outline as a closed ring of <see cref="ManualCirclePolygonVertexCount"/> corners built in mosaic space and
+        /// mapped to volume space; null when any corner cannot be mapped.
+        /// </summary>
+        private Geometry.Vector2[]? TryGetCircleVolumeRing(Viking.UI.Controls.SectionViewerControl parent)
+        {
+            Circle mosaicCircle = GetCircleFromLocation();
+            Geometry.Vector2[] mosaicRing = new Geometry.Vector2[ManualCirclePolygonVertexCount + 1];
+            for (int i = 0; i < ManualCirclePolygonVertexCount; i++)
+            {
+                double angle = 2.0 * Math.PI * i / ManualCirclePolygonVertexCount;
+                mosaicRing[i] = new Geometry.Vector2(
+                    mosaicCircle.Center.X + mosaicCircle.Radius * Math.Cos(angle),
+                    mosaicCircle.Center.Y + mosaicCircle.Radius * Math.Sin(angle));
+            }
+
+            mosaicRing[ManualCirclePolygonVertexCount] = mosaicRing[0];
+
+            IReadOnlyList<Geometry.Vector2> volumeRing = CircleSegmentationPrompts.ToVolumePoints(
+                mosaicRing,
+                parent.Section.ActiveSectionToVolumeTransform);
+            return volumeRing.Count == mosaicRing.Length ? volumeRing.ToArray() : null;
+        }
+
+        /// <summary>
+        /// Segment to Polygon for a circle: starts <see cref="SegmentationPaintCommand"/> with the circle's disc painted as foreground,
+        /// so its result is shown before the user touches anything.
         /// </summary>
         protected void ContextMenu_SegmentCircleToPolygon(object sender, EventArgs e)
         {
@@ -642,37 +650,20 @@ namespace WebAnnotation.ViewModel
                     return;
                 }
 
-                // Get the circle geometry
-                // The same starting prompt auto-polygonize sends: the inscribed square and four axis clicks.
-                Circle mosaic_circle = GetCircleFromLocation();
-                if (!CircleSegmentationPrompts.TryCreateStartingPrompt(
-                        mosaic_circle, parent.Section.ActiveSectionToVolumeTransform, out CircleSegmentationPrompts.StartingPrompt startingPrompt))
+                Geometry.Vector2[]? volumeRing = TryGetCircleVolumeRing(parent);
+                if (volumeRing is null)
                 {
                     MessageBox.Show("This circle could not be mapped onto the volume.", "Segment", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
-
-                IReadOnlyList<Geometry.Vector2> volume_points = startingPrompt.Points;
 
                 void callback(Polygon outputPolygon)
                 {
                     UpdateLocationShapeFromVolumePolygon(outputPolygon);
                 }
 
-                // Launch segmentation command
                 var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                SegmentationCommand segmentCommand = new(
-                    parent,
-                    volume_points,
-                    Array.Empty<Geometry.Vector2>(), // no background points initially
-                    callback,
-                    channelManager,
-                    modelObj.Parent.TypeID,
-                    modelObj.ID,
-                    modelObj.ParentID,
-                    startingBoxes: [startingPrompt.Seed]);
-
-                parent.CurrentCommand = segmentCommand;
+                parent.CurrentCommand = new SegmentationPaintCommand(parent, callback, channelManager, seedRings: [volumeRing]);
             }
             catch (Exception ex)
             {
@@ -682,67 +673,16 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        /// <summary>
-        /// Resegment this polygon. Clicks are the unsmoothed mosaic triangle centroids, the same set linked placement sends.
-        /// </summary>
-        protected void ContextMenu_SegmentPolygon(object sender, EventArgs e)
-        {
-            try
-            {
-                //ContextMenu menu = sender as ContextMenu;
-                if (this.modelObj.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.CURVEPOLYGON &&
-                   this.modelObj.TypeCode != Viking.AnnotationServiceTypes.Interfaces.LocationType.POLYGON)
-                    return;
-
-                var parent = AnnotationOverlay.CurrentOverlay?.Parent;
-                if (parent is null)
-                {
-                    MessageBox.Show("There is no open section viewer to segment in.", "Segment", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-
-                Polygon controlRing = modelObj.MosaicShape.ToPolygon();
-                IReadOnlyList<Geometry.Vector2> foregroundPoints =
-                    PolygonSegmentationPrompts.CreateVolumeForegroundPoints(
-                        controlRing,
-                        parent.Section.ActiveSectionToVolumeTransform);
-
-                void callback(Polygon volume_poly)
-                {
-                    UpdateLocationShapeFromVolumePolygon(volume_poly);
-                }
-
-                var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                SegmentationCommand segmentCommand = new(
-                    parent,
-                    foregroundPoints,
-                    Array.Empty<Geometry.Vector2>(), // no background points initially
-                    callback,
-                    channelManager,
-                    modelObj.Parent.TypeID,
-                    modelObj.ID,
-                    modelObj.ParentID);
-
-                parent.CurrentCommand = segmentCommand;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error launching segmentation: {ex.Message}");
-                MessageBox.Show($"Failed to launch segmentation: {ex.Message}",
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        /// <summary>
-        /// Rasterizes this polygon and starts <see cref="SegmentationMaskEditCommand"/> on it so the mask can be grown and
-        /// shrunk with the wheel. When the user accepts the edited mask it is sent to the segmentation server as the
-        /// starting mask by a new <see cref="SegmentationCommand"/>, whose result the user accepts or declines; only an
-        /// accepted result changes this location. Cancelling the edit changes nothing.
-        /// </summary>
         /// <summary>Raster pixels left free around a polygon when it is rasterized for dilate/erode.</summary>
         private const int EditMaskMarginPixels = 128;
 
-        protected void ContextMenu_EditPolygonMask(object sender, EventArgs e)
+        /// <summary>
+        /// Resegment: rasterizes this polygon and starts <see cref="SegmentationMaskEditCommand"/> on it so the starting mask can
+        /// be grown and shrunk with the wheel. When the user accepts the edited mask (unchanged is fine) it is sent to the
+        /// segmentation server as the starting mask by a new <see cref="SegmentationPaintCommand"/>, where it can be painted
+        /// further; only an accepted result changes this location. Cancelling the edit changes nothing.
+        /// </summary>
+        protected void ContextMenu_ResegmentPolygon(object sender, EventArgs e)
         {
             try
             {
@@ -779,7 +719,7 @@ namespace WebAnnotation.ViewModel
                 // texture is downsampled until it fits. The server's limits apply when the mask is sent (SubmitEditedMask).
                 Geometry.Rectangle polygonBounds = RasterMask.BoundsOf(volumeRings[0]);
                 SegmentationDiag.Log($"EditMask start ds={downsample} polygon={polygonBounds.Width:0}x{polygonBounds.Height:0} maxTexture={parent.MaxTextureSide}");
-                RasterMask mask = RasterMask.FromRings(
+                RasterMask? mask = RasterMask.FromRings(
                     volumeRings, downsample, marginPixels: EditMaskMarginPixels, maxRasterSide: parent.MaxTextureSide);
                 SegmentationDiag.Log(mask is null
                     ? "EditMask raster is null: the polygon covers no pixel centre"
@@ -814,9 +754,9 @@ namespace WebAnnotation.ViewModel
         }
 
         /// <summary>
-        /// Starts a <see cref="SegmentationCommand"/> that sends <paramref name="edited"/> to the segmentation server as
-        /// the starting mask. The user accepts or declines the resulting segmentation; accepting replaces this location's
-        /// shape, declining leaves it as it was.
+        /// Starts a <see cref="SegmentationPaintCommand"/> seeded with <paramref name="edited"/>, which sends it to the
+        /// segmentation server as the starting mask. The user accepts or declines the resulting segmentation; accepting
+        /// replaces this location's shape, declining leaves it as it was.
         /// </summary>
         private void SubmitEditedMask(Viking.UI.Controls.SectionViewerControl parent, RasterMask edited)
         {
@@ -845,18 +785,10 @@ namespace WebAnnotation.ViewModel
                     return;
                 }
 
-                // The bitmap itself is the foreground mask; one click inside it tells the server which object is meant.
+                // The bitmap itself is the foreground mask, painted onto the canvas and segmented at once.
                 var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                parent.CurrentCommand = new SegmentationCommand(
-                    parent,
-                    [seed.Value.Center],
-                    Array.Empty<Geometry.Vector2>(),
-                    UpdateLocationShapeFromVolumePolygon,
-                    channelManager,
-                    modelObj.Parent.TypeID,
-                    modelObj.ID,
-                    modelObj.ParentID,
-                    startingBoxes: [seed.Value]);
+                parent.CurrentCommand = new SegmentationPaintCommand(
+                    parent, UpdateLocationShapeFromVolumePolygon, channelManager, seedMask: edited);
             }
             catch (Exception ex)
             {
@@ -913,6 +845,8 @@ namespace WebAnnotation.ViewModel
             {
                 await Store.Locations.Save();
                 UndoManager.PushLocationFlags("Toggle OffEdge", modelObj, oldTerminal, oldOffEdge);
+                if (modelObj.OffEdge)
+                    AnnotationOverlay.CurrentOverlay?.PlayFlagFeedback(UI.FlagFeedbackKind.Frown, modelObj.VolumeCenter());
             }
             catch (Exception ex)
             {
@@ -1004,7 +938,7 @@ namespace WebAnnotation.ViewModel
         {
             if (e is PropertyChangedEventArgs PropertyChangedArgs)
             {
-                StructureObj structObj = sender as StructureObj;
+                StructureObj? structObj = sender as StructureObj;
                 if (structObj != null && structObj.ID == modelObj.ParentID)
                 {
                     OnParentPropertyChanged(sender, PropertyChangedArgs);

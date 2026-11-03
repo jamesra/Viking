@@ -13,7 +13,7 @@ namespace Geometry.Graphics
         /// <summary>
         /// Returns the color from a string which may be encoded as 0xFFFFFFFF #FFFFFFFF, or an integer
         /// </summary>
-        /// <param name="input"></param>
+        /// <param name="Color">Text encoded as 0xFFFFFFFF, #FFFFFFFF, or an integer</param>
         public static Color FromInteger(string Color)
         {
             int ColorValue;

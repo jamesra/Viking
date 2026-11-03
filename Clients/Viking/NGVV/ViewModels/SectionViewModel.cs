@@ -22,9 +22,9 @@ namespace Viking.ViewModels
         /// <summary>
         /// Fires when the transform used to render the section changes
         /// </summary>
-        public event Viking.Common.TransformChangedEventHandler TransformChanged;
+        public event Viking.Common.TransformChangedEventHandler? TransformChanged;
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
 
         [Column("Name")]
@@ -202,7 +202,7 @@ namespace Viking.ViewModels
                 if (section == value)
                     return;
 
-                Section _oldReference = this._ReferenceSectionBelow;
+                Section? _oldReference = this._ReferenceSectionBelow;
 
                 //See if the new section is really below us
                 if (value != null)
@@ -254,49 +254,17 @@ namespace Viking.ViewModels
             return;
         }
 
+        event System.ComponentModel.PropertyChangedEventHandler IUIObject.ValueChanged { add { } remove { } }
 
-        private event System.ComponentModel.PropertyChangedEventHandler? OnValueChanged;
-        internal event EventHandler? OnBeforeDelete;
-        internal event EventHandler? OnAfterDelete;
-        internal event EventHandler? OnBeforeSave;
-        internal event EventHandler? OnAfterSave;
-        private event System.Collections.Specialized.NotifyCollectionChangedEventHandler? OnChildChanged;
+        event EventHandler IUIObject.BeforeDelete { add { } remove { } }
 
-        event System.ComponentModel.PropertyChangedEventHandler IUIObject.ValueChanged
-        {
-            add => OnValueChanged += value;
-            remove => OnValueChanged -= value;
-        }
+        event EventHandler IUIObject.AfterDelete { add { } remove { } }
 
-        event EventHandler IUIObject.BeforeDelete
-        {
-            add => OnBeforeDelete += value;
-            remove => OnBeforeDelete -= value;
-        }
+        event EventHandler IUIObject.BeforeSave { add { } remove { } }
 
-        event EventHandler IUIObject.AfterDelete
-        {
-            add => OnAfterDelete += value;
-            remove => OnAfterDelete -= value;
-        }
+        event EventHandler IUIObject.AfterSave { add { } remove { } }
 
-        event EventHandler IUIObject.BeforeSave
-        {
-            add => OnBeforeSave += value;
-            remove => OnBeforeSave -= value;
-        }
-
-        event EventHandler IUIObject.AfterSave
-        {
-            add => OnAfterSave += value;
-            remove => OnAfterSave -= value;
-        }
-
-        event System.Collections.Specialized.NotifyCollectionChangedEventHandler IUIObject.ChildChanged
-        {
-            add => OnChildChanged += value;
-            remove => OnChildChanged -= value;
-        }
+        event System.Collections.Specialized.NotifyCollectionChangedEventHandler IUIObject.ChildChanged { add { } remove { } }
 
         event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
         {
@@ -372,7 +340,7 @@ namespace Viking.ViewModels
 
         public Section GetSectionToDrawForChannel(ChannelInfo channel)
         {
-            Section sectionToDraw = null;
+            Section? sectionToDraw = null;
 
             switch (channel.SectionSource)
             {

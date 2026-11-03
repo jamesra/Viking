@@ -12,7 +12,7 @@ namespace Viking.Services.Grpc
         /// The channel is reused across all calls to avoid connection overhead.
         /// </summary>
         /// <returns>A gRPC channel, or null if the service is not available.</returns>
-        Channel GetOrCreateChannel();
+        Channel? GetOrCreateChannel();
 
         /// <summary>
         /// Checks if the channel is in a healthy state for making calls.

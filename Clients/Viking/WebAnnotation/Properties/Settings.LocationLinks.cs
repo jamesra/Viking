@@ -57,17 +57,14 @@ namespace WebAnnotation.Properties
             set => this[nameof(LocationLinkLabels)] = value;
         }
 
-        /// <summary>
-        /// Seconds an annotation hidden with the Del key stays hidden before it reappears, 1 to 600.
-        /// Keep the default in step with <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_HIDE_ANNOTATION_SECONDS"/>.
-        /// </summary>
+        /// <summary>True draws annotation text with a thin outline so it stays readable over light and dark images.</summary>
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("30")]
-        public int HideAnnotationSeconds
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool LabelOutlineEnabled
         {
-            get => (int)this[nameof(HideAnnotationSeconds)];
-            set => this[nameof(HideAnnotationSeconds)] = value;
+            get => (bool)this[nameof(LabelOutlineEnabled)];
+            set => this[nameof(LabelOutlineEnabled)] = value;
         }
 
         /// <summary>
@@ -82,6 +79,32 @@ namespace WebAnnotation.Properties
         {
             get => (double)this[nameof(LabelRotation)];
             set => this[nameof(LabelRotation)] = value;
+        }
+
+        /// <summary>
+        /// False outlines black text in white. True draws white text with a black outline.
+        /// Only used while <see cref="LabelOutlineEnabled"/> is true.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool LabelOutlineWhiteText
+        {
+            get => (bool)this[nameof(LabelOutlineWhiteText)];
+            set => this[nameof(LabelOutlineWhiteText)] = value;
+        }
+
+        /// <summary>
+        /// Seconds an annotation hidden with the Del key stays hidden before it reappears, 1 to 600.
+        /// Keep the default in step with <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_HIDE_ANNOTATION_SECONDS"/>.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("30")]
+        public int HideAnnotationSeconds
+        {
+            get => (int)this[nameof(HideAnnotationSeconds)];
+            set => this[nameof(HideAnnotationSeconds)] = value;
         }
     }
 }

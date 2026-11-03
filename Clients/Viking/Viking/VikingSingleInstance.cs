@@ -115,8 +115,6 @@ namespace Viking
 
         internal static string NormalizeVolumeUrl(string url) => VikingDeepLinkParser.NormalizeVolumeUrl(url);
 
-        internal static bool VolumeUrlsMatch(string? a, string? b) => VikingDeepLinkParser.VolumeUrlsEqual(a, b);
-
         private static bool TryForwardToPipe(string pipeName, string vikingUrl)
         {
             try

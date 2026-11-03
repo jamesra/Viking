@@ -278,7 +278,6 @@ namespace Geometry
         /// <param name="p1"></param>
         /// <param name="p2"></param>
         /// <param name="p3"></param>
-        /// <param name="tPoints">If null then [NumInterpolations] points are evenly spaced along the curve </param>
         /// <param name="NumInterpolations"></param>
         /// <returns></returns>
         public static Vector2[] RecursivelyFitCurveSegment(in Vector2 p0, in Vector2 p1,

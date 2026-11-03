@@ -262,11 +262,12 @@ namespace Viking.UI.Commands
         /// </summary>
         protected Geometry.Vector2 oldWorldPosition = new(0, 0);
 
-        MouseEventHandler MyMouseClick;
+        MouseEventHandler? MyMouseClick;
         MouseEventHandler MyMouseDoubleClick;
         MouseEventHandler MyMouseDown;
         MouseEventHandler MyMouseUp;
         MouseEventHandler MyMouseWheel;
+        MouseEventHandler MyMouseHWheel;
         MouseEventHandler MyMouseMove;
         EventHandler MyMouseHover;
         EventHandler MyMouseLeave;
@@ -279,8 +280,8 @@ namespace Viking.UI.Commands
 
         /* UI Extensions, extensions can register with these delegates to be notified whenever the default command does not process input.  This gives
         * extensions the chance to select objects only they are aware of or provide special behavior for key presses */
-        public static event MouseEventHandler OnUnhandledMouseDown;
-        public static event KeyPressEventHandler OnUnhandledKeyPress;
+        public static event MouseEventHandler? OnUnhandledMouseDown;
+        public static event KeyPressEventHandler? OnUnhandledKeyPress;
 
         /// <summary>
         /// Event fired whenever a command completes successfully
@@ -319,6 +320,7 @@ namespace Viking.UI.Commands
             MyMouseDown = new MouseEventHandler(this.OnMouseDown);
             MyMouseUp = new MouseEventHandler(this.OnMouseUp);
             MyMouseWheel = new MouseEventHandler(this.OnMouseWheel);
+            MyMouseHWheel = new MouseEventHandler(this.OnMouseHWheel);
             MyMouseMove = new MouseEventHandler(this.OnMouseMove);
 
             MyMouseHover = new EventHandler(this.OnMouseHover);
@@ -336,6 +338,7 @@ namespace Viking.UI.Commands
             Parent.MouseDown += MyMouseDown;
             Parent.MouseUp += MyMouseUp;
             Parent.MouseWheel += MyMouseWheel;
+            Parent.MouseHWheel += MyMouseHWheel;
             Parent.MouseMove += MyMouseMove;
             Parent.MouseHover += MyMouseHover;
             Parent.MouseLeave += MyMouseLeave;
@@ -376,6 +379,7 @@ namespace Viking.UI.Commands
             Parent.MouseDown -= MyMouseDown;
             Parent.MouseUp -= MyMouseUp;
             Parent.MouseWheel -= MyMouseWheel;
+            Parent.MouseHWheel -= MyMouseHWheel;
             Parent.MouseMove -= MyMouseMove;
 
             Parent.MouseHover -= MyMouseHover;
@@ -516,6 +520,14 @@ namespace Viking.UI.Commands
         }
 
         protected virtual void OnMouseUp(object sender, MouseEventArgs e)
+        {
+        }
+
+        /// <summary>
+        /// The sideways (tilt) wheel moved: <see cref="MouseEventArgs.Delta"/> is positive for a tilt to the right. Does nothing
+        /// by default; commands that want the wheel override it.
+        /// </summary>
+        protected virtual void OnMouseHWheel(object sender, MouseEventArgs e)
         {
         }
 

@@ -30,6 +30,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="TestModel.cs" />
+    <Compile Include="AnnotationPreferencesShimmerStyleTests.cs" />
+    <Compile Include="Commands\PaintUndoHistoryTests.cs" />
     <Compile Include="View\LocationShapeChangeEventTests.cs" />
     <Compile Include="View\StructureLinkRestoreAfterRemovalTests.cs" />
     <Compile Include="Actions\ChangeTypeActionTests.cs" />
@@ -108,6 +110,20 @@
     <Compile Include="Commands\SegmentationServiceSessionTests.cs" />
     <Compile Include="Commands\SegmentationViewportInterfaceTests.cs" />
     <Compile Include="Commands\CommandConstructorBinderTests.cs" />
+        <Compile Include="RTreeRectangleEqualsTests.cs" />
+        <Compile Include="WebAnnotationModelExtensionsTests.cs" />
+        <Compile Include="Commands\SameStructureMergeDiskTests.cs" />
+        <Compile Include="AnnotationPreferencesBarrelButtonTests.cs" />
+        <Compile Include="BarrelButtonBindingTests.cs" />
+        <Compile Include="Commands\PaintCanvasTests.cs" />
+        <Compile Include="Commands\PaintBrushTests.cs" />
+        <Compile Include="Commands\PaintCanvasSeedTests.cs" />
+        <Compile Include="Commands\SegmentationResultMergeTests.cs" />
+        <Compile Include="CreateStructureCommandActionAttributeListTests.cs" />
+        <Compile Include="LabelOutlineTests.cs" />
+        <Compile Include="HiddenStructureTypeSetTests.cs" />
+        <Compile Include="StructureObjTagsXmlTests.cs" />
+        <Compile Include="View\LocationCanvasViewCompareToTests.cs" />
     <Compile Include="Commands\StructureColorForIdTests.cs" />
     <Compile Include="Commands\SegmentationCommandTests.cs" />
     <Compile Include="DialogSmokeTests.cs" />
@@ -132,7 +148,9 @@
     <Compile Include="Commands\SegmentationTileImagesTests.cs" />
     <Compile Include="Commands\SegmentationThinFeatureCutTests.cs" />
     <Compile Include="Commands\AutoPolygonizeDissolveTests.cs" />
+    <Compile Include="Commands\CellOverlapGeometryTests.cs" />
     <Compile Include="Commands\AutoCirclePolygonizeTests.cs" />
+    <Compile Include="Commands\AutoPolygonizeMergeCandidateTests.cs" />
     <Compile Include="Commands\AutoPolygonizeSelectionRulesTests.cs" />
     <Compile Include="Commands\SameStructureMergeTests.cs" />
     <Compile Include="Properties\AutoPolygonizeMinRadiusSettingsTests.cs" />
@@ -145,6 +163,8 @@
     <Compile Include="Commands\CircleStartingPromptTests.cs" />
     <Compile Include="Commands\SharedViewportImageLeaseTests.cs" />
     <Compile Include="Commands\SegmentationCaptureEncoderTests.cs" />
+    <Compile Include="SectionLoadCheckTests.cs" />
+    <Compile Include="FlagFeedbackAnimationTests.cs" />
     <Compile Include="ReviewChangeFeedTests.cs" />
     <Compile Include="SectionRangeParserTests.cs" />
     <Compile Include="GlobalShouldLoadTests.cs" />
@@ -160,6 +180,10 @@
     <Compile Include="PidControllerTests.cs" />
     <Compile Include="LocationParentFetchTests.cs" />
     <Compile Include="StructureTypeIDsToStructureTypeObjsConverterTests.cs" />
+    <Compile Include="IntToBrushConverterTests.cs" />
+    <Compile Include="TokenErrorHelperTests.cs" />
+    <Compile Include="SectionReferenceSettingsTests.cs" />
+    <Compile Include="TranslateCurveLocationCommandTests.cs" />
     <Compile Include="PenLocationLinksTests.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -167,6 +191,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FlaUI.UIA3" Version="4.0.0" />
+    <PackageReference Include="FsCheck" Version="2.16.3" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="MSTest.TestAdapter" Version="3.9.3" />
     <PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
@@ -175,6 +200,8 @@
 	    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
 	    <!-- Pen commands derive from types that touch WPF's DependencyObject; tests that call their static members need it to compile. -->
 	    <Reference Include="WindowsBase" />
+	    <!-- IntToBrushConverterTests uses System.Windows.Media.Color and SolidColorBrush. -->
+	    <Reference Include="PresentationCore" />
     </ItemGroup>
     <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
 	    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />

@@ -136,6 +136,13 @@ namespace VikingXNAGraphics
             /// Output limited to unit circle
             /// </summary>
             CircleVertexColorTextureLumaOverlayEffect,
+            /// <summary>
+            /// As <see cref="CircleSingleColorTextureLumaOverlayEffect"/>, over a contrasting border set by
+            /// <see cref="OverlayShaderEffect.SetMarkerBorder"/>, a fixed number of screen pixels wide.
+            /// The texture must be a <see cref="MarkerOutlineMap"/>.
+            /// Output limited to unit circle
+            /// </summary>
+            CircleSingleColorTextureLumaOutlinedOverlayEffect,
 
             /// <summary>
             /// Color defined by effect (hue/chroma), luma set relative to the background by <see cref="OverlayShaderEffect.RingContrast"/>.
@@ -150,7 +157,15 @@ namespace VikingXNAGraphics
             /// Sizes are in the mask texels given by <see cref="OverlayShaderEffect.StripeTexelCount"/>, so the stripes scale with zoom.
             /// Normal alpha blending
             /// </summary>
-            StripeOverlayEffect
+            StripeOverlayEffect,
+
+            /// <summary>
+            /// Checkerboard of <see cref="OverlayShaderEffect.CheckerColorA"/> and <see cref="OverlayShaderEffect.CheckerColorB"/> inside
+            /// the alpha of <see cref="OverlayShaderEffect.StripeClipTexture"/>, anti-aliased per pixel. Squares are
+            /// <see cref="OverlayShaderEffect.CheckerCell"/> mask texels wide (<see cref="OverlayShaderEffect.StripeTexelCount"/>).
+            /// Normal alpha blending
+            /// </summary>
+            CheckerOverlayEffect
         };
 
         public Effect effect;
@@ -186,6 +201,16 @@ namespace VikingXNAGraphics
         private EffectParameter _StripeGlow;
         private EffectParameter _StripeRipple;
         private EffectParameter _StripeRipple2;
+
+        private EffectParameter _CheckerColorA;
+        private EffectParameter _CheckerColorB;
+        private EffectParameter _CheckerCell;
+        private EffectParameter _CheckerAlpha;
+
+        private EffectParameter _MarkerBorderColor;
+        private EffectParameter _MarkerBorderWidth;
+        private EffectParameter _MarkerBorderBlur;
+        private EffectParameter _MarkerDistanceRange;
 
         private EffectParameter _InputLumaAlpha;
 
@@ -358,6 +383,45 @@ namespace VikingXNAGraphics
             set => _StripeRipple2?.SetValue(value);
         }
 
+        /// <summary>First square color of <see cref="Techniques.CheckerOverlayEffect"/>. Null-safe so an older compiled shader still works.</summary>
+        public Vector4 CheckerColorA
+        {
+            set => _CheckerColorA?.SetValue(value);
+        }
+
+        /// <summary>Second square color of <see cref="Techniques.CheckerOverlayEffect"/>.</summary>
+        public Vector4 CheckerColorB
+        {
+            set => _CheckerColorB?.SetValue(value);
+        }
+
+        /// <summary>Width of a checker square in mask texels (<see cref="StripeTexelCount"/>).</summary>
+        public float CheckerCell
+        {
+            set => _CheckerCell?.SetValue(value);
+        }
+
+        /// <summary>Alpha of the checker inside the clip area.</summary>
+        public float CheckerAlpha
+        {
+            set => _CheckerAlpha?.SetValue(value);
+        }
+
+        /// <summary>
+        /// Border of <see cref="Techniques.CircleSingleColorTextureLumaOutlinedOverlayEffect"/>: its color, and its width and blur in
+        /// screen pixels (as a label's, <see cref="LabelOutlineEffect.OutlineWidth"/>). Null-safe so an older compiled shader still works.
+        /// </summary>
+        public void SetMarkerBorder(Color color, float width, float blur)
+        {
+            _MarkerBorderColor?.SetValue(color.ToVector3());
+            _MarkerBorderWidth?.SetValue(width);
+            _MarkerBorderBlur?.SetValue(blur);
+            _MarkerDistanceRange?.SetValue(MarkerOutlineMap.DistanceRange);
+        }
+
+        /// <summary>True when the compiled shader has <paramref name="technique"/>; an older build of the content may not.</summary>
+        public bool HasTechnique(Techniques technique) => effect?.Techniques[technique.ToString()] is not null;
+
         public float InputLumaAlphaValue
         {
             get => _InputLumaAlpha.GetValueSingle();
@@ -431,6 +495,16 @@ namespace VikingXNAGraphics
             _StripeGlow = effect.Parameters["stripeGlow"];
             _StripeRipple = effect.Parameters["stripeRipple"];
             _StripeRipple2 = effect.Parameters["stripeRipple2"];
+
+            _CheckerColorA = effect.Parameters["checkerColorA"];
+            _CheckerColorB = effect.Parameters["checkerColorB"];
+            _CheckerCell = effect.Parameters["checkerCell"];
+            _CheckerAlpha = effect.Parameters["checkerAlpha"];
+
+            _MarkerBorderColor = effect.Parameters["markerBorderColor"];
+            _MarkerBorderWidth = effect.Parameters["markerBorderWidth"];
+            _MarkerBorderBlur = effect.Parameters["markerBorderBlur"];
+            _MarkerDistanceRange = effect.Parameters["markerDistanceRange"];
 
             _InputLumaAlpha = effect.Parameters["InputLumaAlpha"];
             _AnnotationHSLColor = effect.Parameters["AnnotationHSLColor"];

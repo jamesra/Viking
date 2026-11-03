@@ -10,8 +10,7 @@ using WebAnnotationModel.Objects;
 namespace WebAnnotation.ViewModel
 {
     [Viking.Common.UI.TreeViewVisible]
-    public class StructureType(StructureTypeObj data) : Viking.Objects.UIObjBase
-        , IContextMenu
+    public class StructureType(StructureTypeObj data) : Viking.Objects.UIObjBase, IContextMenu
     {
         public StructureTypeObj modelObj = data;
 
@@ -24,7 +23,7 @@ namespace WebAnnotation.ViewModel
                 return modelObj.Equals(Obj.modelObj);
             }
 
-            StructureTypeObj Obj2 = obj as StructureTypeObj;
+            StructureTypeObj? Obj2 = obj as StructureTypeObj;
             if (Obj2 != null)
             {
                 return modelObj.Equals(Obj2);

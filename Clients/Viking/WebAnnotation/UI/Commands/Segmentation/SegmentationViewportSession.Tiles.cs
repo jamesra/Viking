@@ -343,11 +343,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             long pausedMs = 0;
             try
             {
-                (int downsample, TileSignature signature, bool grayscale) = await Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
-                {
-                    int level = ResolveTileDownsample(parent.CameraDownsample);
-                    return (level, CurrentTileSignature(level), parent.IsGrayscale);
-                }).Task.ConfigureAwait(false);
+                (int downsample, TileSignature signature, bool grayscale) = await ReadPrefetchSignatureAsync().ConfigureAwait(false);
 
                 List<TileCell> cells = [];
                 HashSet<TileCell> seen = [];
@@ -377,9 +373,51 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 SegmentationDiag.Log($"Prefetch stopped: UploadTile RPC {rpcEx.StatusCode}");
             }
 
-            SegmentationDiag.Log(
-                $"Prefetch done uploaded={uploaded} alreadySent={skipped} serverHeld={held} pausedForRequests={pausedMs}ms ms={timer.ElapsedMilliseconds}");
+            SegmentationDiag.Log($"Prefetch done uploaded={uploaded} alreadySent={skipped} serverHeld={held} pausedForRequests={pausedMs}ms ms={timer.ElapsedMilliseconds}");
         }
+
+        /// <summary>
+        /// Uploads the image tiles under <paramref name="mask"/>, nearest <paramref name="nearest"/> first, so the server has them
+        /// encoded before a request for the mask needs them. The paint command calls it after every change; a new call should
+        /// cancel the last one, whose tiles already sent are skipped. Stops on cancellation or an RPC error.
+        /// </summary>
+        internal async Task PrefetchMaskTilesAsync(SegmentationMaskUnion mask, Geometry.Vector2 nearest, CancellationToken token)
+        {
+            if (grpcClient is null || mask.IsEmpty || !IsCameraWithinTileSubmission(recordSkip: false))
+                return;
+
+            Stopwatch timer = Stopwatch.StartNew();
+            int uploaded = 0;
+            int skipped = 0;
+            int held = 0;
+            long pausedMs = 0;
+            try
+            {
+                (int downsample, TileSignature signature, bool grayscale) = await ReadPrefetchSignatureAsync().ConfigureAwait(false);
+                double cellWorld = SegmentationTileGrid.TileSize * (double)downsample;
+                List<TileCell> cells = [.. mask.TilesTouched(downsample).OrderBy(cell => Geometry.Vector2.DistanceSquared(
+                    new Geometry.Vector2((cell.Col + 0.5) * cellWorld, (cell.Row + 0.5) * cellWorld), nearest))];
+                SegmentationDiag.Log($"Prefetch mask tiles={cells.Count} ds={downsample}");
+                (uploaded, skipped, held, pausedMs) = await UploadPrefetchCellsAsync(signature, cells, grayscale, token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (RpcException rpcEx)
+            {
+                SegmentationDiag.Log($"Prefetch mask stopped: UploadTile RPC {rpcEx.StatusCode}");
+            }
+
+            SegmentationDiag.Log($"Prefetch mask done uploaded={uploaded} alreadySent={skipped} serverHeld={held} pausedForRequests={pausedMs}ms ms={timer.ElapsedMilliseconds}");
+        }
+
+        /// <summary>The tile level, signature and colour mode a request sent now would use, read on the UI thread.</summary>
+        private Task<(int Downsample, TileSignature Signature, bool Grayscale)> ReadPrefetchSignatureAsync() =>
+            Viking.UI.State.MainThreadDispatcher.InvokeAsync(() =>
+            {
+                int level = ResolveTileDownsample(parent.CameraDownsample);
+                return (level, CurrentTileSignature(level), parent.IsGrayscale);
+            }).Task;
 
         /// <summary>
         /// Uploads <paramref name="cells"/> one at a time, skipping those already sent and those the server says it holds, and
@@ -999,7 +1037,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
             finally
             {
-                Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() => renderTarget.Dispose()));
+                _ = Viking.UI.State.MainThreadDispatcher.BeginInvoke(new Action(() => renderTarget.Dispose()));
             }
         }
     }

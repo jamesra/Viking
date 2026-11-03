@@ -93,7 +93,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             float[] fromOpened = SquaredDistanceTo(opened, wide, tall, seedValue: true);
             double restoreSquared = (double)scale * scale;
-            byte[] result = null;
+            byte[]? result = null;
             int blockArea = scale * scale;
             for (int y = 0; y < height; y++)
             {

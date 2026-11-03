@@ -514,7 +514,7 @@ namespace Geometry
         /// <summary>
         /// Returns a list of GridLineSegments that could possible intersect the passed line
         /// </summary>
-        /// <param name="L"></param>
+        /// <param name="line">Line to test for potential intersections</param>
         /// <returns></returns>
         public IEnumerable<LineSegmentPair> GetPotentialIntersections(in LineSegment line)
         {

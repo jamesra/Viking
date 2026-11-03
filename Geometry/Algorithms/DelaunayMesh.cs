@@ -132,7 +132,7 @@ namespace Geometry
         /// <summary>
         /// Recursively splits the vertex set, triangulates each half, then stitches along the cut.
         /// </summary>
-        private static TriangulationMesh<VERTEX> RecursiveDivideAndConquerDelaunay(TriangulationMesh<VERTEX> mesh, MeshCut VertSet = null, IVertex2D[] verts = null, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
+        private static TriangulationMesh<VERTEX>? RecursiveDivideAndConquerDelaunay(TriangulationMesh<VERTEX> mesh, MeshCut? VertSet = null, IVertex2D[]? verts = null, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null)
         {
             //The first recursion we populate variables to include all the verticies in the mesh
             VertSet ??= new MeshCut(mesh.XSorted, mesh.YSorted, CutDirection.HORIZONTAL, mesh.BoundingBox);
@@ -231,8 +231,8 @@ namespace Geometry
 
             IVertex2D LOrigin = L;
             IVertex2D ROrigin = R;
-            IVertex2D LeftCandidate = null;
-            IVertex2D RightCandidate = null;
+            IVertex2D? LeftCandidate = null;
+            IVertex2D? RightCandidate = null;
             List<EdgeAngle> LCandidates = [.. EdgesByAngle(mesh, L, R.Index, false)];
             List<EdgeAngle> RCandidates = [.. EdgesByAngle(mesh, R, L.Index, true)];
 
@@ -1079,7 +1079,7 @@ namespace Geometry
         /// is usually outside it. Treating the band as inside deletes an edge the triangulation needs; keeping a
         /// borderline edge is safe because the final flip pass in <see cref="TriangulateToMesh"/> restores Delaunay.
         /// </remarks>
-        private static IVertex2D TryGetNextCandidate(TriangulationMesh<VERTEX> mesh, ref List<EdgeAngle> sortedCandidates, in Baseline baseline, bool Clockwise, out double angle, out Circle? circle)
+        private static IVertex2D? TryGetNextCandidate(TriangulationMesh<VERTEX> mesh, ref List<EdgeAngle> sortedCandidates, in Baseline baseline, bool Clockwise, out double angle, out Circle? circle)
         {
             if (sortedCandidates is null || sortedCandidates.Count == 0)
             {
@@ -1186,7 +1186,9 @@ namespace Geometry
         /// <summary>
         /// Helper function to track pairs of faces
         /// </summary>
-        /// <param name="AlreadyFlipped"></param>
+        /// <param name="dict">Map from each face to the faces paired with it</param>
+        /// <param name="A">First face of the pair</param>
+        /// <param name="B">Second face of the pair</param>
         static void AddFacePair(Dictionary<IFace, SortedSet<IFace>> dict, IFace A, IFace B)
         {
             if (false == dict.TryGetValue(A, out var ASet))
@@ -1214,7 +1216,7 @@ namespace Geometry
         /// Lawson, "Software for C1 Surface Interpolation," in Rice (ed.), Mathematical Software III,
         /// Academic Press, 1977.
         /// </remarks>
-        static void CheckEdgeFlip(TriangulationMesh<VERTEX> mesh, TriangleFace f, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null, Dictionary<IFace, SortedSet<IFace>> AlreadyFlipped = null)
+        static void CheckEdgeFlip(TriangulationMesh<VERTEX> mesh, TriangleFace f, TriangulationMesh<VERTEX>.ProgressUpdate ReportProgress = null, Dictionary<IFace, SortedSet<IFace>>? AlreadyFlipped = null)
         {
             //Check if the face has already been removed.
             if (mesh.Contains(f) == false)
@@ -1232,7 +1234,7 @@ namespace Geometry
 
 
 
-            SortedSet<IFace> AlreadyFlippedOppositeFaces = null;
+            SortedSet<IFace>? AlreadyFlippedOppositeFaces = null;
             if (AlreadyFlipped != null && AlreadyFlipped.ContainsKey(f))
             {
                 AlreadyFlippedOppositeFaces = AlreadyFlipped[f];
@@ -1367,8 +1369,8 @@ namespace Geometry
             if (edge.Faces.Count < 2)
                 return;
 
-            TriangleFace f = edge.Faces[0] as TriangleFace;
-            TriangleFace oppositeFace = edge.Faces[1] as TriangleFace;
+            TriangleFace? f = edge.Faces[0] as TriangleFace;
+            TriangleFace? oppositeFace = edge.Faces[1] as TriangleFace;
 
             VERTEX[] verts = [.. f.iVerts.Select(v => mesh[v])];
             Vector2[] circlePoints = [.. verts.Select(v => v.Position)];

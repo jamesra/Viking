@@ -90,7 +90,7 @@ namespace WebAnnotation.UI.Actions
         /// exterior piece keeps the stored holes it still covers; a hole the cut leaves outside goes with the other piece.
         /// </summary>
         /// <returns>Null when a new point cannot be mapped or the ring is not a valid polygon.</returns>
-        private static Piece BuildPiece(SplicedControlRing side, Vector2[] mosaicRing, Polygon mosaicControl, IVolumeToSectionTransform transform, bool isHole)
+        private static Piece? BuildPiece(SplicedControlRing side, Vector2[] mosaicRing, Polygon mosaicControl, IVolumeToSectionTransform transform, bool isHole)
         {
             if (side is null)
                 return null;

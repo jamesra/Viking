@@ -121,6 +121,23 @@ namespace WebAnnotation
         private readonly MouseOverLocationCanvasViewEffect mouseOverEffect = new();
         private AutoCirclePolygonizeController autoPolygonizeController;
 
+        /// <summary>Checkered shading and menu for overlaps between cells; created by the first draw.</summary>
+        private WebAnnotation.UI.CellOverlap.CellOverlapOverlay cellOverlap;
+
+        private readonly FlagFeedbackRenderer flagFeedback = new();
+
+        /// <summary>
+        /// Plays the short client-side confetti (Terminal turned on) or frown (Off Edge turned on) animation at a location.
+        /// Draws only; it makes no tile or server requests. Call from the UI thread after the flag change was saved.
+        /// </summary>
+        /// <param name="kind">Which animation to play.</param>
+        /// <param name="worldAnchor">Volume-space position of the annotation the flag was set on.</param>
+        internal void PlayFlagFeedback(FlagFeedbackKind kind, Geometry.Vector2 worldAnchor)
+        {
+            flagFeedback.Start(kind, worldAnchor);
+            _Parent?.Invalidate();
+        }
+
         /// <summary>
         /// True when auto-polygonize is hovering a proposal ring for this location.
         /// Used by circle draw to cut the annotation's alpha in half as a linked highlight.
@@ -194,6 +211,8 @@ namespace WebAnnotation
 
         public AnnotationOverlay()
         {
+            Global.AnnotationSettings.ApplyBarrelButton();
+
             SectionChangedEventHandler = new TransformChangedEventHandler(OnSectionTransformChanged);
 
             AnnotationChangedEventHandler = new EventHandler(OnAnnotationChanged);
@@ -624,7 +643,7 @@ namespace WebAnnotation
             }
 
             //Get the overlapping locations, filter out non-location annotations
-            return [.. locView.GetAnnotations(position).Where(hr => hr.obj is LocationCanvasView)];
+            return [.. HiddenStructureTypes.ExcludeHits(locView.GetAnnotations(position)).Where(hr => hr.obj is LocationCanvasView)];
         }
 
         /// <summary>
@@ -639,8 +658,8 @@ namespace WebAnnotation
                 return null;
             }
 
-            //Get the overlapping locations, filter out non-location annotations and the ones Del hid
-            return [.. hiddenAnnotations.Exclude(locView.GetAnnotations(position)).Where(hr => hr.obj is LocationCanvasView)];
+            //Get the overlapping locations, filter out non-location annotations, the ones Del hid and those of types hidden with the eye
+            return [.. HiddenStructureTypes.ExcludeHits(hiddenAnnotations.Exclude(locView.GetAnnotations(position))).Where(hr => hr.obj is LocationCanvasView)];
         }
 
         /// <summary>
@@ -663,7 +682,7 @@ namespace WebAnnotation
 
             ICanvasGeometryView bestObj = null;
 
-            List<HitTestResult> listObjects = hiddenAnnotations.Exclude(locView.GetAnnotations(position));
+            List<HitTestResult> listObjects = HiddenStructureTypes.ExcludeHits(hiddenAnnotations.Exclude(locView.GetAnnotations(position)));
 
             HitTestResult bestHit = listObjects.NearestObjectOnCurrentSectionThenAdjacent(CurrentSectionNumber, preferCloserLocationLinks: true);
 
@@ -717,11 +736,21 @@ namespace WebAnnotation
             MouseButtons button,
             Geometry.Vector2 worldPosition)
         {
-            if (!IsCommandDefault() ||
-                autoPolygonizeController?.TryHit(worldPosition, out AutoPolygonizeProposal proposal, out _) != true)
-            {
+            if (!IsCommandDefault())
                 return false;
+
+            // A right double-click on a shaded overlap gives the area to one of the two cells; Shift opens the cell's own menu instead.
+            if ((button == MouseButtons.Right || button == MouseButtons.Middle) &&
+                (Control.ModifierKeys & Keys.Shift) == 0 &&
+                autoPolygonizeController?.TryHit(worldPosition, out _, out _) != true &&
+                cellOverlap is not null && cellOverlap.TryHit(worldPosition, out WebAnnotation.UI.CellOverlap.CellOverlapRegion region) && region is not null)
+            {
+                WebAnnotation.UI.CellOverlap.CellOverlapOverlay.CreateMenu(region, _Parent).Show(Control.MousePosition);
+                return true;
             }
+
+            if (autoPolygonizeController?.TryHit(worldPosition, out AutoPolygonizeProposal proposal, out _) != true)
+                return false;
 
             if (button == MouseButtons.Left)
                 return proposal.HandleMouseDoubleClick(button, worldPosition);
@@ -748,7 +777,7 @@ namespace WebAnnotation
                 return null;
             }
 
-            List<HitTestResult> listObjects = locView.GetAnnotations(rect);
+            List<HitTestResult> listObjects = HiddenStructureTypes.ExcludeHits(locView.GetAnnotations(rect));
             return listObjects;
         }
 
@@ -790,7 +819,7 @@ namespace WebAnnotation
 
             IEnumerable<LocationCanvasView> listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode == LocationType.CIRCLE);
 
-            IEnumerable<LocationCircleView> listCircles = listObjects.Select(o => o as LocationCircleView).Where(o => o != null);
+            IEnumerable<LocationCircleView> listCircles = listObjects.OfType<LocationCircleView>();
 
             return [.. listCircles.Where(o => o.VolumeCircle.Intersects(bounds) || bounds.Contains(o.VolumeCircle))];
         }
@@ -812,7 +841,7 @@ namespace WebAnnotation
 
             IEnumerable<LocationCanvasView> listObjects = locView.GetLocations(bounds.BoundingBox).Where(o => o.TypeCode.AllowsInteriorHoles());
 
-            IEnumerable<LocationPolygonView> listPolygons = listObjects.Select(o => o as LocationPolygonView).Where(o => o != null);
+            IEnumerable<LocationPolygonView> listPolygons = listObjects.OfType<LocationPolygonView>();
 
             return [.. listPolygons.Where(o =>
             {
@@ -829,7 +858,7 @@ namespace WebAnnotation
                 return null;
             }
 
-            List<HitTestResult> listObjects = [.. locView.GetLocations(line).Select(o => new HitTestResult(o, (int)o.Z, o.VisualHeight, o.DistanceFromCenterNormalized(line.A)))];
+            List<HitTestResult> listObjects = [.. locView.GetLocations(line).Where(o => !HiddenStructureTypes.IsHidden(o)).Select(o => new HitTestResult(o, (int)o.Z, o.VisualHeight, o.DistanceFromCenterNormalized(line.A)))];
             return listObjects;
         }
 
@@ -994,6 +1023,10 @@ namespace WebAnnotation
         {
             if (_Parent != null)
                 _Parent.Disposed -= OnParentDisposed;
+
+            flagFeedback.Dispose();
+            cellOverlap?.Dispose();
+            cellOverlap = null;
 
             Store.Locations.OnCollectionChanged -= OnLocationCollectionChanged;
             Store.LocationLinks.OnCollectionChanged -= OnLocationLinksCollectionChanged;
@@ -2042,7 +2075,7 @@ break;
 
 
         /// <summary>
-        /// Tab starts <see cref="SegmentationCommand"/> so clicks place a new structure.
+        /// Tab starts <see cref="SegmentationPaintCommand"/> so the user paints the object for a new structure.
         /// Called from <see cref="OnKeyDown"/> when the default command is active.
         /// The saved type is the structure selected in the list, or cell type 1.
         /// Accepting the mask saves through <see cref="SegmentationCommand.CreateAnnotationFromPolygon"/>.
@@ -2062,10 +2095,12 @@ break;
                 ? selected.ID
                 : Store.StructureTypes[1].ID;
 
-            Parent.CurrentCommand = new SegmentationCommand(
+            // The point placing SegmentationCommand is retired and no longer started from anywhere; Tab and the context menus paint a mask.
+            // TODO: restore `new SegmentationCommand(..., structureTypeId: structureTypeId)` here only if the paintbrush is withdrawn;
+            // the paintbrush passes no structure type, so it adds no background prompts from other structures.
+            Parent.CurrentCommand = new SegmentationPaintCommand(
                 Parent,
-                outputPolygon => SegmentationCommand.CreateAnnotationFromPolygon(Parent, null, outputPolygon),
-                structureTypeId: structureTypeId);
+                outputPolygon => SegmentationCommand.CreateAnnotationFromPolygon(Parent, null, outputPolygon));
         }
 
         /// <summary>
@@ -2533,7 +2568,87 @@ break;
                 if (s > 0)
                     RequestSectionAnnotationsLoad(s);
             }
+
+            ScheduleSectionLoadCheck(B);
             await Task.CompletedTask;
+        }
+
+        private CancellationTokenSource? _sectionLoadCheckCts;
+        private int _loadCheckPreviousSection;
+        private int _loadCheckDirection;
+        private int _loadCheckRun;
+
+        /// <summary>
+        /// Runs <see cref="CheckSectionLoaded"/> once, <see cref="SectionLoadCheck.Delay"/> after a section change. A newer
+        /// section change replaces the pending check, so only the section a run of steps ends on is checked.
+        /// </summary>
+        private void ScheduleSectionLoadCheck(int section)
+        {
+            SectionLoadCheck.UpdateRun(_loadCheckPreviousSection, section, _loadCheckDirection, _loadCheckRun, out int direction, out int run);
+            _loadCheckPreviousSection = section;
+            _loadCheckDirection = direction;
+            _loadCheckRun = run;
+
+            CancellationTokenSource next = CancellationTokenSource.CreateLinkedTokenSource(_annotationLoadWorkerCts.Token);
+            CancellationTokenSource? previous = Interlocked.Exchange(ref _sectionLoadCheckCts, next);
+            if (previous is not null)
+            {
+                previous.Cancel();
+                previous.Dispose();
+            }
+
+            CancellationToken token = next.Token;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(SectionLoadCheck.Delay, token).ConfigureAwait(false);
+                    Parent?.BeginInvoke(new System.Action(() => CheckSectionLoaded(section, direction, run, token)));
+                }
+                catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException or InvalidOperationException)
+                {
+                    // Superseded by a newer section change, or the view is closing.
+                }
+            });
+        }
+
+        /// <summary>
+        /// UI thread. If the section is still current and its region cells never finished a server query while no load is
+        /// queued or running, queue the load again; when the queries did finish, queue it again anyway (warm cells are
+        /// answered from the local cache without a server request) and repaint, which covers a reply that was cached
+        /// without a redraw. Every check is logged by <see cref="SectionLoadCheck"/>.
+        /// </summary>
+        private void CheckSectionLoaded(int section, int direction, int run, CancellationToken token)
+        {
+            if (token.IsCancellationRequested || section != _currentSectionNumber || Parent?.Scene is null || !_Parent.ShowOverlays)
+                return;
+
+            // A section whose view does not exist yet has nothing drawn to check; start building it and stop here.
+            SectionAnnotationsView sectionView = cacheSectionAnnotations.Fetch(section);
+            if (sectionView is null)
+            {
+                _ = GetOrCreateAnnotationsForSectionAsync(section);
+                return;
+            }
+
+            Geometry.Rectangle? mosaicBounds = Parent.Scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(sectionView.mapper);
+            bool complete = Store.LocationsByRegion.AreRegionQueriesComplete(mosaicBounds, Parent.Scene.ScreenPixelSizeInVolume, section);
+
+            bool queuedOrRunning;
+            lock (_sectionAnnotationLoadLock)
+            {
+                queuedOrRunning = _requestedSectionNumbers.Contains(section) || _loadingSectionNumbers.Contains(section);
+            }
+
+            SectionLoadCheckOutcome outcome = SectionLoadCheck.Classify(complete, queuedOrRunning);
+            bool again = SectionLoadCheck.ShouldRequestAgain(outcome);
+            SectionLoadCheck.Append(SectionLoadCheck.FormatLine(section, Parent.Camera.Downsample, direction, run, outcome, again));
+
+            if (again)
+            {
+                RequestSectionAnnotationsLoad(section);
+                InvalidateParent();
+            }
         }
 
         protected void OnAnnotationChanged(object sender, EventArgs e) =>
@@ -3082,9 +3197,9 @@ break;
             ISet<long>? hiddenStructures = (_Parent.CurrentCommand as AnnotationOverlayPenFreeDrawCommandV2)?.HiddenStructureIDs;
 
             ICollection<LocationCanvasView> Locations = currentSectionAnnotations.GetLocations(scene.VisibleWorldBounds);
-            List<LocationCanvasView> listLocationsToDraw = hiddenAnnotations.VisibleToDraw(HiddenStructures.ExcludeLocations(FindVisibleLocations(Locations, scene), hiddenStructures));
+            List<LocationCanvasView> listLocationsToDraw = hiddenAnnotations.VisibleToDraw(HiddenStructureTypes.ExcludeLocations(HiddenStructures.ExcludeLocations(FindVisibleLocations(Locations, scene), hiddenStructures)));
             ICollection<LocationCanvasView> RefLocations = currentSectionAnnotations.AdjacentLocationsNotOverlappedInRegion(Bounds);
-            List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = hiddenAnnotations.VisibleToDraw(HiddenStructures.ExcludeLocations(FindVisibleAdjacentLocations(RefLocations, scene), hiddenStructures)); //Find the locations on the adjacent sections
+            List<LocationCanvasView> listVisibleNonOverlappingLocationsOnAdjacentSections = hiddenAnnotations.VisibleToDraw(HiddenStructureTypes.ExcludeLocations(HiddenStructures.ExcludeLocations(FindVisibleAdjacentLocations(RefLocations, scene), hiddenStructures))); //Find the locations on the adjacent sections
 
             //Draw all of the locations on the current section
             //An annotation Del hid fades back in over the end of its hide time; scale its alpha for this draw only.
@@ -3107,10 +3222,11 @@ break;
 
             //Get all the lines to draw first so the text and geometric shapes are over top of them
             // A pen stroke and its choice buttons draw no location links or link labels; the markers check the same predicate.
-            List<LocationLinkView> linksToDraw = PenLocationLinks.HidesLocationLinks(_Parent.CurrentCommand) ? [] : hiddenAnnotations.VisibleToDraw(HiddenStructures.ExcludeLocationLinks(
+            List<LocationLinkView> linksToDraw = PenLocationLinks.HidesLocationLinks(_Parent.CurrentCommand) ? [] : hiddenAnnotations.VisibleToDraw(HiddenStructureTypes.ExcludeLocationLinks(HiddenStructures.ExcludeLocationLinks(
                 currentSectionAnnotations.NonOverlappedLocationLinksInRegion(scene.VisibleWorldBounds),
                 hiddenStructures,
-                locationId => Store.Locations.TryGetObjectByID(locationId, out LocationObj linkEnd) ? linkEnd?.ParentID : null));
+                locationId => Store.Locations.TryGetObjectByID(locationId, out LocationObj linkEnd) ? linkEnd?.ParentID : null),
+                locationId => Store.Locations.TryGetObjectByID(locationId, out LocationObj linkEnd) ? linkEnd?.Parent?.TypeID : null));
             using (hiddenAnnotations.ApplyFade(linksToDraw))
             {
                 LocationLinkView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, basicEffect, overlayEffect, linksToDraw);
@@ -3139,7 +3255,9 @@ break;
             //Draw structure links over any annotations
             DeviceStateManager.SetDepthStencilValue(graphicsDevice, nextStencilValue);
 
-            List<StructureLinkViewModelBase> VisibleStructureLinks = hiddenAnnotations.VisibleToDraw(HiddenStructures.ExcludeStructureLinks(currentSectionAnnotations.VisibleStructureLinks(scene), hiddenStructures));
+            List<StructureLinkViewModelBase> VisibleStructureLinks = hiddenAnnotations.VisibleToDraw(HiddenStructureTypes.ExcludeStructureLinks(
+                HiddenStructures.ExcludeStructureLinks(currentSectionAnnotations.VisibleStructureLinks(scene), hiddenStructures),
+                structureId => Store.Structures.TryGetObjectByID(structureId, out StructureObj structure) ? structure?.TypeID : null));
             using (hiddenAnnotations.ApplyFade(VisibleStructureLinks))
             {
                 StructureLinkCirclesView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, [.. VisibleStructureLinks.OfType<StructureLinkCirclesView>()]);
@@ -3169,7 +3287,18 @@ break;
             if (StructureLabelsBase.TakeAnimatingFrame())
                 _Parent.Invalidate();
 
+            // Where two cells' outlines overlap (they should not), checkered in both cells' colors.
+            cellOverlap ??= new WebAnnotation.UI.CellOverlap.CellOverlapOverlay();
+            cellOverlap.Update(
+                listLocationsToDraw.Select(view => Store.Locations.TryGetObjectByID(view.ID, out LocationObj location) ? location : null).Where(location => location is not null),
+                _Parent.Section.ActiveSectionToVolumeTransform);
+            cellOverlap.Draw(graphicsDevice, scene);
+
             autoPolygonizeController?.Draw(graphicsDevice, scene);
+
+            // Time-based like the shimmer: ask for the next frame until the animation ends.
+            if (flagFeedback.Draw(_Parent.spriteBatch, scene))
+                _Parent.Invalidate();
 
             if (OriginalRasterState != null && !OriginalRasterState.IsDisposed)
             {

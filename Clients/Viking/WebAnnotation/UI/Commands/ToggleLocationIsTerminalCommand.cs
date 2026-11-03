@@ -24,7 +24,13 @@ namespace WebAnnotation.UI.Commands
             bool previous = target.Terminal;
             target.Terminal = !target.Terminal;
             if (!await AnnotationOverlay.SaveLocationsWithMessageBoxOnError())
+            {
                 target.Terminal = previous;
+            }
+            else if (target.Terminal)
+            {
+                AnnotationOverlay.CurrentOverlay?.PlayFlagFeedback(FlagFeedbackKind.Celebration, target.VolumeCenter());
+            }
 
             base.Execute();
         }

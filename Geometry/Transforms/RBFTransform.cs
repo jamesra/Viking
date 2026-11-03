@@ -46,10 +46,10 @@ namespace Geometry.Transforms
         private const long ParallelWorkThreshold = 16384;
 
         [NonSerialized]
-        private volatile Vector2[] _mappedPointsCache = null;
+        private volatile Vector2[]? _mappedPointsCache = null;
 
         [NonSerialized]
-        private volatile Vector2[] _controlPointsCache = null;
+        private volatile Vector2[]? _controlPointsCache = null;
 
         /// <summary>
         /// The mapped point of every <see cref="ReferencePointBasedTransform.MapPoints"/> element, in the same order. Built on first use
@@ -60,7 +60,7 @@ namespace Geometry.Transforms
         {
             get
             {
-                Vector2[] cached = _mappedPointsCache;
+                Vector2[]? cached = _mappedPointsCache;
                 if (cached is not null)
                     return cached;
 
@@ -79,7 +79,7 @@ namespace Geometry.Transforms
         {
             get
             {
-                Vector2[] cached = _controlPointsCache;
+                Vector2[]? cached = _controlPointsCache;
                 if (cached is not null)
                     return cached;
 
@@ -112,12 +112,12 @@ namespace Geometry.Transforms
             base.OnMapPointsChanged();
         }
 
-        private volatile double[] _ControlToMappedSpaceWeights = null;
+        private volatile double[]? _ControlToMappedSpaceWeights = null;
         private double[] ControlToMappedSpaceWeights
         {
             get
             {
-                double[] cached = _ControlToMappedSpaceWeights;
+                double[]? cached = _ControlToMappedSpaceWeights;
                 if (cached is not null)
                     return cached;
 
@@ -128,12 +128,12 @@ namespace Geometry.Transforms
             }
         }
 
-        private volatile double[] _MappedToControlSpaceWeights = null;
+        private volatile double[]? _MappedToControlSpaceWeights = null;
         private double[] MappedToControlSpaceWeights
         {
             get
             {
-                double[] cached = _MappedToControlSpaceWeights;
+                double[]? cached = _MappedToControlSpaceWeights;
                 if (cached is not null)
                     return cached;
 
@@ -277,7 +277,7 @@ namespace Geometry.Transforms
 
         public override Vector2 InverseTransform(in Vector2 Point) => RBFTransform.Transform(Point, ControlToMappedSpaceWeights, ControlPointsArray, this.BasisFunction);
 
-        /// <summary>Maps control space points back to mapped space; see <see cref="Transform(Vector2[])"/> for the batching rules.</summary>
+        /// <summary>Maps control space points back to mapped space; see <see cref="Transform(in Vector2[])"/> for the batching rules.</summary>
         public override Vector2[] InverseTransform(in Vector2[] Points)
         {
             if (Points is null)
@@ -394,7 +394,7 @@ namespace Geometry.Transforms
         /// <param name="ControlPoints"></param>
         /// <param name="BasisFunction">How to weight pairs of points, if null, use Euclidean distance</param>
         /// <returns></returns>
-        public static Matrix<double> CreateBetaMatrixWithLinear(Vector2[] ControlPoints, BasisFunctionDelegate BasisFunction = null)
+        public static Matrix<double> CreateBetaMatrixWithLinear(Vector2[] ControlPoints, BasisFunctionDelegate? BasisFunction = null)
         {
             if (ControlPoints is null)
                 throw new ArgumentNullException(nameof(ControlPoints));

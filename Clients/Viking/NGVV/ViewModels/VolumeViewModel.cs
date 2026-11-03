@@ -21,6 +21,9 @@ namespace Viking.ViewModels
 
         public bool IsLocal => _Volume.IsLocal;
 
+        /// <summary>Paths of .stos files whose transform did not load; see <see cref="Volume.StosLoadFailures"/>.</summary>
+        public System.Collections.Generic.IReadOnlyList<string> StosLoadFailures => _Volume.StosLoadFailures;
+
         public int? DefaultTileWidth => _Volume.DefaultTileWidth;
 
         public UnitsAndScale.IAxisUnits DefaultXYScale => _Volume.DefaultXYScale;
@@ -81,7 +84,7 @@ namespace Viking.ViewModels
         {
             try
             {
-                string volumeLocalDir = _Volume?.LocalVolumeDir;
+                string? volumeLocalDir = _Volume?.LocalVolumeDir;
                 if (string.IsNullOrWhiteSpace(volumeLocalDir))
                 {
                     return;
@@ -245,7 +248,7 @@ namespace Viking.ViewModels
         /// <summary>
         /// Fires when the transform used to place the section into the volume changes
         /// </summary>
-        public event Viking.Common.TransformChangedEventHandler TransformChanged;
+        public event Viking.Common.TransformChangedEventHandler? TransformChanged;
 
         #endregion
 

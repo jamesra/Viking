@@ -80,6 +80,41 @@ namespace VolumeModelTests
         }
 
         [TestMethod]
+        public void PrintVikingXMLElementList_IndentsEachLevelAndPrintsPlainValues()
+        {
+            var root = new XElement("Volume", new XAttribute("name", "RC1"));
+            var section = new XElement("Section", new XAttribute("path", "Mosaic/001"));
+            root.Add(section);
+
+            string text = section.GetRootToElementList().PrintVikingXMLElementList();
+
+            Assert.AreEqual("<Volume name=RC1>\n\t<Section path=Mosaic/001>\n", text);
+        }
+
+        [TestMethod]
+        public void XMLMissingDataException_ElementOverload_NamesPathNotWholeXml()
+        {
+            var volume = new XElement("Volume", new XAttribute("name", "RC1"));
+            var mapping = new XElement("Mapping", new XElement("Deep"));
+            volume.Add(mapping);
+
+            var ex = new XMLMissingDataException(mapping, "Tile", "path");
+
+            StringAssert.StartsWith(ex.Message, "Tile element's path attribute is missing under ");
+            StringAssert.Contains(ex.Message, "<Volume name=RC1>");
+            StringAssert.Contains(ex.Message, "<Mapping>");
+            Assert.IsFalse(ex.Message.Contains("<Deep"), "message must not dump the parent's XML");
+            Assert.AreEqual(1, System.Text.RegularExpressions.Regex.Matches(ex.Message, "under").Count);
+        }
+
+        [TestMethod]
+        public void XMLMissingDataException_StringOverload_SingleUnderClause()
+        {
+            Assert.AreEqual("Tile element is missing under Mapping", new XMLMissingDataException("Mapping", "Tile").Message);
+            Assert.AreEqual("Tile element's path attribute is missing", new XMLMissingDataException((string)null, "Tile", "path").Message);
+        }
+
+        [TestMethod]
         public void HasAttributeCaseInsensitive_MatchesReferenceOnGeneratedNames()
         {
             var prop = Prop.ForAll(

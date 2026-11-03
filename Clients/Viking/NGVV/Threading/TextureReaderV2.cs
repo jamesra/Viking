@@ -124,8 +124,10 @@ class TextureReaderV2 : IDisposable
     /// This texture reader is used when we don't have a cachepath to check before making the request
     /// </summary>
     /// <param name="graphicsDevice"></param>
-    /// <param name="filename"></param>
-    /// <param name="downsample"></param>
+    /// <param name="textureURI">Location of the texture to download.</param>
+    /// <param name="mipMapLevels">Number of mip levels to generate.</param>
+    /// <param name="OnCompletion">Optional callback invoked when loading finishes.</param>
+    /// <param name="token">Cancels the load.</param>
     /// <param name="tileViewOwner">When provided, the created texture is assigned to this tile via PendingTextureQueue.</param>
     /// <param name="sectionToken">When provided, used only for semaphore waits; section change cancels waiters while in-flight loads continue.</param>
     public TextureReaderV2(GraphicsDevice graphicsDevice, Uri textureURI, int mipMapLevels, Action? OnCompletion, CancellationTokenSource token, TileView? tileViewOwner = null, CancellationToken? sectionToken = null)
@@ -171,7 +173,7 @@ class TextureReaderV2 : IDisposable
         {
             if (Interlocked.Read(ref TriedToCreateDirectory) == 0)
             {
-                Trace.WriteLine($"Failed To delete cache file from non-existant directory (probably OK): {CacheFilename}", "TextureUse");
+                Trace.WriteLine($"Failed To delete cache file from non-existent directory (probably OK): {CacheFilename}", "TextureUse");
                 TryCreatingCacheDirectory(CacheFilename);
             }
         }

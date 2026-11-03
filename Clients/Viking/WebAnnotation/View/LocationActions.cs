@@ -465,7 +465,7 @@ namespace WebAnnotation
                             }
                             catch (ArgumentException e)
                             {
-                                MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                ShowPolygonSaveError(Parent, e);
                             }
                         }
 
@@ -486,22 +486,18 @@ namespace WebAnnotation
                             color,
                             (polygon, _) =>
                             {
-                                IReadOnlyList<Geometry.Vector2> foreground = PolygonSegmentationPrompts.CreateVolumeForegroundPoints(
-                                    polygon,
-                                    Parent.Section.ActiveSectionToVolumeTransform);
-
-                                if (foreground.Count == 0)
+                                Polygon? volumeFallback = LocationVolumeGeometry.TryMapPolygon(polygon, Parent.Section.ActiveSectionToVolumeTransform);
+                                if (volumeFallback is null || volumeFallback.ExteriorRing.Length < 3)
                                 {
                                     PlaceLinkedMosaicPolygon(polygon);
                                     return;
                                 }
 
-                                Polygon volumeFallback = LocationVolumeGeometry.TryMapPolygon(polygon, Parent.Section.ActiveSectionToVolumeTransform);
+                                // The dropped polygon is painted as foreground and segmented at once; Escape or the red X places it as dropped.
+                                List<Geometry.Vector2[]> seedRings = [volumeFallback.ExteriorRing, .. volumeFallback.InteriorRings];
                                 var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
-                                Parent.CommandQueue.EnqueueCommand(new SegmentationCommand(
+                                Parent.CommandQueue.EnqueueCommand(new SegmentationPaintCommand(
                                     Parent,
-                                    foreground,
-                                    Array.Empty<Geometry.Vector2>(),
                                     segmentedVolumePolygon =>
                                     {
                                         LocationObj newLoc = new(loc.Parent,
@@ -518,14 +514,12 @@ namespace WebAnnotation
                                         }
                                         catch (ArgumentException e)
                                         {
-                                            MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                            ShowPolygonSaveError(Parent, e);
                                         }
                                     },
                                     channelManager,
-                                    loc.Parent.TypeID,
-                                    loc.ID,
-                                    loc.ParentID,
-                                    volumeFallback)
+                                    seedRings,
+                                    onAbandoned: () => PlaceLinkedMosaicPolygon(polygon))
                                 {
                                     ShowPenButtons = true
                                 });
@@ -542,14 +536,14 @@ namespace WebAnnotation
                                                                      //Drawing from inside to outside:
                                                                      RetraceAndReplacePathCommand cmd = (RetraceAndReplacePathCommand)sender;
 
-                                                                     Action recordUndo = null;
+                                                                     Action? recordUndo = null;
                                                                      try
                                                                      {
                                                                          recordUndo = cmd.ApplyCut(loc);
                                                                      }
                                                                      catch (ArgumentException e)
                                                                      {
-                                                                         MessageBox.Show(Parent, e.Message, "Could not save Polygon", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                                                         ShowPolygonSaveError(Parent, e);
                                                                      }
 
 

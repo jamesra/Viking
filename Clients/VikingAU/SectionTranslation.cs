@@ -84,15 +84,19 @@ namespace Viking.AU
         /// Adds entries to this object from a JSON string
         /// Parses a JSON dictionary into a SectionTranslations object, example of JSON:
         /// {
-        ///     1: { 
-        ///     "X": 10.0,
-        ///     "Y": 20.0,
-        ///     "TranslateBefore": "2021-08-01T00:00:00"
-        ///     },
+        ///     "DefaultTranslateBefore": "2021-08-01T00:00:00",
+        ///     "Sections": {
+        ///         "1": {
+        ///             "X": 10.0,
+        ///             "Y": 20.0,
+        ///             "TranslateBefore": "2021-08-01T00:00:00"
+        ///         }
+        ///     }
         /// }
+        /// "DefaultTranslateBefore" and the per-section "TranslateBefore" are optional.
         /// </summary>
         /// <param name="config_data"></param>
-        /// <param name="defaultDateCutoff">If a date is provided, use that value for unspecfied DateCutoffs.</param>
+        /// <param name="defaultCutoffDate">Cutoff for sections that do not specify TranslateBefore, unless the file sets DefaultTranslateBefore.</param>
         /// <returns></returns>
         public void AddFromJSON(string config_data, DateTime defaultCutoffDate)
         {

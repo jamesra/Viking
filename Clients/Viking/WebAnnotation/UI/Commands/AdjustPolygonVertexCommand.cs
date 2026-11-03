@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Viking.VolumeModel;
 using VikingXNAGraphics;
-using VikingXNAWinForms;
+using VikingXNAWinForms;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -112,7 +112,7 @@ namespace WebAnnotation.UI.Commands
                 if (oldMouse.Button.Left())
                 {
                     Geometry.Vector2 LastWorldPosition = Parent.ScreenToWorld(oldMouse.X, oldMouse.Y);
-                    UpdatePosition(NewPosition - LastWorldPosition);
+                    _ = UpdatePosition(NewPosition - LastWorldPosition);
                 }
             }
 

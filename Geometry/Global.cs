@@ -134,7 +134,7 @@ namespace Geometry
         private static string DescribeAssembly(System.Reflection.Assembly assembly)
         {
             System.Reflection.AssemblyName name = assembly.GetName();
-            string informational = assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            string? informational = assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
                 .OfType<System.Reflection.AssemblyInformationalVersionAttribute>()
                 .FirstOrDefault()?.InformationalVersion;
             return $"{name.Name} {informational ?? name.Version.ToString()}";

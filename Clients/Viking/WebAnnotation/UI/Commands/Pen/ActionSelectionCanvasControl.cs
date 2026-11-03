@@ -549,7 +549,7 @@ namespace WebAnnotation.UI.Commands
             {
                 foreach (IHitTesting interactable in actionInteractables.Where(ai => ai is IClickable).Where(ai => ai.Contains(WorldPosition)))
                 {
-                    IClickable clickable = interactable as IClickable;
+                    IClickable? clickable = interactable as IClickable;
                     if (clickable.OnClick(clickable, WorldPosition, InputDevice.Mouse, e.Button.ToVikingButton()))
                     {
                         Deactivated = true;

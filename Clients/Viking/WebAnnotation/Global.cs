@@ -192,6 +192,7 @@ namespace WebAnnotation
                 Properties.Settings.UpgradeFromPreviousVersionIfNeeded();
                 CircleView.SmallestRenderedSizeAccessor = () => SmallestRenderedSize;
                 LocationCanvasView.SmallestRenderedSizeAccessor = () => SmallestRenderedSize;
+                VikingXNAGraphics.LabelView.OutlineStyleAccessor = () => LabelOutline;
             }
 
             private const int MIN_SECTIONS_IN_MEMORY = 1;
@@ -253,7 +254,7 @@ namespace WebAnnotation
             private const double MIN_AUTOPOLYGONIZE_RADIUS_NANOMETERS = 0.0;
             private const double MAX_AUTOPOLYGONIZE_RADIUS_NANOMETERS = 10000.0;
             private const double MIN_AUTOPOLYGONIZE_MAX_DOWNSAMPLE = 1.0;
-            private const double MAX_AUTOPOLYGONIZE_MAX_DOWNSAMPLE = 4.0;
+            private const double MAX_AUTOPOLYGONIZE_MAX_DOWNSAMPLE = 6.0;
 
             // Use shared MathUtils.Clamp methods (Math.Clamp not available in .NET Framework 4.8)
 
@@ -558,6 +559,36 @@ namespace WebAnnotation
             /// <see cref="LabelRotation"/>: <see cref="Geometry.LabelLayout.NeverRotate"/> at 0, otherwise (1 − setting)·1.
             /// </summary>
             public static double LabelRotationGain => Geometry.LabelLayout.RotationGainForSetting(LabelRotation);
+
+            /// <summary>Whether annotation text is drawn with a thin outline for readability.</summary>
+            public static bool LabelOutlineEnabled
+            {
+                get => Properties.Settings.Default.LabelOutlineEnabled;
+                set
+                {
+                    Properties.Settings.Default.LabelOutlineEnabled = value;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>False outlines black text in white; true draws white text with a black outline.</summary>
+            public static bool LabelOutlineWhiteText
+            {
+                get => Properties.Settings.Default.LabelOutlineWhiteText;
+                set
+                {
+                    Properties.Settings.Default.LabelOutlineWhiteText = value;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>The outline style the label drawing code reads: off, or one of the two color choices.</summary>
+            public static VikingXNAGraphics.LabelOutlineStyle LabelOutline =>
+                !LabelOutlineEnabled
+                    ? VikingXNAGraphics.LabelOutlineStyle.Off
+                    : LabelOutlineWhiteText
+                        ? VikingXNAGraphics.LabelOutlineStyle.WhiteTextBlackOutline
+                        : VikingXNAGraphics.LabelOutlineStyle.BlackTextWhiteOutline;
 
             public static uint NumClosedCurveInterpolationPointsForDisplay
             {
@@ -954,8 +985,8 @@ namespace WebAnnotation
 
             /// <summary>
             /// Coarsest camera downsample at which auto-segment and tile submit still run. Default 2.
-            /// The preference allows 1 to 4: the value itself still submits and anything coarser does not.
-            /// A saved value above 4 is clamped to 4; a lower saved value still wins.
+            /// The preference allows 1 to 6 (6 is needed for Muller cell main columns): the value itself still submits and anything coarser does not.
+            /// A saved value above 6 is clamped to 6; a lower saved value still wins.
             /// Changing it restarts the idle timer so a view that is now allowed can run without a camera nudge.
             /// </summary>
             public static double AutoPolygonizeMaxDownsample
@@ -1228,6 +1259,24 @@ namespace WebAnnotation
                 Properties.Settings.Default.Save();
             }
 
+            /// <summary>
+            /// Which pen report Viking treats as the pen's barrel button (see <see cref="Viking.UI.BarrelButtonBinding"/>).
+            /// Setting it saves it and applies it to every pen event at once.
+            /// </summary>
+            public static Viking.UI.BarrelButtonKind BarrelButton
+            {
+                get => Viking.UI.BarrelButtonBinding.Parse(Properties.Settings.Default.BarrelButton);
+                set
+                {
+                    Properties.Settings.Default.BarrelButton = Viking.UI.BarrelButtonBinding.Format(value);
+                    Properties.Settings.Default.Save();
+                    Viking.UI.BarrelButtonBinding.Current = value;
+                }
+            }
+
+            /// <summary>Makes the saved <see cref="BarrelButton"/> the one pen events use; called when a viewer opens.</summary>
+            public static void ApplyBarrelButton() => Viking.UI.BarrelButtonBinding.Current = BarrelButton;
+
             public static double SmallestRenderedSize
             {
                 get => Math.Max(MIN_SMALLEST_RENDERED_SIZE, Properties.Settings.Default.SmallestRenderedSize);
@@ -1289,6 +1338,8 @@ namespace WebAnnotation
                 Properties.Settings.Default.HideAnnotationSeconds = DEFAULT_HIDE_ANNOTATION_SECONDS;
                 Properties.Settings.Default.LocationLinkVisibilityPercent = DEFAULT_LOCATION_LINK_VISIBILITY_PERCENT;
                 Properties.Settings.Default.LocationLinkLabels = true;
+                Properties.Settings.Default.LabelOutlineEnabled = true;
+                Properties.Settings.Default.LabelOutlineWhiteText = false;
                 Properties.Settings.Default.LabelRotation = DEFAULT_LABEL_ROTATION;
                 Properties.Settings.Default.NumClosedCurveInterpolationPointsForDisplay = (uint)DEFAULT_NUM_CLOSED_CURVE_INTERPOLATION_POINTS;
                 Properties.Settings.Default.PenSimplifyThreshold = DEFAULT_PEN_SIMPLIFY_THRESHOLD;
@@ -1325,6 +1376,8 @@ namespace WebAnnotation
                 Properties.Settings.Default.SmallestRenderedSize = DEFAULT_SMALLEST_RENDERED_SIZE;
                 Properties.Settings.Default.PolygonVertexPointsVisibleAtWidthFraction = DEFAULT_POLYGON_VERTEX_VISIBLE_FRACTION;
                 Properties.Settings.Default.PolygonVertexPointsHiddenAtWidthFraction = DEFAULT_POLYGON_VERTEX_HIDDEN_FRACTION;
+                Properties.Settings.Default.BarrelButton = Viking.UI.BarrelButtonBinding.Format(Viking.UI.BarrelButtonKind.Barrel);
+                Viking.UI.BarrelButtonBinding.Current = Viking.UI.BarrelButtonKind.Barrel;
                 Properties.Settings.Default.Save();
                 OnSettingsChanged();
                 if (segmentationRequestSettingsChanged)
@@ -1521,7 +1574,7 @@ namespace WebAnnotation
         /// </summary>
 //        static internal readonly string XSDUri = "http://connectomes.utah.edu/XSD/BookmarkSchema.xsd";
 
-        private static XRoot _userSettingsDoc;
+        private static XRoot? _userSettingsDoc;
         private static Task? _loadUserPreferencesTask = null;
 
         public static string EndpointName
@@ -1713,7 +1766,9 @@ namespace WebAnnotation
             if (serviceProvider?.GetService<WebAnnotationModel.gRPC.IGrpcChannelManager>() is WebAnnotationModel.gRPC.IGrpcChannelManager correctionChannels)
             {
                 Viking.SectionCorrectionClient.SectionShimContext.Source = new Viking.SectionCorrectionClient.GrpcSectionShimSource(
-                    uri => correctionChannels.GetOrCreate(uri).CreateCallInvoker());
+                    uri => Grpc.Core.Interceptors.CallInvokerExtensions.Intercept(
+                        correctionChannels.GetOrCreate(uri).CreateCallInvoker(),
+                        Viking.Services.Grpc.ShutdownCancellationInterceptor.Instance));
             }
 
             WebAnnotationModel.State.UserCredentials = Viking.UI.State.UserCredentials;
@@ -1762,15 +1817,13 @@ namespace WebAnnotation
             switch (elem.Name.LocalName)
             {
                 case "Volume":
-                    IEnumerable<XElement> SettingsElements = elem.Elements().Where(e => e.Name.LocalName == "DefaultWebAnnotationUserSettings");
-                    UserSettingsElement = SettingsElements.Count() > 0
-                        ? SettingsElements.First()
-                        : throw new XMLMissingDataException("The Volume Element is missing the <DefaultWebAnnotationUserSettings> element");
+                    UserSettingsElement = elem.Elements().FirstOrDefault(e => e.Name.LocalName == "DefaultWebAnnotationUserSettings")
+                        ?? throw new XMLMissingDataException("The Volume Element is missing the <DefaultWebAnnotationUserSettings> element");
 
-                    IEnumerable<XElement> MappingElements = elem.Elements().Where(e => e.Name.LocalName == "VolumeToEndpoint");
+                    XElement MappingElement = elem.Elements().FirstOrDefault(e => e.Name.LocalName == "VolumeToEndpoint");
 
-                    if (MappingElements.Count() > 0)
-                        Global.PopulateEndpointStateFromVolumeToEndpointElement(MappingElements.First());
+                    if (MappingElement is not null)
+                        Global.PopulateEndpointStateFromVolumeToEndpointElement(MappingElement);
                     else
                         Global.ApplyIdentityAnnotationEndpointOnly();
 
@@ -1896,7 +1949,7 @@ namespace WebAnnotation
         private static Task LoadUserPreferencesAsync()
         {
             // Check if a load is already in progress
-            Task existingTask = _loadUserPreferencesTask;
+            Task? existingTask = _loadUserPreferencesTask;
             if (existingTask != null && !existingTask.IsCompleted)
             {
                 return existingTask;

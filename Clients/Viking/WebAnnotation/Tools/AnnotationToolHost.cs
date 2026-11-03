@@ -482,7 +482,8 @@ namespace WebAnnotation.Tools
                 return;
             }
 
-            StartTool(new SegmentTool(_context, viewport, channels, circle, prompt.Points, new[] { prompt.Seed }));
+            // The circle goes as its seed alone, with no foreground clicks, as auto-polygonize sends it.
+            StartTool(new SegmentTool(_context, viewport, channels, circle, [], new[] { prompt.Seed }));
         }
 
         /// <summary>Margin, in raster pixels, left free around a polygon rasterized for dilate/erode, as in Viking.</summary>

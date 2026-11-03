@@ -92,7 +92,7 @@ namespace Viking.UI.BaseClasses
             List<PropertyInfo> listPropInfoForColumn = [];
             foreach (PropertyInfo Property in Properties)
             {
-                ColumnAttribute[] Attributes = Property.GetCustomAttributes(typeof(ColumnAttribute), true) as ColumnAttribute[];
+                ColumnAttribute[]? Attributes = Property.GetCustomAttributes(typeof(ColumnAttribute), true) as ColumnAttribute[];
                 foreach (ColumnAttribute Attrib in Attributes)
                 {
                     ColumnList.Add(Attrib.ColumnName);
@@ -171,14 +171,6 @@ namespace Viking.UI.BaseClasses
             set => DisplayObjects(value);
         }
 
-        public void SelectObject(object Object)
-        {
-            foreach (ListViewItem Item in this.Items)
-            {
-                Item.Selected = Item.Tag.Equals(Object) == true;
-            }
-        }
-
         protected ListViewItem ItemForObject(object Object)
         {
             foreach (ListViewItem Item in this.Items)
@@ -194,7 +186,7 @@ namespace Viking.UI.BaseClasses
 
         private void AddObjectEvents(object Object)
         {
-            IUIObject uiObj = Object as IUIObject;
+            IUIObject? uiObj = Object as IUIObject;
             Debug.Assert(uiObj != null);
             uiObj.AfterSave += this.OnObjectSaveHandler;
             uiObj.BeforeDelete += this.OnObjectDeleteHandler;
@@ -203,7 +195,7 @@ namespace Viking.UI.BaseClasses
 
         private void RemoveObjectEvents(object Object)
         {
-            IUIObject uiObj = Object as IUIObject;
+            IUIObject? uiObj = Object as IUIObject;
             Debug.Assert(uiObj != null);
             uiObj.AfterSave -= this.OnObjectSaveHandler;
             uiObj.BeforeDelete -= this.OnObjectDeleteHandler;
@@ -280,7 +272,7 @@ namespace Viking.UI.BaseClasses
                 return;
             }
 
-            IUIObject Obj = Item.Tag as IUIObject;
+            IUIObject? Obj = Item.Tag as IUIObject;
             RemoveObjectEvents(Obj);
 
             Item.Remove();
@@ -380,7 +372,7 @@ namespace Viking.UI.BaseClasses
             ContextMenuStrip contextMenu = new();
 
             // find the item we clicked on
-            ListViewItem listItem = null;
+            ListViewItem? listItem = null;
             if (lastMouseUpEventArgs != null)
                 listItem = GetItemAt(lastMouseUpEventArgs.X, lastMouseUpEventArgs.Y);
 
@@ -519,7 +511,7 @@ namespace Viking.UI.BaseClasses
             // create the menu items
             foreach (object obj in list)
             {
-                string str = obj as string;
+                string? str = obj as string;
                 ToolStripMenuItem newMenuItem = new(str);
                 newMenuItem.Click += OnContextColumnMenuHandler;
 
@@ -555,7 +547,7 @@ namespace Viking.UI.BaseClasses
 
         protected override void OnColumnClick(System.Windows.Forms.ColumnClickEventArgs e)
         {
-            Type ColumnType = null;
+            Type? ColumnType = null;
             if (e.Column > 0)
                 ColumnType = this.ColumnProperties[e.Column - 1]?.PropertyType;
 
@@ -581,7 +573,7 @@ namespace Viking.UI.BaseClasses
 
         protected void OnObjectSave(object sender, System.EventArgs e)
         {
-            IUIObject Obj = sender as IUIObject;
+            IUIObject? Obj = sender as IUIObject;
             Debug.Assert(Obj != null);
 
             if (this.ItemForObject(Obj) is null)
@@ -599,7 +591,7 @@ namespace Viking.UI.BaseClasses
 
         protected void OnObjectValueChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            IUIObject Obj = sender as IUIObject;
+            IUIObject? Obj = sender as IUIObject;
             Debug.Assert(Obj != null);
 
             if (this.ItemForObject(Obj) is null)
@@ -617,7 +609,7 @@ namespace Viking.UI.BaseClasses
 
         protected void OnObjectDelete(object sender, System.EventArgs e)
         {
-            IUIObject Obj = sender as IUIObject;
+            IUIObject? Obj = sender as IUIObject;
             Debug.Assert(Obj != null);
 
             this.RemoveObject(Obj);
@@ -635,7 +627,7 @@ namespace Viking.UI.BaseClasses
 
         protected void OnContextMenuColumnVisibility(object sender, EventArgs e)
         {
-            System.Windows.Forms.MenuItem item = sender as System.Windows.Forms.MenuItem;
+            System.Windows.Forms.MenuItem? item = sender as System.Windows.Forms.MenuItem;
 
             Debug.Assert(item != null);
             Debug.Assert(_ColumnSettingsHashtable.ContainsKey(item.Text));
@@ -743,20 +735,6 @@ namespace Viking.UI.BaseClasses
                 return key.ToString();
             }
         }
-        #region Public Methods
-
-        /// <summary>
-        /// Returns true if the ListView contains the provided object. Otherwise false.
-        /// </summary>
-        /// <param name="Obj"></param>
-        /// <returns></returns>
-        public bool ContainsObj(object Obj) => ItemForObject(Obj) != null;
-
-
-        public void ExportToExcel() => throw new NotImplementedException("Coming soon");//PlantMap.Utils.OfficeDocExporter.ToExcel(this);
-
-
-        #endregion
 
         protected void parentForm_Closing(object sender, CancelEventArgs e)
         {

@@ -173,8 +173,9 @@ namespace Viking.UI.WPF.Models
             // Parse color from hex string
             try
             {
+                // ToDto writes #AARRGGBB; Color.FromInteger reads the alpha byte inverted, so read the bytes directly.
                 channelInfo.Color = !string.IsNullOrWhiteSpace(dto.ColorHex)
-                    ? Geometry.Graphics.Color.FromInteger(dto.ColorHex)
+                    ? ColorFromArgbHex(dto.ColorHex)
                     : new Geometry.Graphics.Color(255, 255, 255, 255);
             }
             catch (Exception ex)
@@ -184,6 +185,13 @@ namespace Viking.UI.WPF.Models
             }
 
             return channelInfo;
+        }
+
+        /// <summary>Parses the #AARRGGBB string that <see cref="ToDto(ChannelInfo)"/> writes.</summary>
+        private static Geometry.Graphics.Color ColorFromArgbHex(string hex)
+        {
+            uint argb = uint.Parse(hex.TrimStart('#'), System.Globalization.NumberStyles.HexNumber);
+            return new Geometry.Graphics.Color((byte)(argb >> 16), (byte)(argb >> 8), (byte)argb, (byte)(argb >> 24));
         }
 
         /// <summary>

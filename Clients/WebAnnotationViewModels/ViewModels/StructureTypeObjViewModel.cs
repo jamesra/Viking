@@ -16,7 +16,7 @@ namespace Annotation.ViewModels
 {
     public class ClearStructureTypeParentCommand : System.Windows.Input.ICommand
     {
-        public event EventHandler CanExecuteChanged;
+        public event EventHandler CanExecuteChanged { add { } remove { } }
 
         public bool CanExecute(object item)
         {

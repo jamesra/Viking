@@ -22,6 +22,32 @@ namespace WebAnnotationTests.Commands
         }
 
         [TestMethod]
+        public void PaintActionsFollowAcceptAndSkip()
+        {
+            CollectionAssert.AreEqual(
+                new[] { SegmentationPenButton.Accept, SegmentationPenButton.Resubmit, SegmentationPenButton.ClearMask },
+                SegmentationPenButtons.Layout(includeSkip: false, includePaintActions: true).ToArray());
+            CollectionAssert.AreEqual(
+                new[] { SegmentationPenButton.Accept, SegmentationPenButton.Skip, SegmentationPenButton.Resubmit, SegmentationPenButton.ClearMask },
+                SegmentationPenButtons.Layout(includeSkip: true, includePaintActions: true).ToArray());
+        }
+
+        [TestMethod]
+        public void EachPaintActionCentreHitsItself()
+        {
+            var buttons = SegmentationPenButtons.Layout(includeSkip: false, includePaintActions: true);
+            for (int i = 0; i < buttons.Count; i++)
+            {
+                (double x, double y) = SegmentationPenButtons.CenterOf(i, Width);
+                Assert.AreEqual(buttons[i], SegmentationPenButtons.HitTest(false, Width, x, y, includePaintActions: true));
+            }
+
+            // Without the paint actions the third slot is empty.
+            (double x2, double y2) = SegmentationPenButtons.CenterOf(2, Width);
+            Assert.IsNull(SegmentationPenButtons.HitTest(false, Width, x2, y2));
+        }
+
+        [TestMethod]
         public void EachButtonCentreHitsItselfAndNoOther()
         {
             var buttons = SegmentationPenButtons.Layout(includeSkip: true);

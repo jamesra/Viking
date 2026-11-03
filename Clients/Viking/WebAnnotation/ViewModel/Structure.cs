@@ -27,7 +27,7 @@ namespace WebAnnotation.ViewModel
                 return modelObj.Equals(Obj.modelObj);
             }
 
-            StructureObj Obj2 = obj as StructureObj;
+            StructureObj? Obj2 = obj as StructureObj;
             if (Obj2 != null)
             {
                 return modelObj.Equals(Obj2);
@@ -252,7 +252,7 @@ namespace WebAnnotation.ViewModel
 
         private async void OnDropDownOpeningUnverifiedBranchTerminals(object sender, EventArgs e)
         {
-            ToolStripMenuItem menuUnverifiedBranchTerminals = sender as ToolStripMenuItem;
+            ToolStripMenuItem? menuUnverifiedBranchTerminals = sender as ToolStripMenuItem;
             menuUnverifiedBranchTerminals.DropDownItems.Clear();
             bool HasMenuItems = await PopulateUnverifiedBranchTerminalsContextMenuAsync(menuUnverifiedBranchTerminals);
 
@@ -280,7 +280,7 @@ namespace WebAnnotation.ViewModel
 
         private ToolStripMenuItem BuildContextMenusForLevel(long level, List<WebAnnotationModel.LocationPositionOnly> listObjs)
         {
-            ToolStripMenuItem rootMenuItem = null;
+            ToolStripMenuItem? rootMenuItem = null;
             if (listObjs.Count == 1)
             {
                 WebAnnotationModel.LocationPositionOnly locObj = listObjs[0];
@@ -328,7 +328,7 @@ namespace WebAnnotation.ViewModel
 
         protected async void ContextMenu_SelectUnbranchedLocation(object sender, EventArgs e)
         {
-            ToolStripMenuItem menu = sender as ToolStripMenuItem;
+            ToolStripMenuItem? menu = sender as ToolStripMenuItem;
             long locationID = (long)menu.Tag;
 
             LocationObj loc = await Store.Locations.GetObjectByID(locationID);

@@ -13,12 +13,12 @@ namespace Viking.Objects
         //Create is no longer in this class because if a static event is placed here
         //all objects derived from the base class fire the same event.  Each derived
         //class has to declate the static event themselves.
-        protected event System.ComponentModel.PropertyChangedEventHandler OnValueChanged;
-        private event EventHandler OnBeforeDelete;
-        private event EventHandler OnAfterDelete;
-        private event EventHandler OnBeforeSave;
-        private event EventHandler OnAfterSave;
-        private event System.Collections.Specialized.NotifyCollectionChangedEventHandler OnChildChanged;
+        protected event System.ComponentModel.PropertyChangedEventHandler? OnValueChanged;
+        private event EventHandler? OnBeforeDelete;
+        private event EventHandler? OnAfterDelete;
+        private event EventHandler? OnBeforeSave;
+        private event EventHandler? OnAfterSave;
+        private event System.Collections.Specialized.NotifyCollectionChangedEventHandler? OnChildChanged;
 
         protected void ValueChangedEvent(string Column)
         {

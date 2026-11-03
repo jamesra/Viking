@@ -34,10 +34,10 @@ namespace Viking
         [Option('v', "Volume", Required = true, HelpText = "URL of VolumeXML file")]
         public string VolumeURL { get; set; } = string.Empty;
 
-        [Option('u', "user", Default = "Anonymous", Required = false, HelpText = "URL of VolumeXML file")]
+        [Option('u', "user", Default = "Anonymous", Required = false, HelpText = "User name for the annotation server")]
         public string Username { get; set; } = string.Empty;
 
-        [Option('p', "pwd", Default = "connectome", Required = false, HelpText = "URL of VolumeXML file")]
+        [Option('p', "pwd", Default = "connectome", Required = false, HelpText = "Password for the annotation server")]
         public string Password { get; set; } = string.Empty;
 
         //[Option('c', "position", Required = false, HelpText= "Position to start viewer at")] 
@@ -68,6 +68,11 @@ namespace Viking
         [STAThread]
         static void Main(string[] args)
         { 
+            // The exit watchdog relaunches Viking.exe to dump the stalled process. That copy must not run
+            // Velopack hooks, take the single-instance pipes or show UI, so it is handled before everything else.
+            if (ExitStallDump.TryRunHelper(args))
+                return;
+
             // Velopack must run first to handle setup/uninstall/update hooks
             // Note: Velopack version 0.0.1298 doesn't have OnFirstRun/OnAfterUpdate hooks
             // Version will be displayed in About dialog from Assembly.GetEntryAssembly().GetName().Version

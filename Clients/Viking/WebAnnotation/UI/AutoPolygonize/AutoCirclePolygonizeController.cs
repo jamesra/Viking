@@ -62,6 +62,9 @@ namespace WebAnnotation.UI.AutoPolygonize
         private static long profileBatchSequence;
 
         private readonly IAutoPolygonizeHost parent;
+
+        /// <summary>Viking's viewer, where <see cref="BeginPaintMask"/> opens the mask painter; null in Jotunn.</summary>
+        private readonly SectionViewerControl? paintViewer;
         private readonly Action requestAnnotationLoad;
         private readonly AutoPolygonizeCache cache = new();
         private readonly SharedViewportImageLease viewportImageLease = new();
@@ -100,8 +103,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         private AutoPolygonizeProposal? hoveredProposal;
 
         /// <summary>
-        /// Proposal removed from the overlay while <see cref="BeginAddPoints"/> runs an interactive
-        /// <see cref="SegmentationCommand"/>. Escape restores it; accept clears it.
+        /// Proposal removed from the overlay while <see cref="BeginPaintMask"/> runs an interactive
+        /// <see cref="SegmentationPaintCommand"/>. Escape restores it; accept clears it.
         /// </summary>
         private AutoPolygonizeProposal? parkedForAddPoints;
 
@@ -114,10 +117,35 @@ namespace WebAnnotation.UI.AutoPolygonize
         private long requestTicketCounter;
 
         /// <summary>
+        /// Circles of the same structure close to a finished result, on screen or not, that may be part of the same
+        /// cell. They go out before everything else (see <see cref="QueueMergeCandidates"/>). Persists across batches:
+        /// a camera move that cancels a batch must not lose them.
+        /// </summary>
+        private readonly System.Collections.Concurrent.ConcurrentQueue<long> mergeCandidateQueue = new();
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<long, byte> mergeCandidateIds = new();
+
+        /// <summary>When each structure's locations were last fetched from the server for the merge check.</summary>
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<long, DateTime> structureFetchedUtc = new();
+
+        /// <summary>How long fetched structure locations are trusted before the merge check asks the server again.</summary>
+        private static readonly TimeSpan StructureFetchLifetime = TimeSpan.FromSeconds(60);
+
+        /// <summary>
         /// Bumped when edge cleanup or hole dropping is applied again, so a slower retrace
         /// does not paint over a newer radius.
         /// </summary>
         private int maskRefreshGeneration;
+
+        /// <summary>
+        /// Other cells' locations whose geometry changes re-clip the proposals (<see cref="OnWatchedLocationChanged"/>).
+        /// Filled as proposals are clipped; emptied by <see cref="Stop"/>. Guarded by itself.
+        /// </summary>
+        private readonly HashSet<LocationObj> watchedLocations = [];
+
+        /// <summary>Sections whose proposals wait for the next re-clip; one UI post handles every change made before it runs.</summary>
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<int, byte> sectionsToReclip = new();
+
+        private int reclipPosted;
 
         /// <summary>
         /// Next request ticket. Taken when a segmentation request starts, so a larger ticket always
@@ -174,6 +202,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             : this(new SectionViewerAutoPolygonizeHost(parent ?? throw new ArgumentNullException(nameof(parent))), requestAnnotationLoad,
                    hidden ?? throw new ArgumentNullException(nameof(hidden)))
         {
+            paintViewer = parent;
         }
 
         /// <summary>A controller over any view that can segment (Jotunn's scene host as well as Viking's viewer).</summary>
@@ -241,6 +270,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             Store.Locations.OnCollectionChanged -= OnLocationsChanged;
             cache.GeometryInvalidated -= OnCacheGeometryInvalidated;
             cache.LocationForgotten -= OnCacheLocationForgotten;
+            UnwatchAllLocations();
             CancelUploadPhase();
             CancelProcessPhase();
             StopSettleTimers();
@@ -442,19 +472,27 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>
         /// Retraces on-screen proposals from the raw server masks at the current edge-cleanup
         /// radius and hole-drop fraction. Called when those preferences are applied. Proposals
-        /// that never stored a mask are left as they are.
+        /// that never stored a mask are left as they are. Every trace is clipped against the other cells as they are now,
+        /// so it also gives back area a cell that has since shrunk no longer claims.
         /// </summary>
-        public void RefreshFromStoredMasks()
+        /// <param name="sectionNumber">Only proposals on this section when set.</param>
+        public void RefreshFromStoredMasks(int? sectionNumber = null)
         {
             if (parent.InvokeRequired)
             {
-                parent.BeginInvoke(new Action(RefreshFromStoredMasks));
+                parent.BeginInvoke(new Action(() => RefreshFromStoredMasks(sectionNumber)));
                 return;
             }
 
             AutoPolygonizeProposal[] snapshot;
             lock (proposalLock)
-                snapshot = [.. DistinctProposalsUnlocked().Where(proposal => proposal.MaskSources.Count > 0)];
+            {
+                snapshot =
+                [
+                    .. DistinctProposalsUnlocked().Where(proposal =>
+                        proposal.MaskSources.Count > 0 && (!sectionNumber.HasValue || proposal.SectionNumber == sectionNumber.Value))
+                ];
+            }
 
             if (snapshot.Length == 0)
                 return;
@@ -518,7 +556,12 @@ namespace WebAnnotation.UI.AutoPolygonize
                             proposal.ParentID,
                             proposal.ForegroundPrompts);
                         if (carved is null)
+                        {
+                            // Other cells cover all of it: cell boundaries never overlap, so nothing is left to propose.
+                            RemoveProposal(proposal.LocationId);
+                            changed = true;
                             continue;
+                        }
 
                         proposal.ReplacePolygon(
                             AutoPolygonizeSelection.SimplifyForCreatedShape(carved, parent.Downsample, proposal.ForegroundPrompts),
@@ -735,7 +778,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Writes <paramref name="polygon"/> onto the survivor for <paramref name="proposal"/>.
-        /// Used by Accept polygonalization and by Add points after interactive refinement.
+        /// Used by Accept polygonalization and by Paint mask after interactive refinement.
         /// </summary>
         public async Task AcceptAsync(AutoPolygonizeProposal proposal, Polygon? polygon)
         {
@@ -778,7 +821,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             // Carve/union densifies; LocationShapeUpdate fits once then maps control points to mosaic.
             if (!await LocationShapeUpdate.ApplyVolumePolygon(survivor, toApply, parent.ActiveSectionToVolumeTransform, parent.Downsample, proposal.ForegroundPrompts))
             {
-                // Overlay Accept keeps the ring; Add points restores the parked proposal so the user can retry.
+                // Overlay Accept keeps the ring; Paint mask restores the parked proposal so the user can retry.
                 parent.ShowTransientStatus("Could not save the auto-segment outline for this annotation.");
                 if (ReferenceEquals(parkedForAddPoints, proposal))
                     RestoreParkedProposal();
@@ -796,15 +839,69 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// Parks the proposal overlay and opens <see cref="SegmentationCommand"/> seeded with its
-        /// prompts and starting boxes so the user can add foreground/background points before accept.
-        /// Escape restores the parked overlay; accept writes through <see cref="AcceptAsync(AutoPolygonizeProposal, Polygon)"/>.
+        /// Parks the proposal overlay and opens <see cref="SegmentationPaintCommand"/> with the proposal's polygon already painted as
+        /// foreground, so the user can paint, erase or add background before accepting. Accepting writes through
+        /// <see cref="Accept(AutoPolygonizeProposal, Polygon)"/>; Escape restores the parked overlay. A host without Viking's viewer
+        /// (Jotunn) has no mask painter and opens prompt-seeded segmentation instead (<see cref="BeginPromptSegmentation"/>).
         /// </summary>
-        public void BeginAddPoints(AutoPolygonizeProposal proposal)
+        public void BeginPaintMask(AutoPolygonizeProposal proposal)
         {
             if (proposal is null || !AreProposalMembersValid(proposal))
                 return;
 
+            if (paintViewer is null)
+            {
+                BeginPromptSegmentation(proposal);
+                return;
+            }
+
+            if (proposal.Polygon is null || proposal.Polygon.ExteriorRing.Length < 3)
+            {
+                MessageBox.Show(
+                    "This proposal has no outline to paint from.",
+                    "Paint mask",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            if (parkedForAddPoints is not null && !ReferenceEquals(parkedForAddPoints, proposal))
+                RestoreParkedProposal();
+
+            List<Vector2[]> rings = [proposal.Polygon.ExteriorRing, .. proposal.Polygon.InteriorRings];
+
+            CancelProcessPhase();
+            RemoveProposal(proposal.LocationId);
+            parkedForAddPoints = proposal;
+            parent.Invalidate();
+
+            AutoPolygonizeProposal parked = proposal;
+            void onSuccess(Polygon refined) => Accept(parked, refined);
+
+            try
+            {
+                IGrpcChannelManager channelManager = parent.SegmentationChannels ?? ServiceLocator.GetRequiredService<IGrpcChannelManager>();
+                paintViewer.CurrentCommand = new SegmentationPaintCommand(
+                    paintViewer, onSuccess, channelManager, seedRings: rings, onAbandoned: RestoreParkedProposal);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"BeginPaintMask failed: {ex.Message}");
+                RestoreParkedProposal();
+                MessageBox.Show(
+                    $"Failed to open the mask painter: {ex.Message}",
+                    "Paint mask",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Parks the proposal overlay and opens the host's interactive segmentation seeded with its prompts and starting boxes,
+        /// so the user can add foreground/background points before accept. Used where there is no mask painter (Jotunn).
+        /// </summary>
+        private void BeginPromptSegmentation(AutoPolygonizeProposal proposal)
+        {
             if (parkedForAddPoints is not null && !ReferenceEquals(parkedForAddPoints, proposal))
                 RestoreParkedProposal();
 
@@ -823,7 +920,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 {
                     MessageBox.Show(
                         "This proposal has no segmentation prompts to edit.",
-                        "Add points",
+                        "Paint mask",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information);
                     return;
@@ -833,16 +930,6 @@ namespace WebAnnotation.UI.AutoPolygonize
                     foreground = fallbackFg;
                 if (startingBoxes.Count == 0)
                     startingBoxes = fallbackBoxes;
-            }
-
-            if (foreground.Count == 0)
-            {
-                MessageBox.Show(
-                    "This proposal has no foreground points to edit.",
-                    "Add points",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
-                return;
             }
 
             CancelProcessPhase();
@@ -866,19 +953,19 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"BeginAddPoints failed: {ex.Message}");
+                Debug.WriteLine($"BeginPromptSegmentation failed: {ex.Message}");
                 RestoreParkedProposal();
                 MessageBox.Show(
                     $"Failed to open segmentation: {ex.Message}",
-                    "Add points",
+                    "Paint mask",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
             }
         }
 
         /// <summary>
-        /// Rebuilds FG clicks and seed boxes when the proposal did not store them (older overlays).
-        /// Single-id circles use the inscribed square; multi-id uses the group prompt from the union ring.
+        /// Rebuilds the prompts and seed boxes when the proposal did not store them (older overlays).
+        /// A single circle goes as its shape with its centre as the one point to keep; a group uses the prompt from the union ring.
         /// </summary>
         private bool TryResolveAddPointsSeed(
             AutoPolygonizeProposal proposal,
@@ -900,7 +987,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     return false;
                 }
 
-                foreground = startingPrompt.Points;
+                foreground = [startingPrompt.Center];
                 startingBoxes = [startingPrompt.Seed];
                 return true;
             }
@@ -915,7 +1002,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             return startingBoxes.Count > 0 || foreground.Count > 0;
         }
 
-        /// <summary>Re-publishes the proposal parked by <see cref="BeginAddPoints"/> when still valid.</summary>
+        /// <summary>Re-publishes the proposal parked by <see cref="BeginPaintMask"/> when still valid.</summary>
         private void RestoreParkedProposal()
         {
             AutoPolygonizeProposal? parked = parkedForAddPoints;
@@ -1185,6 +1272,10 @@ namespace WebAnnotation.UI.AutoPolygonize
             CancellationTokenSource? prefetchCts = null;
             ProcessBatch? processBatch = null;
 
+            // Merge candidates this batch took off the queue; the ones it did not finish go back when the batch is cancelled.
+            List<long> takenMergeCandidates = [];
+            CancellationToken batchProcessToken = default;
+
             try
             {
                 Stopwatch stepTimer = Stopwatch.StartNew();
@@ -1251,10 +1342,11 @@ namespace WebAnnotation.UI.AutoPolygonize
                     processToken = processCts.Token;
                 }
 
+                batchProcessToken = processToken;
                 Rectangle inset = AutoPolygonizeSelection.InsetBounds(viewBounds);
                 List<LocationObj> candidates = CollectEligibleCircles(viewBounds, inset);
-                SegmentationDiag.Log($"RunBatch candidates={candidates.Count} bounds={viewBounds}");
-                if (candidates.Count == 0)
+                SegmentationDiag.Log($"RunBatch candidates={candidates.Count} bounds={viewBounds} mergeCandidates={mergeCandidateQueue.Count}");
+                if (candidates.Count == 0 && mergeCandidateQueue.IsEmpty)
                 {
                     ScheduleSavedSiblingOverlapScan();
                     return;
@@ -1329,9 +1421,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                         return;
                     }
 
-                    IReadOnlyList<Vector2> foreground = startingPrompt.Points;
+                    // The circle goes as a shape; no clicks are sent. Its center is the one point the result must keep.
                     IReadOnlyList<SegmentationSeed> startingBoxes = [startingPrompt.Seed];
                     IReadOnlyList<Vector2> keepPoints = [startingPrompt.Center];
+                    IReadOnlyList<Vector2> foreground = keepPoints;
 
                     SegmentationBackgroundShapes backgroundShapes = CircleSegmentationPrompts.CreateOtherStructureBackgroundShapes(
                         visibleForPrompts, transform, [circle.ID], circle.ParentID);
@@ -1342,7 +1435,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     long requestTicket = NextRequestTicket();
                     Stopwatch segmentTimer = Stopwatch.StartNew();
                     var response = await localUploadSession.SegmentAsync(
-                        foreground,
+                        [],
                         [],
                         processToken,
                         startingBoxes,
@@ -1401,7 +1494,33 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                     QueuedCircle? next = await TakeNextQueuedCircleAsync(queue, sectionNumber, downsample).ConfigureAwait(false);
                     if (next is null)
-                        break;
+                    {
+                        // A response still being processed can queue merge candidates, so the batch is not over until
+                        // every request and response has finished and the queue is still empty.
+                        if (inFlight.Count > 0)
+                        {
+                            Task done = await Task.WhenAny(inFlight).ConfigureAwait(false);
+                            inFlight.Remove(done);
+                            await done.ConfigureAwait(false);
+                            continue;
+                        }
+
+                        Task[] processing = [.. processBatch.SnapshotResponseTasks().Where(task => !task.IsCompleted)];
+                        if (processing.Length == 0)
+                            break;
+
+                        await Task.WhenAny(processing).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    if (next.Value.IsMergeCandidate)
+                    {
+                        takenMergeCandidates.Add(next.Value.Circle.ID);
+                        // Its surroundings may never have been on screen: load them, then take the avoid marks from there.
+                        Rectangle around = await LoadRegionAroundAsync(next.Value.Circle, next.Value.LiveBounds, processToken).ConfigureAwait(false);
+                        inFlight.Add(SendCircleAsync(next.Value.Circle, [.. CollectVisibleLocationObjs(around)]));
+                        continue;
+                    }
 
                     if (!SegmentationViewportSession.AreViewportBoundsSimilar(promptBounds, next.Value.LiveBounds))
                     {
@@ -1429,6 +1548,13 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
             finally
             {
+                // A camera move or section change cancelled the batch: the merge candidates it had not answered stay wanted.
+                if (batchProcessToken.IsCancellationRequested)
+                {
+                    foreach (long id in takenMergeCandidates)
+                        EnqueueMergeCandidate(id);
+                }
+
                 prefetchCts?.Cancel();
                 await FinishUploadOrProcessBatchAsync(localUploadSession, processBatch).ConfigureAwait(false);
                 prefetchCts?.Dispose();
@@ -1492,8 +1618,52 @@ namespace WebAnnotation.UI.AutoPolygonize
             return true;
         }
 
+        /// <summary>
+        /// Loads the annotations around an off-screen <paramref name="circle"/> and returns the view-sized rectangle centred
+        /// on it that the prompts are built from. Without the load, the avoid marks of the neighbouring structures there
+        /// would be missing and the result cached as done.
+        /// </summary>
+        /// <param name="liveBounds">The live view, which gives the size.</param>
+        private async Task<Rectangle> LoadRegionAroundAsync(LocationObj circle, Rectangle liveBounds, CancellationToken token)
+        {
+            Vector2 center = circle.VolumeCenter();
+            Rectangle around = new(
+                new Vector2(center.X - liveBounds.Width / 2, center.Y - liveBounds.Height / 2),
+                new Vector2(center.X + liveBounds.Width / 2, center.Y + liveBounds.Height / 2));
+            if (parent.Scene is null || !parent.HasSection)
+                return around;
+
+            var dispatcher = Viking.UI.State.MainThreadDispatcher;
+            if (dispatcher is null)
+                return around;
+
+            VikingXNA.Scene? scene = await dispatcher.InvokeAsync(() =>
+            {
+                if (parent.Scene is null || !parent.HasSection)
+                    return null;
+
+                var camera = new VikingXNA.Camera
+                {
+                    Downsample = parent.CameraDownsample,
+                    LookAt = new Microsoft.Xna.Framework.Vector2((float)center.X, (float)center.Y)
+                };
+                return new VikingXNA.Scene(parent.Scene.Viewport, camera);
+            }).Task.ConfigureAwait(false);
+            if (scene is null)
+                return around;
+
+            SectionAnnotationsView sectionView = await AnnotationOverlay.GetOrCreateAnnotationsForSectionAsync(parent.SectionNumber).ConfigureAwait(false);
+            if (sectionView is null)
+                return around;
+
+            await sectionView.LoadAnnotationsInRegion(scene, token).ConfigureAwait(false);
+            await WaitForAnnotationsLoadedAsync(token, scene).ConfigureAwait(false);
+            return around;
+        }
+
         /// <summary>The circle the queue sends next, and the live view it was picked in.</summary>
-        private readonly record struct QueuedCircle(LocationObj Circle, Rectangle LiveBounds);
+        /// <param name="IsMergeCandidate">True for a circle queued by <see cref="QueueMergeCandidates"/>, which may be off screen.</param>
+        private readonly record struct QueuedCircle(LocationObj Circle, Rectangle LiveBounds, bool IsMergeCandidate = false);
 
         /// <summary>
         /// Removes and returns the queued circle nearest the cursor (the view centre when the cursor is off the
@@ -1507,6 +1677,22 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             if (liveDownsample > Global.AnnotationSettings.AutoPolygonizeMaxDownsample)
                 return null;
+
+            // Merge candidates go before anything the view or the cursor asks for, wherever they are.
+            while (mergeCandidateQueue.TryDequeue(out long mergeId))
+            {
+                mergeCandidateIds.TryRemove(mergeId, out _);
+                LocationObj candidate = Store.Locations.GetCachedObject(mergeId);
+                if (candidate is null ||
+                    candidate.Section != sectionNumber ||
+                    !cache.ShouldProcess(candidate.ID, sectionNumber, candidate.LastModified, candidate.TypeCode, downsample))
+                {
+                    continue;
+                }
+
+                queue.RemoveAll(circle => circle.ID == candidate.ID);
+                return new QueuedCircle(candidate, liveBounds, IsMergeCandidate: true);
+            }
 
             Rectangle liveInset = AutoPolygonizeSelection.InsetBounds(liveBounds);
             queue.RemoveAll(circle =>
@@ -1660,6 +1846,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (!published)
                     return;
 
+                QueueMergeCandidates(proposal);
+
                 Debug.WriteLine(
                     $"[SegmentationProfile] Auto batch={batchId} location={circle.ID} ready-to-draw " +
                     $"prompts={promptMs}ms segmentRpc={segmentMs}ms polygonize={polygonMs}ms " +
@@ -1715,6 +1903,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                 SegmentationDiag.Log(
                     $"publish ids=[{string.Join(",", proposal.LocationIds)}] ticket={proposal.RequestTicket} round={proposal.OverlapResubmitRound} " +
                     $"area={proposal.Polygon.Area:F0} replaces=[{string.Join("; ", replaced.Select(item => string.Join(",", item.LocationIds)))}]");
+                // A result for fewer circles than the merge it replaces (a resized circle answering after its group formed)
+                // must not take the other circles' overlays with it: they come back, and the overlap check below merges them again.
+                List<AutoPolygonizeProposal> survivors = [];
                 foreach (AutoPolygonizeProposal old in replaced)
                 {
                     old.DisposeMaskOverlay();
@@ -1722,6 +1913,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                         hoveredProposal = null;
                     foreach (long id in old.LocationIds)
                         proposals.Remove(id);
+
+                    CollectSurvivors(old, proposal.LocationIds, survivors);
                 }
 
                 if (Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
@@ -1729,6 +1922,28 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 foreach (long id in proposal.LocationIds)
                     proposals[id] = proposal;
+
+                List<AutoPolygonizeProposal> restored = [];
+                foreach (AutoPolygonizeProposal survivor in survivors)
+                {
+                    if (survivor.LocationIds.Any(proposals.ContainsKey) || !AreProposalMembersValid(survivor))
+                        continue;
+
+                    survivor.EndRefining();
+                    if (Global.AnnotationSettings.AutoPolygonizeOverlayMasks)
+                        survivor.AttachMaskOverlay(parent.Device);
+
+                    foreach (long id in survivor.LocationIds)
+                        proposals[id] = survivor;
+                    restored.Add(survivor);
+                }
+
+                if (restored.Count > 0)
+                {
+                    SegmentationDiag.Log(
+                        $"publish restored=[{string.Join("; ", restored.Select(item => string.Join(",", item.LocationIds)))}] " +
+                        $"after ids=[{string.Join(",", proposal.LocationIds)}] replaced a merge");
+                }
             }
 
             onPublished?.Invoke();
@@ -1745,23 +1960,26 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <see cref="AnnotationWaitResult.TimedOut"/> when <see cref="RegionWaitTimeoutMs"/> passed first, and
         /// <see cref="AnnotationWaitResult.Cancelled"/> when cancelled or the view is gone.
         /// </returns>
-        private async Task<AnnotationWaitResult> WaitForAnnotationsLoadedAsync(CancellationToken token)
+        /// <param name="token">Cancels the wait.</param>
+        /// <param name="scene">The region to wait for; null waits for the live view. An off-screen region must have been asked for with <c>LoadAnnotationsInRegion</c>.</param>
+        private async Task<AnnotationWaitResult> WaitForAnnotationsLoadedAsync(CancellationToken token, VikingXNA.Scene? scene = null)
         {
-            if (parent.Scene is null || !parent.HasSection)
+            scene ??= parent.Scene;
+            if (scene is null || !parent.HasSection)
                 return AnnotationWaitResult.Cancelled;
 
             SectionAnnotationsView sectionView = AnnotationOverlay.GetAnnotationsForSection(parent.SectionNumber);
             if (sectionView is null)
                 return AnnotationWaitResult.Cancelled;
 
-            Rectangle? mosaicBounds = parent.Scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(sectionView.mapper);
+            Rectangle? mosaicBounds = scene.VisibleWorldBounds.ApproximateVisibleMosaicBounds(sectionView.mapper);
             Stopwatch wait = Stopwatch.StartNew();
 
             while (!token.IsCancellationRequested && wait.ElapsedMilliseconds < RegionWaitTimeoutMs)
             {
                 if (Store.LocationsByRegion.AreRegionQueriesComplete(
                     mosaicBounds,
-                    parent.Scene.ScreenPixelSizeInVolume,
+                    scene.ScreenPixelSizeInVolume,
                     parent.SectionNumber))
                 {
                     return AnnotationWaitResult.Complete;
@@ -1860,12 +2078,12 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// A circle auto-polygonize may send for this view: away from the edges, wholly on screen and above the
-        /// minimum radius. See <see cref="AutoPolygonizeSelection"/>.IsEligibleCircle.
+        /// A circle auto-polygonize may send for this view: a cell's (<see cref="AutoPolygonizeSelection.IsCell"/>), away
+        /// from the edges, wholly on screen and above the minimum radius. See <see cref="AutoPolygonizeSelection"/>.IsEligibleCircle.
         /// </summary>
         private static bool IsEligibleCircleInView(LocationObj loc, Rectangle viewBounds, Rectangle inset)
         {
-            return AutoPolygonizeSelection.IsEligibleCircle(
+            return AutoPolygonizeSelection.IsCell(loc.Parent) && AutoPolygonizeSelection.IsEligibleCircle(
                 loc.TypeCode,
                 loc.VolumeCenter(),
                 inset,
@@ -2068,6 +2286,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>Cache dropped LastModified skip after a geometry commit. Overlay is stale; force one SegmentImage if still in view.</summary>
         private void OnCacheGeometryInvalidated(long locationId, int sectionNumber, int generation)
         {
+            CancelOverlapJobsContaining(locationId);
             DissolveProposal(locationId);
             if (!enabled)
                 return;
@@ -2075,6 +2294,43 @@ namespace WebAnnotation.UI.AutoPolygonize
             parent.Invalidate();
             refreshQueue ??= new LocationRefreshQueue(RunForLocationAsync, () => enabled, maxConcurrent: 2);
             ObserveFaults(refreshQueue.RefreshAsync(locationId, sectionNumber, generation), "single-ID refresh");
+        }
+
+        /// <summary>
+        /// Cancels every running overlap merge that includes <paramref name="locationId"/>. Its members were captured before
+        /// the circle changed, so it would publish a merge of the old outline over the new one, or, by being in flight, keep
+        /// the merge of the new outline from starting.
+        /// </summary>
+        private static bool IsCancelled(OverlapGroupJob job)
+        {
+            try
+            {
+                return job.Cancellation.IsCancellationRequested;
+            }
+            catch (ObjectDisposedException)
+            {
+                return true;
+            }
+        }
+
+        private void CancelOverlapJobsContaining(long locationId)
+        {
+            lock (overlapResubmitsInFlight)
+            {
+                foreach (OverlapGroupJob job in overlapResubmitsInFlight.Values)
+                {
+                    if (!job.LocationIds.Contains(locationId))
+                        continue;
+
+                    try
+                    {
+                        job.Cancellation.Cancel();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -2129,14 +2385,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             Rectangle viewBounds = GetCurrentViewportBounds();
             Rectangle inset = AutoPolygonizeSelection.InsetBounds(viewBounds);
-            if (!AutoPolygonizeSelection.IsEligibleCircle(
-                    circle.TypeCode,
-                    circle.VolumeCenter(),
-                    inset,
-                    viewBounds,
-                    circle.Radius,
-                    Global.Scale.X,
-                    Global.AnnotationSettings.AutoPolygonizeMinRadiusNanometers))
+            if (!IsEligibleCircleInView(circle, viewBounds, inset))
             {
                 cache.Remove(locationId);
                 return;
@@ -2173,9 +2422,10 @@ namespace WebAnnotation.UI.AutoPolygonize
                     return;
                 }
 
-                IReadOnlyList<Vector2> foreground = startingPrompt.Points;
+                // The circle goes as a shape; no clicks are sent. Its center is the one point the result must keep.
                 IReadOnlyList<SegmentationSeed> startingBoxes = [startingPrompt.Seed];
                 IReadOnlyList<Vector2> keepPoints = [startingPrompt.Center];
+                IReadOnlyList<Vector2> foreground = keepPoints;
 
                 List<LocationObj> visibleForPrompts = [.. CollectVisibleLocationObjs(viewBounds)];
                 SegmentationBackgroundShapes backgroundShapes = CircleSegmentationPrompts.CreateOtherStructureBackgroundShapes(
@@ -2186,7 +2436,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 Stopwatch proposalTimer = Stopwatch.StartNew();
                 long requestTicket = NextRequestTicket();
                 var response = await session.SegmentAsync(
-                    foreground,
+                    [],
                     [],
                     processToken,
                     startingBoxes,
@@ -2379,19 +2629,104 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// The proposals a merged proposal replaced that do not contain <paramref name="changedId"/>. A member that does
         /// contain it and is itself a merge is searched in turn; one that is a single request result is dropped.
         /// </summary>
-        internal static void CollectSurvivors(AutoPolygonizeProposal merged, long changedId, List<AutoPolygonizeProposal> survivors)
+        internal static void CollectSurvivors(AutoPolygonizeProposal merged, long changedId, List<AutoPolygonizeProposal> survivors) =>
+            CollectSurvivors(merged, [changedId], survivors);
+
+        /// <summary>
+        /// As <see cref="CollectSurvivors(AutoPolygonizeProposal, long, List{AutoPolygonizeProposal})"/> for a replacement that
+        /// stands for several locations: the proposals <paramref name="merged"/> replaced that share none of
+        /// <paramref name="replacedIds"/>.
+        /// </summary>
+        internal static void CollectSurvivors(AutoPolygonizeProposal merged, IReadOnlyCollection<long> replacedIds, List<AutoPolygonizeProposal> survivors)
         {
             foreach (AutoPolygonizeProposal member in merged.MergedFrom)
             {
-                if (!member.LocationIds.Contains(changedId))
+                if (!member.LocationIds.Any(replacedIds.Contains))
                     survivors.Add(member);
                 else
-                    CollectSurvivors(member, changedId, survivors);
+                    CollectSurvivors(member, replacedIds, survivors);
             }
         }
 
         private IEnumerable<AutoPolygonizeProposal> DistinctProposalsUnlocked() =>
             proposals.Values.Distinct();
+
+        /// <summary>
+        /// Queues, at the front of the line, every circle of the result's structure that lies within the result's average
+        /// diameter of it, on screen or not and whether or not it was in this batch: it may be the same cell and the result a
+        /// merge of the two. Each one's own result is checked the same way, so the search follows a chain of circles until
+        /// none is left near an answer; a circle is only segmented once, so it ends. UI thread, after a publish.
+        /// </summary>
+        private void QueueMergeCandidates(AutoPolygonizeProposal proposal)
+        {
+            if (proposal.ParentID is not long structureId || !enabled)
+                return;
+
+            int sectionNumber = proposal.SectionNumber;
+            Polygon result = proposal.Polygon;
+            IReadOnlyCollection<long> own = proposal.LocationIds;
+            double downsample = GetCurrentDownsample();
+            IVolumeToSectionTransform? transform = parent.ActiveSectionToVolumeTransform;
+            if (transform is null)
+                return;
+
+            ObserveFaults(Task.Run(async () =>
+            {
+                DateTime now = DateTime.UtcNow;
+                if (!structureFetchedUtc.TryGetValue(structureId, out DateTime fetched) || now - fetched > StructureFetchLifetime)
+                {
+                    // Brings the structure's circles on every section into the store; most are off screen.
+                    await Store.Locations.GetStructureLocations(structureId, QueryTargets.Server).ConfigureAwait(false);
+                    structureFetchedUtc[structureId] = now;
+                }
+
+                List<AutoPolygonizeSelection.CircleFootprint> near = AutoPolygonizeSelection.CollectMergeCandidates(
+                    result,
+                    structureId,
+                    sectionNumber,
+                    AutoPolygonizeSelection.ToCircleFootprints(Store.Locations.GetLocalObjectsForStructure(structureId), transform),
+                    own);
+                int queued = 0;
+                foreach (AutoPolygonizeSelection.CircleFootprint footprint in near)
+                {
+                    LocationObj loc = Store.Locations.GetCachedObject(footprint.Id);
+                    if (loc is null ||
+                        !cache.ShouldProcess(loc.ID, sectionNumber, loc.LastModified, loc.TypeCode, downsample) ||
+                        !AutoPolygonizeSelection.MeetsMinRadiusNanometers(
+                            loc.Radius,
+                            Global.Scale.X,
+                            Global.AnnotationSettings.AutoPolygonizeMinRadiusNanometers))
+                    {
+                        continue;
+                    }
+
+                    lock (proposalLock)
+                    {
+                        if (proposals.ContainsKey(loc.ID))
+                            continue;
+                    }
+
+                    if (EnqueueMergeCandidate(loc.ID))
+                        queued++;
+                }
+
+                SegmentationDiag.Log(
+                    $"merge check ids=[{string.Join(",", own)}] structure={structureId} diameter={AutoPolygonizeSelection.AverageDiameter(result):F0} " +
+                    $"near={near.Count} queued={queued}");
+                if (queued > 0 && !IsBusy)
+                    RestartIdleTimer();
+            }), "merge candidate check");
+        }
+
+        /// <summary>Queues one circle for the merge check unless it is already queued. Thread-safe.</summary>
+        private bool EnqueueMergeCandidate(long locationId)
+        {
+            if (!mergeCandidateIds.TryAdd(locationId, 0))
+                return false;
+
+            mergeCandidateQueue.Enqueue(locationId);
+            return true;
+        }
 
         /// <summary>
         /// After a publish, if other same-cell overlays or already-saved sibling polygons
@@ -2458,7 +2793,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             OverlapGroupJob job = new([.. locationIds], NextRequestTicket());
             lock (overlapResubmitsInFlight)
             {
-                if (overlapResubmitsInFlight.ContainsKey(key))
+                // A cancelled job for the same circles (one of them changed) is still unwinding; it must not block the new one.
+                if (overlapResubmitsInFlight.TryGetValue(key, out OverlapGroupJob? running) && !IsCancelled(running))
                 {
                     job.Cancellation.Dispose();
                     return;
@@ -2587,6 +2923,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return proposed;
 
             IReadOnlyCollection<LocationObj> nearby = [.. CollectVisibleLocationObjs(proposed.BoundingBox)];
+            WatchForGeometryChanges(nearby, excludeLocationIds, excludeParentId);
             List<Polygon> existing = AutoPolygonizeSelection.CollectOverlappingExistingPolygons(
                 nearby,
                 proposed,
@@ -2612,6 +2949,95 @@ namespace WebAnnotation.UI.AutoPolygonize
                     ? "result=null (existing annotations cover the proposal)"
                     : $"result area={carved.Area:F0} bbox={carved.BoundingBox} vertices={carved.TotalUniqueVertices}"));
             return carved;
+        }
+
+        /// <summary>
+        /// Listens to <paramref name="locations"/> of other cells so that a change to one of their outlines (a pen
+        /// refinement, a move, a delete) re-clips the proposals, not only an accept. Cell boundaries never overlap.
+        /// </summary>
+        private void WatchForGeometryChanges(IEnumerable<LocationObj> locations, IReadOnlyCollection<long> excludeLocationIds, long? excludeParentId)
+        {
+            lock (watchedLocations)
+            {
+                foreach (LocationObj location in locations)
+                {
+                    if (location is null || excludeLocationIds.Contains(location.ID))
+                        continue;
+                    if (excludeParentId.HasValue && location.ParentID == excludeParentId)
+                        continue;
+
+                    if (watchedLocations.Add(location))
+                        location.PropertyChanged += OnWatchedLocationChanged;
+                }
+            }
+        }
+
+        private void UnwatchAllLocations()
+        {
+            lock (watchedLocations)
+            {
+                foreach (LocationObj location in watchedLocations)
+                    location.PropertyChanged -= OnWatchedLocationChanged;
+
+                watchedLocations.Clear();
+            }
+
+            sectionsToReclip.Clear();
+        }
+
+        /// <summary>
+        /// A pen edit sets several properties in a row, so this only notes the section; one posted <see cref="ReclipProposals"/>
+        /// handles all of them once the edit has finished.
+        /// </summary>
+        private void OnWatchedLocationChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (!enabled || sender is not LocationObj location || !AutoPolygonizeSelection.IsGeometryProperty(e.PropertyName))
+                return;
+
+            sectionsToReclip[(int)location.Section] = 0;
+            if (Interlocked.Exchange(ref reclipPosted, 1) == 0)
+                parent.BeginInvoke(new Action(ReclipProposals));
+        }
+
+        /// <summary>
+        /// Clips every proposal on the changed sections against the other cells as they are now. A proposal with a stored
+        /// mask is retraced first (<see cref="RefreshFromStoredMasks"/>), so area a cell has given up returns to it; one
+        /// without can only lose area. UI thread.
+        /// </summary>
+        private void ReclipProposals()
+        {
+            Interlocked.Exchange(ref reclipPosted, 0);
+            List<int> sections = [.. sectionsToReclip.Keys];
+            foreach (int section in sections)
+                sectionsToReclip.TryRemove(section, out _);
+
+            if (!enabled || sections.Count == 0)
+                return;
+
+            RefreshFromStoredMasks(sections.Count == 1 ? sections[0] : null);
+
+            List<AutoPolygonizeProposal> withoutMask;
+            lock (proposalLock)
+            {
+                withoutMask =
+                [
+                    .. DistinctProposalsUnlocked().Where(item => item.MaskSources.Count == 0 && sections.Contains(item.SectionNumber))
+                ];
+            }
+
+            double downsample = GetCurrentDownsample();
+            foreach (AutoPolygonizeProposal proposal in withoutMask)
+            {
+                LocationObj seed = Store.Locations.GetCachedObject(proposal.LocationId);
+                Vector2 keep = seed is not null ? seed.VolumeCenter() : proposal.Polygon.Centroid;
+                Polygon? carved = CarveAgainstExistingPolygons(proposal.Polygon, proposal.LocationIds, keep, proposal.ParentID, proposal.ForegroundPrompts);
+                if (carved is null)
+                    RemoveProposal(proposal.LocationId);
+                else if (!ReferenceEquals(carved, proposal.Polygon))
+                    proposal.ReplacePolygon(AutoPolygonizeSelection.SimplifyForCreatedShape(carved, downsample, proposal.ForegroundPrompts), downsample);
+            }
+
+            parent.Invalidate();
         }
 
         /// <summary>
@@ -2835,7 +3261,11 @@ namespace WebAnnotation.UI.AutoPolygonize
             finally
             {
                 lock (overlapResubmitsInFlight)
-                    overlapResubmitsInFlight.Remove(inFlightKey);
+                {
+                    // A newer job for the same circles may have taken the key while this cancelled one unwound.
+                    if (overlapResubmitsInFlight.TryGetValue(inFlightKey, out OverlapGroupJob? registered) && ReferenceEquals(registered, job))
+                        overlapResubmitsInFlight.Remove(inFlightKey);
+                }
                 linkedCancellation?.Dispose();
                 job.Cancellation.Dispose();
                 foreach (AutoPolygonizeProposal member in members)

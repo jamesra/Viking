@@ -22,6 +22,31 @@ namespace VikingXNAGraphics
 
         public static TextureCircleView CreateDownArrow(Circle circle, Color color) => new(GlobalPrimitives.DownArrowTexture, circle, color, BuiltinTexture.DownArrow);
 
+        /// <summary>
+        /// The border drawn round every arrow marker: the outline color the label outline preference gives labels (white when it is off),
+        /// so arrows stand out from the image as labels do. Read each time arrows are drawn, so it follows the preference.
+        /// </summary>
+        public static Color ArrowBorderColor()
+        {
+            LabelOutlineStyle style = LabelView.OutlineStyleAccessor();
+            return LabelView.OutlineColors(Color.Black, style == LabelOutlineStyle.Off ? LabelOutlineStyle.BlackTextWhiteOutline : style).Outline;
+        }
+
+        /// <summary>
+        /// The <see cref="MarkerOutlineMap"/> drawn in place of an arrow texture, so every arrow (overlapped link markers, adjacent
+        /// locations, adjacent polyline points) gets the contrasting border; null for any other texture or before the host built them.
+        /// </summary>
+        internal static Texture2D OutlinedArrow(Texture2D texture)
+        {
+            if (texture is null)
+                return null;
+            if (texture == GlobalPrimitives.UpArrowTexture)
+                return GlobalPrimitives.UpArrowOutlinedTexture;
+            if (texture == GlobalPrimitives.DownArrowTexture)
+                return GlobalPrimitives.DownArrowOutlinedTexture;
+            return null;
+        }
+
         public static TextureCircleView CreatePlusCircle(Circle circle, Color color) => new(GlobalPrimitives.PlusTexture, circle, color, BuiltinTexture.Plus);
 
         public static TextureCircleView CreateMinusCircle(Circle circle, Color color) => new(GlobalPrimitives.MinusTexture, circle, color, BuiltinTexture.Minus);
@@ -70,8 +95,20 @@ namespace VikingXNAGraphics
             foreach (var textureGroup in textureGroups)
             {
                 TextureCircleView[] views = [.. textureGroup];
-                overlayEffect.AnnotationTexture = textureGroup.Key;
-                overlayEffect.Technique = OverlayShaderEffect.Techniques.CircleSingleColorTextureLumaOverlayEffect;
+
+                // An arrow is drawn from its outlined map; an older compiled shader without the technique draws it plain
+                Texture2D outlined = OutlinedArrow(textureGroup.Key);
+                if (outlined is not null && overlayEffect.HasTechnique(OverlayShaderEffect.Techniques.CircleSingleColorTextureLumaOutlinedOverlayEffect))
+                {
+                    overlayEffect.AnnotationTexture = outlined;
+                    overlayEffect.Technique = OverlayShaderEffect.Techniques.CircleSingleColorTextureLumaOutlinedOverlayEffect;
+                    overlayEffect.SetMarkerBorder(ArrowBorderColor(), LabelOutlineEffect.OutlineWidth, LabelOutlineEffect.OutlineBlur);
+                }
+                else
+                {
+                    overlayEffect.AnnotationTexture = textureGroup.Key;
+                    overlayEffect.Technique = OverlayShaderEffect.Techniques.CircleSingleColorTextureLumaOverlayEffect;
+                }
 
                 foreach (TextureCircleView cv in textureGroup)
                 {
@@ -498,8 +535,20 @@ namespace VikingXNAGraphics
                 // instanced shader does not implement, so they are drawn separately and last.
                 RingCircleView[] ringCircles = [.. allCircles.OfType<RingCircleView>()];
                 CircleView[] instancedCircles = ringCircles.Length == 0 ? allCircles : [.. allCircles.Where(c => c is not RingCircleView)];
+
+                // Arrows with an outlined map take their contrasting border from an OverlayShaderEffect technique the
+                // instanced shader does not implement, so they are drawn there instead.
+                TextureCircleView[] outlinedArrows = overlayEffect != null && overlayEffect.HasTechnique(OverlayShaderEffect.Techniques.CircleSingleColorTextureLumaOutlinedOverlayEffect)
+                    ? [.. instancedCircles.OfType<TextureCircleView>().Where(t => TextureCircleView.OutlinedArrow(t.Texture) is not null)]
+                    : [];
+                if (outlinedArrows.Length > 0)
+                    instancedCircles = [.. instancedCircles.Where(c => !outlinedArrows.Contains(c))];
+
                 if (instancedCircles.Length > 0)
                     CircleView.Draw(device, scene, instancedEffect, instancedCircles, rtSize, backgroundTexture, inputLumaAlpha);
+
+                if (outlinedArrows.Length > 0)
+                    TextureCircleView.Draw(device, scene, overlayEffect, outlinedArrows);
 
                 if (ringCircles.Length > 0 && overlayEffect != null)
                     RingCircleView.Draw(device, scene, overlayEffect, ringCircles);

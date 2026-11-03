@@ -25,6 +25,8 @@ namespace WebAnnotation.WPF.Forms
         private int _originalLocationLinkVisibilityPercent = DefaultLocationLinkVisibilityPercent;
         private bool _originalLocationLinkLabels = true;
         private int _originalHideAnnotationSeconds = DefaultHideAnnotationSeconds;
+        private bool _originalLabelOutlineEnabled = true;
+        private bool _originalLabelOutlineWhiteText;
         private double _originalLabelRotation = DefaultLabelRotation;
         private uint _originalNumClosedCurveInterpolationPointsForDisplay;
         private int _originalPenSimplifyThreshold;
@@ -190,6 +192,46 @@ namespace WebAnnotation.WPF.Forms
                     OnPropertyChanged();
                 }
             }
+        }
+
+        private bool _labelOutlineEnabled = true;
+
+        /// <summary>Draws annotation text with a thin outline so it stays readable over light and dark images.</summary>
+        public bool LabelOutlineEnabled
+        {
+            get => _labelOutlineEnabled;
+            set
+            {
+                if (_labelOutlineEnabled != value)
+                {
+                    _labelOutlineEnabled = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _labelOutlineWhiteText;
+
+        /// <summary>False outlines black text in white. True draws white text with a black outline.</summary>
+        public bool LabelOutlineWhiteText
+        {
+            get => _labelOutlineWhiteText;
+            set
+            {
+                if (_labelOutlineWhiteText != value)
+                {
+                    _labelOutlineWhiteText = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(LabelOutlineColorChoice));
+                }
+            }
+        }
+
+        /// <summary>The outline color combo box position: 0 is black text with a white outline, 1 is white text with a black outline.</summary>
+        public int LabelOutlineColorChoice
+        {
+            get => _labelOutlineWhiteText ? 1 : 0;
+            set => LabelOutlineWhiteText = value == 1;
         }
 
         /// <summary>
@@ -887,7 +929,7 @@ namespace WebAnnotation.WPF.Forms
 
         /// <summary>
         /// Coarsest camera downsample at which auto-segment still runs. Default <see cref="DefaultAutoPolygonizeMaxDownsample"/>.
-        /// The preference allows 1 to 4. The value itself still runs; anything coarser is not sent
+        /// The preference allows 1 to 6. The value itself still runs; anything coarser is not sent
         /// to the segmentation service.
         /// </summary>
         private double _autoPolygonizeMaxDownsample;
@@ -896,8 +938,8 @@ namespace WebAnnotation.WPF.Forms
             get => _autoPolygonizeMaxDownsample;
             set
             {
-                // Preference slider steps by 0.25 over [1, 4]; snap so keyboard/bindings match ticks.
-                double clamped = MathUtils.Clamp(Math.Round(value * 4.0) / 4.0, 1.0, 4.0);
+                // Preference slider steps by 0.25 over [1, 6]; snap so keyboard/bindings match ticks.
+                double clamped = MathUtils.Clamp(Math.Round(value * 4.0) / 4.0, 1.0, 6.0);
                 if (Math.Abs(_autoPolygonizeMaxDownsample - clamped) > 0.001)
                 {
                     _autoPolygonizeMaxDownsample = clamped;
@@ -991,6 +1033,36 @@ namespace WebAnnotation.WPF.Forms
                 }
             }
         }
+
+        /// <summary>The stored name of the pen report that is the barrel button when nothing else is chosen.</summary>
+        public const string DefaultBarrelButton = "Barrel";
+
+        private string _barrelButton = DefaultBarrelButton;
+        private string _originalBarrelButton = DefaultBarrelButton;
+
+        /// <summary>
+        /// Which pen report Viking treats as the pen's barrel button: "Barrel" (Windows' own barrel flag, the default) or "Eraser"
+        /// for pens whose side button is reported as the eraser. The dialog sets it when the user clicks their pen button.
+        /// </summary>
+        public string BarrelButton
+        {
+            get => _barrelButton;
+            set
+            {
+                string next = string.IsNullOrEmpty(value) ? DefaultBarrelButton : value;
+                if (_barrelButton != next)
+                {
+                    _barrelButton = next;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(BarrelButtonDescription));
+                }
+            }
+        }
+
+        /// <summary>The chosen barrel button in words, for the preferences page.</summary>
+        public string BarrelButtonDescription => _barrelButton == "Eraser"
+            ? "Pen eraser button"
+            : "Pen barrel button (Windows default)";
 
         private double _smallestRenderedSize;
         public double SmallestRenderedSize
@@ -1144,9 +1216,13 @@ namespace WebAnnotation.WPF.Forms
             int locationLinkVisibilityPercent = DefaultLocationLinkVisibilityPercent,
             bool locationLinkLabels = true,
             int hideAnnotationSeconds = DefaultHideAnnotationSeconds,
+            bool labelOutlineEnabled = true,
+            bool labelOutlineWhiteText = false,
+            string barrelButton = DefaultBarrelButton,
             double labelRotation = DefaultLabelRotation,
             AutoPolygonizeShimmerStyle autoPolygonizeShimmerStyle = DefaultAutoPolygonizeShimmerStyle)
         {
+            _barrelButton = _originalBarrelButton = string.IsNullOrEmpty(barrelButton) ? DefaultBarrelButton : barrelButton;
             _polygonPointOpacity = _originalPolygonPointOpacity = polygonPointOpacity;
             _hidePolygonPointsInPenMode = _originalHidePolygonPointsInPenMode = hidePolygonPointsInPenMode;
 
@@ -1200,6 +1276,8 @@ namespace WebAnnotation.WPF.Forms
             _originalLocationLinkVisibilityPercent = locationLinkVisibilityPercent;
             _originalLocationLinkLabels = locationLinkLabels;
             _originalHideAnnotationSeconds = hideAnnotationSeconds;
+            _originalLabelOutlineEnabled = labelOutlineEnabled;
+            _originalLabelOutlineWhiteText = labelOutlineWhiteText;
             _originalNumClosedCurveInterpolationPointsForDisplay = numClosedCurveInterpolationPointsForDisplay;
             _originalPenSimplifyThreshold = penSimplifyThreshold;
             _originalMinRadius = minRadius;
@@ -1273,6 +1351,8 @@ namespace WebAnnotation.WPF.Forms
             LocationLinkVisibilityPercent = locationLinkVisibilityPercent;
             LocationLinkLabels = locationLinkLabels;
             HideAnnotationSeconds = hideAnnotationSeconds;
+            LabelOutlineEnabled = labelOutlineEnabled;
+            LabelOutlineWhiteText = labelOutlineWhiteText;
             LabelRotation = labelRotation;
             _originalLabelRotation = _labelRotation;
             CorrectionShimEnabled = correctionShimEnabled;
@@ -1303,6 +1383,8 @@ namespace WebAnnotation.WPF.Forms
             _originalLocationLinkVisibilityPercent = _locationLinkVisibilityPercent;
             _originalLocationLinkLabels = _locationLinkLabels;
             _originalHideAnnotationSeconds = _hideAnnotationSeconds;
+            _originalLabelOutlineEnabled = _labelOutlineEnabled;
+            _originalLabelOutlineWhiteText = _labelOutlineWhiteText;
             _originalLabelRotation = _labelRotation;
             _originalNumClosedCurveInterpolationPointsForDisplay = _numClosedCurveInterpolationPointsForDisplay;
             _originalPenSimplifyThreshold = _penSimplifyThreshold;
@@ -1337,6 +1419,7 @@ namespace WebAnnotation.WPF.Forms
             _originalPolygonPointDiameter = _polygonPointDiameter;
             _originalPolygonPointOpacity = _polygonPointOpacity;
             _originalHidePolygonPointsInPenMode = _hidePolygonPointsInPenMode;
+            _originalBarrelButton = _barrelButton;
             _originalSmallestRenderedSize = _smallestRenderedSize;
             _originalPolygonVertexPointsVisibleAtWidthFraction = _polygonVertexPointsVisibleAtWidthFraction;
             _originalPolygonVertexPointsHiddenAtWidthFraction = _polygonVertexPointsHiddenAtWidthFraction;
@@ -1356,6 +1439,8 @@ namespace WebAnnotation.WPF.Forms
             _locationLinkVisibilityPercent = _originalLocationLinkVisibilityPercent;
             _locationLinkLabels = _originalLocationLinkLabels;
             _hideAnnotationSeconds = _originalHideAnnotationSeconds;
+            _labelOutlineEnabled = _originalLabelOutlineEnabled;
+            _labelOutlineWhiteText = _originalLabelOutlineWhiteText;
             _labelRotation = _originalLabelRotation;
             _numClosedCurveInterpolationPointsForDisplay = _originalNumClosedCurveInterpolationPointsForDisplay;
             _penSimplifyThreshold = _originalPenSimplifyThreshold;
@@ -1390,6 +1475,7 @@ namespace WebAnnotation.WPF.Forms
             _polygonPointDiameter = _originalPolygonPointDiameter;
             _polygonPointOpacity = _originalPolygonPointOpacity;
             _hidePolygonPointsInPenMode = _originalHidePolygonPointsInPenMode;
+            _barrelButton = _originalBarrelButton;
             _smallestRenderedSize = _originalSmallestRenderedSize;
             _polygonVertexPointsVisibleAtWidthFraction = _originalPolygonVertexPointsVisibleAtWidthFraction;
             _polygonVertexPointsHiddenAtWidthFraction = _originalPolygonVertexPointsHiddenAtWidthFraction;
@@ -1411,6 +1497,8 @@ namespace WebAnnotation.WPF.Forms
             _locationLinkLabels = true;
             _locationLinkDrawUnderMarkers = false;
             _hideAnnotationSeconds = DefaultHideAnnotationSeconds;
+            _labelOutlineEnabled = true;
+            _labelOutlineWhiteText = false;
             _labelRotation = DefaultLabelRotation;
             _numClosedCurveInterpolationPointsForDisplay = 3;
             _penSimplifyThreshold = 3;
@@ -1450,6 +1538,7 @@ namespace WebAnnotation.WPF.Forms
             _polygonPointDiameter = 12.0;
             _polygonPointOpacity = 0.75;
             _hidePolygonPointsInPenMode = true;
+            _barrelButton = DefaultBarrelButton;
             _smallestRenderedSize = 10.0;
             _polygonVertexPointsVisibleAtWidthFraction = 0.0025;
             _polygonVertexPointsHiddenAtWidthFraction = 0.002;

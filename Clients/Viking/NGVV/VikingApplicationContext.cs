@@ -18,8 +18,6 @@ namespace Viking
 
     public class VikingApplicationContext : ApplicationContext
     {
-        public CancellationTokenSource cancellationTokenSource = new();
-
         private readonly ApplicationSettings _settings;
 
         public VikingApplicationContext(ApplicationSettings settings)
@@ -46,10 +44,8 @@ namespace Viking
         {
             if (string.IsNullOrWhiteSpace(_settings.VolumeURL))
                 throw new ArgumentNullException(nameof(_settings.VolumeURL));
-            //var cancellationTokenSource = new CancellationTokenSource();
-
             using SplashForm Splash = new();
-            Splash.TrackedTask = System.Threading.Tasks.Task.Run(() => BackgroundLoading(_settings.VolumeURL, Splash.progressReporter, cancellationTokenSource.Token));
+            Splash.TrackedTask = System.Threading.Tasks.Task.Run(() => BackgroundLoading(_settings.VolumeURL, Splash.progressReporter, ApplicationShutdown.Token));
 
             //The splash dialog will run until the Volume is initialized 
             Splash.ShowDialog();
@@ -83,6 +79,17 @@ namespace Viking
                 return;
             }
 
+            var stosFailures = UI.State.volume?.StosLoadFailures;
+            if (stosFailures is { Count: > 0 })
+            {
+                Trace.WriteLine($"{stosFailures.Count} .stos transforms did not load:" + Environment.NewLine + string.Join(Environment.NewLine, stosFailures));
+                MessageBox.Show(
+                    $"{stosFailures.Count} section transforms (.stos) could not be loaded from the server, so those sections " +
+                    "are shown without their transform. The list is in the Viking log. Reopening the volume usually fixes it." + Environment.NewLine + Environment.NewLine +
+                    $"First: {stosFailures[0]}",
+                    "Transforms Missing", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+
             Trace.WriteLine($"Showing VikingMain window");
             UI.State.Appwindow = new VikingMain();
             this.MainForm = UI.State.Appwindow;
@@ -91,17 +98,13 @@ namespace Viking
 
         protected override void OnMainFormClosed(object sender, EventArgs e)
         {
-            try
-            {
-                cancellationTokenSource.Cancel();
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-
             // The window is already gone (ApplicationContext reacts to HandleDestroyed), so arm the
-            // watchdog before teardown that can block: closing the viewer or a WPF window runs their handlers.
+            // watchdog before teardown that can block: cancellation callbacks, and closing the viewer or a
+            // WPF window, which runs their handlers.
             StartExitWatchdog();
+
+            // Cancels in-flight gRPC calls so the channel shutdown after the message loop does not wait on them.
+            ApplicationShutdown.Begin();
             ShutdownRuntime();
             base.OnMainFormClosed(sender, e);
         }
@@ -204,26 +207,22 @@ namespace Viking
         }
 
         /// <summary>
-        /// If teardown has not finished 3 seconds after the main window is destroyed, kill the process.
-        /// Covers <see cref="ShutdownRuntime"/>, a WinForms loop that never returns (dispatcher or gRPC still
-        /// pumping), and <see cref="ShutdownAfterMessageLoop"/>. Uses <see cref="ProcessTermination"/>, not
-        /// <see cref="Environment.Exit(int)"/>: Exit runs Grpc.Core's unbounded ProcessExit wait and stalled here.
-        /// Background so a clean exit does not wait out the delay.
+        /// If teardown has not finished 3 seconds after the main window is destroyed, write an
+        /// <see cref="ExitStallDump"/> and kill the process. Covers <see cref="ShutdownRuntime"/>, a WinForms loop that
+        /// never returns (dispatcher or gRPC still pumping), and <see cref="ShutdownAfterMessageLoop"/>. Uses
+        /// <see cref="ProcessTermination"/>, not <see cref="Environment.Exit(int)"/>: Exit runs Grpc.Core's ProcessExit
+        /// wait and stalled here. Background so a clean exit does not wait out the delay.
         /// </summary>
         private static void StartExitWatchdog()
         {
             Thread watchdog = new(() =>
             {
                 Thread.Sleep(3000);
-                try
-                {
-                    Trace.WriteLine("Viking exit watchdog: teardown did not finish; terminating process");
-                }
-                catch (Exception)
-                {
-                    // Main may have closed the log writer just before its own termination.
-                }
-
+                TryTrace("Viking exit watchdog: teardown did not finish in 3 s; writing exit-stall dump");
+                string? dumpPath = ExitStallDump.TryCapture();
+                TryTrace(dumpPath is null
+                    ? "Viking exit watchdog: no dump written; terminating process"
+                    : $"Viking exit watchdog: dump written to {dumpPath}; terminating process");
                 ProcessTermination.Terminate(0);
             })
             {
@@ -231,6 +230,21 @@ namespace Viking
                 Name = "VikingExitWatchdog"
             };
             watchdog.Start();
+        }
+
+        /// <summary>
+        /// Writes a trace line from the exit watchdog. Main may have closed the log writer just before its own
+        /// termination, so a write failure is ignored.
+        /// </summary>
+        private static void TryTrace(string message)
+        {
+            try
+            {
+                Trace.WriteLine(message);
+            }
+            catch (Exception)
+            {
+            }
         }
 
         /// <summary>

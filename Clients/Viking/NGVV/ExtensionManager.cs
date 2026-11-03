@@ -129,7 +129,7 @@ namespace Viking.Common
                 }
 
                 System.Windows.Forms.ToolStripItem[] items = menuStrip.Items.Find(Attribs[0].ParentMenuName, false);
-                System.Windows.Forms.ToolStripMenuItem ParentItem = null;
+                System.Windows.Forms.ToolStripMenuItem? ParentItem = null;
                 if (items != null && items.Length > 0)
                 {
                     ParentItem = items[0] as System.Windows.Forms.ToolStripMenuItem;
@@ -445,7 +445,7 @@ namespace Viking.Common
             //Put in an array so we can change the collection in the loop
 
             // Create the extension load context once for all extensions
-            ExtensionLoadContext loadContext = null;
+            ExtensionLoadContext? loadContext = null;
             try
             {
                 Viking.ViewModels.VolumeViewModel volume = Viking.UI.State.volume;
@@ -643,9 +643,9 @@ namespace Viking.Common
             }
         }
 
-        private static VikingExtensionAttribute GetAssemblyExtensionAttribute(Assembly A)
+        private static VikingExtensionAttribute? GetAssemblyExtensionAttribute(Assembly A)
         {
-            VikingExtensionAttribute[] Attribs = A.GetCustomAttributes(typeof(VikingExtensionAttribute), false) as VikingExtensionAttribute[];
+            VikingExtensionAttribute[]? Attribs = A.GetCustomAttributes(typeof(VikingExtensionAttribute), false) as VikingExtensionAttribute[];
             Debug.Assert(Attribs.Length < 2, A.FullName + " contained two AssemblyExtensionAttribues. Maximum number is one.");
 
             if (Attribs.Length != 1)
@@ -662,7 +662,7 @@ namespace Viking.Common
             {
                 foreach (Module M in A.GetModules(true))
                 {
-                    string FullyQualifiedName = null;
+                    string? FullyQualifiedName = null;
                     try
                     {
                         FullyQualifiedName = M.FullyQualifiedName;
@@ -908,7 +908,7 @@ namespace Viking.Common
                 System.Type ObjType = SectionOverlayList[i];
                 try
                 {
-                    ISectionOverlayExtension OverlayObj = Activator.CreateInstance(ObjType, []) as ISectionOverlayExtension;
+                    ISectionOverlayExtension? OverlayObj = Activator.CreateInstance(ObjType, []) as ISectionOverlayExtension;
                     OverlayObj.SetParent(parent);
                     listOverlays.Add(OverlayObj);
                 }
@@ -935,7 +935,7 @@ namespace Viking.Common
                 System.Type ObjType = ExtensionManager.ContextMenuProviderList[i];
                 try
                 {
-                    IProvideContextMenus OverlayObj = Activator.CreateInstance(ObjType, []) as IProvideContextMenus;
+                    IProvideContextMenus? OverlayObj = Activator.CreateInstance(ObjType, []) as IProvideContextMenus;
                     listProviders.Add(OverlayObj);
                 }
                 catch (Exception e)
@@ -972,7 +972,7 @@ namespace Viking.Common
         /// <summary>
         /// Custom assembly resolver to handle dependencies in module directories
         /// </summary>
-        private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
+        private static Assembly? OnAssemblyResolve(object sender, ResolveEventArgs args)
         {
             try
             {

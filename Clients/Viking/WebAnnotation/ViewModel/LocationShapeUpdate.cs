@@ -20,7 +20,8 @@ namespace WebAnnotation.ViewModel
     /// Used by Segment to Polygon and auto-polygonize accept; shows a MessageBox on save failure.
     /// Fits the ring once, then maps those control points back to mosaic space with the inverse owner
     /// (<see cref="LocationVolumeGeometry.ToMosaic(LocationType, Polygon, IVolumeToSectionTransform)"/>): MosaicShape is the
-    /// unsmoothed control polygon and VolumeShape the forward owner's smoothed shape.
+    /// unsmoothed control polygon and VolumeShape the forward owner's smoothed shape. A result with any point outside the
+    /// section's transform is refused and nothing is saved.
     /// </summary>
     internal static class LocationShapeUpdate
     {

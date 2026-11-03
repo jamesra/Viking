@@ -254,7 +254,7 @@ namespace Geometry.Meshing
         /// <summary>
         /// Returns all of the verticies in the face
         /// </summary>
-        /// <param name="vertIndicies"></param>
+        /// <param name="face">The face whose verticies are returned</param>
         /// <returns></returns>
         public IEnumerable<VERTEX> this[IFace face] => face.iVerts.Select(i => this._Verticies[(int)i]);
 
@@ -265,7 +265,7 @@ namespace Geometry.Meshing
         /// <summary>
         /// Returns all of the verticies that match the indicies
         /// </summary>
-        /// <param name="vertIndicies"></param>
+        /// <param name="keys">The edge keys to look up</param>
         /// <returns></returns>
         public IEnumerable<IEdge> this[IEnumerable<IEdgeKey> keys] => keys.Select(e => this._Edges[e]);
 
@@ -300,7 +300,7 @@ namespace Geometry.Meshing
         /// <summary>
         /// Add a collection of verticies to the mesh whose index has not been set
         /// </summary>
-        /// <param name="v"></param>
+        /// <param name="verts">The verticies to add</param>
         /// <returns>The index the first element was inserted at</returns>
         public virtual int AddVerticies(IEnumerable<VERTEX> verts)
         {
@@ -518,7 +518,6 @@ namespace Geometry.Meshing
         /// <summary>
         /// Returns the shortest path of adjacent faces from the starting face to a face meeting a criteria function
         /// </summary>
-        /// <param name="mesh"></param>
         /// <param name="start">Starting Face</param>
         /// <param name="CanBePartOfPath">Returns true if the tested face can be part of the path.</param>
         /// <param name="MeetsCriteriaFunc">Returns true if the face is the desired destination</param>
@@ -560,6 +559,7 @@ namespace Geometry.Meshing
         /// additions, so later siblings skip those faces. This replaces copying the set for every branch with the same visibility.</param>
         /// <param name="mesh"></param>
         /// <param name="Origin"></param>
+        /// <param name="CanBePartOfPath">Returns true if the tested face can be part of the path.</param>
         /// <param name="IsMatch"></param>
         /// <param name="PathCache">Contains a lookup table of the shortest route to the target for each face</param>
         /// <returns>The path from Origin to a face that matches, or null. When several branches succeed, the first
@@ -671,7 +671,6 @@ namespace Geometry.Meshing
         /// Returns a list of faces adjacent to the passed face
         /// </summary>
         /// <param name="face"></param>
-        /// <param name="mesh"></param>
         /// <returns></returns>
         public IFace[] AdjacentFaces(IFace face)
         {

@@ -316,7 +316,7 @@ namespace WebAnnotation.ViewModel
 
         private bool AddNonOverlappedOrUnlinkedLocation(LocationObj loc)
         {
-            LocationCanvasView locView = null;
+            LocationCanvasView? locView = null;
             try
             {
                 locView = AnnotationViewFactory.CreateAdjacent(loc, mapper);
@@ -1000,7 +1000,7 @@ namespace WebAnnotation.ViewModel
         /// <param name="link"></param>
         /// <param name="SectionNumber"></param>
         /// <returns></returns>
-        private static LocationObj GetLocationFromLinkOnThisSection(LocationLinkKey link, int SectionNumber)
+        private static LocationObj? GetLocationFromLinkOnThisSection(LocationLinkKey link, int SectionNumber)
         {
             if (!Store.Locations.TryGetObjectByID(link.A, out LocationObj AObj))
             {

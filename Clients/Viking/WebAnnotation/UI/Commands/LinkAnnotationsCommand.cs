@@ -92,7 +92,7 @@ namespace WebAnnotation.UI.Commands
                 return loc.ID != OriginObj.ID && !OriginObj.Links.Contains(loc.ID);
             })];
 
-            IViewLocation nearestVisible = null;
+            IViewLocation? nearestVisible = null;
             HitTestResult BestMatch = listHitTestResults.NearestObjectOnCurrentSectionThenAdjacent((int)OriginObj.Z);
             if (BestMatch?.obj is IViewLocation bestViewLocMatch)
             {
@@ -132,7 +132,7 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="NearestTarget"></param>
         /// <returns></returns>
-        private LocationObj TrySetTarget(IViewLocation nearest, in Rectangle targetBoundingRect)
+        private LocationObj? TrySetTarget(IViewLocation nearest, in Rectangle targetBoundingRect)
         {
             if (nearest != null)
             {
@@ -151,7 +151,7 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         /// <param name="NearestTarget"></param>
         /// <returns></returns>
-        private LocationObj TrySetTarget(LocationObj nearest_target)
+        private LocationObj? TrySetTarget(LocationObj nearest_target)
         {
             if (nearest_target is null)
             {
@@ -296,7 +296,7 @@ namespace WebAnnotation.UI.Commands
             }
 
             Color lineColor = noTarget;
-            string lineStyle = null;
+            string? lineStyle = null;
             double lineRadius = LineRadiusForLocationLink();
             bool UseLumaLineManager = false;
 

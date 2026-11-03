@@ -32,8 +32,8 @@ namespace WebAnnotation.UI.Commands
         public PolygonIndex? PolyBeingCut;
 
         //Meshes of the individual cut pieces of the retrace and replace
-        private PositionColorMeshModel _choiceBaseMesh;
-        private PositionColorMeshModel _choiceCapMesh;
+        private PositionColorMeshModel? _choiceBaseMesh;
+        private PositionColorMeshModel? _choiceCapMesh;
         private Task<Geometry.Meshing.PolygonCutFill> _fillTask;
         private Geometry.Meshing.PolygonCutFill _fill;
         private Geometry.Vector2[] _cutPath;
@@ -281,8 +281,8 @@ namespace WebAnnotation.UI.Commands
         {
             using WebAnnotation.View.PolygonViewTimingLog.PenStepTimer timer = WebAnnotation.View.PolygonViewTimingLog.Measure("finish-cut", $"verts={OriginalVolumePolygon.TotalVertices}");
             Polygon keptPiece = ChosenPiece();
-            Polygon discardedPiece = KeepBothPieces ? OtherPiece(keptPiece) : null;
-            Polygon discardedVolume = KeepBothPieces ? DiscardedVolumePolygon() : null;
+            Polygon? discardedPiece = KeepBothPieces ? OtherPiece(keptPiece) : null;
+            Polygon? discardedVolume = KeepBothPieces ? DiscardedVolumePolygon() : null;
 
             try
             {
@@ -330,7 +330,7 @@ namespace WebAnnotation.UI.Commands
             ControlPointCut.Piece Spliced(Polygon walked) => ReferenceEquals(walked, ClockwiseCutPolygon) ? clockwise : ReferenceEquals(walked, CounterClockwiseCutPolygon) ? counterClockwise : null;
 
             ControlPointCut.Piece kept = Spliced(keptPiece);
-            ControlPointCut.Piece splitOff = splitOffPiece is null ? null : Spliced(splitOffPiece);
+            ControlPointCut.Piece? splitOff = splitOffPiece is null ? null : Spliced(splitOffPiece);
             if (kept is null || (splitOffPiece is not null && splitOff is null))
                 return false;
 
@@ -490,7 +490,7 @@ namespace WebAnnotation.UI.Commands
         /// part is filled unless Ctrl fills the larger one (<see cref="HolePartKept"/>), as in the pen choices.
         /// Null when there is no cut.
         /// </summary>
-        private Polygon ChosenPiece() => CutAction switch
+        private Polygon? ChosenPiece() => CutAction switch
         {
             RetraceCommandAction.GROW_EXTERIOR_RING or RetraceCommandAction.GROW_INTERNAL_RING =>
                 CounterClockwiseCutPolygon.Area > ClockwiseCutPolygon.Area ? CounterClockwiseCutPolygon : ClockwiseCutPolygon,
@@ -521,7 +521,7 @@ namespace WebAnnotation.UI.Commands
         /// The exterior piece <see cref="GenerateOutputVolumePolygon"/> does not keep.
         /// Null unless this is a shrink cut with both pieces.
         /// </summary>
-        private Polygon DiscardedVolumePolygon()
+        private Polygon? DiscardedVolumePolygon()
         {
             if (CutAction != RetraceCommandAction.SHRINK_EXTERIOR_RING)
                 return null;
@@ -667,10 +667,10 @@ namespace WebAnnotation.UI.Commands
             if ((interior || _fillTask is { IsFaulted: true }) && _choiceFallback is null)
             {
                 // The cached cell has no triangles inside a hole. Mesh off the pen thread, without a Steiner budget.
-                Polygon largePiece = grow
+                Polygon? largePiece = grow
                     ? GenerateOutputVolumePolygon()
                     : (CounterClockwiseCutPolygon.Area > ClockwiseCutPolygon.Area ? CounterClockwiseCutPolygon : ClockwiseCutPolygon);
-                Polygon capPiece = grow ? null : small;
+                Polygon? capPiece = grow ? null : small;
                 _choiceFallback = Task.Run(() =>
                 {
                     PositionColorMeshModel baseMesh = PolygonCutMeshBuilder.FromPatch(largePiece, largeColor);
@@ -687,8 +687,8 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         private void RequestTemporaryFill(Polygon small, Microsoft.Xna.Framework.Color largeColor, Microsoft.Xna.Framework.Color smallColor, bool grow)
         {
-            Polygon cw = ClockwiseCutPolygon;
-            Polygon ccw = CounterClockwiseCutPolygon;
+            Polygon? cw = ClockwiseCutPolygon;
+            Polygon? ccw = CounterClockwiseCutPolygon;
             RetraceCommandAction action = CutAction;
             PolygonIndex? cutIndex = PolyBeingCut;
             Polygon original = OriginalVolumePolygon;
@@ -724,7 +724,7 @@ namespace WebAnnotation.UI.Commands
         private void RunTemporaryFill()
         {
             TemporaryFillRequest request = _tempLatest;
-            TemporaryFillRequest handled = null;
+            TemporaryFillRequest? handled = null;
             using (WebAnnotation.View.PolygonViewTimingLog.Measure("temporary-fill"))
             {
                 try
@@ -838,7 +838,7 @@ return false;
             if (CutAction != RetraceCommandAction.NONE && _choiceBaseMesh is null)
                 UpdateViews();
 
-            PositionColorMeshModel[] meshes = null;
+            PositionColorMeshModel[]? meshes = null;
             if (_choiceBaseMesh is not null || _choiceCapMesh is not null)
             {
                 meshes = _choiceCapMesh is null

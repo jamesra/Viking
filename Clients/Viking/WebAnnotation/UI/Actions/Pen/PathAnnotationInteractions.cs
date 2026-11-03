@@ -65,7 +65,7 @@ namespace WebAnnotation.UI
         public readonly ICanvasView Annotation = annotation;
 
         /// <summary>
-        /// Index into the path/polyline where this event occured.
+        /// Index into the path/polyline where this event occurred.
         /// </summary>
         public readonly int Index = index;
 
@@ -146,7 +146,7 @@ namespace WebAnnotation.UI
 
         private readonly List<InteractionLogEvent> _Entries = [];
 
-        public event System.Collections.Specialized.NotifyCollectionChangedEventHandler OnLogChanged;
+        public event System.Collections.Specialized.NotifyCollectionChangedEventHandler? OnLogChanged;
         event NotifyCollectionChangedEventHandler System.Collections.Specialized.INotifyCollectionChanged.CollectionChanged
         {
             add => OnLogChanged += value;
@@ -341,11 +341,11 @@ namespace WebAnnotation.UI
         /// </summary>
         private void AddLogEntriesForNewSegment()
         {
-            HitTestResult[] candidates = null;
-            HitTestResult[] line_intersect_candidates = null; //Canvas entities that intersect the most recent line
-            HitTestResult[] point_intersect_candidates = null; //Canvas entities that intersect the most recent point
+            HitTestResult[]? candidates = null;
+            HitTestResult[]? line_intersect_candidates = null; //Canvas entities that intersect the most recent line
+            HitTestResult[]? point_intersect_candidates = null; //Canvas entities that intersect the most recent point
 
-            ICanvasView[] point_intersections = null;
+            ICanvasView[]? point_intersections = null;
 
             if (_Path.HasSegment)
             {
@@ -370,7 +370,7 @@ namespace WebAnnotation.UI
             }
 
             //point_intersect_candidates = point_intersect_candidates.ExpandICanvasViewContainers(_Path.Points[0]).ToArray();
-            HitTestResult[] expanded_point_intersect_candidates = [.. point_intersect_candidates.ExpandICanvasViewContainers(_Path.Points[_Path.Points.Count - 1]).Where(c => c != null)];
+            HitTestResult[] expanded_point_intersect_candidates = [.. ExpandForPen(point_intersect_candidates, _Path.Points[_Path.Points.Count - 1])];
             ICanvasView[] expanded_point_intersections = [.. expanded_point_intersect_candidates.Select(o => (ICanvasView)o.obj)];
             //Contains for LocationPolygonView is semi-broken because we need to select holes in the polygon for UI purposes.  However for pen
             //purposes we want contains to return false.  The workaround is that if the point is inside the interior hole it has a distance > 1
@@ -424,12 +424,39 @@ namespace WebAnnotation.UI
             CurrentlyIntersected = new_line_intersections;
         }
 
+        /// <summary>
+        /// Replaces each container hit with what is under <paramref name="point"/> inside it; a container with nothing there
+        /// (such as a polygon hole) is dropped. A link marker drawn inside a location does not take the stroke out of the
+        /// location while the point is inside the location's own outline, so the location stays next to the marker. Without
+        /// that, a stroke over a marker logged a crossing of the outline where there was none, and the pen cut, which uses the
+        /// last two crossings, found nothing to cut. A hole does take the stroke out, since its ring is part of the outline.
+        /// </summary>
+        internal static List<HitTestResult> ExpandForPen(IEnumerable<HitTestResult> hits, Vector2 point)
+        {
+            List<HitTestResult> expanded = [];
+            foreach (HitTestResult hit in hits)
+            {
+                HitTestResult nested = hit.ExpandICanvasViewContainer(point);
+                if (nested is null)
+                    continue;
+
+                expanded.Add(nested);
+                if (!ReferenceEquals(nested.obj, hit.obj) && nested.obj is IViewLocationLink &&
+                    ((ICanvasView)hit.obj).DistanceFromCenterNormalized(point) <= 1.0)
+                {
+                    expanded.Add(hit);
+                }
+            }
+
+            return expanded;
+        }
+
         private void AddLogEntryForFirstPoint()
         {
             HitTestResult[] candidates = [.. Overlay.GetAnnotations(_Path.Points[0])];
             HitTestResult[] point_intersect_candidates = [.. candidates.Where(o => o.obj.Contains(_Path.Points[0]))];
             //Expanding a container yields null when nothing nested is under the point (e.g. a polygon hole), which counts as empty space
-            point_intersect_candidates = [.. point_intersect_candidates.ExpandICanvasViewContainers(_Path.Points[0]).Where(c => c != null)];
+            point_intersect_candidates = [.. ExpandForPen(point_intersect_candidates, _Path.Points[0])];
 
             if (point_intersect_candidates.Length > 0)
             {

@@ -43,11 +43,12 @@ namespace Viking.UI
         }
 
         /// <summary>Is the pen eraser active/touching?</summary>
-        public bool Erase => (Pen.flags & PenFlags.Eraser) > 0;
+        public bool Erase => BarrelButtonBinding.IsEraserDown(Pen.flags);
         /// <summary>Is the pen upside down?</summary>
         public bool Inverted => (Pen.flags & PenFlags.Inverted) > 0;
         /// <summary>Is the button on the pen barrel pressed?</summary>
-        public bool Barrel => (Pen.flags & PenFlags.Barrel) > 0;
+        /// <remarks>Follows <see cref="BarrelButtonBinding"/>, so it is the button the user chose in Preferences.</remarks>
+        public bool Barrel => BarrelButtonBinding.IsDown(Pen.flags);
 
         /// <summary>Is the pen touching the surface?</summary>
         public bool InContact => (Pen.pointerInfo.pointerFlags & PointerFlags.InContact) > 0;
@@ -237,8 +238,8 @@ namespace Viking.UI
                     FireOnPenMove(args);
                 }
 
-                bool wasBarrel = (previousPenState.Value.flags & PenFlags.Barrel) != 0;
-                bool isBarrel = (penState.flags & PenFlags.Barrel) != 0;
+                bool wasBarrel = BarrelButtonBinding.IsDown(previousPenState.Value.flags);
+                bool isBarrel = BarrelButtonBinding.IsDown(penState.flags);
                 if (!wasBarrel && isBarrel)
                     FireOnPenButtonDown(args);
                 else if (wasBarrel && !isBarrel)

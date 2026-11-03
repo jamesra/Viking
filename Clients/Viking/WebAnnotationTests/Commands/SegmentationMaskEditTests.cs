@@ -234,5 +234,18 @@ namespace WebAnnotationTests.Commands
 
             Assert.IsNull(empty.InteriorPoint());
         }
+
+        [TestMethod]
+        public void TranslatedMovesTheWorldBoundsByWholePixelsAndKeepsThePixels()
+        {
+            RasterMask mask = new(downsample: 4, xMin: 10, yMax: 20, width: 8, height: 8, pixels: new byte[64], scale: 2);
+
+            RasterMask moved = mask.Translated(6, -4);
+
+            Assert.AreSame(mask.Pixels, moved.Pixels);
+            Assert.AreEqual(mask.WorldBounds.Left + 6 * 4, moved.WorldBounds.Left, 1e-9);
+            Assert.AreEqual(mask.WorldBounds.Bottom - 4 * 4, moved.WorldBounds.Bottom, 1e-9);
+            Assert.AreEqual(mask.WorldBounds.Width, moved.WorldBounds.Width, 1e-9);
+        }
     }
 }

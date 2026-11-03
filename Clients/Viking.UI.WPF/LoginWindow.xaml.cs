@@ -40,11 +40,6 @@ namespace Viking.UI.WPF
         private string _savedPassword;
         private bool _isAnonymous;
         private bool _launchVolumeAutoSelectStarted;
-        private string _pendingVolumeName;
-        private string _pendingVolumeUrl;
-        private Uri _pendingIdentityApiUrl;
-        private Uri _pendingIdentityServerUrl;
-        private UserResourcePermissions _pendingAccessibleVolume;
 
         public LoginWindow()
         {

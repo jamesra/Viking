@@ -139,7 +139,8 @@
     <WriteLinesToFile File="$(OutputPath)debug_output.txt" Lines="Debug output will be captured here when Viking runs" Overwrite="true" />
   </Target>
   <PropertyGroup>
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <!-- Viking ships 64-bit only (PublishVelopack.ps1 packs win-x64). -->
+    <PlatformTarget>x64</PlatformTarget>
     <Title>Viking</Title>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

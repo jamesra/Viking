@@ -1142,9 +1142,10 @@ namespace WebAnnotation.ViewModel
         {
             float visibility = Global.AnnotationSettings.LocationLinkVisibility;
 
-            // Labels sit on the image, so they are always outlined: black text on a white outline.
-            Color textColor = Color.Black;
-            Color outlineColor = Color.White;
+            // Labels sit on the image, so they are always outlined, in the colors the label outline preference picks.
+            LabelOutlineStyle style = LabelView.OutlineStyleAccessor();
+            (Color textColor, Color outlineColor) = LabelView.OutlineColors(Color.Black,
+                style == LabelOutlineStyle.Off ? LabelOutlineStyle.BlackTextWhiteOutline : style);
 
             foreach (LocationLinkView link in listToDraw.Where(l => l is not null))
             {

@@ -244,7 +244,7 @@ namespace Viking.ViewModels
         /// </summary>
         /// <param name="device"></param>
         /// <returns></returns>
-        private static VertexBuffer CreateVertexBuffer(GraphicsDevice device, VolumeModel.PositionNormalTextureVertex[] Vertices)
+        private static VertexBuffer? CreateVertexBuffer(GraphicsDevice device, VolumeModel.PositionNormalTextureVertex[] Vertices)
         {
             if (Vertices.Length == 0)
                 return null;
@@ -263,7 +263,7 @@ namespace Viking.ViewModels
 
             }
 
-            VertexBuffer vb = null;
+            VertexBuffer? vb = null;
             try
             {
                 vb = new VertexBuffer(device, typeof(VertexPositionNormalTexture), vertArray.Length, BufferUsage.None);
@@ -393,7 +393,7 @@ namespace Viking.ViewModels
             if (TriangleIndicies is null || TriangleIndicies.Length == 0)
                 return;
 
-            Texture2D currentTexture = null;
+            Texture2D? currentTexture = null;
             try
             {
                 currentTexture = this.texture;

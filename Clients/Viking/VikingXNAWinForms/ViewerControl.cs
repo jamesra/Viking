@@ -285,6 +285,7 @@ public class ViewerControl : GraphicsDeviceControl
         DeviceEffectsStore<PolygonOverlayEffect>.GetOrCreateForDevice(this.Device, this.Content);
         DeviceEffectsStore<OverlayShaderEffect>.GetOrCreateForDevice(this.Device, this.Content);
         DeviceEffectsStore<CircleInstancedEffect>.GetOrCreateForDevice(this.Device, this.Content);
+        DeviceEffectsStore<LabelOutlineEffect>.GetOrCreateForDevice(this.Device, this.Content);
 
         // Font store will be recreated on demand
         DeviceFontStore.GetOrCreateForDevice(this.Device, this.Content);
@@ -571,12 +572,9 @@ public class ViewerControl : GraphicsDeviceControl
     }
 
     /// <summary>
-    /// Draws the volume using the bounds and downsample onto the renderTarget.  If renderTarget is null the scene is drawn to the display
+    /// Draws the scene to the display
     /// </summary>
-    /// <param name="graphicsDevice"></param>
-    /// <param name="Bounds"></param>
-    /// <param name="DownSample"></param>
-    /// <param name="renderTarget"></param>
+    /// <param name="scene"></param>
     protected virtual void Draw(Scene scene) => throw new NotImplementedException();
 
     public Geometry.Vector2 ScreenToWorld(double X, double Y) => Scene.ScreenToWorld(X, Y);

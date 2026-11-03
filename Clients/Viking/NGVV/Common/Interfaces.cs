@@ -38,16 +38,16 @@ namespace Viking.Common
         /// <param name="WorldPosition"></param>
         /// <param name="distance"></param>
         /// <returns></returns>
-        object ObjectAtPosition(Geometry.Vector2 WorldPosition, out double distance);
+        object? ObjectAtPosition(Geometry.Vector2 WorldPosition, out double distance);
 
         /// <summary>
         /// Draw the specified overlay extension on the render target.  
         /// </summary>
         /// <param name="graphicsDevice"></param>
-        /// <param name="Bounds"></param>
-        /// <param name="DownSample"></param>
+        /// <param name="scene">Scene being rendered.</param>
         /// <param name="BackgroundLuma">Texture matching size of client with Luma value of each pixel</param>
         /// <param name="BackgroundColors">Texture matching size of client window with RGB values for each pixel.  May be null of no color data available</param>
+        /// <param name="NextStencilValue">Stencil reference value, passed by reference.</param>
         void Draw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, Texture BackgroundLuma, Texture BackgroundColors, ref int NextStencilValue);
     }
 

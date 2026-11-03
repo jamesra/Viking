@@ -165,6 +165,12 @@
 /processorParam:Version=3.8.5.0
 /build:DownArrowV2.png
 
+#begin LabelOutline.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:LabelOutline.fx
+
 #begin MergeHSVImages.fx
 /importer:EffectImporter
 /processor:EffectProcessor

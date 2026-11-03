@@ -475,8 +475,11 @@ namespace WebAnnotationModel.Objects
             internal set => _Type = value;
         }
 
-        // Recursive getter — do not treat as a working export of attributes.
-        public string TagsXML => this.TagsXML;
+        /// <summary>
+        /// The structure's attributes as XML, the form <see cref="ObjAttributeParser.ParseAttributes"/> reads back.
+        /// Null when the structure has no attributes.
+        /// </summary>
+        public string TagsXML => _Attributes?.ReadOnlyObservable.ToXml();
 
         ulong IStructureReadOnly.ID => (ulong)ID;
 

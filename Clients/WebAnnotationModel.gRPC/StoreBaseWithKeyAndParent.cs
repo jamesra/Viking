@@ -227,7 +227,7 @@ namespace WebAnnotationModel.gRPC
             bool added = PrivateTryAddRootObject(key);
             if (added && PropertyChanged != null)
             {  
-                PropertyChanged.RaiseEventOnUIThread(new PropertyChangedEventArgs(nameof(RootObjects)));
+                PropertyChanged.RaiseEventOnUIThread(this, new PropertyChangedEventArgs(nameof(RootObjects)));
             }
 
             return added;
@@ -247,7 +247,7 @@ namespace WebAnnotationModel.gRPC
             
             if (results.Any(added => added) && PropertyChanged != null)
             { 
-                PropertyChanged.RaiseEventOnUIThread(new PropertyChangedEventArgs(nameof(RootObjects)));
+                PropertyChanged.RaiseEventOnUIThread(this, new PropertyChangedEventArgs(nameof(RootObjects)));
             }
 
             return results;
@@ -290,7 +290,7 @@ namespace WebAnnotationModel.gRPC
             bool added = PrivateTryRemoveRootObject(key);
             if (added && PropertyChanged != null)
             { 
-                PropertyChanged.RaiseEventOnUIThread(new PropertyChangedEventArgs("RootObjects"));
+                PropertyChanged.RaiseEventOnUIThread(this, new PropertyChangedEventArgs("RootObjects"));
             }
 
             return added;

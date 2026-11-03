@@ -72,11 +72,11 @@ namespace Viking.UI.Commands
 
         protected object NearestObjectAtPositionAcrossAllExtensions(Vector2 WorldPosition)
         {
-            object nearest_obj = null;
+            object? nearest_obj = null;
             double distance = double.MaxValue;
             foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
             {
-                object nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
+                object? nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
                     if (nearObj != null && newDistance < distance)
                     {
                         nearest_obj = nearObj;
@@ -121,7 +121,7 @@ namespace Viking.UI.Commands
         {
             Vector2 WorldPosition = Parent.ScreenToWorld(e.X, e.Y);
             double distance = double.MaxValue;
-            object context_obj = null;
+            object? context_obj = null;
 
             // Preferential overlay double-click (e.g. auto-polygonize rings) before
             // ObjectAtPosition so hollow hits do not steal single-click edit of annotations.
@@ -141,7 +141,7 @@ namespace Viking.UI.Commands
             {
                 foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
                 {
-                    object nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
+                    object? nearObj = overlay.ObjectAtPosition(WorldPosition, out double newDistance);
                     if (nearObj != null && newDistance < distance)
                     {
                         context_obj = nearObj;
@@ -160,7 +160,7 @@ namespace Viking.UI.Commands
             if (e.Button == MouseButtons.Right || e.Button == MouseButtons.Middle)
             {
                 //Create a context menu and show it where the mouse clicked
-                ContextMenuStrip menu = null;
+                ContextMenuStrip? menu = null;
                 if (context_obj is IContextMenu menu_obj)
                 {
                     menu = menu_obj.ContextMenu;

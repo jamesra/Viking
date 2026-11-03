@@ -202,7 +202,7 @@ namespace Geometry.Meshing
 
         IEdgeKey IEdge.Key => this.Key;
 
-        private ImmutableSortedSet<IFace> _ImmutableFaces;
+        private ImmutableSortedSet<IFace>? _ImmutableFaces;
 
         public ImmutableSortedSet<IFace> Faces
         {
@@ -220,7 +220,7 @@ namespace Geometry.Meshing
         /// Duplicate functions are used to create a copy of the edge, with index numbers adjusted by the offset, without any face data.
         /// This method is used to merge meshes
         /// </summary>
-        /// <param name="oldVertex"></param>
+        /// <param name="oldEdge"></param>
         /// <param name="offset"></param>
         /// <returns></returns>
         public static Edge CreateOffsetCopy(Edge oldEdge, int offset)

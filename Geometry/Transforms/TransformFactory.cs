@@ -28,8 +28,8 @@ namespace Geometry.Transforms
         /// <summary>
         /// Read parameters from an enumerator of strings and return an array of numbers.  First value is number of values.  Remaining strings are values themselves.
         /// </summary>
-        /// <param name="NumParameters">Space delimited string, first value is number of parameters.</param>
-        /// <param name="parts"></param>
+        /// <param name="parts">Space delimited string, first value is number of parameters.</param>
+        /// <param name="iStart"></param>
         /// <returns></returns>
         private static double[] ReadParameterValues(string[] parts, long iStart)
         {
@@ -149,6 +149,20 @@ namespace Geometry.Transforms
 
         }
 
+        /// <summary>
+        /// True for HTTP statuses that usually clear on a later attempt (timeout, throttling, a busy or restarting
+        /// server or gateway), so a .stos that answers one of them is retried instead of being skipped.
+        /// </summary>
+        public static bool IsTransientStosStatus(System.Net.HttpStatusCode status)
+        {
+            return status == System.Net.HttpStatusCode.RequestTimeout
+                || status == (System.Net.HttpStatusCode)429
+                || status == System.Net.HttpStatusCode.InternalServerError
+                || status == System.Net.HttpStatusCode.BadGateway
+                || status == System.Net.HttpStatusCode.ServiceUnavailable
+                || status == System.Net.HttpStatusCode.GatewayTimeout;
+        }
+
         public static async Task<ITransform> ParseStos(Uri stosURI, XElement elem, System.Net.NetworkCredential UserCredentials)
         {
             if (elem is null)
@@ -165,14 +179,13 @@ namespace Geometry.Transforms
             int nRetries = 5;
 
             using HttpClient client = new();
-            HttpResponseMessage response = null;
+            HttpResponseMessage? response = null;
             while (nRetries >= 0)
             {
                 response = await client.GetAsync(stosURI, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
                 if (false == response.IsSuccessStatusCode)
                 {
-                    if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
-                        response.StatusCode == System.Net.HttpStatusCode.RequestTimeout)
+                    if (IsTransientStosStatus(response.StatusCode))
                     {
                         nRetries--;
                         Debug.WriteLine($"Failed to load {stosURI} : Delaying for retry");
@@ -435,7 +448,7 @@ namespace Geometry.Transforms
         /// <summary>
         /// This code was reverse engineered from original stos polynomial transform source
         /// </summary>
-        /// <param name="parts"></param>
+        /// <param name="transform"></param>
         /// <param name="pixelSpacing"></param>
         /// <param name="iFixedParameters"></param>
         /// <param name="iVariableParameters"></param>
@@ -531,8 +544,9 @@ namespace Geometry.Transforms
         /// <summary>
         /// Load mosaic from specified file and add it to transforms list using specified key
         /// </summary>
-        /// <param name="file"></param>
-        /// <param name="Key"></param>
+        /// <param name="path"></param>
+        /// <param name="mosaic"></param>
+        /// <param name="lastModified"></param>
         public static ITransform[] LoadMosaic(string path, string[] mosaic, DateTime lastModified)
         {
             if (mosaic is null)
@@ -603,7 +617,7 @@ namespace Geometry.Transforms
                     int iFileName = Transform.IndexOf(TileFileName);
                     Transform = Transform.Remove(0, iFileName + TileFileName.Length);
 
-                    ITransformControlPoints newTGT = ParseMosaicTileEntry(Transform, null) as ITransformControlPoints;
+                    ITransformControlPoints? newTGT = ParseMosaicTileEntry(Transform, null) as ITransformControlPoints;
                     TileTransformInfo info = new(TileFileName, iTileNumber, lastModified, newTGT.MappedBounds.Width, newTGT.MappedBounds.Height);
                     ((ITransformInfo)newTGT).Info = info;
 

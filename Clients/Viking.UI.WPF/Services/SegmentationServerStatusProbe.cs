@@ -45,8 +45,8 @@ namespace Viking.UI.WPF.Services
 
         public static async Task<SegmentationServerProbeResult> ProbeAsync(string endpoint, CancellationToken cancellationToken)
         {
-            string target = FormatGrpcTarget(endpoint);
-            if (string.IsNullOrWhiteSpace(target))
+            GrpcChannelTarget? target = GrpcChannelTarget.TryFormat(endpoint);
+            if (target is null)
             {
                 return new SegmentationServerProbeResult();
             }
@@ -54,7 +54,7 @@ namespace Viking.UI.WPF.Services
             Channel channel = null;
             try
             {
-                channel = CreateChannel(endpoint, target);
+                channel = CreateChannel(target.Value);
                 return await CallAsync(channel, endpoint, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
@@ -68,13 +68,11 @@ namespace Viking.UI.WPF.Services
             }
         }
 
-        internal static Channel CreateChannel(string endpoint, string target)
-        {
-            ChannelCredentials credentials = EndpointRequiresTls(endpoint)
-                ? new SslCredentials()
-                : ChannelCredentials.Insecure;
-            return new Channel(target, credentials);
-        }
+        /// <summary>
+        /// Opens a TLS channel to <paramref name="target"/>: the segmentation server only speaks TLS, and the target comes
+        /// from <see cref="GrpcChannelTarget.TryFormat"/>, the rule the segmentation channel itself uses.
+        /// </summary>
+        internal static Channel CreateChannel(GrpcChannelTarget target) => new Channel(target.Target, new SslCredentials());
 
         /// <summary>One GetServerStatus call on an open channel. Never throws; a failed call is an unreachable result.</summary>
         internal static async Task<SegmentationServerProbeResult> CallAsync(Channel channel, string endpoint, CancellationToken cancellationToken)
@@ -136,64 +134,6 @@ namespace Viking.UI.WPF.Services
                 Trace.WriteLine($"[SegmentationSelection] Channel shutdown failed for '{endpoint}': {ex.Message}");
             }
         }
-
-        /// <summary>
-        /// Grpc.Core channels want host:port[/path], not a URI with a scheme.
-        /// </summary>
-        internal static string FormatGrpcTarget(string rawEndpoint)
-        {
-            if (string.IsNullOrWhiteSpace(rawEndpoint))
-            {
-                return null;
-            }
-
-            string trimmedEndpoint = rawEndpoint.Trim();
-            bool containsScheme = trimmedEndpoint.IndexOf("://", StringComparison.Ordinal) >= 0;
-            string endpointToParse = containsScheme ? trimmedEndpoint : "http://" + trimmedEndpoint;
-
-            if (!Uri.TryCreate(endpointToParse, UriKind.Absolute, out Uri parsedUri) || parsedUri is null)
-            {
-                return null;
-            }
-
-            string absolutePath = parsedUri.AbsolutePath;
-            if (string.Equals(absolutePath, "/", StringComparison.Ordinal))
-            {
-                absolutePath = string.Empty;
-            }
-
-            string authority = parsedUri.Authority;
-            if (string.Equals(parsedUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
-                parsedUri.Port == 40080)
-            {
-                // The old cleartext port moved to the TLS port when that listener was removed.
-                string host = parsedUri.HostNameType == UriHostNameType.IPv6 ? "[" + parsedUri.Host + "]" : parsedUri.Host;
-                authority = host + ":40443";
-            }
-
-            return authority + absolutePath + parsedUri.Query;
-        }
-
-        /// <summary>
-        /// The segmentation server only speaks TLS, so every endpoint that parses uses the system trust store.
-        /// </summary>
-        internal static bool EndpointRequiresTls(string rawEndpoint)
-        {
-            if (string.IsNullOrWhiteSpace(rawEndpoint))
-            {
-                return false;
-            }
-
-            string trimmedEndpoint = rawEndpoint.Trim();
-            bool containsScheme = trimmedEndpoint.IndexOf("://", StringComparison.Ordinal) >= 0;
-            string endpointToParse = containsScheme ? trimmedEndpoint : "http://" + trimmedEndpoint;
-            if (!Uri.TryCreate(endpointToParse, UriKind.Absolute, out Uri parsedUri) || parsedUri is null)
-            {
-                return false;
-            }
-
-            return true;
-        }
     }
 
     /// <summary>
@@ -246,8 +186,8 @@ namespace Viking.UI.WPF.Services
 
         private Channel ChannelFor(string endpoint)
         {
-            string target = SegmentationServerStatusProbe.FormatGrpcTarget(endpoint);
-            if (string.IsNullOrWhiteSpace(target))
+            GrpcChannelTarget? target = GrpcChannelTarget.TryFormat(endpoint);
+            if (target is null)
             {
                 return null;
             }
@@ -261,7 +201,7 @@ namespace Viking.UI.WPF.Services
 
                 if (!_channels.TryGetValue(endpoint, out var channel))
                 {
-                    channel = SegmentationServerStatusProbe.CreateChannel(endpoint, target);
+                    channel = SegmentationServerStatusProbe.CreateChannel(target.Value);
                     _channels[endpoint] = channel;
                 }
 

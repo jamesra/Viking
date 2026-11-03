@@ -902,6 +902,9 @@ namespace Viking.VolumeModel
             listSectionLoadingTasks.Add(newSection.InitializeFromXML(elem, token));
         }
 
+        /// <summary>Limits concurrent .stos downloads from the server.</summary>
+        private static readonly SemaphoreSlim StosServerFetchSemaphore = new(32);
+
         private async Task<LoadStosResult> LoadStos(XElement elem, bool HaveStosCache, string stosGroupName = null)
         {
             LoadStosResult result = null;
@@ -932,6 +935,9 @@ namespace Viking.VolumeModel
                 if (result is null)
                 {
                     //    Trace.WriteLine("Loading " + StosFileName + " from HTTP Server", "VolumeModel");
+                    // A volume can queue ~1800 stos loads at once. Cap simultaneous server fetches so the burst
+                    // of new connections is not refused by the server or firewall.
+                    await StosServerFetchSemaphore.WaitAsync().ConfigureAwait(false);
                     try
                     {
                         result = await LoadStosResult.LoadAsync(stosPath, this.UserCredentials, elem).ConfigureAwait(false);
@@ -941,6 +947,10 @@ namespace Viking.VolumeModel
                         Console.WriteLine($"Exception loading {stosPath}.\n{e?.InnerException}");
                         Trace.WriteLine($"Exception loading {stosPath}.\n{e?.InnerException}");
                         throw;
+                    }
+                    finally
+                    {
+                        StosServerFetchSemaphore.Release();
                     }
                 }
             }
@@ -964,6 +974,17 @@ namespace Viking.VolumeModel
             return result;
         }
 
+        private readonly List<string> _StosLoadFailures = new();
+
+        /// <summary>
+        /// Paths of .stos files that answered the server with an error (after retries) and so have no transform.
+        /// Filled during <see cref="Initialize"/>; empty when every transform loaded.
+        /// </summary>
+        public IReadOnlyList<string> StosLoadFailures
+        {
+            get { lock (_StosLoadFailures) return _StosLoadFailures.ToArray(); }
+        }
+
         /// <summary>Not readonly: tests build the volume without its constructor, so it is created on first use.</summary>
         private HashSet<(string Group, int MappedSection)> _StosLoadFailedSections;
 
@@ -972,10 +993,9 @@ namespace Viking.VolumeModel
 
         /// <summary>
         /// True when the .stos that maps <paramref name="mappedSection"/> in the transform group <paramref name="transformGroup"/>
-        /// failed to load (<c>TransformFactory.ParseStos</c> returned null: a server error after retries, or a NaN file): the
-        /// volume aligns the section, but the group has no entry for it. It is drawn by identity, as the reference section is,
-        /// but it has no volume basis, so the stored volume cache must not be written for it
-        /// (<see cref="IDefaultVolumeTransformProvider"/>). Port of VikingLegacy e9be69cf.
+        /// failed to load (<see cref="StosLoadFailures"/>): the volume aligns the section, but the group has no entry for it.
+        /// It is drawn by identity, as the reference section is, but it has no volume basis, so the stored volume cache
+        /// must not be written for it (<c>IDefaultVolumeTransformProvider</c>).
         /// </summary>
         public bool StosLoadFailed(string transformGroup, int mappedSection)
         {
@@ -1084,7 +1104,7 @@ namespace Viking.VolumeModel
         /// </summary>
         /// <param name="ListSectionThreadingObj"></param>
         /// <param name="workerThread"></param>
-        private static async Task WaitForLoadStosTransformThreads(List<Task<LoadStosResult>> ListStosTransformTasks, IProgress<ProgressInfo> workerThread, CancellationToken token)
+        private async Task WaitForLoadStosTransformThreads(List<Task<LoadStosResult>> ListStosTransformTasks, IProgress<ProgressInfo> workerThread, CancellationToken token)
         {
             workerThread?.Report(new ProgressInfo("Waiting for Stos Transform Loading Threads", 0));
             int countFinished = 0;
@@ -1112,6 +1132,10 @@ namespace Viking.VolumeModel
                 int Progress = NumStosFiles > 0 ? (countFinished * 100) / NumStosFiles : 100;
                 if (result.Transform is null)
                 {
+                    string failedPath = result.element?.GetAttributeCaseInsensitive("path")?.Value ?? result.element?.ToString() ?? "unknown";
+                    Trace.WriteLine($"No transform loaded for .stos {failedPath}; the section pair is drawn without it.", "VolumeModel");
+                    lock (_StosLoadFailures)
+                        _StosLoadFailures.Add(failedPath);
                     workerThread?.Report(new ProgressInfo($"Failed Loading {result.element}", Progress, 100));
                     continue;
                 }

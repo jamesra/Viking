@@ -32,10 +32,11 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
+    /// RETIRED: replaced by <see cref="SegmentationPaintCommand"/>, which no caller starts any more. Kept for now because
+    /// <see cref="SegmentationPaintCommand"/> derives from it and shares its request, polygonizing and accept code.
     /// Interactive segmentation command that uses AI (SAM2) to segment images based on user-placed points.
     /// Users place foreground (green) and background (red) points, and the system generates a segmentation mask
     /// via gRPC, which can then be converted to a polygon annotation.
-    /// 
     /// </summary>
     internal class SegmentationCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
     {
@@ -74,6 +75,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// prompt signature so a settled pan that brings a neighbour into or out of view resubmits.
         /// </summary>
         private string derivedBackgroundShapesKey = string.Empty;
+
+        /// <summary>
+        /// The painted background a subclass supplies through <see cref="SetPromptMasks"/>, sent as BACKGROUND mask tiles with
+        /// every request; null when nothing is painted as background.
+        /// </summary>
+        private SegmentationMaskUnion? paintedBackgroundMask;
 
         // Monographics views for rendering
         private PointSetView foregroundPointsView;
@@ -164,6 +171,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public bool ShowPenButtons { get; set; }
 
         private bool PenButtonsIncludeSkip => placementFallback is not null;
+
+        /// <summary>True for a command that offers the resubmit and clear-mask pen buttons (the paint command).</summary>
+        protected virtual bool PenButtonsIncludePaintActions => false;
+
+        /// <summary>
+        /// When true, new prompts given while a request is running cancel it and are sent at once, instead of waiting for its
+        /// answer: the answer would be for prompts that no longer stand. The paint command sets it, since one stale request on a
+        /// large object can run for minutes while the user goes on painting.
+        /// </summary>
+        protected virtual bool NewPromptsSupersedeRequest => false;
+
+        /// <summary>The session that captures and uploads this command's tiles, so a subclass can prefetch through it.</summary>
+        protected SegmentationViewportSession ViewportSession => viewportSession;
 
         /// <summary>
         /// Set to the segmented polygon if the command completes successfully
@@ -350,6 +370,75 @@ namespace WebAnnotation.UI.Commands.Segmentation
             SegmentationCameraPolicy.PromptSignature(foreground, background) + "|" + derivedBackgroundShapesKey;
         #endregion
 
+        #region Members for subclasses that supply their own prompts
+        /// <summary>
+        /// True (the default) when clicks place foreground and background points. A subclass that supplies its own prompts
+        /// through <see cref="SetPromptMasks"/> returns false so this class's mouse handlers leave input to it.
+        /// </summary>
+        protected virtual bool PlacesPoints => true;
+
+        /// <summary>
+        /// Replaces the mask prompts sent with every request: <paramref name="foreground"/> is the object, <paramref name="background"/>
+        /// is what it must not include. Either may be null. Call <see cref="RequestSegmentationFromPrompts"/> afterwards. UI thread only.
+        /// </summary>
+        protected void SetPromptMasks(SegmentationSeed? foreground, SegmentationMaskUnion? background, IReadOnlyList<Geometry.Vector2>? foregroundClicks = null)
+        {
+            startingBoxes = foreground is SegmentationSeed seed ? [seed] : [];
+            paintedBackgroundMask = background;
+
+            // SegmentAsync refuses a request with no click, and the result is trimmed to the pieces holding a foreground point, so
+            // each separate piece of the object needs a click inside it (the seed's own interior point when none are given).
+            foregroundPoints.Clear();
+            backgroundPoints.Clear();
+            if (foregroundClicks is { Count: > 0 })
+                foregroundPoints.AddRange(foregroundClicks);
+            else if (foreground is SegmentationSeed clickSeed)
+                foregroundPoints.Add(clickSeed.Center);
+        }
+
+        /// <summary>
+        /// Requests segmentation of the prompts last given to <see cref="SetPromptMasks"/>. While a request is running this records a
+        /// follow-up, so the newest prompts are always the last ones answered.
+        /// </summary>
+        protected void RequestSegmentationFromPrompts()
+        {
+            if (startingBoxes.Count == 0)
+                ClearPromptResults();
+            else
+                _ = RequestSegmentation();
+        }
+
+        /// <summary>Drops the shown segmentation and ignores any answer still in flight.</summary>
+        protected void ClearPromptResults()
+        {
+            requestCoalescer.Invalidate();
+            CancelProcessSegmentationResponse();
+            ClearSegmentationResults();
+        }
+
+        /// <summary>
+        /// Last step on an answer's polygons before they are shown. Returns them unchanged here; the paintbrush merges overlapping
+        /// ones. May run on a worker thread, so it must use only its arguments.
+        /// </summary>
+        /// <param name="polygons">The answer's polygons, volume space.</param>
+        /// <param name="foreground">The foreground clicks the answer was made from.</param>
+        protected virtual IReadOnlyList<Polygon> MergeResultPolygons(IReadOnlyList<Polygon> polygons, IReadOnlyList<Geometry.Vector2> foreground) => polygons;
+
+        /// <summary>The polygons of the segmentation shown now, largest first. UI thread only.</summary>
+        protected IReadOnlyList<Polygon> ResultPolygons =>
+            [.. segmentPolygonViews.Select(view => view?.InputPolygon).OfType<Polygon>().OrderByDescending(polygon => polygon.Area)];
+
+        /// <summary>Accepts <paramref name="polygon"/> as the result: the success callback runs and the command ends.</summary>
+        protected void AcceptPolygon(Polygon polygon)
+        {
+            selectedPolygon = polygon;
+            Execute();
+        }
+
+        /// <summary>True once the command has delivered its result or been abandoned.</summary>
+        protected bool IsFinished => placementFinished || Deactivated;
+        #endregion
+
         #region Lifecycle Methods
         public override void OnActivate()
         {
@@ -439,9 +528,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             if (ShowPenButtons && !placementFinished && e.Button.Left() &&
-                SegmentationPenButtons.HitTest(PenButtonsIncludeSkip, Parent.ClientSize.Width, e.X, e.Y, Parent.DockedChromeInsets) is SegmentationPenButton pressed)
+                SegmentationPenButtons.HitTest(
+                    PenButtonsIncludeSkip, Parent.ClientSize.Width, e.X, e.Y, Parent.DockedChromeInsets, PenButtonsIncludePaintActions)
+                    is SegmentationPenButton pressed)
             {
                 HandlePenButton(pressed);
+                return;
+            }
+
+            if (!PlacesPoints)
+            {
+                base.OnMouseDown(sender, e);
                 return;
             }
 
@@ -478,10 +575,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         /// <summary>
         /// Runs the action behind a pen button. Accept saves the segmented polygon, skip places the dragged polygon
-        /// without segmentation (see <see cref="AcceptPlacementFallback"/>). Cancel is the shared
+        /// without segmentation (see <see cref="AcceptPlacementFallback"/>); resubmit and clear go to
+        /// <see cref="OnResubmitButton"/> and <see cref="OnClearMaskButton"/>. Cancel is the shared
         /// <see cref="PenCancelButton"/>, handled in <see cref="OnMouseDown"/>.
         /// </summary>
-        private void HandlePenButton(SegmentationPenButton button)
+        protected void HandlePenButton(SegmentationPenButton button)
         {
             switch (button)
             {
@@ -491,14 +589,35 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 case SegmentationPenButton.Skip:
                     AcceptPlacementFallback();
                     break;
+                case SegmentationPenButton.Resubmit:
+                    OnResubmitButton();
+                    break;
+                case SegmentationPenButton.ClearMask:
+                    OnClearMaskButton();
+                    break;
             }
+        }
+
+        /// <summary>The resubmit pen button: sends the current prompts again, cancelling a request still running.</summary>
+        protected virtual void OnResubmitButton() => _ = RequestSegmentation(supersede: true);
+
+        /// <summary>The clear-mask pen button. Only commands that show it (<see cref="PenButtonsIncludePaintActions"/>) act on it.</summary>
+        protected virtual void OnClearMaskButton()
+        {
+        }
+
+        /// <summary>Cancels the request running now, if any; its answer, if one still comes, is ignored.</summary>
+        protected void CancelRequestInFlight()
+        {
+            requestCoalescer.Invalidate();
+            CancelSegmentRequest();
         }
 
         /// <summary>
         /// Accepts the segmented polygon a pen user most likely means: among the polygons holding a foreground point,
         /// the largest; if none holds one, the largest of all. Does nothing while no polygon exists yet.
         /// </summary>
-        private void AcceptBestPolygon()
+        protected virtual void AcceptBestPolygon()
         {
             List<Polygon> candidates = [.. segmentPolygonViews.Select(view => view?.InputPolygon).OfType<Polygon>()];
             if (candidates.Count == 0)
@@ -548,7 +667,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         protected override void OnMouseDoubleClick(object sender, MouseEventArgs e)
         {
-            if (!placementFinished && e.Button.Left() && !Control.ModifierKeys.HasFlag(Keys.Control))
+            if (PlacesPoints && !placementFinished && e.Button.Left() && !Control.ModifierKeys.HasFlag(Keys.Control))
             {
                 Geometry.Vector2 worldPos = Parent.ScreenToWorld(e.X, e.Y);
                 Polygon clickedPolygon = ForegroundPointsContain(worldPos)
@@ -607,12 +726,19 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
             else
             {
-                RequestSegmentation();
+                _ = RequestSegmentation();
             }
         }
 
         protected override void OnMouseMove(object sender, MouseEventArgs e)
         {
+            if (!PlacesPoints)
+            {
+                base.OnMouseMove(sender, e);
+                CheckForViewportChange();
+                return;
+            }
+
             bool ctrlHeld = Control.ModifierKeys.HasFlag(Keys.Control);
             // When Ctrl+RMB is held we delete background points; do not let base command pan the scene
             if (!(ctrlHeld && e.Button.Right()))
@@ -694,7 +820,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         {
             if (e.KeyCode == Keys.Return)
             {
-                RequestSegmentation();
+                _ = RequestSegmentation();
             }
             base.OnKeyDown(sender, e);
         }
@@ -741,7 +867,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 AddBackgroundShapesFromOtherStructures(Parent.Scene);
             }
 
-            if (foregroundPoints.Count == 0 && backgroundPoints.Count == 0)
+            if (foregroundPoints.Count == 0 && backgroundPoints.Count == 0 && startingBoxes.Count == 0)
             {
                 Debug.WriteLine("Viewport settled, no points present - no upload needed");
                 return;
@@ -919,9 +1045,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #region gRPC Segmentation
         /// <summary>
         /// Sends one SegmentImage with the current prompt lists. Extra clicks while busy or uploading
-        /// set a follow-up so the next attempt uses every point collected so far.
+        /// set a follow-up so the next attempt uses every point collected so far. With <paramref name="supersede"/> (or
+        /// <see cref="NewPromptsSupersedeRequest"/>) a request already running is cancelled, so the follow-up starts as soon
+        /// as it stops instead of when it answers.
         /// </summary>
-        private async Task RequestSegmentation()
+        private async Task RequestSegmentation(bool supersede = false)
         {
             if (placementFinished || Deactivated)
             {
@@ -936,7 +1064,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
-            if (foregroundPoints.Count == 0 && backgroundPoints.Count == 0)
+            if (foregroundPoints.Count == 0 && backgroundPoints.Count == 0 && startingBoxes.Count == 0)
             {
                 SegmentationDiag.Log("RequestSegmentation skip: no points");
                 return;
@@ -952,7 +1080,17 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             if (!requestCoalescer.TryStart(out int generation))
             {
-                SegmentationDiag.Log("RequestSegmentation skip: coalescer busy");
+                // TryStart recorded the follow-up. Cancelling the running request makes it end now and start that follow-up.
+                if (supersede || NewPromptsSupersedeRequest)
+                {
+                    SegmentationDiag.Log("RequestSegmentation supersede: cancelling the request in flight for newer prompts");
+                    CancelSegmentRequest();
+                }
+                else
+                {
+                    SegmentationDiag.Log("RequestSegmentation skip: coalescer busy");
+                }
+
                 return;
             }
 
@@ -980,7 +1118,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 CancellationToken segmentToken = segmentRequestCts.Token;
                 var response = await viewportSession.SegmentAsync(
                     foregroundSnapshot, backgroundSnapshot, segmentToken, startingBoxes,
-                    backgroundShapes: derivedBackgroundShapes).ConfigureAwait(false);
+                    backgroundShapes: derivedBackgroundShapes,
+                    backgroundBitmap: paintedBackgroundMask).ConfigureAwait(false);
                 SegmentationDiag.Log(
                     $"RequestSegmentation done responseNull={response is null} islands={response?.Segments.Count ?? -1}");
                 delivered = response is not null;
@@ -1136,7 +1275,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
             }
 
-            polygons = SimplifyPreviewRings(polygons, foreground);
+            polygons = MergeResultPolygons(SimplifyPreviewRings(polygons, foreground), foreground);
 
             if (cancellationToken.IsCancellationRequested || !requestCoalescer.ShouldApply(generation))
                 return;
@@ -1201,12 +1340,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
             double? holeDropFraction = null,
             int? edgeCleanupRadius = null)
         {
-            IReadOnlyList<Polygon> polygons = SimplifyPreviewRings(viewportSession.CreatePolygonsFromResponse(
+            IReadOnlyList<Polygon> polygons = MergeResultPolygons(SimplifyPreviewRings(viewportSession.CreatePolygonsFromResponse(
                 response,
                 holeDropFraction,
                 lastSegmentationBackground,
                 edgeCleanupRadius,
-                keepComponentsContainingWorldPoints: lastSegmentationForeground), lastSegmentationForeground);
+                keepComponentsContainingWorldPoints: lastSegmentationForeground), lastSegmentationForeground), lastSegmentationForeground);
             ApplyPolygonViews(polygons, polygons.Count);
 #if DEBUG
             CreateDebugMaskOverlay(response, edgeCleanupRadius);
@@ -1422,7 +1561,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (ShowPenButtons && !placementFinished)
             {
                 penButtons ??= new SegmentationPenButtons(Parent);
-                penButtons.Draw(graphicsDevice, scene, PenButtonsIncludeSkip);
+                penButtons.Draw(graphicsDevice, scene, PenButtonsIncludeSkip, PenButtonsIncludePaintActions);
             }
 
             if (!placementFinished)
@@ -1598,6 +1737,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             backgroundPoints.Clear();
             derivedBackgroundShapes = null;
             derivedBackgroundShapesKey = string.Empty;
+            paintedBackgroundMask = null;
             // Clear point views but keep them initialized (never null)
             foregroundPointsView.Points = [];
             backgroundPointsView.Points = [];

@@ -168,13 +168,13 @@ Neuron connectivity network
       * **JSON** - Java script object notation, ``json``
         
    :query ids: ID numbers of cells to include in connectivity graph.  Semicolons separate multiple IDs.  Omit to export the whole volume.  For lists too long for a URL, POST them to the same address instead; see `Long lists: POST the IDs instead`_.
-   :query hops: Degrees of seperation to include additional neurons in graph
+   :query hops: Degrees of separation to include additional neurons in graph
    
    :resheader Content-Type: text/plain
    
    **Example request**
       
-      Get all cells within one degree of seperation of cells 476 and 514.
+      Get all cells within one degree of separation of cells 476 and 514.
       
       .. code-block:: text
       

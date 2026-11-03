@@ -88,8 +88,7 @@ namespace Geometry.Meshing
         /// <summary>
         /// Return a normalized vector from the Origin towards the Direction vertex
         /// </summary>
-        /// <param name="Origin"></param>
-        /// <param name="Direction"></param>
+        /// <param name="f"></param>
         /// <returns></returns>
         public Polygon ToPolygon(IFace f)
         {
@@ -101,8 +100,7 @@ namespace Geometry.Meshing
         /// <summary>
         /// Return a normalized vector from the Origin towards the Direction vertex
         /// </summary>
-        /// <param name="Origin"></param>
-        /// <param name="Direction"></param>
+        /// <param name="f"></param>
         /// <returns></returns>
         public Triangle ToTriangle(IFace f)
         {
@@ -123,8 +121,7 @@ namespace Geometry.Meshing
         /// Given a face that is not a triangle, return an array of triangles describing the face.
         /// For now this assumes convex faces with 3 or 4 verticies.  It removes the face and adds the split faces from the mesh
         /// </summary>
-        /// <param name="Duplicator">A constructor that can copy attributes of a face object</param>
-        /// <returns></returns>
+        /// <param name="face">The face to split</param>
         public override void SplitFace(IFace face)
         {
             if (face.IsTriangle())

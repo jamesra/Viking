@@ -429,8 +429,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         private AutoPolygonizeMaskOverlay? displayMask;
 
-        private Texture2D maskTexture;
-        private TextureOverlayView maskOverlayView;
+        private Texture2D? maskTexture;
+        private TextureOverlayView? maskOverlayView;
         private PointSetView? foregroundPointsView;
         private bool isHighlighted;
 
@@ -586,8 +586,8 @@ namespace WebAnnotation.UI.AutoPolygonize
 
         /// <summary>
         /// Volume-space seed rectangles, sent as <c>foreground_feature.mask</c>, from the same SegmentImage (inscribed circle square or
-        /// group seed box). Empty when the request had none. Kept so Add points can reopen
-        /// <see cref="SegmentationCommand"/> without remasking clicks alone.
+        /// group seed box). Empty when the request had none. Kept with the proposal for the
+        /// retired point placing <see cref="SegmentationCommand"/>.
         /// </summary>
         public IReadOnlyList<WebAnnotation.UI.Commands.Segmentation.SegmentationSeed> StartingBoxes { get; }
 
@@ -639,11 +639,11 @@ namespace WebAnnotation.UI.AutoPolygonize
         public string[] HelpStrings =>
         [
             "Double-click: Accept polygonalization",
-            "Double right-click: Proposal menu (Accept / Add points / Reject)"
+            "Double right-click: Proposal menu (Accept / Paint mask / Reject)"
         ];
 
         /// <summary>
-        /// Accept, refine with extra points, or Reject for the ring.
+        /// Accept, adjust by painting a mask, or Reject for the ring.
         /// </summary>
         public ContextMenuStrip ContextMenu
         {
@@ -654,9 +654,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                 accept.Click += (_, _) => controller.Accept(this);
                 menu.Items.Add(accept);
 
-                ToolStripMenuItem addPoints = new("Add points");
-                addPoints.Click += (_, _) => controller.BeginAddPoints(this);
-                menu.Items.Add(addPoints);
+                ToolStripMenuItem paintMask = new("Paint mask");
+                paintMask.Click += (_, _) => controller.BeginPaintMask(this);
+                menu.Items.Add(paintMask);
 
                 ToolStripMenuItem reject = new("Reject proposal");
                 reject.Click += (_, _) => controller.Dismiss(this);
@@ -1407,7 +1407,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// Packs the soft field into a Color texture. Samples on the inside of the iso level
         /// use <paramref name="color"/>; the outside halo stays transparent.
         /// </summary>
-        private static Texture2D CreateMaskTexture(
+        private static Texture2D? CreateMaskTexture(
             GraphicsDevice graphicsDevice,
             AutoPolygonizeMaskOverlay overlay,
             Color color)

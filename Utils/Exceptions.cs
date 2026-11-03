@@ -12,26 +12,23 @@ namespace Utils
 
         public XMLMissingDataException(string parent, string element, string attribute = null) : base()
         {
-            this.XMLDataMessage = attribute is null ?
-                $"{element} element is missing under {parent}" :
-                $"{element} element's {attribute} attribute is missing under {parent}";
-
-            if (parent is not null)
-                this.XMLDataMessage += $"under parent: {parent}";
+            this.XMLDataMessage = BuildMessage(parent, element, attribute);
         }
 
         public XMLMissingDataException(XElement parent, string element, string attribute = null) : base()
         {
-            List<XElement> roottoelement = parent?.GetRootToElementList();
+            // Name the parent by its root-to-element path rather than dumping its whole XML.
+            string path = parent is null ? null : "\n" + parent.GetRootToElementList().PrintVikingXMLElementList();
+            this.XMLDataMessage = BuildMessage(path, element, attribute);
+        }
 
-            roottoelement?.PrintVikingXMLElementList();
+        private static string BuildMessage(string parent, string element, string attribute)
+        {
+            string what = attribute is null ?
+                $"{element} element is missing" :
+                $"{element} element's {attribute} attribute is missing";
 
-            this.XMLDataMessage = attribute is null ?
-                $"{element} element is missing under {parent}" :
-                $"{element} element's {attribute} attribute is missing under {parent}";
-
-            if (parent is not null)
-                this.XMLDataMessage += $"under parent: {parent}";
+            return parent is null ? what : $"{what} under {parent}";
         }
 
         public XMLMissingDataException(string message) : base()
