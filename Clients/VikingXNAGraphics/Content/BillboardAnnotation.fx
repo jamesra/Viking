@@ -524,7 +524,10 @@ PixelShaderOutput CircleGrayscaleTextureOutlinedOverBackgroundLumaPixelShaderFun
 	float texturePerPixel = max(0.5 * (length(ddx(input.TexCoord)) + length(ddy(input.TexCoord))), 0.0000001);
 
 	float CenterDistSquared = CenterDistanceSquared(input.CenterDistance);
-	clip(CenterDistSquared > radiusSquared ? -1 : 1); //remove pixels outside the circle
+	//Nothing outside the disc the texture fills: the corners of the quad are skipped, not drawn transparent, so they write no stencil.
+	//(radiusSquared defaults to 1, beyond the quad's corners, so the usual CenterDistSquared test removes nothing.)
+	float2 fromCentre = input.TexCoord - 0.5;
+	clip(dot(fromCentre, fromCentre) > 0.25 ? -1 : 1);
 
 	//Screen pixels from the icon's edge, negative inside
 	float edgeDistance = (0.5 - map.g) * 2 * markerDistanceRange / texturePerPixel;
