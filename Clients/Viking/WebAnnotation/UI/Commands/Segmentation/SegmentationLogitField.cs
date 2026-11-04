@@ -25,7 +25,18 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// The same grid as <paramref name="Data"/> with the logits exactly as the server sent them (no smoothing), so the
     /// mask overlay shows the server's mask.
     /// </param>
-    internal sealed record SegmentField(byte[]? Data, int Width, int Height, int Scale, int X, int Y, byte[]? ServerData = null)
+    /// <param name="Threshold">
+    /// The mask threshold, in logits, the soft bytes are centred on: 127.5 is this logit. NaN when nothing was decoded.
+    /// </param>
+    internal sealed record SegmentField(
+        byte[]? Data,
+        int Width,
+        int Height,
+        int Scale,
+        int X,
+        int Y,
+        byte[]? ServerData = null,
+        double Threshold = double.NaN)
     {
         /// <summary>Width of the field in grid pixels.</summary>
         public int PixelWidth => Width * Scale;
@@ -106,7 +117,36 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     soft[i] = ToSoftByte(smoothed[i], iso);
             }
 
-            return new SegmentField(soft, width, height, PixelScale(segment), segment.LogitsOrigin.X, segment.LogitsOrigin.Y, server);
+            return new SegmentField(soft, width, height, PixelScale(segment), segment.LogitsOrigin.X, segment.LogitsOrigin.Y, server, iso);
+        }
+
+        /// <summary>
+        /// <paramref name="soft"/>, soft bytes centred on <paramref name="fromIso"/>, re-centred on <paramref name="toIso"/>:
+        /// a byte is linear in the logit, so moving the threshold up by d logits moves every byte down by
+        /// d * <see cref="SoftBytesPerLogit"/>. Exact while the move stays within the six logits a byte spans either side of
+        /// its centre; a byte already at 0 or 255 stays there. Returns <paramref name="soft"/> itself when nothing moves.
+        /// </summary>
+        internal static byte[] Recentre(byte[] soft, double fromIso, double toIso)
+        {
+            if (soft is null || double.IsNaN(fromIso) || double.IsNaN(toIso) || Math.Abs(toIso - fromIso) < 1e-6)
+                return soft!;
+
+            double offset = (fromIso - toIso) * SoftBytesPerLogit;
+            byte[] moved = new byte[soft.Length];
+            for (int i = 0; i < soft.Length; i++)
+            {
+                byte value = soft[i];
+                if (value == 0 || value == 255)
+                {
+                    moved[i] = value;
+                    continue;
+                }
+
+                double shifted = value + offset;
+                moved[i] = shifted <= 0 ? (byte)0 : shifted >= 255 ? (byte)255 : (byte)Math.Round(shifted);
+            }
+
+            return moved;
         }
 
         /// <summary>

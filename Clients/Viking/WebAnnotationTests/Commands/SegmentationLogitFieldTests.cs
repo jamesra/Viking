@@ -236,6 +236,39 @@ namespace WebAnnotationTests.Commands
         /// One island of <paramref name="width"/> x <paramref name="height"/> samples, sample (0, 0)'s top-left corner at grid
         /// pixel (<paramref name="x"/>, <paramref name="y"/>), Y up; <paramref name="logit"/> takes (column, row), row 0 the top.
         /// </summary>
+        [TestMethod]
+        public void RecentringDecodedBytesMatchesDecodingAtTheNewThreshold()
+        {
+            SegmentationServiceTypes.SegmentResult segment = SegmentWithLogits(
+                width: 9,
+                height: 1,
+                scale: 4,
+                x: 0,
+                y: 0,
+                logit: (column, _) => -4f + column);
+
+            SegmentField atZero = SegmentationLogitField.Decode(segment, 0.0, sigma: 0);
+            SegmentField atTwo = SegmentationLogitField.Decode(segment, 2.0, sigma: 0);
+            byte[] moved = SegmentationLogitField.Recentre(atZero.Data!, atZero.Threshold, 2.0);
+
+            Assert.AreEqual(0.0, atZero.Threshold);
+            for (int i = 0; i < moved.Length; i++)
+                Assert.IsTrue(Math.Abs(moved[i] - atTwo.Data![i]) <= 1, $"sample {i}: {moved[i]} against {atTwo.Data[i]}");
+            Assert.AreSame(atZero.Data, SegmentationLogitField.Recentre(atZero.Data!, 0.0, 0.0), "no move, no copy");
+        }
+
+        [TestMethod]
+        public void AResponseAnswersItsGrowthThresholdAndAnyHigherOne()
+        {
+            var grown = new SegmentationServiceTypes.SegmentationResponse { GrowthThreshold = 0.5f };
+
+            Assert.IsTrue(grown.AnswersThreshold(0.5));
+            Assert.IsTrue(grown.AnswersThreshold(3.0));
+            Assert.IsFalse(grown.AnswersThreshold(0.25), "a lower threshold may reach past where the walk stopped");
+            Assert.IsFalse(new SegmentationServiceTypes.SegmentationResponse().AnswersThreshold(3.0), "an older server");
+            Assert.IsFalse(((SegmentationServiceTypes.SegmentationResponse?)null).AnswersThreshold(3.0));
+        }
+
         internal static SegmentationServiceTypes.SegmentResult SegmentWithLogits(
             int width,
             int height,

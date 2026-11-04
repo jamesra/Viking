@@ -146,3 +146,6 @@ created or edited a location, or edited a structure, structure type or structure
 annotation service is redeployed. Deleting a location on such a database still fails until DeletedLocations.Z and
 DeletedLocationLinks reach the script.
 -->
+
+* **Raising the SAM2 threshold redraws at once.** Moving the **SAM2 threshold** slider up now redraws the outlines on screen from the answer Viking already has, for the segmentation command and for auto-polygonize proposals, instead of asking the segmentation server again. Moving it below the threshold an answer was grown at still asks again. Answers from a segmentation server older than this change are always asked for again.
+<!-- SegmentationResponse.growth_threshold (gRPC_Protos 974e020, server Viking dev 65aff1ae): the logits answer any threshold at or above it. SegmentationViewportSession.DecodeSegmentField decodes again per threshold; AutoPolygonizeMaskOverlay records the threshold its soft bytes are centred on and re-centres them (SegmentationLogitField.Recentre) when traced. -->
