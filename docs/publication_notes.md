@@ -116,6 +116,19 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
 
 ## Algorithmic decisions
 
+- **2026-11-04 One shared prompt library builds every location's segmentation request.** Why: the server's result
+  cache only answers byte-identical requests, and the Viking client and the annotation gallery differed in space,
+  tile naming, neighbours and clicks. `SegmentationPrompts/Viking.SegmentationPrompts` (netstandard2.0, called by
+  Viking directly and by the gallery through a NativeAOT build) applies one rule set: mosaic space at downsample 1,
+  `channel` = `transform` = the tileset name; a circle is its true disc plus a centre click; a polygon or curve
+  polygon is an outline to correct, curve rings fitted as the training exporter fitted them (port of nornir
+  `curves.py`, within 1e-9 of its fixtures); background is Viking's `IsOtherStructure` limited to cell-level circles
+  and polygons (what the model saw as negatives), within the targets' cells grown by one. Rejected: the library
+  computing the polygon's deepest-pixel click itself; the server's fallback is now that click on the very raster it
+  encodes, so a second raster and EDT would only add a way to disagree. The centripetal knot uses two square roots, not
+  `Math.Pow(d, 0.5)`, because `Sqrt` is correctly rounded on every runtime: the Linux native build and the Windows
+  .NET build give the same request (golden SHA-256 checked on both). Where: `SegmentationPrompts/`,
+  `gRPC_Protos/Segmentation/SAM2/prompt_input.proto`.
 - **2026-11-04 Segmentation prompts follow the trainer: one click per mask prompt, at its deepest pixel, and an
   existing outline goes as a mask to correct.** Why: the trainer (Sam2Trainer `data/prompts.py`) pairs every circle
   with one click at its centre and every polygon with one click at the distance-transform maximum, and encodes

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Viking.SegmentationPrompts as a native shared library (NativeAOT), for callers that are not .NET: the annotation
+       gallery loads it with ctypes. Published for linux-x64 in the gallery's Docker build:
+         dotnet publish -c Release -r linux-x64 -o out
+       which writes out/Viking.SegmentationPrompts.Native.so. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishAot>true</PublishAot>
+    <NativeLib>Shared</NativeLib>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <AssemblyName>Viking.SegmentationPrompts.Native</AssemblyName>
+    <RootNamespace>Viking.SegmentationPrompts.Native</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Viking.SegmentationPrompts\Viking.SegmentationPrompts.csproj" />
+  </ItemGroup>
+
+</Project>
