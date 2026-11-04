@@ -20,10 +20,10 @@ LabeledImage = NDArray[np.uint16]
 PolygonArray = NDArray[np.int32]
 Point = Tuple[int, int]
 
-# Logit a pixel must exceed to be object when a client sends no mask_threshold. SAM2's own default
-# is 0; 1.0 trims the over-segmentation seen on RC2 (0.5 still ran large). Clients that do send a
-# value, including an explicit 0, override it.
-DEFAULT_MASK_THRESHOLD = 1.0
+# Logit a pixel must exceed to be object when a client sends no mask_threshold: SAM2's own boundary. The server grows
+# a result at the request's threshold and a client may draw it at any higher one, so the default is the low end that
+# answers the most (1.0 until 2026-11-04, chosen against over-segmentation on RC2 before clients drew their own).
+DEFAULT_MASK_THRESHOLD = 0.0
 
 class SegmentInfo(TypedDict):
     index: int

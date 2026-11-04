@@ -11,6 +11,11 @@ the answer; the client keeps no cache of its own. The key is exact equality on:
 - the prompt (:func:`prompt_hash`), so a polygon prompted with its inscribed seed circle (gallery scoring) is never
   served as the polygon itself (the converter).
 
+The mask threshold is not in the key. Each row records the threshold its walk grew at (``growth_threshold``), and the
+logits answer any request at that threshold or above, since a client draws its own outline from them: a request at or
+above the row's threshold is a hit, one below it misses, grows anew at the lower value and replaces the row. A row's
+threshold only ever goes down.
+
 Viking merges overlapping proposals by asking again for the merged set, and every step of that chain is cached, so a
 client that comes back walks the same chain from cache hits.
 
@@ -40,7 +45,8 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 logger = logging.getLogger(__name__)
 
 # Changing how a prompt or a context is written changes this, so old rows miss instead of matching wrongly.
-PROMPT_SCHEME = "prompt-v2"  # v2: the outlines to correct (correction_feature), and one click per island
+# v2: the outlines to correct (correction_feature), and one click per island. v3: the threshold left the hash.
+PROMPT_SCHEME = "prompt-v3"
 CONTEXT_SCHEME = "context-v1"
 
 # .NET ticks (100 ns since 0001-01-01) at the Unix epoch: the protocol's timestamps are .NET ticks.
@@ -61,6 +67,7 @@ CREATE TABLE IF NOT EXISTS segmentation (
     downsample     INTEGER NOT NULL,
     context_hash   TEXT    NOT NULL,
     prompt_hash    TEXT    NOT NULL,
+    growth_threshold REAL  NOT NULL,
     created_ticks  INTEGER NOT NULL,
     last_hit_ticks INTEGER NOT NULL,
     response       BLOB    NOT NULL,
@@ -187,18 +194,14 @@ def _feature(feature: Any) -> str:
 
 
 def prompt_hash(request: Any, mask_digest: str) -> str:
-    """The object prompt as a hash: threshold, mask input, painted bitmaps, clicks and shapes, and the outlines to
-    correct.
+    """The object prompt as a hash: mask input, painted bitmaps, clicks and shapes, and the outlines to correct.
 
+    Not the threshold: a row answers every threshold at or above the one it grew at (see the module docstring).
     Computed here from the decoded request, so two clients that format numbers differently agree. Coordinates are grid
     pixels at the grid's downsample, which is part of the key on its own.
     """
-    has_field = getattr(request, "HasField", None)
-    threshold = (
-        f"{float(request.mask_threshold):.4f}" if callable(has_field) and has_field("mask_threshold") else "default"
-    )
     text = (
-        f"{PROMPT_SCHEME}|thr={threshold}|mask={int(bool(request.use_mask_input))}:{mask_digest}|"
+        f"{PROMPT_SCHEME}|mask={int(bool(request.use_mask_input))}:{mask_digest}|"
         f"{_feature(request.foreground_feature)}|correction={_feature(request.correction_feature)}"
     )
     return hashlib.sha256(text.encode("ascii")).hexdigest()
@@ -266,10 +269,15 @@ def cache_key(request: Any, mask_digest: str, model_version: str, server_version
     )
 
 
+# Thresholds closer than this are the same: a float32 from the request against a REAL in the row.
+_THRESHOLD_EPSILON = 1e-4
+
+
 @dataclass(frozen=True)
 class CachedResult:
     response: bytes
     created_ticks: int
+    growth_threshold: float
 
 
 @dataclass(frozen=True)
@@ -340,17 +348,18 @@ class ResultStore:
         connection.execute("PRAGMA foreign_keys=ON")
         return connection
 
-    def lookup(self, volume: str, key: CacheKey, job_id: int = 0) -> Optional[CachedResult]:
-        """The cached answer for ``key``, marking it hit (and linking it to ``job_id``), or None."""
+    def lookup(self, volume: str, key: CacheKey, threshold: float, job_id: int = 0) -> Optional[CachedResult]:
+        """The cached answer for ``key`` when it grew at ``threshold`` or below, marking it hit (and linking it to
+        ``job_id``), or None. A row grown at a higher threshold is a miss: its walk may have stopped short."""
         path = self._path(volume)
         with self._connect(path) as connection:
             row = connection.execute(
-                "SELECT response, created_ticks FROM segmentation WHERE location_key=? AND location_lm=? AND "
-                "model_version=? AND server_version=? AND space=? AND transform=? AND channel=? AND downsample=? AND "
-                "context_hash=? AND prompt_hash=?",
+                "SELECT response, created_ticks, growth_threshold FROM segmentation WHERE location_key=? AND "
+                "location_lm=? AND model_version=? AND server_version=? AND space=? AND transform=? AND channel=? AND "
+                "downsample=? AND context_hash=? AND prompt_hash=?",
                 key.columns(),
             ).fetchone()
-            if row is None:
+            if row is None or float(row[2]) > float(threshold) + _THRESHOLD_EPSILON:
                 return None
             connection.execute(
                 "UPDATE segmentation SET last_hit_ticks=? WHERE location_key=? AND location_lm=? AND model_version=? "
@@ -359,18 +368,24 @@ class ResultStore:
                 (now_ticks(), *key.columns()),
             )
             self._link(connection, job_id, key.location_key)
-        return CachedResult(response=bytes(row[0]), created_ticks=int(row[1]))
+        return CachedResult(response=bytes(row[0]), created_ticks=int(row[1]), growth_threshold=float(row[2]))
 
-    def store(self, volume: str, key: CacheKey, response: bytes, job_id: int = 0) -> int:
-        """Keep ``response`` under ``key``, replacing any row there. Returns the row's created time (ticks)."""
+    def store(self, volume: str, key: CacheKey, response: bytes, threshold: float, job_id: int = 0) -> int:
+        """Keep ``response``, grown at ``threshold``, under ``key``. It replaces a row grown at a higher threshold and
+        leaves one grown at the same or a lower one (two requests that missed together). Returns the created time
+        (ticks)."""
         path = self._path(volume)
         created = now_ticks()
         with self._connect(path) as connection:
             connection.execute(
-                "INSERT OR REPLACE INTO segmentation (location_key, location_lm, model_version, server_version, space, "
-                "transform, channel, downsample, context_hash, prompt_hash, created_ticks, last_hit_ticks, response) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (*key.columns(), created, created, sqlite3.Binary(response)),
+                "INSERT INTO segmentation (location_key, location_lm, model_version, server_version, space, "
+                "transform, channel, downsample, context_hash, prompt_hash, growth_threshold, created_ticks, "
+                "last_hit_ticks, response) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT (location_key, location_lm, model_version, server_version, space, transform, channel, "
+                "downsample, context_hash, prompt_hash) DO UPDATE SET growth_threshold=excluded.growth_threshold, "
+                "created_ticks=excluded.created_ticks, last_hit_ticks=excluded.last_hit_ticks, "
+                "response=excluded.response WHERE excluded.growth_threshold < segmentation.growth_threshold",
+                (*key.columns(), float(threshold), created, created, sqlite3.Binary(response)),
             )
             connection.executemany(
                 "INSERT OR IGNORE INTO segmentation_member (location_key, location_id) VALUES (?, ?)",

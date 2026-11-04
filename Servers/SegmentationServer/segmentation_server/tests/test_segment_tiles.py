@@ -95,13 +95,13 @@ async def test_a_request_without_an_id_is_answered_with_zero() -> None:
 
 
 @pytest.mark.asyncio
-async def test_a_client_that_sends_no_mask_threshold_gets_the_server_default() -> None:
-    assert await _threshold_sent_to_the_model() == pytest.approx(1.0)
+async def test_a_client_that_sends_no_mask_threshold_gets_the_server_default_of_zero() -> None:
+    assert await _threshold_sent_to_the_model() == 0.0
 
 
 @pytest.mark.asyncio
-async def test_an_explicit_zero_mask_threshold_is_honored() -> None:
-    assert await _threshold_sent_to_the_model(mask_threshold=0.0) == 0.0
+async def test_an_explicit_mask_threshold_is_honored() -> None:
+    assert await _threshold_sent_to_the_model(mask_threshold=1.0) == pytest.approx(1.0)
 
 
 @pytest.mark.asyncio

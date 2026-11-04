@@ -165,7 +165,7 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
    (0 at the border, 1 across the core), so the cell that sees a pixel most centred decides it
    and a neighbor's unsure edge answer barely counts. A cell's later prediction replaces its
    earlier one. The result is where the fused logit is above the request's `mask_threshold`
-   (bilinearly upsampled, as SAM2 does). The walk
+   (0, SAM2's own boundary, when the request sends none; bilinearly upsampled, as SAM2 does). The walk
    itself follows a separate control view, every pixel any one window answered as object away
    from its border, so a window with more context can reveal object a blind neighbor denied.
    A prediction that returns no logits contributes its core only.
@@ -239,9 +239,16 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
 border, as little-endian float16, row-major, `logits_size.width` per row, rows from the top (largest Y) down. Samples
 nobody predicted hold -20. `logits_origin` is the grid-space pixel (X right, Y up, at the grid's downsample) at the
 top-left of sample (0, 0): sample (i, j) covers pixels `x` from `origin.x + 4i` to `origin.x + 4i + 3` and `y` from
-`origin.y - 4j - 3` to `origin.y - 4j`. The client contours the logits at `mask_threshold` and places the contour with
-the origin and scale. A walk whose predictions carried no logits (only test fakes) sends its mask as logits at the same
-grid. `score` is the lowest score of the island's predictions; `island` is its number.
+`origin.y - 4j - 3` to `origin.y - 4j`. The client contours the logits at its threshold, keeps the pieces its clicks
+land on, and places the contour with the origin and scale. `growth_threshold` is the threshold the walk grew at: the
+logits are good for drawing at it or any higher value, so a client that raises its threshold redraws without asking
+again, and one that lowers it below `growth_threshold` sends a new request. Pixels taken as object without a logit of
+their own (a pinned seed, a walk whose predictions carried no logits, only test fakes) read +20, object at every
+threshold. `score` is the lowest score of the island's predictions; `island` is its number.
+
+The result cache (`result_store.py`) keys a row on everything but the threshold and records the row's
+`growth_threshold`: a request at or above it is a hit, one below it misses, grows at the lower value and replaces the
+row, so a row's threshold only moves down (`prompt-v3`).
 
 These are the numbers the earlier protocol sent with `LOGITS | NO_UPSCALE`, placed differently: it gave the walk's
 bottom-left pixel as the response's `origin_x`/`origin_y`, the frame's height in samples, and the crop's corner as

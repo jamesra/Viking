@@ -1266,7 +1266,8 @@ class SegmentationServicer(SegmentationServiceServicer):
         store = self._results
         volume = request.grid.volume
         job_id = self._job_id(request)
-        cached = await self._run_store(lambda: store.lookup(volume, key, job_id), "lookup")
+        threshold = _PredictSettings.from_request(request).mask_threshold
+        cached = await self._run_store(lambda: store.lookup(volume, key, threshold, job_id), "lookup")
         if cached is None:
             return None
         response = SegmentationResponse()
@@ -1276,10 +1277,12 @@ class SegmentationServicer(SegmentationServiceServicer):
             logger.exception("Result cache row for %s on %s is unreadable; segmenting anew", key.location_key, volume)
             return None
         response.request_id = request.request_id
+        response.growth_threshold = cached.growth_threshold
         response.cache.CopyFrom(CacheInfo(created_ticks=cached.created_ticks, model_version=key.model_version))
         await self._attach_reviewed(request, response)
         logger.info(
-            "SegmentTiles cached req=%s vol=%s sec=%s ds=%s locations=%s key=%s segments=%d reviewed=%s",
+            "SegmentTiles cached req=%s vol=%s sec=%s ds=%s locations=%s key=%s segments=%d reviewed=%s "
+            "threshold=%.3f grown_at=%.3f",
             request.request_id,
             volume,
             request.grid.section,
@@ -1288,6 +1291,8 @@ class SegmentationServicer(SegmentationServiceServicer):
             key.location_key,
             len(response.segments),
             response.HasField("reviewed"),
+            threshold,
+            cached.growth_threshold,
         )
         return response
 
@@ -1303,7 +1308,8 @@ class SegmentationServicer(SegmentationServiceServicer):
         payload = kept.SerializeToString()
         volume = request.grid.volume
         job_id = self._job_id(request)
-        await self._run_store(lambda: store.store(volume, key, payload, job_id), "store")
+        threshold = float(response.growth_threshold)
+        await self._run_store(lambda: store.store(volume, key, payload, threshold, job_id), "store")
 
     async def _attach_reviewed(self, request: SegmentTilesRequest, response: SegmentationResponse) -> None:
         """Add the reviewed outline of a single-location request whose location has not been edited since review."""
@@ -1747,7 +1753,9 @@ class SegmentationServicer(SegmentationServiceServicer):
         segments = await asyncio.get_running_loop().run_in_executor(
             self._cpu_executor, functools.partial(self._build_results, outcomes, logit_iso)
         )
-        response = SegmentationResponse(segments=segments, request_id=request.request_id)
+        response = SegmentationResponse(
+            segments=segments, request_id=request.request_id, growth_threshold=float(logit_iso)
+        )
         grid = session.grid
         for outcome in outcomes:
             result = outcome.result

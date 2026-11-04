@@ -154,13 +154,13 @@ async def test_foreground_shapes_and_an_outline_to_correct_together_are_invalid_
     servicer.model.predict_tile.assert_not_called()
 
 
-def test_an_outline_to_correct_is_part_of_the_prompt_hash_under_the_v2_scheme() -> None:
+def test_an_outline_to_correct_is_part_of_the_prompt_hash() -> None:
     """Rows from before outlines to correct existed (prompt-v1) never match, and a seed never shares a row with the
     same outline sent as a correction."""
     outline = polygon(SQUARE_WITH_TAIL)
     seeded = start(shapes=[outline])
     corrected = start(correction_feature=Feature(shapes=[outline]))
 
-    assert PROMPT_SCHEME == "prompt-v2"
+    assert PROMPT_SCHEME == "prompt-v3"
     assert prompt_hash(seeded, "") != prompt_hash(corrected, "")
     assert prompt_hash(corrected, "") == prompt_hash(start(correction_feature=Feature(shapes=[outline])), "")

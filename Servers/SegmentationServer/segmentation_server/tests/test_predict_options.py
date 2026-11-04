@@ -57,15 +57,15 @@ def _predict(model: SegmentationModel, predictor: FakePredictor, **options: Any)
     return model._predict_with_logits(predictor, [(5, 5)], [1], False, **options)
 
 
-def test_default_threshold_is_one_logit():
+def test_default_threshold_is_sam2s_own_zero_logit():
     masks, _scores, _logits = _predict(_model(), FakePredictor(_ramp()))
-    assert DEFAULT_MASK_THRESHOLD == 1.0
+    assert DEFAULT_MASK_THRESHOLD == 0.0
     assert np.array_equal(masks[0], _ramp() > DEFAULT_MASK_THRESHOLD)
 
 
-def test_an_explicit_zero_threshold_is_not_replaced_by_the_default():
-    masks, _scores, _logits = _predict(_model(), FakePredictor(_ramp()), mask_threshold=0.0)
-    assert np.array_equal(masks[0], _ramp() > 0.0)
+def test_an_explicit_threshold_replaces_the_default():
+    masks, _scores, _logits = _predict(_model(), FakePredictor(_ramp()), mask_threshold=0.5)
+    assert np.array_equal(masks[0], _ramp() > 0.5)
 
 
 def test_raising_the_threshold_shrinks_the_mask():

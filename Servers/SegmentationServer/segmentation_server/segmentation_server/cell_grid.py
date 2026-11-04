@@ -37,6 +37,9 @@ LOGIT_CORE = CORE_SIZE // LOGIT_SCALE
 LOGIT_CORE_MARGIN = CORE_MARGIN // LOGIT_SCALE
 # Fused logit of a sample no prediction has covered. Far below any iso level a client sends.
 UNSEEN_LOGIT = -20.0
+# Logit of a sample the walk took as object without a logit of its own (a pinned seed or box, a prediction that returned
+# only a mask). Far above any iso level a client sends, so it stays object at every threshold the result answers.
+PINNED_LOGIT = -UNSEEN_LOGIT
 # A window's logit only counts as reaching a pixel (see ``Canvas``) where its feather weight is at
 # least this, which keeps the unreliable outer 64 px of a window from steering the walk.
 REACH_MIN_WEIGHT = 0.25

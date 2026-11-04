@@ -75,7 +75,6 @@ def test_a_polygon_key_ignores_where_the_ring_starts_and_which_way_it_turns() ->
         lambda r: r.grid.__setattr__("transform", "other|"),
         lambda r: r.grid.__setattr__("space", 1 if r.grid.space != 1 else 2),
         lambda r: r.foreground_feature.shapes[0].circle.__setattr__("radius", 60),
-        lambda r: r.__setattr__("mask_threshold", 0.3),
     ],
 )
 def test_anything_that_changes_the_answer_changes_the_key(change) -> None:
@@ -83,6 +82,11 @@ def test_anything_that_changes_the_answer_changes_the_key(change) -> None:
     changed = _request()
     change(changed)
     assert _key(base) != _key(changed)
+
+
+def test_the_threshold_is_not_part_of_the_key() -> None:
+    """A row records the threshold it grew at instead, and answers every threshold at or above it."""
+    assert _key(_request(mask_threshold=0.3)) == _key(_request(mask_threshold=1.5)) == _key(_request())
 
 
 def test_another_model_or_server_version_is_another_key() -> None:
@@ -104,49 +108,60 @@ def test_listed_neighbours_stand_for_their_shapes() -> None:
 def test_a_stored_answer_is_found_again(tmp_path: Path) -> None:
     store = ResultStore(tmp_path)
     key = _key(_request())
-    store.store("RC1", key, b"answer")
-    hit = store.lookup("RC1", key)
-    assert hit is not None and hit.response == b"answer"
-    assert store.lookup("RC2", key) is None, "volumes do not share rows"
+    store.store("RC1", key, b"answer", 0.0)
+    hit = store.lookup("RC1", key, 0.0)
+    assert hit is not None and hit.response == b"answer" and hit.growth_threshold == 0.0
+    assert store.lookup("RC2", key, 0.0) is None, "volumes do not share rows"
 
 
-def test_store_replaces_the_row_for_a_key(tmp_path: Path) -> None:
+def test_a_row_answers_its_threshold_and_any_higher_one_only(tmp_path: Path) -> None:
     store = ResultStore(tmp_path)
     key = _key(_request())
-    store.store("RC1", key, b"first")
-    store.store("RC1", key, b"second")
-    assert store.lookup("RC1", key).response == b"second"
+    store.store("RC1", key, b"grown at 0.5", 0.5)
+    assert store.lookup("RC1", key, 0.5) is not None
+    assert store.lookup("RC1", key, 2.0).growth_threshold == 0.5
+    assert store.lookup("RC1", key, 0.25) is None, "a lower threshold may reach past where the walk stopped"
+
+
+def test_a_lower_threshold_replaces_the_row_and_a_higher_one_never_does(tmp_path: Path) -> None:
+    store = ResultStore(tmp_path)
+    key = _key(_request())
+    store.store("RC1", key, b"first", 0.5)
+    store.store("RC1", key, b"lower", 0.0)
+    store.store("RC1", key, b"higher", 1.0)
+    hit = store.lookup("RC1", key, 1.0)
+    assert hit.response == b"lower" and hit.growth_threshold == 0.0
 
 
 def test_eviction_drops_unlinked_rows_least_recently_hit_first(tmp_path: Path) -> None:
     store = ResultStore(tmp_path, max_bytes=250)
     keys = [_key(_request(locations=_refs((i, 1)))) for i in range(1, 5)]
     job = store.create_job("RC1", "Convert structure 1", "james", "", "convert")
-    store.store("RC1", keys[0], b"x" * 100, job_id=job.job_id)
+    store.store("RC1", keys[0], b"x" * 100, 0.0, job_id=job.job_id)
     for key in keys[1:]:
-        store.store("RC1", key, b"x" * 100)
-    store.lookup("RC1", keys[1])  # the most recent hit of the unlinked rows
+        store.store("RC1", key, b"x" * 100, 0.0)
+    store.lookup("RC1", keys[1], 0.0)  # the most recent hit of the unlinked rows
 
     store.evict("RC1")
 
-    assert store.lookup("RC1", keys[0]) is not None, "a row linked to a job is never evicted"
-    assert store.lookup("RC1", keys[1]) is not None
-    assert store.lookup("RC1", keys[2]) is None
-    assert store.lookup("RC1", keys[3]) is None
+    assert store.lookup("RC1", keys[0], 0.0) is not None, "a row linked to a job is never evicted"
+    assert store.lookup("RC1", keys[1], 0.0) is not None
+    assert store.lookup("RC1", keys[2], 0.0) is None
+    assert store.lookup("RC1", keys[3], 0.0) is None
 
 
 def test_deleting_a_job_makes_its_rows_evictable(tmp_path: Path) -> None:
     store = ResultStore(tmp_path, max_bytes=50)
     key = _key(_request())
     job = store.create_job("RC1", "t", "james", "", "convert")
-    store.store("RC1", key, b"x" * 100, job_id=job.job_id)
+    store.store("RC1", key, b"x" * 100, 0.0, job_id=job.job_id)
     store.evict("RC1")
-    assert store.lookup("RC1", key) is not None
+    assert store.lookup("RC1", key, 0.0) is not None
     assert [row.linked for row in store.list_jobs("RC1")] == [1]
 
     assert store.delete_job("RC1", job.job_id)
     store.evict("RC1")
-    assert store.lookup("RC1", key) is None
+    assert store.lookup("RC1", key, 0.0) is None
     assert not store.delete_job("RC1", job.job_id)
 
 
@@ -195,6 +210,39 @@ async def test_a_second_request_for_the_same_location_is_answered_from_the_cache
     assert second.request_id == 2
     assert list(second.segments) == list(first.segments)
     assert target.model.predict_ephemeral.call_count + target.model.predict_tile.call_count == calls
+
+
+@pytest.mark.asyncio
+async def test_a_higher_threshold_is_answered_by_a_walk_grown_lower_and_a_lower_one_grows_anew(tmp_path: Path) -> None:
+    target = await _cached_servicer(tmp_path)
+
+    def predictions() -> int:
+        return target.model.predict_ephemeral.call_count + target.model.predict_tile.call_count
+
+    grown = result(await converse(target, _request(mask_threshold=0.5)))
+    assert grown.growth_threshold == pytest.approx(0.5) and not grown.HasField("cache")
+    calls = predictions()
+
+    higher = result(await converse(target, _request(mask_threshold=2.0)))
+    assert higher.HasField("cache") and higher.growth_threshold == pytest.approx(0.5)
+    assert list(higher.segments) == list(grown.segments)
+    assert predictions() == calls
+
+    lower = result(await converse(target, _request(mask_threshold=-1.0)))
+    assert not lower.HasField("cache") and lower.growth_threshold == pytest.approx(-1.0)
+    assert predictions() > calls
+    calls = predictions()
+
+    again = result(await converse(target, _request(mask_threshold=0.5)))
+    assert again.HasField("cache") and again.growth_threshold == pytest.approx(-1.0), "the row moved down"
+    assert predictions() == calls
+
+
+@pytest.mark.asyncio
+async def test_a_request_without_a_threshold_grows_at_zero(tmp_path: Path) -> None:
+    target = await _cached_servicer(tmp_path)
+    response = result(await converse(target, _request()))
+    assert response.HasField("growth_threshold") and response.growth_threshold == 0.0
 
 
 @pytest.mark.asyncio

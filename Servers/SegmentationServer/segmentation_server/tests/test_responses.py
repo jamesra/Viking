@@ -63,7 +63,7 @@ def test_a_walk_without_logits_sends_its_mask_at_the_logit_grid() -> None:
     mask = np.zeros((512, 512), dtype=bool)
     mask[100:200, 40:120] = True
 
-    logits = logits_from_mask(mask, iso=1.0)
+    logits = logits_from_mask(mask)
     segment = build_island_result(1, 0.8, mask, None, 256, 256, iso=1.0)
 
     assert logits.shape == (128, 128) and int((logits > 1.0).sum()) == 25 * 20

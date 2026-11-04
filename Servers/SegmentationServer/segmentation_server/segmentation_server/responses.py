@@ -22,7 +22,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from segmentation_grpc import IntPoint, IntSize, SegmentResult
-from segmentation_server.cell_grid import LOGIT_SCALE, UNSEEN_LOGIT
+from segmentation_server.cell_grid import LOGIT_SCALE, PINNED_LOGIT, UNSEEN_LOGIT
 from segmentation_server.mask_utils import fill_small_holes, get_mask_bounds
 
 # Background samples kept around the mask in a logits crop so the client's contour closes on the
@@ -41,12 +41,13 @@ def logits_origin(
     return origin_x + left * scale, origin_y + grid_rows * scale - 1 - top * scale
 
 
-def logits_from_mask(mask: NDArray[np.bool_], iso: float, scale: int = LOGIT_SCALE) -> NDArray[np.float32]:
-    """Logits for a walk whose predictions carried none: ``iso + 1`` where at least half of a sample's pixels are set,
-    ``UNSEEN_LOGIT`` elsewhere, so the client's contour at ``iso`` is the mask at the logit grid's resolution."""
+def logits_from_mask(mask: NDArray[np.bool_], scale: int = LOGIT_SCALE) -> NDArray[np.float32]:
+    """Logits for a walk whose predictions carried none: ``PINNED_LOGIT`` where at least half of a sample's pixels are
+    set, ``UNSEEN_LOGIT`` elsewhere, so the client's contour at any threshold is the mask at the logit grid's
+    resolution."""
     rows, cols = mask.shape[0] // scale, mask.shape[1] // scale
     covered = mask[:rows * scale, :cols * scale].reshape(rows, scale, cols, scale).mean(axis=(1, 3)) >= 0.5
-    return np.where(covered, np.float32(iso + 1.0), np.float32(UNSEEN_LOGIT)).astype(np.float32)
+    return np.where(covered, np.float32(PINNED_LOGIT), np.float32(UNSEEN_LOGIT)).astype(np.float32)
 
 
 def build_island_result(
@@ -69,7 +70,7 @@ def build_island_result(
     if fused_logits is None:
         if mask.ndim != 2 or not mask.any():
             return None
-        fused_logits = logits_from_mask(mask, iso, scale)
+        fused_logits = logits_from_mask(mask, scale)
     logits = np.asarray(fused_logits, dtype=np.float32)
     if logits.ndim != 2 or logits.size == 0:
         return None

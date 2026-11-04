@@ -120,7 +120,7 @@ def test_a_neighbor_that_sees_a_pixel_well_inside_its_window_overrides_the_centr
     owner = cell_of_point(2560, 2550)
     world = _StingyOwner(truth, owner, shrink=40)
 
-    result = _grow(world, circle_clicks(2560, 2550, 100))
+    result = _grow(world, circle_clicks(2560, 2550, 100), logit_iso=1.0)
 
     mask = world.to_truth_frame(result)
     assert iou(mask, truth) >= 0.95
@@ -156,12 +156,12 @@ def _bar_world(world_type):
 def test_weak_margin_logits_below_the_iso_do_not_make_a_pixel_object() -> None:
     truth, world = _bar_world(_UnsureMargin)
 
-    at_default = world.to_truth_frame(_grow(world, circle_clicks(2560, 2550, 100)))
+    at_one = world.to_truth_frame(_grow(world, circle_clicks(2560, 2550, 100), logit_iso=1.0))
     _truth, again = _bar_world(_UnsureMargin)
     lower_iso = again.to_truth_frame(_grow(again, circle_clicks(2560, 2550, 100), logit_iso=0.0))
 
-    assert not at_default[2410, 2400]
-    assert at_default.sum() < lower_iso.sum()
+    assert not at_one[2410, 2400]
+    assert at_one.sum() < lower_iso.sum()
 
 
 def test_a_prediction_without_logits_contributes_only_its_core() -> None:

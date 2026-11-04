@@ -81,6 +81,7 @@ from segmentation_server.cell_grid import (
     CORE_SIZE,
     LOGIT_SCALE,
     LOGIT_WINDOW,
+    PINNED_LOGIT,
     TILE_SIZE,
     Box,
     Canvas,
@@ -242,7 +243,7 @@ class GrowthResult:
     logits: Optional[NDArray] = None
     """Fused logits over the same extent as ``mask`` at ``1 / LOGIT_SCALE`` of its size (Y-down), or
     None when no prediction returned logits. Samples nobody predicted read ``UNSEEN_LOGIT``; boxes
-    taken as object read at least ``logit_iso + 1``."""
+    taken as object read at least ``PINNED_LOGIT``."""
 
 
 @dataclass
@@ -1263,7 +1264,7 @@ class GrowthWalk:
         scores = [pred.score for pred in cells.values() if pred.score > 0.0]
         logits = None
         if canvas.has_logits():
-            logits = canvas.fused_mosaic(min_row, max_row, min_col, max_col, self._logit_iso + 1.0)
+            logits = canvas.fused_mosaic(min_row, max_row, min_col, max_col, PINNED_LOGIT)
         return GrowthResult(
             mask=mosaic,
             origin_x=min_col * CELL_STRIDE + CORE_MARGIN,

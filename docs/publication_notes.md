@@ -129,6 +129,20 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   `Math.Pow(d, 0.5)`, because `Sqrt` is correctly rounded on every runtime: the Linux native build and the Windows
   .NET build give the same request (golden SHA-256 checked on both). Where: `SegmentationPrompts/`,
   `gRPC_Protos/Segmentation/SAM2/prompt_input.proto`.
+- **2026-11-04 The mask threshold left the result-cache key; the server's default is 0.** Why: a result is SAM2's
+  fused logits and the client draws its own outline from them, so a result grown at threshold $t_0$ answers any
+  $t \ge t_0$ (the walk at $t_0$ reaches every cell a walk at $t$ would). The threshold still steers the walk (which
+  cells it grows into, which pieces without a click it drops), so a lower one cannot be served from a higher row. Each
+  row records its `growth_threshold`; a request at or above it is a hit, one below it grows anew and replaces the row,
+  and the response says the threshold so a client redraws locally when its threshold rises. Pinned and mask-only
+  samples are written at +20 instead of $t_0 + 1$, so they stay object at every higher threshold. The default (no
+  threshold sent) moves from 1.0, chosen on 2026-10-02 against over-segmentation on RC2 when the server's walk was the
+  outline, to SAM2's own 0, the low end that answers the most. Not bit-identical: drawing a low walk at a higher
+  threshold can keep a piece the higher walk would have dropped (the client keeps only clicked pieces) and blends
+  more windows near the edge. Rejected: keying on the threshold (every slider step a miss, and the gallery and Viking
+  never share a row unless they send the same value). Where: `Servers/SegmentationServer` (`result_store.py`,
+  `server.py`, `mask_utils.py`, `responses.py`, `cell_grid.py`), `SegmentationResponse.growth_threshold` in
+  `gRPC_Protos`.
 - **2026-11-04 Segmentation prompts follow the trainer: one click per mask prompt, at its deepest pixel, and an
   existing outline goes as a mask to correct.** Why: the trainer (Sam2Trainer `data/prompts.py`) pairs every circle
   with one click at its centre and every polygon with one click at the distance-transform maximum, and encodes
