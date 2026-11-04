@@ -229,6 +229,21 @@ class TiledMaskShape(MaskShape):
                 best_distance, best = distance, (x, y)
         return best
 
+    def deepest_point(self) -> Point:
+        """The set pixel farthest from the mask's edge: the click the trainer pairs with a mask prompt.
+
+        The exact Euclidean distance to the nearest unset pixel (outside the mask's box counts as unset), the first
+        maximum scanning from low y, then low x, as the trainer's ``sample_points_in_mask`` takes it.
+        """
+        if not self._pixels:
+            return 0, 0
+        x0, y0, x1, y1 = self.box
+        padded = np.zeros((y1 - y0 + 3, x1 - x0 + 3), dtype=np.uint8)
+        padded[1:-1, 1:-1] = self.region(x0, y0, x1, y1)
+        distance = cv2.distanceTransform(padded, cv2.DIST_L2, cv2.DIST_MASK_PRECISE)
+        row, col = np.unravel_index(int(np.argmax(distance)), distance.shape)
+        return int(col) - 1 + x0, int(row) - 1 + y0
+
 
 class MaskTileCollector:
     """One request's mask tiles: the foreground and background bitmaps, with their duplicate and count rules.

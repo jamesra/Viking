@@ -169,7 +169,8 @@ def build_trust_islands(
     support = np.zeros((height, width), dtype=np.bool_)
     part_support: List[NDArray[np.bool_]] = []
     for part in parts:
-        if part.softened:
+        # An outline to correct is not depth-trusted (it keeps the edge curve), so it is its own core, like the bitmap.
+        if part.softened and part.role != "correction":
             w, part_core = shape_trust(part, x0, y0, width, height, trust)
             np.maximum(weight, w, out=weight)
             core |= part_core

@@ -253,7 +253,8 @@ def test_a_mask_prompt_starts_the_cell_with_mask_input_and_no_box_and_is_taken_a
 
     start = world.calls[0]
     assert world.mask_prompts[0] is not None and world.mask_prompts[0].max() > 0, "the square is the mask_input"
-    assert mosaic_to_window(start[0], 2304, 2304) in start[1], "the square's center is a click"
+    assert mosaic_to_window(start[0], 2304, 2304) not in start[1], "the client's clicks are the clicks, no centre beside"
+    assert set(start[1]) <= {mosaic_to_window(start[0], x, y) for x, y in points}
     assert world.to_truth_frame(result)[hole].all(), "everything inside a mask is object"
 
 

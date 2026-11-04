@@ -586,7 +586,7 @@ class GrowthWalk:
                 continue
             full, partial = split
             touched = list(partial)
-            if box in self._masks:
+            if box in self._masks and _taken_as_object(self._mask_shapes[box]):
                 shape = self._mask_shapes[box]
                 for cell in full:
                     if cell in self._assumed:
@@ -1031,17 +1031,22 @@ class GrowthWalk:
         positive for the answer filter, so a piece covering the box is never dropped for holding no click
         and the window may hold none; it is not sent to SAM2 unless the client sent it itself or
         ``send_center`` is set, which a mask-prompted start uses so SAM2 has a click to pair with
-        the mask.
+        the mask. It is sent only to a window that holds none of the walk's clicks: the trainer pairs a mask prompt
+        with exactly one click, so a click the client sent is that click and the centre is not added beside it.
         """
         filter_only: Set[Point] = set()
         extra: List[Point] = []
         if mosaic_box is not None:
             center = center if center is not None else box_center(mosaic_box)
             if center not in self._fg_set:
-                if not send_center:
+                if not send_center or self._window_holds_click(cell):
                     filter_only.add(center)
                 extra.append(center)
         return self._build_prompts(cell, filter_only, extra_positives=extra)
+
+    def _window_holds_click(self, cell: Cell) -> bool:
+        """True when one of the walk's foreground clicks falls in ``cell``'s window."""
+        return any(in_window(mosaic_to_window(cell, x, y)) for x, y in self._fg)
 
     def _build_prompts(
         self, cell: Cell, omit: Set[Point], extra_positives: Sequence[Point] = ()
@@ -1214,7 +1219,7 @@ class GrowthWalk:
             for box in self._boxes:
                 if cores_under_box(box, None if box in self._masks else MAX_BOX_CELLS) is None:
                     continue
-                if box in self._masks:
+                if box in self._masks and _taken_as_object(self._mask_shapes[box]):
                     canvas.assume_mask(self._mask_shapes[box])
             for shape in self._background_masks:
                 if not shape.empty and cores_under_box(shape.box, None if shape.unbounded else MAX_BOX_CELLS) is not None:
@@ -1398,6 +1403,11 @@ def _kept_logits(logits: NDArray, kept_down: MaskArray, iso: float) -> Tuple[NDA
     touching_kept = np.unique(labels[kept_low & above])
     clicked_piece = np.isin(labels, touching_kept[touching_kept > 0])
     return native, ~support | (above & ~clicked_piece)
+
+
+def _taken_as_object(shape: MaskShape) -> bool:
+    """False for an outline to correct: it prompts the walk but the model decides every one of its pixels."""
+    return getattr(shape, "role", "seed") != "correction"
 
 
 def _components_with_positives(mask_down: MaskArray, positives: Sequence[Point]) -> MaskArray:

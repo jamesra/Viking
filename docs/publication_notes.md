@@ -116,6 +116,18 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
 
 ## Algorithmic decisions
 
+- **2026-11-04 Segmentation prompts follow the trainer: one click per mask prompt, at its deepest pixel, and an
+  existing outline goes as a mask to correct.** Why: the trainer (Sam2Trainer `data/prompts.py`) pairs every circle
+  with one click at its centre and every polygon with one click at the distance-transform maximum, and encodes
+  `near_correct`/`correction` outlines at $+3\,c(d)$ against $+10\,c(d)$ for seeds. The server sent a polygon with a
+  client click as two clicks (the click plus the island's pixel nearest its centroid), fell back to that
+  nearest-to-centroid pixel, and had no correction input, so an existing polygon went as a pinned seed. Measured live:
+  a polygon as a seed leaked (IoU 0.23 with the reviewed outline), as a correction gave 0.94. Now: an island with no
+  click gets $\arg\max_p d(p)$ (exact EDT, first maximum from low Y then low X); a window holding a client click
+  gets no extra one; `correction_feature` outlines are encoded at `CORRECTION_LOGIT` and never pinned. The result
+  cache moves to `prompt-v2`, so rows keyed under the old rules miss. Where: `Servers/SegmentationServer`
+  (`tile_growth.py` `_start_prompts`, `mask_tiles.py` `deepest_point`, `prompt.py`, `prompt_encodings.py`,
+  `result_store.py`), `gRPC_Protos` 2e4824c; tests `test_correction_prompt.py`.
 - **2026-11-02 The correction service sends the full TLS chain (leaf plus intermediates), not the leaf alone.** Why:
   Viking's gRPC client (Grpc.Core, C-core) does not fetch missing intermediates through AIA, so a leaf-only handshake
   failed with `Unavailable: failed to connect to all addresses` against `corrections.codepharm.net`, while browsers and

@@ -130,13 +130,15 @@ class EdgeConfidenceEncoder:
         self, positive: NDArray[np.float32], cell: Cell, island: MaskShape, part: ForegroundPart,
         claimed: NDArray[np.bool_],
     ) -> None:
-        """Raise ``positive`` to one part's seed values, each part with its own edge distance and depth cap."""
+        """Raise ``positive`` to one part's values, each part with its own edge distance and depth cap: a seed at
+        ``SEED_LOGIT``, an outline to correct at ``CORRECTION_LOGIT``."""
         pixels = part.region.window_full(cell)
         if pixels is None:
             return
         pixels &= claimed
         if pixels.any():
-            np.maximum(positive, self._seed(pixels), out=positive)
+            logit = self.correction_logit if part.role == "correction" else self.seed_logit
+            np.maximum(positive, self._seed(pixels, logit), out=positive)
 
     def _negatives(self, cell: Cell, background_masks: Sequence[MaskShape]) -> List[enc.NegativeCanvas]:
         """Each background region that reaches the window as a negative, each by its own geometry."""
@@ -203,7 +205,8 @@ class DepthTrustEncoder(EdgeConfidenceEncoder):
         self, positive: NDArray[np.float32], cell: Cell, island: MaskShape, part: ForegroundPart,
         claimed: NDArray[np.bool_],
     ) -> None:
-        if not part.softened:
+        # The bitmap and outlines to correct keep the edge curve (Sam2Trainer docs/adjacent_circle_seed_plan.md, 3).
+        if not part.softened or part.role == "correction":
             super()._add_part(positive, cell, island, part, claimed)
             return
         trust = island.trust_window(cell) if isinstance(island, Island) else None

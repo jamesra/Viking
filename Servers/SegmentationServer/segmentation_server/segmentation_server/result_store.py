@@ -40,7 +40,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 logger = logging.getLogger(__name__)
 
 # Changing how a prompt or a context is written changes this, so old rows miss instead of matching wrongly.
-PROMPT_SCHEME = "prompt-v1"
+PROMPT_SCHEME = "prompt-v2"  # v2: the outlines to correct (correction_feature), and one click per island
 CONTEXT_SCHEME = "context-v1"
 
 # .NET ticks (100 ns since 0001-01-01) at the Unix epoch: the protocol's timestamps are .NET ticks.
@@ -187,7 +187,8 @@ def _feature(feature: Any) -> str:
 
 
 def prompt_hash(request: Any, mask_digest: str) -> str:
-    """The foreground prompt as a hash: threshold, mask input, painted bitmaps, clicks and shapes.
+    """The object prompt as a hash: threshold, mask input, painted bitmaps, clicks and shapes, and the outlines to
+    correct.
 
     Computed here from the decoded request, so two clients that format numbers differently agree. Coordinates are grid
     pixels at the grid's downsample, which is part of the key on its own.
@@ -198,7 +199,7 @@ def prompt_hash(request: Any, mask_digest: str) -> str:
     )
     text = (
         f"{PROMPT_SCHEME}|thr={threshold}|mask={int(bool(request.use_mask_input))}:{mask_digest}|"
-        f"{_feature(request.foreground_feature)}"
+        f"{_feature(request.foreground_feature)}|correction={_feature(request.correction_feature)}"
     )
     return hashlib.sha256(text.encode("ascii")).hexdigest()
 

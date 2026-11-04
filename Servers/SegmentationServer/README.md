@@ -71,8 +71,11 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
    downsample, X right, Y up; pixel `(x, y)` covers `[x, x + 1) x [y, y + 1)` and a click is the pixel it falls in.
    What the object is: foreground clicks (`foreground_feature.points`), foreground shapes
    (`foreground_feature.shapes`) and a FOREGROUND bitmap (mask tiles). What it is not: background clicks, background
-   shapes (the neighbouring annotations) and a BACKGROUND bitmap. A request needs a foreground click, shape or mask
-   tile; a `Shape.point` in either `Feature` is `INVALID_ARGUMENT` (a click goes in `points`).
+   shapes (the neighbouring annotations) and a BACKGROUND bitmap. What the object roughly is: the outlines to correct
+   (`correction_feature`), an existing annotation the model may redraw, with its clicks in `correction_feature.points`.
+   A request needs a foreground click, shape or mask tile, or an outline to correct; a `Shape.point` in any `Feature`
+   is `INVALID_ARGUMENT` (a click goes in `points`), and so are outlines to correct sent with foreground shapes or a
+   FOREGROUND bitmap (one object prompt is a seed or a correction, not both).
 
    Shapes are rasterized per tile or window, a pixel being inside when its centre is (the Viking client's own rule):
    a circle and an ellipse analytically, a line as a stroke of its `width` (round ends; under a pixel wide is drawn one
@@ -88,7 +91,8 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
    used as drawn. For `edge-confidence-v6` a softened circle is its disc at `radius * circle_diameter_scale` (the
    manifest's `client_contract`; the client sends the TRUE radius), and every foreground part is encoded as a seed,
    `+SEED_LOGIT * c(d)` with the trainer's edge confidence of its own pixels; several parts of one object are combined
-   by the largest value. Background shapes are each a negative by their own geometry: a circle by its radius trust
+   by the largest value. An outline to correct is encoded `+CORRECTION_LOGIT * c(d)` (3, the trainer's
+   `near_correct`/`correction` families) and is never softened by depth. Background shapes are each a negative by their own geometry: a circle by its radius trust
    (`circle_negative_canvas`, full to half the radius, nothing past `zero_frac`), any other shape and the background
    bitmap by the edge curve (`negative_canvas`). A pixel claimed by both sides is 0 (unknown). For `legacy-flat-v1`
    the object is a flat +8 and every background region -8. `edge-confidence-v7` (not served yet) trusts softened
@@ -101,11 +105,14 @@ other cell is cropped from two or four uploaded tiles and predicted on a throwaw
    for v7 it is a trusted core (`rho <= full_frac`) with the falling zone nearest to it, and cores under 16 px are
    dropped. Islands are numbered 1, 2, ... by decreasing trusted area (prompt pixels for v6, core pixels for v7); past
    `SEGMENTATION_MAX_ISLANDS` (default 16) the smallest are dropped with a warning. A foreground click goes with the
-   island it lies in, a click outside every island with island 1; an island with no click starts from its pixel
-   nearest its centroid. Background clicks, shapes and bitmap go with every island. Clicks alone are one walk, as
+   island it lies in, a click outside every island with island 1; an island with no click gets one at its deepest
+   pixel (largest distance from its edge, the first maximum from low Y then low X), the trainer's click for a mask
+   prompt. The trainer pairs every mask prompt with exactly one click, so a start window that holds a client click is
+   sent no extra one. Background clicks, shapes and bitmap go with every island. Clicks alone are one walk, as
    before. The prompt may cover at most `SEGMENTATION_MAX_MASK_TILES` tiles (`RESOURCE_EXHAUSTED`).
 
-   Each island's pixels are pinned as object in its result, and a core wholly inside them is taken as object without
+   Each seed island's pixels are pinned as object in its result (an outline to correct's are not: the model decides
+   every pixel), and a core wholly inside them is taken as object without
    a prediction (an island that leaves part of a core out is predicted, then its pixels are pinned). Background
    regions are cleared from the result's mask: a polygon, line or ellipse as drawn, a circle out to `zero_frac` of its
    radius.

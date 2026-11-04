@@ -481,6 +481,8 @@ class _Start:
     background: List[Click]
     foreground_shapes: List[Geometry]
     background_shapes: List[Geometry]
+    # correction_feature's shapes: outlines to correct, never mixed with foreground shapes or a foreground bitmap.
+    correction_shapes: List[Geometry] = field(default_factory=list)
 
 
 @dataclass
@@ -1148,7 +1150,8 @@ class SegmentationServicer(SegmentationServiceServicer):
                     plan = [(None, list(start.foreground))]
                 for island, clicks in plan:
                     if not clicks and island is not None:
-                        clicks = [island.interior_point()]
+                        # The trainer pairs a mask prompt with one click at its deepest pixel.
+                        clicks = [island.deepest_point()]
                     walk = GrowthWalk(
                         clicks,
                         start.background,
@@ -1452,7 +1455,11 @@ class SegmentationServicer(SegmentationServiceServicer):
                 context, "mask tiles", request.mask_tile_count, self._limits.max_mask_tiles, "SEGMENTATION_MAX_MASK_TILES"
             )
             return None
-        features = (("foreground", request.foreground_feature), ("background", request.background_feature))
+        features = (
+            ("foreground", request.foreground_feature),
+            ("background", request.background_feature),
+            ("correction", request.correction_feature),
+        )
         for side, feature in features:
             if len(feature.points) > self._limits.max_points:
                 await self._abort_over_limit(
@@ -1464,11 +1471,19 @@ class SegmentationServicer(SegmentationServiceServicer):
                     context, f"{side} shapes", len(feature.shapes), self._limits.max_shapes, "SEGMENTATION_MAX_SHAPES"
                 )
                 return None
+        correction = request.correction_feature
+        if len(correction.shapes) and len(request.foreground_feature.shapes):
+            await context.abort(
+                grpc.StatusCode.INVALID_ARGUMENT,
+                "A prompt is a seed or an outline to correct, not both: send foreground shapes or correction shapes.",
+            )
+            return None
         try:
             return _Start(
+                # A correction's clicks are the object's clicks like any other.
                 foreground=[
                     _click(point, f"foreground point {i}") for i, point in enumerate(request.foreground_feature.points)
-                ],
+                ] + [_click(point, f"correction point {i}") for i, point in enumerate(correction.points)],
                 background=[
                     _click(point, f"background point {i}") for i, point in enumerate(request.background_feature.points)
                 ],
@@ -1478,6 +1493,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                 background_shapes=[
                     parse_shape(shape, f"background shape {i}") for i, shape in enumerate(request.background_feature.shapes)
                 ],
+                correction_shapes=[parse_shape(shape, f"correction shape {i}") for i, shape in enumerate(correction.shapes)],
             )
         except ShapeError as e:
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
@@ -1539,7 +1555,14 @@ class SegmentationServicer(SegmentationServiceServicer):
 
         Rasterizing shapes and labelling the union is CPU work that grows with the prompt, so it runs on the CPU pool.
         """
-        parts = foreground_parts(start.foreground_shapes, mask_tiles.foreground_shape(), self._circle_scale)
+        bitmap = mask_tiles.foreground_shape()
+        if start.correction_shapes and bitmap is not None and not bitmap.empty:
+            await context.abort(
+                grpc.StatusCode.INVALID_ARGUMENT,
+                "A prompt is a seed or an outline to correct, not both: send a foreground bitmap or correction shapes.",
+            )
+            return None
+        parts = foreground_parts(start.foreground_shapes, bitmap, self._circle_scale, start.correction_shapes)
         if not parts:
             return []
         encoder = self._prompt_encoder

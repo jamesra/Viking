@@ -66,11 +66,13 @@ class ForegroundPart:
 
     ``geometry`` is the shape as the client sent it (a circle's TRUE radius), None for the bitmap. ``region`` is the
     pixels the prompt covers for it: a softened circle at its scaled radius, any other shape as drawn, the bitmap's own
-    pixels.
+    pixels. ``role`` is ``"seed"`` (``foreground_feature``, the bitmap) or ``"correction"`` (``correction_feature``: an
+    outline the model may move, encoded as a mask to correct and never taken as object).
     """
 
     region: MaskShape
     geometry: Optional[Geometry] = None
+    role: str = "seed"
 
     @property
     def kind(self) -> str:
@@ -83,17 +85,22 @@ class ForegroundPart:
 
 
 def foreground_parts(
-    shapes: Sequence[Geometry], bitmap: Optional[TiledMaskShape], circle_scale: float
+    shapes: Sequence[Geometry],
+    bitmap: Optional[TiledMaskShape],
+    circle_scale: float,
+    corrections: Sequence[Geometry] = (),
 ) -> List[ForegroundPart]:
-    """The object prompt as parts: each shape, softened (a circle's radius times ``circle_scale``), then the bitmap."""
+    """The object prompt as parts: each shape, softened (a circle's radius times ``circle_scale``), then the bitmap,
+    then the outlines to correct."""
     parts: List[ForegroundPart] = []
-    for geometry in shapes:
-        softened = scaled_circle(geometry, circle_scale) if isinstance(geometry, CircleGeometry) else geometry
-        region = ShapeRegion(softened)
-        if not region.empty:
-            parts.append(ForegroundPart(region=region, geometry=geometry))
-    if bitmap is not None and not bitmap.empty:
-        parts.append(ForegroundPart(region=bitmap))
+    for role, geometries in (("seed", shapes), ("correction", corrections)):
+        for geometry in geometries:
+            softened = scaled_circle(geometry, circle_scale) if isinstance(geometry, CircleGeometry) else geometry
+            region = ShapeRegion(softened)
+            if not region.empty:
+                parts.append(ForegroundPart(region=region, geometry=geometry, role=role))
+        if role == "seed" and bitmap is not None and not bitmap.empty:
+            parts.append(ForegroundPart(region=bitmap))
     return parts
 
 
@@ -104,10 +111,14 @@ class Island(TiledMaskShape):
     ``trust`` is set by encodings that weigh pixels by depth (v7): ``(x0, y0, values_up)``, the island's
     ``SEED_LOGIT``-free trust ``w`` in [0, 1] over the mosaic rectangle starting at ``(x0, y0)``, Y up, 0 outside the
     island and for bitmap pixels.
+
+    An island made only of outlines to correct has the role ``"correction"``: the walk prompts with it but never takes
+    its pixels as object. A request does not mix the two (``SegmentTilesRequest.correction_feature``).
     """
 
     def __init__(self, number: int, area: float, parts: Sequence[ForegroundPart]) -> None:
-        super().__init__(role="seed", complete=True)
+        role = "correction" if parts and all(part.role == "correction" for part in parts) else "seed"
+        super().__init__(role=role, complete=True)
         object.__setattr__(self, "number", int(number))
         object.__setattr__(self, "area", float(area))
         object.__setattr__(self, "parts", list(parts))
