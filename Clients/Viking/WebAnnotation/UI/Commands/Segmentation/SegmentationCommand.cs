@@ -1314,10 +1314,18 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>
         /// Asks the server again for the prompts already placed after a SAM2 request setting
         /// (mask threshold, mask_input) changed. Does nothing before the first click. UI thread only,
-        /// because it reads the prompt lists.
+        /// because it reads the prompt lists. When only the threshold changed (<paramref name="thresholdOnly"/>) and the last
+        /// answer was grown at or below the new value, it is redrawn instead of asked for again.
         /// </summary>
-        public void ResegmentAfterRequestSettingsChange()
+        public void ResegmentAfterRequestSettingsChange(bool thresholdOnly = false)
         {
+            if (thresholdOnly && lastSegmentationResponse.AnswersThreshold(WebAnnotation.Global.AnnotationSettings.SegmentationMaskThreshold))
+            {
+                // The server grew the last answer at this threshold or a lower one: redraw it from its logits.
+                RefreshPolygonsFromLastMask();
+                return;
+            }
+
             if (placementFinished || Deactivated || foregroundPoints.Count == 0)
                 return;
 

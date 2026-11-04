@@ -38,6 +38,9 @@ Documentation/source/Client/versionhistory.rst.
 
 <!-- MarkerOutlineMap (arrow shrunk to 0.85 with a distance ramp in G) + BillboardAnnotation.fx CircleSingleColorTextureLumaOutlinedOverlayEffect; width and blur are LabelOutlineEffect.OutlineWidth / OutlineBlur in screen pixels. Viking.exe is now built x64 and packed --runtime win-x64. -->
 
+* **Raising the SAM2 threshold redraws at once.** Moving the **SAM2 threshold** slider up now redraws the outlines on screen from the answer Viking already has, for the segmentation command and for auto-polygonize proposals, instead of asking the segmentation server again. Moving it below the threshold an answer was grown at still asks again. Answers from a segmentation server older than this change are always asked for again.
+<!-- SegmentationResponse.growth_threshold (gRPC_Protos 974e020, server Viking dev 65aff1ae): the logits answer any threshold at or above it. SegmentationViewportSession.DecodeSegmentField decodes again per threshold; AutoPolygonizeMaskOverlay records the threshold its soft bytes are centred on and re-centres them (SegmentationLogitField.Recentre) when traced. -->
+
 ## 1.2.136 — 2026-11-02 (release)
 
 * **Fix: Go To Location zoom on scaled sections.** Jumping to a location now zooms to its size as drawn in the volume. On sections that map into the volume at a different scale, such as CMP sections, it used the size on the section image and opened far too close, often at the closest zoom.

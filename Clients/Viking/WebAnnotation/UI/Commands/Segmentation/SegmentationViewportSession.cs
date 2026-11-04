@@ -809,19 +809,36 @@ namespace WebAnnotation.UI.Commands.Segmentation
             };
         }
 
-        private readonly ConditionalWeakTable<SegmentationServiceTypes.SegmentResult, SegmentField> decodedFields = new();
+        /// <summary>The last decode of one segment; replaced when the mask threshold changes.</summary>
+        private sealed class DecodedFieldSlot
+        {
+            public SegmentField? Field;
+        }
+
+        private readonly ConditionalWeakTable<SegmentationServiceTypes.SegmentResult, DecodedFieldSlot> decodedFields = new();
 
         /// <summary>
-        /// The soft field of <paramref name="segment"/>'s logits at their native resolution, with the boundary at the mask
-        /// threshold the request used, decoded once. Polygonizing and the mask overlay both need the same samples, and the
-        /// decode is the costly part of a large mask. The returned array is shared: callers must not write to it (the
+        /// The soft field of <paramref name="segment"/>'s logits at their native resolution, with the boundary at the current
+        /// mask threshold, decoded once per threshold. Polygonizing and the mask overlay both need the same samples, and the
+        /// decode is the costly part of a large mask. A threshold change decodes again, so a response the server grew at a
+        /// lower threshold is redrawn without a new request. The returned array is shared: callers must not write to it (the
         /// polygonizer and overlay only read).
         /// </summary>
-        public SegmentField DecodeSegmentField(SegmentationServiceTypes.SegmentResult segment) =>
-            decodedFields.GetValue(segment, s => SegmentationLogitField.Decode(
-                s,
-                WebAnnotation.Global.AnnotationSettings.SegmentationMaskThreshold,
-                WebAnnotation.Global.AnnotationSettings.SegmentationSmoothingSigma));
+        public SegmentField DecodeSegmentField(SegmentationServiceTypes.SegmentResult segment)
+        {
+            double threshold = WebAnnotation.Global.AnnotationSettings.SegmentationMaskThreshold;
+            DecodedFieldSlot slot = decodedFields.GetOrCreateValue(segment);
+            SegmentField? decoded = Volatile.Read(ref slot.Field);
+            if (decoded is not null && Math.Abs(decoded.Threshold - threshold) < 1e-6)
+                return decoded;
+
+            decoded = SegmentationLogitField.Decode(
+                segment,
+                threshold,
+                WebAnnotation.Global.AnnotationSettings.SegmentationSmoothingSigma);
+            Volatile.Write(ref slot.Field, decoded);
+            return decoded;
+        }
 
         /// <summary>
         /// Reads the camera rectangle on the UI dispatcher so off-UI encode/publish can compare against the live view.

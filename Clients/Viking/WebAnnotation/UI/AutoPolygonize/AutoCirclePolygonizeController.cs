@@ -369,14 +369,36 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
+        /// True when every proposal traced from a mask can be redrawn at <paramref name="threshold"/>: each of its fields was
+        /// grown at that threshold or a lower one. False when any cannot, so the view is asked for again.
+        /// </summary>
+        private bool StoredMasksAnswerThreshold(double threshold)
+        {
+            lock (proposalLock)
+            {
+                return DistinctProposalsUnlocked()
+                    .Where(proposal => proposal.MaskSources.Count > 0)
+                    .All(proposal => proposal.MaskSources.All(source => source.Mask.AnswersThreshold(threshold)));
+            }
+        }
+
+        /// <summary>
         /// A SAM2 request setting (mask threshold, mask_input) changed, so every cached answer was
-        /// made with the old value. Cancels in-flight work, forgets which circles were already
+        /// made with the old value. When only the threshold changed (<paramref name="thresholdOnly"/>) and every proposal's
+        /// field was grown at or below the new value, the proposals are retraced instead. Cancels in-flight work, forgets which circles were already
         /// segmented, and restarts the idle settle so the current view is requested again.
         /// Existing outlines stay up until the new batch replaces them, and the uploaded images
         /// stay valid, so nothing is re-uploaded.
         /// </summary>
-        public void OnSegmentationRequestSettingsChanged()
+        public void OnSegmentationRequestSettingsChanged(bool thresholdOnly = false)
         {
+            if (thresholdOnly && StoredMasksAnswerThreshold(Global.AnnotationSettings.SegmentationMaskThreshold))
+            {
+                // Every proposal on screen was grown at or below the new threshold: retrace them from their fields.
+                RefreshFromStoredMasks();
+                return;
+            }
+
             CancelProcessPhase();
             CancelUploadPhase();
             cache.Clear();

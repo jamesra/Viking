@@ -880,11 +880,12 @@ namespace WebAnnotation
         }
 
         /// <summary>
-        /// Re-segments the current view after a SAM2 request setting (mask threshold, mask_input) changes.
+        /// Re-segments the current view after a SAM2 request setting (mask threshold, mask_input) changes; after a threshold
+        /// change alone (<paramref name="thresholdOnly"/>) proposals the server grew at or below it are retraced instead.
         /// </summary>
-        public void OnSegmentationRequestSettingsChanged()
+        public void OnSegmentationRequestSettingsChanged(bool thresholdOnly = false)
         {
-            autoPolygonizeController?.OnSegmentationRequestSettingsChanged();
+            autoPolygonizeController?.OnSegmentationRequestSettingsChanged(thresholdOnly);
         }
 
         /// <summary>

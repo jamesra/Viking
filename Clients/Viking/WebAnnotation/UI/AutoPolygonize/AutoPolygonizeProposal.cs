@@ -64,6 +64,18 @@ namespace WebAnnotation.UI.AutoPolygonize
         public Geometry.Rectangle TraceBounds =>
             SegmentationMaskPolygonizer.CenterSampleBounds(WorldBounds, Width, Height, PixelScale);
 
+        /// <summary>
+        /// The mask threshold, in logits, the soft bytes are centred on (127.5 is this logit). NaN for a mask PNG, whose bytes
+        /// are not logits.
+        /// </summary>
+        public double Threshold { get; }
+
+        /// <summary>
+        /// The lowest threshold the field may be drawn at: the server's <c>growth_threshold</c> (for a merged field, the highest
+        /// of its parts'). Null when the server did not say (an older server), so a threshold change asks again.
+        /// </summary>
+        public double? GrowthThreshold { get; }
+
         public AutoPolygonizeMaskOverlay(
             byte[] maskData,
             int width,
@@ -71,7 +83,9 @@ namespace WebAnnotation.UI.AutoPolygonize
             Geometry.Rectangle worldBounds,
             int pixelScale = 1,
             Func<Polygon, Polygon>? edgeRefiner = null,
-            byte[]? serverMaskData = null)
+            byte[]? serverMaskData = null,
+            double threshold = double.NaN,
+            double? growthThreshold = null)
         {
             MaskData = maskData;
             ServerMaskData = serverMaskData is not null && serverMaskData.Length == maskData.Length ? serverMaskData : null;
@@ -80,6 +94,33 @@ namespace WebAnnotation.UI.AutoPolygonize
             WorldBounds = worldBounds;
             PixelScale = Math.Max(1, pixelScale);
             EdgeRefiner = edgeRefiner;
+            Threshold = threshold;
+            GrowthThreshold = growthThreshold;
+        }
+
+        /// <summary>True when the field can be drawn at <paramref name="threshold"/> without asking the server again.</summary>
+        public bool AnswersThreshold(double threshold) =>
+            !double.IsNaN(Threshold) && GrowthThreshold is double grown && threshold >= grown - 1e-4;
+
+        /// <summary>
+        /// This field with its bytes centred on <paramref name="threshold"/> (<see cref="SegmentationLogitField.Recentre"/>),
+        /// or this field itself when it already is, or when its bytes are not logits.
+        /// </summary>
+        public AutoPolygonizeMaskOverlay AtThreshold(double threshold)
+        {
+            if (double.IsNaN(Threshold) || double.IsNaN(threshold) || Math.Abs(threshold - Threshold) < 1e-6)
+                return this;
+
+            return new AutoPolygonizeMaskOverlay(
+                SegmentationLogitField.Recentre(MaskData, Threshold, threshold),
+                Width,
+                Height,
+                WorldBounds,
+                PixelScale,
+                EdgeRefiner,
+                ServerMaskData is null ? null : SegmentationLogitField.Recentre(ServerMaskData, Threshold, threshold),
+                threshold,
+                GrowthThreshold);
         }
 
         /// <summary>
@@ -121,7 +162,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                 worldBounds,
                 field.Scale,
                 session.CreateEdgeRefiner(response),
-                field.ServerData);
+                field.ServerData,
+                field.Threshold,
+                response.HasGrowthThreshold ? response.GrowthThreshold : null);
         }
 
         /// <summary>
@@ -151,6 +194,13 @@ namespace WebAnnotation.UI.AutoPolygonize
                 return null;
             if (masks.Count == 1)
                 return masks[0];
+
+            // The max of bytes is the max of logits only when every part's bytes are centred on the same threshold.
+            double threshold = masks[0].Threshold;
+            masks = [.. masks.Select(mask => mask.AtThreshold(threshold))];
+            double? growthThreshold = masks.All(mask => mask.GrowthThreshold.HasValue)
+                ? masks.Max(mask => mask.GrowthThreshold!.Value)
+                : null;
 
             Geometry.Rectangle bounds = masks[0].WorldBounds;
             for (int i = 1; i < masks.Count; i++)
@@ -208,7 +258,9 @@ namespace WebAnnotation.UI.AutoPolygonize
                 bounds,
                 finest.PixelScale,
                 masks.Select(mask => mask.EdgeRefiner).FirstOrDefault(refiner => refiner is not null),
-                mergedServer);
+                mergedServer,
+                threshold,
+                growthThreshold);
         }
 
         private static byte Sample(AutoPolygonizeMaskOverlay mask, byte[] data, double worldX, double worldY)
@@ -250,14 +302,15 @@ namespace WebAnnotation.UI.AutoPolygonize
         public IReadOnlyList<Geometry.Vector2> KeepPoints { get; }
 
         /// <summary>
-        /// Traces this field at <paramref name="edgeCleanupRadius"/>. The mask rectangle is the
+        /// Traces this field at <paramref name="edgeCleanupRadius"/> and the current mask threshold. The mask rectangle is the
         /// viewport, which matches <see cref="SegmentationViewportSession.GetSegmentWorldBounds"/>
         /// for a segment crop (pixel Y is top-origin, world Y is up).
         /// </summary>
         public Polygon? CreatePolygon(double holeDropFraction, int edgeCleanupRadius)
         {
+            AutoPolygonizeMaskOverlay mask = Mask.AtThreshold(Global.AnnotationSettings.SegmentationMaskThreshold);
             IReadOnlyList<Polygon> polygons = SegmentationMaskPolygonizer.CreatePolygons(
-                Mask.MaskData,
+                mask.MaskData,
                 Mask.Width,
                 Mask.Height,
                 0,
@@ -315,14 +368,17 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (traced is not null)
                     parts.Add(AutoPolygonizeSelection.FitMinErrorCurvePolygon(traced, simplifyTolerance, mustContain));
 
-                // The picture is the server's mask; cleanup and snapping change only the outline.
+                // The picture is the server's mask at the current threshold; cleanup and snapping change only the outline.
+                AutoPolygonizeMaskOverlay current = source.Mask.AtThreshold(Global.AnnotationSettings.SegmentationMaskThreshold);
                 cleaned.Add(new AutoPolygonizeMaskOverlay(
-                    source.Mask.DisplayData,
-                    source.Mask.Width,
-                    source.Mask.Height,
-                    source.Mask.WorldBounds,
-                    source.Mask.PixelScale,
-                    source.Mask.EdgeRefiner));
+                    current.DisplayData,
+                    current.Width,
+                    current.Height,
+                    current.WorldBounds,
+                    current.PixelScale,
+                    current.EdgeRefiner,
+                    threshold: current.Threshold,
+                    growthThreshold: current.GrowthThreshold));
             }
 
             if (fixedPolygons is not null)

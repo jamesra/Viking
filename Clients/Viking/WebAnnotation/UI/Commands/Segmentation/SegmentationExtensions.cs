@@ -11,6 +11,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
     public static class SegmentationExtensions
     {
         /// <summary>
+        /// True when <paramref name="response"/>'s logits can be drawn at <paramref name="threshold"/> without asking again:
+        /// the server grew it at that threshold or a lower one (<c>growth_threshold</c>). False for a response from a server
+        /// older than that field, which grew at the threshold of its request only.
+        /// </summary>
+        internal static bool AnswersThreshold(this SegmentationServiceTypes.SegmentationResponse? response, double threshold) =>
+            response is not null && response.HasGrowthThreshold && threshold >= response.GrowthThreshold - 1e-4;
+
+        /// <summary>
         /// The islands of <paramref name="response"/> in island order (1, the largest trusted area, first), or empty when it has
         /// none. A server numbers its islands 1.. in the order it sends them; sorting keeps that order however they arrive, and
         /// the sort is stable so islands with the same number keep the order they were sent in.

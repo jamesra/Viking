@@ -736,8 +736,9 @@ namespace WebAnnotation
 
             /// <summary>
             /// Logit a pixel must exceed for SAM2 to call it object, sent with every SegmentTiles request.
-            /// 0 is SAM2's own default; higher values shrink the mask. A change re-segments the active
-            /// segmentation command and the auto-polygonize view once the value has stopped moving.
+            /// 0 is SAM2's own default; higher values shrink the mask. Once the value has stopped moving, answers the
+            /// server grew at or below it (<c>growth_threshold</c>) are redrawn from their logits; anything else is
+            /// segmented again (the active segmentation command and the auto-polygonize view).
             /// </summary>
             public static double SegmentationMaskThreshold
             {
@@ -757,7 +758,7 @@ namespace WebAnnotation
                     Properties.Settings.Default.SegmentationMaskThreshold = clamped;
                     Properties.Settings.Default.Save();
                     UI.AnnotationModeToolbar.SyncMaskThreshold();
-                    ScheduleSegmentationRequestSettingsRefresh();
+                    ScheduleSegmentationRequestSettingsRefresh(thresholdOnly: true);
                 }
             }
 
@@ -855,12 +856,27 @@ namespace WebAnnotation
                 }
             }
 
+            private static readonly object _segmentationRefreshLock = new();
+
+            /// <summary>True while a refresh waits in <see cref="_segmentationRequestSettingsTimer"/>.</summary>
+            private static bool _segmentationRefreshPending;
+
+            /// <summary>True while every change in the waiting refresh was to the threshold alone.</summary>
+            private static bool _segmentationRefreshThresholdOnly;
+
             /// <summary>
-            /// Waits for the mask-threshold slider to stop moving, then re-requests on the UI thread.
-            /// Each change restarts the wait so a drag sends one request, not one per tick.
+            /// Waits for the mask-threshold slider to stop moving, then redraws or re-requests on the UI thread.
+            /// Each change restarts the wait so a drag sends one request, not one per tick. A wait that includes any change
+            /// other than the threshold (<paramref name="thresholdOnly"/> false) always re-requests.
             /// </summary>
-            private static void ScheduleSegmentationRequestSettingsRefresh()
+            private static void ScheduleSegmentationRequestSettingsRefresh(bool thresholdOnly = false)
             {
+                lock (_segmentationRefreshLock)
+                {
+                    _segmentationRefreshThresholdOnly = (!_segmentationRefreshPending || _segmentationRefreshThresholdOnly) && thresholdOnly;
+                    _segmentationRefreshPending = true;
+                }
+
                 _segmentationRequestSettingsTimer?.Dispose();
                 _segmentationRequestSettingsTimer = new System.Threading.Timer(
                     _ => RefreshAfterSegmentationRequestSettingsChange(),
@@ -871,6 +887,13 @@ namespace WebAnnotation
 
             private static void RefreshAfterSegmentationRequestSettingsChange()
             {
+                bool thresholdOnly;
+                lock (_segmentationRefreshLock)
+                {
+                    thresholdOnly = _segmentationRefreshThresholdOnly;
+                    _segmentationRefreshPending = false;
+                }
+
                 var overlay = AnnotationOverlay.CurrentOverlay;
                 if (overlay is null)
                     return;
@@ -881,9 +904,9 @@ namespace WebAnnotation
 
                 void Refresh()
                 {
-                    overlay.OnSegmentationRequestSettingsChanged();
+                    overlay.OnSegmentationRequestSettingsChanged(thresholdOnly);
                     if (parent.CurrentCommand is SegmentationCommand command)
-                        command.ResegmentAfterRequestSettingsChange();
+                        command.ResegmentAfterRequestSettingsChange(thresholdOnly);
                 }
 
                 if (parent.InvokeRequired)
