@@ -12,7 +12,7 @@ namespace WebAnnotationTests.Commands
 {
     /// <summary>
     /// The client side of <c>SegmentLocation</c>: which volumes the server reads, the mosaic result redrawn on the volume grid
-    /// (<see cref="SegmentationFieldResampler"/>), the half-precision encoding that redraw writes, and the reviewed outline.
+    /// (<see cref="SegmentationFieldResampler"/>), the half-precision encoding that redraw writes, and a person's traced outline.
     /// </summary>
     [TestClass]
     public class SegmentLocationClientTests
@@ -145,30 +145,50 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual(2, mosaic.Segments.Count, "the mosaic response is not changed");
         }
 
-        [TestMethod]
-        public void TheReviewedOutlineIsMappedIntoViewerSpace()
+        private static SegmentationServiceTypes.SegmentationResponse Traced()
         {
             SegmentationServiceTypes.SegmentationResponse response = new()
             {
-                Reviewed = new SegmentationServiceTypes.ReviewedOutline
+                RequestId = 3,
+                ManualTrace = new SegmentationServiceTypes.ManualTrace
                 {
                     LocationId = 5,
-                    State = "approved",
+                    Tracer = "Ann",
                     Outline = new GeometryProto.Shape { Polygon = new GeometryProto.Polygon { Exterior = new GeometryProto.Ring() } }
                 }
             };
             foreach ((double x, double y) in new[] { (0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0) })
-                response.Reviewed.Outline.Polygon.Exterior.Points.Add(new GeometryProto.Vector2 { X = x, Y = y });
+                response.ManualTrace.Outline.Polygon.Exterior.Points.Add(new GeometryProto.Vector2 { X = x, Y = y });
+            return response;
+        }
 
-            Polygon? mosaic = SegmentationViewportSession.ReviewedOutline(response, null);
-            Polygon? volume = SegmentationViewportSession.ReviewedOutline(response, new ScaleTransform(2, new Vector2(100, 0)));
+        [TestMethod]
+        public void TheTracedOutlineIsMappedIntoViewerSpace()
+        {
+            SegmentationServiceTypes.SegmentationResponse response = Traced();
+
+            Polygon? mosaic = SegmentationViewportSession.TracedOutline(response, null);
+            Polygon? volume = SegmentationViewportSession.TracedOutline(response, new ScaleTransform(2, new Vector2(100, 0)));
 
             Assert.IsNotNull(mosaic);
             Assert.AreEqual(100, mosaic.Area, 1e-9);
             Assert.IsNotNull(volume);
             Assert.AreEqual(400, volume.Area, 1e-9);
             Assert.AreEqual(100, volume.BoundingBox.Left, 1e-9);
-            Assert.IsNull(SegmentationViewportSession.ReviewedOutline(new SegmentationServiceTypes.SegmentationResponse(), null));
+            Assert.IsNull(SegmentationViewportSession.TracedOutline(new SegmentationServiceTypes.SegmentationResponse(), null));
+        }
+
+        [TestMethod]
+        public void ATracedAnswerHasNoIslandsToRedrawAndKeepsItsTrace()
+        {
+            SegmentationServiceTypes.SegmentationResponse response = Traced();
+
+            SegmentationServiceTypes.SegmentationResponse volume =
+                SegmentationFieldResampler.ToVolume(response, new ScaleTransform(2, new Vector2(100, 0)));
+
+            Assert.AreEqual(0, volume.Segments.Count);
+            Assert.AreEqual(3ul, volume.RequestId);
+            Assert.IsNotNull(SegmentationViewportSession.TracedOutline(response, null), "the trace is read from the mosaic answer");
         }
     }
 }

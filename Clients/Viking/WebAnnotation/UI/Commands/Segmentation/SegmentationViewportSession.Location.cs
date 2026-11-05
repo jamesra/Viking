@@ -1,6 +1,7 @@
 using Geometry;
 using Grpc.Core;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -15,12 +16,15 @@ namespace WebAnnotation.UI.Commands.Segmentation
     internal sealed partial class SegmentationViewportSession
     {
         /// <summary>
-        /// A <c>SegmentLocation</c> answer for the viewer: the segmentation on the viewer's grid, and the outline a person
-        /// reviewed for the location, when the server holds one, in viewer space.
+        /// A <c>SegmentLocation</c> answer for the viewer: the segmentation on the viewer's grid, or the outline a person
+        /// traced for the location (the server's manual trace) in viewer space.
         /// </summary>
-        /// <param name="Response">The islands' logits on the viewer's grid, like a <see cref="SegmentAsync"/> response.</param>
-        /// <param name="Reviewed">The reviewed outline in viewer space; null when there is none or it does not map.</param>
-        internal sealed record LocationSegmentation(SegmentationResponse Response, Polygon? Reviewed);
+        /// <param name="Response">
+        /// The islands' logits on the viewer's grid, like a <see cref="SegmentAsync"/> response; no islands when the answer
+        /// is a trace.
+        /// </param>
+        /// <param name="Traced">The traced outline in viewer space; null when the answer is the model's or it does not map.</param>
+        internal sealed record LocationSegmentation(SegmentationResponse Response, Polygon? Traced);
 
         /// <summary>
         /// Segments a saved location the server builds the prompt for (<c>SegmentLocation</c>): the server reads the location,
@@ -71,10 +75,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 SegmentationResponse response = transform is null
                     ? mosaic
                     : await Task.Run(() => SegmentationFieldResampler.ToVolume(mosaic, transform), cancellationToken).ConfigureAwait(false);
-                Polygon? reviewed = ReviewedOutline(mosaic, transform);
+                Polygon? traced = TracedOutline(mosaic, transform);
                 SegmentationDiag.Log(
                     $"SegmentLocation location={locationId} req={requestId} cache={(mosaic.Cache is null ? "miss" : "hit")} " +
-                    $"reviewed={mosaic.Reviewed?.State ?? "none"} islands={mosaic.Segments.Count}->{response.Segments.Count} " +
+                    $"traced={(mosaic.ManualTrace is null ? "no" : $"by {mosaic.ManualTrace.Tracer}")} " +
+                    $"islands={mosaic.Segments.Count}->{response.Segments.Count} " +
                     $"rpc={rpcMs}ms resample={timer.ElapsedMilliseconds - rpcMs}ms");
 
                 resultContexts.Record(response, downsample);
@@ -89,7 +94,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
                 ClearSkip();
                 SegmentationServiceHealth.ReportSuccess();
-                return new LocationSegmentation(response, reviewed);
+                return new LocationSegmentation(response, traced);
             }
             catch (Exception ex)
             {
@@ -165,12 +170,39 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// The reviewed outline <paramref name="response"/> carries, mapped from mosaic into viewer space when the viewer draws
+        /// Tells the server the locations were written to the annotation database, so it drops their cached answers: the
+        /// model's results and a person's trace (<c>ForgetLocations</c>). Best effort: a failure is logged, and the cached
+        /// answers no longer match the edited locations anyway.
+        /// </summary>
+        public async Task ForgetLocationsAsync(long annotationContextId, IReadOnlyCollection<long> locationIds)
+        {
+            if (grpcClient is null || locationIds.Count == 0)
+                return;
+
+            ForgetLocationsRequest request = new() { AnnotationContextId = annotationContextId };
+            request.LocationIds.AddRange(locationIds);
+            try
+            {
+                ForgetLocationsResponse reply = await grpcClient.ForgetLocationsAsync(
+                    request,
+                    deadline: DateTime.UtcNow.AddSeconds(ForgetLocationsSeconds)).ResponseAsync.ConfigureAwait(false);
+                SegmentationDiag.Log($"ForgetLocations context={annotationContextId} locations={string.Join(",", locationIds)} removed={reply.Removed}");
+            }
+            catch (RpcException ex)
+            {
+                SegmentationDiag.Log($"ForgetLocations context={annotationContextId} locations={string.Join(",", locationIds)} failed: {ex.Status.Detail}");
+            }
+        }
+
+        private const int ForgetLocationsSeconds = 30;
+
+        /// <summary>
+        /// The traced outline <paramref name="response"/> carries, mapped from mosaic into viewer space when the viewer draws
         /// in volume space (<paramref name="transform"/> set); null when there is none, it is not a polygon, or it does not map.
         /// </summary>
-        internal static Polygon? ReviewedOutline(SegmentationResponse response, IVolumeToSectionTransform? transform)
+        internal static Polygon? TracedOutline(SegmentationResponse response, IVolumeToSectionTransform? transform)
         {
-            if (response.Reviewed?.Outline?.Polygon is not Viking.gRPC.Geometry.V1.Polygon outline ||
+            if (response.ManualTrace?.Outline?.Polygon is not Viking.gRPC.Geometry.V1.Polygon outline ||
                 outline.Exterior is null || outline.Exterior.Points.Count < 3)
             {
                 return null;
@@ -188,8 +220,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
             catch (ArgumentException ex)
             {
-                // A ring that crosses itself or repeats points: show the model's mask instead.
-                SegmentationDiag.Log($"Reviewed outline of location {response.Reviewed.LocationId} skipped: {ex.Message}");
+                // A ring that crosses itself or repeats points: nothing is proposed, as for an empty mask.
+                SegmentationDiag.Log($"Traced outline of location {response.ManualTrace.LocationId} skipped: {ex.Message}");
                 return null;
             }
 
