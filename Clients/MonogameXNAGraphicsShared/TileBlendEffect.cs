@@ -1,3 +1,5 @@
+#nullable enable
+
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -30,6 +32,23 @@ namespace VikingXNA
             }
         }
 
+        private readonly EffectParameter? _DisplayMin;
+        private readonly EffectParameter? _DisplayMax;
+
+        /// <summary>
+        /// The window of texture sample values (0 to 1) shown from black to white. Ordinary tiles use 0 to 1. Crushed tiles hold
+        /// codes, so their window expands the codes to the screen. Does nothing for a shader built without the window.
+        /// </summary>
+        public (float Min, float Max) DisplayWindow
+        {
+            get => (_DisplayMin?.GetValueSingle() ?? 0f, _DisplayMax?.GetValueSingle() ?? 1f);
+            set
+            {
+                _DisplayMin?.SetValue(value.Min);
+                _DisplayMax?.SetValue(value.Max);
+            }
+        }
+
         public Matrix WorldViewProjMatrix
         {
             get => _WorldViewProjMatrix.GetValueMatrix();
@@ -56,6 +75,8 @@ namespace VikingXNA
 
             _TileColor = effect.Parameters["TileColor"];
             _TileHue = effect.Parameters["TileHue"];
+            _DisplayMin = effect.Parameters["DisplayMin"];
+            _DisplayMax = effect.Parameters["DisplayMax"];
 
             effect.CurrentTechnique = effect.Techniques["TileLayoutToGreyscaleEffect"];
 

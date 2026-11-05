@@ -163,6 +163,15 @@ namespace Viking.UI
         /// </summary>
         public static bool ShowTileMesh = false;
 
+        /// <summary>
+        /// Brightness multiplier for crushed sections. The display window of the section's codes shrinks by this factor toward its
+        /// black point, so 2 shows the codes twice as bright. Tiles that are not crushed ignore it.
+        /// </summary>
+        public static double CrushContrast = 1.0;
+
+        public const double MinCrushContrast = 0.25;
+        public const double MaxCrushContrast = 16.0;
+
         private static VolumeViewModel? _volume = null;
 
         /// <summary>

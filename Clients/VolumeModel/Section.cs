@@ -84,6 +84,12 @@ namespace Viking.VolumeModel
         /// </summary>
         public SortedList<string, Pyramid> ImagePyramids = [];
 
+        /// <summary>
+        /// Noise-crush parameters of the channels (pyramid or tileset names) whose tiles store codes, from the Crush* attributes
+        /// in VikingXML. A channel that is missing here draws as ordinary intensity tiles.
+        /// </summary>
+        public Dictionary<string, CrushInfo> CrushedChannels { get; } = new(StringComparer.OrdinalIgnoreCase);
+
         public string DefaultPyramid = "";
         public string DefaultTileset = "";
         public string DefaultPyramidTransform = "";
@@ -244,6 +250,9 @@ namespace Viking.VolumeModel
                             continue;
                         }
 
+                        if (CrushInfo.FromElement(elem) is CrushInfo pyramidCrush)
+                            this.CrushedChannels[pyramid.Name] = pyramidCrush;
+
                         if (!this.ImagePyramids.ContainsKey(pyramid.Name))
                             this.ImagePyramids.Add(pyramid.Name, pyramid);
                         else
@@ -269,6 +278,9 @@ namespace Viking.VolumeModel
                             System.Diagnostics.Trace.WriteLine($"Unable to parse Tileset element of Section #{this.Number}");
                             continue;
                         }
+
+                        if (CrushInfo.FromElement(elem) is CrushInfo tilesetCrush)
+                            this.CrushedChannels[tilegridmapping.Name] = tilesetCrush;
 
                         this.AddTileset(tilegridmapping);
                         DefaultTileset = tilegridmapping.Name;

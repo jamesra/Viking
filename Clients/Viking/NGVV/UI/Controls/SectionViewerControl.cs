@@ -2218,6 +2218,27 @@ namespace Viking.UI.Controls
         }
 
         /// <summary>
+        /// The window of texture samples (0 to 1) that shows a channel from black to white. A crushed channel's tiles hold codes, so
+        /// the window is its display range, narrowed by <see cref="State.CrushContrast"/>. Every other channel, and a crushed
+        /// channel in a storage Viking does not decode, uses the whole range, which leaves the tile unchanged.
+        /// </summary>
+        internal static (float Min, float Max) CrushDisplayWindowFor(Section section, string channel)
+        {
+            if (!section.CrushedChannels.TryGetValue(channel, out CrushInfo? crush))
+                return (0f, 1f);
+
+            if (!crush.IsSupported)
+            {
+                Trace.WriteLine($"Section {section.Number} channel {channel} stores {crush.Bits}-bit crushed codes, which Viking cannot display yet; drawing the tiles unscaled.", "Crush");
+                return (0f, 1f);
+            }
+
+            (float min, float max) = crush.DefaultWindow();
+            double contrast = Math.Min(Math.Max(State.CrushContrast, State.MinCrushContrast), State.MaxCrushContrast);
+            return (min, (float)(min + ((max - min) / contrast)));
+        }
+
+        /// <summary>
         /// Draws the tiles of one section and channel into a viewport-sized render target.
         /// </summary>
         /// <param name="graphicsDevice">Device that creates and draws the render target.</param>
@@ -2244,6 +2265,8 @@ namespace Viking.UI.Controls
                 StartMappingInitIfNeeded(section.Number, mapping);
                 return null;
             }
+
+            tileLayoutEffect.DisplayWindow = CrushDisplayWindowFor(section, channel);
 
             int[] DownsamplesToRender = CalculateDownsamplesToRender(mapping, scene.Camera.Downsample);
 
@@ -2798,6 +2821,23 @@ namespace Viking.UI.Controls
             }
         }
 
+        /// <summary>
+        /// Ctrl+Shift+Plus brightens and Ctrl+Shift+Minus darkens crushed sections by a quarter octave of window width; Ctrl+Shift+0 resets.
+        /// Sections that are not crushed do not change.
+        /// </summary>
+        private void AdjustCrushContrast(Keys key)
+        {
+            double contrast = key switch
+            {
+                Keys.Oemplus or Keys.Add => State.CrushContrast * Math.Pow(2, 0.25),
+                Keys.OemMinus or Keys.Subtract => State.CrushContrast / Math.Pow(2, 0.25),
+                _ => 1.0
+            };
+
+            State.CrushContrast = Math.Min(Math.Max(contrast, State.MinCrushContrast), State.MaxCrushContrast);
+            this.Invalidate();
+        }
+
         protected override void OnKeyDown(KeyEventArgs e)
         {
             switch (e.KeyCode)
@@ -2818,6 +2858,18 @@ namespace Viking.UI.Controls
                 case Keys.Space:
                     SetOverlayVisiblity(e.Control, true);
                     this.Invalidate();
+                    break;
+                case Keys.Oemplus:
+                case Keys.Add:
+                case Keys.OemMinus:
+                case Keys.Subtract:
+                case Keys.D0:
+                case Keys.NumPad0:
+                    if (e.Control && e.Shift)
+                    {
+                        AdjustCrushContrast(e.KeyCode);
+                        e.Handled = true;
+                    }
                     break;
                 case Keys.Control:
                 case Keys.ControlKey:

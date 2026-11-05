@@ -10,6 +10,16 @@ float4 TileColor;
 
 float TileHue;
 
+//Display window of the texture sample, in texture units (0 to 1).  A sample at DisplayMin shows black and one at DisplayMax shows white.
+//Ordinary tiles use 0 to 1, which leaves them unchanged.  Crushed tiles hold codes, so the window expands them.
+float DisplayMin = 0;
+float DisplayMax = 1;
+
+float ApplyDisplayWindow(float sampleValue)
+{
+	return saturate((sampleValue - DisplayMin) / max(DisplayMax - DisplayMin, 0.000001));
+}
+
 uniform const sampler TextureSampler : register(s0) = sampler_state
 {
 	Texture = (Texture);
@@ -65,9 +75,10 @@ TileBlendPixelShaderOutput TileBlendToGreyscalePixelShaderFunction(VertexShaderO
 	float XDist;
 	float YDist;
     float4 color = tex2D(TextureSampler, input.TexCoord); //Input is a luminance texture
-	output.Color.r = color.a;
-	output.Color.g = color.a;
-	output.Color.b = color.a; 
+	float shown = ApplyDisplayWindow(color.a);
+	output.Color.r = shown;
+	output.Color.g = shown;
+	output.Color.b = shown;
 	output.Color.a = 1;
 
 	XDist = (input.TexCoord.x - 0.5);
@@ -102,9 +113,10 @@ TileBlendPixelShaderOutput TileBlendToHSVPixelShaderFunction(VertexShaderOutput 
 	float Value; 
 
 	//Convert to color from greyscale and write to output
-	Color.r = Color.a * TileColor.r;
-	Color.g = Color.a * TileColor.g; 
-	Color.b = Color.a * TileColor.b;
+	float shown = ApplyDisplayWindow(Color.a);
+	Color.r = shown * TileColor.r;
+	Color.g = shown * TileColor.g;
+	Color.b = shown * TileColor.b;
 
 	float maxC = max(Color.r, Color.g); 
 	maxC = max(maxC, Color.b); 
