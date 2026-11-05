@@ -353,6 +353,17 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
   the new outside shadow (5 px, black around light links, white around dark) are composited as plain RGB; the fill keeps
   the luma blend it had at alpha 64 ($\alpha_\text{luma} = 0.75$) so raising opacity does not change its colour. Where:
   `PinchedLineShaders.fx` `MyPSPinchedHSV`.
+- **2026-11-05 A person's gallery trace is proposed as drawn; saving a location clears what the server cached for it.**
+  A retraced converter card belongs in the annotation database, which the gallery cannot write yet (WCF refuses its
+  token; the gRPC annotation service checks no per-volume rights; both need the client to compute the volume shape from
+  the stos transforms). So the segmentation server keeps it as the location's cached answer (`manual_trace`, a polygon
+  and no logits), and Viking proposes that polygon mapped into viewer space with no mask, so a threshold change never
+  retraces it. After Accept saves a location on a volume the server reads, Viking calls `ForgetLocations`, which drops
+  the trace and every model row of the location: they described the location before the save. Best effort: a failed
+  call leaves rows that no longer match the location's LastModified. Rejected: proposing a reviewed outline alongside
+  the model's logits (mixed human and model output in one answer). Later: a direct writer from the gallery, which would
+  then call ForgetLocations itself. Where: `SegmentationViewportSession.Location.cs`,
+  `AutoCirclePolygonizeController.cs` (`ForgetSavedLocations`); gRPC_Protos `14dd53e`, server Viking dev `1756b490`.
 - **2026-11-05 A location-built segmentation is resampled onto the volume grid, not mapped as a polygon.** The server's
   `SegmentLocation` answer is a logit field on the mosaic grid at downsample 1. Auto-polygonize draws, retraces at a new
   threshold and merges same-cell proposals (pixel-wise max of logits on a shared canvas) in viewer space, so mapping only the

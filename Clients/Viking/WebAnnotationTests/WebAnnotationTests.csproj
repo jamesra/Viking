@@ -129,6 +129,7 @@
     <Compile Include="Commands\SegmentationCameraPolicyTests.cs" />
     <Compile Include="Commands\SegmentationMaskPolygonizerTests.cs" />
     <Compile Include="Commands\SegmentationLogitFieldTests.cs" />
+    <Compile Include="Commands\SegmentLocationClientTests.cs" />
     <Compile Include="Commands\AutoPolygonizeRefiningTests.cs" />
     <Compile Include="Commands\SegmentationEdgeSnapTests.cs" />
     <Compile Include="Commands\SegmentationTileImagesTests.cs" />

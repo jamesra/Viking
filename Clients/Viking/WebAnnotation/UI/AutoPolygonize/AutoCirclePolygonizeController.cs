@@ -772,6 +772,29 @@ namespace WebAnnotation.UI.AutoPolygonize
         public void Accept(AutoPolygonizeProposal proposal) => Accept(proposal, proposal?.Polygon);
 
         /// <summary>
+        /// The locations were just saved: the segmentation server drops what it cached for them, a person's trace among it,
+        /// when it reads this volume (only there does it answer by location). Runs in the background.
+        /// </summary>
+        private void ForgetSavedLocations(IReadOnlyCollection<long> locationIds)
+        {
+            long annotationContextId = Viking.Common.AccessibleVolumeSession.AnnotationContextId;
+            if (!SegmentationViewportSession.ServerReadsContext(annotationContextId))
+                return;
+
+            SegmentationViewportSession? session;
+            lock (lifecycleLock)
+            {
+                session = uploadSession;
+            }
+
+            if (session is not { HasClient: true })
+                return;
+
+            long[] ids = [.. locationIds];
+            _ = Task.Run(() => session.ForgetLocationsAsync(annotationContextId, ids));
+        }
+
+        /// <summary>
         /// Writes <paramref name="polygon"/> onto the survivor for <paramref name="proposal"/>.
         /// Used by Accept polygonalization and by Paint mask after interactive refinement.
         /// </summary>
@@ -824,6 +847,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
 
             SameStructureMerge.TransferLinksAndRemove(survivor, victims, proposal.LocationIds);
+            ForgetSavedLocations(proposal.LocationIds);
 
             foreach (long id in proposal.LocationIds)
                 cache.Remove(id);
@@ -1323,7 +1347,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                     long promptMs;
                     Stopwatch segmentTimer;
                     Viking.gRPC.SegmentationServiceTypes.V1.SegmentationResponse? response;
-                    Polygon? reviewedOutline = null;
+                    Polygon? tracedOutline = null;
                     if (serverReadsVolume)
                     {
                         // The server builds the same prompt (the circle, and the other structures it reaches) from the saved location.
@@ -1336,7 +1360,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                             processToken,
                             (ulong)requestTicket).ConfigureAwait(false);
                         response = located?.Response;
-                        reviewedOutline = located?.Reviewed;
+                        tracedOutline = located?.Traced;
                     }
                     else
                     {
@@ -1379,7 +1403,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                             requestTicket,
                             keepPoints,
                             startingBoxes,
-                            reviewedOutline);
+                            tracedOutline);
                         processBatch.AddResponseTask(responseTask);
                     }
                     catch (OperationCanceledException)
@@ -1648,8 +1672,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// object) is traced; the other islands are dropped. An empty union is a LastModified skip (no overlay)
         /// so the next idle batch does not segment the same circle again. GPU mask textures are created
         /// later on the UI thread in <see cref="PublishProposalOnUiThread"/>.
-        /// A <paramref name="reviewedOutline"/> (an outline a person approved in the gallery, which the server returned with the
-        /// response) is proposed instead of the traced mask, and the proposal keeps no mask, so a threshold change never retraces it.
+        /// A <paramref name="tracedOutline"/> (an outline a person traced in the gallery, which the server returned instead of a
+        /// segmentation) is proposed as it is, and the proposal keeps no mask, so a threshold change never retraces it.
         /// </summary>
         private async Task ProcessResponseAsync(
             SegmentationViewportSession session,
@@ -1669,7 +1693,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             long requestTicket,
             IReadOnlyList<Vector2>? extraKeepPoints = null,
             IReadOnlyList<SegmentationSeed>? startingBoxes = null,
-            Polygon? reviewedOutline = null)
+            Polygon? tracedOutline = null)
         {
             if (processToken.IsCancellationRequested || !enabled || !cache.IsGenerationCurrent(circle.ID, generation))
                 return;
@@ -1677,8 +1701,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             Stopwatch polygonTimer = Stopwatch.StartNew();
             (Polygon? Polygon, AutoPolygonizeMaskOverlay? Mask, int VerticesBeforeSimplify) processed = await Task.Run(() =>
             {
-                if (reviewedOutline is not null)
-                    return (reviewedOutline, (AutoPolygonizeMaskOverlay?)null, reviewedOutline.TotalUniqueVertices);
+                if (tracedOutline is not null)
+                    return (tracedOutline, (AutoPolygonizeMaskOverlay?)null, tracedOutline.TotalUniqueVertices);
 
                 // The clicks sit near the circle's edge, where a mask can break into pieces; the circle's
                 // center is inside the object by construction, so it keeps the main piece.
