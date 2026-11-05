@@ -48,8 +48,9 @@ Side clicks on a 5 button mouse move down and up 1 slice
 Keyboard commands
 =================
 
-* **+** and **-** move down and up 1 slice
-* **SHIFT +** and **-** move down and up 10 slices
+* **+** and **-** move up and down 1 slice (**+** goes to the next higher section number)
+* **SHIFT +** and **-** move up and down 10 slices
+* **Ctrl+Shift+Plus** and **Ctrl+Shift+Minus** brighten and darken sections Nornir built as noise-crushed; **Ctrl+Shift+0** resets the contrast. Other sections do not change
 * **Arrow keys** pan the view by a quarter of the screen
 * **PageUp/PageDown** zoom in/out by about 15% per press (the same step as one scroll wheel notch)
 * **Home** rounds the magnification to the nearest power of two (1, 2, 4, 8 ... or 0.5, 0.25 ...)
