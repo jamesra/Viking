@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Viking.DataModel.Annotation;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
@@ -92,7 +93,9 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// One SaveChanges for the whole batch. A failed row sets Success=false and does not roll back the others.
-        /// Created rows are reported after the save, so each carries the Id the database assigned.
+        /// Each change sees the changes before it: an update or delete of an Id that does not exist, or that the
+        /// batch already deleted, fails its own row. Created rows are reported after the save, so each carries
+        /// the Id the database assigned.
         /// </summary>
         public override async Task<UpdateStructureTypesResponse> Update(UpdateStructureTypesRequest request, ServerCallContext context)
         {
@@ -119,14 +122,14 @@ namespace gRPCAnnotationService
                             pendingCreates.Add((row_response, insertResult.Entity));
                             break;
                         case StructureTypeChangeRequest.ActionOneofCase.Update:
-                            var obj = await _context.StructureTypes.FirstOrDefaultAsync(t => t.Id == req.Update.Id, ct);
+                            var obj = await FindLiveAsync(req.Update.Id, ct);
                             if (obj != null)
                             {
+                                // Tracked, so change tracking saves the new values.
                                 req.Update.Sync(ref obj);
                                 obj.Username = username;
-                                var EF_Result = _context.StructureTypes.Update(obj);
                                 row_response.Success = true;
-                                row_response.Updated = EF_Result.Entity.ToProtobufMessage();
+                                row_response.Updated = obj.ToProtobufMessage();
                             }
                             else
                             {
@@ -134,7 +137,7 @@ namespace gRPCAnnotationService
                             }
                             break;
                         case StructureTypeChangeRequest.ActionOneofCase.Delete:
-                            var EF_remove_row = await _context.StructureTypes.FirstOrDefaultAsync(t => t.Id == req.Delete, ct);
+                            var EF_remove_row = await FindLiveAsync(req.Delete, ct);
                             if (EF_remove_row != null)
                             {
                                 _context.StructureTypes.Remove(EF_remove_row);
@@ -162,6 +165,16 @@ namespace gRPCAnnotationService
                 return response;
             }
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(Update), e, context); }
+        }
+
+        /// <summary>
+        /// The type with this Id as the batch so far leaves it: Find looks in the change tracker before the
+        /// database, and a type queued for delete counts as absent.
+        /// </summary>
+        private async Task<Viking.DataModel.Annotation.StructureType> FindLiveAsync(long id, CancellationToken ct)
+        {
+            var row = await _context.StructureTypes.FindAsync(new object[] { id }, ct);
+            return row == null || _context.Entry(row).State == EntityState.Deleted ? null : row;
         }
     }
 }
