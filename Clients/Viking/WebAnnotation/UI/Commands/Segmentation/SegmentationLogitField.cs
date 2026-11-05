@@ -255,5 +255,43 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             return sign == 1 ? -magnitude : magnitude;
         }
+
+        /// <summary>Largest finite half-precision value.</summary>
+        private const float HalfMax = 65504f;
+
+        /// <summary>
+        /// Single to IEEE 754 half-precision, rounded to nearest; NaN stays NaN and a magnitude beyond the half range is clamped
+        /// to <see cref="HalfMax"/> rather than made infinite, so interpolating encoded logits never meets an infinity.
+        /// </summary>
+        internal static ushort SingleToHalf(float value)
+        {
+            if (float.IsNaN(value))
+                return 0x7E00;
+
+            int sign = value < 0 ? 0x8000 : 0;
+            double magnitude = Math.Min(Math.Abs((double)value), HalfMax);
+
+            // Subnormal: steps of 2^-24 below the smallest normal, 2^-14.
+            if (magnitude < ExponentScale[1])
+                return (ushort)(sign | (int)Math.Round(magnitude / ExponentScale[1] * 1024));
+
+            int exponent = (int)Math.Floor(Math.Log(magnitude, 2));
+            if (Math.Pow(2, exponent) > magnitude)
+                exponent--;
+            else if (Math.Pow(2, exponent + 1) <= magnitude)
+                exponent++;
+
+            int mantissa = (int)Math.Round(((magnitude / Math.Pow(2, exponent)) - 1) * 1024);
+            if (mantissa == 1024)
+            {
+                mantissa = 0;
+                exponent++;
+            }
+
+            if (exponent > 15)
+                return (ushort)(sign | (30 << 10) | 0x3FF);
+
+            return (ushort)(sign | ((exponent + 15) << 10) | mantissa);
+        }
     }
 }

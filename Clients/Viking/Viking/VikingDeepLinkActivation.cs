@@ -77,6 +77,8 @@ namespace Viking
                 if (State.GoToAnnotationLocation != null)
                 {
                     State.GoToAnnotationLocation(locId);
+                    if (place["Propose"] == "1")
+                        State.ProposeAnnotationLocation?.Invoke(locId);
                     return;
                 }
 

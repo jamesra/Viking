@@ -89,6 +89,23 @@ namespace WebAnnotationTests
             Assert.IsTrue(VikingDeepLinkParser.VolumeUrlsEqual(link.VolumeUrl, parsed.VolumeUrl));
         }
 
+        /// <summary>The gallery's converter cards add propose=1; it is kept with a location id and survives forwarding.</summary>
+        [TestMethod]
+        public void Propose_IsKeptWithALocationAndForwarded()
+        {
+            Assert.IsTrue(VikingDeepLinkParser.TryParse("viking://open?volumeName=RC2&location=6743&propose=1", out VikingDeepLink link));
+            Assert.AreEqual("1", link.Place["Propose"]);
+
+            Assert.IsTrue(VikingDeepLinkParser.TryParse(VikingDeepLinkParser.BuildActivationUrl(link), out VikingDeepLink forwarded));
+            Assert.AreEqual("6743", forwarded.Place["Location"]);
+            Assert.AreEqual("1", forwarded.Place["Propose"]);
+
+            Assert.IsTrue(VikingDeepLinkParser.TryParse("viking://open?volumeName=RC2&location=6743", out VikingDeepLink plain));
+            Assert.IsNull(plain.Place["Propose"]);
+            Assert.IsTrue(VikingDeepLinkParser.TryParse("viking://open?volumeName=RC2&location=1,2,3&propose=1", out VikingDeepLink coordinates));
+            Assert.IsNull(coordinates.Place["Propose"], "propose names a location, not coordinates");
+        }
+
         [TestMethod]
         public void ParsePlaceArguments_LocationWinsOverCoordinates()
         {
