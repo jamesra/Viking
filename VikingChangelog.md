@@ -11,7 +11,7 @@ Notes for whoever updates this file. Comments like this one are not shown in Vik
   changes, rename the unreleased heading to the new version; when a version ships, replace "not yet released" with the date
   and channel, for example "2026-10-26 (Viking Test, unsigned)".
 
-Committed application version: 1.2.136.0.
+Committed application version: 1.2.137.0.
 1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109;
 their changes are listed under 1.2.109. Builds 1.2.128 and 1.2.129 are listed under 1.2.129 (it went out as Viking Test
 and as a signed release on 2026-10-27). Viking Test builds 1.2.130 to 1.2.136 were folded into the 1.2.136 release on
@@ -23,7 +23,7 @@ version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. 
 Documentation/source/Client/versionhistory.rst.
 -->
 
-## 1.2.137 — not yet released
+## 1.2.137 — 2026-11-05 (Viking Test, unsigned)
 
 * **Auto-polygonize sends no images where the server has them.** On a volume whose images the segmentation server reads itself, auto-polygonize asks it for each circle by its annotation alone instead of rendering and uploading the image around it, and shares the server's stored results with the annotation gallery. Other volumes work as before.
 * **Gallery links propose the outline.** A Viking link from a card in the annotation gallery's structure converter now goes to the location and proposes its outline at once; when someone retraced that card in the gallery, the outline they drew is the one proposed. Accepting it saves it as usual. **Auto Polygonize Circles** (Annotation menu) must be on; otherwise the status bar says so.
