@@ -272,6 +272,30 @@ The GPU cap is the hot set. Feature maps for each cell are also written under `S
 
 In front of the disk store, offset cell windows (the ones predicted on a throwaway predictor) keep their last few embeddings in host memory (`SEGMENTATION_EMBEDDING_RAM_ENTRIES`, default 4, `0` turns it off; a 1024 window is roughly 40 to 85 MiB). A repeat prediction on the same window pixels then skips both the encoder and the disk read, and with no disk store configured it is the only thing that does.
 
+### SegmentLocation: the server builds the prompt
+
+`SegmentLocation` segments saved annotation locations without a client building the prompt. The client sends
+`LocationStart`: the annotation context (`GetServerStatus.readable_volumes`), one `location_id` or a merged
+`LocationSet`, `SegmentOptions` (threshold, `CacheMode` use/refresh/bypass, job) and whether it `provides_images`. The
+server reads the locations, the section's cell-level neighbours and their structures from the volume's OData
+(`location_source.py`; root `SEGMENTATION_ODATA_TEMPLATE` with `{volume}`, else the VikingXML's annotation service with
+`/Annotation/Service.svc` replaced by `/OData`), hands them to the served model's prompt provider
+(`prompt_provider.py`, `prompt_providers/README.md`) and runs the result as a `SegmentTilesStream` conversation with
+itself as the client: background cells are answered by the provider, never asked of the caller. The grid is the
+section's VikingXML tileset (`DefaultTileset`, else the first by name), MOSAIC at downsample 1.
+
+Tiles: a readable section's tiles are read by the server. Only a client that set `provides_images` is sent
+`TilesNeeded` (tiles only, no `background_cells`); it may also send tiles unasked after `start`, uploads them as
+`UploadTileRequest` (its `grid` is ignored), answers each `TilesNeeded` with a `TilesAnswer` listing what it cannot
+supply, and its half-close settles whatever is still awaited as unavailable. A section that is not readable is
+`FAILED_PRECONDITION` without `provides_images`, and a tile sent for a readable one is `FAILED_PRECONDITION` too, so a
+cached result is grown from one source of pixels. The server sends `SegmentProgress` ("reading annotations",
+"growing" with the round, "waiting for tiles", "cached") and then the `SegmentationResponse` (`request_id` 0).
+
+The result cache keys on the locations with the LastModified the server read, so no client's clock enters the key.
+`CACHE_MODE_BYPASS` and a `shape_override` (a seed circle in the location's place) are never cached. Without a tile
+source (Identity) or a loadable provider, `SegmentLocation` is `UNIMPLEMENTED`; `SegmentTilesStream` is unchanged.
+
 ## GPU / CUDA
 
 The Docker image is `nvidia/cuda:13.2.1-devel-ubuntu24.04` with `torch==2.14.0+cu132` and `torchvision==0.29.0`. It is built for **Ada sm_89 and later** (RTX 4500 Ada, RTX 40, L40, Hopper, Blackwell). Host NVIDIA driver must be **595+** or the container will not start.

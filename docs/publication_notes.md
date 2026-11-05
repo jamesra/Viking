@@ -116,6 +116,21 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
 
 ## Algorithmic decisions
 
+- **2026-11-05 The segmentation server builds location prompts itself (SegmentLocation).** Why: with clients building
+  them, a location's request was spread over two languages (the gallery reached the C# library through ctypes and ran
+  the stream in Python), every client had to send byte-identical bytes to share a cache row, and each sent what the
+  server knows or reads itself: the context, the tileset, the neighbours, the LastModified and tiles it could only
+  answer "unavailable". Now a client sends a location id, a threshold and whether it provides images; the server reads
+  the annotations from OData and asks the served model's prompt provider for the request. Prompt generation is an
+  interface (`PromptProvider`), so another library can feed a model trained on other prompts; the Viking library moved
+  into the server as its first provider. The cache keys on the LastModified the server read, so no client clock enters
+  it. A client tile for a section the server reads is refused, so one cached row is never grown from two pixel
+  sources. The protocol was reviewed for brevity and reuse before it was written (it reuses `TilesNeeded`,
+  `TilesAnswer` and `UploadTileRequest`, a `CacheMode` enum replaces two flags, the target is a location or a merged
+  set). Rejected: a headless C# client the gallery calls through a native library (the conversation would still run
+  on the client, answering tiles it never has); SWIG or pythonnet bindings (no gain over plain gRPC once the server
+  builds the prompt). Where: `Servers/SegmentationServer` (`location_source.py`, `prompt_provider.py`, `server.py`
+  `SegmentLocation`, `prompt_providers/`), `SegmentLocation` in `gRPC_Protos`.
 - **2026-11-04 One shared prompt library builds every location's segmentation request.** Why: the server's result
   cache only answers byte-identical requests, and the Viking client and the annotation gallery differed in space,
   tile naming, neighbours and clicks. `SegmentationPrompts/Viking.SegmentationPrompts` (netstandard2.0, called by

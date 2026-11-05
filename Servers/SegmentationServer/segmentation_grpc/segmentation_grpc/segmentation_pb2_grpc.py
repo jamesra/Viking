@@ -47,6 +47,11 @@ class SegmentationServiceStub:
                 request_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentTilesStreamRequest.SerializeToString,
                 response_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentTilesStreamResponse.FromString,
                 _registered_method=True)
+        self.SegmentLocation = channel.stream_stream(
+                '/segmentation.SegmentationService/SegmentLocation',
+                request_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentLocationRequest.SerializeToString,
+                response_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentLocationResponse.FromString,
+                _registered_method=True)
         self.GetHeldTiles = channel.unary_unary(
                 '/segmentation.SegmentationService/GetHeldTiles',
                 request_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.HeldTilesRequest.SerializeToString,
@@ -110,6 +115,28 @@ class SegmentationServiceServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def SegmentLocation(self, request_iterator, context):
+        """Segment saved annotation locations: the server reads the locations, their neighbours and the section's images
+        itself and builds the prompt for the model it serves. The client sends `start`, then, only when it set
+        provides_images, any tiles it chooses to send unasked and one TilesAnswer per TilesNeeded. The server streams
+        progress, then the SegmentationResponse, and ends the call. The grid is MOSAIC at downsample 1 on the context's
+        tileset.
+
+        A client with provides_images false may half-close right after `start`. With it true, a half-close settles every
+        tile still awaited as unavailable. Tiles sent after `result` fail on the client with CANCELLED.
+
+        Statuses: after `result` the call ends OK; a client that cancels gets no result (a walk that already finished is
+        still cached). NOT_FOUND for an annotation context this server does not hold or a location its annotation service
+        does not know. FAILED_PRECONDITION when the context's images are not readable here and provides_images is false,
+        for a tile sent for a context whose images are readable here (the server reads every pixel of a readable volume
+        itself, so one cached result never mixes sources), and ("NO_MATCHING_MASK ...") as for SegmentTilesStream.
+        INVALID_ARGUMENT for a malformed conversation or start. DEADLINE_EXCEEDED when an answer does not arrive within the
+        idle limit. RESOURCE_EXHAUSTED and UNAVAILABLE as for SegmentTilesStream.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def GetHeldTiles(self, request, context):
         """Which cells SegmentTilesStream would not ask this client for: the server holds them, or reads them from the
         annotation context's tileset itself. A client calls it before uploading tiles ahead of a request and skips the
@@ -168,6 +195,11 @@ def add_SegmentationServiceServicer_to_server(servicer, server):
                     servicer.SegmentTilesStream,
                     request_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentTilesStreamRequest.FromString,
                     response_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentTilesStreamResponse.SerializeToString,
+            ),
+            'SegmentLocation': grpc.stream_stream_rpc_method_handler(
+                    servicer.SegmentLocation,
+                    request_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentLocationRequest.FromString,
+                    response_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentLocationResponse.SerializeToString,
             ),
             'GetHeldTiles': grpc.unary_unary_rpc_method_handler(
                     servicer.GetHeldTiles,
@@ -257,6 +289,33 @@ class SegmentationService:
             '/segmentation.SegmentationService/SegmentTilesStream',
             Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentTilesStreamRequest.SerializeToString,
             Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentTilesStreamResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SegmentLocation(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_stream(
+            request_iterator,
+            target,
+            '/segmentation.SegmentationService/SegmentLocation',
+            Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentLocationRequest.SerializeToString,
+            Segmentation_dot_SAM2_dot_segmentation__pb2.SegmentLocationResponse.FromString,
             options,
             channel_credentials,
             insecure,

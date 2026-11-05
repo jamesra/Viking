@@ -35,8 +35,13 @@ from segmentation_grpc import (
     ListJobsResponse,
     PutReviewedOutlinesRequest,
     PutReviewedOutlinesResponse,
+    LocationStart,
+    ReadableVolume,
     ReviewedOutline,
     SegmentationResponse,
+    SegmentLocationRequest,
+    SegmentLocationResponse,
+    SegmentProgress,
     Shape,
     SegmentationServiceServicer,
     SegmentResult,
@@ -45,6 +50,7 @@ from segmentation_grpc import (
     SegmentTilesStreamResponse,
     ServerStatusRequest,
     ServerStatusResponse,
+    TilesAnswer,
     TilesNeeded,
     UploadTileRequest,
     UploadTileResponse,
@@ -98,6 +104,8 @@ from segmentation_server.result_store import (
     open_result_store,
 )
 from segmentation_server.tile_source import TileSource, open_tile_source
+from segmentation_server.location_source import LocationError, LocationPrompts, PreparedLocation
+from segmentation_server.prompt_provider import open_prompt_provider
 from segmentation_server.tile_work import (
     install_sam2_log_filter,
     install_tile_work_logging,
@@ -287,6 +295,14 @@ class _StreamReader:
             read.cancel()
         elif not read.cancelled():
             read.exception()
+
+
+@dataclass(frozen=True)
+class _ProgressNote:
+    """A growth round began. Yielded among the stream's responses; SegmentTilesStream drops it, SegmentLocation sends it
+    as SegmentProgress."""
+
+    rounds: int
 
 
 @dataclass
@@ -589,6 +605,7 @@ class SegmentationServicer(SegmentationServiceServicer):
         cache_gpu_max_bytes: int = DEFAULT_GPU_MAX_BYTES,
         cache_tile_idle_seconds: float = DEFAULT_TILE_IDLE_SECONDS,
         result_store: Optional[ResultStore] = None,
+        location_prompts: Optional[LocationPrompts] = None,
     ) -> None:
         """
         Args:
@@ -616,6 +633,9 @@ class SegmentationServicer(SegmentationServiceServicer):
             clock: Monotonic clock for the status cache (inject in tests).
             result_store: Finished segmentations by location (:mod:`result_store`); read from the environment if
                 omitted (None there when ``SEGMENTATION_RESULTS_DIR`` is unset: nothing is cached).
+            location_prompts: Builds SegmentLocation requests (:mod:`location_source`); made from the tile source and
+                the manifest's prompt provider if omitted (None there without either: SegmentLocation is
+                UNIMPLEMENTED).
         """
         if model is None:
             from segmentation_server.segmentation_service import SegmentationModel as _SegmentationModel
@@ -673,12 +693,25 @@ class SegmentationServicer(SegmentationServiceServicer):
         self._cpu_executor = futures.ThreadPoolExecutor(
             max_workers=max(2, min(8, os.cpu_count() or 4)), thread_name_prefix="seg-cpu"
         )
+        self._locations = location_prompts if location_prompts is not None else self._open_location_prompts()
         try:
             self._loop: Optional[asyncio.AbstractEventLoop] = asyncio.get_running_loop()
         except RuntimeError:
             self._loop = None
         if hasattr(self.model, "set_on_compiled_ready"):
             self.model.set_on_compiled_ready(self._flush_cache_after_compile)
+
+    def _open_location_prompts(self) -> Optional[LocationPrompts]:
+        """SegmentLocation's request builder: needs the tile source (the contexts and their volumes) and the prompt
+        provider the manifest names."""
+        if not callable(getattr(self._tile_source, "context_volume", None)):
+            logger.info("SegmentLocation is off: no tile source, so no annotation contexts")
+            return None
+        provider = open_prompt_provider(str(self._manifest.client_contract.get("prompt_provider") or "") or None)
+        if provider is None:
+            return None
+        model_id = self._manifest.model_id if self._manifest.model_id != _UNKNOWN_MODEL else ""
+        return LocationPrompts(self._tile_source, provider, model_id, executor=self._cpu_executor)
 
     def close(self) -> None:
         """Release the servicer's own thread pools. The inference pool belongs to whoever passed it in."""
@@ -918,7 +951,27 @@ class SegmentationServicer(SegmentationServiceServicer):
             recent_latency_ms=recent_latency_ms,
             inference_workers=self._inference_workers,
             model=self._manifest.to_model_info(),
+            readable_volumes=await self._readable_volumes(),
         )
+
+    async def _readable_volumes(self) -> List[ReadableVolume]:
+        """The assigned annotation contexts, and whether their VikingXML names tilesets this server can read."""
+        listing = getattr(self._tile_source, "context_volumes", None)
+        if listing is None:
+            return []
+        try:
+            pairs = await listing()
+        except Exception:
+            logger.exception("Listing the readable volumes failed")
+            return []
+        return [
+            ReadableVolume(
+                annotation_context_id=context.annotation_context_id,
+                name=volume.name if volume is not None else context.name,
+                readable=volume is not None and any(section.tilesets for section in volume.sections.values()),
+            )
+            for context, volume in pairs
+        ]
 
     async def UploadTile(
         self,
@@ -1051,6 +1104,12 @@ class SegmentationServicer(SegmentationServiceServicer):
         return HeldTilesResponse(held=held)
 
     async def SegmentTilesStream(self, request_iterator, context: ServicerContext):
+        """Segment from the prompt in ``start`` (:meth:`_segment_tiles`)."""
+        async for update in self._segment_tiles(request_iterator, context):
+            if isinstance(update, SegmentTilesStreamResponse):
+                yield update
+
+    async def _segment_tiles(self, request_iterator, context: ServicerContext):
         """Segment from the prompt in ``start``; the server owns the growth and asks for tiles as it needs them.
 
         The client sends ``start`` and the mask tiles it announced. The prompt is split into islands
@@ -1064,6 +1123,8 @@ class SegmentationServicer(SegmentationServiceServicer):
 
         A client cancel stops the walk before its next SAM2 call and ends the stream without a
         result: the call is already gone, so there is no one to send a status to.
+
+        Yields SegmentTilesStreamResponse messages and a :class:`_ProgressNote` at each growth round.
         """
         first = await _next_message(request_iterator)
         if first is None or first.WhichOneof("body") != "start":
@@ -1239,6 +1300,136 @@ class SegmentationServicer(SegmentationServiceServicer):
                 await self.image_cache.release_image(image_id)
             self._active_streams -= 1
             self._load.end(time.perf_counter() - start_time)
+
+    async def SegmentLocation(self, request_iterator, context: ServicerContext):
+        """Segment saved locations: the server builds the prompt (:mod:`location_source`) and runs it as a
+        SegmentTilesStream conversation whose client is this method.
+
+        The inner conversation's ``needed`` messages are answered here: background from the prompt provider, tiles as
+        unavailable unless the client said it provides images, in which case only the tiles go to the client and its
+        TilesAnswer comes back with the background added. Tiles the client sends are uploaded as UploadTile would.
+        """
+        first = await _next_message(request_iterator)
+        if first is None or first.WhichOneof("body") != "start":
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "SegmentLocation must begin with a start message.")
+            return
+        if self._locations is None:
+            await context.abort(grpc.StatusCode.UNIMPLEMENTED, "This server has no prompt provider for SegmentLocation.")
+            return
+        start: LocationStart = first.start
+        yield SegmentLocationResponse(progress=SegmentProgress(stage="reading annotations"))
+        try:
+            prepared = await self._locations.prepare(start)
+        except LocationError as e:
+            logger.info("SegmentLocation context=%s refused: %s", start.annotation_context_id, e)
+            await context.abort(e.code, str(e))
+            return
+        if not prepared.readable and not start.provides_images:
+            await context.abort(
+                grpc.StatusCode.FAILED_PRECONDITION,
+                f"Section {prepared.prompt_input.section} of {prepared.prompt_input.volume} is not readable here and "
+                "the client does not provide images.",
+            )
+            return
+        request = prepared.request
+        logger.info(
+            "SegmentLocation locations=%s section=%s tileset=%s readable=%s provides_images=%s cache=%s",
+            ",".join(str(target.id) for target in prepared.prompt_input.targets),
+            prepared.prompt_input.section,
+            prepared.prompt_input.tileset,
+            prepared.readable,
+            start.provides_images,
+            start.options.cache_mode,
+        )
+
+        inner: "asyncio.Queue[Optional[SegmentTilesStreamRequest]]" = asyncio.Queue()
+        inner.put_nowait(SegmentTilesStreamRequest(start=request))
+        # Per TilesNeeded forwarded to the client and not yet answered, oldest first: its tiles, and the background
+        # shapes owed with the client's answer.
+        owed: Deque[Tuple[List[GridCell], List[Shape]]] = deque()
+        sent_ids: List[int] = []
+        failure: List[Tuple[grpc.StatusCode, str]] = []
+        client_ended = asyncio.Event()
+
+        async def inner_requests():
+            while True:
+                message = await inner.get()
+                if message is None:
+                    return
+                yield message
+
+        async def read_client() -> None:
+            """Upload the client's tiles and pass its answers on; on its half-close, settle what is still owed."""
+            try:
+                while True:
+                    message = await _next_message(request_iterator)
+                    if message is None:
+                        break
+                    body = message.WhichOneof("body")
+                    if body == "tile":
+                        if not start.provides_images or prepared.readable:
+                            failure.append((
+                                grpc.StatusCode.FAILED_PRECONDITION if prepared.readable else grpc.StatusCode.INVALID_ARGUMENT,
+                                "This server reads the section's images itself; send no tiles."
+                                if prepared.readable else "A tile came from a client that does not provide images.",
+                            ))
+                            break
+                        tile = UploadTileRequest()
+                        tile.CopyFrom(message.tile)
+                        tile.grid.CopyFrom(request.grid)
+                        await self.UploadTile(tile, context)
+                    elif body == "answer":
+                        if not owed:
+                            failure.append((grpc.StatusCode.INVALID_ARGUMENT, "A TilesAnswer came with no TilesNeeded open."))
+                            break
+                        answer = TilesAnswer(unavailable=message.answer.unavailable, background_shapes=owed.popleft()[1])
+                        inner.put_nowait(SegmentTilesStreamRequest(answer=answer))
+                    else:
+                        failure.append((grpc.StatusCode.INVALID_ARGUMENT, "SegmentLocation sends start once."))
+                        break
+            finally:
+                client_ended.set()
+                if failure:
+                    inner.put_nowait(None)
+                # A half-close settles every forwarded TilesNeeded: its tiles are unavailable.
+                while owed and not failure:
+                    tiles, shapes = owed.popleft()
+                    inner.put_nowait(SegmentTilesStreamRequest(answer=TilesAnswer(unavailable=tiles, background_shapes=shapes)))
+
+        async def answer_inner(needed: TilesNeeded) -> Optional[TilesNeeded]:
+            """Answer one inner ``needed``; returns the TilesNeeded to forward to the client, if any."""
+            shapes = await self._locations.background(prepared, needed.background_cells, sent_ids) if needed.background_cells else []
+            if needed.tiles and start.provides_images and not client_ended.is_set():
+                owed.append((list(needed.tiles), shapes))
+                return TilesNeeded(tiles=needed.tiles)
+            inner.put_nowait(SegmentTilesStreamRequest(answer=TilesAnswer(unavailable=needed.tiles, background_shapes=shapes)))
+            return None
+
+        reader = asyncio.create_task(read_client())
+        try:
+            async for update in self._segment_tiles(inner_requests(), context):
+                if isinstance(update, _ProgressNote):
+                    yield SegmentLocationResponse(progress=SegmentProgress(stage="growing", round=update.rounds))
+                elif update.WhichOneof("update") == "needed":
+                    forward = await answer_inner(update.needed)
+                    if forward is not None:
+                        yield SegmentLocationResponse(needed=forward)
+                        yield SegmentLocationResponse(progress=SegmentProgress(stage="waiting for tiles"))
+                elif update.WhichOneof("update") == "result" and not failure:
+                    result = update.result
+                    result.request_id = 0
+                    if result.HasField("cache"):
+                        yield SegmentLocationResponse(progress=SegmentProgress(stage="cached"))
+                    yield SegmentLocationResponse(result=result)
+        finally:
+            reader.cancel()
+            try:
+                await reader
+            except (asyncio.CancelledError, Exception):
+                pass
+        if failure:
+            code, message = failure[0]
+            await context.abort(code, message)
 
     # -- result cache ------------------------------------------------------------------------------------------------
 
@@ -1607,6 +1798,7 @@ class SegmentationServicer(SegmentationServiceServicer):
             settled_now = False
             if needed or background:
                 progress["rounds"] += 1
+                yield _ProgressNote(progress["rounds"])
                 settled_now = await self._begin_tile_wait(session, wait, needed, background)
             if settled_now:
                 walk.resume(wait.take_unavailable())

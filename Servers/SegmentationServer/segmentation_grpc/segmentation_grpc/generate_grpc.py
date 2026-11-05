@@ -3,9 +3,9 @@
 The protos live under ``gRPC_Protos`` and import each other relative to that root
 (``segmentation.proto`` imports ``Common/geometry.proto``). protoc is run with that root as the import path, so the
 generated modules first land in ``Segmentation/SAM2/`` and ``Common/`` of a scratch directory; they are then copied
-flat into this package (``segmentation_pb2.py``, ``segmentation_pb2_grpc.py``, ``geometry_pb2.py``) and their imports
-rewritten to ``from segmentation_grpc import ...``. The descriptor pool still names the files by their paths under
-``gRPC_Protos``, so the import of ``Common/geometry.proto`` resolves the same way it does for every other language.
+flat into this package (``segmentation_pb2.py``, ``segmentation_pb2_grpc.py``, ``prompt_input_pb2.py``,
+``geometry_pb2.py``) and their imports rewritten to ``from segmentation_grpc import ...``. The descriptor pool still
+names the files by their paths under ``gRPC_Protos``, so the import of ``Common/geometry.proto`` resolves the same way it does for every other language.
 """
 
 from __future__ import annotations
@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 # Protos relative to the gRPC_Protos root, and the module each generates.
 SEGMENTATION_PROTO = Path('Segmentation') / 'SAM2' / 'segmentation.proto'
+PROMPT_INPUT_PROTO = Path('Segmentation') / 'SAM2' / 'prompt_input.proto'
 GEOMETRY_PROTO = Path('Common') / 'geometry.proto'
 
 _DOCKER_ROOT = Path('/home/user') / 'gRPC_Protos'
@@ -30,6 +31,7 @@ _DOCKER_ROOT = Path('/home/user') / 'gRPC_Protos'
 _GENERATED = {
     Path('Segmentation') / 'SAM2' / 'segmentation_pb2.py': 'segmentation_pb2.py',
     Path('Segmentation') / 'SAM2' / 'segmentation_pb2_grpc.py': 'segmentation_pb2_grpc.py',
+    Path('Segmentation') / 'SAM2' / 'prompt_input_pb2.py': 'prompt_input_pb2.py',
     Path('Common') / 'geometry_pb2.py': 'geometry_pb2.py',
 }
 
@@ -64,7 +66,7 @@ def _find_proto_file() -> Optional[Path]:
 
 
 def generate_grpc_code(force: bool = False) -> bool:
-    """Generate segmentation_pb2*.py and geometry_pb2.py next to this module.
+    """Generate segmentation_pb2*.py, prompt_input_pb2.py and geometry_pb2.py next to this module.
 
     Args:
         force: Regenerate even when stubs are newer than the protos.
@@ -76,7 +78,7 @@ def generate_grpc_code(force: bool = False) -> bool:
     if root is None:
         logger.error("Proto file not found (looked for gRPC_Protos/%s)", SEGMENTATION_PROTO.as_posix())
         return False
-    protos = [root / SEGMENTATION_PROTO, root / GEOMETRY_PROTO]
+    protos = [root / SEGMENTATION_PROTO, root / PROMPT_INPUT_PROTO, root / GEOMETRY_PROTO]
     missing = [proto for proto in protos if not proto.exists()]
     if missing:
         logger.error("Proto file(s) not found: %s", ", ".join(str(proto) for proto in missing))

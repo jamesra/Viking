@@ -137,6 +137,15 @@ class IdentityAssignments:
             await self._refresh()
         return self._contexts.get(annotation_context_id)
 
+    async def contexts(self) -> Dict[int, LocalContext]:
+        """Every local context by id, refreshed first when the list is stale."""
+        now = self._time_fn()
+        stale = self._fetched_at is None or now - self._fetched_at >= self._refresh_seconds
+        recently_tried = self._attempted_at is not None and now - self._attempted_at < UNKNOWN_CONTEXT_REFRESH_SECONDS
+        if stale and not recently_tried:
+            await self._refresh()
+        return dict(self._contexts)
+
     async def _refresh(self) -> None:
         async with self._lock:
             now = self._time_fn()

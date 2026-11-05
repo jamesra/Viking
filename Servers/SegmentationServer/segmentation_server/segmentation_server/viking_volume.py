@@ -89,6 +89,16 @@ class VikingVolume:
     # Tile URLs are host + "/" + path below it, as the client builds them.
     host: str
     sections: Dict[int, VolumeSection] = field(default_factory=dict)
+    # <DefaultTileset name="..."/>: the tileset a location request is grown on. Empty when the document names none.
+    default_tileset: str = ""
+    # <VolumeToEndpoint Endpoint="..."/>: the annotation service, from which the OData root is found. Empty when absent.
+    annotation_endpoint: str = ""
+
+    def tileset_for(self, section: VolumeSection) -> Optional[Tileset]:
+        """The section's tileset for location requests: the volume's default, else the first by name."""
+        if self.default_tileset in section.tilesets:
+            return section.tilesets[self.default_tileset]
+        return section.tilesets[min(section.tilesets)] if section.tilesets else None
 
     def tile_url(self, section: VolumeSection, tileset: Tileset, downsample: int, ix: int, iy: int) -> str:
         return self.host.rstrip("/") + "/" + tileset.tile_path(section.path, downsample, ix, iy)
@@ -148,11 +158,23 @@ def parse_viking_xml(data: bytes, url: str) -> VikingVolume:
         raise ValueError(f"VikingXML at {url} has root <{_local(root)}>, not <Volume>")
     host = (_attr(root, "path") or urljoin(url, ".")).rstrip("/")
     sections: Dict[int, VolumeSection] = {}
+    default_tileset = ""
+    annotation_endpoint = ""
     for child in root:
         tag = _local(child).lower()
+        if tag == "defaulttileset":
+            default_tileset = _attr(child, "name") or ""
+        elif tag == "volumetoendpoint":
+            annotation_endpoint = _attr(child, "Endpoint") or ""
         candidates = [child] if tag == "section" else [c for c in child if _local(c).lower() == "section"] if tag == "sections" else []
         for element in candidates:
             section = _parse_section(element)
             if section is not None:
                 sections[section.number] = section
-    return VikingVolume(name=_attr(root, "name") or "", host=host, sections=sections)
+    return VikingVolume(
+        name=_attr(root, "name") or "",
+        host=host,
+        sections=sections,
+        default_tileset=default_tileset or _attr(root, "DefaultTileset") or "",
+        annotation_endpoint=annotation_endpoint,
+    )

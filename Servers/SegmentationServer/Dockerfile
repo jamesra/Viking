@@ -2,6 +2,16 @@
 # Layer order is deliberate: expensive/rare steps first so a Python-only
 # rebuild reuses torch, the SAM2 compile, and the checkpoint.
 
+# The prompt provider Viking.SegmentationPrompts (prompt_providers/) as a NativeAOT library for linux-x64, loaded by
+# segmentation_server/prompt_provider.py. The SDK image is Ubuntu 24.04 like the runtime below, so the glibc it links
+# against is the runtime's. The protos keep the repository's layout, which its csproj finds them by.
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS prompts
+RUN apt-get update && apt-get install -y --no-install-recommends clang zlib1g-dev && rm -rf /var/lib/apt/lists/*
+COPY gRPC_Protos/Segmentation /src/gRPC_Protos/Segmentation
+COPY gRPC_Protos/Common /src/gRPC_Protos/Common
+COPY Servers/SegmentationServer/prompt_providers /src/Servers/SegmentationServer/prompt_providers
+RUN dotnet publish /src/Servers/SegmentationServer/prompt_providers/Viking.SegmentationPrompts.Native         -c Release -r linux-x64 -o /out
+
 FROM nvidia/cuda:13.2.1-devel-ubuntu24.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -114,6 +124,10 @@ COPY --chown=user:user gRPC_Protos/Segmentation /home/user/gRPC_Protos/Segmentat
 COPY --chown=user:user gRPC_Protos/Common /home/user/gRPC_Protos/Common
 COPY --chown=user:user Servers/SegmentationServer/segmentation_grpc /home/user/segmentation_grpc
 COPY --chown=user:user Servers/SegmentationServer/segmentation_server/segmentation_server /home/user/segmentation_server/segmentation_server/
+
+# The image fails to build when the native provider does not give the .NET tests' golden request.
+COPY --from=prompts /out/Viking.SegmentationPrompts.Native.so /home/user/native/
+RUN --mount=type=bind,from=prompts,source=/src/Servers/SegmentationServer/prompt_providers,target=/tmp/prompts     python3 /tmp/prompts/Viking.SegmentationPrompts.Native/check_native.py         /home/user/native/Viking.SegmentationPrompts.Native.so /tmp/prompts/Viking.SegmentationPrompts.Tests
 
 EXPOSE 443
 # Debug ports. They accept connections only in an image built with INSTALL_DEBUG_TOOLS=true.

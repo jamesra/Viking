@@ -28,7 +28,7 @@ from numpy.typing import NDArray
 from segmentation_grpc import CoordinateSpace
 from segmentation_server.capture_encoder import encode_capture
 from segmentation_server.tile_ref import TileRef
-from segmentation_server.identity_client import IdentityAssignments, IdentityOptions
+from segmentation_server.identity_client import IdentityAssignments, IdentityOptions, LocalContext
 from segmentation_server.viking_volume import Tileset, TilesetLevel, VikingVolume, VolumeSection, parse_viking_xml
 
 logger = logging.getLogger(__name__)
@@ -126,6 +126,20 @@ class VikingTilesetSource:
             self._volumes[url] = (volume, self._time_fn())
             logger.info("VikingXML %s: volume %s, %d sections", url, volume.name, len(volume.sections))
             return volume
+
+    async def context_volume(self, annotation_context_id: int) -> Optional[Tuple[LocalContext, Optional[VikingVolume]]]:
+        """The local context and its VikingXML volume (None when the document cannot be read), or None when this
+        server is not local to the context."""
+        local = await self._assignments.get(annotation_context_id) if annotation_context_id > 0 else None
+        if local is None:
+            return None
+        return local, await self._volume(local.endpoint)
+
+    async def context_volumes(self) -> List[Tuple[LocalContext, Optional[VikingVolume]]]:
+        """Every local context with its VikingXML volume (None when the document cannot be read), by id."""
+        contexts = await self._assignments.contexts()
+        volumes = await asyncio.gather(*(self._volume(contexts[i].endpoint) for i in sorted(contexts)))
+        return [(contexts[i], volume) for i, volume in zip(sorted(contexts), volumes)]
 
     async def _locate(
         self, annotation_context_id: int, coord: TileRef
