@@ -33,7 +33,7 @@ namespace Viking.SegmentationPrompts
     /// </remarks>
     public static class PromptBuilder
     {
-        /// <summary>Most tiles a prompt may start on (as the annotation gallery's client allows).</summary>
+        /// <summary>Most tiles a prompt may start on (the server's own limit).</summary>
         public const int MaxStartTiles = 64;
 
         /// <summary>Most shapes a prompt's object may have.</summary>

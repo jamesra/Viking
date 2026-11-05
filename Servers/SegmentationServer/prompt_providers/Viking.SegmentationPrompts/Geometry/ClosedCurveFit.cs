@@ -131,7 +131,7 @@ namespace Viking.SegmentationPrompts.Geometry
 
         /// <summary>
         /// The centripetal knot step, <c>|pj - pi|^0.5</c>. Square roots, not <c>Math.Pow</c>: a square root is correctly
-        /// rounded on every runtime, so Viking on Windows and the gallery's native build on Linux fit the same bits.
+        /// rounded on every runtime, so a Windows build and the server's native build on Linux fit the same bits.
         /// </summary>
         private static double Tj(double ti, Point pi, Point pj) => Math.Sqrt(Distance(pi, pj)) + ti;
 

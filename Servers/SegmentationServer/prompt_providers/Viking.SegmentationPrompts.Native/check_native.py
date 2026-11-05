@@ -1,7 +1,7 @@
 """Check a native build of Viking.SegmentationPrompts against the .NET tests' golden request.
 
 The library is only shared if every build gives the same bytes: the golden input's request must have the SHA-256 the
-.NET tests pin (PromptBuilderTests.GoldenDigest). Run where the native library will be used, e.g. in the gallery image:
+.NET tests pin (PromptBuilderTests.GoldenDigest). Run where the native library will be used, e.g. in the server image:
 
     python check_native.py out/Viking.SegmentationPrompts.Native.so ../Viking.SegmentationPrompts.Tests
 """

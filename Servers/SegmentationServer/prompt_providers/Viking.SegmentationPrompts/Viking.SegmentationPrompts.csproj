@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- The one place segmentation requests for annotation locations are built, so the Viking clients (both trees) and
-       the annotation gallery (through Viking.SegmentationPrompts.Native) send byte-identical requests. It depends on
-       Google.Protobuf alone: VikingLegacy reaches this folder through a directory link and the gallery builds it in
-       Docker, neither with the rest of this solution. -->
+  <!-- The segmentation server's first prompt provider: it builds the SegmentTilesRequest for annotation locations
+       (SegmentLocation), so every client gets the same request for the same location. The server loads it through
+       Viking.SegmentationPrompts.Native. It depends on Google.Protobuf alone, so the server's Docker build stage
+       builds it without the rest of this solution. -->
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>latest</LangVersion>
@@ -13,7 +13,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- The generated protocol types are internal and carry no XML docs. -->
     <NoWarn>$(NoWarn);CS1591</NoWarn>
-    <ProtosRoot>$(MSBuildThisFileDirectory)..\..\gRPC_Protos</ProtosRoot>
+    <ProtosRoot Condition="'$(ProtosRoot)' == ''">$(MSBuildThisFileDirectory)..\..\..\..\gRPC_Protos</ProtosRoot>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,8 +24,7 @@
     </PackageReference>
   </ItemGroup>
 
-  <!-- Compiled internal, so they never clash with a client's own public SegmentationServiceTypes.gRPC and
-       GeometryTypes.gRPC (same namespaces): callers exchange serialized bytes with this library, not types. -->
+  <!-- Compiled internal: the server exchanges serialized bytes with this library, not types. -->
   <ItemGroup>
     <Protobuf Include="$(ProtosRoot)\Common\geometry.proto" ProtoRoot="$(ProtosRoot)" GrpcServices="None" Access="Internal" />
     <Protobuf Include="$(ProtosRoot)\Segmentation\SAM2\segmentation.proto" ProtoRoot="$(ProtosRoot)" GrpcServices="None" Access="Internal" />
@@ -37,7 +36,7 @@
   </ItemGroup>
 
   <Target Name="CheckProtosRoot" BeforeTargets="BeforeBuild" Condition="!Exists('$(ProtosRoot)\Segmentation\SAM2\prompt_input.proto')">
-    <Error Text="Viking.SegmentationPrompts needs gRPC_Protos (with Segmentation/SAM2/prompt_input.proto) at $(ProtosRoot): the folder two levels above this project. From VikingLegacy that is its own gRPC_Protos checkout, which must be at the same commit as Viking's." />
+    <Error Text="Viking.SegmentationPrompts needs gRPC_Protos (with Segmentation/SAM2/prompt_input.proto) at $(ProtosRoot): the repository's gRPC_Protos, four levels above this project (or pass -p:ProtosRoot=...)." />
   </Target>
 
 </Project>

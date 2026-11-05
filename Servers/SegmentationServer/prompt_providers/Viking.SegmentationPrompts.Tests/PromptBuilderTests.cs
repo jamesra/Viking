@@ -227,7 +227,7 @@ namespace Viking.SegmentationPrompts.Tests
 
         private static string FixturesSource([CallerFilePath] string here = "") => Path.Combine(Path.GetDirectoryName(here)!, "Fixtures");
 
-        /// <summary>SHA-256 of that request; the gallery's native build on Linux must give the same (Native README).</summary>
+        /// <summary>SHA-256 of that request; the server's native build on Linux must give the same (Native README).</summary>
         internal const string GoldenDigest = "3DF6A759AAC0978266EA1E7410BC61EBEF1FB1B04359792C1B27D87DD26821D6";
 
         [TestMethod]
