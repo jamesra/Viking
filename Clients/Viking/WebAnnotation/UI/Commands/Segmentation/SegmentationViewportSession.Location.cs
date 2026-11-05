@@ -30,10 +30,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <see cref="SegmentAsync"/> response: the same tile level is recorded, and the cells under it are captured for the edge
         /// snap. Returns null when no mask could be produced; <see cref="ConsumeLastSkip"/> says why.
         /// </summary>
+        /// <param name="volumeTransform">
+        /// The section's transform to the volume, which the result is redrawn with when the viewer draws in volume space.
+        /// </param>
         /// <param name="requestId">Only correlates log lines, as for <see cref="SegmentAsync"/>.</param>
         public async Task<LocationSegmentation?> SegmentLocationAsync(
             long annotationContextId,
             long locationId,
+            IVolumeToSectionTransform? volumeTransform,
             CancellationToken cancellationToken,
             ulong requestId = 0)
         {
@@ -51,14 +55,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 cancellationToken.ThrowIfCancellationRequested();
                 (int downsample, TileSignature signature, _, bool grayscale) = await ReadViewTilesAsync().ConfigureAwait(false);
                 mosaicDownsample = downsample;
+                // Without a volume transform the viewer draws the section's own mosaic, the space the server answers in.
                 IVolumeToSectionTransform? transform = null;
                 if (signature.Space == CoordinateSpace.Volume)
                 {
-                    transform = await Viking.UI.State.MainThreadDispatcher
-                        .InvokeAsync(() => parent.Section?.ActiveSectionToVolumeTransform)
-                        .Task.ConfigureAwait(false);
-                    if (transform is null)
-                        throw new InvalidOperationException("The section has no volume transform to draw the result with.");
+                    transform = volumeTransform
+                        ?? throw new InvalidOperationException("The section has no volume transform to draw the result with.");
                 }
 
                 Stopwatch timer = Stopwatch.StartNew();

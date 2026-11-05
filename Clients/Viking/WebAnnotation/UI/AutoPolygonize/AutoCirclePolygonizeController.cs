@@ -1332,6 +1332,7 @@ namespace WebAnnotation.UI.AutoPolygonize
                         SegmentationViewportSession.LocationSegmentation? located = await localUploadSession.SegmentLocationAsync(
                             annotationContextId,
                             circle.ID,
+                            transform,
                             processToken,
                             (ulong)requestTicket).ConfigureAwait(false);
                         response = located?.Response;
