@@ -143,6 +143,9 @@ namespace Viking
                 if (long.TryParse(locationRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out long locationId))
                 {
                     args["Location"] = locationId.ToString(CultureInfo.InvariantCulture);
+                    // propose=1 (the gallery's converter cards): show the location's proposed outline on arrival.
+                    if (query.TryGetValue("propose", out string? propose) && propose.Trim() == "1")
+                        args["Propose"] = "1";
                     return args;
                 }
 
@@ -195,7 +198,11 @@ namespace Viking
 
             string? location = link.Place?["Location"];
             if (!string.IsNullOrWhiteSpace(location))
+            {
                 parts.Add("location=" + Uri.EscapeDataString(location));
+                if (link.Place?["Propose"] == "1")
+                    parts.Add("propose=1");
+            }
             else
             {
                 CopyPlaceQuery(parts, link.Place, "X", "x");

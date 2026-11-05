@@ -186,6 +186,20 @@ namespace WebAnnotation
 
                 GoToLocation(loc);
             };
+            Viking.UI.State.ProposeAnnotationLocation = locId => CurrentOverlay?.ProposeLocation(locId);
+        }
+
+        /// <summary>
+        /// A <c>propose=1</c> deep link: puts <paramref name="locationId"/> at the front of the auto-polygonize queue, so its
+        /// proposed outline (a gallery reviewer's, when the segmentation server holds one) shows without waiting for the view to
+        /// settle. While Auto Polygonize Circles is off the status bar says how to see it.
+        /// </summary>
+        internal void ProposeLocation(long locationId)
+        {
+            if (autoPolygonizeController?.Propose(locationId) == true)
+                return;
+
+            _Parent?.ShowTransientStatus("Turn on Annotation > Auto Polygonize Circles to see this location's proposed outline.");
         }
 
         public AnnotationOverlay()
@@ -253,9 +267,13 @@ namespace WebAnnotation
                 return;
             }
 
+            bool propose = Viking.UI.State.StartupArguments["Propose"] == "1";
             Viking.UI.State.StartupArguments.Remove("Location");
+            Viking.UI.State.StartupArguments.Remove("Propose");
             StopStartupLocationRetry();
             GoToLocation(loc);
+            if (propose)
+                ProposeLocation(locID);
         }
 
         /// <summary>

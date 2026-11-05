@@ -158,8 +158,27 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 serverStatusEndpoint = null;
 
             Volatile.Write(ref serverModelId, null);
+            Volatile.Write(ref readableContexts, null);
             Volatile.Write(ref serverStatusRefresh, null);
         }
+
+        /// <summary>
+        /// The annotation contexts whose images the server reads from its own storage (<c>readable_volumes</c>), or null until
+        /// it has answered. Replaced as a whole, so readers need no lock.
+        /// </summary>
+        private static HashSet<long>? readableContexts;
+
+        /// <summary>
+        /// True when the server reported that it reads <paramref name="annotationContextId"/>'s images itself, so a saved
+        /// location there can be segmented with <c>SegmentLocation</c> without this client sending tiles. False for a server
+        /// that has not answered or does not report readable volumes.
+        /// </summary>
+        public static bool ServerReadsContext(long annotationContextId) =>
+            annotationContextId > 0 && Volatile.Read(ref readableContexts)?.Contains(annotationContextId) == true;
+
+        /// <summary>The contexts <paramref name="status"/> lists as read from the server's own storage.</summary>
+        internal static HashSet<long> ReadableContextsOf(ServerStatusResponse? status) =>
+            [.. (status?.ReadableVolumes ?? []).Where(volume => volume.Readable).Select(volume => volume.AnnotationContextId)];
 
         /// <summary>
         /// Waits (at most <paramref name="timeoutSeconds"/>) for the GetServerStatus query a connection started, so
@@ -230,6 +249,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                         return;
 
                     Volatile.Write(ref serverModelId, modelId);
+                    Volatile.Write(ref readableContexts, ReadableContextsOf(status));
                 }
 
                 if (status?.Model is { } model)
@@ -636,48 +656,59 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 SegmentationServiceHealth.ReportSuccess();
                 return response;
             }
-            catch (OperationCanceledException)
-            {
-                SegmentationDiag.Log("SegmentAsync cancelled");
-                RecordSkip(SegmentationSkipKind.Cancelled);
-                return null;
-            }
-            catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.FailedPrecondition &&
-                rpcEx.Status.Detail.StartsWith("NO_MATCHING_MASK", StringComparison.Ordinal))
-            {
-                // The server found no candidate mask that fits the prompt (the starting rectangle, or the
-                // clicks) and does not guess. There is nothing to retry; log what the server said.
-                SegmentationDiag.Log($"SegmentAsync req={requestId} {rpcEx.Status.Detail}");
-                Debug.WriteLine($"Segmentation found no matching mask: {rpcEx.Status.Detail}");
-                SegmentationServiceHealth.ReportSuccess();
-                RecordSkip(SegmentationSkipKind.Error, rpcEx.Status.Detail);
-                return null;
-            }
-            catch (RpcException rpcEx) when (SegmentationRpcErrors.Describe(rpcEx) is not null)
-            {
-                // A timeout or a server limit says nothing is wrong with the request, so the user is
-                // told that trying again can work instead of being shown the raw gRPC status.
-                string reason = SegmentationRpcErrors.Describe(rpcEx)!;
-                SegmentationDiag.Log($"SegmentAsync req={requestId} {rpcEx.StatusCode}: {rpcEx.Status.Detail}");
-                if (rpcEx.StatusCode == StatusCode.FailedPrecondition)
-                {
-                    // The server now serves a different model than the one the next prompts were built for. Forget it so
-                    // the next connection asks GetServerStatus again.
-                    ResetServerModel();
-                }
-
-                SegmentationServiceHealth.ReportRpcError(rpcEx);
-                RecordSkip(SegmentationSkipKind.Error, reason);
-                return null;
-            }
             catch (Exception ex)
             {
-                SegmentationDiag.Log($"SegmentAsync error: {ex.GetType().Name}: {ex.Message}");
-                Debug.WriteLine($"Segmentation error: {ex.Message}");
-                if (ex is RpcException callError)
-                    SegmentationServiceHealth.ReportRpcError(callError);
-                RecordSkip(SegmentationSkipKind.Error, ex.Message);
+                RecordSegmentFailure(ex, "SegmentAsync", requestId);
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Logs a failed segmentation call and records why it was skipped, for <see cref="SegmentAsync"/> and
+        /// <see cref="SegmentLocationAsync"/>.
+        /// </summary>
+        /// <param name="caller">The method name the log lines start with.</param>
+        private void RecordSegmentFailure(Exception ex, string caller, ulong requestId)
+        {
+            switch (ex)
+            {
+                case OperationCanceledException:
+                    SegmentationDiag.Log($"{caller} cancelled");
+                    RecordSkip(SegmentationSkipKind.Cancelled);
+                    return;
+
+                case RpcException rpcEx when rpcEx.StatusCode == StatusCode.FailedPrecondition &&
+                    rpcEx.Status.Detail.StartsWith("NO_MATCHING_MASK", StringComparison.Ordinal):
+                    // The server found no candidate mask that fits the prompt (the starting rectangle, or the
+                    // clicks) and does not guess. There is nothing to retry; log what the server said.
+                    SegmentationDiag.Log($"{caller} req={requestId} {rpcEx.Status.Detail}");
+                    Debug.WriteLine($"Segmentation found no matching mask: {rpcEx.Status.Detail}");
+                    SegmentationServiceHealth.ReportSuccess();
+                    RecordSkip(SegmentationSkipKind.Error, rpcEx.Status.Detail);
+                    return;
+
+                case RpcException rpcEx when SegmentationRpcErrors.Describe(rpcEx) is string reason:
+                    // A timeout or a server limit says nothing is wrong with the request, so the user is
+                    // told that trying again can work instead of being shown the raw gRPC status.
+                    SegmentationDiag.Log($"{caller} req={requestId} {rpcEx.StatusCode}: {rpcEx.Status.Detail}");
+                    if (rpcEx.StatusCode == StatusCode.FailedPrecondition)
+                    {
+                        // The server now serves a different model than the one the next prompts were built for, or no
+                        // longer reads a volume it reported. Forget what it said so the next connection asks GetServerStatus again.
+                        ResetServerModel();
+                    }
+
+                    SegmentationServiceHealth.ReportRpcError(rpcEx);
+                    RecordSkip(SegmentationSkipKind.Error, reason);
+                    return;
+
+                default:
+                    SegmentationDiag.Log($"{caller} error: {ex.GetType().Name}: {ex.Message}");
+                    Debug.WriteLine($"Segmentation error: {ex.Message}");
+                    if (ex is RpcException callError)
+                        SegmentationServiceHealth.ReportRpcError(callError);
+                    RecordSkip(SegmentationSkipKind.Error, ex.Message);
+                    return;
             }
         }
 

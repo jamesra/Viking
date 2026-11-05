@@ -238,5 +238,11 @@ namespace Viking.UI
         /// </summary>
         public static Action<long>? GoToAnnotationLocation { get; set; }
 
+        /// <summary>
+        /// Registered by WebAnnotation to ask auto-polygonize for a location's proposed outline at once, after
+        /// <see cref="GoToAnnotationLocation"/> went there. Used by deep links with <c>propose=1</c>.
+        /// </summary>
+        public static Action<long>? ProposeAnnotationLocation { get; set; }
+
     }
 }

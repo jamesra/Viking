@@ -1213,6 +1213,13 @@ namespace WebAnnotation.UI.AutoPolygonize
                     uploadSession = localUploadSession;
                 }
 
+                // A server that reads this volume's images builds each circle's prompt itself (SegmentLocation), so the
+                // batch sends location ids and no tiles. It says so in its status, which the connection above asked for.
+                await SegmentationViewportSession.WhenServerStatusKnownAsync().ConfigureAwait(false);
+                long annotationContextId = Viking.Common.AccessibleVolumeSession.AnnotationContextId;
+                bool serverReadsVolume = SegmentationViewportSession.ServerReadsContext(annotationContextId);
+                SegmentationDiag.Log($"RunBatch context={annotationContextId} serverReadsVolume={serverReadsVolume}");
+
                 localUploadSession.ViewportBounds = localUploadSession.GetCurrentViewportBounds();
                 Rectangle viewBounds = localUploadSession.ViewportBounds;
 
@@ -1278,18 +1285,22 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 // Tiles around every queued circle go up in the background, nearest the cursor first, so most requests
                 // find them already encoded on the server. Stopped when the queue is done: what is left belongs to
-                // circles no longer sent.
+                // circles no longer sent. Not for a volume the server reads: it reads the mosaic tiles it needs from disk,
+                // and these volume-space tiles are on another grid.
                 prefetchCts = CancellationTokenSource.CreateLinkedTokenSource(processToken);
-                LiveView startView = await ReadLiveViewAsync().ConfigureAwait(false);
-                Vector2 priority = AutoPolygonizeSelection.QueuePriorityPoint(startView.Cursor, startView.Bounds);
-                List<Rectangle> regions = [];
-                foreach (LocationObj circle in queue.OrderBy(circle => Vector2.DistanceSquared(circle.VolumeCenter(), priority)))
+                if (!serverReadsVolume)
                 {
-                    if (TryPrefetchRegion(circle, transform, out Rectangle region))
-                        regions.Add(region);
-                }
+                    LiveView startView = await ReadLiveViewAsync().ConfigureAwait(false);
+                    Vector2 priority = AutoPolygonizeSelection.QueuePriorityPoint(startView.Cursor, startView.Bounds);
+                    List<Rectangle> regions = [];
+                    foreach (LocationObj circle in queue.OrderBy(circle => Vector2.DistanceSquared(circle.VolumeCenter(), priority)))
+                    {
+                        if (TryPrefetchRegion(circle, transform, out Rectangle region))
+                            regions.Add(region);
+                    }
 
-                processBatch.AddResponseTask(localUploadSession.PrefetchTilesAsync(regions, prefetchCts.Token));
+                    processBatch.AddResponseTask(localUploadSession.PrefetchTilesAsync(regions, prefetchCts.Token));
+                }
 
                 // One circle's request. Returns once its response is handed to ProcessResponseAsync.
                 async Task SendCircleAsync(LocationObj circle, List<LocationObj> visibleForPrompts)
@@ -1308,21 +1319,41 @@ namespace WebAnnotation.UI.AutoPolygonize
                     IReadOnlyList<Vector2> keepPoints = [startingPrompt.Center];
                     IReadOnlyList<Vector2> foreground = keepPoints;
 
-                    SegmentationBackgroundShapes backgroundShapes = CircleSegmentationPrompts.CreateOtherStructureBackgroundShapes(
-                        visibleForPrompts, transform, [circle.ID], circle.ParentID);
-                    SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
-                        "auto-circle-batch", [circle.ID], circle.ParentID, visibleForPrompts, foreground, null, backgroundShapes));
-                    long promptMs = proposalTimer.ElapsedMilliseconds;
-
                     long requestTicket = NextRequestTicket();
-                    Stopwatch segmentTimer = Stopwatch.StartNew();
-                    var response = await localUploadSession.SegmentAsync(
-                        [],
-                        [],
-                        processToken,
-                        startingBoxes,
-                        requestId: (ulong)requestTicket,
-                        backgroundShapes: backgroundShapes).ConfigureAwait(false);
+                    long promptMs;
+                    Stopwatch segmentTimer;
+                    Viking.gRPC.SegmentationServiceTypes.V1.SegmentationResponse? response;
+                    Polygon? reviewedOutline = null;
+                    if (serverReadsVolume)
+                    {
+                        // The server builds the same prompt (the circle, and the other structures it reaches) from the saved location.
+                        promptMs = proposalTimer.ElapsedMilliseconds;
+                        segmentTimer = Stopwatch.StartNew();
+                        SegmentationViewportSession.LocationSegmentation? located = await localUploadSession.SegmentLocationAsync(
+                            annotationContextId,
+                            circle.ID,
+                            processToken,
+                            (ulong)requestTicket).ConfigureAwait(false);
+                        response = located?.Response;
+                        reviewedOutline = located?.Reviewed;
+                    }
+                    else
+                    {
+                        SegmentationBackgroundShapes backgroundShapes = CircleSegmentationPrompts.CreateOtherStructureBackgroundShapes(
+                            visibleForPrompts, transform, [circle.ID], circle.ParentID);
+                        SegmentationDiag.Log(CircleSegmentationPrompts.DescribePrompts(
+                            "auto-circle-batch", [circle.ID], circle.ParentID, visibleForPrompts, foreground, null, backgroundShapes));
+                        promptMs = proposalTimer.ElapsedMilliseconds;
+                        segmentTimer = Stopwatch.StartNew();
+                        response = await localUploadSession.SegmentAsync(
+                            [],
+                            [],
+                            processToken,
+                            startingBoxes,
+                            requestId: (ulong)requestTicket,
+                            backgroundShapes: backgroundShapes).ConfigureAwait(false);
+                    }
+
                     long segmentMs = segmentTimer.ElapsedMilliseconds;
                     if (response is null)
                         return;
@@ -1346,7 +1377,8 @@ namespace WebAnnotation.UI.AutoPolygonize
                             processToken,
                             requestTicket,
                             keepPoints,
-                            startingBoxes);
+                            startingBoxes,
+                            reviewedOutline);
                         processBatch.AddResponseTask(responseTask);
                     }
                     catch (OperationCanceledException)
@@ -1615,6 +1647,8 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// object) is traced; the other islands are dropped. An empty union is a LastModified skip (no overlay)
         /// so the next idle batch does not segment the same circle again. GPU mask textures are created
         /// later on the UI thread in <see cref="PublishProposalOnUiThread"/>.
+        /// A <paramref name="reviewedOutline"/> (an outline a person approved in the gallery, which the server returned with the
+        /// response) is proposed instead of the traced mask, and the proposal keeps no mask, so a threshold change never retraces it.
         /// </summary>
         private async Task ProcessResponseAsync(
             SegmentationViewportSession session,
@@ -1633,7 +1667,8 @@ namespace WebAnnotation.UI.AutoPolygonize
             CancellationToken processToken,
             long requestTicket,
             IReadOnlyList<Vector2>? extraKeepPoints = null,
-            IReadOnlyList<SegmentationSeed>? startingBoxes = null)
+            IReadOnlyList<SegmentationSeed>? startingBoxes = null,
+            Polygon? reviewedOutline = null)
         {
             if (processToken.IsCancellationRequested || !enabled || !cache.IsGenerationCurrent(circle.ID, generation))
                 return;
@@ -1641,6 +1676,9 @@ namespace WebAnnotation.UI.AutoPolygonize
             Stopwatch polygonTimer = Stopwatch.StartNew();
             (Polygon? Polygon, AutoPolygonizeMaskOverlay? Mask, int VerticesBeforeSimplify) processed = await Task.Run(() =>
             {
+                if (reviewedOutline is not null)
+                    return (reviewedOutline, (AutoPolygonizeMaskOverlay?)null, reviewedOutline.TotalUniqueVertices);
+
                 // The clicks sit near the circle's edge, where a mask can break into pieces; the circle's
                 // center is inside the object by construction, so it keeps the main piece.
                 IReadOnlyList<Vector2> keepPoints = extraKeepPoints is { Count: > 0 }
@@ -2604,6 +2642,23 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (queued > 0 && !IsBusy)
                     RestartIdleTimer();
             }), "merge candidate check");
+        }
+
+        /// <summary>
+        /// Asks for <paramref name="locationId"/>'s proposal ahead of everything else (a <c>propose=1</c> deep link): it joins the
+        /// merge candidates, which go out first wherever they are, and an idle pass starts. A circle already proposed, dismissed
+        /// or no longer a circle is skipped as the queue always skips it. UI thread.
+        /// </summary>
+        /// <returns>False while auto-polygonize is off.</returns>
+        public bool Propose(long locationId)
+        {
+            if (!enabled)
+                return false;
+
+            SegmentationDiag.Log($"AutoPolygonize.Propose location={locationId}");
+            EnqueueMergeCandidate(locationId);
+            RestartIdleTimer();
+            return true;
         }
 
         /// <summary>Queues one circle for the merge check unless it is already queued. Thread-safe.</summary>

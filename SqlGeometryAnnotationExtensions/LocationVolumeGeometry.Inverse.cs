@@ -204,6 +204,21 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
+        /// Maps volume points to mosaic space one by one, for samples rather than an edit: a mosaic field drawn on the volume
+        /// grid looks each volume sample up in the mosaic, and a sample the transform does not cover is only left empty.
+        /// </summary>
+        /// <returns>Whether each point mapped; <paramref name="mosaicPoints"/> holds every mapped point at its index.</returns>
+        public static bool[] TryMapEachPointToMosaic(IReadOnlyList<Vector2> volumePoints, IVolumeToSectionTransform transform, out Vector2[] mosaicPoints)
+        {
+            if (volumePoints is null)
+                throw new ArgumentNullException(nameof(volumePoints));
+            if (transform is null)
+                throw new ArgumentNullException(nameof(transform));
+
+            return transform.TryVolumeToSection(volumePoints as Vector2[] ?? [.. volumePoints], out mosaicPoints);
+        }
+
+        /// <summary>
         /// Maps an edited volume polygon with holes back to a mosaic <see cref="Polygon"/>, all or none: the
         /// <see cref="TryMapPointsToMosaic"/> of every ring, for commands and cuts that go on working with the mosaic polygon
         /// (and save it with <c>SetShapeFromGeometryInSection</c>).

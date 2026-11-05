@@ -353,6 +353,16 @@ for future papers: citations, formulas, algorithmic decisions and the reasoning 
   the new outside shadow (5 px, black around light links, white around dark) are composited as plain RGB; the fill keeps
   the luma blend it had at alpha 64 ($\alpha_\text{luma} = 0.75$) so raising opacity does not change its colour. Where:
   `PinchedLineShaders.fx` `MyPSPinchedHSV`.
+- **2026-11-05 A location-built segmentation is resampled onto the volume grid, not mapped as a polygon.** The server's
+  `SegmentLocation` answer is a logit field on the mosaic grid at downsample 1. Auto-polygonize draws, retraces at a new
+  threshold and merges same-cell proposals (pixel-wise max of logits on a shared canvas) in viewer space, so mapping only the
+  traced polygon (the first plan) would have left the mask overlay, the threshold redraw and the merges on the wrong grid.
+  Each volume sample $v$ takes the bilinear interpolation of the mosaic logits at $T^{-1}(v)$, at the field's own pixel
+  scale; samples outside the field or the transform take the field's lowest logit. The bilinear interpolation of logits
+  keeps the zero crossing between samples, so the traced boundary moves by the transform alone, up to the interpolation
+  error of a quarter-resolution field. Rejected: asking the server for volume space (it holds no volume transforms).
+  Where: `SegmentationFieldResampler`, `LocationVolumeGeometry.TryMapEachPointToMosaic`; the polygon a reviewer approved in
+  the gallery (`SegmentationResponse.reviewed`, mosaic) is mapped with `TryMapPolygon`.
 
 ## Discussion points
 
