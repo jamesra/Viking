@@ -11,7 +11,7 @@ Notes for whoever updates this file. Comments like this one are not shown in Vik
   changes, rename the unreleased heading to the new version; when a version ships, replace "not yet released" with the date
   and channel, for example "2026-10-26 (Viking Test, unsigned)".
 
-Committed application version: 1.2.137.0.
+Committed application version: 1.2.138.0.
 1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109;
 their changes are listed under 1.2.109. Builds 1.2.128 and 1.2.129 are listed under 1.2.129 (it went out as Viking Test
 and as a signed release on 2026-10-27). Viking Test builds 1.2.130 to 1.2.136 were folded into the 1.2.136 release on
@@ -22,6 +22,11 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. Older 1.1.x notes live in
 Documentation/source/Client/versionhistory.rst.
 -->
+
+## 1.2.138 — not yet released
+
+* **Fix: overlap shading follows a new transform.** After switching the volume transform, or when a section's alignment is reloaded, the checkerboard where two cells overlap stayed where the old transform had put it, and right double-clicking it for **Give overlap to** only worked at that old place. The shading now moves with the cells at once.
+<!-- CellOverlapIndex reused per-pair intersections across a transform change (cache keyed by IDs and shape stamps only); now kept only while the transform instance is the same. The bug came with the overlap shading in 1.2.137, so mark this bullet test-regression 1.2.137 when it is packed as Viking Test. -->
 
 ## 1.2.137 — 2026-11-05 (Viking Test, unsigned)
 

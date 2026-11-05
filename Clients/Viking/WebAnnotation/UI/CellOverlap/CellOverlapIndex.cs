@@ -18,13 +18,16 @@ namespace WebAnnotation.UI.CellOverlap
     /// <remarks>
     /// <see cref="Update"/> is called every frame, so it first computes a signature from the identity of each location's
     /// <c>MosaicShape</c> (a shape edit stores a new instance) and only then does any geometry. A pair's intersection is
-    /// remembered while neither outline changes, so panning does not repeat it. UI thread only.
+    /// remembered while neither outline and the transform instance change, so panning does not repeat it. UI thread only.
     /// </remarks>
     internal sealed class CellOverlapIndex
     {
         private readonly record struct PairKey(long A, long B, int StampA, int StampB);
 
         private Dictionary<PairKey, IReadOnlyList<Polygon>> pairs = [];
+
+        /// <summary>The transform <see cref="pairs"/> was mapped through; its volume-space intersections are wrong under any other.</summary>
+        private IVolumeToSectionTransform? pairsTransform;
         private long signature;
         private bool hasSignature;
 
@@ -56,6 +59,7 @@ namespace WebAnnotation.UI.CellOverlap
             if (hasSignature && next == signature)
                 return false;
 
+            Dictionary<PairKey, IReadOnlyList<Polygon>> reusable = ReferenceEquals(transform, pairsTransform) ? pairs : [];
             Dictionary<PairKey, IReadOnlyList<Polygon>> remembered = [];
             List<CellOverlapRegion> regions = [];
             List<(LocationObj Location, Polygon Shape, int Stamp)> shapes = [];
@@ -79,7 +83,7 @@ namespace WebAnnotation.UI.CellOverlap
                     }
 
                     PairKey key = new(first.ID, second.ID, firstStamp, secondStamp);
-                    if (!pairs.TryGetValue(key, out IReadOnlyList<Polygon>? parts))
+                    if (!reusable.TryGetValue(key, out IReadOnlyList<Polygon>? parts))
                         parts = CellOverlapGeometry.Intersection(firstShape, secondShape);
 
                     remembered[key] = parts;
@@ -88,6 +92,7 @@ namespace WebAnnotation.UI.CellOverlap
             }
 
             pairs = remembered;
+            pairsTransform = transform;
             signature = next;
             hasSignature = true;
             Regions = regions;

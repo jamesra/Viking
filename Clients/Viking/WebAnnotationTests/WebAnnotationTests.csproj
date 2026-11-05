@@ -136,6 +136,7 @@
     <Compile Include="Commands\SegmentationThinFeatureCutTests.cs" />
     <Compile Include="Commands\AutoPolygonizeDissolveTests.cs" />
     <Compile Include="Commands\CellOverlapGeometryTests.cs" />
+    <Compile Include="Commands\CellOverlapIndexTests.cs" />
     <Compile Include="Commands\AutoCirclePolygonizeTests.cs" />
     <Compile Include="Commands\AutoPolygonizeMergeCandidateTests.cs" />
     <Compile Include="Commands\AutoPolygonizeSelectionRulesTests.cs" />
