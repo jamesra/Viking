@@ -67,8 +67,8 @@ x-segmentation-env: &segmentation-env
   # Uploaded tile bytes, so a tile the GPU cache dropped is rebuilt without asking a client. Disk copies go under the embedding cache.
   SEGMENTATION_TILE_RAM_BYTES: ${SEGMENTATION_TILE_RAM_BYTES:-}
   SEGMENTATION_TILE_CACHE_MAX_BYTES: ${SEGMENTATION_TILE_CACHE_MAX_BYTES:-}
-  # Finished segmentations by location (SegmentTilesRequest.locations), reviewed outlines and jobs. Both limits are
-  # optional (empty is none); rows linked to a job and reviewed outlines are never evicted.
+  # Finished segmentations by location (SegmentTilesRequest.locations), manual traces and jobs. Both limits are
+  # optional (empty is none); rows linked to a job and manual traces are never evicted.
   SEGMENTATION_RESULTS_DIR: /var/cache/segmentation-results
   SEGMENTATION_RESULTS_MAX_BYTES: ${SEGMENTATION_RESULTS_MAX_BYTES:-}
   SEGMENTATION_RESULTS_MAX_AGE_DAYS: ${SEGMENTATION_RESULTS_MAX_AGE_DAYS:-}

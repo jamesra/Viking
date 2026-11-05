@@ -116,6 +116,17 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
 
 ## Algorithmic decisions
 
+- **2026-11-05 A person's traced outline is a cached row of its own; reviewed outlines are retired.** Why: the
+  gallery stored approved and retraced outlines in a side table and sent them alongside the model's logits, mixing human
+  and model output in one answer. A traced outline belongs in the annotation database, which the gallery cannot write
+  yet (WCF refuses its token; the gRPC annotation service checks no per-volume rights; both need the client to compute
+  the volume shape). Until it can, the trace is the location's cached answer: a `segmentation` row with `manual_trace`
+  set, holding the polygon (a serialized `Shape`) and no logits, never evicted, answering until the location is edited.
+  Viking proposes it and calls `ForgetLocations` when it saves the location, which drops the trace and every model row
+  of the location. Approved unedited cards send nothing: the build's job already keeps the model's row. Rejected:
+  rasterising the trace into saturated logits (the vertices would be lost to the 4 px logit grid; a trace is kept as
+  the polygon drawn). Migration: a retraced reviewed outline becomes a trace, an approved one is dropped. Where:
+  `result_store.py`, `server.py` (`_traced_response`, `PutManualTraces`, `ForgetLocations`); gRPC_Protos `14dd53e`.
 - **2026-11-05 The segmentation server builds location prompts itself (SegmentLocation).** Why: with clients building
   them, a location's request was spread over two languages (the gallery reached the C# library through ctypes and ran
   the stream in Python), every client had to send byte-identical bytes to share a cache row, and each sent what the

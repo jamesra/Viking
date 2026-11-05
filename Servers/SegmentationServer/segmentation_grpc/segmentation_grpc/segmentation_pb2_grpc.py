@@ -62,10 +62,15 @@ class SegmentationServiceStub:
                 request_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ServerStatusRequest.SerializeToString,
                 response_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ServerStatusResponse.FromString,
                 _registered_method=True)
-        self.PutReviewedOutlines = channel.unary_unary(
-                '/segmentation.SegmentationService/PutReviewedOutlines',
-                request_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.PutReviewedOutlinesRequest.SerializeToString,
-                response_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.PutReviewedOutlinesResponse.FromString,
+        self.PutManualTraces = channel.unary_unary(
+                '/segmentation.SegmentationService/PutManualTraces',
+                request_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.PutManualTracesRequest.SerializeToString,
+                response_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.PutManualTracesResponse.FromString,
+                _registered_method=True)
+        self.ForgetLocations = channel.unary_unary(
+                '/segmentation.SegmentationService/ForgetLocations',
+                request_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ForgetLocationsRequest.SerializeToString,
+                response_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ForgetLocationsResponse.FromString,
                 _registered_method=True)
         self.CreateJob = channel.unary_unary(
                 '/segmentation.SegmentationService/CreateJob',
@@ -154,10 +159,19 @@ class SegmentationServiceServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def PutReviewedOutlines(self, request, context):
-        """Store or remove outlines a person reviewed (approved or retraced) for single locations. A stored outline is sent
-        as SegmentationResponse.reviewed with every later segmentation of that location until the location is edited.
-        Only a pending proposal is ever made from it: nothing is written to the annotation database.
+    def PutManualTraces(self, request, context):
+        """Store or remove outlines people traced for single locations (the gallery's converter, which cannot write to the
+        annotation database). A stored trace is the location's cached answer, sent as SegmentationResponse.manual_trace
+        instead of a segmentation until the location is edited, and is never evicted. A client that saves it calls
+        ForgetLocations.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ForgetLocations(self, request, context):
+        """The locations were written to the annotation database: every cached row of theirs, model results and manual
+        traces alike, is dropped.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -211,10 +225,15 @@ def add_SegmentationServiceServicer_to_server(servicer, server):
                     request_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ServerStatusRequest.FromString,
                     response_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ServerStatusResponse.SerializeToString,
             ),
-            'PutReviewedOutlines': grpc.unary_unary_rpc_method_handler(
-                    servicer.PutReviewedOutlines,
-                    request_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.PutReviewedOutlinesRequest.FromString,
-                    response_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.PutReviewedOutlinesResponse.SerializeToString,
+            'PutManualTraces': grpc.unary_unary_rpc_method_handler(
+                    servicer.PutManualTraces,
+                    request_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.PutManualTracesRequest.FromString,
+                    response_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.PutManualTracesResponse.SerializeToString,
+            ),
+            'ForgetLocations': grpc.unary_unary_rpc_method_handler(
+                    servicer.ForgetLocations,
+                    request_deserializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ForgetLocationsRequest.FromString,
+                    response_serializer=Segmentation_dot_SAM2_dot_segmentation__pb2.ForgetLocationsResponse.SerializeToString,
             ),
             'CreateJob': grpc.unary_unary_rpc_method_handler(
                     servicer.CreateJob,
@@ -381,7 +400,7 @@ class SegmentationService:
             _registered_method=True)
 
     @staticmethod
-    def PutReviewedOutlines(request,
+    def PutManualTraces(request,
             target,
             options=(),
             channel_credentials=None,
@@ -394,9 +413,36 @@ class SegmentationService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/segmentation.SegmentationService/PutReviewedOutlines',
-            Segmentation_dot_SAM2_dot_segmentation__pb2.PutReviewedOutlinesRequest.SerializeToString,
-            Segmentation_dot_SAM2_dot_segmentation__pb2.PutReviewedOutlinesResponse.FromString,
+            '/segmentation.SegmentationService/PutManualTraces',
+            Segmentation_dot_SAM2_dot_segmentation__pb2.PutManualTracesRequest.SerializeToString,
+            Segmentation_dot_SAM2_dot_segmentation__pb2.PutManualTracesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ForgetLocations(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/segmentation.SegmentationService/ForgetLocations',
+            Segmentation_dot_SAM2_dot_segmentation__pb2.ForgetLocationsRequest.SerializeToString,
+            Segmentation_dot_SAM2_dot_segmentation__pb2.ForgetLocationsResponse.FromString,
             options,
             channel_credentials,
             insecure,

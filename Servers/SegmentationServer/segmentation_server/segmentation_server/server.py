@@ -33,11 +33,13 @@ from segmentation_grpc import (
     Job,
     ListJobsRequest,
     ListJobsResponse,
-    PutReviewedOutlinesRequest,
-    PutReviewedOutlinesResponse,
+    ForgetLocationsRequest,
+    ForgetLocationsResponse,
     LocationStart,
+    ManualTrace,
+    PutManualTracesRequest,
+    PutManualTracesResponse,
     ReadableVolume,
-    ReviewedOutline,
     SegmentationResponse,
     SegmentLocationRequest,
     SegmentLocationResponse,
@@ -99,7 +101,7 @@ from segmentation_server.result_store import (
     CacheKey,
     JobRow,
     ResultStore,
-    StoredOutline,
+    StoredTrace,
     cache_key,
     open_result_store,
 )
@@ -1142,9 +1144,12 @@ class SegmentationServicer(SegmentationServiceServicer):
             return
 
         # A request naming its locations may be answered from the result cache: no tiles, no model, no stream limit.
+        # A person's trace of the location comes before any model answer.
         key = self._cache_key(request, mask_tiles)
         if key is not None and not request.refresh:
-            cached = await self._cached_response(request, key)
+            cached = await self._traced_response(request)
+            if cached is None:
+                cached = await self._cached_response(request, key)
             if cached is not None:
                 yield SegmentTilesStreamResponse(result=cached)
                 return
@@ -1291,7 +1296,6 @@ class SegmentationServicer(SegmentationServiceServicer):
             )
             if key is not None:
                 await self._remember_result(request, key, response)
-                await self._attach_reviewed(request, response)
             yield SegmentTilesStreamResponse(result=response)
         finally:
             reader.close()
@@ -1470,9 +1474,8 @@ class SegmentationServicer(SegmentationServiceServicer):
         response.request_id = request.request_id
         response.growth_threshold = cached.growth_threshold
         response.cache.CopyFrom(CacheInfo(created_ticks=cached.created_ticks, model_version=key.model_version))
-        await self._attach_reviewed(request, response)
         logger.info(
-            "SegmentTiles cached req=%s vol=%s sec=%s ds=%s locations=%s key=%s segments=%d reviewed=%s "
+            "SegmentTiles cached req=%s vol=%s sec=%s ds=%s locations=%s key=%s segments=%d "
             "threshold=%.3f grown_at=%.3f",
             request.request_id,
             volume,
@@ -1481,7 +1484,6 @@ class SegmentationServicer(SegmentationServiceServicer):
             list(key.location_ids),
             key.location_key,
             len(response.segments),
-            response.HasField("reviewed"),
             threshold,
             cached.growth_threshold,
         )
@@ -1495,41 +1497,50 @@ class SegmentationServicer(SegmentationServiceServicer):
         kept.CopyFrom(response)
         kept.request_id = 0
         kept.ClearField("cache")
-        kept.ClearField("reviewed")
         payload = kept.SerializeToString()
         volume = request.grid.volume
         job_id = self._job_id(request)
         threshold = float(response.growth_threshold)
         await self._run_store(lambda: store.store(volume, key, payload, threshold, job_id), "store")
 
-    async def _attach_reviewed(self, request: SegmentTilesRequest, response: SegmentationResponse) -> None:
-        """Add the reviewed outline of a single-location request whose location has not been edited since review."""
+    async def _traced_response(self, request: SegmentTilesRequest) -> Optional[SegmentationResponse]:
+        """A person's trace of a single-location request's location, not edited since, as its answer; else None."""
         if self._results is None or len(request.locations) != 1:
-            return
+            return None
         store = self._results
         ref = request.locations[0]
         volume = request.grid.volume
         stored = await self._run_store(
-            lambda: store.reviewed(volume, int(ref.id), int(ref.last_modified_ticks)), "reviewed lookup"
+            lambda: store.trace(volume, int(ref.id), int(ref.last_modified_ticks)), "trace lookup"
         )
         if stored is None:
-            return
+            return None
         outline = Shape()
         try:
             outline.ParseFromString(stored.outline)
         except Exception:
-            logger.exception("Reviewed outline of location %s on %s is unreadable", stored.location_id, volume)
-            return
-        response.reviewed.CopyFrom(
-            ReviewedOutline(
+            logger.exception("Manual trace of location %s on %s is unreadable; segmenting", stored.location_id, volume)
+            return None
+        response = SegmentationResponse(request_id=request.request_id)
+        response.cache.CopyFrom(CacheInfo(created_ticks=stored.traced_ticks))
+        response.manual_trace.CopyFrom(
+            ManualTrace(
                 location_id=stored.location_id,
                 last_modified_ticks=stored.last_modified_ticks,
                 outline=outline,
-                state=stored.state,
-                reviewed_ticks=stored.reviewed_ticks,
-                reviewer=stored.reviewer,
+                tracer=stored.tracer,
+                traced_ticks=stored.traced_ticks,
             )
         )
+        logger.info(
+            "SegmentTiles traced req=%s vol=%s sec=%s location=%s tracer=%s",
+            request.request_id,
+            volume,
+            request.grid.section,
+            stored.location_id,
+            stored.tracer,
+        )
+        return response
 
     async def _store_or_abort(self, context: ServicerContext, rpc: str) -> Optional[ResultStore]:
         if self._results is None:
@@ -1546,39 +1557,64 @@ class SegmentationServicer(SegmentationServiceServicer):
             return False
         return True
 
-    async def PutReviewedOutlines(
-        self, request: PutReviewedOutlinesRequest, context: ServicerContext
-    ) -> PutReviewedOutlinesResponse:
-        """Store and remove reviewed outlines; they ride along with later segmentations of their locations."""
-        store = await self._store_or_abort(context, "PutReviewedOutlines")
-        if store is None or not await self._volume_or_abort(request.volume, context, "PutReviewedOutlines"):
-            return PutReviewedOutlinesResponse()
-        outlines: List[StoredOutline] = []
-        for outline in request.outlines:
-            if outline.outline.WhichOneof("kind") not in ("polygon", "line", "circle", "ellipse"):
+    async def _context_volume_or_abort(self, context_id: int, context: ServicerContext, rpc: str) -> Optional[str]:
+        """The VikingXML volume name of an annotation context, as SegmentLocation names its store; None after an abort."""
+        lookup = getattr(self._tile_source, "context_volume", None)
+        found = await lookup(int(context_id)) if lookup is not None and context_id > 0 else None
+        if found is None or found[1] is None:
+            await context.abort(
+                grpc.StatusCode.NOT_FOUND, f"{rpc}: annotation context {context_id} has no volume this server reads."
+            )
+            return None
+        return found[1].name
+
+    async def PutManualTraces(self, request: PutManualTracesRequest, context: ServicerContext) -> PutManualTracesResponse:
+        """Store and remove outlines people traced; each is its location's answer until the location is edited."""
+        store = await self._store_or_abort(context, "PutManualTraces")
+        if store is None:
+            return PutManualTracesResponse()
+        volume = await self._context_volume_or_abort(request.annotation_context_id, context, "PutManualTraces")
+        if volume is None:
+            return PutManualTracesResponse()
+        traces: List[StoredTrace] = []
+        for trace in request.traces:
+            if trace.outline.WhichOneof("kind") != "polygon":
                 await context.abort(
-                    grpc.StatusCode.INVALID_ARGUMENT,
-                    f"Reviewed outline of location {outline.location_id} needs a polygon, line, circle or ellipse.",
+                    grpc.StatusCode.INVALID_ARGUMENT, f"The trace of location {trace.location_id} must be a polygon."
                 )
-                return PutReviewedOutlinesResponse()
-            outlines.append(
-                StoredOutline(
-                    location_id=int(outline.location_id),
-                    last_modified_ticks=int(outline.last_modified_ticks),
-                    outline=outline.outline.SerializeToString(),
-                    state=outline.state or "approved",
-                    reviewed_ticks=int(outline.reviewed_ticks),
-                    reviewer=outline.reviewer,
+                return PutManualTracesResponse()
+            traces.append(
+                StoredTrace(
+                    location_id=int(trace.location_id),
+                    last_modified_ticks=int(trace.last_modified_ticks),
+                    outline=trace.outline.SerializeToString(),
+                    tracer=trace.tracer,
+                    traced_ticks=int(trace.traced_ticks),
                 )
             )
-        volume = request.volume
         removals = [int(location_id) for location_id in request.remove_location_ids]
-        counts = await self._run_store(lambda: store.put_reviewed(volume, outlines, removals), "reviewed store")
+        counts = await self._run_store(lambda: store.put_traces(volume, traces, removals), "trace store")
         if counts is None:
-            await context.abort(grpc.StatusCode.INTERNAL, "Could not store the reviewed outlines.")
-            return PutReviewedOutlinesResponse()
-        logger.info("PutReviewedOutlines vol=%s stored=%d removed=%d", volume, counts[0], counts[1])
-        return PutReviewedOutlinesResponse(stored=counts[0], removed=counts[1])
+            await context.abort(grpc.StatusCode.INTERNAL, "Could not store the manual traces.")
+            return PutManualTracesResponse()
+        logger.info("PutManualTraces vol=%s stored=%d removed=%d", volume, counts[0], counts[1])
+        return PutManualTracesResponse(stored=counts[0], removed=counts[1])
+
+    async def ForgetLocations(self, request: ForgetLocationsRequest, context: ServicerContext) -> ForgetLocationsResponse:
+        """Drop the cached rows of locations just written to the annotation database."""
+        store = await self._store_or_abort(context, "ForgetLocations")
+        if store is None:
+            return ForgetLocationsResponse()
+        volume = await self._context_volume_or_abort(request.annotation_context_id, context, "ForgetLocations")
+        if volume is None:
+            return ForgetLocationsResponse()
+        ids = [int(location_id) for location_id in request.location_ids]
+        removed = await self._run_store(lambda: store.forget(volume, ids), "forget")
+        if removed is None:
+            await context.abort(grpc.StatusCode.INTERNAL, "Could not forget the locations.")
+            return ForgetLocationsResponse()
+        logger.info("ForgetLocations vol=%s locations=%s removed=%d", volume, ids, removed)
+        return ForgetLocationsResponse(removed=removed)
 
     @staticmethod
     def _job_message(volume: str, row: JobRow) -> Job:

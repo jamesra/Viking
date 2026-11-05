@@ -22,8 +22,11 @@ client that comes back walks the same chain from cache hits.
 One SQLite file per volume (WAL) under ``SEGMENTATION_RESULTS_DIR``, shared by the model containers of a host; the key
 names the model, so they never read each other's rows. It holds three other things the cache needs:
 
-- reviewed outlines: outlines a person approved or retraced in the gallery, sent with the next segmentation of that
-  location until it is edited; never evicted;
+- manual traces: outlines a person traced for one location in the gallery's converter, which cannot write to the
+  annotation database. A trace is a row of the ``segmentation`` table with ``manual_trace`` set, holding the outline
+  (a serialized ``Shape``) instead of logits, keyed by the location and the LastModified it was traced against; it
+  answers for the location until it is edited, whatever the model or threshold, and is never evicted. A row is either
+  a person's polygon or the model's logits, never both;
 - jobs: a reason to keep rows. A row whose location key is linked to a job is never evicted;
 - size and age limits, both optional (``SEGMENTATION_RESULTS_MAX_BYTES`` per volume file and
   ``SEGMENTATION_RESULTS_MAX_AGE_DAYS``): least recently hit rows go first.
@@ -71,6 +74,8 @@ CREATE TABLE IF NOT EXISTS segmentation (
     created_ticks  INTEGER NOT NULL,
     last_hit_ticks INTEGER NOT NULL,
     response       BLOB    NOT NULL,
+    manual_trace   INTEGER NOT NULL DEFAULT 0,
+    tracer         TEXT    NOT NULL DEFAULT '',
     PRIMARY KEY (location_key, location_lm, model_version, server_version, space, transform, channel, downsample,
                  context_hash, prompt_hash)
 );
@@ -81,14 +86,6 @@ CREATE TABLE IF NOT EXISTS segmentation_member (
     PRIMARY KEY (location_key, location_id)
 );
 CREATE INDEX IF NOT EXISTS segmentation_member_location ON segmentation_member (location_id);
-CREATE TABLE IF NOT EXISTS reviewed_outline (
-    location_id         INTEGER PRIMARY KEY,
-    last_modified_ticks INTEGER NOT NULL,
-    outline             BLOB    NOT NULL,
-    state               TEXT    NOT NULL,
-    reviewed_ticks      INTEGER NOT NULL,
-    reviewer            TEXT    NOT NULL
-);
 CREATE TABLE IF NOT EXISTS job (
     job_id        INTEGER PRIMARY KEY AUTOINCREMENT,
     title         TEXT    NOT NULL,
@@ -104,6 +101,9 @@ CREATE TABLE IF NOT EXISTS job_link (
 );
 CREATE INDEX IF NOT EXISTS job_link_key ON job_link (location_key);
 """
+
+# A manual trace fills the key columns it has no value for with these, so it never matches a model lookup.
+_TRACE_KEY_FILLER = ("", "", 0, "", "", 0, "", "")
 
 
 def now_ticks() -> int:
@@ -281,13 +281,13 @@ class CachedResult:
 
 
 @dataclass(frozen=True)
-class StoredOutline:
+class StoredTrace:
     location_id: int
     last_modified_ticks: int
+    # A serialized ``Shape`` in mosaic pixels at downsample 1.
     outline: bytes
-    state: str
-    reviewed_ticks: int
-    reviewer: str
+    tracer: str
+    traced_ticks: int
 
 
 @dataclass(frozen=True)
@@ -335,9 +335,38 @@ class ResultStore:
         path = self._root / f"{name}.sqlite"
         with self._connect(path) as connection:
             connection.executescript(_SCHEMA)
+            self._migrate(connection)
         with self._lock:
             self._ready[volume] = path
         return path
+
+    @staticmethod
+    def _migrate(connection: sqlite3.Connection) -> None:
+        """Bring a file written before manual traces up to date.
+
+        Its reviewed outlines go: a retraced one becomes the location's manual trace, an approved one was the model's
+        own answer and is dropped (its row, if any, is still cached).
+        """
+        columns = {str(row[1]) for row in connection.execute("PRAGMA table_info(segmentation)")}
+        if "manual_trace" not in columns:
+            connection.execute("ALTER TABLE segmentation ADD COLUMN manual_trace INTEGER NOT NULL DEFAULT 0")
+        if "tracer" not in columns:
+            connection.execute("ALTER TABLE segmentation ADD COLUMN tracer TEXT NOT NULL DEFAULT ''")
+        reviewed = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='reviewed_outline'"
+        ).fetchone()
+        if reviewed is None:
+            return
+        rows = connection.execute(
+            "SELECT location_id, last_modified_ticks, outline, reviewer, reviewed_ticks FROM reviewed_outline "
+            "WHERE state='retraced'"
+        ).fetchall()
+        ResultStore._write_traces(
+            connection,
+            [StoredTrace(int(r[0]), int(r[1]), bytes(r[2]), str(r[3]), int(r[4])) for r in rows],
+        )
+        connection.execute("DROP TABLE reviewed_outline")
+        logger.info("Result cache: %d retraced reviewed outline(s) became manual traces", len(rows))
 
     @staticmethod
     def _connect(path: Path) -> sqlite3.Connection:
@@ -404,40 +433,88 @@ class ResultStore:
                 (key, job_id),
             )
 
-    # -- reviewed outlines -------------------------------------------------------------------------------------------
+    # -- manual traces and forgetting ------------------------------------------------------------------------------
 
-    def reviewed(self, volume: str, location_id: int, last_modified_ticks: int) -> Optional[StoredOutline]:
-        """The reviewed outline of a location not edited since it was reviewed, or None."""
+    @staticmethod
+    def _write_traces(connection: sqlite3.Connection, traces: Sequence[StoredTrace]) -> None:
+        """Replace each location's trace, whatever LastModified the old one was drawn against."""
+        for trace in traces:
+            key = str(int(trace.location_id))
+            connection.execute("DELETE FROM segmentation WHERE location_key=? AND manual_trace=1", (key,))
+            connection.execute(
+                "INSERT OR REPLACE INTO segmentation (location_key, location_lm, model_version, server_version, space, "
+                "transform, channel, downsample, context_hash, prompt_hash, growth_threshold, created_ticks, "
+                "last_hit_ticks, response, manual_trace, tracer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 1, ?)",
+                (key, int(trace.last_modified_ticks), *_TRACE_KEY_FILLER, int(trace.traced_ticks), now_ticks(),
+                 sqlite3.Binary(trace.outline), trace.tracer),
+            )
+            connection.execute(
+                "INSERT OR IGNORE INTO segmentation_member (location_key, location_id) VALUES (?, ?)",
+                (key, int(trace.location_id)),
+            )
+
+    def trace(self, volume: str, location_id: int, last_modified_ticks: int) -> Optional[StoredTrace]:
+        """The manual trace of a location not edited since it was traced, marking it hit, or None."""
         path = self._path(volume)
+        key = str(int(location_id))
         with self._connect(path) as connection:
             row = connection.execute(
-                "SELECT last_modified_ticks, outline, state, reviewed_ticks, reviewer FROM reviewed_outline "
-                "WHERE location_id=?",
-                (location_id,),
+                "SELECT location_lm, response, tracer, created_ticks FROM segmentation "
+                "WHERE location_key=? AND manual_trace=1",
+                (key,),
             ).fetchone()
-        if row is None or int(row[0]) != int(last_modified_ticks):
-            return None
-        return StoredOutline(location_id, int(row[0]), bytes(row[1]), str(row[2]), int(row[3]), str(row[4]))
+            if row is None or int(row[0]) != int(last_modified_ticks):
+                return None
+            connection.execute(
+                "UPDATE segmentation SET last_hit_ticks=? WHERE location_key=? AND manual_trace=1", (now_ticks(), key)
+            )
+        return StoredTrace(int(location_id), int(row[0]), bytes(row[1]), str(row[2]), int(row[3]))
 
-    def put_reviewed(self, volume: str, outlines: Sequence[StoredOutline], remove: Sequence[int]) -> Tuple[int, int]:
-        """Store and remove reviewed outlines. Returns (stored, removed)."""
+    def put_traces(self, volume: str, traces: Sequence[StoredTrace], remove: Sequence[int]) -> Tuple[int, int]:
+        """Store and remove manual traces. Returns (stored, removed)."""
         path = self._path(volume)
         with self._connect(path) as connection:
-            connection.executemany(
-                "INSERT OR REPLACE INTO reviewed_outline (location_id, last_modified_ticks, outline, state, "
-                "reviewed_ticks, reviewer) VALUES (?, ?, ?, ?, ?, ?)",
-                [
-                    (o.location_id, o.last_modified_ticks, sqlite3.Binary(o.outline), o.state, o.reviewed_ticks,
-                     o.reviewer)
-                    for o in outlines
-                ],
-            )
+            self._write_traces(connection, traces)
             removed = 0
             for location_id in remove:
                 removed += connection.execute(
-                    "DELETE FROM reviewed_outline WHERE location_id=?", (int(location_id),)
+                    "DELETE FROM segmentation WHERE location_key=? AND manual_trace=1", (str(int(location_id)),)
                 ).rowcount
-        return len(outlines), removed
+            if removed:
+                self._drop_orphan_members(connection)
+        return len(traces), removed
+
+    def forget(self, volume: str, location_ids: Sequence[int]) -> int:
+        """Drop every row of the locations: their own results, merged groups they belong to, and their traces.
+
+        For locations just written to the annotation database, whose cached answers describe what they were before.
+        Returns rows removed.
+        """
+        ids = sorted({int(location_id) for location_id in location_ids})
+        if not ids:
+            return 0
+        path = self._path(volume)
+        marks = ",".join("?" * len(ids))
+        with self._connect(path) as connection:
+            keys = {str(location_id) for location_id in ids}
+            keys.update(
+                str(row[0])
+                for row in connection.execute(
+                    f"SELECT location_key FROM segmentation_member WHERE location_id IN ({marks})", ids
+                )
+            )
+            removed = 0
+            for key in keys:
+                removed += connection.execute("DELETE FROM segmentation WHERE location_key=?", (key,)).rowcount
+            if removed:
+                self._drop_orphan_members(connection)
+        return removed
+
+    @staticmethod
+    def _drop_orphan_members(connection: sqlite3.Connection) -> None:
+        connection.execute(
+            "DELETE FROM segmentation_member WHERE location_key NOT IN (SELECT location_key FROM segmentation)"
+        )
 
     # -- jobs --------------------------------------------------------------------------------------------------------
 
@@ -484,9 +561,10 @@ class ResultStore:
             logger.exception("Result cache eviction failed for %s (%s)", volume, path)
 
     def evict(self, volume: str) -> int:
-        """Apply the age and size limits to one volume. Rows linked to a job are kept. Returns rows removed."""
+        """Apply the age and size limits to one volume. Manual traces and rows linked to a job are kept, and traces do
+        not count toward the size. Returns rows removed."""
         path = self._path(volume)
-        unprotected = "location_key NOT IN (SELECT location_key FROM job_link)"
+        unprotected = "manual_trace=0 AND location_key NOT IN (SELECT location_key FROM job_link)"
         removed = 0
         with self._connect(path) as connection:
             if self._max_age_ticks:
@@ -495,7 +573,11 @@ class ResultStore:
                     (now_ticks() - self._max_age_ticks,),
                 ).rowcount
             if self._max_bytes:
-                total = int(connection.execute("SELECT COALESCE(SUM(LENGTH(response)), 0) FROM segmentation").fetchone()[0])
+                total = int(
+                    connection.execute(
+                        "SELECT COALESCE(SUM(LENGTH(response)), 0) FROM segmentation WHERE manual_trace=0"
+                    ).fetchone()[0]
+                )
                 if total > self._max_bytes:
                     rows = connection.execute(
                         f"SELECT rowid, LENGTH(response) FROM segmentation WHERE {unprotected} "
@@ -510,9 +592,7 @@ class ResultStore:
                     connection.executemany("DELETE FROM segmentation WHERE rowid=?", doomed)
                     removed += len(doomed)
             if removed:
-                connection.execute(
-                    "DELETE FROM segmentation_member WHERE location_key NOT IN (SELECT location_key FROM segmentation)"
-                )
+                self._drop_orphan_members(connection)
         if removed:
             logger.info("Result cache %s: evicted %d row(s)", volume, removed)
         return removed

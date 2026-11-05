@@ -250,6 +250,14 @@ The result cache (`result_store.py`) keys a row on everything but the threshold 
 `growth_threshold`: a request at or above it is a hit, one below it misses, grows at the lower value and replaces the
 row, so a row's threshold only moves down (`prompt-v3`).
 
+A row is either the model's logits or an outline a person traced (`manual_trace`), never both. The gallery's converter
+stores a reviewer's retraced outline with `PutManualTraces`, because it cannot write to the annotation database; the
+trace is keyed by the location and the LastModified it was traced against, answers a single-location request for that
+location before any model row (at any threshold, for any model, unless the request asks to `refresh`) as
+`SegmentationResponse.manual_trace` with no segments, and is never evicted. `ForgetLocations` drops every row of
+locations a client has just written to the annotation database: their own results, merged groups they belong to, and
+their traces. Both RPCs name the annotation context, which the server resolves to its volume as SegmentLocation does.
+
 These are the numbers the earlier protocol sent with `LOGITS | NO_UPSCALE`, placed differently: it gave the walk's
 bottom-left pixel as the response's `origin_x`/`origin_y`, the frame's height in samples, and the crop's corner as
 `logits_x`/`logits_y` in Y-down pixels from the frame's top-left. `logits_origin` is

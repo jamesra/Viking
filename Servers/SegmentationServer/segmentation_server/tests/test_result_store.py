@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Iterator
 
+import grpc
 import numpy as np
 import pytest
 
@@ -12,13 +17,14 @@ from protocol import circle, context, converse, grid, polygon, put_tile, result,
 from segmentation_grpc import (
     CreateJobRequest,
     DeleteJobRequest,
+    ForgetLocationsRequest,
     ListJobsRequest,
     LocationRef,
-    PutReviewedOutlinesRequest,
-    ReviewedOutline,
+    ManualTrace,
+    PutManualTracesRequest,
     SegmentTilesRequest,
 )
-from segmentation_server.result_store import ResultStore, cache_key, location_key
+from segmentation_server.result_store import ResultStore, StoredTrace, cache_key, location_key
 
 
 def _refs(*pairs):
@@ -165,16 +171,72 @@ def test_deleting_a_job_makes_its_rows_evictable(tmp_path: Path) -> None:
     assert not store.delete_job("RC1", job.job_id)
 
 
-def test_a_reviewed_outline_is_valid_only_until_the_location_is_edited(tmp_path: Path) -> None:
-    from segmentation_server.result_store import StoredOutline
-
-    store = ResultStore(tmp_path, max_bytes=1)
-    store.put_reviewed("RC1", [StoredOutline(7, 100, b"shape", "retraced", 5, "james")], [])
+def test_a_manual_trace_answers_only_until_the_location_is_edited_and_is_never_evicted(tmp_path: Path) -> None:
+    store = ResultStore(tmp_path, max_bytes=1, max_age_days=1e-12)
+    store.put_traces("RC1", [StoredTrace(7, 100, b"shape", "james", 5)], [])
+    model = _key(_request(locations=_refs((8, 100))))
+    store.store("RC1", model, b"x" * 100, 0.0)  # evicts: the store is over both limits
     store.evict("RC1")
-    assert store.reviewed("RC1", 7, 100).state == "retraced"
-    assert store.reviewed("RC1", 7, 101) is None
-    assert store.put_reviewed("RC1", [], [7]) == (0, 1)
-    assert store.reviewed("RC1", 7, 100) is None
+    assert store.lookup("RC1", model, 0.0) is None, "the model row goes, the trace stays"
+
+    trace = store.trace("RC1", 7, 100)
+    assert (trace.outline, trace.tracer, trace.traced_ticks) == (b"shape", "james", 5)
+    assert store.trace("RC1", 7, 101) is None
+    assert store.lookup("RC1", _key(_request()), 0.0) is None, "a trace is never a model answer"
+    assert store.put_traces("RC1", [], [7]) == (0, 1)
+    assert store.trace("RC1", 7, 100) is None
+
+
+def test_a_new_trace_replaces_the_old_one(tmp_path: Path) -> None:
+    store = ResultStore(tmp_path)
+    store.put_traces("RC1", [StoredTrace(7, 100, b"old", "a", 5)], [])
+    store.put_traces("RC1", [StoredTrace(7, 200, b"new", "b", 6)], [])
+    assert store.trace("RC1", 7, 100) is None
+    assert store.trace("RC1", 7, 200).outline == b"new"
+
+
+def test_forgetting_a_location_drops_its_results_its_groups_and_its_trace(tmp_path: Path) -> None:
+    store = ResultStore(tmp_path)
+    own, group, other = (_key(_request(locations=refs)) for refs in (_refs((7, 100)), _refs((7, 100), (8, 1)), _refs((9, 1))))
+    for key in (own, group, other):
+        store.store("RC1", key, b"x", 0.0)
+    store.put_traces("RC1", [StoredTrace(7, 100, b"shape", "james", 5)], [])
+
+    assert store.forget("RC1", [7]) == 3
+    assert store.lookup("RC1", own, 0.0) is None and store.lookup("RC1", group, 0.0) is None
+    assert store.trace("RC1", 7, 100) is None
+    assert store.lookup("RC1", other, 0.0) is not None
+    assert store.forget("RC1", [7]) == 0
+
+
+def test_a_retraced_reviewed_outline_becomes_a_manual_trace(tmp_path: Path) -> None:
+    """A file from before manual traces: its retraced outline is kept as a trace, the approved one is dropped."""
+    with sqlite3.connect(str(tmp_path / "RC1.sqlite")) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE segmentation (
+                location_key TEXT NOT NULL, location_lm INTEGER NOT NULL, model_version TEXT NOT NULL,
+                server_version TEXT NOT NULL, space INTEGER NOT NULL, transform TEXT NOT NULL, channel TEXT NOT NULL,
+                downsample INTEGER NOT NULL, context_hash TEXT NOT NULL, prompt_hash TEXT NOT NULL,
+                growth_threshold REAL NOT NULL, created_ticks INTEGER NOT NULL, last_hit_ticks INTEGER NOT NULL,
+                response BLOB NOT NULL,
+                PRIMARY KEY (location_key, location_lm, model_version, server_version, space, transform, channel,
+                             downsample, context_hash, prompt_hash));
+            CREATE TABLE reviewed_outline (
+                location_id INTEGER PRIMARY KEY, last_modified_ticks INTEGER NOT NULL, outline BLOB NOT NULL,
+                state TEXT NOT NULL, reviewed_ticks INTEGER NOT NULL, reviewer TEXT NOT NULL);
+            INSERT INTO reviewed_outline VALUES (7, 100, X'01', 'retraced', 5, 'james');
+            INSERT INTO reviewed_outline VALUES (8, 100, X'02', 'approved', 5, 'james');
+            """
+        )
+
+    store = ResultStore(tmp_path)
+
+    assert store.trace("RC1", 7, 100) == StoredTrace(7, 100, b"\x01", "james", 5)
+    assert store.trace("RC1", 8, 100) is None
+    with sqlite3.connect(str(tmp_path / "RC1.sqlite")) as connection:
+        tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    assert "reviewed_outline" not in tables
 
 
 # -- the stream --------------------------------------------------------------------------------------------------------
@@ -272,26 +334,75 @@ async def test_a_merge_chain_replays_from_the_cache(tmp_path: Path) -> None:
     assert target.model.predict_ephemeral.call_count + target.model.predict_tile.call_count == calls
 
 
+@contextmanager
+def _context_volume(target, volume: str) -> Iterator[None]:
+    """Let the servicer resolve annotation context 1 to ``volume`` (as SegmentLocation does) for the cache RPCs."""
+
+    async def context_volume(annotation_context_id: int):
+        return (SimpleNamespace(annotation_context_id=1), SimpleNamespace(name=volume)) if annotation_context_id == 1 else None
+
+    kept = target._tile_source
+    target._tile_source = SimpleNamespace(context_volume=context_volume)
+    try:
+        yield
+    finally:
+        target._tile_source = kept
+
+
 @pytest.mark.asyncio
-async def test_a_reviewed_outline_rides_along_with_its_location(tmp_path: Path) -> None:
+async def test_a_manual_trace_is_its_locations_answer_until_the_location_is_edited(tmp_path: Path) -> None:
     target = await _cached_servicer(tmp_path)
     outline = polygon([(0, 0), (10, 0), (10, 10)])
-    response = await target.PutReviewedOutlines(
-        PutReviewedOutlinesRequest(
-            volume=grid().volume,
-            outlines=[ReviewedOutline(location_id=7, last_modified_ticks=100, outline=outline, state="retraced")],
-        ),
-        context(),
-    )
+    trace = ManualTrace(location_id=7, last_modified_ticks=100, outline=outline, tracer="james", traced_ticks=5)
+    with _context_volume(target, grid().volume):
+        response = await target.PutManualTraces(PutManualTracesRequest(annotation_context_id=1, traces=[trace]), context())
     assert response.stored == 1
+    calls = target.model.predict_ephemeral.call_count + target.model.predict_tile.call_count
 
-    fresh = result(await converse(target, _request()))
-    cached = result(await converse(target, _request()))
+    traced = result(await converse(target, _request(request_id=3, mask_threshold=5.0)))
     edited = result(await converse(target, _request(locations=_refs((7, 101)))))
 
-    assert fresh.reviewed.state == "retraced" and fresh.reviewed.outline == outline
-    assert cached.HasField("cache") and cached.reviewed.state == "retraced"
-    assert not edited.HasField("reviewed"), "an edit since the review hides the outline"
+    assert traced.manual_trace == trace and not traced.segments and traced.request_id == 3
+    assert traced.cache.created_ticks == 5 and not traced.HasField("growth_threshold")
+    assert not edited.HasField("manual_trace") and edited.segments, "an edit since the trace asks the model"
+    assert target.model.predict_ephemeral.call_count + target.model.predict_tile.call_count > calls
+
+
+@pytest.mark.asyncio
+async def test_a_trace_must_be_a_polygon_of_a_known_context(tmp_path: Path) -> None:
+    target = await _cached_servicer(tmp_path)
+    with _context_volume(target, grid().volume):
+        refused = context()
+        await target.PutManualTraces(
+            PutManualTracesRequest(
+                annotation_context_id=1, traces=[ManualTrace(location_id=7, outline=circle(1, 1, 1))]
+            ),
+            refused,
+        )
+        unknown = context()
+        await target.ForgetLocations(ForgetLocationsRequest(annotation_context_id=2, location_ids=[7]), unknown)
+    assert refused.abort.call_args[0][0] == grpc.StatusCode.INVALID_ARGUMENT
+    assert unknown.abort.call_args[0][0] == grpc.StatusCode.NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_forget_locations_makes_the_next_request_ask_the_model(tmp_path: Path) -> None:
+    target = await _cached_servicer(tmp_path)
+    await converse(target, _request())
+    with _context_volume(target, grid().volume):
+        await target.PutManualTraces(
+            PutManualTracesRequest(
+                annotation_context_id=1,
+                traces=[ManualTrace(location_id=7, last_modified_ticks=100, outline=polygon([(0, 0), (9, 0), (9, 9)]))],
+            ),
+            context(),
+        )
+        forgotten = await target.ForgetLocations(ForgetLocationsRequest(annotation_context_id=1, location_ids=[7]), context())
+
+    again = result(await converse(target, _request()))
+
+    assert forgotten.removed == 2, "the model's row and the trace"
+    assert not again.HasField("cache") and not again.HasField("manual_trace")
 
 
 @pytest.mark.asyncio
