@@ -25,7 +25,7 @@ Documentation/source/Client/versionhistory.rst.
 
 ## 1.2.139 — 2026-11-06 (Viking Test, unsigned)
 
-* **Contrast editor has a Gamma slider and a smarter Auto.** The window opened from **Section > Contrast...** is now a resizable window with a **Gamma** slider (above 1 lifts the dark and middle tones, which is where TEM membranes and other stained structures sit). **Auto** now also sets the gamma that puts the median pixel at mid grey. Your choices are saved per section on this computer; **Reset to volume range** undoes them.
+* **Contrast editor has a Gamma slider and a smarter Auto.** The window opened from **Section > Contrast...** is now a resizable window with a **Gamma** slider (above 1 lifts the dark and middle tones, which is where TEM membranes and other stained structures sit). **Auto** now also sets the gamma that puts the median pixel at mid grey. The histogram draws the tone curve (white) and a green line at the code shown as mid grey, so you can see where the gamma sits. Your choices are saved per section on this computer; **Reset to volume range** undoes them.
 <!-- TileLayout.fx: shown = window^(1/DisplayGamma); the gamma slider is log2, 0.25..4. CrushInfo.AutoGamma = ln(t)/ln(0.5) for the median code t of the window (bin 0 skipped). CrushContrast.xml stores min, max and gamma per volume, section and channel; files without gamma mean 1. -->
 
 ## 1.2.138 — 2026-11-05 (Viking Test, unsigned)

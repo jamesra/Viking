@@ -83,7 +83,7 @@ namespace Viking.UI.Forms
             BlackText.Text = BlackSlider.Value.ToString("0", CultureInfo.CurrentCulture);
             WhiteText.Text = WhiteSlider.Value.ToString("0", CultureInfo.CurrentCulture);
             GammaText.Text = Gamma.ToString("0.00", CultureInfo.CurrentCulture);
-            Histogram.SetWindow(BlackSlider.Value, WhiteSlider.Value);
+            Histogram.SetWindow(BlackSlider.Value, WhiteSlider.Value, Gamma);
         }
 
         private void OnGammaChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -156,10 +156,13 @@ namespace Viking.UI.Forms
         private static readonly Brush Dim = Frozen(new SolidColorBrush(Color.FromArgb(150, 0, 0, 0)));
         private static readonly Pen BlackPen = FrozenPen(Colors.DeepSkyBlue);
         private static readonly Pen WhitePen = FrozenPen(Colors.Orange);
+        private static readonly Pen CurvePen = FrozenPen(Color.FromArgb(220, 255, 255, 255), 1.5);
+        private static readonly Pen MidPen = FrozenDashedPen(Colors.LimeGreen);
 
         private IReadOnlyList<long>? _counts;
         private double _black;
         private double _white = 255;
+        private double _gamma = 1;
 
         public IReadOnlyList<long>? Counts
         {
@@ -171,10 +174,11 @@ namespace Viking.UI.Forms
             }
         }
 
-        public void SetWindow(double black, double white)
+        public void SetWindow(double black, double white, double gamma)
         {
             _black = black;
             _white = white;
+            _gamma = gamma;
             InvalidateVisual();
         }
 
@@ -210,6 +214,32 @@ namespace Viking.UI.Forms
             dc.DrawRectangle(Dim, null, new Rect(whiteX, 0, Math.Max(width - whiteX, 0), height));
             dc.DrawLine(BlackPen, new Point(blackX, 0), new Point(blackX, height));
             dc.DrawLine(WhitePen, new Point(whiteX, 0), new Point(whiteX, height));
+
+            // The tone curve: how bright each code between the points is shown, from black at the bottom to white at the top.
+            // The green line marks the code that is shown at mid grey, which is where the gamma places the middle of the window.
+            if (whiteX > blackX + 2)
+            {
+                StreamGeometry curve = new();
+                using (StreamGeometryContext ctx = curve.Open())
+                {
+                    const int steps = 48;
+                    for (int i = 0; i <= steps; i++)
+                    {
+                        double t = (double)i / steps;
+                        Point p = new(blackX + (t * (whiteX - blackX)), height - (Math.Pow(t, 1.0 / _gamma) * (height - 2)) - 1);
+                        if (i == 0)
+                            ctx.BeginFigure(p, false, false);
+                        else
+                            ctx.LineTo(p, true, false);
+                    }
+                }
+
+                curve.Freeze();
+                dc.DrawGeometry(null, CurvePen, curve);
+
+                double midX = blackX + ((whiteX - blackX) * Math.Pow(0.5, _gamma));
+                dc.DrawLine(MidPen, new Point(midX, 0), new Point(midX, height));
+            }
         }
 
         private static Brush Frozen(SolidColorBrush brush)
@@ -218,9 +248,16 @@ namespace Viking.UI.Forms
             return brush;
         }
 
-        private static Pen FrozenPen(Color color)
+        private static Pen FrozenPen(Color color, double thickness = 2)
         {
-            Pen pen = new(Frozen(new SolidColorBrush(color)), 2);
+            Pen pen = new(Frozen(new SolidColorBrush(color)), thickness);
+            pen.Freeze();
+            return pen;
+        }
+
+        private static Pen FrozenDashedPen(Color color)
+        {
+            Pen pen = new(Frozen(new SolidColorBrush(color)), 1.5) { DashStyle = new DashStyle([4, 3], 0) };
             pen.Freeze();
             return pen;
         }

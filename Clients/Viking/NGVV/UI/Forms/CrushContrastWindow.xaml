@@ -15,7 +15,8 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TextBlock x:Name="Heading" Grid.Row="0" FontWeight="SemiBold" Margin="0,0,0,8" />
+        <TextBlock x:Name="Heading" Grid.Row="0" FontWeight="SemiBold" Margin="0,0,0,8"
+                   ToolTip="Blue: black point. Orange: white point. White curve: how bright each code is shown. Green: the code shown at mid grey." />
 
         <Border Grid.Row="1" BorderBrush="#FF888888" BorderThickness="1" MinHeight="120">
             <local:HistogramView x:Name="Histogram" />
