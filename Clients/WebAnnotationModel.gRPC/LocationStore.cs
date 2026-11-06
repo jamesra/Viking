@@ -425,6 +425,24 @@ namespace WebAnnotationModel.gRPC
         }
 
         /// <summary>
+        /// Cached locations on <paramref name="SectionNumber"/> whose mosaic bounding box intersects
+        /// <paramref name="bounds"/> (closed test, so a shared edge counts) and whose radius is at least
+        /// <paramref name="MinRadius"/>. Reads only the local section index; no server call.
+        /// </summary>
+        /// <remarks>
+        /// Matches the WCF client's R-tree query over each location's mosaic bounding box, so a location whose
+        /// centre lies outside <paramref name="bounds"/> but whose shape reaches into it is returned; this is wider
+        /// than <see cref="Contains"/>, which tests the centre only. Locations without a mosaic shape are skipped.
+        /// </remarks>
+        public Task<ICollection<LocationObj>> GetLocalObjectsInRegion(long SectionNumber, Geometry.Rectangle bounds, double MinRadius)
+        {
+            var locations = GetLocalObjectsForSection(SectionNumber).Values
+                .Where(l => l.MosaicShape != null && l.Radius >= MinRadius && bounds.Intersects(l.MosaicShape.BoundingBox))
+                .ToList();
+            return Task.FromResult<ICollection<LocationObj>>(locations);
+        }
+
+        /// <summary>
         /// Objects in the section index, without contacting the server.
         /// Empty until CollectionChanged has indexed those adds (GetOrAdd alone is not enough).
         /// </summary>
