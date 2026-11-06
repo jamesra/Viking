@@ -433,7 +433,8 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// Inserts the row, then PersistCircleShapesIfNeededAsync. NTS cannot write SQL CurvePolygon;
-        /// circles are stored as POINT until that SQL update.
+        /// circles are stored as POINT until that SQL update. Throws NotFound, before anything is saved, when ParentId
+        /// names no structure or Links name a location that does not exist.
         /// </summary>
         public override async Task<CreateLocationResponse> CreateLocation(CreateLocationRequest request, ServerCallContext context)
         {
@@ -442,6 +443,9 @@ namespace gRPCAnnotationService
                 var ct = context.CancellationToken;
                 var username = AnnotationRpc.CallerName(context);
                 var row = NewLocationRow(request.Obj, username);
+                if (!await _context.Structures.AsNoTracking().AnyAsync(s => s.Id == row.ParentId, ct))
+                    throw new RpcException(new Status(StatusCode.NotFound, $"Structure not found: {row.ParentId}"));
+                await ThrowIfLocationsMissingAsync(request.Obj.Links.Where(peer => peer != 0), ct);
 
                 await using var tx = await _context.Database.BeginTransactionAsync(ct);
 
@@ -524,14 +528,16 @@ namespace gRPCAnnotationService
         }
 
         /// <summary>
-        /// Creates the link between two locations; a link that already exists is left as is.
+        /// Creates the link between two locations; a link that already exists is left as is. Throws InvalidArgument for
+        /// a self-link and NotFound, naming the missing IDs, when either location does not exist; neither saves anything.
         /// </summary>
         public override async Task<CreateLocationLinkResponse> CreateLocationLink(CreateLocationLinkRequest request, ServerCallContext context)
         {
             try
             {
                 var ct = context.CancellationToken;
-                await AddLinkIfMissing(_context, request.SourceId, request.TargetId, AnnotationRpc.CallerName(context), ct);
+                if (await AddLinkIfMissing(_context, request.SourceId, request.TargetId, AnnotationRpc.CallerName(context), ct))
+                    await ThrowIfLocationsMissingAsync(new[] { request.SourceId, request.TargetId }, ct);
                 await _context.SaveChangesAsync(ct);
                 return new CreateLocationLinkResponse();
             }
@@ -731,9 +737,9 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// Queues the link unless it is stored or already queued in this context (a peer listed twice in
-        /// Location.Links). Refuses a self-link with InvalidArgument.
+        /// Location.Links). Refuses a self-link with InvalidArgument. Returns whether it queued a new link.
         /// </summary>
-        private static async Task AddLinkIfMissing(AnnotationContext db, long source, long target, string username, CancellationToken ct)
+        private static async Task<bool> AddLinkIfMissing(AnnotationContext db, long source, long target, string username, CancellationToken ct)
         {
             if (source == target)
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "A location cannot link to itself"));
@@ -741,7 +747,7 @@ namespace gRPCAnnotationService
             var (a, b) = Ordered(source, target);
             var exists = await db.LocationLinks.FindAsync(new object[] { a, b }, ct) != null;
             if (exists)
-                return;
+                return false;
 
             await db.LocationLinks.AddAsync(new EfLocationLink
             {
@@ -750,6 +756,28 @@ namespace gRPCAnnotationService
                 Username = username,
                 Created = DateTime.UtcNow
             }, ct);
+            return true;
+        }
+
+        /// <summary>
+        /// Throws NotFound, naming each of <paramref name="ids"/> that is not a stored location, when there is one:
+        /// FK_LocationLink_Location and FK_LocationLink_Location1 would otherwise fail the save of a link naming it as a
+        /// generic Unknown failure. No IDs cost no query.
+        /// </summary>
+        private async Task ThrowIfLocationsMissingAsync(IEnumerable<long> ids, CancellationToken ct)
+        {
+            var named = ids.Distinct().ToArray();
+            if (named.Length == 0)
+                return;
+
+            var live = new HashSet<long>();
+            foreach (var chunk in named.DistinctChunk())
+                live.UnionWith(await _context.Locations.AsNoTracking()
+                    .Where(l => chunk.Contains(l.Id)).Select(l => l.Id).ToListAsync(ct));
+
+            var missing = named.Where(id => !live.Contains(id)).ToArray();
+            if (missing.Length > 0)
+                throw new RpcException(new Status(StatusCode.NotFound, $"Locations not found: {string.Join(", ", missing)}"));
         }
 
         private async Task<List<long>> LinkedIdsOf(long id, CancellationToken ct)

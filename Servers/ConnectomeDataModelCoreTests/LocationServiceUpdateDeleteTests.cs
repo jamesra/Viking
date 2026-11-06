@@ -33,7 +33,8 @@ namespace ConnectomeDataModelCoreTests
     /// no DeletedLocation, which the Location_delete trigger writes (a second writer fails on PK_DeletedLocations).
     /// An update of a location the batch already deleted fails its own row rather than reporting a lost edit.
     /// CreateLocation and CreateLocationLink, which share Update's link helper, save
-    /// one link per distinct pair and refuse a self-link. No database is contacted: interceptors stand in for
+    /// one link per distinct pair, refuse a self-link, and refuse a missing peer location or parent structure with
+    /// NotFound before saving. No database is contacted: interceptors stand in for
     /// the connection, the transaction, the queries and SaveChanges.
     /// </summary>
     public class LocationServiceUpdateDeleteTests
@@ -272,6 +273,124 @@ namespace ConnectomeDataModelCoreTests
             await NewService(db).CreateLocationLink(new CreateLocationLinkRequest { SourceId = 9, TargetId = 4 }, new TestCallContext());
 
             Assert.Equal(new[] { (4L, 9L) }, store.Saved.AddedLinks);
+            Assert.Equal(1, store.LocationQueries);
+        }
+
+        /// <summary>
+        /// A link to a location that does not exist would fail the save on FK_LocationLink_Location as a generic
+        /// Unknown error, so it is refused with NotFound naming only the missing ends, and nothing is saved.
+        /// </summary>
+        [Theory]
+        [InlineData(8, 4, "Locations not found: 8")]
+        [InlineData(4, 9, "Locations not found: 9")]
+        [InlineData(9, 8, "Locations not found: 9, 8")]
+        public async Task LinkingToAMissingLocationIsNotFoundWithoutSaving(long source, long target, string detail)
+        {
+            var store = new FakeDatabase();
+            store.AddLocation(4, z: 11);
+            using var db = NewContext(store);
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => NewService(db).CreateLocationLink(
+                new CreateLocationLinkRequest { SourceId = source, TargetId = target }, new TestCallContext()));
+
+            Assert.Equal((StatusCode.NotFound, detail), (ex.StatusCode, ex.Status.Detail));
+            Assert.Same(SavedRows.None, store.Saved);
+            Assert.Equal(1, store.LocationQueries);
+        }
+
+        /// <summary>A link that is already stored has both ends by its foreign keys, so it costs no location query.</summary>
+        [Fact]
+        public async Task LinkingAStoredLinkAgainRunsNoLocationQuery()
+        {
+            var store = new FakeDatabase();
+            store.AddLocation(4, z: 11);
+            store.AddLocation(9, z: 12);
+            store.Links.Add((4, 9));
+            using var db = NewContext(store);
+
+            await NewService(db).CreateLocationLink(new CreateLocationLinkRequest { SourceId = 9, TargetId = 4 }, new TestCallContext());
+
+            Assert.Empty(store.Saved.AddedLinks);
+            Assert.Equal(0, store.LocationQueries);
+        }
+
+        /// <summary>A location under a structure that does not exist would fail FK_Location_StructureBase1 as Unknown.</summary>
+        [Fact]
+        public async Task CreateLocationUnderAMissingStructureIsNotFoundWithoutSaving()
+        {
+            var store = new FakeDatabase();
+            using var db = NewContext(store);
+            var orphan = NewLocation();
+            orphan.ParentId = 77;
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() =>
+                NewService(db).CreateLocation(new CreateLocationRequest { Obj = orphan }, new TestCallContext()));
+
+            Assert.Equal((StatusCode.NotFound, "Structure not found: 77"), (ex.StatusCode, ex.Status.Detail));
+            Assert.Same(SavedRows.None, store.Saved);
+            Assert.False(store.Committed);
+            Assert.Empty(db.Locations.Local);
+        }
+
+        /// <summary>
+        /// A create whose Links name a location that does not exist would save the location, then fail its links on
+        /// FK_LocationLink_Location as Unknown. It is refused with NotFound naming each missing peer once, before the
+        /// location is added; peer 0 and stored peers are not reported.
+        /// </summary>
+        [Fact]
+        public async Task CreateLocationLinkedToMissingLocationsIsNotFoundWithoutSaving()
+        {
+            var store = new FakeDatabase();
+            store.AddLocation(5, z: 11);
+            using var db = NewContext(store);
+            var created = NewLocation();
+            created.Links.AddRange(new long[] { 0, 8, 5, 9, 8 });
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() =>
+                NewService(db).CreateLocation(new CreateLocationRequest { Obj = created }, new TestCallContext()));
+
+            Assert.Equal((StatusCode.NotFound, "Locations not found: 8, 9"), (ex.StatusCode, ex.Status.Detail));
+            Assert.Same(SavedRows.None, store.Saved);
+            Assert.False(store.Committed);
+            Assert.Empty(db.Locations.Local);
+            Assert.Equal(1, store.LocationQueries);
+        }
+
+        /// <summary>A create that names no peer, or only peer 0, cannot break FK_LocationLink_Location, so it costs no location query.</summary>
+        [Fact]
+        public async Task CreateLocationWithoutPeersRunsNoLocationQuery()
+        {
+            var store = new FakeDatabase();
+            using var db = NewContext(store);
+            var created = NewLocation();
+            created.Links.Add(0);
+
+            var response = await NewService(db).CreateLocation(new CreateLocationRequest { Obj = created }, new TestCallContext());
+
+            Assert.Equal(FakeDatabase.FirstGeneratedId, response.Result.Id);
+            Assert.Empty(store.Saved.AddedLinks);
+            Assert.Equal(0, store.LocationQueries);
+            Assert.Equal(1, store.StructureQueries);
+            Assert.True(store.Committed);
+        }
+
+        /// <summary>The peer lookup is chunked so no query carries more than SQL Server's 2,100 parameters.</summary>
+        [Fact]
+        public async Task CreateLocationLinkedToManyPeersLooksThemUpInChunks()
+        {
+            var store = new FakeDatabase();
+            var peers = Enumerable.Range((int)FakeDatabase.FirstGeneratedId + 1, 2500).Select(i => (long)i).ToArray();
+            foreach (var peer in peers)
+                store.AddLocation(peer, z: 11);
+            using var db = NewContext(store);
+            var created = NewLocation();
+            created.Links.AddRange(peers);
+
+            await NewService(db).CreateLocation(new CreateLocationRequest { Obj = created }, new TestCallContext());
+
+            Assert.Equal(2, store.LocationQueries);
+            Assert.Equal(peers.Length, store.Saved.AddedLinks.Length);
+            Assert.True(store.Committed);
         }
 
         [Fact]
