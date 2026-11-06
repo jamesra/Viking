@@ -11,7 +11,7 @@ Notes for whoever updates this file. Comments like this one are not shown in Vik
   changes, rename the unreleased heading to the new version; when a version ships, replace "not yet released" with the date
   and channel, for example "2026-10-26 (Viking Test, unsigned)".
 
-Committed application version: 1.2.139.0.
+Committed application version: 1.2.140.0.
 1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109;
 their changes are listed under 1.2.109. Builds 1.2.128 and 1.2.129 are listed under 1.2.129 (it went out as Viking Test
 and as a signed release on 2026-10-27). Viking Test builds 1.2.130 to 1.2.136 were folded into the 1.2.136 release on
@@ -23,7 +23,7 @@ version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. 
 Documentation/source/Client/versionhistory.rst.
 -->
 
-## 1.2.139 — 2026-11-06 (Viking Test, unsigned)
+## 1.2.140 — 2026-11-06 (Viking Test, unsigned)
 
 * **Contrast editor has a Gamma slider and a smarter Auto.** The window opened from **Section > Contrast...** is now a resizable window with a **Gamma** slider (above 1 lifts the dark and middle tones, which is where TEM membranes and other stained structures sit). **Auto** now also sets the gamma that puts the median pixel at mid grey. The histogram draws the tone curve (white) and a green line at the code shown as mid grey, so you can see where the gamma sits. Your choices are saved per section on this computer; **Reset to volume range** undoes them.
 <!-- TileLayout.fx: shown = window^(1/DisplayGamma); the gamma slider is log2, 0.25..4. CrushInfo.AutoGamma = ln(t)/ln(0.5) for the median code t of the window (bin 0 skipped). CrushContrast.xml stores min, max and gamma per volume, section and channel; files without gamma mean 1. -->
