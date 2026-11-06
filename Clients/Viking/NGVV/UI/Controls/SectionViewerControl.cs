@@ -2222,7 +2222,7 @@ namespace Viking.UI.Controls
         /// the window is its display range, narrowed by <see cref="State.CrushContrast"/>. Every other channel, and a crushed
         /// channel in a storage Viking does not decode, uses the whole range, which leaves the tile unchanged.
         /// </summary>
-        internal static (float Min, float Max) CrushDisplayWindowFor(Section section, string channel)
+        internal static (float Min, float Max) CrushDisplayWindowFor(Section section, string channel, (double Min, double Max)? userCodes = null)
         {
             if (!section.CrushedChannels.TryGetValue(channel, out CrushInfo? crush))
                 return (0f, 1f);
@@ -2233,7 +2233,10 @@ namespace Viking.UI.Controls
                 return (0f, 1f);
             }
 
-            (float min, float max) = crush.DefaultWindow();
+            // The user's window for this section, saved on this computer, replaces the volume's display range.
+            (float min, float max) = userCodes is { } chosen
+                ? ((float)(chosen.Min / CrushInfo.StorageMaximum), (float)(chosen.Max / CrushInfo.StorageMaximum))
+                : crush.DefaultWindow();
             double contrast = Math.Min(Math.Max(State.CrushContrast, State.MinCrushContrast), State.MaxCrushContrast);
             return (min, (float)(min + ((max - min) / contrast)));
         }
@@ -2266,7 +2269,8 @@ namespace Viking.UI.Controls
                 return null;
             }
 
-            tileLayoutEffect.DisplayWindow = CrushDisplayWindowFor(section, channel);
+            tileLayoutEffect.DisplayWindow = CrushDisplayWindowFor(section, channel,
+                CrushContrastStore.Default.Get(State.volume?.Name, section.Number, channel));
 
             int[] DownsamplesToRender = CalculateDownsamplesToRender(mapping, scene.Camera.Downsample);
 
@@ -3005,11 +3009,37 @@ namespace Viking.UI.Controls
         }
 
 
+        /// <summary>The crush parameters of the channel on screen, or null when it is not a crushed channel.</summary>
+        private CrushInfo? CurrentCrushInfo() =>
+            Section?.section is { } section && CurrentChannel is { } channel && section.CrushedChannels.TryGetValue(channel, out CrushInfo? crush)
+                ? crush
+                : null;
+
+        private CrushContrastForm? _contrastForm;
+
+        private void menuSectionContrast_Click(object sender, EventArgs e)
+        {
+            if (_contrastForm is { IsDisposed: false })
+            {
+                _contrastForm.Close();
+            }
+
+            if (CurrentCrushInfo() is not { IsSupported: true } crush)
+            {
+                MessageBox.Show(this, "The channel on screen is not a crushed channel that Viking can adjust.", "Contrast", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            _contrastForm = new CrushContrastForm(crush, State.volume?.Name, Section.section.Number, CurrentChannel, Invalidate);
+            _contrastForm.Show(this.FindForm());
+        }
+
         private void menuSection_DropDownOpening(object sender, EventArgs e)
         {
             menuSectionUseSpecific.Checked = State.UseSectionSpecificTransform;
             menuSectionShowMesh.Checked = State.ShowStosMesh;
             menuSectionShowTileMesh.Checked = State.ShowTileMesh;
+            menuSectionContrast.Enabled = CurrentCrushInfo() is { IsSupported: true };
 
             if (State.volume is null)
                 return;

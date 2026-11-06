@@ -59,6 +59,7 @@ namespace Viking.UI.Controls
             this.menuSetupChannels = new System.Windows.Forms.ToolStripMenuItem();
             this.menuColorizeTiles = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSectionShowTileMesh = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuSectionContrast = new System.Windows.Forms.ToolStripMenuItem();
             this.menuCommands = new System.Windows.Forms.ToolStripMenuItem();
             this.menuGoToLocation = new System.Windows.Forms.ToolStripMenuItem();
             this.menuCaptureScreen = new System.Windows.Forms.ToolStripMenuItem();
@@ -147,7 +148,8 @@ namespace Viking.UI.Controls
             this.menuSectionShowMesh,
             this.menuSetupChannels,
             this.menuColorizeTiles,
-            this.menuSectionShowTileMesh});
+            this.menuSectionShowTileMesh,
+            this.menuSectionContrast});
             this.menuSection.Name = "menuSection";
             this.menuSection.Size = new System.Drawing.Size(58, 20);
             this.menuSection.Text = "Section";
@@ -193,9 +195,16 @@ namespace Viking.UI.Controls
             this.menuSectionShowTileMesh.Size = new System.Drawing.Size(220, 22);
             this.menuSectionShowTileMesh.Text = "Show Tile Mesh";
             this.menuSectionShowTileMesh.Click += new System.EventHandler(this.menuSectionShowTileMesh_Click);
-            // 
+            //
+            // menuSectionContrast
+            //
+            this.menuSectionContrast.Name = "menuSectionContrast";
+            this.menuSectionContrast.Size = new System.Drawing.Size(220, 22);
+            this.menuSectionContrast.Text = "Contrast...";
+            this.menuSectionContrast.Click += new System.EventHandler(this.menuSectionContrast_Click);
+            //
             // menuCommands
-            // 
+            //
             this.menuCommands.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.menuGoToLocation,
             this.menuCaptureScreen,
@@ -280,6 +289,7 @@ namespace Viking.UI.Controls
         private System.Windows.Forms.ToolStripMenuItem menuColorizeTiles;
         private System.Windows.Forms.ToolStripMenuItem menuExportTiles;
         private System.Windows.Forms.ToolStripMenuItem menuSectionShowTileMesh;
+        private System.Windows.Forms.ToolStripMenuItem menuSectionContrast;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripMenuItem menuClearCache;
         private System.Windows.Forms.Timer timerHelpTextChange;
