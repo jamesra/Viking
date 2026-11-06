@@ -2,6 +2,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
+using System.Threading;
 using Viking.SectionCorrection;
 using Path = System.IO.Path;
 
@@ -247,6 +249,87 @@ namespace SectionCorrection.Tests
                 catalog.Load();
                 File.Delete(Path.Combine(live, PublishedCorrectionSet.ManifestFileName));
                 catalog.Load();
+
+                Assert.IsFalse(catalog.TryGet("grid16", out _));
+            }
+            finally
+            {
+                Directory.Delete(root, true);
+            }
+        }
+
+        static readonly MethodInfo OnChanged = typeof(CorrectionCatalog).GetMethod(
+            "OnChanged", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        static void RaiseChangedConcurrently(CorrectionCatalog catalog, string root)
+        {
+            FileSystemEventArgs args = new(WatcherChangeTypes.Changed, root, "manifest.json");
+            const int threads = 16;
+            using Barrier start = new(threads);
+            Thread[] workers = new Thread[threads];
+            for (int t = 0; t < threads; t++)
+            {
+                workers[t] = new Thread(() =>
+                {
+                    start.SignalAndWait();
+                    for (int i = 0; i < 500; i++)
+                        OnChanged.Invoke(catalog, [null, args]);
+                });
+                workers[t].Start();
+            }
+
+            foreach (Thread worker in workers)
+                worker.Join();
+        }
+
+        [TestMethod]
+        public void ConcurrentChangeEvents_ReloadOnceDebounceElapses()
+        {
+            string root = NewRoot("reload");
+            string live = Path.Combine(root, "grid16");
+            Directory.CreateDirectory(live);
+            try
+            {
+                using CorrectionCatalog catalog = new(root);
+                Set("grid16", 3).WriteDirectory(live);
+                RaiseChangedConcurrently(catalog, root);
+
+                Thread.Sleep(200);
+                Assert.IsFalse(catalog.TryGet("grid16", out _), "Reloaded before the debounce window.");
+                Thread.Sleep(1500);
+                Assert.IsTrue(catalog.TryGet("grid16", out _));
+
+                Directory.Delete(live, true);
+                Thread.Sleep(1500);
+                Assert.IsTrue(catalog.TryGet("grid16", out _), "Reloaded again with no new change event.");
+            }
+            finally
+            {
+                Directory.Delete(root, true);
+            }
+        }
+
+        /// <summary>
+        /// FileSystemWatcher raises events on pooled threads. A burst of concurrent events must leave one pending
+        /// reload that Dispose cancels, not stray timers that reload the catalog after it was disposed.
+        /// </summary>
+        [TestMethod]
+        public void ConcurrentChangeEvents_NoReloadAfterDispose()
+        {
+            string root = NewRoot("events");
+            Directory.CreateDirectory(root);
+            try
+            {
+                CorrectionCatalog catalog = new(root);
+                RaiseChangedConcurrently(catalog, root);
+
+                catalog.Dispose();
+                OnChanged.Invoke(catalog, [null, new FileSystemEventArgs(WatcherChangeTypes.Changed, root, "manifest.json")]);
+
+                string live = Path.Combine(root, "grid16");
+                Directory.CreateDirectory(live);
+                Set("grid16", 3).WriteDirectory(live);
+                Thread.Sleep(1500);
 
                 Assert.IsFalse(catalog.TryGet("grid16", out _));
             }
