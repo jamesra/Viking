@@ -1,10 +1,5 @@
 using Geometry;
-using SixLabors.Fonts;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing;
-using SixLabors.ImageSharp.Drawing.Processing;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -72,7 +67,7 @@ namespace Viking.SectionCorrectionBuilder
             return written;
         }
 
-        public static Image<Rgba32> Render(SectionVectorField field, double displayPitchNm, Geometry.Rectangle? sectionBoundsNm = null)
+        static SKImage Render(SectionVectorField field, double displayPitchNm, Geometry.Rectangle? sectionBoundsNm = null)
         {
             (double originX, double originY, double extentX, double extentY, bool sectionFrame) = Frame(field, displayPitchNm, sectionBoundsNm);
             double maxExtent = Math.Max(extentX, extentY);
@@ -86,45 +81,49 @@ namespace Viking.SectionCorrectionBuilder
             int margin = sectionFrame ? 0 : 40;
             int pxW = Math.Max(64, (int)Math.Ceiling(extentX / nmPerPixel) + margin * 2);
             int pxH = Math.Max(64, (int)Math.Ceiling(extentY / nmPerPixel) + margin * 2);
-            Image<Rgba32> image = new(pxW, pxH, new Rgba32(12, 12, 16));
+            using SKSurface surface = SKSurface.Create(new SKImageInfo(pxW, pxH, SKColorType.Rgba8888, SKAlphaType.Premul));
+            SKCanvas canvas = surface.Canvas;
+            canvas.Clear(new SKColor(12, 12, 16));
             double pitch = displayPitchNm > 0 ? displayPitchNm : field.PitchNm * 0.5;
             double cellPx = pitch / nmPerPixel;
             double legend500 = 500.0 / nmPerPixel;
 
-            image.Mutate(ctx =>
+            foreach ((Vector2 origin, Vector2 offset) in field.EnumerateTrustedDisplaySamples(pitch))
             {
-                foreach ((Vector2 origin, Vector2 offset) in field.EnumerateTrustedDisplaySamples(pitch))
-                {
-                    double mag = offset.Magnitude;
-                    float px = (float)((origin.X - originX) / nmPerPixel + margin);
-                    float py = (float)((origin.Y - originY) / nmPerPixel + margin);
-                    double arrowLen = Math.Min(cellPx * 0.9, Math.Max(3, mag / 500.0 * Math.Max(legend500, cellPx * 0.75)));
-                    Vector2 dir = offset * (arrowLen / mag);
-                    float x1 = px + (float)dir.X;
-                    float y1 = py + (float)dir.Y;
-                    Color color = ColorForMagnitude(mag);
-                    ctx.DrawLine(color, 2f, new PointF(px, py), new PointF(x1, y1));
-                    DrawHead(ctx, color, px, py, x1, y1);
-                }
+                double mag = offset.Magnitude;
+                float px = (float)((origin.X - originX) / nmPerPixel + margin);
+                float py = (float)((origin.Y - originY) / nmPerPixel + margin);
+                double arrowLen = Math.Min(cellPx * 0.9, Math.Max(3, mag / 500.0 * Math.Max(legend500, cellPx * 0.75)));
+                Vector2 dir = offset * (arrowLen / mag);
+                float x1 = px + (float)dir.X;
+                float y1 = py + (float)dir.Y;
+                SKColor color = ColorForMagnitude(mag);
+                DrawLine(canvas, color, 2f, px, py, x1, y1);
+                DrawHead(canvas, color, px, py, x1, y1);
+            }
 
-                if (sectionFrame)
-                {
-                    Color border = Color.FromRgb(176, 176, 184);
-                    float right = pxW - 1.5f;
-                    float bottom = pxH - 1.5f;
-                    ctx.DrawLine(border, 3f, new PointF(1.5f, 1.5f), new PointF(right, 1.5f));
-                    ctx.DrawLine(border, 3f, new PointF(right, 1.5f), new PointF(right, bottom));
-                    ctx.DrawLine(border, 3f, new PointF(right, bottom), new PointF(1.5f, bottom));
-                    ctx.DrawLine(border, 3f, new PointF(1.5f, bottom), new PointF(1.5f, 1.5f));
-                }
+            if (sectionFrame)
+            {
+                SKColor border = new(176, 176, 184);
+                float right = pxW - 1.5f;
+                float bottom = pxH - 1.5f;
+                DrawLine(canvas, border, 3f, 1.5f, 1.5f, right, 1.5f);
+                DrawLine(canvas, border, 3f, right, 1.5f, right, bottom);
+                DrawLine(canvas, border, 3f, right, bottom, 1.5f, bottom);
+                DrawLine(canvas, border, 3f, 1.5f, bottom, 1.5f, 1.5f);
+            }
 
-                DrawLegend(ctx, pxW);
-            });
-
-            return image;
+            DrawLegend(canvas, pxW);
+            return surface.Snapshot();
         }
 
-        static void DrawHead(IImageProcessingContext ctx, Color color, float x0, float y0, float x1, float y1)
+        static void DrawLine(SKCanvas canvas, SKColor color, float width, float x0, float y0, float x1, float y1)
+        {
+            using SKPaint paint = new() { Color = color, StrokeWidth = width, Style = SKPaintStyle.Stroke, IsAntialias = true };
+            canvas.DrawLine(x0, y0, x1, y1, paint);
+        }
+
+        static void DrawHead(SKCanvas canvas, SKColor color, float x0, float y0, float x1, float y1)
         {
             float dx = x1 - x0;
             float dy = y1 - y0;
@@ -137,42 +136,38 @@ namespace Viking.SectionCorrectionBuilder
             float hy = y1 - dy * 10;
             float px = -dy * 4;
             float py = dx * 4;
-            ctx.DrawLine(color, 2f, new PointF(x1, y1), new PointF(hx + px, hy + py));
-            ctx.DrawLine(color, 2f, new PointF(x1, y1), new PointF(hx - px, hy - py));
+            DrawLine(canvas, color, 2f, x1, y1, hx + px, hy + py);
+            DrawLine(canvas, color, 2f, x1, y1, hx - px, hy - py);
         }
 
-        static Color ColorForMagnitude(double magNm)
+        static SKColor ColorForMagnitude(double magNm)
         {
             double t = Math.Clamp(magNm / 1000.0, 0, 1);
             byte r = (byte)(40 + 200 * t);
             byte g = (byte)(180 * (1 - t));
             byte b = (byte)(220 * (1 - t));
-            return Color.FromRgb(r, g, b);
+            return new SKColor(r, g, b);
         }
 
-        static void DrawLegend(IImageProcessingContext ctx, int width)
+        static void DrawLegend(SKCanvas canvas, int width)
         {
-            try
+            // The server image has no fonts (SkiaSharp's no-dependencies Linux build has no font manager), so there the
+            // label falls back to a plain white bar.
+            using SKTypeface? typeface = SKFontManager.Default.MatchFamily("DejaVu Sans") ?? SKFontManager.Default.MatchFamily("Arial");
+            if (typeface is not null)
             {
-                Font font;
-                try
-                {
-                    font = SystemFonts.CreateFont("DejaVu Sans", 28);
-                }
-                catch (FontException)
-                {
-                    font = SystemFonts.CreateFont("Arial", 28);
-                }
-                ctx.DrawText("100 nm / 500 nm / 1 µm", font, Color.White, new PointF(20, 12));
+                using SKFont font = new(typeface, 28);
+                using SKPaint text = new() { Color = SKColors.White, IsAntialias = true };
+                canvas.DrawText("100 nm / 500 nm / 1 µm", 20, 12 + font.Size, SKTextAlign.Left, font, text);
             }
-            catch (FontException)
+            else
             {
-                ctx.DrawLine(Color.White, 3f, new PointF(20, 20), new PointF(20 + 100, 20));
+                DrawLine(canvas, SKColors.White, 3f, 20, 20, 20 + 100, 20);
             }
 
-            ctx.DrawLine(ColorForMagnitude(100), 3f, new PointF(width - 360, 24), new PointF(width - 300, 24));
-            ctx.DrawLine(ColorForMagnitude(500), 3f, new PointF(width - 240, 24), new PointF(width - 160, 24));
-            ctx.DrawLine(ColorForMagnitude(1000), 3f, new PointF(width - 120, 24), new PointF(width - 20, 24));
+            DrawLine(canvas, ColorForMagnitude(100), 3f, width - 360, 24, width - 300, 24);
+            DrawLine(canvas, ColorForMagnitude(500), 3f, width - 240, 24, width - 160, 24);
+            DrawLine(canvas, ColorForMagnitude(1000), 3f, width - 120, 24, width - 20, 24);
         }
 
         static void WriteContactSheet(
@@ -193,18 +188,22 @@ namespace Viking.SectionCorrectionBuilder
 
             int cols = (int)Math.Ceiling(Math.Sqrt(sample.Count));
             int rows = (int)Math.Ceiling(sample.Count / (double)cols);
-            using Image<Rgba32> sheet = new(cols * thumb, rows * thumb, new Rgba32(8, 8, 10));
+            using SKSurface sheet = SKSurface.Create(new SKImageInfo(cols * thumb, rows * thumb, SKColorType.Rgba8888, SKAlphaType.Premul));
+            sheet.Canvas.Clear(new SKColor(8, 8, 10));
+            SKSamplingOptions sampling = new(SKCubicResampler.Mitchell);
             for (int i = 0; i < sample.Count; i++)
             {
                 Geometry.Rectangle? frame = sectionBoundsNm.TryGetValue(sample[i].Z, out Geometry.Rectangle bounds) ? bounds : null;
-                using Image<Rgba32> full = Render(sample[i], displayPitchNm, frame);
-                full.Mutate(c => c.Resize(thumb, thumb));
+                using SKImage full = Render(sample[i], displayPitchNm, frame);
                 int cx = (i % cols) * thumb;
                 int cy = (i / cols) * thumb;
-                sheet.Mutate(c => c.DrawImage(full, new Point(cx, cy), 1f));
+                sheet.Canvas.DrawImage(full, SKRect.Create(cx, cy, thumb, thumb), sampling);
             }
 
-            sheet.SaveAsPng(Path.Combine(previewDirectory, "index.png"));
+            using SKImage image = sheet.Snapshot();
+            using SKData png = image.Encode(SKEncodedImageFormat.Png, 100);
+            using FileStream file = File.Create(Path.Combine(previewDirectory, "index.png"));
+            png.SaveTo(file);
         }
 
         /// <summary>
