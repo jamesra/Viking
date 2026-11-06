@@ -17,12 +17,13 @@ namespace Viking.SectionCorrection
         Dictionary<(string Volume, string StosGroup), PublishedCorrectionSet> _sets =
             new(VolumeStosComparer.Instance);
         FileSystemWatcher _watcher;
-        Timer _reloadDebounce;
+        readonly Timer _reloadDebounce;
         readonly string _root;
 
         public VolumeCorrectionCatalog(string rootDirectory)
         {
             _root = rootDirectory;
+            _reloadDebounce = new Timer(ReloadAfterDebounce, null, Timeout.Infinite, Timeout.Infinite);
         }
 
         public string RootDirectory => _root;
@@ -188,24 +189,27 @@ namespace Viking.SectionCorrection
 
         void OnChanged(object sender, FileSystemEventArgs e)
         {
-            _reloadDebounce?.Dispose();
-            _reloadDebounce = new Timer(_ =>
+            // Watcher events arrive concurrently on pooled threads, and can arrive after Dispose, where
+            // Change is a no-op on .NET Core (.NET Framework would throw; no consumer targets it).
+            _reloadDebounce.Change(750, Timeout.Infinite);
+        }
+
+        void ReloadAfterDebounce(object state)
+        {
+            try
             {
-                try
-                {
-                    Load();
-                }
-                catch
-                {
-                    // Keep the previous catalog if a mid-write reload fails.
-                }
-            }, null, 750, Timeout.Infinite);
+                Load();
+            }
+            catch
+            {
+                // Keep the previous catalog if a mid-write reload fails.
+            }
         }
 
         public void Dispose()
         {
             _watcher?.Dispose();
-            _reloadDebounce?.Dispose();
+            _reloadDebounce.Dispose();
         }
 
         sealed class VolumeStosComparer : IEqualityComparer<(string Volume, string StosGroup)>
