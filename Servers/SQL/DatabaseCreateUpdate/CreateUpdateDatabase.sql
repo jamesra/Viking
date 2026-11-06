@@ -9003,5 +9003,227 @@ BEGIN TRANSACTION main
 		      N'StructureType.HotKey defaults to CHAR(0)' ,getDate(),User_ID())
 	 COMMIT TRANSACTION ninetyone
 	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 92)))
+	begin
+     print N'SET NOCOUNT ON and header comments in the network procedures and SelectNumConnectionsPerStructure'
+	 BEGIN TRANSACTION ninetytwo
+
+	 /*Finishes what step 87 began for RecursiveSelectChildStructureIDs and SelectNetworkDetails. Each body is
+	   its latest definition here (SelectNumConnectionsPerStructure step 7, SelectNetworkStructures,
+	   SelectNetworkChildStructures and SelectNetworkStructureLinks step 61, SelectNetworkStructureIDs and
+	   SelectNetworkChildStructureIDs step 63, the two spatial-data procedures step 71) with only a header
+	   comment and SET NOCOUNT ON added; SelectNumConnectionsPerStructure also gains the BEGIN/END that
+	   SET NOCOUNT ON needs. Every caller reads result sets, none reads a row count.*/
+	 EXEC('-- SelectNumConnectionsPerStructure: for each parent structure, the number of its child structures
+-- that are the source or target of a StructureLink. Returns StructureID (the parent), Label (the
+-- parent label) and NumConnections, ordered by NumConnections descending.
+-- Parameters: none.
+-- Callers: WCF AnnotateService.getTopConnectedStructures through EF6
+-- ConnectomeEntities.SelectNumConnectionsPerStructure; AnnotationContextProcedures wrapper.
+			 ALTER PROCEDURE [dbo].[SelectNumConnectionsPerStructure]
+			 AS
+			 BEGIN
+			 SET NOCOUNT ON;
+			 (
+				 select CS.ParentID as StructureID, ParentStructure.Label as Label, COUNT(CS.ParentID) as NumConnections
+				 from Structure CS
+					INNER JOIN Structure ParentStructure
+					ON CS.ParentID = ParentStructure.ID
+				 WHERE
+				 (
+						CS.ID in
+						(
+							Select SourceID from StructureLink
+								WHERE
+								(SourceID in
+									(
+									SELECT S.ID
+										FROM [dbo].[Structure] S
+									)
+								)
+						)
+				 )
+				 OR
+				 (
+						CS.ID in
+						(
+							Select TargetID from StructureLink
+								WHERE
+								(TargetID in
+									(
+										SELECT S.ID
+										FROM [dbo].[Structure] S
+									)
+								)
+						)
+			     )
+				group by CS.ParentID, ParentStructure.Label
+
+			)
+			order by NumConnections DESC
+			END')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+
+	 EXEC('-- SelectNetworkStructureIDs: IDs of the structures within @Hops links of @IDs (dbo.NetworkStructureIDs).
+-- Parameters: @IDs, the seed structure IDs; @Hops, the number of link hops to follow.
+-- Callers: dbo.SelectNetworkDetails (INSERT ... EXEC); gRPC StructureService through
+-- AnnotationContextProcedures.SelectNetworkStructureIDsAsync; EF6 ConnectomeEntities.SelectNetworkStructureIDs.
+			ALTER PROCEDURE [dbo].SelectNetworkStructureIDs
+				@IDs integer_list READONLY,
+				@Hops int
+			AS
+			BEGIN
+				SET NOCOUNT ON;
+
+				select N.ID as ID from NetworkStructureIDs(@IDs, @Hops) N
+			END')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+
+	 EXEC('-- SelectNetworkChildStructureIDs: IDs of the linked child structures of the network within @Hops
+-- links of @IDs (dbo.NetworkChildStructureIDs).
+-- Parameters: @IDs, the seed structure IDs; @Hops, the number of link hops to follow.
+-- Callers: AnnotationContextProcedures.SelectNetworkChildStructureIDsAsync (EF Core).
+			ALTER PROCEDURE [dbo].SelectNetworkChildStructureIDs
+				@IDs integer_list READONLY,
+				@Hops int
+			AS
+			BEGIN
+				SET NOCOUNT ON;
+
+				select N.ID as ID from NetworkChildStructureIDs(@IDs, @Hops) N
+			END')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+
+	 EXEC('-- SelectNetworkStructures: Structure rows of the network within @Hops links of @IDs
+-- (dbo.NetworkStructureIDs).
+-- Parameters: @IDs, the seed structure IDs; @Hops, the number of link hops to follow.
+-- Callers: OData Structures and StructureSpatialCaches controllers through EF6
+-- ConnectomeEntities.SelectNetworkStructures; AnnotationContextProcedures.SelectNetworkStructuresAsync.
+		    ALTER PROCEDURE [dbo].[SelectNetworkStructures]
+				@IDs integer_list READONLY,
+				@Hops int
+			AS
+			BEGIN
+				SET NOCOUNT ON;
+
+				select S.* from Structure S
+					inner join NetworkStructureIDs(@IDs, @Hops) N ON N.ID = S.ID
+			END')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+
+	 EXEC('-- SelectNetworkChildStructures: Structure rows of the linked child structures of the network within
+-- @Hops links of @IDs (dbo.NetworkChildStructureIDs).
+-- Parameters: @IDs, the seed structure IDs; @Hops, the number of link hops to follow.
+-- Callers: gRPC StructureService through AnnotationContextProcedures.SelectNetworkChildStructuresAsync;
+-- OData Structures controller through EF6 ConnectomeEntities.SelectNetworkChildStructures.
+		    ALTER PROCEDURE [dbo].[SelectNetworkChildStructures]
+						@IDs integer_list READONLY,
+						@Hops int
+			AS
+			BEGIN
+				SET NOCOUNT ON;
+
+				select S.* from Structure S
+					inner join NetworkChildStructureIDs(@IDs, @Hops) N ON N.ID = S.ID
+			END')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+
+	 EXEC('-- SelectNetworkStructureLinks: StructureLinks whose source or target is a linked child structure of
+-- the network within @Hops links of @IDs (dbo.NetworkChildStructureIDs).
+-- Parameters: @IDs, the seed structure IDs; @Hops, the number of link hops to follow.
+-- Callers: gRPC StructureService through AnnotationContextProcedures.SelectNetworkStructureLinksAsync;
+-- OData StructureLinks controller through EF6 ConnectomeEntities.SelectNetworkStructureLinks.
+			ALTER PROCEDURE [dbo].[SelectNetworkStructureLinks]
+						@IDs integer_list READONLY,
+						@Hops int
+			AS
+			BEGIN
+				SET NOCOUNT ON;
+
+				select SL.* from StructureLink SL
+					where SL.SourceID in (Select ID from NetworkChildStructureIDs( @IDs, @Hops)) OR
+							SL.TargetID in (Select ID from NetworkChildStructureIDs( @IDs, @Hops))
+			END')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+
+	 EXEC('-- SelectNetworkStructureSpatialData: StructureSpatialCache rows of the network within @Hops links
+-- of @IDs (dbo.NetworkStructureIDs).
+-- Parameters: @IDs, the seed structure IDs; @Hops, the number of link hops to follow.
+-- Callers: OData StructureSpatialCaches controller through EF6
+-- ConnectomeEntities.SelectNetworkStructureSpatialData; AnnotationContextProcedures wrapper.
+			  ALTER PROCEDURE [dbo].[SelectNetworkStructureSpatialData]
+				@IDs integer_list READONLY,
+				@Hops int
+			AS
+			BEGIN
+				SET NOCOUNT ON;
+
+				select S.* from StructureSpatialCache S
+					inner join NetworkStructureIDs(@IDs, @Hops) N ON N.ID = S.ID
+			END')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+
+	 EXEC('-- SelectNetworkChildStructureSpatialData: StructureSpatialCache rows of the linked child structures
+-- of the network within @Hops links of @IDs (dbo.NetworkChildStructureIDs).
+-- Parameters: @IDs, the seed structure IDs; @Hops, the number of link hops to follow.
+-- Callers: OData StructureSpatialCaches controller through EF6
+-- ConnectomeEntities.SelectNetworkChildStructureSpatialData; AnnotationContextProcedures wrapper.
+			ALTER PROCEDURE [dbo].[SelectNetworkChildStructureSpatialData]
+						@IDs integer_list READONLY,
+						@Hops int
+			AS
+			BEGIN
+				SET NOCOUNT ON;
+
+				select S.* from StructureSpatialCache S
+					inner join NetworkChildStructureIDs(@IDs, @Hops) N ON N.ID = S.ID
+			END')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+
+	INSERT INTO DBVersion values (92,
+		      N'SET NOCOUNT ON and header comments in the network procedures and SelectNumConnectionsPerStructure' ,getDate(),User_ID())
+	 COMMIT TRANSACTION ninetytwo
+	end
 		   
 COMMIT TRANSACTION main

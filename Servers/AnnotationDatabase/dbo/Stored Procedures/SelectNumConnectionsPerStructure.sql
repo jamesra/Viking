@@ -6,6 +6,8 @@
 -- ConnectomeEntities.SelectNumConnectionsPerStructure; AnnotationContextProcedures wrapper.
 CREATE PROCEDURE [dbo].[SelectNumConnectionsPerStructure]
 			AS
+			BEGIN
+			 SET NOCOUNT ON;
 			 (
  select CS.ParentID as StructureID, ParentStructure.Label as Label, COUNT(CS.ParentID) as NumConnections 
  from Structure CS
@@ -34,6 +36,7 @@ group by CS.ParentID, ParentStructure.Label
 
 )
 order by NumConnections DESC
+END
 GO
 GRANT EXECUTE
     ON OBJECT::[dbo].[SelectNumConnectionsPerStructure] TO [AnnotationPowerUser]

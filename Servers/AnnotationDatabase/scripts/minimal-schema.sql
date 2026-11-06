@@ -627,6 +627,7 @@ BEGIN
         @Hops int
     AS
     BEGIN
+        SET NOCOUNT ON;
         SELECT N.ID AS ID FROM dbo.NetworkStructureIDs(@IDs, @Hops) N;
     END');
 END
@@ -640,6 +641,7 @@ BEGIN
         @Hops int
     AS
     BEGIN
+        SET NOCOUNT ON;
         SELECT S.* FROM dbo.Structure S
             INNER JOIN dbo.NetworkChildStructureIDs(@IDs, @Hops) N ON N.ID = S.ID;
     END');
@@ -654,6 +656,7 @@ BEGIN
         @Hops int
     AS
     BEGIN
+        SET NOCOUNT ON;
         SELECT SL.* FROM dbo.StructureLink SL
             WHERE SL.SourceID IN (SELECT ID FROM dbo.NetworkChildStructureIDs(@IDs, @Hops))
                OR SL.TargetID IN (SELECT ID FROM dbo.NetworkChildStructureIDs(@IDs, @Hops));
