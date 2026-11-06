@@ -463,7 +463,8 @@ namespace gRPCAnnotationService
         /// Applies a batch of creates, updates and deletes in one transaction, all or nothing; a row whose
         /// location is missing reports Success false without failing the batch. An update of a location an
         /// earlier row of the batch deleted counts as missing, since the delete would discard it. A create, or an
-        /// update that moves a location, under a structure that does not exist reports Success false. A delete
+        /// update that moves a location, under a structure that does not exist reports Success false, and so does a
+        /// create linked to a location that does not exist or that the batch deletes. A delete
         /// removes the location's links and logs each link and the location once, even when the batch deletes
         /// both ends of a link or the same ID twice.
         /// </summary>
@@ -490,6 +491,7 @@ namespace gRPCAnnotationService
                 }
 
                 await FailWritesUnderMissingStructuresAsync(pendingCircles, ct);
+                await FailCreatesLinkedToMissingLocationsAsync(pendingCircles, ct);
                 await _context.SaveChangesAsync(ct);
                 foreach (var (rowResponse, entity, proto, isCreate) in pendingCircles)
                 {
@@ -864,7 +866,35 @@ namespace gRPCAnnotationService
                 live.UnionWith(await _context.Structures.AsNoTracking()
                     .Where(s => chunk.Contains(s.Id)).Select(s => s.Id).ToListAsync(ct));
 
-            foreach (var (rowResponse, entity, _, _) in named.Where(p => !live.Contains(p.Entity.ParentId)))
+            FailPendingWrites(pending, named.Where(p => !live.Contains(p.Entity.ParentId)));
+        }
+
+        /// <summary>
+        /// Fails each pending create whose Links name a location that is not stored or that the batch deletes:
+        /// FK_LocationLink_Location would fail the save of its links and roll back the whole batch, so the row reports
+        /// Success = false, its insert stops being tracked and it leaves <paramref name="pending"/>. A batch whose
+        /// creates name no peers costs no query.
+        /// </summary>
+        private async Task FailCreatesLinkedToMissingLocationsAsync(List<PendingWrite> pending, CancellationToken ct)
+        {
+            var linking = pending.Where(p => p.IsCreate && p.Proto.Links.Any(peer => peer != 0)).ToList();
+            if (linking.Count == 0)
+                return;
+
+            var live = new HashSet<long>();
+            foreach (var chunk in linking.SelectMany(p => p.Proto.Links).DistinctChunk())
+                live.UnionWith(await _context.Locations.AsNoTracking()
+                    .Where(l => chunk.Contains(l.Id)).Select(l => l.Id).ToListAsync(ct));
+            live.ExceptWith(_context.ChangeTracker.Entries<EfLocation>()
+                .Where(e => e.State == EntityState.Deleted).Select(e => e.Entity.Id));
+
+            FailPendingWrites(pending, linking.Where(p => !p.Proto.Links.All(peer => peer == 0 || live.Contains(peer))));
+        }
+
+        /// <summary>Reports each of <paramref name="failed"/> as Success = false, stops tracking its write and drops it from <paramref name="pending"/>.</summary>
+        private void FailPendingWrites(List<PendingWrite> pending, IEnumerable<PendingWrite> failed)
+        {
+            foreach (var (rowResponse, entity, _, _) in failed)
             {
                 _context.Entry(entity).State = EntityState.Detached;
                 rowResponse.Success = false;

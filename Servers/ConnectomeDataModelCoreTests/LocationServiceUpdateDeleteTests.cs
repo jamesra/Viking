@@ -139,6 +139,7 @@ namespace ConnectomeDataModelCoreTests
         public async Task CreatingWithARepeatedPeerSavesOneLink()
         {
             var store = new FakeDatabase();
+            store.AddLocation(5, z: 11);
             using var db = NewContext(store);
             var created = NewLocation();
             created.Links.Add(5);
@@ -247,6 +248,7 @@ namespace ConnectomeDataModelCoreTests
         public async Task CreateLocationWithARepeatedPeerSavesOneLink()
         {
             var store = new FakeDatabase();
+            store.AddLocation(5, z: 11);
             using var db = NewContext(store);
             var created = NewLocation();
             created.Links.Add(5);
@@ -263,6 +265,8 @@ namespace ConnectomeDataModelCoreTests
         public async Task CreateLocationLinkSavesTheLinkLowerIdFirst()
         {
             var store = new FakeDatabase();
+            store.AddLocation(4, z: 11);
+            store.AddLocation(9, z: 12);
             using var db = NewContext(store);
 
             await NewService(db).CreateLocationLink(new CreateLocationLinkRequest { SourceId = 9, TargetId = 4 }, new TestCallContext());
@@ -329,7 +333,57 @@ namespace ConnectomeDataModelCoreTests
             Assert.True(store.Committed);
         }
 
+        /// <summary>
+        /// A create linked to a location that is not stored, or that the batch deletes, would fail the save on
+        /// FK_LocationLink_Location and roll back every row, so only that create fails; the rest of the batch,
+        /// including a create linked to a stored location, saves. An update writes no links, so its Links are not checked.
+        /// </summary>
+        [Fact]
+        public async Task CreatingLinkedToAMissingOrDeletedLocationFailsOnlyThatRow()
+        {
+            var store = new FakeDatabase();
+            store.AddLocation(1, z: 10);
+            store.AddLocation(5, z: 11);
+            using var db = NewContext(store);
+            Track(db, store, 1, 5);
+            var updateNamingAMissingPeer = Update(5);
+            updateNamingAMissingPeer.Update.Links.Add(8);
+
+            var response = await NewService(db).Update(
+                Request(Create(0, 5), Create(8), Delete(1), Create(0, 1), updateNamingAMissingPeer),
+                new TestCallContext());
+
+            Assert.Equal(new[] { true, false, true, false, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Equal(FakeDatabase.FirstGeneratedId, response.Results[0].Created.Id);
+            Assert.Null(response.Results[1].Created);
+            Assert.Null(response.Results[3].Created);
+            Assert.Equal(new[] { (5L, FakeDatabase.FirstGeneratedId) }, store.Saved.AddedLinks);
+            Assert.Equal(new[] { 1L }, store.Saved.DeletedLocations);
+            Assert.True(store.Committed);
+        }
+
+        /// <summary>Creates that name no peers cannot break FK_LocationLink_Location, so they cost no location query.</summary>
+        [Fact]
+        public async Task CreatingWithoutLinksRunsNoLocationQuery()
+        {
+            var store = new FakeDatabase();
+            using var db = NewContext(store);
+
+            var response = await NewService(db).Update(Request(Create(), Create(0)), new TestCallContext());
+
+            Assert.Equal(new[] { true, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Equal(0, store.LocationQueries);
+            Assert.True(store.Committed);
+        }
+
         private static LocationService NewService(AnnotationContext db) => new(db, NullLogger<LocationService>.Instance);
+
+        private static LocationChangeRequest Create(params long[] peers)
+        {
+            var created = NewLocation();
+            created.Links.AddRange(peers);
+            return new() { Create = created };
+        }
 
         private static LocationChangeRequest Delete(long id) => new() { Delete = id };
 
@@ -393,7 +447,8 @@ namespace ConnectomeDataModelCoreTests
         /// suppressed: it gives each added location or structure a generated ID and records what would be
         /// written. Nothing is accepted, so the last save holds every write of the batch. An added or modified
         /// location whose ParentID is neither in <see cref="Structures"/> nor a tracked structure fails the save with
-        /// <see cref="DbUpdateException"/>, as FK_Location_StructureBase1 does.
+        /// <see cref="DbUpdateException"/>, as FK_Location_StructureBase1 does, and so does an added link with an end
+        /// that is neither a stored nor a tracked location, or that the batch deletes, as FK_LocationLink_Location does.
         /// </summary>
         internal sealed class FakeDatabase : IDbConnectionInterceptor, IDbCommandInterceptor, IDbTransactionInterceptor, ISaveChangesInterceptor
         {
@@ -413,6 +468,9 @@ namespace ConnectomeDataModelCoreTests
 
             /// <summary>Number of Structure queries run.</summary>
             public int StructureQueries { get; private set; }
+
+            /// <summary>Number of Location queries run.</summary>
+            public int LocationQueries { get; private set; }
 
             public SavedRows Saved { get; private set; } = SavedRows.None;
             public bool Committed { get; private set; }
@@ -437,6 +495,10 @@ namespace ConnectomeDataModelCoreTests
                 var parents = Structures.Concat(tracker.Entries<EfStructure>().Select(e => e.Entity.Id)).ToHashSet();
                 if (tracker.Entries<EfLocation>().Any(e => (e.State is EntityState.Added or EntityState.Modified) && !parents.Contains(e.Entity.ParentId)))
                     throw new DbUpdateException("The INSERT or UPDATE statement conflicted with the FOREIGN KEY constraint \"FK_Location_StructureBase1\".");
+                var deleted = tracker.Entries<EfLocation>().Where(e => e.State == EntityState.Deleted).Select(e => e.Entity.Id).ToHashSet();
+                var locations = LocationZ.Keys.Concat(tracker.Entries<EfLocation>().Select(e => e.Entity.Id)).Where(id => !deleted.Contains(id)).ToHashSet();
+                if (tracker.Entries<EfLocationLink>().Any(e => e.State == EntityState.Added && !(locations.Contains(e.Entity.A) && locations.Contains(e.Entity.B))))
+                    throw new DbUpdateException("The INSERT statement conflicted with the FOREIGN KEY constraint \"FK_LocationLink_Location\".");
 
                 foreach (var id in tracker.Entries().Where(e => e.State == EntityState.Added && e.Entity is EfLocation or EfStructure)
                              .Select(e => e.Property(nameof(EfLocation.Id))).Where(p => p.IsTemporary))
@@ -469,6 +531,8 @@ namespace ConnectomeDataModelCoreTests
 
                 if (table == "Structure")
                     StructureQueries++;
+                if (table == "Location")
+                    LocationQueries++;
                 var rows = table switch
                 {
                     "Structure" => Structures.Where(keys.Contains).Select(id => Row(("ID", id))),

@@ -28,7 +28,7 @@ namespace ConnectomeDataModelCoreTests
         [InlineData(new long[] { 2000, 5 }, new long[] { 5, 2000 })]
         public async Task SavesOneLinkPerDistinctPeer(long[] peers, long[] linked)
         {
-            var store = new FakeDatabase();
+            var store = StoreWithPeers();
             using var db = NewContext(store);
 
             var response = await NewService(db).CreateStructure(Request(peers), new TestCallContext());
@@ -41,7 +41,7 @@ namespace ConnectomeDataModelCoreTests
         [Fact]
         public async Task APeerTheDatabaseAlreadyLinksGetsNoSecondLink()
         {
-            var store = new FakeDatabase();
+            var store = StoreWithPeers();
             store.Links.Add((5, NewLocationId));
             using var db = NewContext(store);
 
@@ -53,6 +53,15 @@ namespace ConnectomeDataModelCoreTests
 
         private static StructureService NewService(Viking.DataModel.Annotation.AnnotationContext db) =>
             new(db, NullLogger<StructureService>.Instance);
+
+        /// <summary>The database fake holding the locations the tests link to, which FK_LocationLink_Location requires.</summary>
+        private static FakeDatabase StoreWithPeers()
+        {
+            var store = new FakeDatabase();
+            foreach (var peer in new long[] { 5, 7, 2000 })
+                store.AddLocation(peer, z: 11);
+            return store;
+        }
 
         private static (long A, long B) Ordered(long x, long y) => x < y ? (x, y) : (y, x);
 
