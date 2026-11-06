@@ -31,8 +31,8 @@ namespace VikingCoreTests
         {
             new CrushContrastStore(_path).Set("RC2", 139, "TEM.Raw8", 5, 40.5);
 
-            (double Min, double Max)? loaded = new CrushContrastStore(_path).Get("RC2", 139, "TEM.Raw8");
-            Assert.AreEqual((5.0, 40.5), loaded);
+            CrushContrastSetting? loaded = new CrushContrastStore(_path).Get("RC2", 139, "TEM.Raw8");
+            Assert.AreEqual(new CrushContrastSetting(5.0, 40.5, 1.0), loaded);
         }
 
         [TestMethod]
@@ -79,7 +79,35 @@ namespace VikingCoreTests
             Assert.IsNull(store.Get("RC2", 139, "TEM.Raw8"));
 
             store.Set("RC2", 139, "TEM.Raw8", 1, 9);
-            Assert.AreEqual((1.0, 9.0), new CrushContrastStore(_path).Get("RC2", 139, "TEM.Raw8"));
+            Assert.AreEqual(new CrushContrastSetting(1.0, 9.0, 1.0), new CrushContrastStore(_path).Get("RC2", 139, "TEM.Raw8"));
+        }
+
+        [TestMethod]
+        public void GammaIsSavedClampedAndDefaultsToLinearForFilesWrittenBeforeGammaExisted()
+        {
+            CrushContrastStore store = new(_path);
+            store.Set("RC2", 139, "TEM.Raw8", 5, 40, 2.0);
+            store.Set("RC2", 943, "TEM.Raw8", 5, 40, 100.0);
+            Assert.AreEqual(2.0, new CrushContrastStore(_path).Get("RC2", 139, "TEM.Raw8")!.Value.Gamma);
+            Assert.AreEqual(CrushContrastSetting.MaxGamma, new CrushContrastStore(_path).Get("RC2", 943, "TEM.Raw8")!.Value.Gamma);
+
+            File.WriteAllText(_path, "<CrushContrast><Window volume=\"RC2\" section=\"7\" channel=\"X\" min=\"1\" max=\"9\"/></CrushContrast>");
+            Assert.AreEqual(1.0, new CrushContrastStore(_path).Get("RC2", 7, "X")!.Value.Gamma);
+        }
+
+        [TestMethod]
+        public void GammaAppliesOnlyToASupportedCrushedChannel()
+        {
+            Volume volume = (Volume)FormatterServices.GetUninitializedObject(typeof(Volume));
+            Section section = new(volume, "0007", XElement.Parse("<Section number=\"7\" />"));
+            section.CrushedChannels["Crushed"] = new CrushInfo(10, 0, 8, null, null);
+            section.CrushedChannels["Wide"] = new CrushInfo(10, 0, 12, null, null);
+            CrushContrastSetting chosen = new(0, 100, 2.0);
+
+            Assert.AreEqual(2f, SectionViewerControl.CrushDisplayGammaFor(section, "Crushed", chosen));
+            Assert.AreEqual(1f, SectionViewerControl.CrushDisplayGammaFor(section, "Crushed", null), "nothing chosen");
+            Assert.AreEqual(1f, SectionViewerControl.CrushDisplayGammaFor(section, "Raw", chosen), "not crushed");
+            Assert.AreEqual(1f, SectionViewerControl.CrushDisplayGammaFor(section, "Wide", chosen), "storage Viking cannot decode");
         }
 
         [TestMethod]
@@ -93,15 +121,15 @@ namespace VikingCoreTests
                 section.CrushedChannels["Crushed"] = new CrushInfo(10, 0, 8, (51.0, 102.0), null);
 
                 State.CrushContrast = 1.0;
-                (float min, float max) = SectionViewerControl.CrushDisplayWindowFor(section, "Crushed", (25.5, 127.5));
+                (float min, float max) = SectionViewerControl.CrushDisplayWindowFor(section, "Crushed", new CrushContrastSetting(25.5, 127.5));
                 Assert.AreEqual(0.1, min, 1e-6);
                 Assert.AreEqual(0.5, max, 1e-6);
 
                 State.CrushContrast = 2.0;
-                (_, max) = SectionViewerControl.CrushDisplayWindowFor(section, "Crushed", (25.5, 127.5));
+                (_, max) = SectionViewerControl.CrushDisplayWindowFor(section, "Crushed", new CrushContrastSetting(25.5, 127.5));
                 Assert.AreEqual(0.3, max, 1e-6);
 
-                (min, _) = SectionViewerControl.CrushDisplayWindowFor(section, "Raw", (25.5, 127.5));
+                (min, _) = SectionViewerControl.CrushDisplayWindowFor(section, "Raw", new CrushContrastSetting(25.5, 127.5));
                 Assert.AreEqual(0, min, "a channel that is not crushed ignores the user's window");
             }
             finally

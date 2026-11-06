@@ -104,6 +104,49 @@ namespace Viking.VolumeModel
             return HistogramRange(0.001, 0.999) ?? DisplayRange ?? (0, (1 << Math.Min(Bits, 16)) - 1);
         }
 
+        /// <summary>
+        /// The gamma that shows the median pixel of the window at mid grey, which is the Auto placement. The shader shows
+        /// value^(1/gamma), so a median in the dark half of the window gives a gamma above 1 that lifts it. Bin 0 is skipped.
+        /// Returns 1 (linear) without a usable histogram or when no pixel lies inside the window.
+        /// </summary>
+        /// <param name="black">Code shown as black.</param>
+        /// <param name="white">Code shown as white; must be above <paramref name="black"/>.</param>
+        public double AutoGamma(double black, double white)
+        {
+            if (CodeHistogram is null || !(white > black))
+                return 1.0;
+
+            long inside = 0;
+            for (int i = 1; i < CodeHistogram.Count; i++)
+            {
+                if (i >= black && i <= white)
+                    inside += CodeHistogram[i];
+            }
+
+            if (inside <= 0)
+                return 1.0;
+
+            long running = 0;
+            int median = 1;
+            for (int i = 1; i < CodeHistogram.Count; i++)
+            {
+                if (i < black || i > white)
+                    continue;
+
+                running += CodeHistogram[i];
+                if (running * 2 >= inside)
+                {
+                    median = i;
+                    break;
+                }
+            }
+
+            // Keep the median strictly inside the window so the logarithm is finite.
+            double t = Math.Min(Math.Max((median - black) / (white - black), 0.02), 0.98);
+            double gamma = Math.Log(t) / Math.Log(0.5);
+            return Math.Min(Math.Max(gamma, 0.25), 4.0);
+        }
+
         /// <summary>The codes that hold <paramref name="lowFraction"/> and <paramref name="highFraction"/> of the pixels, skipping bin 0.</summary>
         private (double, double)? HistogramRange(double lowFraction = 0.0001, double highFraction = 0.9999)
         {

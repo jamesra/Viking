@@ -21,7 +21,8 @@ namespace Viking.UI.Forms
         private readonly int _section;
         private readonly string _channel;
         private readonly Action _redraw;
-        private bool _loading;
+        // True until the constructor has set the sliders, so the changes it makes are not saved.
+        private bool _loading = true;
 
         internal CrushContrastWindow(CrushInfo crush, string? volume, int section, string channel, Action redraw, IntPtr ownerHandle)
         {
@@ -44,27 +45,31 @@ namespace Viking.UI.Forms
             Title = $"Contrast - Section {section}";
             Heading.Text = $"Section {section}, channel {channel}";
 
-            (double min, double max) = EffectiveWindow();
-            Load(min, max);
+            CrushContrastSetting now = EffectiveSetting();
+            Load(now.Min, now.Max, now.Gamma);
         }
 
-        /// <summary>The window drawn now, in codes: the user's, else the volume's display range.</summary>
-        private (double Min, double Max) EffectiveWindow()
+        /// <summary>What is drawn now: the user's setting, else the volume's display range at gamma 1.</summary>
+        private CrushContrastSetting EffectiveSetting()
         {
             if (CrushContrastStore.Default.Get(_volume, _section, _channel) is { } saved)
                 return saved;
 
             (float min, float max) = _crush.DefaultWindow();
-            return (min * CrushInfo.StorageMaximum, max * CrushInfo.StorageMaximum);
+            return new CrushContrastSetting(min * CrushInfo.StorageMaximum, max * CrushInfo.StorageMaximum, 1.0);
         }
 
-        private void Load(double min, double max)
+        /// <summary>The gamma slider is on a log2 scale, so equal steps lift and darken equally and 1 sits in the middle.</summary>
+        private double Gamma => Math.Pow(2, GammaSlider.Value);
+
+        private void Load(double min, double max, double gamma)
         {
             _loading = true;
             try
             {
                 BlackSlider.Value = Math.Min(Math.Max(Math.Round(min), 0), BlackSlider.Maximum);
                 WhiteSlider.Value = Math.Min(Math.Max(Math.Round(max), 0), WhiteSlider.Maximum);
+                GammaSlider.Value = Math.Log(CrushContrastSetting.ClampGamma(gamma), 2);
                 ShowValues();
             }
             finally
@@ -77,7 +82,17 @@ namespace Viking.UI.Forms
         {
             BlackText.Text = BlackSlider.Value.ToString("0", CultureInfo.CurrentCulture);
             WhiteText.Text = WhiteSlider.Value.ToString("0", CultureInfo.CurrentCulture);
+            GammaText.Text = Gamma.ToString("0.00", CultureInfo.CurrentCulture);
             Histogram.SetWindow(BlackSlider.Value, WhiteSlider.Value);
+        }
+
+        private void OnGammaChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_loading)
+                return;
+
+            ShowValues();
+            Save();
         }
 
         private void OnSliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -110,7 +125,7 @@ namespace Viking.UI.Forms
         {
             if (WhiteSlider.Value > BlackSlider.Value)
             {
-                CrushContrastStore.Default.Set(_volume, _section, _channel, BlackSlider.Value, WhiteSlider.Value);
+                CrushContrastStore.Default.Set(_volume, _section, _channel, BlackSlider.Value, WhiteSlider.Value, Gamma);
                 _redraw();
             }
         }
@@ -118,15 +133,15 @@ namespace Viking.UI.Forms
         private void OnAutoClick(object sender, RoutedEventArgs e)
         {
             (double min, double max) = _crush.AutoRange();
-            Load(min, max);
+            Load(min, max, _crush.AutoGamma(Math.Round(min), Math.Round(max)));
             Save();
         }
 
         private void OnResetClick(object sender, RoutedEventArgs e)
         {
             CrushContrastStore.Default.Clear(_volume, _section, _channel);
-            (double min, double max) = EffectiveWindow();
-            Load(min, max);
+            CrushContrastSetting now = EffectiveSetting();
+            Load(now.Min, now.Max, now.Gamma);
             _redraw();
         }
 

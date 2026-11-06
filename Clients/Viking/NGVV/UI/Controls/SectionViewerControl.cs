@@ -2222,8 +2222,9 @@ namespace Viking.UI.Controls
         /// the window is its display range, narrowed by <see cref="State.CrushContrast"/>. Every other channel, and a crushed
         /// channel in a storage Viking does not decode, uses the whole range, which leaves the tile unchanged.
         /// </summary>
-        internal static (float Min, float Max) CrushDisplayWindowFor(Section section, string channel, (double Min, double Max)? userCodes = null)
+        internal static (float Min, float Max) CrushDisplayWindowFor(Section section, string channel, CrushContrastSetting? user = null)
         {
+            (double Min, double Max)? userCodes = user is { } setting ? (setting.Min, setting.Max) : null;
             if (!section.CrushedChannels.TryGetValue(channel, out CrushInfo? crush))
                 return (0f, 1f);
 
@@ -2240,6 +2241,12 @@ namespace Viking.UI.Controls
             double contrast = Math.Min(Math.Max(State.CrushContrast, State.MinCrushContrast), State.MaxCrushContrast);
             return (min, (float)(min + ((max - min) / contrast)));
         }
+
+        /// <summary>The gamma the user chose for a crushed channel; 1 (linear) for every other channel and when none was chosen.</summary>
+        internal static float CrushDisplayGammaFor(Section section, string channel, CrushContrastSetting? user = null) =>
+            user is { } setting && section.CrushedChannels.TryGetValue(channel, out CrushInfo? crush) && crush.IsSupported
+                ? (float)CrushContrastSetting.ClampGamma(setting.Gamma)
+                : 1f;
 
         /// <summary>
         /// Draws the tiles of one section and channel into a viewport-sized render target.
@@ -2269,8 +2276,9 @@ namespace Viking.UI.Controls
                 return null;
             }
 
-            tileLayoutEffect.DisplayWindow = CrushDisplayWindowFor(section, channel,
-                CrushContrastStore.Default.Get(State.volume?.Name, section.Number, channel));
+            CrushContrastSetting? userContrast = CrushContrastStore.Default.Get(State.volume?.Name, section.Number, channel);
+            tileLayoutEffect.DisplayWindow = CrushDisplayWindowFor(section, channel, userContrast);
+            tileLayoutEffect.DisplayGamma = CrushDisplayGammaFor(section, channel, userContrast);
 
             int[] DownsamplesToRender = CalculateDownsamplesToRender(mapping, scene.Camera.Downsample);
 

@@ -96,6 +96,31 @@ namespace VolumeModelTests
         }
 
         [TestMethod]
+        public void AutoGammaPutsTheMedianPixelAtMidGrey()
+        {
+            // Codes 1..4 with the median at code 2: in a 0..4 window that is 0.5 of the way up, so no lift is needed.
+            CrushInfo even = new(10, 0, 8, null, [0, 10, 40, 40, 10]);
+            Assert.AreEqual(1.0, even.AutoGamma(0, 4), 1e-9);
+
+            // A median at 0.4 of the window needs gamma ln(0.4)/ln(0.5) so that 0.4^(1/gamma) = 0.5.
+            CrushInfo dark = new(10, 0, 8, null, [0, 0, 100, 5, 5, 5]);
+            Assert.AreEqual(System.Math.Log(0.4) / System.Math.Log(0.5), dark.AutoGamma(0, 5), 1e-9);
+            Assert.AreEqual(2.0, new CrushInfo(10, 0, 8, null, [0, 0, 0, 100, 1, 1, 1, 1, 1]).AutoGamma(0, 12), 1e-9); // median code 3 of 0..12 is a quarter of the way up
+
+            // A bright median needs gamma below 1.
+            Assert.IsTrue(new CrushInfo(10, 0, 8, null, [0, 1, 1, 100]).AutoGamma(0, 4) < 1.0);
+        }
+
+        [TestMethod]
+        public void AutoGammaIsLinearWithoutAHistogramOrWithNoPixelsInTheWindow_AndClamped()
+        {
+            Assert.AreEqual(1.0, new CrushInfo(10, 0, 8, null, null).AutoGamma(0, 10));
+            Assert.AreEqual(1.0, new CrushInfo(10, 0, 8, null, [0, 0, 0, 5]).AutoGamma(0, 2), "no pixels inside");
+            Assert.AreEqual(1.0, new CrushInfo(10, 0, 8, null, [0, 5, 5]).AutoGamma(2, 2), "window with no width");
+            Assert.AreEqual(4.0, new CrushInfo(10, 0, 8, null, [0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]).AutoGamma(0, 20), "clamped to the maximum");
+        }
+
+        [TestMethod]
         public void MoreThanEightBitsIsNotSupported()
         {
             Assert.IsFalse(CrushInfo.FromElement(XElement.Parse("<Pyramid CrushVersion=\"1\" CrushStep=\"10\" CrushBits=\"9\" />"))!.IsSupported);

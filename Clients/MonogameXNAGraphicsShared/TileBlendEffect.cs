@@ -49,6 +49,15 @@ namespace VikingXNA
             }
         }
 
+        private readonly EffectParameter? _DisplayGamma;
+
+        /// <summary>The gamma applied after the display window: above 1 lifts dark and middle tones, 1 is linear. Does nothing for a shader built without it.</summary>
+        public float DisplayGamma
+        {
+            get => _DisplayGamma?.GetValueSingle() ?? 1f;
+            set => _DisplayGamma?.SetValue(value);
+        }
+
         public Matrix WorldViewProjMatrix
         {
             get => _WorldViewProjMatrix.GetValueMatrix();
@@ -77,6 +86,7 @@ namespace VikingXNA
             _TileHue = effect.Parameters["TileHue"];
             _DisplayMin = effect.Parameters["DisplayMin"];
             _DisplayMax = effect.Parameters["DisplayMax"];
+            _DisplayGamma = effect.Parameters["DisplayGamma"];
 
             effect.CurrentTechnique = effect.Techniques["TileLayoutToGreyscaleEffect"];
 

@@ -11,7 +11,7 @@ Notes for whoever updates this file. Comments like this one are not shown in Vik
   changes, rename the unreleased heading to the new version; when a version ships, replace "not yet released" with the date
   and channel, for example "2026-10-26 (Viking Test, unsigned)".
 
-Committed application version: 1.2.138.0.
+Committed application version: 1.2.139.0.
 1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109;
 their changes are listed under 1.2.109. Builds 1.2.128 and 1.2.129 are listed under 1.2.129 (it went out as Viking Test
 and as a signed release on 2026-10-27). Viking Test builds 1.2.130 to 1.2.136 were folded into the 1.2.136 release on
@@ -23,9 +23,14 @@ version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. 
 Documentation/source/Client/versionhistory.rst.
 -->
 
+## 1.2.139 — not yet released
+
+* **Contrast editor has a Gamma slider and a smarter Auto.** The window opened from **Section > Contrast...** is now a resizable window with a **Gamma** slider (above 1 lifts the dark and middle tones, which is where TEM membranes and other stained structures sit). **Auto** now also sets the gamma that puts the median pixel at mid grey. Your choices are saved per section on this computer; **Reset to volume range** undoes them.
+<!-- TileLayout.fx: shown = window^(1/DisplayGamma); the gamma slider is log2, 0.25..4. CrushInfo.AutoGamma = ln(t)/ln(0.5) for the median code t of the window (bin 0 skipped). CrushContrast.xml stores min, max and gamma per volume, section and channel; files without gamma mean 1. -->
+
 ## 1.2.138 — 2026-11-05 (Viking Test, unsigned)
 
-* **Crushed sections display with adjustable contrast.** Sections Nornir builds as noise-crushed (tiles that keep raw codes instead of a contrast-stretched image) are expanded on the graphics card using the display range in the VikingXML, so they no longer look dark. Press **Ctrl+Shift+Plus** to brighten, **Ctrl+Shift+Minus** to darken and **Ctrl+Shift+0** to reset. **Section > Contrast...** opens an editor with a histogram, black and white point sliders and an **Auto** button for the section on screen; each section's choice is saved on this computer and **Reset to volume range** undoes it. Other sections are unchanged. Only 8-bit crushed tiles are shown this way; none of the current volumes use more.
+* **Crushed sections display with adjustable contrast.** Sections Nornir builds as noise-crushed (tiles that keep raw codes instead of a contrast-stretched image) are expanded on the graphics card using the display range in the VikingXML, so they no longer look dark. Press **Ctrl+Shift+Plus** to brighten, **Ctrl+Shift+Minus** to darken and **Ctrl+Shift+0** to reset. **Section > Contrast...** opens an editor with a histogram, black and white point sliders for the section on screen; each section's choice is saved on this computer and **Reset to volume range** undoes it. Other sections are unchanged. Only 8-bit crushed tiles are shown this way; none of the current volumes use more.
 <!-- CrushInfo reads CrushVersion/Step/Offset/Bits/DisplayMin/DisplayMax and the CodeHistogram child from <Pyramid>/<Tileset> (Section.CrushedChannels); TileLayout.fx maps DisplayMin..DisplayMax to black..white. Without a display range the window comes from the histogram (bin 0 skipped), else all codes. Per-tile gain on Pyramid tiles (nornir_crush tEXt chunk) is not applied yet. Gamma is planned, not built. -->
 * **Concurrent texture requests stop at 32.** **Max Concurrent Texture Requests** (Viewer Preferences) now goes from 0 (Auto) to 32, and Auto also stops at 32 for tiles smaller than 256×256. Viking never loaded more than 32 textures at once, so values above 32 had no effect; a saved value above 32 now shows as 32. Loading speed is unchanged.
 <!-- D-TextureWorkerCap option B: TextureRequestQueue starts MaxSupportedWorkers (= ViewerPreferencesDialogViewModel.MaxMaxConcurrentTextureRequests = 32) worker loops; SetMaxWorkers and GetAutoMaxConcurrentRequests clamp to it. -->

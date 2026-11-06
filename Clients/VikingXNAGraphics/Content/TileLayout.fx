@@ -15,9 +15,13 @@ float TileHue;
 float DisplayMin = 0;
 float DisplayMax = 1;
 
+//Gamma applied to the windowed value: shown = value ^ (1 / DisplayGamma).  Above 1 lifts the dark and middle tones, 1 leaves the window linear.
+float DisplayGamma = 1;
+
 float ApplyDisplayWindow(float sampleValue)
 {
-	return saturate((sampleValue - DisplayMin) / max(DisplayMax - DisplayMin, 0.000001));
+	float windowed = saturate((sampleValue - DisplayMin) / max(DisplayMax - DisplayMin, 0.000001));
+	return pow(windowed, 1.0 / max(DisplayGamma, 0.01));
 }
 
 uniform const sampler TextureSampler : register(s0) = sampler_state
