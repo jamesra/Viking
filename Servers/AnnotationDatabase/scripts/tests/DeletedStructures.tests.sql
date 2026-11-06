@@ -33,7 +33,6 @@ DECLARE @Base bigint = 900000000000002000;
 DECLARE @Start datetime = DATEADD(second, -1, GETUTCDATE());
 DECLARE @LongAgo datetime = '2000-01-01';
 
--- HotKey is given because the CreateUpdateDatabase.sql default (CHAR(0) as '\0') does not fit char(1).
 SET IDENTITY_INSERT dbo.StructureType ON;
 INSERT dbo.StructureType (ID, Name, HotKey) VALUES (@Base, N'DeletedStructures test', 'z');
 SET IDENTITY_INSERT dbo.StructureType OFF;

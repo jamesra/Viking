@@ -10,7 +10,7 @@
     [Color]         INT            CONSTRAINT [DF_StructureType_Color] DEFAULT (0xFFFFFF) NOT NULL,
     [Version]       ROWVERSION     NOT NULL,
     [Code]          NCHAR (16)     CONSTRAINT [DF_StructureType_Code] DEFAULT (N'No Code') NOT NULL,
-    [HotKey]        CHAR (1)       CONSTRAINT [DF_StructureType_HotKey] DEFAULT ('\0') NOT NULL,
+    [HotKey]        CHAR (1)       CONSTRAINT [DF_StructureType_HotKey] DEFAULT (CHAR(0)) NOT NULL,
     [Username]      NVARCHAR (254) CONSTRAINT [DF_StructureType_Username] DEFAULT (N'') NOT NULL,
     [LastModified]  DATETIME       CONSTRAINT [DF_StructureType_LastModified] DEFAULT (getutcdate()) NOT NULL,
     [Created]       DATETIME       CONSTRAINT [DF_StructureType_Created] DEFAULT (getutcdate()) NOT NULL,

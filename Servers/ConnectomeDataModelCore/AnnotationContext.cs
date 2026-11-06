@@ -305,7 +305,7 @@ namespace Viking.DataModel.Annotation
 
                 entity.Property(e => e.HotKey)
                     .IsUnicode(false)
-                    .HasDefaultValueSql("('\\0')")
+                    .HasDefaultValueSql("(char((0)))")
                     .IsFixedLength(true)
                     .HasComment("Hotkey used to create a structure of this type");
 

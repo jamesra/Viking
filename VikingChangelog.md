@@ -154,6 +154,10 @@ DeletedLocationLinks, and Location_delete now records each deleted location once
 writes DeletedLocations itself. Before it, deleting a location through the gRPC service failed on a script-built database
 (Msg 207 or 208), and on a database that had both, the trigger and the service inserted the same ID (Msg 2627). Users get
 it when that script is run on their annotation database and the service is redeployed.
+
+Database change, not a client bullet: DBVersion 91 makes StructureType.HotKey default to CHAR(0). The old default
+('\0') was two characters for a CHAR(1) column, so creating a structure type without a hotkey failed on a script-built
+database (Msg 2628). Viking always sends a hotkey, so no client path hit it.
 -->
 
 * **Raising the SAM2 threshold redraws at once.** Moving the **SAM2 threshold** slider up now redraws the outlines on screen from the answer Viking already has, for the segmentation command and for auto-polygonize proposals, instead of asking the segmentation server again. Moving it below the threshold an answer was grown at still asks again. Answers from a segmentation server older than this change are always asked for again.

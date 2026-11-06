@@ -1068,7 +1068,7 @@ BEGIN
 	/****** Object:  Default [DF_StructureType_Code]    Script Date: 06/14/2011 13:13:53 ******/
 	ALTER TABLE [dbo].[StructureType] ADD  CONSTRAINT [DF_StructureType_Code]  DEFAULT (N'No Code') FOR [Code]
 	/****** Object:  Default [DF_StructureType_HotKey]    Script Date: 06/14/2011 13:13:53 ******/
-	ALTER TABLE [dbo].[StructureType] ADD  CONSTRAINT [DF_StructureType_HotKey]  DEFAULT ('\0') FOR [HotKey]
+	ALTER TABLE [dbo].[StructureType] ADD  CONSTRAINT [DF_StructureType_HotKey]  DEFAULT (CHAR(0)) FOR [HotKey]
 	/****** Object:  Default [DF_StructureType_Username]    Script Date: 06/14/2011 13:13:53 ******/
 	ALTER TABLE [dbo].[StructureType] ADD  CONSTRAINT [DF_StructureType_Username]  DEFAULT (N'') FOR [Username]
 	/****** Object:  Default [DF_StructureType_LastModified]    Script Date: 06/14/2011 13:13:53 ******/
@@ -8957,6 +8957,51 @@ BEGIN TRANSACTION main
 	INSERT INTO DBVersion values (90,
 		      N'Add DeletedLocations.Z and DeletedLocationLinks; Location_delete logs each deleted location once with its section' ,getDate(),User_ID())
 	 COMMIT TRANSACTION ninety
+	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 91)))
+	begin
+     print N'StructureType.HotKey defaults to CHAR(0)'
+	 BEGIN TRANSACTION ninetyone
+
+	 /*DF_StructureType_HotKey was DEFAULT ('\0'): a backslash and a zero, two characters for a CHAR(1) column, so an
+	   INSERT into StructureType that omits HotKey failed with Msg 2628 (truncation) when ANSI_WARNINGS is ON, as
+	   SqlClient sets it, or stored a backslash when it is OFF. The intended value is the NUL character the clients
+	   write for "no hotkey". A default on HotKey that is already CHAR(0), under any name, is left alone; any other
+	   default on the column is replaced. Existing rows are not changed.*/
+	 DECLARE @HotKeyDefault nvarchar(300)
+	 SELECT @HotKeyDefault = QUOTENAME(dc.name) FROM sys.default_constraints dc
+		INNER JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id
+		WHERE dc.parent_object_id = OBJECT_ID(N'dbo.StructureType') AND c.name = N'HotKey'
+		  AND dc.definition <> N'(char((0)))'
+
+	 IF @HotKeyDefault IS NOT NULL
+	 BEGIN
+		EXEC(N'ALTER TABLE [dbo].[StructureType] DROP CONSTRAINT ' + @HotKeyDefault)
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+	 END
+
+	 IF NOT EXISTS(select * from sys.default_constraints dc
+		INNER JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id
+		WHERE dc.parent_object_id = OBJECT_ID(N'dbo.StructureType') AND c.name = N'HotKey')
+	 BEGIN
+		EXEC('ALTER TABLE [dbo].[StructureType] ADD CONSTRAINT [DF_StructureType_HotKey] DEFAULT (CHAR(0)) FOR [HotKey]')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+	 END
+
+	INSERT INTO DBVersion values (91,
+		      N'StructureType.HotKey defaults to CHAR(0)' ,getDate(),User_ID())
+	 COMMIT TRANSACTION ninetyone
 	end
 		   
 COMMIT TRANSACTION main
