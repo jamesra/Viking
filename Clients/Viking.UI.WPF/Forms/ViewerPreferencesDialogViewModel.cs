@@ -83,7 +83,11 @@ namespace Viking.UI.WPF.Forms
         /// </summary>
         public const int DefaultMaxConcurrentTextureRequests = 0;
         public const int MinMaxConcurrentTextureRequests = 0;
-        public const int MaxMaxConcurrentTextureRequests = 256;
+        /// <summary>
+        /// Largest concurrent texture request limit, for a typed value and for Auto. <c>TextureRequestQueue</c> starts
+        /// exactly this many worker loops, so a larger limit could never run more requests at once.
+        /// </summary>
+        public const int MaxMaxConcurrentTextureRequests = 32;
         #endregion
 
         #region Original Values (for Cancel revert)

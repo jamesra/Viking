@@ -43,8 +43,12 @@ namespace Viking
         private static readonly HashSet<TileView> _pendingTileViews = new();
         private static readonly object _lock = new();
         private static readonly SemaphoreSlim _gate = new(0, int.MaxValue);
-        private static volatile SemaphoreSlim _throttle = new(DefaultMaxWorkers, DefaultMaxWorkers);
-        private const int DefaultMaxWorkers = 32;
+        private static volatile SemaphoreSlim _throttle = new(MaxSupportedWorkers, MaxSupportedWorkers);
+        /// <summary>
+        /// Worker loops started, and so the most requests that can load at once; <see cref="SetMaxWorkers"/> clamps to it.
+        /// Shared with the Viewer Preferences range so the dialog never offers a limit the pool cannot reach.
+        /// </summary>
+        internal const int MaxSupportedWorkers = Viking.UI.WPF.Forms.ViewerPreferencesDialogViewModel.MaxMaxConcurrentTextureRequests;
         private static readonly List<Task> _workers = new();
         private static CancellationTokenSource? _workerCts;
         private static volatile bool _started;
@@ -52,7 +56,7 @@ namespace Viking
         /// <summary>
         /// Number of max workers configured on the semaphore.
         /// </summary>
-        private static int _current_max_workers = DefaultMaxWorkers;
+        private static int _current_max_workers = MaxSupportedWorkers;
 
         public static int MaxWorkers => _current_max_workers;
 
@@ -166,11 +170,12 @@ namespace Viking
         }
 
         /// <summary>
-        /// Set the max concurrent texture load workers (1-256). Replaces HttpRequestThrottle sizing.
+        /// Set the max concurrent texture load workers, clamped to 1 through the worker pool size (32). Replaces
+        /// HttpRequestThrottle sizing.
         /// </summary>
         public static void SetMaxWorkers(int max)
         {
-            int clamped = Math.Max(1, Math.Min(max, 256));
+            int clamped = Math.Max(1, Math.Min(max, MaxSupportedWorkers));
             var prev = _throttle;
             _current_max_workers = clamped;
             _throttle = new SemaphoreSlim(clamped, clamped);
@@ -227,7 +232,7 @@ namespace Viking
                     return;
                 _started = true;
                 _workerCts = new CancellationTokenSource();
-                for (int i = 0; i < DefaultMaxWorkers; i++)
+                for (int i = 0; i < MaxSupportedWorkers; i++)
                 {
                     _workers.Add(Task.Run(() => WorkerLoop(_workerCts.Token)));
                 }

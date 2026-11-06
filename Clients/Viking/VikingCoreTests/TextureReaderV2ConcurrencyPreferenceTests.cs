@@ -19,7 +19,7 @@ namespace VikingCoreTests
     [TestClass]
     public class TextureReaderV2ConcurrencyPreferenceTests
     {
-        private const int MaxWorkersCeiling = 256;
+        private const int MaxWorkersCeiling = 32;
 
         private int _savedMaxWorkers;
 
@@ -35,12 +35,25 @@ namespace VikingCoreTests
             TextureRequestQueue.SetMaxWorkers(_savedMaxWorkers);
         }
 
-        /// <summary>Known tile sizes: 4096 / width tiles per row, doubled, never below one.</summary>
+        /// <summary>
+        /// The queue starts 32 workers, and the Viewer Preferences dialog must offer exactly that range: a larger limit
+        /// would be silently capped, a smaller one would hide workers the pool has.
+        /// </summary>
+        [TestMethod]
+        public void WorkerPoolDialogMaximumAndCeilingAreThirtyTwo()
+        {
+            Assert.AreEqual(MaxWorkersCeiling, TextureRequestQueue.MaxSupportedWorkers);
+            Assert.AreEqual(MaxWorkersCeiling, Viking.UI.WPF.Forms.ViewerPreferencesDialogViewModel.MaxMaxConcurrentTextureRequests);
+        }
+
+        /// <summary>Known tile sizes: 4096 / width tiles per row, doubled, never below one nor above the 32 workers.</summary>
         [TestMethod]
         public void AutoLimitForCommonTileWidthsIsTwiceTheTilesPerFourThousandNinetySixPixels()
         {
-            Assert.AreEqual(8192, TextureReaderV2.GetAutoMaxConcurrentRequests(1));
+            Assert.AreEqual(MaxWorkersCeiling, TextureReaderV2.GetAutoMaxConcurrentRequests(1));
+            Assert.AreEqual(MaxWorkersCeiling, TextureReaderV2.GetAutoMaxConcurrentRequests(128));
             Assert.AreEqual(32, TextureReaderV2.GetAutoMaxConcurrentRequests(256));
+            Assert.AreEqual(30, TextureReaderV2.GetAutoMaxConcurrentRequests(270));
             Assert.AreEqual(16, TextureReaderV2.GetAutoMaxConcurrentRequests(512));
             Assert.AreEqual(8, TextureReaderV2.GetAutoMaxConcurrentRequests(1024));
             Assert.AreEqual(2, TextureReaderV2.GetAutoMaxConcurrentRequests(4096));
@@ -65,8 +78,8 @@ namespace VikingCoreTests
         }
 
         /// <summary>
-        /// For every tile width the Auto limit is the documented formula, is at least 1, and never grows as tiles
-        /// get wider.
+        /// For every tile width the Auto limit is the documented formula capped at the worker pool, is at least 1, and
+        /// never grows as tiles get wider.
         /// </summary>
         [TestMethod]
         public void AutoLimitMatchesFormulaIsPositiveAndNeverGrowsWithWidth()
@@ -74,15 +87,16 @@ namespace VikingCoreTests
             Prop.ForAll(Arb.Default.Int32(), Arb.From(Gen.Choose(0, 10000)), (int width, int extra) =>
             {
                 int auto = TextureReaderV2.GetAutoMaxConcurrentRequests(width);
-                int expected = Math.Max(1, 4096 / Math.Max(1, width) * 2);
+                int expected = Math.Max(1, Math.Min(4096 / Math.Max(1, width) * 2, MaxWorkersCeiling));
                 int wider = (int)Math.Min(int.MaxValue, (long)Math.Max(1, width) + extra);
                 return auto == expected
                     && auto >= 1
+                    && auto <= MaxWorkersCeiling
                     && TextureReaderV2.GetAutoMaxConcurrentRequests(wider) <= auto;
             }).QuickCheckThrowOnFailure();
         }
 
-        /// <summary>A positive preference is a hard limit, whatever the tile width, clamped to the queue's 1-256 range.</summary>
+        /// <summary>A positive preference is a hard limit, whatever the tile width, clamped to the queue's 1-32 range.</summary>
         [TestMethod]
         public void PositivePreferenceSetsWorkerLimitIgnoringTileWidth()
         {
@@ -98,7 +112,7 @@ namespace VikingCoreTests
             }).QuickCheckThrowOnFailure();
         }
 
-        /// <summary>Preference 0 (Auto) with a known tile width uses the Auto formula, clamped to 1-256.</summary>
+        /// <summary>Preference 0 (Auto) with a known tile width uses the Auto formula, clamped to 1-32.</summary>
         [TestMethod]
         public void ZeroPreferenceWithTileWidthUsesAutoLimit()
         {
@@ -143,11 +157,20 @@ namespace VikingCoreTests
             Assert.AreEqual(16, TextureRequestQueue.MaxWorkers);
         }
 
-        /// <summary>Known clamps: a tiny tile width (Auto 8192) and an oversized preference both stop at 256.</summary>
+        /// <summary>
+        /// Known clamps: a tiny tile width (formula 8192), a saved preference from the old 1-256 range, and an oversized
+        /// preference all stop at the 32 workers the queue runs.
+        /// </summary>
         [TestMethod]
-        public void WorkerLimitIsClampedToTwoHundredFiftySix()
+        public void WorkerLimitIsClampedToThirtyTwo()
         {
             TextureReaderV2.ApplyMaxConcurrentRequestPreference(0, 1);
+            Assert.AreEqual(MaxWorkersCeiling, TextureRequestQueue.MaxWorkers);
+
+            TextureReaderV2.ApplyMaxConcurrentRequestPreference(256, null);
+            Assert.AreEqual(MaxWorkersCeiling, TextureRequestQueue.MaxWorkers);
+
+            TextureReaderV2.ApplyMaxConcurrentRequestPreference(MaxWorkersCeiling + 1, 1024);
             Assert.AreEqual(MaxWorkersCeiling, TextureRequestQueue.MaxWorkers);
 
             TextureReaderV2.ApplyMaxConcurrentRequestPreference(int.MaxValue, null);

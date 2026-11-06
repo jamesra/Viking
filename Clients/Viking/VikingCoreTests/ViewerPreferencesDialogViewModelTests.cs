@@ -112,6 +112,47 @@ namespace VikingCoreTests
         }
 
         /// <summary>
+        /// The texture loader runs 32 workers, so the dialog stops at 32: a typed larger value and a value saved by an
+        /// older Viking (which allowed up to 256) both become 32, and Cancel restores the clamped saved value.
+        /// </summary>
+        [TestMethod]
+        public void MaxConcurrentTextureRequests_AboveThirtyTwo_IsClampedOnEditAndLoad()
+        {
+            Assert.AreEqual(32, ViewerPreferencesDialogViewModel.MaxMaxConcurrentTextureRequests);
+            var vm = LoadedViewModel();
+            Assert.AreEqual(32, vm.MaxConcurrentTextureRequestsMaximum);
+
+            vm.MaxConcurrentTextureRequests = 33;
+            Assert.AreEqual(32, vm.MaxConcurrentTextureRequests);
+            vm.MaxConcurrentTextureRequests = 31;
+            Assert.AreEqual(31, vm.MaxConcurrentTextureRequests);
+
+            vm.LoadCurrentSettings(
+                sectionNumberOverlayEnabled: true,
+                sectionNumberOverlayCount: 10,
+                sectionNumberOverlayAcceleration: 20,
+                sectionNumberOverlayEdge: "Left",
+                sectionNumberOverlayOpacity: 0.7,
+                sectionNumberOverlayMinOpacityNonCenter: 0.5,
+                sectionNumberOverlayCenterMagnification: 3.0,
+                pidProportionalGain: 2500,
+                pidDerivativeGain: 4500,
+                pidIntegralGain: 40,
+                pidVelocityThreshold: 0.01,
+                pidPositionThreshold: 0.02,
+                textureLoadingWindow: 30,
+                minTexturesToLoadFromQueue: 3,
+                visibleTileSortIntervalMs: 1000,
+                maxConcurrentTextureRequests: 256,
+                loadAdjacentSectionTextures: true);
+            Assert.AreEqual(32, vm.MaxConcurrentTextureRequests);
+
+            vm.MaxConcurrentTextureRequests = 8;
+            vm.RevertToOriginal();
+            Assert.AreEqual(32, vm.MaxConcurrentTextureRequests);
+        }
+
+        /// <summary>
         /// Closing the dialog after Cancel must not undo anything more: a second revert leaves the snapshot values.
         /// </summary>
         [TestMethod]

@@ -373,7 +373,7 @@
                                      Foreground="Gray"
                                      TextWrapping="Wrap"
                                      VerticalAlignment="Center"
-                                     Text="Maximum simultaneous HTTP texture downloads. Default is 0 = Auto (based on tile size: (4096 / tile width) × 2). Auto uses 32 threads at 256×256, 16 at 512×512, and 8 at 1024×1024. 1–256 to override. Higher values can speed loading to a point, but too high slows all loading as each request competes for resources."/>
+                                     Text="Maximum simultaneous HTTP texture downloads. Default is 0 = Auto (based on tile size: (4096 / tile width) × 2). Auto uses 32 threads at 256×256, 16 at 512×512, and 8 at 1024×1024; smaller tiles still use at most 32. 1–32 to override. Higher values can speed loading to a point, but too high slows all loading as each request competes for resources."/>
                         </Grid>
                     </StackPanel>
                 </Expander>
