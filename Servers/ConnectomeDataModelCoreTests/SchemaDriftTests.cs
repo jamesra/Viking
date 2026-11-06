@@ -283,7 +283,7 @@ namespace ConnectomeDataModelCoreTests
                 "\tALTER TABLE T ALTER COLUMN B NVARCHAR(max) NULL\n" +
                 "\tALTER TABLE T ADD G geometry\n" +
                 "\tALTER TABLE T ALTER COLUMN [G] geometry NOT NULL\n" +
-                "\tALTER TABLE T DROP COLUMN C\n" +
+                "\tALTER TABLE T DROP COLUMN [C]\n" +
                 "\tALTER TABLE T ADD C as ISNULL(G.STX, 0) PERSISTED\n" +
                 "\tALTER TABLE [dbo].[T] ADD CONSTRAINT [DF_T_A] DEFAULT ((0)) FOR [A]\n" +
                 "\tEXEC(' ALTER TABLE T ADD R as\n\t\tCASE G.STDimension()\n\t\tWHEN 0 THEN 0\n\t\tEND PERSISTED NOT NULL ')\n" +
