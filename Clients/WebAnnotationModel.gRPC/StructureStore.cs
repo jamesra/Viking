@@ -111,21 +111,6 @@ namespace WebAnnotationModel.gRPC
             
             if (numLocs == 0)
             {
-                /*
-                string name; 
-                if(obj.Type != null)
-                    name = obj.Type.Name + " " + obj.ID.ToString();
-                else
-                    name = obj.ID.ToString();
-                */
-                /*
-                System.Windows.Forms.DialogResult result = System.Windows.Forms.MessageBox.Show("Structure " + name + " has no locations, do you wish to delete from the database?", 
-                                                            "Continue Delete?",
-                                                            System.Windows.Forms.MessageBoxButtons.YesNo);
-
-                //Delete on yes
-                if (result == System.Windows.Forms.DialogResult.Yes)
-                {*/
                 try
                 {
                     await client.Delete(ID, CancellationToken.None);
@@ -133,10 +118,8 @@ namespace WebAnnotationModel.gRPC
                 }
                 catch (Exception)
                 {
-                    //             System.Windows.Forms.MessageBox.Show("Delete failed.  Structure may have had child location added or already been deleted. Exception: " + e.ToString(), "Survivable error"); 
                     throw;
                 }
-                //  }
             }
         }
 
@@ -162,46 +145,6 @@ namespace WebAnnotationModel.gRPC
                 : await Store.Locations.GetOrAdd(createdLocation.ID, _ => ServerLocationObjToObjConverter.Convert(createdLocation), out _);
 
             return (obj, location);
-
-            /*
-            AnnotateStructures.AnnotateStructuresClient proxy = null;
-
-            created_loc = null;
-            try
-            {
-                proxy = CreateProxy();
-                proxy.Open();
-
-                CreateStructureRetval retval = proxy.CreateStructure(newStruct.GetData(), newLocation.GetData());
-
-                //We should not insert created objects into the store before they are created on the server
-                Debug.Assert(this.GetObjectByID(newStruct.ID, false) == null);
-
-                StructureObj created_struct = new StructureObj(retval.structure);
-
-                ChangeInventory<StructureObj> inventory = InternalAdd(created_struct);
-                created_loc = new LocationObj(retval.location);
-
-                CallOnCollectionChangedForAdd(new StructureObj[] { created_struct });
-                Store.Locations.AddFromFriend(new LocationObj[] { created_loc });
-
-                return created_struct;
-            }
-            catch (Exception e)
-            {
-                ShowStandardExceptionMessage(e);
-                StructureObj deletedObj = InternalDelete(newStruct.ID);
-                if (deletedObj != null)
-                    CallOnCollectionChangedForDelete(new StructureObj[] { deletedObj });
-
-                return null;
-            }
-            finally
-            {
-                if (proxy != null)
-                    proxy.Close();
-            }
-            */
         }
 
         /// <summary>
