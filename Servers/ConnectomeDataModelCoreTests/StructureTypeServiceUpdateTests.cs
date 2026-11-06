@@ -215,6 +215,25 @@ namespace ConnectomeDataModelCoreTests
             Assert.DoesNotContain(identity.Types, t => t.State == EntityState.Deleted);
         }
 
+        /// <summary>
+        /// A delete that fails leaves the type in place, so a later create or move under it must still succeed:
+        /// only a delete the batch applies takes the parent out of the live set.
+        /// </summary>
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task FailedDeleteOfParentKeepsItLiveForALaterChild(bool byCreate)
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            using var db = NewContext(identity, new FakeStructureTypeTable(Stored(1, "Parent"), Stored(2, "Child", parentId: 1), Stored(3, "Other")));
+
+            var response = await Update(db, DeleteOf(1), byCreate ? CreateOf("New", parentId: 1) : UpdateOf(3, "Moved", parentId: 1));
+
+            Assert.Equal(new[] { false, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Equal(1, byCreate ? response.Results[1].Created.ParentId : response.Results[1].Updated.ParentId);
+            Assert.DoesNotContain(identity.Types, t => t.State == EntityState.Deleted);
+        }
+
         [Fact]
         public async Task UpdateUnderMissingParentFailsItsRowAndKeepsTheRest()
         {
