@@ -3,6 +3,7 @@ using gRPCAnnotationService.Protos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -62,9 +63,10 @@ namespace gRPCAnnotationService
         /// <summary>
         /// Applies a batch of insert, update, and delete changes in order, in one save. Each change sees
         /// the changes before it: <c>Sucess</c> is false, and only that row is skipped, for an insert whose
-        /// row (keyed by source and target type) already exists or is queued, and for an update or delete
-        /// whose row does not exist or was deleted earlier in the batch. Only <c>Bidirectional</c> can
-        /// change on update. A delete echoes the request key.
+        /// row (keyed by source and target type) already exists or is queued, or that names a source or
+        /// target type that does not exist (see <see cref="LiveStructureTypeIdsAsync"/>), and for an update
+        /// or delete whose row does not exist or was deleted earlier in the batch. Only <c>Bidirectional</c>
+        /// can change on update. A delete echoes the request key.
         /// </summary>
         public override async Task<UpdatePermittedStructureLinksResponse> UpdatePermittedStructureLinks(UpdatePermittedStructureLinksRequest request, ServerCallContext context)
         {
@@ -72,6 +74,7 @@ namespace gRPCAnnotationService
             {
                 var ct = context.CancellationToken;
                 var response = new UpdatePermittedStructureLinksResponse();
+                var liveTypes = await LiveStructureTypeIdsAsync(request, ct);
 
                 foreach (var r in request.Changes)
                 {
@@ -83,7 +86,8 @@ namespace gRPCAnnotationService
                             row_response.Sucess = true;
                             break;
                         case DBAction.Insert:
-                            if (await FindLiveAsync(r.Result, ct) != null)
+                            if (!liveTypes.Contains(r.Result.SourceTypeId) || !liveTypes.Contains(r.Result.TargetTypeId)
+                                || await FindLiveAsync(r.Result, ct) != null)
                             {
                                 row_response.Sucess = false;
                                 break;
@@ -126,6 +130,27 @@ namespace gRPCAnnotationService
                 return response;
             }
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(UpdatePermittedStructureLinks), e, context); }
+        }
+
+        /// <summary>
+        /// The stored types, among the source and target types the batch's inserts name, that exist.
+        /// FK_PermittedStructureLink_SourceType and _TargetType would fail an insert naming any other type and
+        /// roll back the whole batch; that row fails instead. A batch with no insert costs no query.
+        /// </summary>
+        private async Task<HashSet<long>> LiveStructureTypeIdsAsync(UpdatePermittedStructureLinksRequest request, CancellationToken ct)
+        {
+            var named = request.Changes.Where(c => c.Action == DBAction.Insert)
+                .SelectMany(c => new[] { c.Result.SourceTypeId, c.Result.TargetTypeId }).ToArray();
+
+            var live = new HashSet<long>();
+            if (named.Length == 0)
+                return live;
+
+            foreach (var chunk in named.DistinctChunk())
+                live.UnionWith(await _context.StructureTypes.AsNoTracking()
+                    .Where(t => chunk.Contains(t.Id)).Select(t => t.Id).ToListAsync(ct));
+
+            return live;
         }
 
         /// <summary>

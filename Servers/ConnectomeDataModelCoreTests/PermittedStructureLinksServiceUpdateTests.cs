@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
@@ -22,8 +23,8 @@ namespace ConnectomeDataModelCoreTests
     /// <summary>
     /// Pins the offline paths of <see cref="PermittedStructureLinksService"/>: a batch saves once, replies
     /// per change in request order, and echoes the composite key. Each change sees the changes before it
-    /// in the same batch: a repeated insert, an insert of a stored link, and an update or delete of a link
-    /// the batch deleted fail only their own row, while an insert followed by an update or delete of the
+    /// in the same batch: a repeated insert, an insert of a stored link or naming a missing type, and an
+    /// update or delete of a link the batch deleted fail only their own row, while an insert followed by an update or delete of the
     /// same key applies to the queued row. No database is contacted: interceptors stand in for the
     /// connection, the key lookups and SaveChanges.
     /// </summary>
@@ -165,6 +166,50 @@ namespace ConnectomeDataModelCoreTests
         }
 
         [Fact]
+        public async Task InsertNamingAMissingTypeFailsThatRowOnly()
+        {
+            var saves = new CaptureSaves();
+            using var db = NewContext(saves, new FakeLinkTable(Stored(1, 2, false)));
+
+            var response = await Update(db,
+                Change(DBAction.Insert, 3, 4),
+                Change(DBAction.Insert, 1, 99),
+                Change(DBAction.Insert, 99, 2),
+                Change(DBAction.Update, 1, 2, true),
+                Change(DBAction.Insert, 4, 5));
+
+            Assert.Equal(1, saves.Count);
+            Assert.Equal(new[] { true, false, false, true, true }, response.Changes.Select(c => c.Sucess).ToArray());
+            Assert.Null(response.Changes[1].Result);
+            Assert.Null(response.Changes[2].Result);
+            Assert.Equal(new[] { (EntityState.Modified, 1L, 2L, true), (EntityState.Added, 3L, 4L, false), (EntityState.Added, 4L, 5L, false) },
+                saves.Links.OrderBy(l => l.State).ThenBy(l => l.Source).ToArray());
+        }
+
+        [Fact]
+        public async Task InsertsLookUpTheirTypesInOneQuery()
+        {
+            var table = new FakeLinkTable();
+            using var db = NewContext(new CaptureSaves(), table);
+
+            await Update(db, Change(DBAction.Insert, 1, 2), Change(DBAction.Insert, 2, 3), Change(DBAction.Insert, 3, 1));
+
+            Assert.Equal(1, table.TypeQueries);
+        }
+
+        [Fact]
+        public async Task BatchWithoutInsertsRunsNoTypeQuery()
+        {
+            var table = new FakeLinkTable(Stored(1, 2, false), Stored(3, 4, false));
+            using var db = NewContext(new CaptureSaves(), table);
+
+            var response = await Update(db, Change(DBAction.Update, 1, 2, true), Change(DBAction.Delete, 3, 4));
+
+            Assert.All(response.Changes, c => Assert.True(c.Sucess));
+            Assert.Equal(0, table.TypeQueries);
+        }
+
+        [Fact]
         public async Task EmptyBatchRepliesEmptyAndSavesOnce()
         {
             var saves = new CaptureSaves();
@@ -233,24 +278,39 @@ namespace ConnectomeDataModelCoreTests
         }
 
         /// <summary>
-        /// Stands in for the PermittedStructureLink table: opening the connection is suppressed, and each
-        /// key lookup (its two parameters are the source and target type, in that order) is answered with
-        /// the stored row that has that key, in the column order its SELECT list names. Counts the queries.
+        /// Stands in for the PermittedStructureLink and StructureType tables: opening the connection is
+        /// suppressed, a StructureType query is answered with the <see cref="Types"/> among its parameters,
+        /// and each link key lookup (its two parameters are the source and target type, in that order) with
+        /// the stored row that has that key, in the column order its SELECT list names. Saving an added link
+        /// whose source or target is not in <see cref="Types"/> throws, as the foreign keys do.
         /// </summary>
-        private sealed class FakeLinkTable : IDbConnectionInterceptor, IDbCommandInterceptor
+        private sealed class FakeLinkTable : IDbConnectionInterceptor, IDbCommandInterceptor, ISaveChangesInterceptor
         {
             private static readonly Regex SelectedColumn = new(@"\]\.\[(\w+)\]");
             private readonly EfLink[] _rows;
 
             public FakeLinkTable(params EfLink[] rows) => _rows = rows;
 
+            /// <summary>Stored structure type Ids: 1 to 9, so a test names a missing type with 99.</summary>
+            public HashSet<long> Types { get; } = new() { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+
             public int Queries { get; private set; }
+
+            public int TypeQueries { get; private set; }
 
             public InterceptionResult ConnectionOpening(DbConnection connection, ConnectionEventData eventData, InterceptionResult result) =>
                 InterceptionResult.Suppress();
 
             public ValueTask<InterceptionResult> ConnectionOpeningAsync(DbConnection connection, ConnectionEventData eventData, InterceptionResult result, CancellationToken cancellationToken = default) =>
                 ValueTask.FromResult(InterceptionResult.Suppress());
+
+            public ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+            {
+                if (eventData.Context.ChangeTracker.Entries<EfLink>().Any(e => e.State == EntityState.Added &&
+                        !(Types.Contains(e.Entity.SourceTypeId) && Types.Contains(e.Entity.TargetTypeId))))
+                    throw new DbUpdateException("The INSERT statement conflicted with the FOREIGN KEY constraint \"FK_PermittedStructureLink_SourceType\".");
+                return ValueTask.FromResult(result);
+            }
 
             public ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
             {
@@ -259,6 +319,15 @@ namespace ConnectomeDataModelCoreTests
                 var selectList = command.CommandText.Substring(0, command.CommandText.IndexOf("FROM", StringComparison.Ordinal));
                 var columns = SelectedColumn.Matches(selectList).Select(m => m.Groups[1].Value).ToArray();
                 var table = new DataTable();
+                if (command.CommandText.Contains("FROM [StructureType]", StringComparison.Ordinal))
+                {
+                    TypeQueries++;
+                    table.Columns.Add(Assert.Single(columns), typeof(long));
+                    foreach (var id in key.Distinct().Where(Types.Contains))
+                        table.Rows.Add(id);
+                    return ValueTask.FromResult(InterceptionResult<DbDataReader>.SuppressWithResult(table.CreateDataReader()));
+                }
+
                 foreach (var column in columns)
                     table.Columns.Add(column, column == "Bidirectional" ? typeof(bool) : typeof(long));
                 foreach (var row in _rows.Where(r => r.SourceTypeId == key[0] && r.TargetTypeId == key[1]))
