@@ -128,9 +128,9 @@ Local tilesets
 
 A container can read the tiles of some annotation contexts itself instead of asking the Viking
 client to render and upload every cell. In the Identity management site, give the container's
-SegmentationService resource **Local resources**: annotation contexts, or the groups and
+SegmentationService resource **Assigned resources**: annotation contexts, or the groups and
 organizational units that hold them (a group can hold resources, so group contexts by where their
-storage is). Then set, in the run env:
+storage is). Correction services are assigned the same way. Then set, in the run env:
 
 - ``SEGMENTATION_SERVICE_CLIENT_SECRET``, equal to the identity run env's secret for the
   ``segmentation`` client. The issuer and Permissions API default to the host-wide

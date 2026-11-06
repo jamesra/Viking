@@ -51,10 +51,10 @@
     {
         ("Correction Service", "CorrectionServices",
             "A section-correction container. It computes how much each section's image should be shifted to line up with its neighbors, from the annotations of the contexts assigned to it.",
-            "Contexts are assigned on the annotation context's Edit page. Viking receives the service URL when it opens an assigned context, and shifts the view slightly as you zoom in. The container signs in as the Identity client named correction (secret set on the server) and asks for the contexts assigned to the service whose name it is configured with. Contexts that share an annotation database and registration are corrected once."),
+            "Assigned contexts, groups and organizational units on its Edit page, as a segmentation service is; a context has one correction service. Viking receives the service URL when it opens an assigned context, and shifts the view slightly as you zoom in. The container signs in as the Identity client named correction (secret set on the server) and asks for the contexts assigned to the service whose name it is configured with. Contexts that share an annotation database and registration are corrected once."),
         ("Segmentation Service", "SegmentationServices",
             "A backend that segments images on request. Users pick one when they sign in to Viking.",
-            "Owned by an organizational unit. Granted to users with the User permission; Access Manager lets someone manage who may use it. Independent of annotation contexts.")
+            "Owned by an organizational unit. Granted to users with the User permission; Access Manager lets someone manage who may use it. Assigned contexts, groups and organizational units on its Edit page: it reads tiles itself for the contexts reached from them. Several segmentation services may serve one context.")
     };
 
     var sections = new (string Heading, string Id, (string Term, string Controller, string Purpose, string Relations)[] Items)[]

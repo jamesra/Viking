@@ -2,7 +2,7 @@
 
 The server authenticates as the shared "segmentation" OAuth client (client credentials, ``Viking.Annotation`` scope)
 and calls ``Permissions/AssignedAnnotationContexts?service=<name>``, which answers with every context reached from
-the local resources of the SegmentationService resource named ``<name>``. This mirrors the correction service's
+the assigned resources of the SegmentationService resource named ``<name>``. This mirrors the correction service's
 IdentityAssignmentClient (Servers/GrpcSectionCorrectionService).
 
 The list is refreshed every ``refresh_seconds``, and sooner (at most once a minute) when a stream names a context

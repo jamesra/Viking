@@ -127,6 +127,7 @@ namespace Viking.Identity.Server.Extensions.Services
             var volumes = await _context.WithCatalog()
                 .Where(v => ids.Contains(v.Id))
                 .ToListAsync();
+            var correctionOwners = await _context.CorrectionOwnersAsync();
 
             return volumes.ToDictionary(v => v.Id, v => new UserResourcePermissions
             {
@@ -135,7 +136,7 @@ namespace Viking.Identity.Server.Extensions.Services
                 ResourceType = nameof(AnnotationContext),
                 Permissions = volumePermissions[v.Id],
                 ParentId = v.ParentID,
-                Metadata = VolumeMetadata.Build(v)
+                Metadata = VolumeMetadata.Build(v, correctionOwners.GetValueOrDefault(v.Id))
             });
         }
 

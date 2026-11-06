@@ -63,12 +63,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return Forbid();
             }
 
-            ViewBag.LocalResources = await _context.SegmentationServiceLocalResources
-                .Where(l => l.SegmentationServiceId == segmentationService.Id)
-                .Select(l => l.Resource)
-                .OrderBy(r => r.ResourceTypeId).ThenBy(r => r.Name)
-                .ToListAsync();
-            ViewBag.LocalContexts = await _context.LocalAnnotationContextsAsync(segmentationService.Id);
+            ViewBag.AssignedResources = await _context.AssignedResourcesAsync(segmentationService.Id);
+            ViewBag.ServedContexts = await _context.ServedAnnotationContextsAsync(segmentationService.Id);
 
             return View(segmentationService);
         }
@@ -136,7 +132,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             }
 
             var segmentationService = await _context.SegmentationServices
-                .Include(s => s.LocalResources)
+                .Include(s => s.AssignedResources)
                 .FirstOrDefaultAsync(s => s.Id == id);
             if (segmentationService == null)
             {
@@ -149,7 +145,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             }
 
             ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), segmentationService.ParentID);
-            ViewBag.LocalResourceList = await LocalResourceChecklistAsync(segmentationService.LocalResources.Select(l => l.ResourceId).ToHashSet());
+            ViewBag.AssignedResourceList = await AssignedResourceChecklistAsync(segmentationService.AssignedResources.Select(a => a.ResourceId).ToHashSet());
             return View(segmentationService);
         }
 
@@ -157,7 +153,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(long id, [Bind("Endpoint,Id,Name,Description,ParentID")] SegmentationService segmentationService,
-            [Bind(Prefix = LocalResourceListPrefix)] List<ResourceSelectedViewModel> localResourceList)
+            [Bind(Prefix = ResourceSelectedViewModelExtensions.AssignedResourceListPrefix)] List<ResourceSelectedViewModel> assignedResourceList)
         {
             if (id != segmentationService.Id)
             {
@@ -165,7 +161,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             }
 
             var existing = await _context.SegmentationServices
-                .Include(s => s.LocalResources)
+                .Include(s => s.AssignedResources)
                 .FirstOrDefaultAsync(s => s.Id == id);
             if (existing == null)
             {
@@ -203,7 +199,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     existing.Description = segmentationService.Description;
                     existing.ParentID = segmentationService.ParentID;
                     existing.Endpoint = segmentationService.Endpoint;
-                    existing.UpdateLocalResources(localResourceList);
+                    existing.UpdateAssignedResources(assignedResourceList);
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
@@ -220,17 +216,14 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return RedirectToAction(nameof(Index));
             }
             ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), segmentationService.ParentID);
-            ViewBag.LocalResourceList = await LocalResourceChecklistAsync(
-                (localResourceList ?? new List<ResourceSelectedViewModel>()).Where(r => r.Selected).Select(r => r.Id).ToHashSet());
+            ViewBag.AssignedResourceList = await AssignedResourceChecklistAsync(
+                (assignedResourceList ?? new List<ResourceSelectedViewModel>()).Where(r => r.Selected).Select(r => r.Id).ToHashSet());
             return View(segmentationService);
         }
 
-        /// <summary>Form field prefix of the local-resource checklist on the Edit page.</summary>
-        public const string LocalResourceListPrefix = "LocalResourceList";
-
-        /// <summary>Organizational units, groups and annotation contexts, checked where the service lists them as local.</summary>
-        private Task<List<ResourceSelectedViewModel>> LocalResourceChecklistAsync(ISet<long> selected) =>
-            ResourceSelectedViewModel.ListAsync(_context, ResourceSelectedViewModelExtensions.SegmentationLocalResourceTypes, selected);
+        /// <summary>Organizational units, groups and annotation contexts, checked where the service is assigned them.</summary>
+        private Task<List<ResourceSelectedViewModel>> AssignedResourceChecklistAsync(ISet<long> selected) =>
+            ResourceSelectedViewModel.ListAsync(_context, ResourceSelectedViewModelExtensions.ContextServiceAssignableTypes, selected);
 
         // GET: SegmentationServices/Delete/5
         public async Task<IActionResult> Delete(long? id)

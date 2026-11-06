@@ -42,8 +42,11 @@ namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
             nameof(CorrectionService), nameof(AnnotationServer), nameof(Connectome),
         };
 
-        /// <summary>Resource types worth listing as a segmentation service's local resources: contexts and the containers that reach them.</summary>
-        public static readonly string[] SegmentationLocalResourceTypes =
+        /// <summary>Form field prefix of a context service's assigned-resource checklist on its Edit page.</summary>
+        public const string AssignedResourceListPrefix = "AssignedResourceList";
+
+        /// <summary>Resource types worth assigning to a context service: contexts and the containers that reach them.</summary>
+        public static readonly string[] ContextServiceAssignableTypes =
         {
             nameof(OrganizationalUnit), nameof(Group), nameof(AnnotationContext),
         };
@@ -67,19 +70,19 @@ namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
             }
         }
 
-        /// <summary>Add or remove the service's local resources to match the checklist.</summary>
-        public static void UpdateLocalResources(this SegmentationService service, IEnumerable<ResourceSelectedViewModel> resources)
+        /// <summary>Add or remove the service's assigned resources to match the checklist.</summary>
+        public static void UpdateAssignedResources(this ContextService service, IEnumerable<ResourceSelectedViewModel> resources)
         {
             if (resources == null)
                 return;
 
             foreach (var resource in resources)
             {
-                var existing = service.LocalResources.FirstOrDefault(l => l.ResourceId == resource.Id);
+                var existing = service.AssignedResources.FirstOrDefault(a => a.ResourceId == resource.Id);
                 if (resource.Selected && existing == null)
-                    service.LocalResources.Add(new SegmentationServiceLocalResource { SegmentationServiceId = service.Id, ResourceId = resource.Id });
+                    service.AssignedResources.Add(new ContextServiceAssignment { ServiceId = service.Id, ResourceId = resource.Id });
                 else if (!resource.Selected && existing != null)
-                    service.LocalResources.Remove(existing);
+                    service.AssignedResources.Remove(existing);
             }
         }
     }

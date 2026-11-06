@@ -160,16 +160,36 @@
                     <dt class="col-sm-3">Registration</dt>
                     <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.RegistrationName) ? "VikingXML default" : Model.RegistrationName)</dd>
 
+                    @{
+                        var correctionService = ViewBag.CorrectionService as Viking.Identity.Models.CorrectionService;
+                        var segmentationServices = (IList<Viking.Identity.Models.SegmentationService>)ViewBag.SegmentationServices;
+                    }
                     <dt class="col-sm-3">Correction Service</dt>
                     <dd class="col-sm-9">
-                        @if (Model.CorrectionService != null)
+                        @if (correctionService != null)
                         {
-                            <a asp-controller="CorrectionServices" asp-action="Details" asp-route-id="@Model.CorrectionService.Id">@Model.CorrectionService.Name</a>
+                            <a asp-controller="CorrectionServices" asp-action="Details" asp-route-id="@correctionService.Id">@correctionService.Name</a>
                         }
                         else
                         {
                             <span class="text-muted">None</span>
                         }
+                    </dd>
+
+                    <dt class="col-sm-3">Segmentation Services</dt>
+                    <dd class="col-sm-9">
+                        @if (segmentationServices.Any())
+                        {
+                            @foreach (var service in segmentationServices)
+                            {
+                                <a asp-controller="SegmentationServices" asp-action="Details" asp-route-id="@service.Id" class="badge bg-light text-dark text-decoration-none me-1">@service.Name</a>
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-muted">None</span>
+                        }
+                        <div class="small text-muted">Services are assigned contexts on their own pages.</div>
                     </dd>
 
                     <dt class="col-sm-3">Member of Groups</dt>

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Viking.Identity.Data;
+using Viking.Identity.Models;
 
 namespace Viking.Identity.Server.Extensions.Services
 {
@@ -38,7 +39,7 @@ namespace Viking.Identity.Server.Extensions.Services
         public string ODataEndpoint { get; set; }
 
         /// <summary>The assignment row for <paramref name="c"/>, loaded with <see cref="VolumeMetadata.WithCatalog"/>.</summary>
-        public static AssignedAnnotationContext From(Viking.Identity.Models.AnnotationContext c)
+        public static AssignedAnnotationContext From(AnnotationContext c)
         {
             var server = VolumeMetadata.DefaultServer(c);
             return new AssignedAnnotationContext
@@ -56,28 +57,33 @@ namespace Viking.Identity.Server.Extensions.Services
     }
 
     /// <summary>
-    /// Answers "which annotation contexts are assigned to this correction service" for the
-    /// AssignedAnnotationContexts endpoint.
+    /// Answers "which annotation contexts does this service serve" for the AssignedAnnotationContexts endpoint: the
+    /// contexts reached from the service's assigned resources (for a correction service, those it owns).
     /// </summary>
-    public static class CorrectionServiceAssignments
+    public static class ContextServiceAssignments
     {
         /// <summary>
-        /// Lists the contexts assigned to the correction service named <paramref name="serviceName"/>, ordered by name.
+        /// Lists the contexts served by the <typeparamref name="TService"/> named <paramref name="serviceName"/>, ordered by name.
         /// </summary>
         /// <param name="context">Identity database.</param>
-        /// <param name="serviceName">The <c>CorrectionService</c> resource name (matched case-insensitively).</param>
+        /// <param name="serviceName">The service's resource name (matched case-insensitively).</param>
         /// <param name="cancellationToken">Cancels the query.</param>
-        /// <returns>The assignments, or null when no correction service has that name (callers answer 404).</returns>
-        public static async Task<List<AssignedAnnotationContext>> ListAsync(
+        /// <returns>The contexts, or null when no service of that kind has that name (callers answer 404).</returns>
+        public static async Task<List<AssignedAnnotationContext>> ListAsync<TService>(
             ApplicationDbContext context, string serviceName, CancellationToken cancellationToken = default)
+            where TService : ContextService
         {
-            var service = await context.CorrectionServices
+            var service = await context.Resource.OfType<TService>()
                 .FirstOrDefaultAsync(s => s.Name == serviceName, cancellationToken);
             if (service == null)
                 return null;
 
+            var served = service is CorrectionService
+                ? await context.CorrectedAnnotationContextsAsync(service.Id)
+                : await context.ServedAnnotationContextsAsync(service.Id);
+            var ids = served.Select(s => s.Context.Id).ToList();
             var contexts = await context.WithCatalog()
-                .Where(c => c.CorrectionServiceId == service.Id)
+                .Where(c => ids.Contains(c.Id))
                 .OrderBy(c => c.Name)
                 .ToListAsync(cancellationToken);
 

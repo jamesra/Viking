@@ -10,8 +10,8 @@ using Xunit;
 namespace TestIdentityModel
 {
     /// <summary>
-    /// Covers groups holding resources, and the annotation contexts a segmentation service reaches from its local
-    /// resources (contexts, groups, organizational units).
+    /// Covers groups holding resources, and the annotation contexts a context service reaches from its assigned
+    /// resources (contexts, groups, organizational units), shown here with segmentation services.
     /// </summary>
     public class SegmentationServiceTests
     {
@@ -54,7 +54,7 @@ namespace TestIdentityModel
 
         private static void Local(ApplicationDbContext db, SegmentationService service, Resource resource)
         {
-            db.SegmentationServiceLocalResources.Add(new SegmentationServiceLocalResource { SegmentationServiceId = service.Id, ResourceId = resource.Id });
+            db.ContextServiceAssignments.Add(new ContextServiceAssignment { ServiceId = service.Id, ResourceId = resource.Id });
             db.SaveChanges();
         }
 
@@ -71,7 +71,7 @@ namespace TestIdentityModel
         }
 
         private static async Task<string[]> LocalNames(ApplicationDbContext db, SegmentationService service) =>
-            (await db.LocalAnnotationContextsAsync(service.Id)).Select(l => l.Context.Name).ToArray();
+            (await db.ServedAnnotationContextsAsync(service.Id)).Select(l => l.Context.Name).ToArray();
 
         [Fact]
         public async Task AddResourceToGroup_RefusesGroupsAndRepeats()
@@ -104,12 +104,12 @@ namespace TestIdentityModel
             db.AnnotationContexts.Remove(rc2);
             await db.SaveChangesAsync();
             Assert.Equal(new[] { rc1.Id }, db.ResourceToGroupAssignments.Select(a => a.ResourceId).ToArray());
-            Assert.Equal(new[] { utah.Id }, db.SegmentationServiceLocalResources.Select(l => l.ResourceId).ToArray());
+            Assert.Equal(new[] { utah.Id }, db.ContextServiceAssignments.Select(l => l.ResourceId).ToArray());
 
             db.Group.Remove(utah);
             await db.SaveChangesAsync();
             Assert.Empty(db.ResourceToGroupAssignments);
-            Assert.Empty(db.SegmentationServiceLocalResources);
+            Assert.Empty(db.ContextServiceAssignments);
         }
 
         [Fact]
@@ -146,7 +146,7 @@ namespace TestIdentityModel
             var service = AddService(db, "seg");
             Local(db, service, usWest);
 
-            var only = Assert.Single(await db.LocalAnnotationContextsAsync(service.Id));
+            var only = Assert.Single(await db.ServedAnnotationContextsAsync(service.Id));
             Assert.Equal("RC1", only.Context.Name);
             Assert.Equal(usWest.Id, only.Via.Id);
 
@@ -226,12 +226,12 @@ namespace TestIdentityModel
             var service = AddService(db, "seg-utah");
             Local(db, service, utah);
 
-            var assigned = await SegmentationServiceAssignments.ListAsync(db, "seg-utah");
+            var assigned = await ContextServiceAssignments.ListAsync<SegmentationService>(db, "seg-utah");
 
             var only = Assert.Single(assigned);
             Assert.Equal(rc1.Id, only.AnnotationContextId);
             Assert.Equal("http://storage/RC1/RC1.vikingxml", only.Endpoint);
-            Assert.Null(await SegmentationServiceAssignments.ListAsync(db, "nope"));
+            Assert.Null(await ContextServiceAssignments.ListAsync<SegmentationService>(db, "nope"));
         }
     }
 }

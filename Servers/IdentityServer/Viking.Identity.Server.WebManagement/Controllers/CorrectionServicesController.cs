@@ -13,8 +13,9 @@ using Viking.Identity.Server.WebManagement.Models.UserViewModels;
 namespace Viking.Identity.Server.WebManagement.Controllers
 {
     /// <summary>
-    /// Management pages for <see cref="CorrectionService"/> resources. Contexts are assigned to a service on the
-    /// annotation context's Edit page; deleting a service unassigns its contexts.
+    /// Management pages for <see cref="CorrectionService"/> resources. A service is assigned contexts, groups and
+    /// organizational units, as a segmentation service is; a save that would reach a context another correction
+    /// service already has is refused, since a context's corrections live in one place.
     /// </summary>
     [Authorize]
     public class CorrectionServicesController : Controller
@@ -33,7 +34,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         {
             var allServices = await _context.CorrectionServices
                 .Include(s => s.Parent)
-                .Include(s => s.AnnotationContexts)
+                .Include(s => s.AssignedResources)
                 .Include(s => s.UsersWithPermissions)
                 .Include(s => s.GroupsWithPermissions)
                 .ToListAsync();
@@ -55,7 +56,6 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             var correctionService = await _context.CorrectionServices
                 .Include(s => s.Parent)
                 .Include(s => s.ResourceType)
-                .Include(s => s.AnnotationContexts)
                 .Include(s => s.UsersWithPermissions)
                 .Include(s => s.GroupsWithPermissions)
                 .FirstOrDefaultAsync(m => m.Id == id);
@@ -68,6 +68,15 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             {
                 return Forbid();
             }
+
+            var owners = await _context.CorrectionOwnersAsync();
+            var served = await _context.ServedAnnotationContextsAsync(correctionService.Id);
+            ViewBag.AssignedResources = await _context.AssignedResourcesAsync(correctionService.Id);
+            ViewBag.ServedContexts = served.Where(s => owners[s.Context.Id].Id == correctionService.Id).ToList();
+            ViewBag.Conflicts = served
+                .Where(s => owners[s.Context.Id].Id != correctionService.Id)
+                .Select(s => new CorrectionConflict(s.Context, owners[s.Context.Id]))
+                .ToList();
 
             return View(correctionService);
         }
@@ -134,7 +143,9 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return NotFound();
             }
 
-            var correctionService = await _context.CorrectionServices.FindAsync(id);
+            var correctionService = await _context.CorrectionServices
+                .Include(s => s.AssignedResources)
+                .FirstOrDefaultAsync(s => s.Id == id);
             if (correctionService == null)
             {
                 return NotFound();
@@ -146,59 +157,25 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             }
 
             ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), correctionService.ParentID);
-            ViewBag.ContextRows = await LoadContextRowsAsync(correctionService.Id, null);
+            ViewBag.AssignedResourceList = await AssignedResourceChecklistAsync(correctionService.AssignedResources.Select(a => a.ResourceId).ToHashSet());
             return View(correctionService);
-        }
-
-        /// <summary>
-        /// One annotation context in the Edit page's assignment list.
-        /// </summary>
-        /// <param name="Id">Annotation context id.</param>
-        /// <param name="Name">Context name.</param>
-        /// <param name="Connectome">Name of its connectome, or null.</param>
-        /// <param name="Assigned">True when the box is checked: assigned to this service, or chosen in a rejected post.</param>
-        /// <param name="OtherService">Name of a different correction service it is assigned to now; checking it moves it here.</param>
-        /// <param name="CanChange">False when the user does not administer the context's organizational unit; it is shown but never changed.</param>
-        public sealed record ContextAssignmentRow(long Id, string Name, string Connectome, bool Assigned, string OtherService, bool CanChange);
-
-        /// <summary>
-        /// Lists every annotation context for the assignment checklist.
-        /// </summary>
-        /// <param name="serviceId">The service being edited.</param>
-        /// <param name="chosen">Ids ticked in a rejected post, or null to reflect the saved assignments.</param>
-        async Task<List<ContextAssignmentRow>> LoadContextRowsAsync(long serviceId, ICollection<long> chosen)
-        {
-            var contexts = await _context.AnnotationContexts
-                .AsNoTracking()
-                .Include(c => c.Connectome)
-                .Include(c => c.CorrectionService)
-                .OrderBy(c => c.Name)
-                .ToListAsync();
-
-            var rows = new List<ContextAssignmentRow>(contexts.Count);
-            foreach (var c in contexts)
-            {
-                bool assigned = chosen != null ? chosen.Contains(c.Id) : c.CorrectionServiceId == serviceId;
-                string other = c.CorrectionServiceId.HasValue && c.CorrectionServiceId != serviceId ? c.CorrectionService?.Name : null;
-                bool canChange = await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, c);
-                rows.Add(new ContextAssignmentRow(c.Id, c.Name, c.Connectome?.Name, assigned, other, canChange));
-            }
-
-            return rows;
         }
 
         // POST: CorrectionServices/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(long id, [Bind("Endpoint,Id,Name,Description,ParentID")] CorrectionService correctionService, long[] assignedContextIds)
+        public async Task<IActionResult> Edit(long id, [Bind("Endpoint,Id,Name,Description,ParentID")] CorrectionService correctionService,
+            [Bind(Prefix = ResourceSelectedViewModelExtensions.AssignedResourceListPrefix)] List<ResourceSelectedViewModel> assignedResourceList)
         {
-            assignedContextIds ??= System.Array.Empty<long>();
+            assignedResourceList ??= new List<ResourceSelectedViewModel>();
             if (id != correctionService.Id)
             {
                 return NotFound();
             }
 
-            var existing = await _context.CorrectionServices.FirstOrDefaultAsync(s => s.Id == id);
+            var existing = await _context.CorrectionServices
+                .Include(s => s.AssignedResources)
+                .FirstOrDefaultAsync(s => s.Id == id);
             if (existing == null)
             {
                 return NotFound();
@@ -227,6 +204,12 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 ModelState.AddModelError(nameof(correctionService.Name), $"A correction service named {correctionService.Name} already exists");
             }
 
+            var chosen = assignedResourceList.Where(r => r.Selected).Select(r => r.Id).ToHashSet();
+            foreach (var conflict in await _context.CorrectionConflictsAsync(existing.Id, chosen))
+            {
+                ModelState.AddModelError(string.Empty, $"{conflict.Context.Name} is already corrected by {conflict.Owner.Name}");
+            }
+
             if (ModelState.IsValid)
             {
                 try
@@ -235,7 +218,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     existing.Description = correctionService.Description;
                     existing.ParentID = correctionService.ParentID;
                     existing.Endpoint = correctionService.Endpoint;
-                    await ApplyContextAssignmentsAsync(existing.Id, assignedContextIds);
+                    existing.UpdateAssignedResources(assignedResourceList);
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
@@ -252,31 +235,13 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return RedirectToAction(nameof(Index));
             }
             ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), correctionService.ParentID);
-            ViewBag.ContextRows = await LoadContextRowsAsync(id, assignedContextIds);
+            ViewBag.AssignedResourceList = await AssignedResourceChecklistAsync(chosen);
             return View(correctionService);
         }
 
-        /// <summary>
-        /// Makes the set of contexts assigned to the service equal <paramref name="assignedContextIds"/>. A ticked
-        /// context assigned elsewhere moves here; an unticked one assigned here is released. Contexts whose
-        /// organizational unit the user does not administer are skipped: their checkboxes are disabled and not posted.
-        /// </summary>
-        async Task ApplyContextAssignmentsAsync(long serviceId, long[] assignedContextIds)
-        {
-            var wanted = new HashSet<long>(assignedContextIds);
-            var contexts = await _context.AnnotationContexts.Include(c => c.Parent).ToListAsync();
-            foreach (var c in contexts)
-            {
-                bool shouldAssign = wanted.Contains(c.Id);
-                bool assignedHere = c.CorrectionServiceId == serviceId;
-                if (shouldAssign == assignedHere)
-                    continue;
-                if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, c))
-                    continue;
-
-                c.CorrectionServiceId = shouldAssign ? serviceId : null;
-            }
-        }
+        /// <summary>Organizational units, groups and annotation contexts, checked where the service is assigned them.</summary>
+        private Task<List<ResourceSelectedViewModel>> AssignedResourceChecklistAsync(ISet<long> selected) =>
+            ResourceSelectedViewModel.ListAsync(_context, ResourceSelectedViewModelExtensions.ContextServiceAssignableTypes, selected);
 
         // GET: CorrectionServices/Delete/5
         public async Task<IActionResult> Delete(long? id)
@@ -308,9 +273,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(long id)
         {
-            var correctionService = await _context.CorrectionServices
-                .Include(s => s.AnnotationContexts)
-                .FirstOrDefaultAsync(s => s.Id == id);
+            var correctionService = await _context.CorrectionServices.FindAsync(id);
             if (correctionService == null)
             {
                 return NotFound();
@@ -319,12 +282,6 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, correctionService))
             {
                 return Unauthorized();
-            }
-
-            // The Resource self-FK cannot cascade or SetNull on SQL Server, so unassign explicitly.
-            foreach (var annotationContext in correctionService.AnnotationContexts.ToList())
-            {
-                annotationContext.CorrectionServiceId = null;
             }
 
             _context.CorrectionServices.Remove(correctionService);

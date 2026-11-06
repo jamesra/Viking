@@ -37,7 +37,7 @@ The grid and cell are the cache key shared by clients. Do not invent a second id
 
 No client deletes tiles. Idle LRU and the GPU memory check reclaim cache slots.
 
-For every tile a stream needs, the cells named in ``start`` included, the server looks in its GPU cache, then in its stored tiles, then waits for another stream that is already fetching the cell, and only then asks this client. When ``annotation_context_id`` names an Identity annotation context the server is local to (the SegmentationService's local resources in Identity), the server reads plain greyscale mosaic cells (``space`` ``MOSAIC``, ``channel`` with no ``[...]`` suffix) from the context's VikingXML tileset itself, before asking the client.
+For every tile a stream needs, the cells named in ``start`` included, the server looks in its GPU cache, then in its stored tiles, then waits for another stream that is already fetching the cell, and only then asks this client. When ``annotation_context_id`` names an Identity annotation context the server is local to (reached from the SegmentationService's assigned resources in Identity), the server reads plain greyscale mosaic cells (``space`` ``MOSAIC``, ``channel`` with no ``[...]`` suffix) from the context's VikingXML tileset itself, before asking the client.
 
 ``ModelInfo``
 -------------

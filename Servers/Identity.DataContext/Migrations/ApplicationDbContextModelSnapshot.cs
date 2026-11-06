@@ -309,6 +309,21 @@ namespace Viking.Identity.Data.Migrations
                     b.ToTable("CollaboratorInvites", (string)null);
                 });
 
+            modelBuilder.Entity("Viking.Identity.Models.ContextServiceAssignment", b =>
+                {
+                    b.Property<long>("ServiceId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ResourceId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("ServiceId", "ResourceId");
+
+                    b.HasIndex("ResourceId");
+
+                    b.ToTable("ContextServiceAssignments", (string)null);
+                });
+
             modelBuilder.Entity("Viking.Identity.Models.GrantedGroupPermission", b =>
                 {
                     b.Property<long>("ResourceId")
@@ -558,21 +573,6 @@ namespace Viking.Identity.Data.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Viking.Identity.Models.SegmentationServiceLocalResource", b =>
-                {
-                    b.Property<long>("SegmentationServiceId")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("ResourceId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("SegmentationServiceId", "ResourceId");
-
-                    b.HasIndex("ResourceId");
-
-                    b.ToTable("SegmentationServiceLocalResources", (string)null);
-                });
-
             modelBuilder.Entity("Viking.Identity.Models.UserToGroupAssignment", b =>
                 {
                     b.Property<long>("GroupId")
@@ -742,9 +742,6 @@ namespace Viking.Identity.Data.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("ConnectomeId");
 
-                    b.Property<long?>("CorrectionServiceId")
-                        .HasColumnType("bigint");
-
                     b.Property<string>("Endpoint")
                         .ValueGeneratedOnUpdateSometimes()
                         .HasColumnType("nvarchar(max)")
@@ -760,8 +757,6 @@ namespace Viking.Identity.Data.Migrations
                     b.HasIndex("AnnotationServerId");
 
                     b.HasIndex("ConnectomeId");
-
-                    b.HasIndex("CorrectionServiceId");
 
                     b.HasIndex("VolumeId");
 
@@ -813,7 +808,7 @@ namespace Viking.Identity.Data.Migrations
                     b.HasDiscriminator().HasValue("Connectome");
                 });
 
-            modelBuilder.Entity("Viking.Identity.Models.CorrectionService", b =>
+            modelBuilder.Entity("Viking.Identity.Models.ContextService", b =>
                 {
                     b.HasBaseType("Viking.Identity.Models.Resource");
 
@@ -822,7 +817,7 @@ namespace Viking.Identity.Data.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("Endpoint");
 
-                    b.HasDiscriminator().HasValue("CorrectionService");
+                    b.HasDiscriminator().HasValue("ContextService");
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.Group", b =>
@@ -851,14 +846,16 @@ namespace Viking.Identity.Data.Migrations
                     b.HasDiscriminator().HasValue("OrganizationalUnit");
                 });
 
+            modelBuilder.Entity("Viking.Identity.Models.CorrectionService", b =>
+                {
+                    b.HasBaseType("Viking.Identity.Models.ContextService");
+
+                    b.HasDiscriminator().HasValue("CorrectionService");
+                });
+
             modelBuilder.Entity("Viking.Identity.Models.SegmentationService", b =>
                 {
-                    b.HasBaseType("Viking.Identity.Models.Resource");
-
-                    b.Property<string>("Endpoint")
-                        .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("Endpoint");
+                    b.HasBaseType("Viking.Identity.Models.ContextService");
 
                     b.HasDiscriminator().HasValue("SegmentationService");
                 });
@@ -950,6 +947,25 @@ namespace Viking.Identity.Data.Migrations
                     b.Navigation("AnnotationContext");
 
                     b.Navigation("OrganizationalUnit");
+                });
+
+            modelBuilder.Entity("Viking.Identity.Models.ContextServiceAssignment", b =>
+                {
+                    b.HasOne("Viking.Identity.Models.Resource", "Resource")
+                        .WithMany()
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .IsRequired();
+
+                    b.HasOne("Viking.Identity.Models.ContextService", "Service")
+                        .WithMany("AssignedResources")
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .IsRequired();
+
+                    b.Navigation("Resource");
+
+                    b.Navigation("Service");
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.GrantedGroupPermission", b =>
@@ -1056,25 +1072,6 @@ namespace Viking.Identity.Data.Migrations
                     b.Navigation("ResourceType");
                 });
 
-            modelBuilder.Entity("Viking.Identity.Models.SegmentationServiceLocalResource", b =>
-                {
-                    b.HasOne("Viking.Identity.Models.Resource", "Resource")
-                        .WithMany()
-                        .HasForeignKey("ResourceId")
-                        .OnDelete(DeleteBehavior.ClientCascade)
-                        .IsRequired();
-
-                    b.HasOne("Viking.Identity.Models.SegmentationService", "SegmentationService")
-                        .WithMany("LocalResources")
-                        .HasForeignKey("SegmentationServiceId")
-                        .OnDelete(DeleteBehavior.ClientCascade)
-                        .IsRequired();
-
-                    b.Navigation("Resource");
-
-                    b.Navigation("SegmentationService");
-                });
-
             modelBuilder.Entity("Viking.Identity.Models.UserToGroupAssignment", b =>
                 {
                     b.HasOne("Viking.Identity.Models.Group", "Group")
@@ -1127,11 +1124,6 @@ namespace Viking.Identity.Data.Migrations
                         .HasForeignKey("ConnectomeId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Viking.Identity.Models.CorrectionService", "CorrectionService")
-                        .WithMany("AnnotationContexts")
-                        .HasForeignKey("CorrectionServiceId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("Viking.Identity.Models.Volume", "Volume")
                         .WithMany("AnnotationContexts")
                         .HasForeignKey("VolumeId")
@@ -1140,8 +1132,6 @@ namespace Viking.Identity.Data.Migrations
                     b.Navigation("AnnotationServer");
 
                     b.Navigation("Connectome");
-
-                    b.Navigation("CorrectionService");
 
                     b.Navigation("Volume");
                 });
@@ -1215,9 +1205,9 @@ namespace Viking.Identity.Data.Migrations
                     b.Navigation("Volumes");
                 });
 
-            modelBuilder.Entity("Viking.Identity.Models.CorrectionService", b =>
+            modelBuilder.Entity("Viking.Identity.Models.ContextService", b =>
                 {
-                    b.Navigation("AnnotationContexts");
+                    b.Navigation("AssignedResources");
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.Group", b =>
@@ -1236,11 +1226,6 @@ namespace Viking.Identity.Data.Migrations
             modelBuilder.Entity("Viking.Identity.Models.OrganizationalUnit", b =>
                 {
                     b.Navigation("Children");
-                });
-
-            modelBuilder.Entity("Viking.Identity.Models.SegmentationService", b =>
-                {
-                    b.Navigation("LocalResources");
                 });
 #pragma warning restore 612, 618
         }

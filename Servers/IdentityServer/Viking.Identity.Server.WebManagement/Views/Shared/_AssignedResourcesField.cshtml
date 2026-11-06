@@ -1,0 +1,17 @@
+@* The assigned-resource checklist on a correction or segmentation service's Edit page. Model: the checklist rows.
+   ViewData["AssignedHelp"]: what the service does for the contexts reached. *@
+@model IList<Viking.Identity.Server.WebManagement.Models.UserViewModels.ResourceSelectedViewModel>
+@{
+    var checklistData = new ViewDataDictionary(ViewData);
+    checklistData.TemplateInfo.HtmlFieldPrefix = Viking.Identity.Server.WebManagement.Models.UserViewModels.ResourceSelectedViewModelExtensions.AssignedResourceListPrefix;
+}
+<div class="mb-3">
+    <label class="form-label fw-bold">Assigned resources</label>
+    <small class="form-text text-muted d-block mb-2">
+        @ViewData["AssignedHelp"] A context counts directly, a group through its member resources and groups, an
+        organizational unit through everything it owns.
+    </small>
+    <div class="border rounded p-2" style="max-height: 400px; overflow-y: auto;">
+        <partial name="~/Views/Shared/_ResourceChecklistPartialView.cshtml" model="Model" view-data="checklistData" />
+    </div>
+</div>

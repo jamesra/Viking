@@ -162,7 +162,7 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
         }
 
         /// <summary>
-        /// Lists the annotation contexts assigned to a correction service, or local to a segmentation service. Called by
+        /// Lists the annotation contexts a correction or segmentation service serves (its assigned resources). Called by
         /// the container at startup and on refresh with a client-credentials token, so there is no user: access is limited
         /// to the "correction" and "segmentation" OAuth clients, and the client id picks which kind of service
         /// <paramref name="service"/> names.
@@ -180,8 +180,8 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
                 return BadRequest("service is required");
 
             var assigned = clientId == CorrectionClientId
-                ? await CorrectionServiceAssignments.ListAsync(_context, service, cancellationToken)
-                : await SegmentationServiceAssignments.ListAsync(_context, service, cancellationToken);
+                ? await ContextServiceAssignments.ListAsync<CorrectionService>(_context, service, cancellationToken)
+                : await ContextServiceAssignments.ListAsync<SegmentationService>(_context, service, cancellationToken);
             if (assigned == null)
                 return NotFound();
             return assigned;

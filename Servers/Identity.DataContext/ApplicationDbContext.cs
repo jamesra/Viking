@@ -63,9 +63,9 @@ namespace Viking.Identity.Data
             builder.Entity<ResourceToGroupAssignment>().HasOne(rga => rga.Group).WithMany(g => g.MemberResources).HasForeignKey(rga => rga.GroupId).OnDelete(DeleteBehavior.ClientCascade);
             builder.Entity<ResourceToGroupAssignment>().HasOne(rga => rga.Resource).WithMany(r => r.MemberOfResourceGroups).HasForeignKey(rga => rga.ResourceId).OnDelete(DeleteBehavior.ClientCascade);
 
-            builder.Entity<SegmentationServiceLocalResource>().ToTable("SegmentationServiceLocalResources").HasKey(l => new { l.SegmentationServiceId, l.ResourceId });
-            builder.Entity<SegmentationServiceLocalResource>().HasOne(l => l.SegmentationService).WithMany(s => s.LocalResources).HasForeignKey(l => l.SegmentationServiceId).OnDelete(DeleteBehavior.ClientCascade);
-            builder.Entity<SegmentationServiceLocalResource>().HasOne(l => l.Resource).WithMany().HasForeignKey(l => l.ResourceId).OnDelete(DeleteBehavior.ClientCascade);
+            builder.Entity<ContextServiceAssignment>().ToTable("ContextServiceAssignments").HasKey(a => new { a.ServiceId, a.ResourceId });
+            builder.Entity<ContextServiceAssignment>().HasOne(a => a.Service).WithMany(s => s.AssignedResources).HasForeignKey(a => a.ServiceId).OnDelete(DeleteBehavior.ClientCascade);
+            builder.Entity<ContextServiceAssignment>().HasOne(a => a.Resource).WithMany().HasForeignKey(a => a.ResourceId).OnDelete(DeleteBehavior.ClientCascade);
 
             builder.Entity<ResourceTypePermission>().HasKey(c => new { c.ResourceTypeId, c.PermissionId });
 
@@ -128,22 +128,10 @@ namespace Viking.Identity.Data
                 .HasColumnName("Endpoint")
                 .HasConversion(uriConverter);
 
-            builder.Entity<SegmentationService>()
+            builder.Entity<ContextService>()
                 .Property(s => s.Endpoint)
                 .HasColumnName("Endpoint")
                 .HasConversion(uriConverter);
-
-            builder.Entity<CorrectionService>()
-                .Property(s => s.Endpoint)
-                .HasColumnName("Endpoint")
-                .HasConversion(uriConverter);
-
-            // Resource-table self FK: SQL Server rejects SetNull/Cascade here; the management controller unassigns contexts before deleting a service.
-            builder.Entity<AnnotationContext>()
-                .HasOne(c => c.CorrectionService)
-                .WithMany(s => s.AnnotationContexts)
-                .HasForeignKey(c => c.CorrectionServiceId)
-                .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<AnnotationServer>()
                 .Property(s => s.BaseUrl)
@@ -382,7 +370,7 @@ namespace Viking.Identity.Data
         }
 
         /// <summary>
-        /// Removes the group-membership and segmentation-local rows of every resource being deleted. Their foreign keys
+        /// Removes the group-membership and context-service assignment rows of every resource being deleted. Their foreign keys
         /// both point at the Resource table, where SQL Server allows no cascade, so every delete of a resource goes
         /// through here instead of each controller remembering to do it.
         /// </summary>
@@ -397,8 +385,8 @@ namespace Viking.Identity.Data
 
             ResourceToGroupAssignments.RemoveRange(ResourceToGroupAssignments
                 .Where(a => deleted.Contains(a.GroupId) || deleted.Contains(a.ResourceId)));
-            SegmentationServiceLocalResources.RemoveRange(SegmentationServiceLocalResources
-                .Where(l => deleted.Contains(l.SegmentationServiceId) || deleted.Contains(l.ResourceId)));
+            ContextServiceAssignments.RemoveRange(ContextServiceAssignments
+                .Where(a => deleted.Contains(a.ServiceId) || deleted.Contains(a.ResourceId)));
         }
 
         private void LogShadowProperties()
@@ -448,7 +436,7 @@ namespace Viking.Identity.Data
 
         public DbSet<ResourceToGroupAssignment> ResourceToGroupAssignments { get; set; }
 
-        public DbSet<SegmentationServiceLocalResource> SegmentationServiceLocalResources { get; set; }
+        public DbSet<ContextServiceAssignment> ContextServiceAssignments { get; set; }
          
         public DbSet<ResourceTypePermission> Permissions { get; set; }
 

@@ -74,6 +74,10 @@
             </div>
         </div>
 
+        <partial name="~/Views/Shared/_ServedContextsCard.cshtml"
+                 model="(IList<Viking.Identity.Data.ServedAnnotationContext>)ViewBag.ServedContexts"
+                 view-data='@(new ViewDataDictionary(ViewData) { ["AssignedResources"] = ViewBag.AssignedResources, ["Conflicts"] = ViewBag.Conflicts, ["ServedLead"] = "Viking is sent this service's URL when these contexts are opened." })' />
+
         @if ((await AuthorizationService.IsParentOrgUnitAdminAsync(User, Model)))
         {
             <div class="card card-modern">

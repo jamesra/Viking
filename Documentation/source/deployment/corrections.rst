@@ -27,7 +27,10 @@ Identity setup
    Identity; this registers the ``correction`` client.
 #. Put the same value in ``IdentityServer__ClientSecret`` of the corrections run env.
 #. In the management site create a Correction Service resource, name it in
-   ``CorrectionService__Name`` and assign annotation contexts on each context's Edit page.
+   ``CorrectionService__Name`` and give it **Assigned resources** on its Edit page: annotation
+   contexts, or the groups and organizational units that hold them, as for a segmentation service.
+   A context has one correction service, so the page refuses an assignment that reaches a context
+   another correction service already has.
 
 SQL: ``AnnotationConnections__<Database>`` (or ``AnnotationConnectionTemplate``) gives direct SQL per
 annotation database; without it the service reads through the OData endpoint Identity reports

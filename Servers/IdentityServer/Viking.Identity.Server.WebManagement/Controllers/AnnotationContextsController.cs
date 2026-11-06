@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -77,6 +78,10 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             {
                 return Forbid();
             }
+
+            var services = await _context.ServicesOfContextAsync(volume.Id);
+            ViewBag.CorrectionService = (await _context.CorrectionOwnersAsync()).GetValueOrDefault(volume.Id);
+            ViewBag.SegmentationServices = services.OfType<SegmentationService>().ToList();
 
             return View(volume);
         }
@@ -167,10 +172,6 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 .AsNoTracking()
                 .OrderBy(s => s.Name)
                 .ToListAsync();
-            ViewBag.AvailableCorrectionServices = await _context.CorrectionServices
-                .AsNoTracking()
-                .OrderBy(s => s.Name)
-                .ToListAsync();
         }
 
         // POST: Volumes/Edit/5
@@ -180,7 +181,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(
             long id,
-            [Bind("Endpoint,Id,Name,Description,ParentID,RegistrationName,AnnotationServerId,CorrectionServiceId")] AnnotationContext context,
+            [Bind("Endpoint,Id,Name,Description,ParentID,RegistrationName,AnnotationServerId")] AnnotationContext context,
             long[] linkedAnnotationServerIds)
         {
             if (id != context.Id)
@@ -223,12 +224,6 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 ModelState.AddModelError(nameof(context.AnnotationServerId), "The selected annotation server does not exist");
             }
 
-            if (context.CorrectionServiceId.HasValue
-                && !await _context.CorrectionServices.AnyAsync(s => s.Id == context.CorrectionServiceId.Value))
-            {
-                ModelState.AddModelError(nameof(context.CorrectionServiceId), "The selected correction service does not exist");
-            }
-
             linkedAnnotationServerIds ??= Array.Empty<long>();
             var unknownServers = linkedAnnotationServerIds.Except(
                 await _context.AnnotationServers.Where(x => linkedAnnotationServerIds.Contains(x.Id)).Select(x => x.Id).ToListAsync());
@@ -250,7 +245,6 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     existing.ParentID = context.ParentID;
                     existing.Endpoint = context.Endpoint;
                     existing.RegistrationName = string.IsNullOrWhiteSpace(context.RegistrationName) ? null : context.RegistrationName.Trim();
-                    existing.CorrectionServiceId = context.CorrectionServiceId;
 
                     // A chosen default is a manual override the catalog sync keeps; "Use VikingXML" hands control back.
                     // The other linked servers are alternates offered to the user at login.

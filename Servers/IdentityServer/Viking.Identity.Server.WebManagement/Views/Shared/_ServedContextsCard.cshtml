@@ -1,0 +1,61 @@
+@* The contexts a correction or segmentation service serves and the assigned resources they are reached from.
+   Model: the served contexts. ViewData["AssignedResources"]: IList<Resource>; ViewData["ServedLead"]: what the
+   service does for these contexts; optional ViewData["Conflicts"]: IList<CorrectionConflict>, contexts it reaches
+   that another correction service keeps. *@
+@model IList<Viking.Identity.Data.ServedAnnotationContext>
+@{
+    var assignedResources = (IList<Viking.Identity.Models.Resource>)ViewData["AssignedResources"];
+    var conflicts = ViewData["Conflicts"] as IList<Viking.Identity.Data.CorrectionConflict> ?? new List<Viking.Identity.Data.CorrectionConflict>();
+}
+<div class="card card-modern mb-4">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0">
+            <i class="bi bi-hdd-network"></i> Annotation Contexts
+            <span class="badge bg-light text-dark ms-2">@Model.Count</span>
+        </h5>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">
+            @ViewData["ServedLead"] They are reached from its assigned resources:
+            @if (assignedResources.Any())
+            {
+                @foreach (var resource in assignedResources)
+                {
+                    <a asp-controller="@Viking.Identity.Server.WebManagement.Models.UserViewModels.ResourceSelectedViewModel.ControllerFor(resource.ResourceTypeId)"
+                       asp-action="Details" asp-route-id="@resource.Id" class="badge bg-light text-dark text-decoration-none me-1">@resource.ResourceTypeId: @resource.Name</a>
+                }
+            }
+            else
+            {
+                <span>none assigned.</span>
+            }
+        </p>
+        @if (Model.Any())
+        {
+            <div class="list-group">
+                @foreach (var served in Model)
+                {
+                    <a asp-controller="AnnotationContexts" asp-action="Details" asp-route-id="@served.Context.Id" class="list-group-item list-group-item-action d-flex justify-content-between">
+                        <span><i class="bi bi-hdd-stack"></i> @served.Context.Name</span>
+                        <small class="text-muted">via @served.Via.Name</small>
+                    </a>
+                }
+            </div>
+        }
+        @if (conflicts.Any())
+        {
+            <div class="alert alert-warning mt-3 mb-0">
+                <strong>Also reached, but kept by another correction service:</strong>
+                <ul class="mb-0">
+                    @foreach (var conflict in conflicts)
+                    {
+                        <li>
+                            <a asp-controller="AnnotationContexts" asp-action="Details" asp-route-id="@conflict.Context.Id">@conflict.Context.Name</a>
+                            (<a asp-controller="CorrectionServices" asp-action="Details" asp-route-id="@conflict.Owner.Id">@conflict.Owner.Name</a>)
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+</div>

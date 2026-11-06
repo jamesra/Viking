@@ -60,20 +60,22 @@ namespace Viking.Identity.Server.Extensions.Services
         public const string Mirrors = "Mirrors";
         public const string RegistrationName = "RegistrationName";
 
-        /// <summary>URL of the correction service assigned to the context, or null when none is assigned.</summary>
+        /// <summary>URL of the correction service that owns the context (<c>ResourceMembership.CorrectionOwnersAsync</c>), or null when none does.</summary>
         public const string CorrectionServiceUrl = "CorrectionServiceUrl";
 
         /// <summary>Annotation contexts with the navigation properties <see cref="Build"/> reads.</summary>
         public static IQueryable<AnnotationContext> WithCatalog(this ApplicationDbContext context) =>
             context.AnnotationContexts
                 .Include(c => c.AnnotationServer)
-                .Include(c => c.CorrectionService)
                 .Include(c => c.AnnotationServerLinks)
                     .ThenInclude(l => l.AnnotationServer)
                 .Include(c => c.Volume)
                     .ThenInclude(v => v.Mirrors);
 
-        public static Dictionary<string, object> Build(AnnotationContext annotationContext)
+        /// <summary>The metadata clients receive for <paramref name="annotationContext"/>, loaded with <see cref="WithCatalog"/>.</summary>
+        /// <param name="annotationContext">The context.</param>
+        /// <param name="correctionService">The correction service that owns it, or null.</param>
+        public static Dictionary<string, object> Build(AnnotationContext annotationContext, CorrectionService correctionService)
         {
             var defaultServer = DefaultServer(annotationContext);
             var servers = AnnotationServersOf(annotationContext);
@@ -90,7 +92,7 @@ namespace Viking.Identity.Server.Extensions.Services
                 [ExportEndpoint] = AnnotationServiceUrls.ExportUrl(defaultServer),
                 [AnnotationServers] = servers,
                 [RegistrationName] = annotationContext.RegistrationName,
-                [CorrectionServiceUrl] = annotationContext.CorrectionService?.Endpoint?.ToString(),
+                [CorrectionServiceUrl] = correctionService?.Endpoint?.ToString(),
                 [Mirrors] = MirrorsOf(annotationContext.Volume)
             };
 

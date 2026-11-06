@@ -7,11 +7,15 @@ using Viking.Identity.Models;
 
 namespace Viking.Identity.Data
 {
-    /// <summary>One annotation context a segmentation service serves, and the local resource it was reached through.</summary>
-    public sealed record LocalAnnotationContext(AnnotationContext Context, Resource Via);
+    /// <summary>One annotation context a context service serves, and the assigned resource it was reached through.</summary>
+    public sealed record ServedAnnotationContext(AnnotationContext Context, Resource Via);
+
+    /// <summary>A context a correction service would reach that another correction service already has.</summary>
+    public sealed record CorrectionConflict(AnnotationContext Context, CorrectionService Owner);
 
     /// <summary>
-    /// Resource membership of groups, and the annotation contexts a segmentation service reaches from its local resources.
+    /// Resource membership of groups, and the annotation contexts a <see cref="ContextService"/> reaches from its
+    /// assigned resources.
     /// </summary>
     public static class ResourceMembership
     {
@@ -34,25 +38,139 @@ namespace Viking.Identity.Data
             return true;
         }
 
-        /// <summary>
-        /// The annotation contexts reached from a segmentation service's local resources: a context itself, a group's
-        /// member resources and member groups, an organizational unit's children (sub-units and groups included).
-        /// Each context appears once, with the first local resource that reached it. Cycles end the walk.
-        /// </summary>
-        public static async Task<List<LocalAnnotationContext>> LocalAnnotationContextsAsync(this ApplicationDbContext context, long segmentationServiceId)
-        {
-            var roots = await context.SegmentationServiceLocalResources
-                .Where(l => l.SegmentationServiceId == segmentationServiceId)
-                .Select(l => l.ResourceId)
+        /// <summary>The resources assigned to a context service, by type then name.</summary>
+        public static Task<List<Resource>> AssignedResourcesAsync(this ApplicationDbContext context, long serviceId) =>
+            context.ContextServiceAssignments
+                .Where(a => a.ServiceId == serviceId)
+                .Select(a => a.Resource)
+                .OrderBy(r => r.ResourceTypeId).ThenBy(r => r.Name)
                 .ToListAsync();
 
-            // via[id] is the local resource the walk reached id from.
+        /// <summary>
+        /// The annotation contexts reached from a context service's assigned resources: a context itself, a group's
+        /// member resources and member groups, an organizational unit's children (sub-units and groups included).
+        /// Each context appears once, with the first assigned resource that reached it. Cycles end the walk.
+        /// For a correction service this includes contexts another correction service owns; see
+        /// <see cref="CorrectionOwnersAsync"/>.
+        /// </summary>
+        public static async Task<List<ServedAnnotationContext>> ServedAnnotationContextsAsync(this ApplicationDbContext context, long serviceId)
+        {
+            var roots = await context.ContextServiceAssignments
+                .Where(a => a.ServiceId == serviceId)
+                .Select(a => a.ResourceId)
+                .ToListAsync();
+
+            var via = await context.ContextsReachedFromAsync(roots);
+            if (via.Count == 0)
+                return new List<ServedAnnotationContext>();
+
+            var rootIds = via.Values.Distinct().ToList();
+            var rootResources = await context.Resource.Where(r => rootIds.Contains(r.Id)).ToDictionaryAsync(r => r.Id);
+            var contextIds = via.Keys.ToList();
+            var contexts = await context.AnnotationContexts.Where(c => contextIds.Contains(c.Id)).ToListAsync();
+            return contexts
+                .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(c => new ServedAnnotationContext(c, rootResources[via[c.Id]]))
+                .ToList();
+        }
+
+        /// <summary>
+        /// The correction service that owns each annotation context reached by any correction service. A context's
+        /// corrections live in one place, so it has one owner: the management site refuses assignments that overlap,
+        /// and where later group or unit changes make two services reach a context, the lowest service id keeps it.
+        /// </summary>
+        /// <param name="exceptServiceId">Leave this service out, to check its proposed assignments against the rest.</param>
+        public static async Task<Dictionary<long, CorrectionService>> CorrectionOwnersAsync(this ApplicationDbContext context, long? exceptServiceId = null)
+        {
+            var services = await context.CorrectionServices
+                .Where(s => s.Id != exceptServiceId)
+                .OrderBy(s => s.Id)
+                .ToListAsync();
+            var serviceIds = services.Select(s => s.Id).ToList();
+            var assignments = (await context.ContextServiceAssignments
+                    .Where(a => serviceIds.Contains(a.ServiceId))
+                    .Select(a => new { a.ServiceId, a.ResourceId })
+                    .ToListAsync())
+                .ToLookup(a => a.ServiceId, a => a.ResourceId);
+
+            var owners = new Dictionary<long, CorrectionService>();
+            foreach (var service in services)
+            {
+                foreach (long contextId in (await context.ContextsReachedFromAsync(assignments[service.Id])).Keys)
+                    owners.TryAdd(contextId, service);
+            }
+            return owners;
+        }
+
+        /// <summary>
+        /// The annotation contexts a correction service owns: those it reaches that no lower-id correction service
+        /// reaches too.
+        /// </summary>
+        public static async Task<List<ServedAnnotationContext>> CorrectedAnnotationContextsAsync(this ApplicationDbContext context, long correctionServiceId)
+        {
+            var owners = await context.CorrectionOwnersAsync();
+            return (await context.ServedAnnotationContextsAsync(correctionServiceId))
+                .Where(s => owners.TryGetValue(s.Context.Id, out var owner) && owner.Id == correctionServiceId)
+                .ToList();
+        }
+
+        /// <summary>
+        /// The contexts that assigning <paramref name="resourceIds"/> to a correction service would reach, but that
+        /// another correction service already has. Empty when the assignment can be saved.
+        /// </summary>
+        public static async Task<List<CorrectionConflict>> CorrectionConflictsAsync(this ApplicationDbContext context, long correctionServiceId, IEnumerable<long> resourceIds)
+        {
+            var reached = await context.ContextsReachedFromAsync(resourceIds);
+            if (reached.Count == 0)
+                return new List<CorrectionConflict>();
+
+            var owners = await context.CorrectionOwnersAsync(correctionServiceId);
+            var conflictIds = reached.Keys.Where(owners.ContainsKey).ToList();
+            if (conflictIds.Count == 0)
+                return new List<CorrectionConflict>();
+
+            var contexts = await context.AnnotationContexts.Where(c => conflictIds.Contains(c.Id)).ToListAsync();
+            return contexts
+                .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(c => new CorrectionConflict(c, owners[c.Id]))
+                .ToList();
+        }
+
+        /// <summary>The context services that serve <paramref name="annotationContextId"/>, by kind then name.</summary>
+        public static async Task<List<ContextService>> ServicesOfContextAsync(this ApplicationDbContext context, long annotationContextId)
+        {
+            var services = await context.Resource.OfType<ContextService>().ToListAsync();
+            var assignments = (await context.ContextServiceAssignments
+                    .Select(a => new { a.ServiceId, a.ResourceId })
+                    .ToListAsync())
+                .ToLookup(a => a.ServiceId, a => a.ResourceId);
+
+            var serving = new List<ContextService>();
+            foreach (var service in services)
+            {
+                if ((await context.ContextsReachedFromAsync(assignments[service.Id])).ContainsKey(annotationContextId))
+                    serving.Add(service);
+            }
+            return serving
+                .OrderBy(s => s.ResourceTypeId)
+                .ThenBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Walks from <paramref name="roots"/> to the annotation contexts they reach: a context itself, a group's member
+        /// resources and member groups, an organizational unit's children. Cycles end the walk.
+        /// </summary>
+        /// <returns>Each reached context id, mapped to the first root that reached it.</returns>
+        private static async Task<Dictionary<long, long>> ContextsReachedFromAsync(this ApplicationDbContext context, IEnumerable<long> roots)
+        {
+            // via[id] is the root the walk reached id from.
             var via = new Dictionary<long, long>();
             foreach (long root in roots)
                 via.TryAdd(root, root);
 
             var contextIds = new List<long>();
-            var frontier = roots.Distinct().ToList();
+            var frontier = via.Keys.ToList();
             while (frontier.Count > 0)
             {
                 var level = await context.Resource
@@ -95,16 +213,7 @@ namespace Viking.Identity.Data
                 }
             }
 
-            if (contextIds.Count == 0)
-                return new List<LocalAnnotationContext>();
-
-            var rootIds = contextIds.Select(id => via[id]).Distinct().ToList();
-            var rootResources = await context.Resource.Where(r => rootIds.Contains(r.Id)).ToDictionaryAsync(r => r.Id);
-            var contexts = await context.AnnotationContexts.Where(c => contextIds.Contains(c.Id)).ToListAsync();
-            return contexts
-                .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(c => new LocalAnnotationContext(c, rootResources[via[c.Id]]))
-                .ToList();
+            return contextIds.ToDictionary(id => id, id => via[id]);
         }
     }
 }
