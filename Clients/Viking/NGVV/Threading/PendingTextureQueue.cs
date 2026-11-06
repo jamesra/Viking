@@ -340,7 +340,7 @@ namespace Viking
                     }
 
                     if (texture != null && item.TileView != null)
-                        item.TileView.SetTextureFromQueue(texture);
+                        item.TileView.SetTextureFromQueue(texture, item.Data.crushGain);
                     item.Tcs.TrySetResult(texture);
                     texturesLoaded++;
                 }

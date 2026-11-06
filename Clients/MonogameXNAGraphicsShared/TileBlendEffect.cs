@@ -49,6 +49,23 @@ namespace VikingXNA
             }
         }
 
+        private readonly EffectParameter? _TileGainScale;
+        private readonly EffectParameter? _TileGainBias;
+
+        /// <summary>
+        /// Gain correction of the tile being drawn, applied to the texture sample before the display window: corrected = sample * Scale + Bias.
+        /// (1, 0) leaves the tile unchanged. Does nothing for a shader built without it.
+        /// </summary>
+        public (float Scale, float Bias) TileGain
+        {
+            get => (_TileGainScale?.GetValueSingle() ?? 1f, _TileGainBias?.GetValueSingle() ?? 0f);
+            set
+            {
+                _TileGainScale?.SetValue(value.Scale);
+                _TileGainBias?.SetValue(value.Bias);
+            }
+        }
+
         private readonly EffectParameter? _DisplayGamma;
 
         /// <summary>The gamma applied after the display window: above 1 lifts dark and middle tones, 1 is linear. Does nothing for a shader built without it.</summary>
@@ -87,6 +104,8 @@ namespace VikingXNA
             _DisplayMin = effect.Parameters["DisplayMin"];
             _DisplayMax = effect.Parameters["DisplayMax"];
             _DisplayGamma = effect.Parameters["DisplayGamma"];
+            _TileGainScale = effect.Parameters["TileGainScale"];
+            _TileGainBias = effect.Parameters["TileGainBias"];
 
             effect.CurrentTechnique = effect.Techniques["TileLayoutToGreyscaleEffect"];
 

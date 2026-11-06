@@ -11,7 +11,7 @@ Notes for whoever updates this file. Comments like this one are not shown in Vik
   changes, rename the unreleased heading to the new version; when a version ships, replace "not yet released" with the date
   and channel, for example "2026-10-26 (Viking Test, unsigned)".
 
-Committed application version: 1.2.140.0.
+Committed application version: 1.2.141.0.
 1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109;
 their changes are listed under 1.2.109. Builds 1.2.128 and 1.2.129 are listed under 1.2.129 (it went out as Viking Test
 and as a signed release on 2026-10-27). Viking Test builds 1.2.130 to 1.2.136 were folded into the 1.2.136 release on
@@ -22,6 +22,11 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. Older 1.1.x notes live in
 Documentation/source/Client/versionhistory.rst.
 -->
+
+## 1.2.141 — not yet released
+
+* **Crushed tiles correct for filament brightness drift.** When a crushed section's tiles carry the gain Nornir measured from the overlaps between neighbouring tiles, Viking applies it on the graphics card, so tile-to-tile brightness steps over the acquisition disappear. Tiles without a gain, including Nornir's optimized tiles (already corrected), are unchanged.
+<!-- TextureReaderV2.TextureDataFromStream reads the gain from the nornir_crush tEXt chunk (PngCrushChunk) before decoding; TileView keeps it and sets TileLayout.fx TileGainScale/TileGainBias = 1/gain and (0.5 + offset/step)*(1/gain - 1)/255 (CrushInfo.GainTransform, same as Nornir noise_crush.unit_gain_correction) before the display window. The section CodeHistogram and display range are of the uncorrected codes. -->
 
 ## 1.2.140 — 2026-11-06 (Viking Test, unsigned)
 

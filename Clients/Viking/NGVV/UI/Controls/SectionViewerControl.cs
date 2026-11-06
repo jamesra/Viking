@@ -2279,6 +2279,7 @@ namespace Viking.UI.Controls
             CrushContrastSetting? userContrast = CrushContrastStore.Default.Get(State.volume?.Name, section.Number, channel);
             tileLayoutEffect.DisplayWindow = CrushDisplayWindowFor(section, channel, userContrast);
             tileLayoutEffect.DisplayGamma = CrushDisplayGammaFor(section, channel, userContrast);
+            CrushInfo? gainCrush = section.CrushedChannels.TryGetValue(channel, out CrushInfo? channelCrush) && channelCrush.IsSupported ? channelCrush : null;
 
             int[] DownsamplesToRender = CalculateDownsamplesToRender(mapping, scene.Camera.Downsample);
 
@@ -2349,7 +2350,7 @@ namespace Viking.UI.Controls
 
                 foreach (TileView tileViewModel in tileViewsToDraw)
                 {
-                    tileViewModel.Draw(graphicsDevice, tileLayoutEffect, AsynchTextureLoad, ColorizeTiles);
+                    tileViewModel.Draw(graphicsDevice, tileLayoutEffect, AsynchTextureLoad, ColorizeTiles, gainCrush);
 
                     if (iLevel == DownsamplesToRender.Length - 1 && Viking.UI.State.ShowTileMesh)
                     {

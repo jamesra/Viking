@@ -18,9 +18,14 @@ float DisplayMax = 1;
 //Gamma applied to the windowed value: shown = value ^ (1 / DisplayGamma).  Above 1 lifts the dark and middle tones, 1 leaves the window linear.
 float DisplayGamma = 1;
 
+//Gain correction of the tile being drawn (crushed Pyramid tiles that carry a gain): corrected = sample * TileGainScale + TileGainBias.  1 and 0 leave the tile unchanged.
+float TileGainScale = 1;
+float TileGainBias = 0;
+
 float ApplyDisplayWindow(float sampleValue)
 {
-	float windowed = saturate((sampleValue - DisplayMin) / max(DisplayMax - DisplayMin, 0.000001));
+	float corrected = sampleValue * TileGainScale + TileGainBias;
+	float windowed = saturate((corrected - DisplayMin) / max(DisplayMax - DisplayMin, 0.000001));
 	return pow(windowed, 1.0 / max(DisplayGamma, 0.01));
 }
 

@@ -96,6 +96,23 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
+        /// The scale and bias that gain-correct a tile's samples (PNG value 0 to 1) into this section's quanta, or null when the gain
+        /// leaves them unchanged or is unusable. This is Nornir's own rule: gain-corrected counts are
+        /// <c>(code * step + step / 2 + offset) / gain</c>, which as codes of the section quanta divided by the largest code is
+        /// <c>sample * (1 / gain) + (0.5 + offset / step) * (1 / gain - 1) / maxCode</c>.
+        /// </summary>
+        /// <param name="gain">The tile's <c>gain</c> from its <c>nornir_crush</c> PNG chunk.</param>
+        public (float Scale, float Bias)? GainTransform(double gain)
+        {
+            if (!(gain > 0) || double.IsInfinity(gain) || gain == 1.0)
+                return null;
+
+            double inverse = 1.0 / gain;
+            double bias = (0.5 + (Offset / (double)Step)) * (inverse - 1.0) / StorageMaximum;
+            return ((float)inverse, (float)bias);
+        }
+
+        /// <summary>
         /// A window in codes that clips the darkest 0.1% and the brightest 0.1% of the pixels, which is the Auto setting of the
         /// contrast editor. Falls back to <see cref="DefaultWindow"/> when the VikingXML has no usable histogram.
         /// </summary>

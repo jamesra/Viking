@@ -777,6 +777,8 @@ class TextureReaderV2 : IDisposable
 
         //Trace.WriteLine("TextureFromStream on thread ID: " + System.Threading.Thread.CurrentThread.ManagedThreadId.ToString());
 
+        double? crushGain = PngCrushChunk.TryReadGain(stream);
+
         try
         {
             using (Bitmap image = new(stream))
@@ -841,7 +843,7 @@ class TextureReaderV2 : IDisposable
                     pixelBytes[iDestByte++] = rgbValues[iSourceByte];
                 }
 
-                return new TextureData(pixelBytes, Width, Height);
+                return new TextureData(pixelBytes, Width, Height, crushGain);
             }
         }
         catch (System.OutOfMemoryException)

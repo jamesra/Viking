@@ -118,11 +118,17 @@ namespace Viking.ViewModels
             }
         }
 
+        private double? _crushGain;
+
+        /// <summary>The gain of this tile's crushed PNG, or null when the file carried none. Applied by the shader, not to the pixels.</summary>
+        internal double? CrushGain => _crushGain;
+
         /// <summary>
         /// Called from the main-thread texture queue pump to assign a newly created texture. Internal for use by PendingTextureQueue.
         /// </summary>
-        internal void SetTextureFromQueue(Texture2D tex)
+        internal void SetTextureFromQueue(Texture2D tex, double? crushGain = null)
         {
+            _crushGain = crushGain;
             texture = tex;
             var previousCts = Interlocked.Exchange(ref TextureLoadCancellationTokenSource, null);
             previousCts?.Dispose();
@@ -369,7 +375,7 @@ namespace Viking.ViewModels
         private static bool NullGridWarningPrinted = false;
 #endif
 
-        public void Draw(GraphicsDevice graphicsDevice, VikingXNA.TileLayoutEffect effect, bool AsynchTextureLoad, bool UseColor)
+        public void Draw(GraphicsDevice graphicsDevice, VikingXNA.TileLayoutEffect effect, bool AsynchTextureLoad, bool UseColor, VolumeModel.CrushInfo? crush = null)
         {
             if (TriangleIndicies is null)
             {
@@ -446,6 +452,11 @@ namespace Viking.ViewModels
             graphicsDevice.Indices = this.IndBuffer;
 
             effect.Texture = currentTexture;
+
+            // A crushed Pyramid tile that carries a gain is corrected into the section quanta in the shader; every other tile is left alone.
+            effect.TileGain = crush is not null && _crushGain is { } gain && crush.GainTransform(gain) is { } transform
+                ? transform
+                : (1f, 0f);
 
             if (UseColor)
                 effect.TileColor = TileColor;

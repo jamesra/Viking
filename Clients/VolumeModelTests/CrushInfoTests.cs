@@ -121,6 +121,37 @@ namespace VolumeModelTests
         }
 
         [TestMethod]
+        public void GainTransformFollowsNornirsRule_CountsAreCodeTimesStepPlusHalfStepPlusOffsetOverGain()
+        {
+            CrushInfo crush = new(step: 120, offset: 30, bits: 8, displayRange: null, codeHistogram: null);
+            const double gain = 2.0;
+
+            (float scale, float bias) = crush.GainTransform(gain)!.Value;
+
+            // Gain corrected counts of code c are (c*step + step/2 + offset)/gain; as a code of the section quanta that is
+            // (counts - step/2 - offset)/step, and as a PNG sample it is divided by 255.
+            foreach (int code in new[] { 0, 7, 46, 255 })
+            {
+                double counts = ((code * 120.0) + 60.0 + 30.0) / gain;
+                double expectedSample = (counts - 60.0 - 30.0) / 120.0 / 255.0;
+                Assert.AreEqual(expectedSample, (code / 255.0 * scale) + bias, 1e-6, $"code {code}");
+            }
+        }
+
+        [TestMethod]
+        public void GainTransformIsNullForUnitOrUnusableGain()
+        {
+            CrushInfo crush = new(120, 0, 8, null, null);
+
+            Assert.IsNull(crush.GainTransform(1.0));
+            Assert.IsNull(crush.GainTransform(0));
+            Assert.IsNull(crush.GainTransform(-2));
+            Assert.IsNull(crush.GainTransform(double.NaN));
+            Assert.IsNull(crush.GainTransform(double.PositiveInfinity));
+            Assert.AreEqual(1f / 0.8f, crush.GainTransform(0.8)!.Value.Scale, 1e-6);
+        }
+
+        [TestMethod]
         public void MoreThanEightBitsIsNotSupported()
         {
             Assert.IsFalse(CrushInfo.FromElement(XElement.Parse("<Pyramid CrushVersion=\"1\" CrushStep=\"10\" CrushBits=\"9\" />"))!.IsSupported);
