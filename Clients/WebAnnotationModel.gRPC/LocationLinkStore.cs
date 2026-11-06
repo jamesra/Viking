@@ -62,7 +62,7 @@ namespace WebAnnotationModel.gRPC
             if (deleted == null)
                 return false;
 
-            // Not awaited, as in base Remove: listeners run on the thread pool when State.UseAsynchEvents is set.
+            // Not awaited: listeners run on the thread pool when State.UseAsynchEvents is set.
             _ = CallOnCollectionChangedForDelete(deleted);
             return true;
         }

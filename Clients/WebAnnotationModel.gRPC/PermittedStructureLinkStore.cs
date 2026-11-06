@@ -85,6 +85,7 @@ namespace WebAnnotationModel.gRPC
         /// <summary>
         /// Removes a link from the store. A link added since the last Save (DBAction INSERT) is not on the server,
         /// so its queued INSERT is cancelled and nothing is sent; a saved link is queued for DELETE as usual.
+        /// Either way the task completes after the CollectionChanged listeners have run.
         /// </summary>
         public override async Task<PermittedStructureLinkObj> Remove(PermittedStructureLinkKey ID)
         {
@@ -92,7 +93,7 @@ namespace WebAnnotationModel.gRPC
             {
                 PermittedStructureLinkObj deleted = InternalDelete(ID);
                 if (deleted != null)
-                    CallOnCollectionChangedForDelete(deleted);
+                    await CallOnCollectionChangedForDelete(deleted).ConfigureAwait(false);
                 return deleted;
             }
 

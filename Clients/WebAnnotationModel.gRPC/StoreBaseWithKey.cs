@@ -90,20 +90,21 @@ namespace WebAnnotationModel.gRPC
         /// Each store took a different set of parameters so I removed this, but it belongs here in spirit
         /// </summary>
         /// <param name="obj"></param>
-        /// <returns></returns>
+        /// <returns>
+        /// The instance now in the store. The task completes after the CollectionChanged listeners have run, also when
+        /// <see cref="State.UseAsynchEvents"/> runs them on the thread pool, and faults with a listener's exception.
+        /// A pending object is queued for Save before the listeners run.
+        /// </returns>
         public override async Task<OBJECT> Add(OBJECT obj)
         {
             //Default implementation
             ChangeInventory<OBJECT> inventory = InternalAdd(new OBJECT[]{obj});
-            CallOnCollectionChanged(inventory);
-            if (inventory.ObjectsInStore.Count > 0)
-            {
-                var added = inventory.ObjectsInStore[0];
+            OBJECT added = inventory.ObjectsInStore.Count > 0 ? inventory.ObjectsInStore[0] : default;
+            if (added != null)
                 TrackForSaveIfPending(added);
-                return added;
-            }
 
-            return default;
+            await CallOnCollectionChanged(inventory).ConfigureAwait(false);
+            return added;
         } 
 
         /// <summary>
@@ -124,14 +125,14 @@ namespace WebAnnotationModel.gRPC
         /// Each store took a different set of parameters so I removed this, but it belongs here in spirit
         /// </summary>
         /// <param name="obj"></param>
-        /// <returns></returns>
+        /// <returns>The instances now in the store; the task completes as for <see cref="Add(OBJECT)"/>.</returns>
         public override async Task<ICollection<OBJECT>> Add(ICollection<OBJECT> objs)
         {
             //Default implementation
             ChangeInventory<OBJECT> inventory = InternalAdd(objs.ToArray());
-            CallOnCollectionChanged(inventory);
             foreach (var added in inventory.ObjectsInStore)
                 TrackForSaveIfPending(added);
+            await CallOnCollectionChanged(inventory).ConfigureAwait(false);
             return inventory.ObjectsInStore; 
         }
 
@@ -160,7 +161,10 @@ namespace WebAnnotationModel.gRPC
         /// deleted from the server until save is called
         /// </summary>
         /// <param name="obj"></param>
-        /// <returns></returns>
+        /// <returns>
+        /// The removed object, or null when it was not cached. The task completes after the CollectionChanged listeners
+        /// have run, as for <see cref="Add(OBJECT)"/>; the delete is queued for Save before they run.
+        /// </returns>
         public virtual async Task<OBJECT> Remove(KEY ID)
         {
             //Default implementation
@@ -173,7 +177,7 @@ namespace WebAnnotationModel.gRPC
                 if (deleted_obj != default)
                 {
                     ChangedObjects.TryAdd(obj.ID, obj);
-                    CallOnCollectionChangedForDelete(deleted_obj );
+                    await CallOnCollectionChangedForDelete(deleted_obj).ConfigureAwait(false);
                 }
 
                 return deleted_obj;
@@ -187,7 +191,7 @@ namespace WebAnnotationModel.gRPC
         /// deleted from the server until save is called
         /// </summary>
         /// <param name="obj"></param>
-        /// <returns></returns>
+        /// <returns>False when the object was not cached; the task completes as for <see cref="Remove(KEY)"/>.</returns>
         public override async Task<bool> Remove(OBJECT obj)
         {
             //Default implementation
@@ -198,7 +202,7 @@ namespace WebAnnotationModel.gRPC
             if (deleted_obj != default)
             {
                 ChangedObjects.TryAdd(obj.ID, obj);
-                CallOnCollectionChangedForDelete( deleted_obj );
+                await CallOnCollectionChangedForDelete(deleted_obj).ConfigureAwait(false);
                 return true;
             }
 
