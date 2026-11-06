@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using System;
@@ -28,6 +28,11 @@ namespace ConnectomeDataModelCoreTests
     /// <para>
     /// Every difference must be on <see cref="AllowedDifferences"/>, each with a reason. An allow-list entry
     /// that no longer matches a difference also fails, so fixing the drift forces the entry to be removed.
+    /// </para>
+    /// <para>
+    /// Stored procedures are compared by name only, between the update script (replayed by
+    /// <see cref="ReplayProcedures"/>) and <c>dbo/Stored Procedures</c>, and the sqlproj build list must hold
+    /// exactly those files. Procedure bodies are not compared.
     /// </para>
     /// <para>
     /// What the CREATE TABLE parser handles: <c>CREATE TABLE [dbo].[Name] ( ... )</c> (the <c>dbo.</c> and
@@ -89,6 +94,26 @@ namespace ConnectomeDataModelCoreTests
 
         /// <summary>Objects minimal-schema.sql creates that are not in dbo/ or the sqlproj, with the reason.</summary>
         private static readonly Dictionary<string, string> AllowedMissingObjects = new();
+
+        private const string NoDbVersionStep =
+            "In the SSDT project, but no DBVersion step in CreateUpdateDatabase.sql creates it, so a database built by " +
+            "the script lacks it. Creating it is a new DBVersion step (a SQL-object change); remove this entry then.";
+
+        /// <summary>
+        /// Differences between the procedures <c>CreateUpdateDatabase.sql</c> leaves behind and the files under
+        /// <c>dbo/Stored Procedures</c>, keyed by the text <see cref="CompareProcedures"/> reports.
+        /// </summary>
+        private static readonly Dictionary<string, string> AllowedProcedureDifferences = new()
+        {
+            [$"procedure ApproximateStructureLocations only in {SqlProject}, not in {UpdateScript}"] = NoDbVersionStep,
+            [$"procedure SelectAllNearestParentChildAttachLocationCandidates only in {SqlProject}, not in {UpdateScript}"] = NoDbVersionStep,
+            [$"procedure SelectChildStructureCenters3D only in {SqlProject}, not in {UpdateScript}"] = NoDbVersionStep,
+            [$"procedure SelectNearestChildAttachLocationCandidates only in {SqlProject}, not in {UpdateScript}"] = NoDbVersionStep,
+            [$"procedure SelectNearestParentAttachCandidatesForLocations only in {SqlProject}, not in {UpdateScript}"] = NoDbVersionStep,
+            [$"procedure SelectNearestParentAttachLocationCandidates only in {SqlProject}, not in {UpdateScript}"] = NoDbVersionStep,
+            [$"procedure SelectStructureCenter3D only in {SqlProject}, not in {UpdateScript}"] = NoDbVersionStep,
+            [$"procedure SelectStructureCenters3D only in {SqlProject}, not in {UpdateScript}"] = NoDbVersionStep,
+        };
 
         // ---- The checks -------------------------------------------------------------------------------
 
@@ -158,7 +183,119 @@ namespace ConnectomeDataModelCoreTests
             }
         }
 
+        [Fact]
+        public void UpdateScriptAndSqlProjectAgreeOnStoredProcedures()
+        {
+            var differences = new SortedSet<string>(
+                CompareProcedures(UpdateScript, ReplayProcedures(ReadUpdateScript()), SqlProject, ReadSqlProjectProcedures()),
+                StringComparer.Ordinal);
+
+            AssertOnlyAllowed(differences, AllowedProcedureDifferences, "stored procedure difference");
+        }
+
+        [Fact]
+        public void SqlProjectBuildListHoldsExactlyTheProcedureFiles()
+        {
+            var sqlprojPath = RepoFile("Servers/AnnotationDatabase/AnnotationDatabase.sqlproj");
+            var listed = ProcedureBuildEntries(File.ReadAllText(sqlprojPath));
+            var files = ReadSqlProjectProcedures().ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            Assert.Empty(files.Except(listed, StringComparer.OrdinalIgnoreCase));
+            Assert.Empty(listed.Except(files, StringComparer.OrdinalIgnoreCase));
+        }
+
+        [Fact]
+        public void ProcedureParsersReadTheRealSources()
+        {
+            // Guards against a parser that silently reads nothing, which would make the drift check vacuous.
+            var script = ReplayProcedures(ReadUpdateScript());
+            var project = ReadSqlProjectProcedures();
+
+            Assert.True(script.Count >= 40, $"only {script.Count} procedures replayed from the update script");
+            Assert.True(project.Count >= 40, $"only {project.Count} procedure files read");
+            Assert.True(ProcedureBuildEntries(File.ReadAllText(RepoFile("Servers/AnnotationDatabase/AnnotationDatabase.sqlproj"))).Count >= 40);
+            Assert.Contains("SelectSectionStructuresAndLinks", script);
+            Assert.Contains("SelectSectionStructuresAndLinks", project);
+            Assert.DoesNotContain("SelectStructuresForSection", script);
+        }
+
         // ---- Mutation checks: the comparison must see each kind of drift ------------------------------
+
+        [Fact]
+        public void ReplayProceduresAppliesCreateAlterAndDropInFileOrder()
+        {
+            var procedures = ReplayProcedures(
+                "-- CREATE PROCEDURE InLineComment\n" +
+                "/* CREATE PROCEDURE InBlockComment\n DROP PROCEDURE Bracketed */\n" +
+                "CREATE PROCEDURE [dbo].[Bracketed] AS SELECT 1\n" +
+                "Create PROCEDURE [dbo].MixedBrackets AS SELECT 1\n" +
+                "\tCREATE PROCEDURE Unqualified AS SELECT 1\n" +
+                "\tCREATE PROC dbo.Short AS SELECT 1\n" +
+                "\tEXEC('CREATE PROCEDURE [dbo].[InsideExec] AS SELECT 1')\n" +
+                "\tEXEC(' CREATE PROCEDURE ExecUnqualified\n AS SELECT 1')\n" +
+                "\tCREATE OR ALTER PROCEDURE dbo.OrAlter AS SELECT 1\n" +
+                "\tCREATE PROCEDURE [dbo].[Dropped] AS SELECT 1\n" +
+                "\tCREATE PROCEDURE [dbo].[DroppedInExec] AS SELECT 1\n" +
+                "\tCREATE PROCEDURE [dbo].[DroppedByObjectId] AS SELECT 1\n" +
+                "\tIF EXISTS(select * from sys.procedures where name = 'Dropped') DROP PROCEDURE [dbo].[Dropped]\n" +
+                "\tEXEC('DROP PROCEDURE DroppedInExec')\n" +
+                "\tIF OBJECT_ID('[DroppedByObjectId]') IS NOT NULL DROP PROCEDURE \n dbo.[DroppedByObjectId]\n" +
+                "\tIF OBJECT_ID('Never') IS NOT NULL DROP PROCEDURE dbo.[NeverCreated]\n" +
+                "\tCREATE PROCEDURE [dbo].[DroppedThenBack] AS SELECT 1\n" +
+                "\tDROP PROCEDURE DroppedThenBack\n" +
+                "\tCREATE PROCEDURE DroppedThenBack AS SELECT 2\n" +
+                "\tALTER PROCEDURE [dbo].[Bracketed] AS SELECT 3\n" +
+                "\tprint N'Create stored procedure for something'\n");
+
+            Assert.Equal(
+                new[] { "Bracketed", "DroppedThenBack", "ExecUnqualified", "InsideExec", "MixedBrackets", "OrAlter", "Short", "Unqualified" },
+                procedures.OrderBy(p => p, StringComparer.Ordinal).ToArray());
+        }
+
+        [Fact]
+        public void ReplayProceduresRejectsAnAlterOfAnUnknownProcedureAndAForeignSchema()
+        {
+            Assert.Throws<FormatException>(() => ReplayProcedures("ALTER PROCEDURE dbo.Missing AS SELECT 1"));
+            Assert.Throws<FormatException>(() => ReplayProcedures("CREATE PROCEDURE dbo.P AS SELECT 1\nDROP PROCEDURE dbo.P\nALTER PROCEDURE dbo.P AS SELECT 1"));
+            Assert.Throws<FormatException>(() => ReplayProcedures("CREATE PROCEDURE [graph].[P] AS SELECT 1"));
+        }
+
+        [Fact]
+        public void ProcedureBuildEntriesReadsOnlyStoredProcedureIncludes()
+        {
+            var listed = ProcedureBuildEntries(
+                "<Build Include=\"dbo\\Stored Procedures\\A.sql\"><Link>x</Link></Build>\n" +
+                "<Build Include=\"dbo\\Tables\\B.sql\" />\n" +
+                "<Build Include=\"dbo\\Stored Procedures\\C.sql\" />");
+
+            Assert.Equal(new[] { "A", "C" }, listed.OrderBy(n => n, StringComparer.Ordinal).ToArray());
+        }
+
+        [Fact]
+        public void ProcedureCompareReportsAProcedureTheUpdateScriptNoLongerLeaves()
+        {
+            var script = ReadUpdateScript();
+            const string create = "CREATE PROCEDURE [dbo].[SelectStructureLabels]";
+            Assert.Single(Regex.Matches(script, Regex.Escape(create)));
+            var mutated = ReplayProcedures(script.Replace(create, "CREATE TABLE [dbo].[NotAProcedure]"));
+
+            var differences = CompareProcedures(SqlProject, ReadSqlProjectProcedures(), UpdateScript, mutated).ToList();
+
+            Assert.Contains($"procedure SelectStructureLabels only in {SqlProject}, not in {UpdateScript}", differences);
+        }
+
+        [Fact]
+        public void ProcedureCompareReportsAProcedureTheUpdateScriptStopsDropping()
+        {
+            var script = ReadUpdateScript();
+            const string drop = "DROP PROCEDURE [dbo].[SelectStructuresForSection]";
+            Assert.Single(Regex.Matches(script, Regex.Escape(drop)));
+            var mutated = ReplayProcedures(script.Replace(drop, "PRINT 0"));
+
+            var differences = CompareProcedures(UpdateScript, mutated, SqlProject, ReadSqlProjectProcedures()).ToList();
+
+            Assert.Contains($"procedure SelectStructuresForSection only in {UpdateScript}, not in {SqlProject}", differences);
+        }
 
         [Fact]
         public void CompareReportsADroppedColumn()
@@ -394,6 +531,78 @@ namespace ConnectomeDataModelCoreTests
                 message.AppendLine($"Allow-listed {what}(s) that no longer occur; remove the entry:")
                        .AppendLine(string.Join(Environment.NewLine, stale.Select(d => "  - " + d)));
             Assert.True(message.Length == 0, message.ToString());
+        }
+
+        // ---- Stored procedures ------------------------------------------------------------------------
+
+        private static readonly Regex ProcedureStatement = new(
+            @"\b(?<verb>CREATE\s+OR\s+ALTER|CREATE|ALTER|DROP)\s+PROC(?:EDURE)?\s+(?:IF\s+EXISTS\s+)?" +
+            @"(?:\[?(?<schema>\w+)\]?\.)?\[?(?<name>\w+)\]?",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        private static readonly Regex ProcedureBuildEntry = new(
+            @"Include=""dbo\\Stored Procedures\\(?<name>[^""\\]+)\.sql""", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        /// <summary>
+        /// The dbo procedures a database built by CreateUpdateDatabase.sql ends with: CREATE (also OR ALTER) adds one,
+        /// DROP removes it, in file order, whether the statement sits in the batch or inside <c>EXEC('...')</c>.
+        /// A DROP of a procedure not created earlier is ignored, since the script guards its drops with
+        /// <c>IF EXISTS</c> or <c>OBJECT_ID</c> for procedures older databases had. A repeated CREATE is ignored too:
+        /// the script has a dead step (guarded by an already-used DBVersion number) that creates one twice.
+        /// Throws <see cref="FormatException"/> for ALTER of a procedure that does not exist then, and for a
+        /// non-<c>dbo</c> schema, which the script does not use. <c>--</c> and <c>/* */</c> comments are removed first;
+        /// a procedure statement written inside a string literal other than <c>EXEC</c> text would be misread.
+        /// </summary>
+        private static SortedSet<string> ReplayProcedures(string sql)
+        {
+            var procedures = new SortedSet<string>(StringComparer.Ordinal);
+            foreach (Match m in ProcedureStatement.Matches(StripComments(sql)))
+            {
+                var schema = m.Groups["schema"];
+                var name = m.Groups["name"].Value;
+                if (schema.Success && !schema.Value.Equals("dbo", StringComparison.OrdinalIgnoreCase))
+                    throw new FormatException($"Procedure {schema.Value}.{name} is not in the dbo schema: {m.Value.Trim()}");
+
+                var verb = Regex.Replace(m.Groups["verb"].Value, @"\s+", " ").ToUpperInvariant();
+                if (verb == "DROP")
+                    procedures.Remove(name);
+                else if (verb == "ALTER" && !procedures.Contains(name))
+                    throw new FormatException($"ALTER PROCEDURE {name} before any CREATE PROCEDURE {name}: {m.Value.Trim()}");
+                else
+                    procedures.Add(name);
+            }
+            return procedures;
+        }
+
+        /// <summary>The procedures of <c>dbo/Stored Procedures/*.sql</c>; each file must create exactly the procedure it is named for.</summary>
+        private static SortedSet<string> ReadSqlProjectProcedures()
+        {
+            var directory = RepoFile("Servers/AnnotationDatabase/dbo/Stored Procedures");
+            var procedures = new SortedSet<string>(StringComparer.Ordinal);
+            foreach (var file in Directory.GetFiles(directory, "*.sql"))
+            {
+                var expected = Path.GetFileNameWithoutExtension(file);
+                var created = ReplayProcedures(File.ReadAllText(file));
+                Assert.True(created.Count == 1 && created.Contains(expected),
+                    $"{file} should create exactly dbo.{expected}, found: {string.Join(", ", created)}");
+                procedures.Add(expected);
+            }
+            return procedures;
+        }
+
+        private static HashSet<string> ProcedureBuildEntries(string sqlprojText) =>
+            ProcedureBuildEntry.Matches(sqlprojText).Select(m => m.Groups["name"].Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Procedures present in one source only, as stable sentences (the allow-list keys).</summary>
+        private static IEnumerable<string> CompareProcedures(
+            string nameA, IEnumerable<string> a, string nameB, IEnumerable<string> b)
+        {
+            var setA = a.ToHashSet(StringComparer.Ordinal);
+            var setB = b.ToHashSet(StringComparer.Ordinal);
+            foreach (var name in setA.Except(setB))
+                yield return $"procedure {name} only in {nameA}, not in {nameB}";
+            foreach (var name in setB.Except(setA))
+                yield return $"procedure {name} only in {nameB}, not in {nameA}";
         }
 
         // ---- Objects created by minimal-schema.sql ---------------------------------------------------
