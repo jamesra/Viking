@@ -435,6 +435,7 @@ namespace gRPCAnnotationService
         /// <summary>
         /// Batch of create, update, and delete changes in one transaction, one result per request row in order. An update of a missing ID reports Success = false instead of failing the batch. Delete runs DeepDeleteStructure, which also removes the structure's locations, links, and children.
         /// An edit of a structure that a later row deletes, directly or as a child, keeps its Success and the delete stands.
+        /// A create whose ParentId names a structure the batch deletes, directly or as a child, reports Success = false and is not saved.
         /// </summary>
         public override async Task<UpdateStructuresResponse> Update(UpdateStructuresRequest request, ServerCallContext context)
         {
@@ -492,11 +493,11 @@ namespace gRPCAnnotationService
                     response.Results.Add(rowResponse);
                 }
 
-                await ForgetEditsOfDeletedStructuresAsync(request, ct);
+                await ForgetEditsOfDeletedStructuresAsync(request, pendingCreates, ct);
                 await _context.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
 
-                foreach (var (rowResponse, entity) in pendingCreates)
+                foreach (var (rowResponse, entity) in pendingCreates.Where(c => c.Response.Success))
                     rowResponse.Created = entity.ToProtobufMessage();
 
                 return response;
@@ -731,25 +732,36 @@ namespace gRPCAnnotationService
         /// DeepDeleteStructure deletes the structure and its child structures in SQL, which the change tracker
         /// does not see. A structure the batch edited before that delete would be saved as an UPDATE of a missing
         /// row, which EF reports as a concurrency failure and which would roll back the whole batch, so stop
-        /// tracking every edited structure whose row is gone. The delete stands. A batch with no delete costs no query.
+        /// tracking every edited structure whose row is gone. The delete stands. A create whose parent is gone
+        /// would fail the insert on FK_Structure_Structure the same way, so it stops being tracked and its row
+        /// reports Success = false. A batch with no delete costs no query.
         /// </summary>
-        private async Task ForgetEditsOfDeletedStructuresAsync(UpdateStructuresRequest request, CancellationToken ct)
+        private async Task ForgetEditsOfDeletedStructuresAsync(UpdateStructuresRequest request,
+            List<(StructureChangeResponse Response, EfStructure Entity)> pendingCreates, CancellationToken ct)
         {
             if (!request.Objs.Any(c => c.ActionCase == StructureChangeRequest.ActionOneofCase.Delete))
                 return;
 
             var edited = _context.ChangeTracker.Entries<EfStructure>()
                 .Where(e => e.State == EntityState.Modified).ToList();
-            if (edited.Count == 0)
+            var childCreates = pendingCreates.Where(c => c.Entity.ParentId.HasValue).ToList();
+            if (edited.Count == 0 && childCreates.Count == 0)
                 return;
 
             var live = new HashSet<long>();
-            foreach (var chunk in edited.Select(e => e.Entity.Id).DistinctChunk())
+            var ids = edited.Select(e => e.Entity.Id).Concat(childCreates.Select(c => c.Entity.ParentId.Value));
+            foreach (var chunk in ids.DistinctChunk())
                 live.UnionWith(await _context.Structures.AsNoTracking()
                     .Where(s => chunk.Contains(s.Id)).Select(s => s.Id).ToListAsync(ct));
 
             foreach (var entry in edited.Where(e => !live.Contains(e.Entity.Id)))
                 entry.State = EntityState.Detached;
+
+            foreach (var (rowResponse, entity) in childCreates.Where(c => !live.Contains(c.Entity.ParentId.Value)))
+            {
+                _context.Entry(entity).State = EntityState.Detached;
+                rowResponse.Success = false;
+            }
         }
 
         /// <summary>Builds the [dbo].[integer_list] table valued parameter the network procedures take.</summary>

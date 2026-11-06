@@ -25,6 +25,7 @@ namespace ConnectomeDataModelCoreTests
     /// transaction, behind EF's back, so a structure the batch edited earlier must not be saved as an UPDATE of a
     /// row that is gone: SQL Server would report no rows affected and EF would fail and roll back the whole batch.
     /// The edit row keeps its success, as for a location edited and then deleted, and the delete stands.
+    /// A create under a deleted structure fails its own row instead of the batch's insert.
     /// No database is contacted: interceptors stand in for the connection, the transaction, the queries, the
     /// procedure and SaveChanges.
     /// </summary>
@@ -117,9 +118,80 @@ namespace ConnectomeDataModelCoreTests
             Assert.True(store.Committed);
         }
 
+        /// <summary>
+        /// A create under a structure the batch deletes would fail the save on FK_Structure_Structure and roll back
+        /// every row, so only that create fails. The order of the create and the delete does not matter.
+        /// </summary>
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CreatingAChildOfADeletedStructureFailsOnlyTheCreate(bool deleteFirst)
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(1);
+            store.AddStructure(5);
+            using var db = NewContext(store);
+            Track(db, store, 5);
+
+            var request = deleteFirst
+                ? Request(Delete(1), Create(parentId: 1), Create(parentId: null), Update(5))
+                : Request(Create(parentId: 1), Delete(1), Create(parentId: null), Update(5));
+            var response = await NewService(db).Update(request, new TestCallContext());
+
+            var childRow = deleteFirst ? 1 : 0;
+            Assert.Equal(Enumerable.Range(0, 4).Select(i => i != childRow).ToArray(),
+                response.Results.Select(r => r.Success).ToArray());
+            Assert.Null(response.Results[childRow].Created);
+            Assert.NotNull(response.Results[2].Created);
+            Assert.Equal(new long?[] { null }, store.CreatedUnder);
+            Assert.Equal(new[] { 5L }, store.Saved);
+            Assert.Equal(new[] { 5L }, store.Rows.Keys);
+            Assert.True(store.Committed);
+        }
+
+        [Fact]
+        public async Task CreatingAChildOfAStructureWhoseParentIsDeletedFailsOnlyTheCreate()
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(1);
+            store.AddStructure(2, parentId: 1);
+            using var db = NewContext(store);
+
+            var response = await NewService(db).Update(Request(Delete(1), Create(parentId: 2)), new TestCallContext());
+
+            Assert.Equal(new[] { true, false }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Empty(store.CreatedUnder);
+            Assert.Empty(store.Rows);
+            Assert.True(store.Committed);
+        }
+
+        [Fact]
+        public async Task CreatingAChildOfALiveStructureBesideAnUnrelatedDeleteSavesTheCreate()
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(1);
+            store.AddStructure(5);
+            using var db = NewContext(store);
+
+            var response = await NewService(db).Update(Request(Create(parentId: 1), Delete(5)), new TestCallContext());
+
+            Assert.Equal(new[] { true, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Equal(1L, response.Results[0].Created.ParentId);
+            Assert.Equal(new long?[] { 1 }, store.CreatedUnder);
+            Assert.True(store.Committed);
+        }
+
         private static StructureService NewService(AnnotationContext db) => new(db, NullLogger<StructureService>.Instance);
 
         private static StructureChangeRequest Delete(long id) => new() { Delete = id };
+
+        private static StructureChangeRequest Create(long? parentId)
+        {
+            var structure = new ProtoStructure { TypeId = 7, Label = "new" };
+            if (parentId.HasValue)
+                structure.ParentId = parentId.Value;
+            return new() { Create = structure };
+        }
 
         private static StructureChangeRequest Update(long id) =>
             new() { Update = new ProtoStructure { Id = id, TypeId = 7, Label = "edited" } };
@@ -161,6 +233,9 @@ namespace ConnectomeDataModelCoreTests
 
             /// <summary>IDs of the structures the batch's save would update.</summary>
             public long[] Saved { get; private set; } = Array.Empty<long>();
+
+            /// <summary>ParentIDs of the structures the batch's save would insert.</summary>
+            public long?[] CreatedUnder { get; private set; } = Array.Empty<long?>();
 
             /// <summary>Number of Structure queries the batch ran.</summary>
             public int Queries { get; private set; }
@@ -214,6 +289,11 @@ namespace ConnectomeDataModelCoreTests
                 // detaching it would fail the save the same way the stale UPDATE did.
                 if (entries.Any(e => (e.State == EntityState.Modified || e.State == EntityState.Deleted) && !Rows.ContainsKey(e.Entity.Id)))
                     throw new DbUpdateConcurrencyException("The database operation was expected to affect 1 row(s), but actually affected 0 row(s).");
+
+                var added = entries.Where(e => e.State == EntityState.Added).ToList();
+                if (added.Any(e => e.Entity.ParentId.HasValue && !Rows.ContainsKey(e.Entity.ParentId.Value)))
+                    throw new DbUpdateException("The INSERT statement conflicted with the FOREIGN KEY SAME TABLE constraint \"FK_Structure_Structure\".");
+                CreatedUnder = added.Select(e => e.Entity.ParentId).ToArray();
 
                 var updated = entries.Where(e => e.State == EntityState.Modified).ToList();
                 Saved = updated.Select(e => e.Entity.Id).OrderBy(id => id).ToArray();
