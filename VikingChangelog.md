@@ -23,7 +23,7 @@ version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. 
 Documentation/source/Client/versionhistory.rst.
 -->
 
-## 1.2.138 — not yet released
+## 1.2.138 — 2026-11-05 (Viking Test, unsigned)
 
 * **Crushed sections display with adjustable contrast.** Sections Nornir builds as noise-crushed (tiles that keep raw codes instead of a contrast-stretched image) are expanded on the graphics card using the display range in the VikingXML, so they no longer look dark. Press **Ctrl+Shift+Plus** to brighten, **Ctrl+Shift+Minus** to darken and **Ctrl+Shift+0** to reset. **Section > Contrast...** opens an editor with a histogram and black and white point sliders for the section on screen; each section's choice is saved on this computer and **Reset to volume range** undoes it. Other sections are unchanged. Only 8-bit crushed tiles are shown this way; none of the current volumes use more.
 <!-- CrushInfo reads CrushVersion/Step/Offset/Bits/DisplayMin/DisplayMax and the CodeHistogram child from <Pyramid>/<Tileset> (Section.CrushedChannels); TileLayout.fx maps DisplayMin..DisplayMax to black..white. Without a display range the window comes from the histogram (bin 0 skipped), else all codes. Per-tile gain on Pyramid tiles (nornir_crush tEXt chunk) is not applied yet. Gamma is planned, not built. -->
