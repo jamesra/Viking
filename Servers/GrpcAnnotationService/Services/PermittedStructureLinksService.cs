@@ -42,12 +42,21 @@ namespace gRPCAnnotationService
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(GetPermittedStructureLinks), e, context); }
         }
 
-        /// <summary>Inserts one permitted link and returns the stored row.</summary>
+        /// <summary>
+        /// Inserts one permitted link and returns the stored row. Throws NotFound, naming the missing type IDs and
+        /// saving nothing, when the source or target structure type does not exist.
+        /// </summary>
         public override async Task<CreatePermittedStructureLinkResponse> CreatePermittedStructureLink(CreatePermittedStructureLinkRequest request, ServerCallContext context)
         {
             try
             {
                 var ct = context.CancellationToken;
+                var named = new[] { request.NewObj.SourceTypeId, request.NewObj.TargetTypeId };
+                var live = await LiveStructureTypeIdsAsync(named, ct);
+                var missing = named.Distinct().Where(id => !live.Contains(id)).ToArray();
+                if (missing.Length > 0)
+                    throw new RpcException(new Status(StatusCode.NotFound, $"Structure types not found: {string.Join(", ", missing)}"));
+
                 var new_obj = request.NewObj.ToPermittedStructureLink();
                 var ef_result = await _context.PermittedStructureLinks.AddAsync(new_obj, ct);
                 await _context.SaveChangesAsync(ct);
@@ -74,7 +83,8 @@ namespace gRPCAnnotationService
             {
                 var ct = context.CancellationToken;
                 var response = new UpdatePermittedStructureLinksResponse();
-                var liveTypes = await LiveStructureTypeIdsAsync(request, ct);
+                var liveTypes = await LiveStructureTypeIdsAsync(request.Changes.Where(c => c.Action == DBAction.Insert)
+                    .SelectMany(c => new[] { c.Result.SourceTypeId, c.Result.TargetTypeId }), ct);
 
                 foreach (var r in request.Changes)
                 {
@@ -133,14 +143,14 @@ namespace gRPCAnnotationService
         }
 
         /// <summary>
-        /// The stored types, among the source and target types the batch's inserts name, that exist.
-        /// FK_PermittedStructureLink_SourceType and _TargetType would fail an insert naming any other type and
-        /// roll back the whole batch; that row fails instead. A batch with no insert costs no query.
+        /// The stored types among the source and target types <paramref name="ids"/> names.
+        /// FK_PermittedStructureLink_SourceType and _TargetType would fail the save of a link naming any other
+        /// type as a generic Unknown failure (and roll back a whole batch), so callers refuse that link first.
+        /// No IDs cost no query.
         /// </summary>
-        private async Task<HashSet<long>> LiveStructureTypeIdsAsync(UpdatePermittedStructureLinksRequest request, CancellationToken ct)
+        private async Task<HashSet<long>> LiveStructureTypeIdsAsync(IEnumerable<long> ids, CancellationToken ct)
         {
-            var named = request.Changes.Where(c => c.Action == DBAction.Insert)
-                .SelectMany(c => new[] { c.Result.SourceTypeId, c.Result.TargetTypeId }).ToArray();
+            var named = ids.ToArray();
 
             var live = new HashSet<long>();
             if (named.Length == 0)

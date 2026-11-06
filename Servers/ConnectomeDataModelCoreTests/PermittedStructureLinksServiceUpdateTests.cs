@@ -26,7 +26,7 @@ namespace ConnectomeDataModelCoreTests
     /// in the same batch: a repeated insert, an insert of a stored link or naming a missing type, and an
     /// update or delete of a link the batch deleted fail only their own row, while an insert followed by an update or delete of the
     /// same key applies to the queued row. No database is contacted: interceptors stand in for the
-    /// connection, the key lookups and SaveChanges.
+    /// connection, the key lookups and SaveChanges. A single create naming a missing type is refused with NotFound.
     /// </summary>
     public class PermittedStructureLinksServiceUpdateTests
     {
@@ -227,16 +227,40 @@ namespace ConnectomeDataModelCoreTests
         public async Task CreateRepliesWithTheStoredLink()
         {
             var saves = new CaptureSaves();
-            using var db = NewContext(saves);
-            var service = new PermittedStructureLinksService(db, NullLogger<PermittedStructureLinksService>.Instance);
+            var table = new FakeLinkTable();
+            using var db = NewContext(saves, table);
 
-            var response = await service.CreatePermittedStructureLink(
-                new CreatePermittedStructureLinkRequest { NewObj = new ProtoLink { SourceTypeId = 7, TargetTypeId = 9, Bidirectional = true } },
-                new TestCallContext());
+            var response = await Create(db, 7, 9, true);
 
             Assert.Equal(1, saves.Count);
             Assert.Equal((7L, 9L, true), Key(response.Result));
+            Assert.Equal(new[] { (EntityState.Added, 7L, 9L, true) }, saves.Links);
+            Assert.Equal(1, table.TypeQueries);
         }
+
+        [Theory]
+        [InlineData(99, 2, "99")]
+        [InlineData(1, 98, "98")]
+        [InlineData(99, 98, "99, 98")]
+        [InlineData(99, 99, "99")]
+        public async Task CreateNamingAMissingTypeIsNotFoundAndSavesNothing(long source, long target, string missing)
+        {
+            var saves = new CaptureSaves();
+            var table = new FakeLinkTable();
+            using var db = NewContext(saves, table);
+
+            var e = await Assert.ThrowsAsync<RpcException>(() => Create(db, source, target));
+
+            Assert.Equal(StatusCode.NotFound, e.StatusCode);
+            Assert.Equal($"Structure types not found: {missing}", e.Status.Detail);
+            Assert.Equal(0, saves.Count);
+            Assert.Equal(1, table.TypeQueries);
+        }
+
+        private static Task<CreatePermittedStructureLinkResponse> Create(AnnotationContext db, long source, long target, bool bidirectional = false) =>
+            new PermittedStructureLinksService(db, NullLogger<PermittedStructureLinksService>.Instance).CreatePermittedStructureLink(
+                new CreatePermittedStructureLinkRequest { NewObj = new ProtoLink { SourceTypeId = source, TargetTypeId = target, Bidirectional = bidirectional } },
+                new TestCallContext());
 
         private static Task<UpdatePermittedStructureLinksResponse> Update(AnnotationContext db, params PermittedStructureLinkChange[] changes)
         {
