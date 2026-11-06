@@ -283,14 +283,61 @@ namespace ConnectomeDataModelCoreTests
             Assert.Same(SavedRows.None, store.Saved);
         }
 
+        /// <summary>
+        /// A create or a move under a structure that does not exist would fail the save on FK_Location_StructureBase1
+        /// and roll back every row, so only those rows fail.
+        /// </summary>
+        [Fact]
+        public async Task CreatingOrMovingUnderAMissingStructureFailsOnlyThoseRows()
+        {
+            var store = new FakeDatabase();
+            store.AddLocation(1, z: 10);
+            store.AddLocation(2, z: 10);
+            using var db = NewContext(store);
+            Track(db, store, 1, 2);
+            var moved = db.Locations.Local.Single(l => l.Id == 1);
+            var orphan = NewLocation();
+            orphan.ParentId = 77;
+
+            var response = await NewService(db).Update(
+                Request(new LocationChangeRequest { Create = orphan }, Update(1, parentId: 78), new LocationChangeRequest { Create = NewLocation() }, Update(2)),
+                new TestCallContext());
+
+            Assert.Equal(new[] { false, false, true, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Null(response.Results[0].Created);
+            Assert.Null(response.Results[1].Updated);
+            Assert.Equal(3L, response.Results[2].Created.ParentId);
+            Assert.Equal(3L, response.Results[3].Updated.ParentId);
+            Assert.Equal(new[] { 3L }, db.Locations.Local.Where(l => db.Entry(l).State == EntityState.Added).Select(l => l.ParentId));
+            Assert.Equal(EntityState.Detached, db.Entry(moved).State);
+            Assert.True(store.Committed);
+        }
+
+        /// <summary>An update that keeps its stored parent cannot break FK_Location_StructureBase1, so it costs no structure query.</summary>
+        [Fact]
+        public async Task UpdatingWithoutMovingRunsNoStructureQuery()
+        {
+            var store = new FakeDatabase();
+            store.AddLocation(1, z: 10);
+            using var db = NewContext(store);
+            Track(db, store, 1);
+
+            var response = await NewService(db).Update(Request(Update(1)), new TestCallContext());
+
+            Assert.True(response.Results.Single().Success);
+            Assert.Equal(0, store.StructureQueries);
+            Assert.True(store.Committed);
+        }
+
         private static LocationService NewService(AnnotationContext db) => new(db, NullLogger<LocationService>.Instance);
 
         private static LocationChangeRequest Delete(long id) => new() { Delete = id };
 
-        private static LocationChangeRequest Update(long id)
+        private static LocationChangeRequest Update(long id, long parentId = 3)
         {
             var edited = NewLocation();
             edited.Id = id;
+            edited.ParentId = parentId;
             return new() { Update = edited };
         }
 
@@ -316,7 +363,7 @@ namespace ConnectomeDataModelCoreTests
         private static void Track(AnnotationContext db, FakeDatabase store, params long[] ids)
         {
             foreach (var id in ids)
-                db.Locations.Attach(new EfLocation { Id = id, Z = store.LocationZ[id], Username = "someone" });
+                db.Locations.Attach(new EfLocation { Id = id, ParentId = 3, Z = store.LocationZ[id], Username = "someone" });
         }
 
         internal static AnnotationContext NewContext(FakeDatabase store) =>
@@ -344,7 +391,9 @@ namespace ConnectomeDataModelCoreTests
         /// table, matching any row whose key is among the command's parameter values. A full Location row is
         /// answered with its key only, which is enough for a location the test tracked. SaveChanges is
         /// suppressed: it gives each added location or structure a generated ID and records what would be
-        /// written. Nothing is accepted, so the last save holds every write of the batch.
+        /// written. Nothing is accepted, so the last save holds every write of the batch. An added or modified
+        /// location whose ParentID is neither in <see cref="Structures"/> nor a tracked structure fails the save with
+        /// <see cref="DbUpdateException"/>, as FK_Location_StructureBase1 does.
         /// </summary>
         internal sealed class FakeDatabase : IDbConnectionInterceptor, IDbCommandInterceptor, IDbTransactionInterceptor, ISaveChangesInterceptor
         {
@@ -358,6 +407,13 @@ namespace ConnectomeDataModelCoreTests
             public Dictionary<long, long> LocationZ { get; } = new();
             public List<(long A, long B)> Links { get; } = new();
             public List<(long A, long B)> LinkTombstones { get; } = new();
+
+            /// <summary>Stored structures: the ParentIDs a location may name.</summary>
+            public HashSet<long> Structures { get; } = new() { 3 };
+
+            /// <summary>Number of Structure queries run.</summary>
+            public int StructureQueries { get; private set; }
+
             public SavedRows Saved { get; private set; } = SavedRows.None;
             public bool Committed { get; private set; }
 
@@ -378,6 +434,10 @@ namespace ConnectomeDataModelCoreTests
             public ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
             {
                 var tracker = eventData.Context.ChangeTracker;
+                var parents = Structures.Concat(tracker.Entries<EfStructure>().Select(e => e.Entity.Id)).ToHashSet();
+                if (tracker.Entries<EfLocation>().Any(e => (e.State is EntityState.Added or EntityState.Modified) && !parents.Contains(e.Entity.ParentId)))
+                    throw new DbUpdateException("The INSERT or UPDATE statement conflicted with the FOREIGN KEY constraint \"FK_Location_StructureBase1\".");
+
                 foreach (var id in tracker.Entries().Where(e => e.State == EntityState.Added && e.Entity is EfLocation or EfStructure)
                              .Select(e => e.Property(nameof(EfLocation.Id))).Where(p => p.IsTemporary))
                     id.CurrentValue = _nextId++;
@@ -407,8 +467,11 @@ namespace ConnectomeDataModelCoreTests
                 var both = sql.Contains(" AND ", StringComparison.Ordinal);
                 bool Match(long a, long b) => both ? keys.Contains(a) && keys.Contains(b) : keys.Contains(a) || keys.Contains(b);
 
+                if (table == "Structure")
+                    StructureQueries++;
                 var rows = table switch
                 {
+                    "Structure" => Structures.Where(keys.Contains).Select(id => Row(("ID", id))),
                     "Location" => LocationZ.Where(l => keys.Contains(l.Key))
                         .Select(l => Row(("ID", l.Key), ("Z", l.Value))),
                     "LocationLink" => Links.Where(l => Match(l.A, l.B))

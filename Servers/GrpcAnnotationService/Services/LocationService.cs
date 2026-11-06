@@ -462,7 +462,8 @@ namespace gRPCAnnotationService
         /// <summary>
         /// Applies a batch of creates, updates and deletes in one transaction, all or nothing; a row whose
         /// location is missing reports Success false without failing the batch. An update of a location an
-        /// earlier row of the batch deleted counts as missing, since the delete would discard it. A delete
+        /// earlier row of the batch deleted counts as missing, since the delete would discard it. A create, or an
+        /// update that moves a location, under a structure that does not exist reports Success false. A delete
         /// removes the location's links and logs each link and the location once, even when the batch deletes
         /// both ends of a link or the same ID twice.
         /// </summary>
@@ -488,6 +489,7 @@ namespace gRPCAnnotationService
                     });
                 }
 
+                await FailWritesUnderMissingStructuresAsync(pendingCircles, ct);
                 await _context.SaveChangesAsync(ct);
                 foreach (var (rowResponse, entity, proto, isCreate) in pendingCircles)
                 {
@@ -838,6 +840,36 @@ namespace gRPCAnnotationService
             var rowResponse = new LocationChangeResponse { Success = true };
             pending.Add(new PendingWrite(rowResponse, existing, proto, IsCreate: false));
             return rowResponse;
+        }
+
+        /// <summary>
+        /// Fails each pending create, and each update that moves a location, whose ParentId names no structure:
+        /// FK_Location_StructureBase1 would fail the save and roll back the whole batch, so the row reports
+        /// Success = false, its write stops being tracked and it leaves <paramref name="pending"/>. An update that
+        /// keeps its stored parent, or that a later row deletes, is not looked up; a batch with neither costs no query.
+        /// </summary>
+        private async Task FailWritesUnderMissingStructuresAsync(List<PendingWrite> pending, CancellationToken ct)
+        {
+            var named = pending.Where(p =>
+            {
+                var entry = _context.Entry(p.Entity);
+                return entry.State == EntityState.Added
+                    || (entry.State == EntityState.Modified && entry.Property(l => l.ParentId).IsModified);
+            }).ToList();
+            if (named.Count == 0)
+                return;
+
+            var live = new HashSet<long>();
+            foreach (var chunk in named.Select(p => p.Entity.ParentId).DistinctChunk())
+                live.UnionWith(await _context.Structures.AsNoTracking()
+                    .Where(s => chunk.Contains(s.Id)).Select(s => s.Id).ToListAsync(ct));
+
+            foreach (var (rowResponse, entity, _, _) in named.Where(p => !live.Contains(p.Entity.ParentId)))
+            {
+                _context.Entry(entity).State = EntityState.Detached;
+                rowResponse.Success = false;
+            }
+            pending.RemoveAll(p => _context.Entry(p.Entity).State == EntityState.Detached);
         }
 
         /// <summary>

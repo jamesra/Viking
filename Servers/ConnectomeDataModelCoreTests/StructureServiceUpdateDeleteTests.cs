@@ -299,6 +299,67 @@ namespace ConnectomeDataModelCoreTests
             Assert.True(store.Committed);
         }
 
+        /// <summary>
+        /// A create or a move under a structure that does not exist would fail the save on FK_Structure_Structure and
+        /// roll back every row even when the batch deletes nothing, so only those rows fail.
+        /// </summary>
+        [Fact]
+        public async Task CreatingOrMovingUnderAMissingStructureWithoutADeleteFailsOnlyThoseRows()
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(1);
+            store.AddStructure(5);
+            store.AddStructure(9);
+            using var db = NewContext(store);
+            Track(db, store, 5, 9);
+
+            var response = await NewService(db).Update(
+                Request(Create(parentId: 42), Update(5, parentId: 43), Create(parentId: 1), Update(9, parentId: 1)), new TestCallContext());
+
+            Assert.Equal(new[] { false, false, true, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Null(response.Results[0].Created);
+            Assert.Null(response.Results[1].Updated);
+            Assert.Equal(1L, response.Results[2].Created.ParentId);
+            Assert.Equal(new long?[] { 1 }, store.CreatedUnder);
+            Assert.Equal(new[] { 9L }, store.Saved);
+            Assert.Equal(new long?[] { null, 1 }, new[] { store.Rows[5], store.Rows[9] });
+            Assert.True(store.Committed);
+        }
+
+        [Fact]
+        public async Task MovingUnderAMissingStructureInABatchOfUpdatesFailsOnlyTheMove()
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(5);
+            store.AddStructure(9);
+            using var db = NewContext(store);
+            Track(db, store, 5, 9);
+
+            var response = await NewService(db).Update(Request(Update(5, parentId: 43), Update(9)), new TestCallContext());
+
+            Assert.Equal(new[] { false, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Equal(new[] { 9L }, store.Saved);
+            Assert.True(store.Committed);
+        }
+
+        /// <summary>An update that keeps its stored parent cannot break FK_Structure_Structure, so it costs no parent query.</summary>
+        [Fact]
+        public async Task UpdatingAChildThatKeepsItsParentRunsOnlyTheLookup()
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(1);
+            store.AddStructure(2, parentId: 1);
+            using var db = NewContext(store);
+            Track(db, store, 2);
+
+            var response = await NewService(db).Update(Request(Update(2, parentId: 1)), new TestCallContext());
+
+            Assert.True(Assert.Single(response.Results).Success);
+            Assert.Equal(new[] { 2L }, store.Saved);
+            Assert.Equal(1, store.Queries);
+            Assert.True(store.Committed);
+        }
+
         private static StructureService NewService(AnnotationContext db) => new(db, NullLogger<StructureService>.Instance);
 
         private static StructureChangeRequest Delete(long id) => new() { Delete = id };

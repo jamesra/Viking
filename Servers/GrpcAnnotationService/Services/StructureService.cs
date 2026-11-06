@@ -435,7 +435,7 @@ namespace gRPCAnnotationService
         /// <summary>
         /// Batch of create, update, and delete changes in one transaction, one result per request row in order. An update of a missing ID reports Success = false instead of failing the batch. Delete runs DeepDeleteStructure, which also removes the structure's locations, links, and children.
         /// An edit of a structure that a later row deletes, directly or as a child, keeps its Success and the delete stands.
-        /// A create or update whose ParentId names a structure the batch deletes, directly or as a child, reports Success = false and is not saved.
+        /// A create or update whose ParentId names a structure that does not exist or that the batch deletes, directly or as a child, reports Success = false and is not saved.
         /// A create or update whose TypeId names no structure type reports Success = false and is not saved (see <see cref="LiveTypeIdsAsync"/>).
         /// </summary>
         public override async Task<UpdateStructuresResponse> Update(UpdateStructuresRequest request, ServerCallContext context)
@@ -503,7 +503,7 @@ namespace gRPCAnnotationService
                     response.Results.Add(rowResponse);
                 }
 
-                await ForgetEditsOfDeletedStructuresAsync(request, pendingCreates, pendingUpdates, ct);
+                await ForgetEditsOfMissingStructuresAsync(request, pendingCreates, pendingUpdates, ct);
                 await _context.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
 
@@ -742,24 +742,25 @@ namespace gRPCAnnotationService
         /// DeepDeleteStructure deletes the structure and its child structures in SQL, which the change tracker
         /// does not see. A structure the batch edited before that delete would be saved as an UPDATE of a missing
         /// row, which EF reports as a concurrency failure and which would roll back the whole batch, so stop
-        /// tracking every edited structure whose row is gone. The delete stands. A create whose parent is gone
-        /// would fail the insert on FK_Structure_Structure the same way, so it stops being tracked and its row
-        /// reports Success = false. An update that moves a live structure under a gone parent would fail the same
-        /// FK, so it stops being tracked and its row reports Success = false with no Updated. A batch with no
-        /// delete costs no query.
+        /// tracking every edited structure whose row is gone. The delete stands. A create whose parent is gone, or
+        /// never existed, would fail the insert on FK_Structure_Structure the same way, so it stops being tracked
+        /// and its row reports Success = false. An update that moves a live structure under such a parent would
+        /// fail the same FK, so it stops being tracked and its row reports Success = false with no Updated. An
+        /// update that keeps its stored parent is not looked up: that parent can only be gone if the batch deleted
+        /// it, and then DeepDeleteStructure took the child too. A batch with no delete, no child create and no
+        /// moved structure costs no query.
         /// </summary>
-        private async Task ForgetEditsOfDeletedStructuresAsync(UpdateStructuresRequest request,
+        private async Task ForgetEditsOfMissingStructuresAsync(UpdateStructuresRequest request,
             List<(StructureChangeResponse Response, EfStructure Entity)> pendingCreates,
             List<(StructureChangeResponse Response, EfStructure Entity)> pendingUpdates, CancellationToken ct)
         {
-            if (!request.Objs.Any(c => c.ActionCase == StructureChangeRequest.ActionOneofCase.Delete))
-                return;
-
+            var deletes = request.Objs.Any(c => c.ActionCase == StructureChangeRequest.ActionOneofCase.Delete);
             var edited = _context.ChangeTracker.Entries<EfStructure>()
-                .Where(e => e.State == EntityState.Modified).ToList();
+                .Where(e => deletes && e.State == EntityState.Modified).ToList();
             var childCreates = pendingCreates.Where(c => c.Entity.ParentId.HasValue).ToList();
-            var childUpdates = pendingUpdates.Where(u => u.Entity.ParentId.HasValue).ToList();
-            if (edited.Count == 0 && childCreates.Count == 0)
+            var childUpdates = pendingUpdates.Where(u => u.Entity.ParentId.HasValue
+                && _context.Entry(u.Entity).Property(s => s.ParentId).IsModified).ToList();
+            if (edited.Count == 0 && childCreates.Count == 0 && childUpdates.Count == 0)
                 return;
 
             var live = new HashSet<long>();
@@ -778,7 +779,7 @@ namespace gRPCAnnotationService
                 rowResponse.Success = false;
             }
 
-            foreach (var (rowResponse, entity) in childUpdates.Where(u => live.Contains(u.Entity.Id) && !live.Contains(u.Entity.ParentId.Value)))
+            foreach (var (rowResponse, entity) in childUpdates.Where(u => (!deletes || live.Contains(u.Entity.Id)) && !live.Contains(u.Entity.ParentId.Value)))
             {
                 _context.Entry(entity).State = EntityState.Detached;
                 rowResponse.Success = false;
