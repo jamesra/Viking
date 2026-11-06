@@ -35,6 +35,8 @@ logger = logging.getLogger(__name__)
 
 CELL = 1024
 DEFAULT_VOLUME_REFRESH_SECONDS = 3600.0
+# A VikingXML that could not be read is not asked for again until this has passed; its cells go to the client meanwhile.
+DEFAULT_FAILURE_RETRY_SECONDS = 120.0
 DEFAULT_FETCH_WORKERS = 16
 _TIMEOUT_SECONDS = 30.0
 
@@ -88,44 +90,79 @@ class VikingTilesetSource:
         assignments: IdentityAssignments,
         http_get: HttpGet = _http_get,
         volume_refresh_seconds: float = DEFAULT_VOLUME_REFRESH_SECONDS,
+        failure_retry_seconds: float = DEFAULT_FAILURE_RETRY_SECONDS,
         fetch_workers: int = DEFAULT_FETCH_WORKERS,
         time_fn: Callable[[], float] = time.monotonic,
     ) -> None:
         self._assignments = assignments
         self._http_get = http_get
         self._volume_refresh_seconds = volume_refresh_seconds
+        self._failure_retry_seconds = failure_retry_seconds
         self._time_fn = time_fn
         self._volumes: Dict[str, Tuple[VikingVolume, float]] = {}
         self._volume_locks: Dict[str, asyncio.Lock] = {}
+        # When each VikingXML last failed to read; cleared by the next good read.
+        self._failures: Dict[str, float] = {}
+        self._loads: Dict[str, "asyncio.Task[Optional[VikingVolume]]"] = {}
         self._pool = futures.ThreadPoolExecutor(max_workers=max(1, fetch_workers), thread_name_prefix="tile-source")
 
     def close(self) -> None:
+        for load in self._loads.values():
+            load.cancel()
         self._pool.shutdown(wait=False, cancel_futures=True)
 
     async def _get(self, url: str) -> Optional[bytes]:
         return await asyncio.get_running_loop().run_in_executor(self._pool, self._http_get, url)
 
-    async def _volume(self, url: str) -> Optional[VikingVolume]:
-        """The VikingXML at ``url``, read again after ``volume_refresh_seconds``. None when it cannot be read."""
+    def _known(self, url: str) -> Tuple[Optional[VikingVolume], bool]:
+        """``(volume, current)`` without reading: the volume is None when the VikingXML is unread or its last read failed
+        less than ``failure_retry_seconds`` ago; ``current`` is False when it is due to be read."""
+        now = self._time_fn()
+        failed = self._failures.get(url)
+        if failed is not None:
+            return None, now - failed < self._failure_retry_seconds
         cached = self._volumes.get(url)
-        if cached is not None and self._time_fn() - cached[1] < self._volume_refresh_seconds:
-            return cached[0]
+        if cached is None:
+            return None, False
+        return cached[0], now - cached[1] < self._volume_refresh_seconds
+
+    async def _volume(self, url: str) -> Optional[VikingVolume]:
+        """The VikingXML at ``url``, read again after ``volume_refresh_seconds``. None when it cannot be read; a failed
+        read is not tried again for ``failure_retry_seconds``, so callers leave the context's cells to the client
+        instead of waiting on an unreachable host each time."""
+        volume, current = self._known(url)
+        if current:
+            return volume
         lock = self._volume_locks.setdefault(url, asyncio.Lock())
         async with lock:
-            cached = self._volumes.get(url)
-            if cached is not None and self._time_fn() - cached[1] < self._volume_refresh_seconds:
-                return cached[0]
+            volume, current = self._known(url)
+            if current:
+                return volume
             try:
                 data = await self._get(url)
                 if data is None:
                     raise ValueError("not found")
                 volume = await asyncio.get_running_loop().run_in_executor(self._pool, parse_viking_xml, data, url)
             except Exception as e:
-                logger.warning("VikingXML %s could not be read (%s)", url, e)
-                return cached[0] if cached is not None else None
+                logger.warning(
+                    "VikingXML %s could not be read (%s); clients send its cells for the next %.0f s",
+                    url,
+                    e,
+                    self._failure_retry_seconds,
+                )
+                self._failures[url] = self._time_fn()
+                return None
+            self._failures.pop(url, None)
             self._volumes[url] = (volume, self._time_fn())
             logger.info("VikingXML %s: volume %s, %d sections", url, volume.name, len(volume.sections))
             return volume
+
+    def _load_in_background(self, url: str) -> None:
+        """Start reading ``url`` unless a read started here is still running."""
+        running = self._loads.get(url)
+        if running is not None and not running.done():
+            return
+        self._loads[url] = asyncio.get_running_loop().create_task(self._volume(url))
 
     async def context_volume(self, annotation_context_id: int) -> Optional[Tuple[LocalContext, Optional[VikingVolume]]]:
         """The local context and its VikingXML volume (None when the document cannot be read), or None when this
@@ -136,10 +173,17 @@ class VikingTilesetSource:
         return local, await self._volume(local.endpoint)
 
     async def context_volumes(self) -> List[Tuple[LocalContext, Optional[VikingVolume]]]:
-        """Every local context with its VikingXML volume (None when the document cannot be read), by id."""
+        """Every local context with the VikingXML volume read so far, by id, without waiting on storage: a volume not
+        yet read, or whose last read failed, is None. A document that is due is read in the background, so a status
+        call answers at once even when a storage host is down; clients send the cells of a None volume themselves."""
         contexts = await self._assignments.contexts()
-        volumes = await asyncio.gather(*(self._volume(contexts[i].endpoint) for i in sorted(contexts)))
-        return [(contexts[i], volume) for i, volume in zip(sorted(contexts), volumes)]
+        listing: List[Tuple[LocalContext, Optional[VikingVolume]]] = []
+        for i in sorted(contexts):
+            volume, current = self._known(contexts[i].endpoint)
+            if not current:
+                self._load_in_background(contexts[i].endpoint)
+            listing.append((contexts[i], volume))
+        return listing
 
     async def _locate(
         self, annotation_context_id: int, coord: TileRef

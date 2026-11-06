@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Dict, List, Optional
 
@@ -97,13 +98,18 @@ def test_only_plain_mosaic_cells_are_read(channel: str, space: int, plain: bool)
 
 class _Assignments:
     def __init__(self, contexts: Dict[int, str]) -> None:
-        self.contexts = contexts
+        self.endpoints = contexts
 
     async def get(self, annotation_context_id: int):
         from segmentation_server.identity_client import LocalContext
 
-        endpoint = self.contexts.get(annotation_context_id)
+        endpoint = self.endpoints.get(annotation_context_id)
         return None if endpoint is None else LocalContext(annotation_context_id, "Rabbit", endpoint)
+
+    async def contexts(self):
+        from segmentation_server.identity_client import LocalContext
+
+        return {i: LocalContext(i, "Rabbit", endpoint) for i, endpoint in self.endpoints.items()}
 
 
 def _png(image: np.ndarray) -> bytes:
@@ -184,6 +190,58 @@ async def test_cells_the_source_cannot_draw_are_left_to_the_client(context_id: i
     assert not await source.can_read(context_id, coord)
     source.close()
 
+
+
+@pytest.mark.asyncio
+async def test_an_unreadable_vikingxml_is_not_asked_for_again_until_the_retry_interval() -> None:
+    requested: List[str] = []
+    up = [False]
+
+    def get(url: str) -> Optional[bytes]:
+        requested.append(url)
+        if not up[0]:
+            raise OSError("connection refused")
+        return VIKING_XML
+
+    clock = [0.0]
+    source = VikingTilesetSource(_Assignments({5: XML_URL}), http_get=get, failure_retry_seconds=120.0, time_fn=lambda: clock[0])
+
+    assert not await source.can_read(5, _coord())
+    assert await source.fetch(5, _coord()) is None
+    assert requested == [XML_URL]  # the second call left the cell to the client without waiting on storage
+
+    up[0] = True
+    clock[0] = 119.0
+    assert not await source.can_read(5, _coord())
+    clock[0] = 121.0
+    assert await source.can_read(5, _coord())
+    assert requested == [XML_URL, XML_URL]
+    source.close()
+
+
+@pytest.mark.asyncio
+async def test_listing_the_volumes_does_not_wait_on_storage() -> None:
+    import threading
+
+    release = threading.Event()
+
+    def get(url: str) -> Optional[bytes]:
+        release.wait(5)
+        return VIKING_XML
+
+    source = VikingTilesetSource(_Assignments({5: XML_URL}), http_get=get)
+
+    listing = await asyncio.wait_for(source.context_volumes(), 1.0)
+    assert [(c.annotation_context_id, v) for c, v in listing] == [(5, None)]
+
+    release.set()
+    for _ in range(100):
+        listing = await source.context_volumes()
+        if listing[0][1] is not None:
+            break
+        await asyncio.sleep(0.02)
+    assert listing[0][1] is not None and listing[0][1].name == "Rabbit"
+    source.close()
 
 @pytest.mark.asyncio
 async def test_can_read_answers_without_reading_a_tile() -> None:

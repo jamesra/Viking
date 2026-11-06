@@ -957,7 +957,9 @@ class SegmentationServicer(SegmentationServiceServicer):
         )
 
     async def _readable_volumes(self) -> List[ReadableVolume]:
-        """The assigned annotation contexts, and whether their VikingXML names tilesets this server can read."""
+        """The assigned annotation contexts, and whether their VikingXML names tilesets this server can read. Answers from
+        what the tile source has read so far, so an unreachable storage host does not hold up GetServerStatus; a context
+        not yet read is not readable, and clients send its cells."""
         listing = getattr(self._tile_source, "context_volumes", None)
         if listing is None:
             return []
