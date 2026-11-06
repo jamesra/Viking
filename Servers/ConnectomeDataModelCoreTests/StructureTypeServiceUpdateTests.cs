@@ -25,7 +25,8 @@ namespace ConnectomeDataModelCoreTests
     /// Id the database assigned, as <see cref="StructureTypeService.CreateStructureType"/> and the
     /// structure batch Update do, and that each change sees the changes before it in the same batch:
     /// an update or delete of a type the batch deleted fails its own row and the delete stands. A delete of a
-    /// type still in use fails its own row instead of failing the whole save. No database is contacted: interceptors stand in for the connection, the Id lookups and
+    /// type still in use, or a create or move under a parent that is missing or that the batch deleted, fails its own row instead of
+    /// failing the whole save. No database is contacted: interceptors stand in for the connection, the Id lookups and
     /// SaveChanges, which assigns identity values the way SQL Server would.
     /// </summary>
     public class StructureTypeServiceUpdateTests
@@ -172,6 +173,123 @@ namespace ConnectomeDataModelCoreTests
             Assert.DoesNotContain(identity.Types, t => t.State == EntityState.Deleted);
         }
 
+        [Fact]
+        public async Task CreateUnderMissingParentFailsItsRowAndKeepsTheRest()
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            using var db = NewContext(identity, new FakeStructureTypeTable(Stored(1, "Parent"), Stored(2, "Old")));
+
+            var response = await Update(db, CreateOf("Orphan", parentId: 99), CreateOf("Child", parentId: 1), UpdateOf(2, "New"));
+
+            Assert.Equal(1, identity.SaveCount);
+            Assert.Equal(new[] { false, true, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Null(response.Results[0].Created);
+            Assert.Equal(1000, response.Results[1].Created.Id);
+            Assert.Equal(new[] { (EntityState.Modified, "New"), (EntityState.Added, "Child") },
+                identity.Types.OrderBy(t => t.State).Select(t => (t.State, t.Name)).ToArray());
+        }
+
+        [Fact]
+        public async Task CreateUnderParentTheBatchDeletedFailsItsRow()
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            using var db = NewContext(identity, new FakeStructureTypeTable(Stored(1, "Parent")));
+
+            var response = await Update(db, DeleteOf(1), CreateOf("Child", parentId: 1));
+
+            Assert.Equal(new[] { true, false }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Equal(EntityState.Deleted, Assert.Single(identity.Types).State);
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task DeleteOfParentTheBatchGaveAChildFailsAndKeepsTheChild(bool byCreate)
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            using var db = NewContext(identity, new FakeStructureTypeTable(Stored(1, "Parent"), Stored(2, "Other")));
+
+            var response = await Update(db, byCreate ? CreateOf("Child", parentId: 1) : UpdateOf(2, "Moved", parentId: 1), DeleteOf(1));
+
+            Assert.Equal(new[] { true, false }, response.Results.Select(r => r.Success).ToArray());
+            Assert.DoesNotContain(identity.Types, t => t.State == EntityState.Deleted);
+        }
+
+        [Fact]
+        public async Task UpdateUnderMissingParentFailsItsRowAndKeepsTheRest()
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            using var db = NewContext(identity, new FakeStructureTypeTable(Stored(1, "Parent"), Stored(2, "Old"), Stored(3, "Other")));
+
+            var response = await Update(db, UpdateOf(2, "Lost", parentId: 99), UpdateOf(3, "Moved", parentId: 1));
+
+            Assert.Equal(1, identity.SaveCount);
+            Assert.Equal(new[] { false, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Null(response.Results[0].Updated);
+            Assert.Equal(1, response.Results[1].Updated.ParentId);
+            Assert.Equal(new[] { (EntityState.Unchanged, 2L, "Old"), (EntityState.Modified, 3L, "Moved") },
+                identity.Types.OrderBy(t => t.Id).ToArray());
+        }
+
+        [Fact]
+        public async Task UpdateUnderParentTheBatchDeletedFailsItsRow()
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            using var db = NewContext(identity, new FakeStructureTypeTable(Stored(1, "Parent"), Stored(2, "Old")));
+
+            var response = await Update(db, DeleteOf(1), UpdateOf(2, "Moved", parentId: 1));
+
+            Assert.Equal(new[] { true, false }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Null(response.Results[1].Updated);
+            Assert.Equal(new[] { (EntityState.Deleted, 1L, "Parent"), (EntityState.Unchanged, 2L, "Old") },
+                identity.Types.OrderBy(t => t.Id).ToArray());
+        }
+
+        /// <summary>Batches that edit a stored child, keeping its parent, around deletes of both.</summary>
+        public static TheoryData<int> KeptParentOrders => new() { 0, 1 };
+
+        [Theory]
+        [MemberData(nameof(KeptParentOrders))]
+        public async Task UpdateThatKeepsItsParentAroundTheirDeletesSucceeds(int order)
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            using var db = NewContext(identity, new FakeStructureTypeTable(Stored(1, "Parent"), Stored(2, "Child", parentId: 1)));
+
+            var response = order == 0
+                ? await Update(db, DeleteOf(1), UpdateOf(2, "New", parentId: 1), DeleteOf(2))
+                : await Update(db, UpdateOf(2, "New", parentId: 1), DeleteOf(1), DeleteOf(2));
+
+            Assert.Equal(new[] { true, true, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.All(identity.Types, t => Assert.Equal(EntityState.Deleted, t.State));
+        }
+
+        [Fact]
+        public async Task BatchNamingNoParentRunsNoParentQuery()
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            var tables = new FakeStructureTypeTable(Stored(1, "Parent"), Stored(2, "Child", parentId: 1));
+            using var db = NewContext(identity, tables);
+
+            var response = await Update(db, UpdateOf(2, "Root"), CreateOf("Free"));
+
+            Assert.Equal(new[] { true, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.False(response.Results[0].Updated.HasParentId);
+            Assert.DoesNotContain(tables.TypeSelects, s => s == "ID");
+        }
+
+        [Fact]
+        public async Task ParentsOfABatchAreLookedUpInOneQuery()
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            var tables = new FakeStructureTypeTable(Stored(1, "Parent"), Stored(2, "Other"));
+            using var db = NewContext(identity, tables);
+
+            var response = await Update(db, CreateOf("A", parentId: 1), CreateOf("B", parentId: 1), UpdateOf(2, "Moved", parentId: 1));
+
+            Assert.All(response.Results, r => Assert.True(r.Success));
+            Assert.Single(tables.TypeSelects, s => s == "ID");
+        }
+
         private static Task<UpdateStructureTypesResponse> Update(AnnotationContext db, params StructureTypeChangeRequest[] changes)
         {
             var request = new UpdateStructureTypesRequest();
@@ -179,8 +297,21 @@ namespace ConnectomeDataModelCoreTests
             return new StructureTypeService(db, NullLogger<StructureTypeService>.Instance).Update(request, new TestCallContext());
         }
 
-        private static StructureTypeChangeRequest UpdateOf(long id, string name) =>
-            new() { Update = new ProtoStructureType { Id = id, Name = name, Code = "C" } };
+        private static StructureTypeChangeRequest UpdateOf(long id, string name, long? parentId = null)
+        {
+            var type = new ProtoStructureType { Id = id, Name = name, Code = "C" };
+            if (parentId.HasValue)
+                type.ParentId = parentId.Value;
+            return new() { Update = type };
+        }
+
+        private static StructureTypeChangeRequest CreateOf(string name, long? parentId = null)
+        {
+            var type = new ProtoStructureType { Name = name, Code = name };
+            if (parentId.HasValue)
+                type.ParentId = parentId.Value;
+            return new() { Create = type };
+        }
 
         private static StructureTypeChangeRequest DeleteOf(long id) => new() { Delete = id };
 
@@ -242,6 +373,9 @@ namespace ConnectomeDataModelCoreTests
             /// <summary>Rows of other tables naming a structure type: (table, column, type Id).</summary>
             public List<(string Table, string Column, long TypeId)> References { get; } = new();
 
+            /// <summary>Selected columns, comma-joined, of each StructureType query in the order they ran.</summary>
+            public List<string> TypeSelects { get; } = new();
+
             private static readonly Dictionary<string, (Type Type, Func<EfStructureType, object> Value)> Columns = new()
             {
                 ["ID"] = (typeof(long), t => t.Id),
@@ -279,6 +413,7 @@ namespace ConnectomeDataModelCoreTests
                 var table = new DataTable();
                 if (fromTable == "StructureType")
                 {
+                    TypeSelects.Add(string.Join(",", columns));
                     foreach (var column in columns)
                         table.Columns.Add(column, Columns[column].Type);
                     foreach (var row in rows.Where(r => Columns[filterColumn].Value(r) is long v && ids.Contains(v)))

@@ -95,8 +95,10 @@ namespace gRPCAnnotationService
         /// One SaveChanges for the whole batch. A failed row sets Success=false and does not roll back the others.
         /// Each change sees the changes before it: an update or delete of an Id that does not exist, or that the
         /// batch already deleted, fails its own row. A delete of a type that is still in use (see
-        /// <see cref="TypesInUseAsync"/>) also fails its own row. Created rows are reported after the save, so each
-        /// carries the Id the database assigned.
+        /// <see cref="TypesInUseAsync"/>), or that an earlier create or update of the batch made a parent, also fails
+        /// its own row. A create, or an update that changes ParentId, naming a parent that does not exist or that the
+        /// batch already deleted fails its own row with no Updated (see <see cref="LiveParentIdsAsync"/>). Created
+        /// rows are reported after the save, so each carries the Id the database assigned.
         /// </summary>
         public override async Task<UpdateStructureTypesResponse> Update(UpdateStructureTypesRequest request, ServerCallContext context)
         {
@@ -109,6 +111,8 @@ namespace gRPCAnnotationService
                 var inUse = await TypesInUseAsync(request.Objs
                     .Where(c => c.ActionCase == StructureTypeChangeRequest.ActionOneofCase.Delete)
                     .Select(c => c.Delete).ToHashSet(), ct);
+                var liveParents = await LiveParentIdsAsync(request, ct);
+                var newParents = new HashSet<long>();
 
                 foreach (var req in request.Objs)
                 {
@@ -117,6 +121,12 @@ namespace gRPCAnnotationService
                     switch (req.ActionCase)
                     {
                         case StructureTypeChangeRequest.ActionOneofCase.Create:
+                            if (req.Create.HasParentId && !liveParents.Contains(req.Create.ParentId))
+                            {
+                                row_response.Success = false;
+                                break;
+                            }
+
                             var ef_obj = req.Create.ToStructureType();
                             ef_obj.Username = username;
                             ef_obj.Created = DateTime.UtcNow;
@@ -124,11 +134,17 @@ namespace gRPCAnnotationService
                             var insertResult = await _context.StructureTypes.AddAsync(ef_obj, ct);
                             row_response.Success = true;
                             pendingCreates.Add((row_response, insertResult.Entity));
+                            if (ef_obj.ParentId.HasValue)
+                                newParents.Add(ef_obj.ParentId.Value);
                             break;
                         case StructureTypeChangeRequest.ActionOneofCase.Update:
                             var obj = await FindLiveAsync(req.Update.Id, ct);
-                            if (obj != null)
+                            var moves = obj != null && req.Update.HasParentId && req.Update.ParentId != obj.ParentId;
+                            if (obj != null && (!moves || liveParents.Contains(req.Update.ParentId)))
                             {
+                                if (moves)
+                                    newParents.Add(req.Update.ParentId);
+
                                 // Tracked, so change tracking saves the new values.
                                 req.Update.Sync(ref obj);
                                 obj.Username = username;
@@ -142,9 +158,10 @@ namespace gRPCAnnotationService
                             break;
                         case StructureTypeChangeRequest.ActionOneofCase.Delete:
                             var EF_remove_row = await FindLiveAsync(req.Delete, ct);
-                            if (EF_remove_row != null && !inUse.Contains(req.Delete))
+                            if (EF_remove_row != null && !inUse.Contains(req.Delete) && !newParents.Contains(req.Delete))
                             {
                                 _context.StructureTypes.Remove(EF_remove_row);
+                                liveParents.Remove(req.Delete);
                                 row_response.Success = true;
                                 row_response.DeletedId = req.Delete;
                             }
@@ -211,6 +228,30 @@ namespace gRPCAnnotationService
             } while (grew);
 
             return inUse;
+        }
+
+        /// <summary>
+        /// The stored types, among the ParentIds the batch's creates and updates name, that exist. FK_StructureType_StructureType
+        /// does not cascade, so saving a type under any other parent would fail and roll back the whole batch; that row
+        /// fails instead. Update removes a type from the set when a row deletes it. A batch naming no parent costs no query.
+        /// </summary>
+        private async Task<HashSet<long>> LiveParentIdsAsync(UpdateStructureTypesRequest request, CancellationToken ct)
+        {
+            var named = request.Objs
+                .Where(c => c.ActionCase == StructureTypeChangeRequest.ActionOneofCase.Create && c.Create.HasParentId).Select(c => c.Create.ParentId)
+                .Concat(request.Objs
+                    .Where(c => c.ActionCase == StructureTypeChangeRequest.ActionOneofCase.Update && c.Update.HasParentId)
+                    .Select(c => c.Update.ParentId)).ToArray();
+
+            var live = new HashSet<long>();
+            if (named.Length == 0)
+                return live;
+
+            foreach (var chunk in named.DistinctChunk())
+                live.UnionWith(await _context.StructureTypes.AsNoTracking()
+                    .Where(t => chunk.Contains(t.Id)).Select(t => t.Id).ToListAsync(ct));
+
+            return live;
         }
 
         /// <summary>
