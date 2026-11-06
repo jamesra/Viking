@@ -12,7 +12,8 @@ using WebAnnotationModel.ServerInterface;
 namespace WebAnnotationModel.gRPC
 {
     /// <summary>
-    /// Mosaic region loads through RegionLoader 2000×2000 cells. Each cell passes its own LastQuery.
+    /// Mosaic region loads through RegionLoader cells (2000×2000 at full resolution, three times wider per pyramid level as
+    /// the view zooms out; each level's MinRadius is sent to the server). Each cell passes its own LastQuery.
     /// After cells complete, at most one incremental GetLocationLinksForSection for deleted links —
     /// never a full-section dump on first visit. The first load of a section seeds its watermark with the oldest
     /// server query time of the cells in view; later loads leave it to the 30s poll.
@@ -39,7 +40,7 @@ namespace WebAnnotationModel.gRPC
         }
 
         /// <summary>
-        /// Loads the locations in the region through the 2000x2000 cells. Without <see cref="QueryTargets.Server"/> in
+        /// Loads the locations in the region through the region cells. Without <see cref="QueryTargets.Server"/> in
         /// <paramref name="queryTargets"/> it only reads the cells and changes no section state. With it, the section is marked
         /// in use and, when the section already has a watermark, one incremental location-link sync fetches deleted links
         /// (a failure is traced and the locations still returned; cancellation is rethrown). A section without a watermark

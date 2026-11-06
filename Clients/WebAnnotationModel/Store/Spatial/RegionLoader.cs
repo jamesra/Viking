@@ -47,6 +47,12 @@ namespace WebAnnotationModel
         where KEY : struct, IEquatable<KEY>, IComparable<KEY>
         where OBJECT : class, IDataObjectWithKey<KEY>
     {
+        /// <summary>
+        /// Screen pixels the pyramid level is picked for, as in the WCF client: an annotation must span a few screen pixels
+        /// (the level's MinRadius, sent to the server) before it is downloaded, and cells grow with the zoom-out.
+        /// </summary>
+        private const double LevelScreenPixels = 8;
+
         readonly GridCellDimensions CellDimensions;
         private readonly double PowerScale;
         static double RegionUpdateInterval = RegionQueryBounds.RefreshIntervalSeconds;
@@ -158,7 +164,7 @@ namespace WebAnnotationModel
             */
 
             RegionPyramid<OBJECT> RegionPyramid = GetOrAddRegionPyramidForSection(sectionNumber);
-            IRegionPyramidLevel<RegionRequestData<OBJECT>> level = RegionPyramid.GetLevel(screenPixelSizeInVolume);
+            IRegionPyramidLevel<RegionRequestData<OBJECT>> level = LevelFor(RegionPyramid, screenPixelSizeInVolume);
             Geometry.Rectangle paddedBounds = RegionQueryBounds.PadVisible(VolumeBounds);
             GridRange<RegionRequestData<OBJECT>> gridRange = level.SubGridForRegion(paddedBounds);
 
@@ -223,6 +229,12 @@ namespace WebAnnotationModel
             return localsObjects;
         }
          
+        /// <summary>
+        /// The level a view at <paramref name="screenPixelSizeInVolume"/> loads, checks and dates; see <see cref="LevelScreenPixels"/>.
+        /// </summary>
+        static IRegionPyramidLevel<RegionRequestData<OBJECT>> LevelFor(RegionPyramid<OBJECT> pyramid, double screenPixelSizeInVolume) =>
+            pyramid.GetLevel(screenPixelSizeInVolume * LevelScreenPixels);
+
         private RegionPyramid<OBJECT> GetOrAddRegionPyramidForSection(int sectionNumber)
         {
             return this.sectionPyramids.GetOrAdd(sectionNumber, (n) => new RegionPyramid<OBJECT>(CellDimensions, PowerScale));
@@ -243,7 +255,7 @@ namespace WebAnnotationModel
             if (!sectionPyramids.TryGetValue(sectionNumber, out RegionPyramid<OBJECT> regionPyramid))
                 return false;
 
-            IRegionPyramidLevel<RegionRequestData<OBJECT>> level = regionPyramid.GetLevel(screenPixelSizeInVolume);
+            IRegionPyramidLevel<RegionRequestData<OBJECT>> level = LevelFor(regionPyramid, screenPixelSizeInVolume);
             RegionRequestData<OBJECT>[] cells = level.ArrayForRegion(volumeBounds.Value);
             if (cells.Length == 0)
                 return false;
@@ -272,7 +284,7 @@ namespace WebAnnotationModel
                 || !sectionPyramids.TryGetValue(sectionNumber, out RegionPyramid<OBJECT> regionPyramid))
                 return null;
 
-            IRegionPyramidLevel<RegionRequestData<OBJECT>> level = regionPyramid.GetLevel(screenPixelSizeInVolume);
+            IRegionPyramidLevel<RegionRequestData<OBJECT>> level = LevelFor(regionPyramid, screenPixelSizeInVolume);
             DateTime oldest = DateTime.MaxValue;
             foreach (RegionRequestData<OBJECT> cell in level.ArrayForRegion(volumeBounds.Value))
             {
