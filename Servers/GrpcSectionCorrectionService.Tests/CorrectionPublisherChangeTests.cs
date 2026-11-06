@@ -250,5 +250,34 @@ namespace GrpcSectionCorrectionService.Tests
             Assert.IsTrue(File.Exists(second));
             Assert.AreEqual(1, Directory.GetFiles(_dest, "volume*.npz").Length);
         }
+
+        [TestMethod]
+        public async Task FailedSwap_PutsThePublishedSetBack()
+        {
+            InMemoryFingerprintSource source = InMemoryFingerprintSource.Generate(1, length: 140);
+            await PublishAsync(source, Options());
+            DateTime built = BuiltUtc();
+
+            // A staging folder that is gone by the time it should take the live name fails the second move.
+            string staging = _dest + ".staging";
+            DirectoryNotFoundException ex = Assert.ThrowsException<DirectoryNotFoundException>(
+                () => CorrectionPublisher.SwapIntoPlace(staging, _dest, _ => { }));
+
+            StringAssert.Contains(ex.Message, staging, "the caller sees why the swap failed");
+            Assert.AreEqual(built, BuiltUtc(), "the previous publish is live again");
+            Assert.IsFalse(Directory.Exists(_dest + ".old"));
+        }
+
+        [TestMethod]
+        public void FailedFirstSwap_LeavesNoLiveFolder()
+        {
+            string staging = _dest + ".staging";
+
+            DirectoryNotFoundException ex = Assert.ThrowsException<DirectoryNotFoundException>(
+                () => CorrectionPublisher.SwapIntoPlace(staging, _dest, _ => { }));
+
+            StringAssert.Contains(ex.Message, staging, "nothing was parked, so nothing is moved back");
+            Assert.IsFalse(Directory.Exists(_dest));
+        }
     }
 }

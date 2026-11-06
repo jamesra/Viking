@@ -339,7 +339,6 @@ namespace Viking.SectionCorrectionBuilder
                 ?? new Dictionary<long, SectionVectorField>(published.Sections);
 
             string staging = dest + ".staging";
-            string previous = dest + ".old";
             if (Directory.Exists(staging))
                 Directory.Delete(staging, true);
             Directory.CreateDirectory(staging);
@@ -353,22 +352,7 @@ namespace Viking.SectionCorrectionBuilder
                 QuiverRenderer.WriteSectionQuivers(preview, sections.Values, options.DisplayPitchNm, SectionBoundsNm(volume, scale, stosGroup, sections.Keys));
             }
 
-            if (Directory.Exists(previous))
-                Directory.Delete(previous, true);
-            if (Directory.Exists(dest))
-                Directory.Move(dest, previous);
-            Directory.Move(staging, dest);
-            if (Directory.Exists(previous))
-            {
-                try
-                {
-                    Directory.Delete(previous, true);
-                }
-                catch (IOException)
-                {
-                    Log(options, $"{stosGroup}: left previous publish at {previous}");
-                }
-            }
+            SwapIntoPlace(staging, dest, msg => Log(options, $"{stosGroup}: {msg}"));
 
             Log(options, $"{stosGroup}: published {sections.Count} sections to {dest}");
             return new CorrectionPublishResult
@@ -378,6 +362,46 @@ namespace Viking.SectionCorrectionBuilder
                 SectionsPublished = sections.Count,
                 Destination = dest
             };
+        }
+
+        /// <summary>
+        /// Replaces <paramref name="dest"/> with <paramref name="staging"/>. The live set is parked at {dest}.old between
+        /// the two moves, where the correction catalogs still serve it. If staging cannot take the live name, the parked set
+        /// is moved back so the previous publish stays live, staging is left for diagnosis, and the error is rethrown.
+        /// </summary>
+        /// <param name="staging">Fully written set that takes the live name.</param>
+        /// <param name="dest">Live folder; need not exist yet.</param>
+        /// <param name="log">Receives a message when the parked set cannot be deleted afterwards.</param>
+        internal static void SwapIntoPlace(string staging, string dest, Action<string> log)
+        {
+            string previous = dest + ".old";
+            if (Directory.Exists(previous))
+                Directory.Delete(previous, true);
+            bool parked = Directory.Exists(dest);
+            if (parked)
+                Directory.Move(dest, previous);
+            try
+            {
+                Directory.Move(staging, dest);
+            }
+            catch
+            {
+                if (parked)
+                    Directory.Move(previous, dest);
+                throw;
+            }
+
+            if (Directory.Exists(previous))
+            {
+                try
+                {
+                    Directory.Delete(previous, true);
+                }
+                catch (IOException)
+                {
+                    log($"left previous publish at {previous}");
+                }
+            }
         }
 
         static string SectionList(SortedSet<long> sections)
