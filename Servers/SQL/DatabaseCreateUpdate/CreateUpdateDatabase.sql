@@ -9225,5 +9225,46 @@ BEGIN TRANSACTION main
 		      N'SET NOCOUNT ON and header comments in the network procedures and SelectNumConnectionsPerStructure' ,getDate(),User_ID())
 	 COMMIT TRANSACTION ninetytwo
 	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 93)))
+	begin
+     print N'SET NOCOUNT ON and a header comment in SelectStructuresLinkedViaChildren'
+	 BEGIN TRANSACTION ninetythree
+
+	 /*The body is its latest definition here (step 23) with only a header comment and SET NOCOUNT ON added; the
+	   parameter keeps the name @StructureID that deployed databases have.*/
+	 EXEC('-- SelectStructuresLinkedViaChildren: the distinct ParentIDs of the structures whose children are the
+-- source or target of a StructureLink with a child of @StructureID.
+-- Parameters: @StructureID, the parent structure whose child links are followed.
+-- Callers: none in code; generated wrappers exist in EF6 ConnectomeEntities and EF Core
+-- AnnotationContextProcedures.SelectStructuresLinkedViaChildrenAsync.
+			ALTER PROCEDURE [dbo].[SelectStructuresLinkedViaChildren]
+			@StructureID bigint
+			AS
+			BEGIN
+				SET NOCOUNT ON;
+
+				IF OBJECT_ID(''tempdb..#ChildStructure'') IS NOT NULL DROP TABLE #ChildStructure
+				IF OBJECT_ID(''tempdb..#LinkedStructures'') IS NOT NULL DROP TABLE #LinkedStructures
+
+				select ID into #ChildStructure from structure where ParentID = @StructureID
+				select * into #LinkedStructures from StructureLink where SourceID in (Select ID from #ChildStructure) or TargetID in (Select ID from #CHildStructure)
+
+				select Distinct ParentID from Structure where ID in (select SourceID from #LinkedStructures) or ID in (select TargetID from #LinkedStructures)
+
+				DROP TABLE #ChildStructure
+				DROP TABLE #LinkedStructures
+			END')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+
+	INSERT INTO DBVersion values (93,
+		      N'SET NOCOUNT ON and a header comment in SelectStructuresLinkedViaChildren' ,getDate(),User_ID())
+	 COMMIT TRANSACTION ninetythree
+	end
 		   
 COMMIT TRANSACTION main
