@@ -151,8 +151,8 @@ namespace ConnectomeDataModelCoreTests
         /// Stands in for the Structure table. Opening the connection is suppressed; commands and the transaction
         /// are fakes. A Structure query returns the key of each stored row whose ID is among its parameter values.
         /// DeepDeleteStructure removes the structure and its children, as the procedure does. SaveChanges is
-        /// suppressed and records the structures it would update; one whose row is gone fails the save with
-        /// <see cref="DbUpdateConcurrencyException"/>, as EF does when SQL Server reports no rows affected.
+        /// suppressed and records the structures it would update; an update or delete of one whose row is gone fails
+        /// the save with <see cref="DbUpdateConcurrencyException"/>, as EF does when SQL Server reports no rows affected.
         /// </summary>
         private sealed class FakeStructureDatabase : IDbConnectionInterceptor, IDbCommandInterceptor, IDbTransactionInterceptor, ISaveChangesInterceptor
         {
@@ -209,11 +209,13 @@ namespace ConnectomeDataModelCoreTests
 
             public ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
             {
-                var updated = eventData.Context.ChangeTracker.Entries<EfStructure>()
-                    .Where(e => e.State == EntityState.Modified).ToList();
-                if (updated.Any(e => !Rows.ContainsKey(e.Entity.Id)))
+                var entries = eventData.Context.ChangeTracker.Entries<EfStructure>().ToList();
+                // EF counts rows for an UPDATE and a DELETE alike, so marking a vanished row Deleted instead of
+                // detaching it would fail the save the same way the stale UPDATE did.
+                if (entries.Any(e => (e.State == EntityState.Modified || e.State == EntityState.Deleted) && !Rows.ContainsKey(e.Entity.Id)))
                     throw new DbUpdateConcurrencyException("The database operation was expected to affect 1 row(s), but actually affected 0 row(s).");
 
+                var updated = entries.Where(e => e.State == EntityState.Modified).ToList();
                 Saved = updated.Select(e => e.Entity.Id).OrderBy(id => id).ToArray();
                 return ValueTask.FromResult(InterceptionResult<int>.SuppressWithResult(updated.Count));
             }
