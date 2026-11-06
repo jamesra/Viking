@@ -43,14 +43,18 @@ namespace WebAnnotationModel.gRPC.Tests
 
         private Task<LocationObj> AddCircleLocation(long id, Vector2 center, long section = Section)
         {
-            var shape = new Circle(center, LocationRadius);
+            return AddCircleLocation(id, center, center, section);
+        }
+
+        private Task<LocationObj> AddCircleLocation(long id, Vector2 mosaicCenter, Vector2 volumeCenter, long section = Section)
+        {
             return AddLocation(new Location
             {
                 Id = id,
                 ParentId = 10,
                 Section = section,
-                MosaicGeometry = shape.ToShape(LocationType.CIRCLE, CoordinateSpace.Mosaic, null),
-                VolumeGeometry = shape.ToShape(LocationType.CIRCLE, CoordinateSpace.Volume, null),
+                MosaicGeometry = new Circle(mosaicCenter, LocationRadius).ToShape(LocationType.CIRCLE, CoordinateSpace.Mosaic, null),
+                VolumeGeometry = new Circle(volumeCenter, LocationRadius).ToShape(LocationType.CIRCLE, CoordinateSpace.Volume, null),
             });
         }
 
@@ -75,6 +79,20 @@ namespace WebAnnotationModel.gRPC.Tests
 
             Assert.That(_locations.Contains(straddling, bounds), Is.False, "the centre is outside the bounds");
             Assert.That(await _locations.GetLocalObjectsInRegion(Section, bounds, 0), Is.EquivalentTo(new[] { straddling }));
+        }
+
+        /// <summary>
+        /// The query is in mosaic space, as the WCF R-tree is: a location whose volume shape sits in the bounds but whose
+        /// mosaic shape does not is excluded, and the reverse is returned.
+        /// </summary>
+        [Test]
+        public async Task MosaicShapeDecides_NotVolumeShape()
+        {
+            var farAway = new Vector2(50000, 50000);
+            var mosaicInside = await AddCircleLocation(1, new Vector2(1256, 1256), farAway);
+            await AddCircleLocation(2, farAway, new Vector2(1256, 1256));
+
+            Assert.That(await _locations.GetLocalObjectsInRegion(Section, Cell, 0), Is.EquivalentTo(new[] { mosaicInside }));
         }
 
         [Test]
