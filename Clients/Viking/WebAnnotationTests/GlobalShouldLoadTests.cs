@@ -32,6 +32,12 @@ namespace WebAnnotationTests
         }
 
         [TestInitialize]
+        public void Initialize()
+        {
+            SegmentationServiceSessionTests.EnsureVolumeCachePathAvailable();
+            AccessibleVolumeSession.Clear();
+        }
+
         [TestCleanup]
         public void ClearIdentitySession() => AccessibleVolumeSession.Clear();
 

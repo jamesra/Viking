@@ -1834,14 +1834,17 @@ namespace WebAnnotation
             return false;
         }
 
-        private static bool GetEndpointFromXML(XElement elem)
+        internal static bool GetEndpointFromXML(XElement elem)
         {
             //Fetch the name if we know it
             switch (elem.Name.LocalName)
             {
                 case "Volume":
-                    UserSettingsElement = elem.Elements().FirstOrDefault(e => e.Name.LocalName == "DefaultWebAnnotationUserSettings")
-                        ?? throw new XMLMissingDataException("The Volume Element is missing the <DefaultWebAnnotationUserSettings> element");
+                    // Optional: without it the user settings come from the local copy or the default file
+                    // (LoadServerUserSettingsAsync), so a volume missing it still loads its annotations.
+                    UserSettingsElement = elem.Elements().FirstOrDefault(e => e.Name.LocalName == "DefaultWebAnnotationUserSettings");
+                    if (UserSettingsElement is null)
+                        Trace.WriteLine("The Volume element has no <DefaultWebAnnotationUserSettings>; using the default user settings.", "WebAnnotation");
 
                     XElement MappingElement = elem.Elements().FirstOrDefault(e => e.Name.LocalName == "VolumeToEndpoint");
 
@@ -2086,7 +2089,7 @@ namespace WebAnnotation
         {
             //Try to download the default user settings file
             Uri uri = UserSettingsUri;
-            uri ??= new Uri("http://rouge1.codepharm.net/RABBIT/WebAnnotationUserSettings.xml");
+            uri ??= new Uri("http://rogue1.codepharm.net/RABBIT/WebAnnotationUserSettings.xml");
 
             try
             {
