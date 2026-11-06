@@ -72,6 +72,29 @@ namespace ConnectomeDataModelCoreTests
             Assert.True(store.Committed);
         }
 
+        /// <summary>
+        /// A move under a parent the batch also deletes is still an edit of a structure a later row deletes, so it keeps
+        /// its Success: the missing-parent failure applies only to a structure that survives the batch's deletes.
+        /// </summary>
+        [Fact]
+        public async Task MovingAChildThenDeletingItAndItsNewParentCommitsTheDeletes()
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(1);
+            store.AddStructure(2, parentId: 1);
+            store.AddStructure(5);
+            using var db = NewContext(store);
+            Track(db, store, 2);
+
+            var response = await NewService(db).Update(Request(Update(2, parentId: 5), Delete(1), Delete(5)), new TestCallContext());
+
+            Assert.Equal(new[] { (true, 0L), (true, 1L), (true, 5L) }, response.Results.Select(r => (r.Success, r.DeletedId)).ToArray());
+            Assert.NotNull(response.Results[0].Updated);
+            Assert.Empty(store.Saved);
+            Assert.Empty(store.Rows);
+            Assert.True(store.Committed);
+        }
+
         [Fact]
         public async Task DeletingThenUpdatingAStructureFailsTheUpdate()
         {
