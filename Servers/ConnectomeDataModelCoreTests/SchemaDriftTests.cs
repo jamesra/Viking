@@ -85,15 +85,6 @@ namespace ConnectomeDataModelCoreTests
                 "Smoke schema omits the spatial cache (see above).",
             [$"table dbo.StructureTemplates only in {UpdateScript}, not in {MinimalSchema}"] =
                 "Smoke schema omits the template table (see above).",
-
-            // TODO: DBVersion 71 creates StructureSpatialCache.ConvexHull NOT NULL and no later step changes it, but
-            // the sqlproj and EF say NULL. The table is written only by that step's initial fill and the
-            // UpdateStructureSpatialCache trigger, both from ConvexHullAggregate over a structure's locations, so it
-            // always has a hull and nothing fails today; align the copies to NOT NULL (the deployed state) and remove these.
-            [$"column dbo.StructureSpatialCache.ConvexHull: NOT NULL in {UpdateScript}, NULL in {SqlProject}"] =
-                "Deployed databases are stricter than the sqlproj copy; see the TODO above.",
-            [$"column dbo.StructureSpatialCache.ConvexHull: NOT NULL in {UpdateScript}, NULL in {EfModel}"] =
-                "Deployed databases are stricter than the EF model; see the TODO above.",
         };
 
         /// <summary>Objects minimal-schema.sql creates that are not in dbo/ or the sqlproj, with the reason.</summary>

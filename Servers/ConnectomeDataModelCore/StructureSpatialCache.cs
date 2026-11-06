@@ -24,6 +24,7 @@ namespace Viking.DataModel.Annotation
         public int MaxDimension { get; set; }
         public double MinZ { get; set; }
         public double MaxZ { get; set; }
+        [Required]
         [Column(TypeName = "geometry")]
         public Geometry ConvexHull { get; set; }
         [Column(TypeName = "datetime")]

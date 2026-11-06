@@ -6,7 +6,7 @@
     [MaxDimension] INT              CONSTRAINT [StructureSpatialCache_MaxDimension_Default] DEFAULT ((0)) NOT NULL,
     [MinZ]         FLOAT (53)       NOT NULL,
     [MaxZ]         FLOAT (53)       NOT NULL,
-    [ConvexHull]   [sys].[geometry] NULL,
+    [ConvexHull]   [sys].[geometry] NOT NULL,
     [LastModified] DATETIME         NOT NULL,
     PRIMARY KEY CLUSTERED ([ID] ASC),
     FOREIGN KEY ([ID]) REFERENCES [dbo].[Structure] ([ID]) ON DELETE CASCADE
