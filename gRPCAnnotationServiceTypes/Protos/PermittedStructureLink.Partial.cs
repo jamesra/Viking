@@ -33,7 +33,7 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
 
         ulong IPermittedStructureLink.TargetTypeID { get => (ulong)TargetTypeId; set => TargetTypeId = (long)value; }
 
-        bool IPermittedStructureLink.Directional { get => Bidirectional; set => Bidirectional = !value; }
+        bool IPermittedStructureLink.Directional { get => !Bidirectional; set => Bidirectional = !value; }
 
         PermittedStructureLinkKey IDataObjectWithKey<PermittedStructureLinkKey>.ID { get => new PermittedStructureLinkKey(SourceTypeId, TargetTypeId, bidirectional_); set => throw new NotImplementedException(); }
 

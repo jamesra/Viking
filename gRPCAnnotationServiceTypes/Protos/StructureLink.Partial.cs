@@ -18,12 +18,12 @@ namespace Viking.AnnotationServiceTypes.gRPC.V1.Protos
         ulong IStructureLinkKey.SourceID { get => (ulong)SourceId; }
         ulong IStructureLinkKey.TargetID { get => (ulong)TargetId; }
 
-        bool IStructureLinkKey.Directional { get => Bidirectional; }
+        bool IStructureLinkKey.Directional { get => !Bidirectional; }
 
         ulong IStructureLink.SourceID { get => (ulong)SourceId; set => SourceId = (long)value; }
         ulong IStructureLink.TargetID { get => (ulong)TargetId; set => TargetId = (long)value; }
 
-        bool IStructureLink.Directional { get => Bidirectional; set => Bidirectional = !value; }
+        bool IStructureLink.Directional { get => !Bidirectional; set => Bidirectional = !value; }
         StructureLinkKey IDataObjectWithKey<StructureLinkKey>.ID
         {
             get => new StructureLinkKey(SourceId, TargetId, Bidirectional);

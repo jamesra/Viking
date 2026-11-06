@@ -208,19 +208,24 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         /// <summary>
-        /// Pins the proto partial's own <c>IStructureLink.Directional</c> as it is today: the getter returns
-        /// <c>Bidirectional</c> (not its inverse) while the setter stores <c>!value</c>. The converters never read it
-        /// from a proto (they take the concrete overload), so no converter output is affected.
-        /// Deferred item: "proto StructureLink/PermittedStructureLink Directional getter not inverted".
+        /// The proto's <c>IStructureLink.Directional</c> and <c>IStructureLinkKey.Directional</c> are
+        /// <c>!Bidirectional</c>, agree with the setter, and a key built through the interface is the proto's own key.
         /// </summary>
-        [Test]
-        public void StructureLinkProto_DirectionalGetterIsNotInverted_DeferredItem()
+        [TestCase(true)]
+        [TestCase(false)]
+        public void StructureLinkProto_DirectionalIsTheInverseOfBidirectional(bool bidirectional)
         {
-            IStructureLink proto = new StructureLink { Bidirectional = true };
-            Assert.That(proto.Directional, Is.True);
+            var concrete = new StructureLink { SourceId = 5, TargetId = 6, Bidirectional = bidirectional };
+            IStructureLink proto = concrete;
 
-            proto.Directional = true;
-            Assert.That(((StructureLink)proto).Bidirectional, Is.False);
+            Assert.That(proto.Directional, Is.EqualTo(!bidirectional));
+            Assert.That(((IStructureLinkKey)concrete).Directional, Is.EqualTo(!bidirectional));
+            Assert.That(new StructureLinkKey(proto), Is.EqualTo(new StructureLinkKey(5, 6, bidirectional)));
+            Assert.That(concrete.CompareTo(new StructureLinkKey(5, 6, bidirectional)), Is.Zero);
+
+            proto.Directional = bidirectional;
+            Assert.That(proto.Directional, Is.EqualTo(bidirectional));
+            Assert.That(concrete.Bidirectional, Is.EqualTo(!bidirectional));
         }
 
         [Test]
@@ -321,21 +326,25 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         /// <summary>
-        /// Pins the proto partial's <c>IPermittedStructureLink.Directional</c> getter, which returns <c>Bidirectional</c>
-        /// uninverted (the setter stores <c>!value</c>, and <c>ToPermittedStructureLink</c> inverts correctly).
-        /// Deferred item: "proto StructureLink/PermittedStructureLink Directional getter not inverted".
+        /// The proto's <c>IPermittedStructureLink.Directional</c> is <c>!Bidirectional</c> and agrees with the setter,
+        /// <c>ToPermittedStructureLink</c>, the key built through the interface, and <c>Equals</c> between two protos.
         /// </summary>
-        [Test]
-        public void PermittedStructureLinkProto_DirectionalGetterIsNotInverted_DeferredItem()
+        [TestCase(true)]
+        [TestCase(false)]
+        public void PermittedStructureLinkProto_DirectionalIsTheInverseOfBidirectional(bool bidirectional)
         {
-            IPermittedStructureLink proto = new PermittedStructureLink { Bidirectional = true };
-            Assert.That(proto.Directional, Is.True);
+            var concrete = new PermittedStructureLink { SourceTypeId = 1, TargetTypeId = 2, Bidirectional = bidirectional };
+            IPermittedStructureLink proto = concrete;
 
-            proto.Directional = true;
-            Assert.That(((PermittedStructureLink)proto).Bidirectional, Is.False);
+            Assert.That(proto.Directional, Is.EqualTo(!bidirectional));
+            Assert.That(new PermittedStructureLinkKey(proto), Is.EqualTo(new PermittedStructureLinkKey(1, 2, bidirectional)));
+            Assert.That(concrete.Equals((IPermittedStructureLink)new PermittedStructureLink { SourceTypeId = 1, TargetTypeId = 2, Bidirectional = bidirectional }), Is.True);
+            Assert.That(concrete.Equals((IPermittedStructureLink)new PermittedStructureLink { SourceTypeId = 1, TargetTypeId = 2, Bidirectional = !bidirectional }), Is.False);
+            Assert.That(proto.ToPermittedStructureLink().Bidirectional, Is.EqualTo(bidirectional));
 
-            var rebuilt = new FakePermittedStructureLink { SourceTypeID = 1, TargetTypeID = 2, Directional = false }.ToPermittedStructureLink();
-            Assert.That(rebuilt.Bidirectional, Is.True);
+            proto.Directional = bidirectional;
+            Assert.That(proto.Directional, Is.EqualTo(bidirectional));
+            Assert.That(concrete.Bidirectional, Is.EqualTo(!bidirectional));
         }
 
         [Test]
