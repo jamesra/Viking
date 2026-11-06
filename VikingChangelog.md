@@ -148,6 +148,12 @@ CreateUpdateDatabase.sql leaves. Before it, on a script-built database the servi
 created or edited a location, or edited a structure, structure type or structure link. Users get it when the gRPC
 annotation service is redeployed. Deleting a location on such a database still fails until DeletedLocations.Z and
 DeletedLocationLinks reach the script.
+
+Database and gRPC annotation service change, not a client bullet: DBVersion 90 adds DeletedLocations.Z and
+DeletedLocationLinks, and Location_delete now records each deleted location once with its section; the service no longer
+writes DeletedLocations itself. Before it, deleting a location through the gRPC service failed on a script-built database
+(Msg 207 or 208), and on a database that had both, the trigger and the service inserted the same ID (Msg 2627). Users get
+it when that script is run on their annotation database and the service is redeployed.
 -->
 
 * **Raising the SAM2 threshold redraws at once.** Moving the **SAM2 threshold** slider up now redraws the outlines on screen from the answer Viking already has, for the segmentation command and for auto-polygonize proposals, instead of asking the segmentation server again. Moving it below the threshold an answer was grown at still asks again. Answers from a segmentation server older than this change are always asked for again.

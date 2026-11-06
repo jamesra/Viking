@@ -208,10 +208,28 @@ BEGIN
 END
 GO
 
--- LocationService and DeepDeleteStructure write DeletedLocations themselves (with Z); the
--- deployed Location_delete trigger would insert the same ID again (PK_DeletedLocations).
+-- Location_delete, as CreateUpdateDatabase.sql DBVersion 90 and dbo/Tables/Location.sql define it:
+-- the only writer of DeletedLocations for LocationService deletes. IDs already logged (DeepDeleteStructure
+-- below logs its own) are skipped.
 IF OBJECT_ID(N'dbo.Location_delete', N'TR') IS NOT NULL
     DROP TRIGGER dbo.Location_delete;
+GO
+
+CREATE TRIGGER [dbo].[Location_delete]
+    ON  [dbo].[Location]
+    FOR DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT INTO [dbo].[DeletedLocations] (ID, Z)
+    SELECT deleted.ID, deleted.Z FROM deleted
+    WHERE NOT EXISTS (SELECT 1 FROM [dbo].[DeletedLocations] DL WHERE DL.ID = deleted.ID)
+
+    DELETE FROM [dbo].[LocationLink]
+        WHERE A IN (SELECT deleted.ID FROM deleted)
+           OR B IN (SELECT deleted.ID FROM deleted)
+END
 GO
 
 -- Simplified DeepDeleteStructure (full SSDT version also clears children/links).

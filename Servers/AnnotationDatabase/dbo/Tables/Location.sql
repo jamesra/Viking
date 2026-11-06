@@ -135,18 +135,23 @@ EXECUTE sp_settriggerorder @triggername = N'[dbo].[UpdateStructureSpatialCache]'
 
 GO
 
-			 CREATE TRIGGER [dbo].[Location_delete] 
-			   ON  [dbo].[Location]
-			   FOR DELETE
-			 AS 
-				INSERT INTO [dbo].[DeletedLocations] (ID, Z)
-				SELECT deleted.ID, deleted.Z FROM deleted
-				
-				delete from LocationLink 
-					where A in  (SELECT deleted.ID FROM deleted)
-						or B in (SELECT deleted.ID FROM deleted)
-				
-				SET NOCOUNT ON;
+-- Location_delete, as CreateUpdateDatabase.sql DBVersion 90 defines it: the only writer of DeletedLocations, which the
+-- gRPC LocationService returns as DeletedIds on incremental location syncs. IDs already logged are skipped.
+CREATE TRIGGER [dbo].[Location_delete]
+	ON  [dbo].[Location]
+	FOR DELETE
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+	INSERT INTO [dbo].[DeletedLocations] (ID, Z)
+	SELECT deleted.ID, deleted.Z FROM deleted
+	WHERE NOT EXISTS (SELECT 1 FROM [dbo].[DeletedLocations] DL WHERE DL.ID = deleted.ID)
+
+	DELETE FROM [dbo].[LocationLink]
+		WHERE A IN (SELECT deleted.ID FROM deleted)
+		   OR B IN (SELECT deleted.ID FROM deleted)
+END
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'Structure which we belong to', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'Location', @level2type = N'COLUMN', @level2name = N'ParentID';
 

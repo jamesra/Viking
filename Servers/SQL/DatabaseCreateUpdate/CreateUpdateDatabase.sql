@@ -8865,5 +8865,98 @@ BEGIN TRANSACTION main
 		      N'Prepopulate PermittedStructureLink from existing structure links; permit types 34, 73 and 189 to link to 267' ,getDate(),User_ID())
 	 COMMIT TRANSACTION eightynine
 	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 90)))
+	begin
+     print N'Add DeletedLocations.Z and DeletedLocationLinks; Location_delete logs each deleted location once with its section'
+	 BEGIN TRANSACTION ninety
+
+	 /*The gRPC LocationService returns DeletedLocations rows whose Z is the section asked for (or NULL) as DeletedIds,
+	   and DeletedLocationLinks rows as deleted links, on incremental syncs (modified_after set). No step added
+	   DeletedLocations.Z or created DeletedLocationLinks, so on a script-built database those reads failed, and deleting a
+	   location through the service failed (Msg 207 on Z, Msg 208 on DeletedLocationLinks). The column, table and index
+	   match the EF model and the sqlproj, and are guarded because a hand fix may already have made them.
+
+	   Location_delete becomes the only writer of DeletedLocations, as Structure_delete is of DeletedStructures (step 88):
+	   it now records Z and skips IDs already logged, so a reused ID or a procedure that logged the ID first does not fail
+	   on the primary key. LocationService no longer writes DeletedLocations itself; both inserting the same ID was the
+	   Msg 2627 on PK_DeletedLocations. SET NOCOUNT ON comes first so the logging row does not change the row count EF6
+	   (WCF) checks after its DELETE. Whoever removes LocationLink rows logs them in DeletedLocationLinks (the service
+	   does); FK_LocationLink_Location and FK_LocationLink_Location1 refuse a location delete while links remain, so the
+	   LocationLink cleanup in the trigger is kept unchanged and has nothing to log.*/
+	 IF COL_LENGTH(N'dbo.DeletedLocations', N'Z') IS NULL
+	 BEGIN
+		EXEC('ALTER TABLE [dbo].[DeletedLocations] ADD [Z] BIGINT NULL')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+	 END
+
+	 IF OBJECT_ID(N'dbo.DeletedLocationLinks', N'U') IS NULL
+	 BEGIN
+		EXEC('CREATE TABLE [dbo].[DeletedLocationLinks] (
+				[A]         BIGINT   NOT NULL,
+				[B]         BIGINT   NOT NULL,
+				[AZ]        BIGINT   NULL,
+				[BZ]        BIGINT   NULL,
+				[DeletedOn] DATETIME CONSTRAINT [DF_DeletedLocationLinks_DeletedOn] DEFAULT (getutcdate()) NOT NULL,
+				CONSTRAINT [PK_DeletedLocationLinks] PRIMARY KEY CLUSTERED ([A] ASC, [B] ASC) WITH (FILLFACTOR = 90)
+			)')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+	 END
+
+	 IF NOT EXISTS(select * from sys.indexes where name = 'DeletedLocationLinks_DeletedOn' AND object_id = OBJECT_ID(N'dbo.DeletedLocationLinks'))
+	 BEGIN
+		EXEC('CREATE NONCLUSTERED INDEX [DeletedLocationLinks_DeletedOn]
+				ON [dbo].[DeletedLocationLinks]([DeletedOn] ASC) WITH (FILLFACTOR = 90)')
+
+		if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+	 END
+
+	 IF EXISTS(select * from sys.triggers where name = 'Location_delete')
+	 BEGIN
+		DROP TRIGGER [dbo].[Location_delete];
+	 END
+
+	 EXEC('-- Location_delete: records the ID and section (Z) of every deleted location in dbo.DeletedLocations, which
+-- the gRPC LocationService returns as DeletedIds on incremental location syncs. IDs already logged are skipped.
+		CREATE TRIGGER [dbo].[Location_delete]
+			ON  [dbo].[Location]
+			FOR DELETE
+		AS
+		BEGIN
+			SET NOCOUNT ON;
+
+			INSERT INTO [dbo].[DeletedLocations] (ID, Z)
+			SELECT deleted.ID, deleted.Z FROM deleted
+			WHERE NOT EXISTS (SELECT 1 FROM [dbo].[DeletedLocations] DL WHERE DL.ID = deleted.ID)
+
+			DELETE FROM [dbo].[LocationLink]
+				WHERE A IN (SELECT deleted.ID FROM deleted)
+				   OR B IN (SELECT deleted.ID FROM deleted)
+		END')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+
+	INSERT INTO DBVersion values (90,
+		      N'Add DeletedLocations.Z and DeletedLocationLinks; Location_delete logs each deleted location once with its section' ,getDate(),User_ID())
+	 COMMIT TRANSACTION ninety
+	end
 		   
 COMMIT TRANSACTION main

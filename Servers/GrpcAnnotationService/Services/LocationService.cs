@@ -523,23 +523,9 @@ namespace gRPCAnnotationService
                                 await LogDeletedLocationLinkAsync(link.A, link.B, ct);
                             _context.LocationLinks.RemoveRange(attached);
 
-                            // Record the delete so incremental GetLocationChanges* calls can
-                            // tell clients to drop the ID. The service writes it because the deployed
-                            // Location_delete trigger logs no Z; minimal-schema.sql drops that trigger.
-                            // Where both exist they insert the same ID (PK_DeletedLocations), so the
-                            // tombstone must move to the trigger alone. Find also sees a row this
-                            // batch queued for the same ID, which the database cannot.
-                            var alreadyLogged = await _context.DeletedLocations.FindAsync(new object[] { toDelete.Id }, ct) != null;
-                            if (!alreadyLogged)
-                            {
-                                await _context.DeletedLocations.AddAsync(new DeletedLocation
-                                {
-                                    Id = toDelete.Id,
-                                    Z = toDelete.Z,
-                                    DeletedOn = DateTime.UtcNow
-                                }, ct);
-                            }
-
+                            // The Location_delete trigger writes the DeletedLocations row (ID, Z)
+                            // that incremental GetLocationChanges* calls return; queuing one here as well would
+                            // fail the save on PK_DeletedLocations.
                             _context.Locations.Remove(toDelete);
                             rowResponse.Success = true;
                             rowResponse.DeletedId = change.Delete;

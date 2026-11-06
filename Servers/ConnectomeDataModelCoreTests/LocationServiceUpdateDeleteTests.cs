@@ -27,10 +27,11 @@ namespace ConnectomeDataModelCoreTests
     /// <summary>
     /// Pins the offline behavior of <see cref="LocationService.Update"/> when one batch touches the same row
     /// twice: deleting two linked locations, deleting one ID twice, or creating a location whose Links list a
-    /// peer twice each writes one row per key (one DeletedLocationLink, one DeletedLocation, one LocationLink)
-    /// and commits, instead of failing the whole batch on an EF identity conflict. Also pins the tombstones a
-    /// plain delete writes today: one DeletedLocationLink per attached link with both sections, none for a link
-    /// the database already logged. CreateLocation and CreateLocationLink, which share Update's link helper, save
+    /// peer twice each writes one row per key (one DeletedLocationLink, one LocationLink) and commits, instead of
+    /// failing the whole batch on an EF identity conflict. Also pins the tombstones a plain delete writes: one
+    /// DeletedLocationLink per attached link with both sections, none for a link the database already logged, and
+    /// no DeletedLocation, which the Location_delete trigger writes (a second writer fails on PK_DeletedLocations).
+    /// CreateLocation and CreateLocationLink, which share Update's link helper, save
     /// one link per distinct pair and refuse a self-link. No database is contacted: interceptors stand in for
     /// the connection, the transaction, the queries and SaveChanges.
     /// </summary>
@@ -54,7 +55,7 @@ namespace ConnectomeDataModelCoreTests
 
             Assert.Equal(new[] { (true, 2L), (true, 1L) }, response.Results.Select(r => (r.Success, r.DeletedId)).ToArray());
             Assert.Equal(new[] { (1L, 2L, (long?)10, (long?)11) }, store.Saved.LinkTombstones);
-            Assert.Equal(new[] { (1L, (long?)10), (2L, (long?)11) }, store.Saved.LocationTombstones);
+            Assert.Empty(store.Saved.LocationTombstones);
             Assert.Equal(new[] { (1L, 2L) }, store.Saved.DeletedLinks);
             Assert.Equal(new[] { 1L, 2L }, store.Saved.DeletedLocations);
             Assert.True(store.Committed);
@@ -74,7 +75,7 @@ namespace ConnectomeDataModelCoreTests
 
             Assert.Equal(new[] { (true, 1L), (true, 1L) }, response.Results.Select(r => (r.Success, r.DeletedId)).ToArray());
             Assert.Equal(new[] { (1L, 3L, (long?)10, (long?)12) }, store.Saved.LinkTombstones);
-            Assert.Equal(new[] { (1L, (long?)10) }, store.Saved.LocationTombstones);
+            Assert.Empty(store.Saved.LocationTombstones);
             Assert.Equal(new[] { (1L, 3L) }, store.Saved.DeletedLinks);
             Assert.Equal(new[] { 1L }, store.Saved.DeletedLocations);
             Assert.True(store.Committed);
@@ -131,7 +132,27 @@ namespace ConnectomeDataModelCoreTests
             var response = await NewService(db).Update(Request(Delete(8), Delete(1)), new TestCallContext());
 
             Assert.Equal(new[] { (false, 0L), (true, 1L) }, response.Results.Select(r => (r.Success, r.DeletedId)).ToArray());
-            Assert.Equal(new[] { (1L, (long?)10) }, store.Saved.LocationTombstones);
+            Assert.Equal(new[] { 1L }, store.Saved.DeletedLocations);
+            Assert.True(store.Committed);
+        }
+
+        /// <summary>
+        /// Location_delete logs (ID, Z) in the DELETE statement itself, which no EF lookup can see, so a
+        /// DeletedLocation the service queued as well would fail the save on PK_DeletedLocations.
+        /// </summary>
+        [Fact]
+        public async Task DeletingALocationLeavesItsTombstoneToTheTrigger()
+        {
+            var store = new FakeDatabase();
+            store.AddLocation(1, z: 10);
+            using var db = NewContext(store);
+            Track(db, store, 1);
+
+            var response = await NewService(db).Update(Request(Delete(1)), new TestCallContext());
+
+            Assert.Equal((true, 1L), (response.Results.Single().Success, response.Results.Single().DeletedId));
+            Assert.Equal(new[] { 1L }, store.Saved.DeletedLocations);
+            Assert.Empty(store.Saved.LocationTombstones);
             Assert.True(store.Committed);
         }
 
@@ -243,7 +264,6 @@ namespace ConnectomeDataModelCoreTests
             public Dictionary<long, long> LocationZ { get; } = new();
             public List<(long A, long B)> Links { get; } = new();
             public List<(long A, long B)> LinkTombstones { get; } = new();
-            public List<long> LocationTombstones { get; } = new();
             public SavedRows Saved { get; private set; } = SavedRows.None;
             public bool Committed { get; private set; }
 
@@ -301,8 +321,6 @@ namespace ConnectomeDataModelCoreTests
                         .Select(l => Row(("A", l.A), ("B", l.B), ("Created", DateTime.UtcNow), ("Username", "someone"))),
                     "DeletedLocationLinks" => LinkTombstones.Where(l => Match(l.A, l.B))
                         .Select(l => Row(("A", l.A), ("B", l.B), ("AZ", DBNull.Value), ("BZ", DBNull.Value), ("DeletedOn", DateTime.UtcNow))),
-                    "DeletedLocations" => LocationTombstones.Where(keys.Contains)
-                        .Select(id => Row(("ID", id), ("DeletedOn", DateTime.UtcNow), ("Z", DBNull.Value))),
                     _ => throw new InvalidOperationException($"Unexpected query: {sql}")
                 };
 
