@@ -95,6 +95,15 @@ namespace Viking.VolumeModel
             return ((float)(min / StorageMaximum), (float)(max / StorageMaximum));
         }
 
+        /// <summary>
+        /// A window in codes that clips the darkest 0.1% and the brightest 0.1% of the pixels, which is the Auto setting of the
+        /// contrast editor. Falls back to <see cref="DefaultWindow"/> when the VikingXML has no usable histogram.
+        /// </summary>
+        public (double Min, double Max) AutoRange()
+        {
+            return HistogramRange(0.001, 0.999) ?? DisplayRange ?? (0, (1 << Math.Min(Bits, 16)) - 1);
+        }
+
         /// <summary>The codes that hold <paramref name="lowFraction"/> and <paramref name="highFraction"/> of the pixels, skipping bin 0.</summary>
         private (double, double)? HistogramRange(double lowFraction = 0.0001, double highFraction = 0.9999)
         {

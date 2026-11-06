@@ -1,0 +1,57 @@
+<Window x:Class="Viking.UI.Forms.CrushContrastWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Viking.UI.Forms"
+        Title="Contrast" Width="600" Height="420" MinWidth="460" MinHeight="340"
+        ShowInTaskbar="False" UseLayoutRounding="True" WindowStartupLocation="CenterOwner"
+        FontSize="14">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="Heading" Grid.Row="0" FontWeight="SemiBold" Margin="0,0,0,8" />
+
+        <Border Grid.Row="1" BorderBrush="#FF888888" BorderThickness="1" MinHeight="120">
+            <local:HistogramView x:Name="Histogram" />
+        </Border>
+
+        <Grid Grid.Row="2" Margin="0,14,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="48" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Black point" VerticalAlignment="Center" Margin="0,0,12,0" />
+            <Slider x:Name="BlackSlider" Grid.Column="1" Minimum="0" Maximum="255" SmallChange="1" LargeChange="8"
+                    TickFrequency="16" TickPlacement="BottomRight" IsMoveToPointEnabled="True" VerticalAlignment="Center"
+                    ValueChanged="OnSliderChanged" />
+            <TextBlock x:Name="BlackText" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" />
+        </Grid>
+
+        <Grid Grid.Row="3" Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="48" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="White point" VerticalAlignment="Center" Margin="0,0,12,0" />
+            <Slider x:Name="WhiteSlider" Grid.Column="1" Minimum="0" Maximum="255" SmallChange="1" LargeChange="8"
+                    TickFrequency="16" TickPlacement="BottomRight" IsMoveToPointEnabled="True" VerticalAlignment="Center"
+                    ValueChanged="OnSliderChanged" />
+            <TextBlock x:Name="WhiteText" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" />
+        </Grid>
+
+        <DockPanel Grid.Row="4" Margin="0,16,0,0" LastChildFill="False">
+            <Button Content="Close" DockPanel.Dock="Right" MinWidth="88" Padding="12,5" IsDefault="True" IsCancel="True" Click="OnCloseClick" />
+            <Button Content="Reset to volume range" DockPanel.Dock="Left" Padding="12,5" Margin="0,0,8,0" Click="OnResetClick"
+                    ToolTip="Go back to the display range stored in the volume" />
+            <Button Content="Auto" DockPanel.Dock="Left" MinWidth="72" Padding="12,5" Click="OnAutoClick"
+                    ToolTip="Clip the darkest and brightest 0.1% of the pixels" />
+        </DockPanel>
+    </Grid>
+</Window>

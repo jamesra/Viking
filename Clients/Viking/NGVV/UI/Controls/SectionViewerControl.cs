@@ -3015,14 +3015,12 @@ namespace Viking.UI.Controls
                 ? crush
                 : null;
 
-        private CrushContrastForm? _contrastForm;
+        private CrushContrastWindow? _contrastWindow;
 
         private void menuSectionContrast_Click(object sender, EventArgs e)
         {
-            if (_contrastForm is { IsDisposed: false })
-            {
-                _contrastForm.Close();
-            }
+            // One editor at a time: reopening it replaces the one for the section that was on screen before.
+            _contrastWindow?.Close();
 
             if (CurrentCrushInfo() is not { IsSupported: true } crush)
             {
@@ -3030,8 +3028,11 @@ namespace Viking.UI.Controls
                 return;
             }
 
-            _contrastForm = new CrushContrastForm(crush, State.volume?.Name, Section.section.Number, CurrentChannel, Invalidate);
-            _contrastForm.Show(this.FindForm());
+            CrushContrastWindow window = new(crush, State.volume?.Name, Section.section.Number, CurrentChannel, Invalidate,
+                this.FindForm()?.Handle ?? IntPtr.Zero);
+            window.Closed += (_, _) => { if (ReferenceEquals(_contrastWindow, window)) _contrastWindow = null; };
+            _contrastWindow = window;
+            window.Show();
         }
 
         private void menuSection_DropDownOpening(object sender, EventArgs e)

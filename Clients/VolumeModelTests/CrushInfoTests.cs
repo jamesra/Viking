@@ -73,6 +73,29 @@ namespace VolumeModelTests
         }
 
         [TestMethod]
+        public void AutoRangeClipsTheTails_SkippingTheEmptyBin_EvenWhenTheVolumeSentADisplayRange()
+        {
+            // 2000 pixels in codes 2..5 with a heavy dim tail: the tenth of a percent tails sit at the first and last used codes.
+            XElement element = XElement.Parse(
+                "<Pyramid CrushVersion=\"1\" CrushStep=\"10\" CrushBits=\"8\" CrushDisplayMin=\"0\" CrushDisplayMax=\"9\">" +
+                "<CodeHistogram>1000000 0 500 500 500 500 0 0 0 0</CodeHistogram></Pyramid>");
+
+            (double min, double max) = CrushInfo.FromElement(element)!.AutoRange();
+
+            Assert.AreEqual(2.0, min);
+            Assert.AreEqual(5.0, max);
+        }
+
+        [TestMethod]
+        public void AutoRangeFallsBackToTheDefaultWindowWithoutAHistogram()
+        {
+            CrushInfo crush = CrushInfo.FromElement(XElement.Parse(
+                "<Pyramid CrushVersion=\"1\" CrushStep=\"10\" CrushBits=\"8\" CrushDisplayMin=\"20\" CrushDisplayMax=\"49\" />"))!;
+
+            Assert.AreEqual((20.0, 49.0), crush.AutoRange());
+        }
+
+        [TestMethod]
         public void MoreThanEightBitsIsNotSupported()
         {
             Assert.IsFalse(CrushInfo.FromElement(XElement.Parse("<Pyramid CrushVersion=\"1\" CrushStep=\"10\" CrushBits=\"9\" />"))!.IsSupported);
