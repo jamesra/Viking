@@ -75,9 +75,14 @@ a supported deploy path for this database.
 | Caller | Server host | Notes |
 |--------|-------------|-------|
 | Host-side tools / tests hitting SQL directly | `localhost,1433` | Port published by compose |
-| `grpc-annotation-service` in compose | `annotation-sql,1433` | Compose service name (set by override) |
+| `grpc-annotation-service` in compose | `annotation-sql,1433` | Set in the gRPC env file (below), not injected |
 | Other containers on the host network | `host.docker.internal,1433` | When SQL is only published on the host |
 
-`docker-compose.annotation-db.yml` injects the compose-service connection string
-into `grpc-annotation-service` so you do not have to edit
-`D:\Docker\Builds\GrpcAnnotationService\.env.Docker` for the test stack.
+`Start-AnnotationTestStack.ps1` does not set this for you; it picks whichever gRPC env file
+already has it. `-GrpcEnvFile` defaults to `D:\Docker\Builds\GrpcAnnotationService\.env.Docker`
+when that file exists (its template, `Servers/GrpcAnnotationService/config-template/build/.env.Docker`,
+already points `ConnectionStrings__AnnotationConnection` at `annotation-sql,1433`), otherwise the
+stack run env `Run\viking-annotation\viking-annotation.run.env` (copied from
+`deploy/examples/example.viking-annotation.run.env`), where the `annotation-sql,1433` line is
+commented out under the production connection string — uncomment it and fill in the SA password
+before starting the stack with that file.
