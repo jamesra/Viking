@@ -37,6 +37,17 @@ namespace Utils
             return attrib;
         }
 
+        /// <summary>
+        /// Finds an attribute by name, ignoring case. The non-throwing form of <see cref="GetAttributeCaseInsensitive"/>, which throws
+        /// <see cref="XMLMissingDataException"/> when the attribute is absent.
+        /// </summary>
+        /// <returns>False, with a null <paramref name="attribute"/>, when the element has no such attribute.</returns>
+        public static bool TryGetAttributeCaseInsensitive(this XElement element, string attribName, out XAttribute attribute)
+        {
+            attribute = element.Attributes().FirstOrDefault(a => string.Equals(a.Name.ToString(), attribName, StringComparison.OrdinalIgnoreCase));
+            return attribute is not null;
+        }
+
         public static bool HasAttributeCaseInsensitive(this XElement element, string AttribName) => element.Attributes().Any(a => string.Compare(a.Name.ToString().ToLower(), AttribName.ToLower()) == 0);
 
         /// <summary>

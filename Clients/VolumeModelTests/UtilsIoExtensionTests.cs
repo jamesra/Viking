@@ -24,6 +24,18 @@ namespace VolumeModelTests
         }
 
         [TestMethod]
+        public void TryGetAttributeCaseInsensitive_FindsIgnoringCaseAndDoesNotThrowWhenAbsent()
+        {
+            var element = new XElement("Section", new XAttribute("Number", "42"));
+
+            Assert.IsTrue(element.TryGetAttributeCaseInsensitive("number", out XAttribute found));
+            Assert.AreEqual("42", found.Value);
+            Assert.IsFalse(element.TryGetAttributeCaseInsensitive("name", out XAttribute missing));
+            Assert.IsNull(missing);
+            Assert.ThrowsException<XMLMissingDataException>(() => element.GetAttributeCaseInsensitive("name"));
+        }
+
+        [TestMethod]
         public void GetAttributeCaseInsensitive_ReturnsAttributeIgnoringCase()
         {
             var element = new XElement("Section", new XAttribute("Number", "42"));

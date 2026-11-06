@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Xml.Linq;
+using Utils;
 
 namespace Viking.VolumeModel
 {
@@ -53,7 +54,7 @@ namespace Viking.VolumeModel
         /// </summary>
         public static CrushInfo? FromElement(XElement element)
         {
-            if (Find(element, "CrushVersion") is null)
+            if (!element.TryGetAttributeCaseInsensitive("CrushVersion", out _))
                 return null;
 
             if (!TryInt(element, "CrushStep", out int step) || step < 1 ||
@@ -126,22 +127,19 @@ namespace Viking.VolumeModel
             return high > low ? (low, high) : null;
         }
 
-        /// <summary>The attribute, or null when absent. <c>GetAttributeCaseInsensitive</c> throws on a missing one, and every Crush* attribute is optional.</summary>
-        private static XAttribute? Find(XElement element, string name) =>
-            element.Attributes().FirstOrDefault(a => string.Equals(a.Name.LocalName, name, StringComparison.OrdinalIgnoreCase));
-
+        // Every Crush* attribute is optional, so these use the non-throwing lookup.
         private static bool TryInt(XElement element, string name, out int value)
         {
             value = 0;
-            XAttribute? attribute = Find(element, name);
-            return attribute is not null && int.TryParse(attribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
+            return element.TryGetAttributeCaseInsensitive(name, out XAttribute attribute) &&
+                   int.TryParse(attribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
         }
 
         private static bool TryDouble(XElement element, string name, out double value)
         {
             value = 0;
-            XAttribute? attribute = Find(element, name);
-            return attribute is not null && double.TryParse(attribute.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+            return element.TryGetAttributeCaseInsensitive(name, out XAttribute attribute) &&
+                   double.TryParse(attribute.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
         }
     }
 }
