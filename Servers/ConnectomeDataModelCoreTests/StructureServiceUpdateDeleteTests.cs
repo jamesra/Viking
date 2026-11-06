@@ -119,6 +119,70 @@ namespace ConnectomeDataModelCoreTests
             Assert.Equal(new[] { true, false }, response.Results.Select(r => r.Success).ToArray());
             Assert.Equal(new[] { 1L }, store.Saved);
             Assert.Equal(2, store.Queries);
+            Assert.Equal(1, store.TypeQueries);
+            Assert.True(store.Committed);
+        }
+
+        /// <summary>
+        /// A create naming a structure type that does not exist would fail the save on FK_StructureBase_StructureType
+        /// and roll back every row, so only that create fails.
+        /// </summary>
+        [Fact]
+        public async Task CreatingAStructureOfAMissingTypeFailsOnlyTheCreate()
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(5);
+            using var db = NewContext(store);
+            Track(db, store, 5);
+
+            var response = await NewService(db).Update(Request(Create(parentId: null, typeId: 99), Create(parentId: null), Update(5)), new TestCallContext());
+
+            Assert.Equal(new[] { false, true, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Null(response.Results[0].Created);
+            Assert.Equal(7L, response.Results[1].Created.TypeId);
+            Assert.Equal(new long?[] { null }, store.CreatedUnder);
+            Assert.Equal(new[] { 5L }, store.Saved);
+            Assert.True(store.Committed);
+        }
+
+        /// <summary>
+        /// An update that changes a structure to a type that does not exist would fail the save on
+        /// FK_StructureBase_StructureType and roll back every row, so only that update fails and reports no Updated.
+        /// </summary>
+        [Fact]
+        public async Task ChangingAStructureToAMissingTypeFailsOnlyTheUpdate()
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(5);
+            store.AddStructure(9);
+            using var db = NewContext(store);
+            Track(db, store, 5, 9);
+
+            var response = await NewService(db).Update(Request(Update(5, typeId: 99), Update(9), Create(parentId: null)), new TestCallContext());
+
+            Assert.Equal(new[] { false, true, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Null(response.Results[0].Updated);
+            Assert.Equal(7L, response.Results[1].Updated.TypeId);
+            Assert.Equal(new[] { 9L }, store.Saved);
+            Assert.Equal(1, store.TypeQueries);
+            Assert.True(store.Committed);
+        }
+
+        /// <summary>Proto3 sends an unset TypeId as 0, which keeps the stored type, so it needs no type lookup.</summary>
+        [Fact]
+        public async Task UpdatingWithTypeIdZeroKeepsTheTypeWithoutALookup()
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(5);
+            using var db = NewContext(store);
+            Track(db, store, 5);
+
+            var response = await NewService(db).Update(Request(Update(5, typeId: 0)), new TestCallContext());
+
+            Assert.True(Assert.Single(response.Results).Success);
+            Assert.Equal(1L, response.Results[0].Updated.TypeId);
+            Assert.Equal(new[] { 5L }, store.Saved);
+            Assert.Equal(0, store.TypeQueries);
             Assert.True(store.Committed);
         }
 
@@ -239,17 +303,17 @@ namespace ConnectomeDataModelCoreTests
 
         private static StructureChangeRequest Delete(long id) => new() { Delete = id };
 
-        private static StructureChangeRequest Create(long? parentId)
+        private static StructureChangeRequest Create(long? parentId, long typeId = 7)
         {
-            var structure = new ProtoStructure { TypeId = 7, Label = "new" };
+            var structure = new ProtoStructure { TypeId = typeId, Label = "new" };
             if (parentId.HasValue)
                 structure.ParentId = parentId.Value;
             return new() { Create = structure };
         }
 
-        private static StructureChangeRequest Update(long id, long? parentId = null)
+        private static StructureChangeRequest Update(long id, long? parentId = null, long typeId = 7)
         {
-            var structure = new ProtoStructure { Id = id, TypeId = 7, Label = "edited" };
+            var structure = new ProtoStructure { Id = id, TypeId = typeId, Label = "edited" };
             if (parentId.HasValue)
                 structure.ParentId = parentId.Value;
             return new() { Update = structure };
@@ -286,6 +350,8 @@ namespace ConnectomeDataModelCoreTests
         /// the save with <see cref="DbUpdateConcurrencyException"/>, as EF does when SQL Server reports no rows affected.
         /// An insert or update whose ParentID row is gone fails the save with <see cref="DbUpdateException"/>, as
         /// FK_Structure_Structure does; a saved update stores its ParentID.
+        /// A StructureType query returns the IDs among its parameter values that are in <see cref="Types"/>, and an
+        /// insert or update naming any other TypeID fails the save, as FK_StructureBase_StructureType does.
         /// </summary>
         private sealed class FakeStructureDatabase : IDbConnectionInterceptor, IDbCommandInterceptor, IDbTransactionInterceptor, ISaveChangesInterceptor
         {
@@ -298,8 +364,14 @@ namespace ConnectomeDataModelCoreTests
             /// <summary>ParentIDs of the structures the batch's save would insert.</summary>
             public long?[] CreatedUnder { get; private set; } = Array.Empty<long?>();
 
+            /// <summary>Stored structure types: the TypeIDs a structure may name.</summary>
+            public HashSet<long> Types { get; } = new() { 1, 7 };
+
             /// <summary>Number of Structure queries the batch ran.</summary>
             public int Queries { get; private set; }
+
+            /// <summary>Number of StructureType queries the batch ran.</summary>
+            public int TypeQueries { get; private set; }
 
             public bool Committed { get; private set; }
 
@@ -331,14 +403,18 @@ namespace ConnectomeDataModelCoreTests
 
             public ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
             {
-                if (!command.CommandText.Contains("FROM [Structure]", StringComparison.Ordinal))
+                var isTypeQuery = command.CommandText.Contains("FROM [StructureType]", StringComparison.Ordinal);
+                if (!isTypeQuery && !command.CommandText.Contains("FROM [Structure]", StringComparison.Ordinal))
                     throw new InvalidOperationException($"Unexpected query: {command.CommandText}");
 
-                Queries++;
+                if (isTypeQuery)
+                    TypeQueries++;
+                else
+                    Queries++;
                 var keys = command.Parameters.Cast<DbParameter>().SelectMany(p => KeyValues(p.Value)).ToHashSet();
                 var answer = new DataTable();
                 answer.Columns.Add("ID", typeof(long));
-                foreach (var id in Rows.Keys.Where(keys.Contains))
+                foreach (var id in (isTypeQuery ? Types : (IEnumerable<long>)Rows.Keys).Where(keys.Contains))
                     answer.Rows.Add(id);
                 return ValueTask.FromResult(InterceptionResult<DbDataReader>.SuppressWithResult(answer.CreateDataReader()));
             }
@@ -350,6 +426,9 @@ namespace ConnectomeDataModelCoreTests
                 // detaching it would fail the save the same way the stale UPDATE did.
                 if (entries.Any(e => (e.State == EntityState.Modified || e.State == EntityState.Deleted) && !Rows.ContainsKey(e.Entity.Id)))
                     throw new DbUpdateConcurrencyException("The database operation was expected to affect 1 row(s), but actually affected 0 row(s).");
+
+                if (entries.Any(e => (e.State == EntityState.Added || e.State == EntityState.Modified) && !Types.Contains(e.Entity.TypeId)))
+                    throw new DbUpdateException("The INSERT or UPDATE statement conflicted with the FOREIGN KEY constraint \"FK_StructureBase_StructureType\".");
 
                 var added = entries.Where(e => e.State == EntityState.Added).ToList();
                 if (added.Any(e => e.Entity.ParentId.HasValue && !Rows.ContainsKey(e.Entity.ParentId.Value)))

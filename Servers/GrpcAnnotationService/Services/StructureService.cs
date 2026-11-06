@@ -436,6 +436,7 @@ namespace gRPCAnnotationService
         /// Batch of create, update, and delete changes in one transaction, one result per request row in order. An update of a missing ID reports Success = false instead of failing the batch. Delete runs DeepDeleteStructure, which also removes the structure's locations, links, and children.
         /// An edit of a structure that a later row deletes, directly or as a child, keeps its Success and the delete stands.
         /// A create or update whose ParentId names a structure the batch deletes, directly or as a child, reports Success = false and is not saved.
+        /// A create or update whose TypeId names no structure type reports Success = false and is not saved (see <see cref="LiveTypeIdsAsync"/>).
         /// </summary>
         public override async Task<UpdateStructuresResponse> Update(UpdateStructuresRequest request, ServerCallContext context)
         {
@@ -448,6 +449,7 @@ namespace gRPCAnnotationService
                 var pendingUpdates = new List<(StructureChangeResponse Response, EfStructure Entity)>();
 
                 await using var tx = await _context.Database.BeginTransactionAsync(ct);
+                var liveTypes = await LiveTypeIdsAsync(request, ct);
 
                 foreach (var change in request.Objs)
                 {
@@ -456,6 +458,12 @@ namespace gRPCAnnotationService
                     switch (change.ActionCase)
                     {
                         case StructureChangeRequest.ActionOneofCase.Create:
+                            if (!liveTypes.Contains(change.Create.TypeId))
+                            {
+                                rowResponse.Success = false;
+                                break;
+                            }
+
                             var toInsert = change.Create.ToStructure();
                             toInsert.Username = username;
                             toInsert.Created = DateTime.UtcNow;
@@ -467,7 +475,7 @@ namespace gRPCAnnotationService
 
                         case StructureChangeRequest.ActionOneofCase.Update:
                             var existing = await _context.Structures.FirstOrDefaultAsync(s => s.Id == change.Update.Id, ct);
-                            if (existing == null)
+                            if (existing == null || (change.Update.TypeId != 0 && !liveTypes.Contains(change.Update.TypeId)))
                             {
                                 rowResponse.Success = false;
                                 break;
@@ -776,6 +784,30 @@ namespace gRPCAnnotationService
                 rowResponse.Success = false;
                 rowResponse.Updated = null;
             }
+        }
+
+        /// <summary>
+        /// The structure types, among those the batch's creates and updates name, that exist. FK_StructureBase_StructureType
+        /// would fail the save of a structure naming any other type and roll back the whole batch, so that row fails
+        /// instead. An update's TypeId of 0 keeps the stored type (see <see cref="ApplyUpdate"/>) and is not looked up.
+        /// A batch naming no type costs no query.
+        /// </summary>
+        private async Task<HashSet<long>> LiveTypeIdsAsync(UpdateStructuresRequest request, CancellationToken ct)
+        {
+            var named = request.Objs
+                .Where(c => c.ActionCase == StructureChangeRequest.ActionOneofCase.Create).Select(c => c.Create.TypeId)
+                .Concat(request.Objs
+                    .Where(c => c.ActionCase == StructureChangeRequest.ActionOneofCase.Update && c.Update.TypeId != 0)
+                    .Select(c => c.Update.TypeId)).ToArray();
+
+            var live = new HashSet<long>();
+            if (named.Length == 0)
+                return live;
+
+            foreach (var chunk in named.DistinctChunk())
+                live.UnionWith(await _context.StructureTypes.AsNoTracking()
+                    .Where(t => chunk.Contains(t.Id)).Select(t => t.Id).ToListAsync(ct));
+            return live;
         }
 
         /// <summary>Builds the [dbo].[integer_list] table valued parameter the network procedures take.</summary>
