@@ -87,6 +87,34 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         [Test]
+        public async Task LocationRemove_CompletesAfterListener()
+        {
+            var locations = new LocationStore(null, null, null, null,
+                new StructureStore(null, null, null, null, null, null, null), new LocationLinkStore(null, null, null, null));
+            var cached = Seed<long, LocationObj>(locations, 5, new LocationObj(5, 2) { DBAction = DBACTION.NONE });
+
+            Task<bool> removal = null;
+            await AssertCompletesAfterListener(locations, NotifyCollectionChangedAction.Remove,
+                () => removal = locations.Remove(cached));
+
+            Assert.That(await removal, Is.True);
+        }
+
+        [Test]
+        public async Task LocationLinkDelete_CompletesAfterListener()
+        {
+            var server = StructureStoreRegionQueryTests.FakeInterface<IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>>
+                .Create("Delete", args => Task.FromResult<LocationLinkKey?>((LocationLinkKey)args[0]));
+            var factory = StructureStoreRegionQueryTests.FakeInterface<IServerAnnotationsClientFactory<IServerAnnotationsClient<LocationLinkKey, ILocationLink, ILocationLink, ILocationLink>>>
+                .Create("GetOrCreate", _ => server);
+            var links = new LocationLinkStore(factory, null, null, null);
+            Seed<LocationLinkKey, LocationLinkObj>(links, new LocationLinkKey(1, 2), new LocationLinkObj(1, 2));
+
+            await AssertCompletesAfterListener(links, NotifyCollectionChangedAction.Remove,
+                () => links.DeleteLink(1, 2));
+        }
+
+        [Test]
         public void Add_ListenerException_ReachesCaller()
         {
             var structures = CreateStructureStore();

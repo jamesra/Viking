@@ -52,7 +52,7 @@ namespace WebAnnotationModel.gRPC
         /// Nothing is queued for <c>Save()</c>: base <c>Remove</c> would queue a second DELETE, which fails with
         /// NotFound or deletes the same link if it is re-created before the next Save.
         /// </summary>
-        /// <returns>True when the link was in the cache; the server delete has been sent either way.</returns>
+        /// <returns>True when the link was in the cache, once the Remove listeners have run; the server delete has been sent either way.</returns>
         public async Task<bool> DeleteLink(long A, long B)
         {
             var key = new LocationLinkKey(A, B);
@@ -62,8 +62,7 @@ namespace WebAnnotationModel.gRPC
             if (deleted == null)
                 return false;
 
-            // Not awaited: listeners run on the thread pool when State.UseAsynchEvents is set.
-            _ = CallOnCollectionChangedForDelete(deleted);
+            await CallOnCollectionChangedForDelete(deleted).ConfigureAwait(false);
             return true;
         }
 

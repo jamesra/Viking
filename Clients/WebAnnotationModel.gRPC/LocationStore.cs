@@ -323,15 +323,15 @@ namespace WebAnnotationModel.gRPC
         /// Marks <paramref name="obj"/> as <c>DBACTION.DELETE</c>, drops it from the cache and raises the delete notification.
         /// The server delete is sent by the next <c>Save</c>, which picks the object up through the <c>DBAction</c> change.
         /// </summary>
-        /// <returns>An already completed task holding <c>true</c>, also when <paramref name="obj"/> was not cached.</returns>
-        public override Task<bool> Remove(LocationObj obj)
+        /// <returns><c>true</c>, also when <paramref name="obj"/> was not cached, once the delete listeners have run.</returns>
+        public override async Task<bool> Remove(LocationObj obj)
         {
             obj.DBAction = DBACTION.DELETE;
 
             LocationObj deletedObj = InternalDelete(obj.ID);
-            CallOnCollectionChangedForDelete(new LocationObj[] { deletedObj });
+            await CallOnCollectionChangedForDelete(new LocationObj[] { deletedObj }).ConfigureAwait(false);
 
-            return Task.FromResult(true);
+            return true;
         }
 
         #region Add/Update/Remove
