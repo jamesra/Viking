@@ -516,7 +516,8 @@ namespace gRPCAnnotationService
         }
 
         /// <summary>
-        /// Creates one link. Throws InvalidArgument when source and target are the same structure.
+        /// Creates one link. Throws InvalidArgument when source and target are the same structure, and NotFound,
+        /// naming the missing IDs, when either structure does not exist; neither saves anything.
         /// </summary>
         public override async Task<CreateStructureLinkResponse> CreateStructureLink(CreateStructureLinkRequest request, ServerCallContext context)
         {
@@ -526,6 +527,7 @@ namespace gRPCAnnotationService
                 var link = request.NewLink;
                 if (link.SourceId == link.TargetId)
                     throw new RpcException(new Status(StatusCode.InvalidArgument, "A structure cannot link to itself"));
+                await ThrowIfStructuresMissingAsync(new[] { link.SourceId, link.TargetId }, ct);
 
                 var row = new EfStructureLink
                 {
@@ -549,7 +551,8 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// Upsert by (SourceId, TargetId): updates Bidirectional and Tags on an existing link, inserts a missing one. Returns an empty response.
-        /// All or nothing: a row linking a structure to itself refuses the whole request with InvalidArgument before anything is read or saved.
+        /// All or nothing: a row linking a structure to itself refuses the whole request with InvalidArgument before anything is read or saved,
+        /// and a row to insert that names a missing structure refuses it with NotFound, naming the missing IDs, before anything is saved.
         /// When a pair appears more than once, its last row wins, as applying the rows in order would leave it.
         /// </summary>
         public override async Task<UpdateStructureLinksResponse> UpdateLinks(UpdateStructureLinksRequest request, ServerCallContext context)
@@ -587,6 +590,7 @@ namespace gRPCAnnotationService
                     }
                 }
 
+                await ThrowIfStructuresMissingAsync(requested.Values.SelectMany(l => new[] { l.SourceId, l.TargetId }), ct);
                 foreach (var link in requested.Values)
                 {
                     await _context.StructureLinks.AddAsync(new EfStructureLink
@@ -809,6 +813,27 @@ namespace gRPCAnnotationService
                 live.UnionWith(await _context.StructureTypes.AsNoTracking()
                     .Where(t => chunk.Contains(t.Id)).Select(t => t.Id).ToListAsync(ct));
             return live;
+        }
+
+        /// <summary>
+        /// Throws NotFound, naming each of <paramref name="ids"/> that is not a stored structure, when there is one:
+        /// FK_StructureLinkSource_StructureBaseID and FK_StructureLinkTarget_StructureBaseID would otherwise fail the
+        /// save of a link naming it as a generic Unknown failure. No IDs cost no query.
+        /// </summary>
+        private async Task ThrowIfStructuresMissingAsync(IEnumerable<long> ids, CancellationToken ct)
+        {
+            var named = ids.Distinct().ToArray();
+            if (named.Length == 0)
+                return;
+
+            var live = new HashSet<long>();
+            foreach (var chunk in named.DistinctChunk())
+                live.UnionWith(await _context.Structures.AsNoTracking()
+                    .Where(s => chunk.Contains(s.Id)).Select(s => s.Id).ToListAsync(ct));
+
+            var missing = named.Where(id => !live.Contains(id)).ToArray();
+            if (missing.Length > 0)
+                throw new RpcException(new Status(StatusCode.NotFound, $"Structures not found: {string.Join(", ", missing)}"));
         }
 
         /// <summary>Builds the [dbo].[integer_list] table valued parameter the network procedures take.</summary>

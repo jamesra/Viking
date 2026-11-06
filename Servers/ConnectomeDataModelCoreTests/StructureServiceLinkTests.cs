@@ -22,7 +22,8 @@ namespace ConnectomeDataModelCoreTests
     /// <summary>
     /// Pins the offline behavior of <see cref="StructureService.CreateStructureLink"/> and
     /// <see cref="StructureService.UpdateLinks"/>: a link from a structure to itself is refused with
-    /// InvalidArgument before anything is queried or saved; a valid link is saved once, stamped with the
+    /// InvalidArgument before anything is queried or saved; a link to insert naming a missing structure is
+    /// refused with NotFound naming the missing IDs, and nothing is saved; a valid link is saved once, stamped with the
     /// caller's name rather than the payload's; UpdateLinks reads existing links in one query, keeps the
     /// last row of a repeated (SourceId, TargetId) pair, and updates a link that exists instead of inserting it.
     /// No database is contacted: interceptors stand in for the connection, the query and SaveChanges.
@@ -48,11 +49,45 @@ namespace ConnectomeDataModelCoreTests
             Assert.Equal(0, saves.Count);
         }
 
+        [Theory]
+        [InlineData(99, 2, "99")]
+        [InlineData(2, 99, "99")]
+        [InlineData(98, 99, "98, 99")]
+        public async Task CreateNamingAMissingStructureIsRefusedWithoutSaving(long source, long target, string missing)
+        {
+            var saves = new CaptureSaves();
+            using var db = NewContext(saves, new FakeLinkTable());
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => service.CreateStructureLink(
+                new CreateStructureLinkRequest { NewLink = new ProtoStructureLink { SourceId = source, TargetId = target } },
+                new TestCallContext()));
+
+            Assert.Equal(StatusCode.NotFound, ex.StatusCode);
+            Assert.Equal($"Structures not found: {missing}", ex.Status.Detail);
+            Assert.Equal(0, saves.Count);
+        }
+
+        [Fact]
+        public async Task CreateLooksUpBothStructuresInOneQuery()
+        {
+            var table = new FakeLinkTable();
+            using var db = NewContext(new CaptureSaves(), table);
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            await service.CreateStructureLink(
+                new CreateStructureLinkRequest { NewLink = new ProtoStructureLink { SourceId = 3, TargetId = 8 } },
+                new TestCallContext());
+
+            Assert.Equal(1, table.StructureQueries);
+            Assert.Equal(2, table.MostStructureParameters);
+        }
+
         [Fact]
         public async Task CreateSavesOnceStampsCallerAndEchoesTheLink()
         {
             var saves = new CaptureSaves();
-            using var db = NewContext(saves);
+            using var db = NewContext(saves, new FakeLinkTable());
             var service = new StructureService(db, NullLogger<StructureService>.Instance);
 
             var response = await service.CreateStructureLink(
@@ -111,8 +146,76 @@ namespace ConnectomeDataModelCoreTests
 
             await service.UpdateLinks(Request(Link(1, 2), Link(1, 3), Link(4, 5)), new TestCallContext());
 
-            Assert.Equal(1, table.Queries);
+            Assert.Equal(1, table.LinkQueries);
         }
+
+        [Fact]
+        public async Task UpdateLinksLooksUpTheStructuresOfItsInsertsInOneQuery()
+        {
+            var table = new FakeLinkTable();
+            using var db = NewContext(new CaptureSaves(), table);
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            await service.UpdateLinks(Request(Link(1, 2), Link(1, 3), Link(4, 5)), new TestCallContext());
+
+            Assert.Equal(1, table.StructureQueries);
+            Assert.Equal(5, table.MostStructureParameters);
+        }
+
+        [Fact]
+        public async Task UpdateLinksWithAMissingStructureSavesNothingAndNamesOnlyTheMissingIds()
+        {
+            var saves = new CaptureSaves();
+            using var db = NewContext(saves, new FakeLinkTable());
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => service.UpdateLinks(
+                Request(Link(1, 2), Link(3, 99), Link(98, 4), Link(5, 99), Link(6, 7)), new TestCallContext()));
+
+            Assert.Equal(StatusCode.NotFound, ex.StatusCode);
+            Assert.Equal(new[] { 98L, 99L }, MissingIds(ex));
+            Assert.Equal(0, saves.Count);
+        }
+
+        /// <summary>Endpoints of links that are already stored exist (the foreign keys hold them), so an update-only batch looks up no structure.</summary>
+        [Fact]
+        public async Task UpdateLinksOfStoredLinksOnlyLooksUpNoStructure()
+        {
+            var saves = new CaptureSaves();
+            var table = new FakeLinkTable(new EfStructureLink
+            {
+                SourceId = 3, TargetId = 8, Tags = "old", Username = "someone", Created = DateTime.UtcNow, LastModified = DateTime.UtcNow
+            })
+            { StructureExists = _ => false };
+            using var db = NewContext(saves, table);
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            await service.UpdateLinks(Request(Link(3, 8, true, "new")), new TestCallContext());
+
+            Assert.Equal(0, table.StructureQueries);
+            Assert.Equal(1, saves.Count);
+        }
+
+        /// <summary>3,000 distinct structures: the lookup splits into queries under SQL Server's 2,100-parameter limit and the batch still saves once.</summary>
+        [Fact]
+        public async Task UpdateLinksChunksALargeStructureLookup()
+        {
+            var saves = new CaptureSaves();
+            var table = new FakeLinkTable { StructureExists = _ => true };
+            using var db = NewContext(saves, table);
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            await service.UpdateLinks(
+                Request(Enumerable.Range(1, 1500).Select(i => Link(i, i + 1500)).ToArray()), new TestCallContext());
+
+            Assert.Equal(2, table.StructureQueries);
+            Assert.InRange(table.MostStructureParameters, 1, 2100);
+            Assert.Equal(1, saves.Count);
+            Assert.Equal(1500, saves.Links.Length);
+        }
+
+        private static long[] MissingIds(RpcException ex) =>
+            Regex.Matches(ex.Status.Detail, @"\d+").Select(m => long.Parse(m.Value)).OrderBy(id => id).ToArray();
 
         [Fact]
         public async Task UpdateLinksUpdatesAnExistingLinkInPlace()
@@ -208,9 +311,10 @@ namespace ConnectomeDataModelCoreTests
         }
 
         /// <summary>
-        /// Stands in for the StructureLink table: opening the connection is suppressed, and every query is
-        /// answered with all stored links, whatever its WHERE clause says, in the column order its SELECT list
-        /// names. Counts the queries.
+        /// Stands in for the StructureLink and Structure tables: opening the connection is suppressed, a
+        /// Structure query is answered with the IDs among its parameters that <see cref="StructureExists"/>
+        /// accepts, and every other query with all stored links, whatever its WHERE clause says, in the column
+        /// order its SELECT list names. Counts the queries.
         /// </summary>
         private sealed class FakeLinkTable : IDbConnectionInterceptor, IDbCommandInterceptor
         {
@@ -219,7 +323,16 @@ namespace ConnectomeDataModelCoreTests
 
             public FakeLinkTable(params EfStructureLink[] rows) => _rows = rows;
 
+            /// <summary>Stored structures: 1 to 9 by default, so a test names a missing structure with 98 or 99.</summary>
+            public Func<long, bool> StructureExists { get; init; } = id => id is >= 1 and <= 9;
+
             public int Queries { get; private set; }
+
+            public int LinkQueries => Queries - StructureQueries;
+
+            public int StructureQueries { get; private set; }
+
+            public int MostStructureParameters { get; private set; }
 
             public InterceptionResult ConnectionOpening(DbConnection connection, ConnectionEventData eventData, InterceptionResult result) =>
                 InterceptionResult.Suppress();
@@ -233,6 +346,16 @@ namespace ConnectomeDataModelCoreTests
                 var selectList = command.CommandText.Substring(0, command.CommandText.IndexOf("FROM", StringComparison.Ordinal));
                 var columns = SelectedColumn.Matches(selectList).Select(m => m.Groups[1].Value).ToArray();
                 var table = new DataTable();
+                if (command.CommandText.Contains("FROM [Structure] AS", StringComparison.Ordinal))
+                {
+                    StructureQueries++;
+                    MostStructureParameters = Math.Max(MostStructureParameters, command.Parameters.Count);
+                    table.Columns.Add(Assert.Single(columns), typeof(long));
+                    foreach (var id in command.Parameters.Cast<DbParameter>().Select(p => Convert.ToInt64(p.Value)).Distinct().Where(StructureExists))
+                        table.Rows.Add(id);
+                    return ValueTask.FromResult(InterceptionResult<DbDataReader>.SuppressWithResult(table.CreateDataReader()));
+                }
+
                 foreach (var column in columns)
                     table.Columns.Add(column, ColumnType(column));
                 foreach (var row in _rows)
