@@ -435,7 +435,7 @@ namespace gRPCAnnotationService
         /// <summary>
         /// Batch of create, update, and delete changes in one transaction, one result per request row in order. An update of a missing ID reports Success = false instead of failing the batch. Delete runs DeepDeleteStructure, which also removes the structure's locations, links, and children.
         /// An edit of a structure that a later row deletes, directly or as a child, keeps its Success and the delete stands.
-        /// A create whose ParentId names a structure the batch deletes, directly or as a child, reports Success = false and is not saved.
+        /// A create or update whose ParentId names a structure the batch deletes, directly or as a child, reports Success = false and is not saved.
         /// </summary>
         public override async Task<UpdateStructuresResponse> Update(UpdateStructuresRequest request, ServerCallContext context)
         {
@@ -445,6 +445,7 @@ namespace gRPCAnnotationService
                 var response = new UpdateStructuresResponse();
                 var username = AnnotationRpc.CallerName(context);
                 var pendingCreates = new List<(StructureChangeResponse Response, EfStructure Entity)>();
+                var pendingUpdates = new List<(StructureChangeResponse Response, EfStructure Entity)>();
 
                 await using var tx = await _context.Database.BeginTransactionAsync(ct);
 
@@ -473,6 +474,7 @@ namespace gRPCAnnotationService
                             }
 
                             ApplyUpdate(change.Update, existing, username);
+                            pendingUpdates.Add((rowResponse, existing));
                             rowResponse.Success = true;
                             rowResponse.Updated = existing.ToProtobufMessage();
                             break;
@@ -493,7 +495,7 @@ namespace gRPCAnnotationService
                     response.Results.Add(rowResponse);
                 }
 
-                await ForgetEditsOfDeletedStructuresAsync(request, pendingCreates, ct);
+                await ForgetEditsOfDeletedStructuresAsync(request, pendingCreates, pendingUpdates, ct);
                 await _context.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
 
@@ -734,10 +736,13 @@ namespace gRPCAnnotationService
         /// row, which EF reports as a concurrency failure and which would roll back the whole batch, so stop
         /// tracking every edited structure whose row is gone. The delete stands. A create whose parent is gone
         /// would fail the insert on FK_Structure_Structure the same way, so it stops being tracked and its row
-        /// reports Success = false. A batch with no delete costs no query.
+        /// reports Success = false. An update that moves a live structure under a gone parent would fail the same
+        /// FK, so it stops being tracked and its row reports Success = false with no Updated. A batch with no
+        /// delete costs no query.
         /// </summary>
         private async Task ForgetEditsOfDeletedStructuresAsync(UpdateStructuresRequest request,
-            List<(StructureChangeResponse Response, EfStructure Entity)> pendingCreates, CancellationToken ct)
+            List<(StructureChangeResponse Response, EfStructure Entity)> pendingCreates,
+            List<(StructureChangeResponse Response, EfStructure Entity)> pendingUpdates, CancellationToken ct)
         {
             if (!request.Objs.Any(c => c.ActionCase == StructureChangeRequest.ActionOneofCase.Delete))
                 return;
@@ -745,11 +750,13 @@ namespace gRPCAnnotationService
             var edited = _context.ChangeTracker.Entries<EfStructure>()
                 .Where(e => e.State == EntityState.Modified).ToList();
             var childCreates = pendingCreates.Where(c => c.Entity.ParentId.HasValue).ToList();
+            var childUpdates = pendingUpdates.Where(u => u.Entity.ParentId.HasValue).ToList();
             if (edited.Count == 0 && childCreates.Count == 0)
                 return;
 
             var live = new HashSet<long>();
-            var ids = edited.Select(e => e.Entity.Id).Concat(childCreates.Select(c => c.Entity.ParentId.Value));
+            var ids = edited.Select(e => e.Entity.Id)
+                .Concat(childCreates.Concat(childUpdates).Select(c => c.Entity.ParentId.Value));
             foreach (var chunk in ids.DistinctChunk())
                 live.UnionWith(await _context.Structures.AsNoTracking()
                     .Where(s => chunk.Contains(s.Id)).Select(s => s.Id).ToListAsync(ct));
@@ -761,6 +768,13 @@ namespace gRPCAnnotationService
             {
                 _context.Entry(entity).State = EntityState.Detached;
                 rowResponse.Success = false;
+            }
+
+            foreach (var (rowResponse, entity) in childUpdates.Where(u => live.Contains(u.Entity.Id) && !live.Contains(u.Entity.ParentId.Value)))
+            {
+                _context.Entry(entity).State = EntityState.Detached;
+                rowResponse.Success = false;
+                rowResponse.Updated = null;
             }
         }
 

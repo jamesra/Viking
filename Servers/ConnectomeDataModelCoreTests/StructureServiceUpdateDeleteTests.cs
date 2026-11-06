@@ -25,7 +25,8 @@ namespace ConnectomeDataModelCoreTests
     /// transaction, behind EF's back, so a structure the batch edited earlier must not be saved as an UPDATE of a
     /// row that is gone: SQL Server would report no rows affected and EF would fail and roll back the whole batch.
     /// The edit row keeps its success, as for a location edited and then deleted, and the delete stands.
-    /// A create under a deleted structure fails its own row instead of the batch's insert.
+    /// A create under a deleted structure, or an update that moves a structure under one, fails its own row instead
+    /// of the batch's save.
     /// No database is contacted: interceptors stand in for the connection, the transaction, the queries, the
     /// procedure and SaveChanges.
     /// </summary>
@@ -51,8 +52,11 @@ namespace ConnectomeDataModelCoreTests
             Assert.True(store.Committed);
         }
 
-        [Fact]
-        public async Task EditingAChildThenDeletingItsParentCommitsTheDelete()
+        /// <summary>The edit may name the deleted parent, as a client resending the whole structure does.</summary>
+        [Theory]
+        [InlineData(null)]
+        [InlineData(1L)]
+        public async Task EditingAChildThenDeletingItsParentCommitsTheDelete(long? editedParentId)
         {
             var store = new FakeStructureDatabase();
             store.AddStructure(1);
@@ -60,7 +64,7 @@ namespace ConnectomeDataModelCoreTests
             using var db = NewContext(store);
             Track(db, store, 2);
 
-            var response = await NewService(db).Update(Request(Update(2), Delete(1)), new TestCallContext());
+            var response = await NewService(db).Update(Request(Update(2, editedParentId), Delete(1)), new TestCallContext());
 
             Assert.Equal(new[] { (true, 0L), (true, 1L) }, response.Results.Select(r => (r.Success, r.DeletedId)).ToArray());
             Assert.Empty(store.Saved);
@@ -181,6 +185,56 @@ namespace ConnectomeDataModelCoreTests
             Assert.True(store.Committed);
         }
 
+        /// <summary>
+        /// An update that moves a structure under one the batch deletes would fail the save on FK_Structure_Structure
+        /// and roll back every row, so only that update fails. The order of the update and the delete does not matter.
+        /// </summary>
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task MovingAStructureUnderADeletedStructureFailsOnlyTheUpdate(bool deleteFirst)
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(1);
+            store.AddStructure(5);
+            store.AddStructure(9);
+            using var db = NewContext(store);
+            Track(db, store, 5, 9);
+
+            var request = deleteFirst
+                ? Request(Delete(1), Update(5, parentId: 1), Create(parentId: null), Update(9))
+                : Request(Update(5, parentId: 1), Delete(1), Create(parentId: null), Update(9));
+            var response = await NewService(db).Update(request, new TestCallContext());
+
+            var movedRow = deleteFirst ? 1 : 0;
+            Assert.Equal(Enumerable.Range(0, 4).Select(i => i != movedRow).ToArray(),
+                response.Results.Select(r => r.Success).ToArray());
+            Assert.Null(response.Results[movedRow].Updated);
+            Assert.NotNull(response.Results[2].Created);
+            Assert.Equal(new long?[] { null }, store.CreatedUnder);
+            Assert.Equal(new[] { 9L }, store.Saved);
+            Assert.Equal(new long?[] { null, null }, new[] { store.Rows[5], store.Rows[9] });
+            Assert.True(store.Committed);
+        }
+
+        [Fact]
+        public async Task MovingAStructureUnderALiveStructureBesideAnUnrelatedDeleteSavesTheUpdate()
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(1);
+            store.AddStructure(5);
+            store.AddStructure(9);
+            using var db = NewContext(store);
+            Track(db, store, 5);
+
+            var response = await NewService(db).Update(Request(Update(5, parentId: 1), Delete(9)), new TestCallContext());
+
+            Assert.Equal(new[] { true, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Equal(1L, response.Results[0].Updated.ParentId);
+            Assert.Equal(new[] { 5L }, store.Saved);
+            Assert.True(store.Committed);
+        }
+
         private static StructureService NewService(AnnotationContext db) => new(db, NullLogger<StructureService>.Instance);
 
         private static StructureChangeRequest Delete(long id) => new() { Delete = id };
@@ -193,8 +247,13 @@ namespace ConnectomeDataModelCoreTests
             return new() { Create = structure };
         }
 
-        private static StructureChangeRequest Update(long id) =>
-            new() { Update = new ProtoStructure { Id = id, TypeId = 7, Label = "edited" } };
+        private static StructureChangeRequest Update(long id, long? parentId = null)
+        {
+            var structure = new ProtoStructure { Id = id, TypeId = 7, Label = "edited" };
+            if (parentId.HasValue)
+                structure.ParentId = parentId.Value;
+            return new() { Update = structure };
+        }
 
         private static UpdateStructuresRequest Request(params StructureChangeRequest[] changes)
         {
@@ -225,6 +284,8 @@ namespace ConnectomeDataModelCoreTests
         /// DeepDeleteStructure removes the structure and its children, as the procedure does. SaveChanges is
         /// suppressed and records the structures it would update; an update or delete of one whose row is gone fails
         /// the save with <see cref="DbUpdateConcurrencyException"/>, as EF does when SQL Server reports no rows affected.
+        /// An insert or update whose ParentID row is gone fails the save with <see cref="DbUpdateException"/>, as
+        /// FK_Structure_Structure does; a saved update stores its ParentID.
         /// </summary>
         private sealed class FakeStructureDatabase : IDbConnectionInterceptor, IDbCommandInterceptor, IDbTransactionInterceptor, ISaveChangesInterceptor
         {
@@ -296,7 +357,11 @@ namespace ConnectomeDataModelCoreTests
                 CreatedUnder = added.Select(e => e.Entity.ParentId).ToArray();
 
                 var updated = entries.Where(e => e.State == EntityState.Modified).ToList();
+                if (updated.Any(e => e.Entity.ParentId.HasValue && !Rows.ContainsKey(e.Entity.ParentId.Value)))
+                    throw new DbUpdateException("The UPDATE statement conflicted with the FOREIGN KEY SAME TABLE constraint \"FK_Structure_Structure\".");
                 Saved = updated.Select(e => e.Entity.Id).OrderBy(id => id).ToArray();
+                foreach (var e in updated)
+                    Rows[e.Entity.Id] = e.Entity.ParentId;
                 return ValueTask.FromResult(InterceptionResult<int>.SuppressWithResult(updated.Count));
             }
 
