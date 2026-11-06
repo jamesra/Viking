@@ -27,6 +27,8 @@ Documentation/source/Client/versionhistory.rst.
 
 * **Crushed tiles correct for filament brightness drift.** When a crushed section's tiles carry the gain Nornir measured from the overlaps between neighbouring tiles, Viking applies it on the graphics card, so tile-to-tile brightness steps over the acquisition disappear. Tiles without a gain, including Nornir's optimized tiles (already corrected), are unchanged.
 <!-- TextureReaderV2.TextureDataFromStream reads the gain from the nornir_crush tEXt chunk (PngCrushChunk) before decoding; TileView keeps it and sets TileLayout.fx TileGainScale/TileGainBias = 1/gain and (0.5 + offset/step)*(1/gain - 1)/255 (CrushInfo.GainTransform, same as Nornir noise_crush.unit_gain_correction) before the display window. The section CodeHistogram and display range are of the uncorrected codes. -->
+* **Fix: annotations missing on some volumes.** A volume whose VikingXML had no default annotation user settings (RC1 v2 was one) opened with no annotations at all and no message. Viking now loads that volume's annotations and uses the default user settings.
+<!-- Global.GetEndpointFromXML no longer throws XMLMissingDataException when <DefaultWebAnnotationUserSettings> is absent; LoadServerUserSettingsAsync already falls back to RABBIT/WebAnnotationUserSettings.xml when UserSettingsUri is null. -->
 
 ## 1.2.140 — 2026-11-06 (Viking Test, unsigned)
 
