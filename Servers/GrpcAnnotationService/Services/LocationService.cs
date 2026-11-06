@@ -464,9 +464,10 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// Applies a batch of creates, updates and deletes in one transaction, all or nothing; a row whose
-        /// location is missing reports Success false without failing the batch. A delete removes the
-        /// location's links and logs each link and the location once, even when the batch deletes both ends
-        /// of a link or the same ID twice.
+        /// location is missing reports Success false without failing the batch. An update of a location an
+        /// earlier row of the batch deleted counts as missing, since the delete would discard it. A delete
+        /// removes the location's links and logs each link and the location once, even when the batch deletes
+        /// both ends of a link or the same ID twice.
         /// </summary>
         public override async Task<UpdateLocationsResponse> Update(UpdateLocationsRequest request, ServerCallContext context)
         {
@@ -496,7 +497,7 @@ namespace gRPCAnnotationService
                             break;
 
                         case LocationChangeRequest.ActionOneofCase.Update:
-                            var existing = await _context.Locations.FirstOrDefaultAsync(l => l.Id == change.Update.Id, ct);
+                            var existing = await FindLiveAsync(change.Update.Id, ct);
                             if (existing == null)
                             {
                                 rowResponse.Success = false;
@@ -848,6 +849,16 @@ namespace gRPCAnnotationService
                             && (d.Z == null || d.Z == section))
                 .Select(d => d.Id)
                 .ToListAsync(ct);
+        }
+
+        /// <summary>
+        /// The location with this Id as the batch so far leaves it: Find looks in the change tracker before the
+        /// database, and a location queued for delete counts as absent.
+        /// </summary>
+        private async Task<EfLocation> FindLiveAsync(long id, CancellationToken ct)
+        {
+            var row = await _context.Locations.FindAsync(new object[] { id }, ct);
+            return row == null || _context.Entry(row).State == EntityState.Deleted ? null : row;
         }
 
         /// <summary>

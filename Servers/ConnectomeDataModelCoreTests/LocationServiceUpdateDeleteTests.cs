@@ -31,6 +31,7 @@ namespace ConnectomeDataModelCoreTests
     /// failing the whole batch on an EF identity conflict. Also pins the tombstones a plain delete writes: one
     /// DeletedLocationLink per attached link with both sections, none for a link the database already logged, and
     /// no DeletedLocation, which the Location_delete trigger writes (a second writer fails on PK_DeletedLocations).
+    /// An update of a location the batch already deleted fails its own row rather than reporting a lost edit.
     /// CreateLocation and CreateLocationLink, which share Update's link helper, save
     /// one link per distinct pair and refuse a self-link. No database is contacted: interceptors stand in for
     /// the connection, the transaction, the queries and SaveChanges.
@@ -78,6 +79,59 @@ namespace ConnectomeDataModelCoreTests
             Assert.Empty(store.Saved.LocationTombstones);
             Assert.Equal(new[] { (1L, 3L) }, store.Saved.DeletedLinks);
             Assert.Equal(new[] { 1L }, store.Saved.DeletedLocations);
+            Assert.True(store.Committed);
+        }
+
+        /// <summary>
+        /// An edit of a location the batch already deleted would be lost when the delete is saved, so it fails
+        /// its own row instead of reporting success; the delete stands.
+        /// </summary>
+        [Fact]
+        public async Task UpdatingALocationTheBatchDeletedFailsThatRow()
+        {
+            var store = new FakeDatabase();
+            store.AddLocation(1, z: 10);
+            using var db = NewContext(store);
+            Track(db, store, 1);
+
+            var response = await NewService(db).Update(Request(Delete(1), Update(1)), new TestCallContext());
+
+            Assert.Equal(new[] { (true, 1L, false), (false, 0L, false) },
+                response.Results.Select(r => (r.Success, r.DeletedId, r.Updated != null)).ToArray());
+            Assert.Equal(new[] { 1L }, store.Saved.DeletedLocations);
+            Assert.True(store.Committed);
+        }
+
+        [Fact]
+        public async Task UpdatingThenDeletingALocationReportsBoth()
+        {
+            var store = new FakeDatabase();
+            store.AddLocation(1, z: 10);
+            using var db = NewContext(store);
+            Track(db, store, 1);
+
+            var response = await NewService(db).Update(Request(Update(1), Delete(1)), new TestCallContext());
+
+            Assert.Equal(new[] { (true, 0L), (true, 1L) }, response.Results.Select(r => (r.Success, r.DeletedId)).ToArray());
+            Assert.Equal(1L, response.Results[0].Updated.Id);
+            Assert.Equal(new[] { 1L }, store.Saved.DeletedLocations);
+            Assert.True(store.Committed);
+        }
+
+        [Fact]
+        public async Task UpdatingAStoredLocationSavesTheEdit()
+        {
+            var store = new FakeDatabase();
+            store.AddLocation(1, z: 10);
+            using var db = NewContext(store);
+            Track(db, store, 1);
+
+            var response = await NewService(db).Update(Request(Update(1), Update(8)), new TestCallContext());
+
+            Assert.Equal(new[] { true, false }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Equal((1L, 12L), (response.Results[0].Updated.Id, response.Results[0].Updated.Section));
+            Assert.Equal(EntityState.Modified, db.Entry(db.Locations.Local.Single(l => l.Id == 1)).State);
+            Assert.Empty(store.Saved.DeletedLocations);
             Assert.True(store.Committed);
         }
 
@@ -199,6 +253,13 @@ namespace ConnectomeDataModelCoreTests
         private static LocationService NewService(AnnotationContext db) => new(db, NullLogger<LocationService>.Instance);
 
         private static LocationChangeRequest Delete(long id) => new() { Delete = id };
+
+        private static LocationChangeRequest Update(long id)
+        {
+            var edited = NewLocation();
+            edited.Id = id;
+            return new() { Update = edited };
+        }
 
         private static UpdateLocationsRequest Request(params LocationChangeRequest[] changes)
         {
