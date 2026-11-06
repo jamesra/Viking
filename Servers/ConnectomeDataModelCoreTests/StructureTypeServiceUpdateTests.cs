@@ -24,8 +24,8 @@ namespace ConnectomeDataModelCoreTests
     /// Pins that the batch <see cref="StructureTypeService.Update"/> reports each created row with the
     /// Id the database assigned, as <see cref="StructureTypeService.CreateStructureType"/> and the
     /// structure batch Update do, and that each change sees the changes before it in the same batch:
-    /// an update or delete of a type the batch deleted fails its own row and the delete stands.
-    /// No database is contacted: interceptors stand in for the connection, the Id lookups and
+    /// an update or delete of a type the batch deleted fails its own row and the delete stands. A delete of a
+    /// type still in use fails its own row instead of failing the whole save. No database is contacted: interceptors stand in for the connection, the Id lookups and
     /// SaveChanges, which assigns identity values the way SQL Server would.
     /// </summary>
     public class StructureTypeServiceUpdateTests
@@ -103,6 +103,75 @@ namespace ConnectomeDataModelCoreTests
             Assert.Equal(EntityState.Deleted, Assert.Single(identity.Types).State);
         }
 
+        /// <summary>Every foreign key into StructureType that is not the type's own ParentID.</summary>
+        public static TheoryData<string, string> TypeReferences => new()
+        {
+            { "Structure", "TypeID" },
+            { "StructureTemplates", "StructureTypeID" },
+            { "PermittedStructureLink", "SourceTypeID" },
+            { "PermittedStructureLink", "TargetTypeID" },
+        };
+
+        [Theory]
+        [MemberData(nameof(TypeReferences))]
+        public async Task DeleteOfReferencedTypeFailsItsRowAndKeepsTheRest(string table, string column)
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            var tables = new FakeStructureTypeTable(Stored(1, "Used"), Stored(2, "Free"), Stored(3, "Old"))
+            {
+                References = { (table, column, 1) },
+            };
+            using var db = NewContext(identity, tables);
+
+            var response = await Update(db, DeleteOf(1), DeleteOf(2), UpdateOf(3, "New"));
+
+            Assert.Equal(1, identity.SaveCount);
+            Assert.Equal(new[] { false, true, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Equal(0, response.Results[0].DeletedId);
+            Assert.Equal(new[] { (EntityState.Unchanged, 1L, "Used"), (EntityState.Deleted, 2L, "Free"), (EntityState.Modified, 3L, "New") },
+                identity.Types.OrderBy(t => t.Id).ToArray());
+        }
+
+        [Fact]
+        public async Task DeleteOfParentWithLiveChildFails()
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            using var db = NewContext(identity, new FakeStructureTypeTable(Stored(1, "Parent"), Stored(2, "Child", parentId: 1)));
+
+            var response = await Update(db, DeleteOf(1));
+
+            Assert.False(Assert.Single(response.Results).Success);
+            Assert.DoesNotContain(identity.Types, t => t.State == EntityState.Deleted);
+        }
+
+        [Fact]
+        public async Task DeleteOfParentAndChildTogetherDeletesBoth()
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            using var db = NewContext(identity, new FakeStructureTypeTable(Stored(1, "Parent"), Stored(2, "Child", parentId: 1)));
+
+            var response = await Update(db, DeleteOf(1), DeleteOf(2));
+
+            Assert.Equal(new[] { true, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.All(identity.Types, t => Assert.Equal(EntityState.Deleted, t.State));
+        }
+
+        [Fact]
+        public async Task DeleteOfAncestorsOfAReferencedTypeFailsTheWholeChain()
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            var tables = new FakeStructureTypeTable(Stored(1, "Root"), Stored(2, "Middle", parentId: 1), Stored(3, "Leaf", parentId: 2))
+            {
+                References = { ("Structure", "TypeID", 3) },
+            };
+            using var db = NewContext(identity, tables);
+
+            var response = await Update(db, DeleteOf(1), DeleteOf(2), DeleteOf(3));
+
+            Assert.Equal(new[] { false, false, false }, response.Results.Select(r => r.Success).ToArray());
+            Assert.DoesNotContain(identity.Types, t => t.State == EntityState.Deleted);
+        }
+
         private static Task<UpdateStructureTypesResponse> Update(AnnotationContext db, params StructureTypeChangeRequest[] changes)
         {
             var request = new UpdateStructureTypesRequest();
@@ -115,9 +184,9 @@ namespace ConnectomeDataModelCoreTests
 
         private static StructureTypeChangeRequest DeleteOf(long id) => new() { Delete = id };
 
-        private static EfStructureType Stored(long id, string name) => new()
+        private static EfStructureType Stored(long id, string name, long? parentId = null) => new()
         {
-            Id = id, Name = name, Code = "C", MarkupType = "Point", HotKey = "\0", Username = "stored", Version = new byte[8],
+            Id = id, ParentId = parentId, Name = name, Code = "C", MarkupType = "Point", HotKey = "\0", Username = "stored", Version = new byte[8],
             Created = new DateTime(2020, 1, 1), LastModified = new DateTime(2020, 1, 1),
         };
 
@@ -159,13 +228,19 @@ namespace ConnectomeDataModelCoreTests
         }
 
         /// <summary>
-        /// Stands in for the StructureType table: opening the connection is suppressed, and each Id lookup
-        /// (its one parameter is the Id) is answered with the stored row that has that Id, in the column
-        /// order its SELECT list names.
+        /// Stands in for the StructureType table and the tables that reference it: opening the connection is
+        /// suppressed, and each query (<c>WHERE [t].[Column] = @p</c> or <c>IN (@p1, ...)</c>) is answered with
+        /// the rows of its table whose column holds a parameter value: StructureType rows from <c>rows</c>, in
+        /// the column order its SELECT list names, and the referencing type Ids from <see cref="References"/>.
         /// </summary>
         private sealed class FakeStructureTypeTable(params EfStructureType[] rows) : IDbConnectionInterceptor, IDbCommandInterceptor
         {
             private static readonly Regex SelectedColumn = new(@"\]\.\[(\w+)\]");
+            private static readonly Regex FromTable = new(@"FROM \[(\w+)\]");
+            private static readonly Regex Filter = new(@"WHERE \[\w+\]\.\[(\w+)\] (?:=|IN)");
+
+            /// <summary>Rows of other tables naming a structure type: (table, column, type Id).</summary>
+            public List<(string Table, string Column, long TypeId)> References { get; } = new();
 
             private static readonly Dictionary<string, (Type Type, Func<EfStructureType, object> Value)> Columns = new()
             {
@@ -194,14 +269,29 @@ namespace ConnectomeDataModelCoreTests
 
             public ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
             {
-                var id = Convert.ToInt64(command.Parameters.Cast<DbParameter>().Single().Value);
-                var selectList = command.CommandText.Substring(0, command.CommandText.IndexOf("FROM", StringComparison.Ordinal));
+                var text = command.CommandText;
+                var ids = command.Parameters.Cast<DbParameter>().Select(p => Convert.ToInt64(p.Value)).ToHashSet();
+                var selectList = text.Substring(0, text.IndexOf("FROM", StringComparison.Ordinal));
                 var columns = SelectedColumn.Matches(selectList).Select(m => m.Groups[1].Value).ToArray();
+                var fromTable = FromTable.Match(text).Groups[1].Value;
+                var filterColumn = Filter.Match(text).Groups[1].Value;
+
                 var table = new DataTable();
-                foreach (var column in columns)
-                    table.Columns.Add(column, Columns[column].Type);
-                foreach (var row in rows.Where(r => r.Id == id))
-                    table.Rows.Add(columns.Select(c => Columns[c].Value(row) ?? DBNull.Value).ToArray());
+                if (fromTable == "StructureType")
+                {
+                    foreach (var column in columns)
+                        table.Columns.Add(column, Columns[column].Type);
+                    foreach (var row in rows.Where(r => Columns[filterColumn].Value(r) is long v && ids.Contains(v)))
+                        table.Rows.Add(columns.Select(c => Columns[c].Value(row) ?? DBNull.Value).ToArray());
+                }
+                else
+                {
+                    table.Columns.Add(Assert.Single(columns), typeof(long));
+                    foreach (var typeId in References.Where(r => r.Table == fromTable && r.Column == filterColumn && ids.Contains(r.TypeId))
+                                 .Select(r => r.TypeId).Distinct())
+                        table.Rows.Add(typeId);
+                }
+
                 return ValueTask.FromResult(InterceptionResult<DbDataReader>.SuppressWithResult(table.CreateDataReader()));
             }
         }

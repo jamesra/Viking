@@ -94,8 +94,9 @@ namespace gRPCAnnotationService
         /// <summary>
         /// One SaveChanges for the whole batch. A failed row sets Success=false and does not roll back the others.
         /// Each change sees the changes before it: an update or delete of an Id that does not exist, or that the
-        /// batch already deleted, fails its own row. Created rows are reported after the save, so each carries
-        /// the Id the database assigned.
+        /// batch already deleted, fails its own row. A delete of a type that is still in use (see
+        /// <see cref="TypesInUseAsync"/>) also fails its own row. Created rows are reported after the save, so each
+        /// carries the Id the database assigned.
         /// </summary>
         public override async Task<UpdateStructureTypesResponse> Update(UpdateStructureTypesRequest request, ServerCallContext context)
         {
@@ -105,6 +106,9 @@ namespace gRPCAnnotationService
                 var username = AnnotationRpc.CallerName(context);
                 var response = new UpdateStructureTypesResponse();
                 var pendingCreates = new List<(StructureTypeChangeResponse Response, Viking.DataModel.Annotation.StructureType Entity)>();
+                var inUse = await TypesInUseAsync(request.Objs
+                    .Where(c => c.ActionCase == StructureTypeChangeRequest.ActionOneofCase.Delete)
+                    .Select(c => c.Delete).ToHashSet(), ct);
 
                 foreach (var req in request.Objs)
                 {
@@ -138,7 +142,7 @@ namespace gRPCAnnotationService
                             break;
                         case StructureTypeChangeRequest.ActionOneofCase.Delete:
                             var EF_remove_row = await FindLiveAsync(req.Delete, ct);
-                            if (EF_remove_row != null)
+                            if (EF_remove_row != null && !inUse.Contains(req.Delete))
                             {
                                 _context.StructureTypes.Remove(EF_remove_row);
                                 row_response.Success = true;
@@ -165,6 +169,48 @@ namespace gRPCAnnotationService
                 return response;
             }
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(Update), e, context); }
+        }
+
+        /// <summary>
+        /// The delete Ids that SaveChanges could not remove, because none of the foreign keys into StructureType
+        /// cascade: types named by a structure, a structure template or a permitted structure link, and parents of a
+        /// child type the batch keeps (a child the batch deletes keeps its parent too when the child is in use).
+        /// Without this check the failed DELETE would roll back the whole batch. A batch with no delete costs no query.
+        /// </summary>
+        private async Task<HashSet<long>> TypesInUseAsync(HashSet<long> deleteIds, CancellationToken ct)
+        {
+            var inUse = new HashSet<long>();
+            if (deleteIds.Count == 0)
+                return inUse;
+
+            var children = new List<(long Id, long ParentId)>();
+            foreach (var chunk in deleteIds.DistinctChunk())
+            {
+                inUse.UnionWith(await _context.Structures
+                    .Where(s => chunk.Contains(s.TypeId)).Select(s => s.TypeId).Distinct().ToListAsync(ct));
+                inUse.UnionWith(await _context.StructureTemplates
+                    .Where(t => chunk.Contains(t.StructureTypeId)).Select(t => t.StructureTypeId).Distinct().ToListAsync(ct));
+                inUse.UnionWith(await _context.PermittedStructureLinks
+                    .Where(p => chunk.Contains(p.SourceTypeId)).Select(p => p.SourceTypeId).Distinct().ToListAsync(ct));
+                inUse.UnionWith(await _context.PermittedStructureLinks
+                    .Where(p => chunk.Contains(p.TargetTypeId)).Select(p => p.TargetTypeId).Distinct().ToListAsync(ct));
+                children.AddRange((await _context.StructureTypes
+                    .Where(t => chunk.Contains(t.ParentId.Value)).Select(t => new { t.Id, ParentId = t.ParentId.Value })
+                    .ToListAsync(ct)).Select(c => (c.Id, c.ParentId)));
+            }
+
+            bool grew;
+            do
+            {
+                grew = false;
+                foreach (var (id, parentId) in children)
+                {
+                    if ((!deleteIds.Contains(id) || inUse.Contains(id)) && inUse.Add(parentId))
+                        grew = true;
+                }
+            } while (grew);
+
+            return inUse;
         }
 
         /// <summary>
