@@ -20,7 +20,7 @@ namespace Viking.UI
         REPLACE, //Replace the newest vertex
         NONE,
         ADD, //Append a new vertex
-        CUT_ERASE //Remove all verticies after a vertex
+        CUT_ERASE //Remove the vertex nearest the input and every vertex placed after it
     };
 
 
@@ -456,7 +456,8 @@ namespace Viking.UI
         /// <param name="action">ADD: Adds the input to the currrent path
         ///                      REPLACE: Replaces the newest vertex in the path with the input
         ///                      REMOVE: Removes the most recently placed vertex; input is ignored
-        ///                      CUT_ERASE: Removes the path vertices placed after the point nearest the input
+        ///                      CUT_ERASE: Removes the path vertex nearest the input and every vertex placed after it
+        ///                      (<see cref="Geometry.Path.Erase(Vector2)"/> erases from that vertex through the newest)
         ///                      NONE: Does nothing</param>
         /// <param name="input">World position for ADD, REPLACE and CUT_ERASE; required (null throws) for those actions.</param>
         /// <exception cref="ArgumentException">The action is not a defined <see cref="PathVertexAction"/>.</exception>
