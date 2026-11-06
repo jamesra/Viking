@@ -426,7 +426,7 @@ namespace ConnectomeDataModelCoreTests
         }
 
         /// <summary>A command EF can configure (parameters are real SqlParameters) but that never runs.</summary>
-        private sealed class FakeCommand : DbCommand
+        internal sealed class FakeCommand : DbCommand
         {
             private readonly SqlCommand _inner = new();
 
@@ -448,7 +448,7 @@ namespace ConnectomeDataModelCoreTests
         }
 
         /// <summary>A transaction on the test's connection that reports its commit and does nothing else.</summary>
-        private sealed class FakeTransaction : DbTransaction
+        internal sealed class FakeTransaction : DbTransaction
         {
             private readonly DbConnection _connection;
             private readonly Action _onCommit;

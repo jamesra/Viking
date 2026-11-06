@@ -434,6 +434,7 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// Batch of create, update, and delete changes in one transaction, one result per request row in order. An update of a missing ID reports Success = false instead of failing the batch. Delete runs DeepDeleteStructure, which also removes the structure's locations, links, and children.
+        /// An edit of a structure that a later row deletes, directly or as a child, keeps its Success and the delete stands.
         /// </summary>
         public override async Task<UpdateStructuresResponse> Update(UpdateStructuresRequest request, ServerCallContext context)
         {
@@ -491,6 +492,7 @@ namespace gRPCAnnotationService
                     response.Results.Add(rowResponse);
                 }
 
+                await ForgetEditsOfDeletedStructuresAsync(request, ct);
                 await _context.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
 
@@ -723,6 +725,31 @@ namespace gRPCAnnotationService
                 if (link.TargetId != link.SourceId && byId.TryGetValue(link.TargetId, out var target))
                     target.Links.Add(ToProtobufMessage(link));
             }
+        }
+
+        /// <summary>
+        /// DeepDeleteStructure deletes the structure and its child structures in SQL, which the change tracker
+        /// does not see. A structure the batch edited before that delete would be saved as an UPDATE of a missing
+        /// row, which EF reports as a concurrency failure and which would roll back the whole batch, so stop
+        /// tracking every edited structure whose row is gone. The delete stands. A batch with no delete costs no query.
+        /// </summary>
+        private async Task ForgetEditsOfDeletedStructuresAsync(UpdateStructuresRequest request, CancellationToken ct)
+        {
+            if (!request.Objs.Any(c => c.ActionCase == StructureChangeRequest.ActionOneofCase.Delete))
+                return;
+
+            var edited = _context.ChangeTracker.Entries<EfStructure>()
+                .Where(e => e.State == EntityState.Modified).ToList();
+            if (edited.Count == 0)
+                return;
+
+            var live = new HashSet<long>();
+            foreach (var chunk in edited.Select(e => e.Entity.Id).DistinctChunk())
+                live.UnionWith(await _context.Structures.AsNoTracking()
+                    .Where(s => chunk.Contains(s.Id)).Select(s => s.Id).ToListAsync(ct));
+
+            foreach (var entry in edited.Where(e => !live.Contains(e.Entity.Id)))
+                entry.State = EntityState.Detached;
         }
 
         /// <summary>Builds the [dbo].[integer_list] table valued parameter the network procedures take.</summary>
