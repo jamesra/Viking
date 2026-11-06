@@ -115,6 +115,47 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         [Test]
+        public async Task StoreWithKeyGetOrAdd_CompletesAfterListener()
+        {
+            var locations = CreateLocationStore();
+            IStoreWithKey<long, LocationObj> store = locations;
+
+            Task<LocationObj> pending = null;
+            await AssertCompletesAfterListener(locations, NotifyCollectionChangedAction.Add,
+                () => pending = store.GetOrAdd(5, id => new LocationObj(id, 2), out _));
+
+            Assert.That((await pending).ID, Is.EqualTo(5));
+        }
+
+        [Test]
+        public async Task StoreWithKeyGetOrAdd_OfCachedKey_RaisesNothing()
+        {
+            var locations = CreateLocationStore();
+            var cached = Seed<long, LocationObj>(locations, 5, new LocationObj(5, 2));
+            int calls = 0;
+            locations.OnCollectionChanged += (_, _) => Interlocked.Increment(ref calls);
+
+            Task<LocationObj> pending = ((IStoreWithKey<long, LocationObj>)locations)
+                .GetOrAdd(5, id => new LocationObj(id, 2), out bool added);
+
+            Assert.That(pending.IsCompleted, Is.True);
+            Assert.That(await pending, Is.SameAs(cached));
+            Assert.That(added, Is.False);
+            Assert.That(calls, Is.Zero);
+        }
+
+        [Test]
+        public void StoreWithKeyGetOrAdd_ListenerException_ReachesCaller()
+        {
+            var locations = CreateLocationStore();
+            locations.OnCollectionChanged += (_, _) => throw new InvalidOperationException("listener failed");
+            IStoreWithKey<long, LocationObj> store = locations;
+
+            Assert.That(async () => await store.GetOrAdd(5, id => new LocationObj(id, 2), out _),
+                Throws.InvalidOperationException.With.Message.EqualTo("listener failed"));
+        }
+
+        [Test]
         public void Add_ListenerException_ReachesCaller()
         {
             var structures = CreateStructureStore();
@@ -188,6 +229,10 @@ namespace WebAnnotationModel.gRPC.Tests
                 .Create("Convert", _ => null);
             return new StructureStore(factory, null, toServer, null, null, null, null);
         }
+
+        private static LocationStore CreateLocationStore() =>
+            new LocationStore(null, null, null, null,
+                new StructureStore(null, null, null, null, null, null, null), new LocationLinkStore(null, null, null, null));
 
         private static PermittedStructureLinkStore CreatePermittedLinkStore()
         {

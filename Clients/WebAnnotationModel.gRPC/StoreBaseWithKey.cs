@@ -1200,9 +1200,22 @@ namespace WebAnnotationModel.gRPC
 
         #region IStoreWithKey
          
+        /// <summary>
+        /// Insert-or-get whose task, when the object was added, completes after the CollectionChanged listeners have
+        /// run and faults with a listener's exception, as for <see cref="Add(OBJECT)"/>. The public synchronous
+        /// <see cref="GetOrAdd(KEY, Func{KEY, OBJECT}, out bool)"/> cannot wait: listeners such as WinForms lists
+        /// marshal to the UI thread with a blocking Invoke, so blocking a UI-thread caller would deadlock.
+        /// </summary>
         Task<OBJECT> IStoreWithKey<KEY, OBJECT>.GetOrAdd(KEY key, Func<KEY, OBJECT> createFunc, out bool added)
         {
-            return Task.FromResult(GetOrAdd(key, createFunc, out added));
+            OBJECT result = InternalGetOrAdd(key, createFunc, out added);
+            return added ? NotifyAddedAsync(result) : Task.FromResult(result);
+        }
+
+        private async Task<OBJECT> NotifyAddedAsync(OBJECT added)
+        {
+            await CallOnCollectionChangedForAdd(added).ConfigureAwait(false);
+            return added;
         }
 
         bool IStoreWithKey<KEY, OBJECT>.Contains(KEY key)
