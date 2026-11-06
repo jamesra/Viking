@@ -26,7 +26,10 @@
                              the certificate needs *.segmentation.<VIKING_DOMAIN> or each name listed)
       network                how the proxy reaches it: backend | published | macvlan
       mac, ip, dhcpHostname  macvlan only: the DHCP-reserved MAC and IP (and the name sent with the request)
-      serviceName            Identity SegmentationService resource, to read local tilesets (optional)
+      identitySegmentationService
+                             name of the Identity SegmentationService resource whose assigned annotation
+                             contexts the server reads tiles for itself (optional; omitted, clients upload
+                             every cell)
       cacheMaxMemoryBytes    cap on the GPU cache of encoded tiles (optional; the server default is 16 GiB).
                              Set it for a server that shares the GPU with training.
 
@@ -247,8 +250,8 @@ foreach ($r in $rows) {
     [void]$y.AppendLine('    environment:')
     [void]$y.AppendLine("      SAM2_CHECKPOINT: /models/$($r.model)")
     [void]$y.AppendLine("      SEGMENTATION_MODEL_NAME: `"$($r.prefix)`"")
-    $service = Get-RowValue $r 'serviceName'
-    if ($service) { [void]$y.AppendLine("      SEGMENTATION_SERVICE_NAME: `"$service`"") }
+    $service = Get-RowValue $r 'identitySegmentationService'
+    if ($service) { [void]$y.AppendLine("      SEGMENTATION_IDENTITY_SERVICE: `"$service`"") }
     [void]$y.AppendLine('    volumes:')
     [void]$y.AppendLine("      - ${cacheRoot}/segmentation-$($r.prefix)-inductor:/home/user/.cache/torch_inductor")
     [void]$y.AppendLine("      - ${cacheRoot}/segmentation-$($r.prefix)-embeddings:/var/cache/segmentation-embeddings")

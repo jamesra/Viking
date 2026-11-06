@@ -205,7 +205,7 @@ class VikingTilesetSource:
 def open_tile_source() -> Optional[VikingTilesetSource]:
     """The tile source the environment configures, or None (every cell is asked of the client).
 
-    Needs ``IdentityServer__Endpoint``, ``IdentityServer__ClientSecret`` and ``SEGMENTATION_SERVICE_NAME``;
+    Needs ``IdentityServer__Endpoint``, ``IdentityServer__ClientSecret`` and ``SEGMENTATION_IDENTITY_SERVICE``;
     ``IdentityServer__ApiEndpoint`` and ``IdentityServer__ClientId`` are optional.
     """
     options = IdentityOptions.from_env()

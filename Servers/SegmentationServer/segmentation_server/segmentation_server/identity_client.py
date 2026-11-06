@@ -65,10 +65,10 @@ class IdentityOptions:
 
     @classmethod
     def from_env(cls) -> Optional["IdentityOptions"]:
-        """The options from ``IdentityServer__*`` and ``SEGMENTATION_SERVICE_NAME``, or None when any required one is unset."""
+        """The options from ``IdentityServer__*`` and ``SEGMENTATION_IDENTITY_SERVICE``, or None when any required one is unset."""
         endpoint = os.environ.get("IdentityServer__Endpoint", "").strip()
         secret = os.environ.get("IdentityServer__ClientSecret", "").strip()
-        name = os.environ.get("SEGMENTATION_SERVICE_NAME", "").strip()
+        name = os.environ.get("SEGMENTATION_IDENTITY_SERVICE", "").strip()
         if not (endpoint and secret and name):
             return None
         return cls(

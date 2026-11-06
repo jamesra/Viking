@@ -32,21 +32,21 @@ checks the weights file, updates ``models.json``, writes ``compose.generated.yam
 ``segmentation-model`` template there) and starts the selected servers. Image build or pull is
 separate (``build``, ``pull``). A row has:
 
-==========================  ===========================================================================
-Field                       Meaning
-==========================  ===========================================================================
-``prefix``                  DNS label; the service is ``segmentation-<prefix>``
-``model``                   weights file in the models folder, or a path below it
-``port``                    host port when published (default: next free from 40445)
-``hostname``                full host name; default ``<prefix>.segmentation.<VIKING_DOMAIN>`` (under the
-                            bare ``VIKING_HOSTNAME_SEGMENTATION``); needs a wildcard, see TLS
-``network``                 ``backend``, ``published`` or ``macvlan`` (below)
-``mac``, ``ip``,            macvlan only: the DHCP-reserved MAC and IP, and the name sent with the request
+================================  ===========================================================================
+Field                             Meaning
+================================  ===========================================================================
+``prefix``                        DNS label; the service is ``segmentation-<prefix>``
+``model``                         weights file in the models folder, or a path below it
+``port``                          host port when published (default: next free from 40445)
+``hostname``                      full host name; default ``<prefix>.segmentation.<VIKING_DOMAIN>`` (under the
+                                  bare ``VIKING_HOSTNAME_SEGMENTATION``); needs a wildcard, see TLS
+``network``                       ``backend``, ``published`` or ``macvlan`` (below)
+``mac``, ``ip``,                  macvlan only: the DHCP-reserved MAC and IP, and the name sent with the request
 ``dhcpHostname``
-``serviceName``             Identity SegmentationService resource (local tilesets, below)
-``cacheMaxMemoryBytes``     cap on the GPU cache of encoded tiles (server default 16 GiB); set it for a
-                            server that shares the GPU with training
-==========================  ===========================================================================
+``identitySegmentationService``   Identity SegmentationService resource name (local tilesets, below)
+``cacheMaxMemoryBytes``           cap on the GPU cache of encoded tiles (server default 16 GiB); set it for a
+                                  server that shares the GPU with training
+================================  ===========================================================================
 
 How the proxy reaches a model server
 ------------------------------------
@@ -136,7 +136,7 @@ storage is). Then set, in the run env:
   ``segmentation`` client. The issuer and Permissions API default to the host-wide
   ``VIKING_IDENTITY_URL`` / ``VIKING_IDENTITY_API_URL``; ``SEGMENTATION_IDENTITY_ENDPOINT`` /
   ``SEGMENTATION_IDENTITY_API_ENDPOINT`` override them;
-- ``SEGMENTATION_SERVICE_NAME`` for the default server, and ``serviceName`` in a row of
+- ``SEGMENTATION_IDENTITY_SERVICE`` for the default server, and ``identitySegmentationService`` in a row of
   ``models.json`` for the others: the resource name of each container's SegmentationService.
 
 The server reads plain greyscale cells in mosaic space from the context's VikingXML tilesets over

@@ -78,7 +78,7 @@ x-segmentation-env: &segmentation-env
   SEGMENTATION_BOX_MULTIMASK: ${SEGMENTATION_BOX_MULTIMASK:-0}
   # Identity "segmentation" client: lists the annotation contexts each container is local to, so it reads their
   # tilesets itself instead of asking clients for every cell. It runs only when the client secret and
-  # SEGMENTATION_SERVICE_NAME are set; otherwise every cell is left to the clients. The URLs are the
+  # SEGMENTATION_IDENTITY_SERVICE are set; otherwise every cell is left to the clients. The URLs are the
   # host-wide VIKING_IDENTITY_URL / VIKING_IDENTITY_API_URL unless SEGMENTATION_IDENTITY_* override them.
   IdentityServer__Endpoint: ${SEGMENTATION_IDENTITY_ENDPOINT:-${VIKING_IDENTITY_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN:-}}/}}
   IdentityServer__ApiEndpoint: ${SEGMENTATION_IDENTITY_API_ENDPOINT:-${VIKING_IDENTITY_API_URL:-https://${VIKING_HOSTNAME_IDENTITY:-identity.${VIKING_DOMAIN:-}}/webapi/}}
@@ -114,7 +114,7 @@ services:
     environment:
       <<: *segmentation-env
       SAM2_CHECKPOINT: ${SAM2_CHECKPOINT:-/models/best_TEM_model.pt}
-      SEGMENTATION_SERVICE_NAME: ${SEGMENTATION_SERVICE_NAME:-}
+      SEGMENTATION_IDENTITY_SERVICE: ${SEGMENTATION_IDENTITY_SERVICE:-}
       SEGMENTATION_MODEL_NAME: ${SEGMENTATION_MODEL_NAME:-default}
       SEGMENTATION_DEMO_SITE: ${SEGMENTATION_DEMO_SITE:-0}
       SEGMENTATION_DEMO_PLAINTEXT: ${SEGMENTATION_DEMO_PLAINTEXT:-0}

@@ -269,13 +269,13 @@ async def test_an_unknown_context_refreshes_after_a_minute_and_a_failure_keeps_t
 
 
 def test_identity_options_need_endpoint_secret_and_name(monkeypatch) -> None:
-    for name in ("IdentityServer__Endpoint", "IdentityServer__ClientSecret", "SEGMENTATION_SERVICE_NAME", "IdentityServer__ApiEndpoint"):
+    for name in ("IdentityServer__Endpoint", "IdentityServer__ClientSecret", "SEGMENTATION_IDENTITY_SERVICE", "IdentityServer__ApiEndpoint"):
         monkeypatch.delenv(name, raising=False)
     assert IdentityOptions.from_env() is None
 
     monkeypatch.setenv("IdentityServer__Endpoint", "https://identity.example/")
     monkeypatch.setenv("IdentityServer__ClientSecret", "s")
-    monkeypatch.setenv("SEGMENTATION_SERVICE_NAME", "seg")
+    monkeypatch.setenv("SEGMENTATION_IDENTITY_SERVICE", "seg")
     options = IdentityOptions.from_env()
     assert options is not None and options.api_endpoint == "https://identity.example/" and options.client_id == "segmentation"
 
