@@ -13,11 +13,43 @@ namespace VikingCoreTests
     /// Pins <see cref="PenInputHelper.ApplyVertexAction"/>, the one place the pen path is edited, through the internal
     /// test constructor (no viewer): what each <see cref="PathVertexAction"/> does to the path, when
     /// <see cref="PenInputHelper.OnProposedNextSegmentChanged"/> fires, that <see cref="PenInputHelper.CanControlPointBePlaced"/>
-    /// can veto an ADD, that segments stay one fewer than points, and that the simplify tolerance is capped.
+    /// can veto an ADD, that segments stay one fewer than points (none on an emptied path, with no Debug.Assert
+    /// failing), and that the simplify tolerance is capped.
     /// </summary>
     [TestClass]
     public class PenInputHelperVertexActionTests
     {
+        /// <summary>
+        /// Turns a failed <see cref="System.Diagnostics.Debug.Assert(bool)"/> into an exception. Inserted ahead of the
+        /// default listener, whose assert dialog would otherwise block the test host. Only Debug builds of Geometry and
+        /// VikingCore compile the asserts in, so the path's segment-count asserts are checked only there.
+        /// </summary>
+        private sealed class ThrowOnDebugAssert : System.Diagnostics.TraceListener
+        {
+            public ThrowOnDebugAssert() => System.Diagnostics.Trace.Listeners.Insert(0, this);
+
+            public override void Fail(string message, string detailMessage) =>
+                throw new InvalidOperationException($"Debug.Assert failed: {message} {detailMessage}");
+
+            public override void Write(string message) { }
+
+            public override void WriteLine(string message) { }
+
+            protected override void Dispose(bool disposing)
+            {
+                System.Diagnostics.Trace.Listeners.Remove(this);
+                base.Dispose(disposing);
+            }
+        }
+
+        private ThrowOnDebugAssert? assertListener;
+
+        [TestInitialize]
+        public void FailTestsOnDebugAssert() => assertListener = new ThrowOnDebugAssert();
+
+        [TestCleanup]
+        public void RestoreDebugAssert() => assertListener?.Dispose();
+
         private static Vector2 V(double x, double y) => new(x, y);
 
         /// <summary>A helper holding a straight path along X: (0,0), (10,0), ... with <paramref name="count"/> points.</summary>
@@ -218,6 +250,41 @@ namespace VikingCoreTests
         }
 
         [TestMethod]
+        public void Remove_LastVertex_EmptiesPathWithoutAssert()
+        {
+            PenInputHelper helper = HelperWithLine(1);
+            List<LineSegment?> fired = CaptureProposedSegments(helper);
+
+            helper.ApplyVertexAction(PathVertexAction.REMOVE, null);
+
+            Assert.AreEqual(0, helper.Points.Count);
+            AssertSegmentsMatchPoints(helper);
+            CollectionAssert.AreEqual(new LineSegment?[] { null }, fired);
+        }
+
+        [TestMethod]
+        public void Replace_OnOnePointPath_SwapsThePointWithoutAssert()
+        {
+            PenInputHelper helper = HelperWithLine(1);
+
+            helper.ApplyVertexAction(PathVertexAction.REPLACE, V(3, 4));
+
+            CollectionAssert.AreEqual(new[] { V(3, 4) }, helper.Points);
+            AssertSegmentsMatchPoints(helper);
+        }
+
+        [TestMethod]
+        public void CutErase_AtFirstVertex_EmptiesPathWithoutAssert()
+        {
+            PenInputHelper helper = HelperWithLine(3);
+
+            helper.ApplyVertexAction(PathVertexAction.CUT_ERASE, V(1, 1));
+
+            Assert.AreEqual(0, helper.Points.Count);
+            AssertSegmentsMatchPoints(helper);
+        }
+
+        [TestMethod]
         public void UndefinedAction_ThrowsArgumentExceptionAndChangesNothing()
         {
             PenInputHelper helper = HelperWithLine(3);
@@ -285,8 +352,7 @@ namespace VikingCoreTests
         public void RandomActionSequences_KeepSegmentsOneFewerThanPoints()
         {
             // Action 0..3 = ADD, REPLACE, REMOVE, CUT_ERASE. Points step along X so no two are equal (a zero-length
-            // segment is not allowed). Edits only run on two or more vertices and CUT_ERASE never targets the first
-            // one: emptying the path trips Path's Debug.Assert (Segments == Points - 1), which blocks the test host.
+            // segment is not allowed). Edits run whenever the path has a vertex, so sequences also empty the path.
             var stepGen = Gen.Elements(0, 1, 2, 3);
             var offsetGen = Gen.Choose(0, 5);
             var yGen = Gen.Choose(-50, 50);
@@ -308,14 +374,14 @@ namespace VikingCoreTests
                         case 0:
                             helper.ApplyVertexAction(PathVertexAction.ADD, p);
                             break;
-                        case 1 when helper.Points.Count > 1:
+                        case 1 when helper.Points.Count > 0:
                             helper.ApplyVertexAction(PathVertexAction.REPLACE, p);
                             break;
-                        case 2 when helper.Points.Count > 1:
+                        case 2 when helper.Points.Count > 0:
                             helper.ApplyVertexAction(PathVertexAction.REMOVE, null);
                             break;
-                        case 3 when helper.Points.Count > 1:
-                            Vector2 nearestVertex = helper.Points[1 + dx % (helper.Points.Count - 1)];
+                        case 3 when helper.Points.Count > 0:
+                            Vector2 nearestVertex = helper.Points[dx % helper.Points.Count];
                             helper.ApplyVertexAction(PathVertexAction.CUT_ERASE, nearestVertex);
                             break;
                     }

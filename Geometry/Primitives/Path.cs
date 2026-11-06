@@ -257,8 +257,8 @@ namespace Geometry
 
             _SimplifiedPath = null;  //TODO: This could be optimized to only calculate the new segment
 
-            //Make sure we have the right number of segments for points in the path
-            System.Diagnostics.Debug.Assert(_Segments.Count == this.Points.Count - 1);
+            //Make sure we have the right number of segments for points in the path; popping the last point leaves none of either
+            System.Diagnostics.Debug.Assert(_Segments.Count == Math.Max(0, this.Points.Count - 1));
             return p;
         }
 
