@@ -137,7 +137,8 @@ namespace WebAnnotationModel.gRPC
         }
 
         /// <summary>
-        /// Insert-or-get for UI/create callers. Fires CollectionChanged immediately when added.
+        /// Insert-or-get for UI/create callers. Fires CollectionChanged immediately when added, without waiting for
+        /// the listeners; a listener's exception is traced, not thrown.
         /// Server ingest should use IStoreEditor.GetOrAdd and batch events via CallOnCollectionChanged.
         /// </summary>
         public OBJECT GetOrAdd(KEY key, Func<KEY, OBJECT> createFunc, out bool added)
@@ -145,10 +146,24 @@ namespace WebAnnotationModel.gRPC
             var result = this.InternalGetOrAdd(key, createFunc, out added);
             if (added)
             {
-                CallOnCollectionChangedForAdd(result);
+                TraceNotifyFault(CallOnCollectionChangedForAdd(result), nameof(GetOrAdd));
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Traces a fault of a CollectionChanged notification that a synchronous caller cannot await (the async
+        /// IStoreWithKey.GetOrAdd explains why blocking would deadlock), so a listener's
+        /// exception is not lost with an unobserved task. Never blocks.
+        /// </summary>
+        private void TraceNotifyFault(Task notifyTask, string caller)
+        {
+            notifyTask.ContinueWith(
+                t => Trace.TraceError($"{GetType().Name}.{caller}: a CollectionChanged listener failed:\n{t.Exception}"),
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
         }
 
         public virtual bool Contains(KEY key)
@@ -1172,11 +1187,14 @@ namespace WebAnnotationModel.gRPC
         /// server for the next request.
         /// </summary>
         /// <param name="keys"></param>
-        /// <returns></returns>
+        /// <returns>
+        /// The removed entries, one per key (null for a key that was not cached). The Remove notification is not
+        /// awaited; a listener's exception is traced, not thrown.
+        /// </returns>
         public virtual List<OBJECT> ForgetLocally(KEY[] keys)
         { 
             List<OBJECT> listForgotten = InternalDelete(keys);
-            CallOnCollectionChangedForDelete(listForgotten);
+            TraceNotifyFault(CallOnCollectionChangedForDelete(listForgotten), nameof(ForgetLocally));
             return listForgotten;
         }
          

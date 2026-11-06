@@ -250,6 +250,81 @@ namespace WebAnnotationModel.gRPC.Tests
                 Throws.InvalidOperationException.With.Message.EqualTo("no server in this test"));
         }
 
+        [Test]
+        public void SyncGetOrAdd_ListenerException_IsTracedNotThrown()
+        {
+            var locations = CreateLocationStore();
+            const string message = "sync GetOrAdd listener failed";
+            locations.OnCollectionChanged += (_, _) => throw new InvalidOperationException(message);
+
+            AssertListenerFaultIsTraced(message, () =>
+            {
+                LocationObj result = locations.GetOrAdd(5, id => new LocationObj(id, 2), out bool added);
+                Assert.That(added, Is.True);
+                Assert.That(result.ID, Is.EqualTo(5));
+            });
+        }
+
+        [Test]
+        public void ForgetLocally_ListenerException_IsTracedNotThrown()
+        {
+            var structures = CreateStructureStore();
+            Seed<long, StructureObj>(structures, 1, new StructureObj(1, 1));
+            const string message = "ForgetLocally listener failed";
+            structures.OnCollectionChanged += (_, _) => throw new InvalidOperationException(message);
+
+            AssertListenerFaultIsTraced(message, () =>
+            {
+                List<StructureObj> forgotten = structures.ForgetLocally(new[] { 1L });
+                Assert.That(forgotten, Has.Count.EqualTo(1));
+                Assert.That(structures.Contains(1L), Is.False);
+            });
+        }
+
+        /// <summary>
+        /// Runs a synchronous store call whose listener throws, and checks the call returns normally while the
+        /// listener's exception still reaches <see cref="System.Diagnostics.Trace"/> instead of being lost with an
+        /// unobserved task.
+        /// </summary>
+        private static void AssertListenerFaultIsTraced(string listenerMessage, Action syncCall)
+        {
+            using var traced = new ManualResetEventSlim(false);
+            var listener = new MessageTraceListener(listenerMessage, traced);
+            System.Diagnostics.Trace.Listeners.Add(listener);
+            try
+            {
+                Assert.That(() => syncCall(), Throws.Nothing);
+                Assert.That(traced.Wait(ListenerTimeout), Is.True, "the listener's exception was not traced");
+            }
+            finally
+            {
+                System.Diagnostics.Trace.Listeners.Remove(listener);
+            }
+        }
+
+        private sealed class MessageTraceListener : System.Diagnostics.TraceListener
+        {
+            private readonly string _expected;
+            private readonly ManualResetEventSlim _seen;
+
+            public MessageTraceListener(string expected, ManualResetEventSlim seen)
+            {
+                _expected = expected;
+                _seen = seen;
+            }
+
+            public override void Write(string message) { }
+
+            public override void WriteLine(string message) { }
+
+            public override void TraceEvent(System.Diagnostics.TraceEventCache eventCache, string source,
+                System.Diagnostics.TraceEventType eventType, int id, string message)
+            {
+                if (eventType == System.Diagnostics.TraceEventType.Error && message != null && message.Contains(_expected))
+                    _seen.Set();
+            }
+        }
+
         /// <summary>
         /// Holds every listener call of <paramref name="store"/> until the operation's task has been checked, so a task
         /// that completes before its notification has run is caught without relying on timing.
