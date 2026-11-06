@@ -441,10 +441,7 @@ namespace gRPCAnnotationService
             {
                 var ct = context.CancellationToken;
                 var username = AnnotationRpc.CallerName(context);
-                var row = request.Obj.ToLocation();
-                row.Username = username;
-                row.Created = DateTime.UtcNow;
-                row.LastModified = row.Created;
+                var row = NewLocationRow(request.Obj, username);
 
                 await using var tx = await _context.Database.BeginTransactionAsync(ct);
 
@@ -476,68 +473,19 @@ namespace gRPCAnnotationService
                 var ct = context.CancellationToken;
                 var response = new UpdateLocationsResponse();
                 var username = AnnotationRpc.CallerName(context);
-                var pendingCircles = new List<(LocationChangeResponse Response, EfLocation Entity, ProtoLocation Proto, bool IsCreate)>();
+                var pendingCircles = new List<PendingWrite>();
 
                 await using var tx = await _context.Database.BeginTransactionAsync(ct);
 
                 foreach (var change in request.Locations)
                 {
-                    var rowResponse = new LocationChangeResponse();
-
-                    switch (change.ActionCase)
+                    response.Results.Add(change.ActionCase switch
                     {
-                        case LocationChangeRequest.ActionOneofCase.Create:
-                            var toInsert = change.Create.ToLocation();
-                            toInsert.Username = username;
-                            toInsert.Created = DateTime.UtcNow;
-                            toInsert.LastModified = toInsert.Created;
-                            var inserted = await _context.Locations.AddAsync(toInsert, ct);
-                            pendingCircles.Add((rowResponse, inserted.Entity, change.Create, true));
-                            rowResponse.Success = true;
-                            break;
-
-                        case LocationChangeRequest.ActionOneofCase.Update:
-                            var existing = await FindLiveAsync(change.Update.Id, ct);
-                            if (existing == null)
-                            {
-                                rowResponse.Success = false;
-                                break;
-                            }
-
-                            ApplyUpdate(change.Update, existing, username);
-                            pendingCircles.Add((rowResponse, existing, change.Update, false));
-                            rowResponse.Success = true;
-                            break;
-
-                        case LocationChangeRequest.ActionOneofCase.Delete:
-                            var toDelete = await _context.Locations.FirstOrDefaultAsync(l => l.Id == change.Delete, ct);
-                            if (toDelete == null)
-                            {
-                                rowResponse.Success = false;
-                                break;
-                            }
-
-                            // The link rows reference the location, so they have to go first.
-                            var attached = await _context.LocationLinks
-                                .Where(link => link.A == toDelete.Id || link.B == toDelete.Id).ToListAsync(ct);
-                            foreach (var link in attached)
-                                await LogDeletedLocationLinkAsync(link.A, link.B, ct);
-                            _context.LocationLinks.RemoveRange(attached);
-
-                            // The Location_delete trigger writes the DeletedLocations row (ID, Z)
-                            // that incremental GetLocationChanges* calls return; queuing one here as well would
-                            // fail the save on PK_DeletedLocations.
-                            _context.Locations.Remove(toDelete);
-                            rowResponse.Success = true;
-                            rowResponse.DeletedId = change.Delete;
-                            break;
-
-                        default:
-                            rowResponse.Success = false;
-                            break;
-                    }
-
-                    response.Results.Add(rowResponse);
+                        LocationChangeRequest.ActionOneofCase.Create => await QueueCreateAsync(change.Create, username, pendingCircles, ct),
+                        LocationChangeRequest.ActionOneofCase.Update => await QueueUpdateAsync(change.Update, username, pendingCircles, ct),
+                        LocationChangeRequest.ActionOneofCase.Delete => await QueueDeleteAsync(change.Delete, ct),
+                        _ => new LocationChangeResponse { Success = false }
+                    });
                 }
 
                 await _context.SaveChangesAsync(ct);
@@ -849,6 +797,71 @@ namespace gRPCAnnotationService
                             && (d.Z == null || d.Z == section))
                 .Select(d => d.Id)
                 .ToListAsync(ct);
+        }
+
+        /// <summary>
+        /// A created or updated row of an <see cref="Update"/> batch, waiting for the save that gives it an ID before
+        /// its circle shapes (and, for a create, its links) are written and <see cref="Response"/> is filled in.
+        /// </summary>
+        private readonly record struct PendingWrite(LocationChangeResponse Response, EfLocation Entity, ProtoLocation Proto, bool IsCreate);
+
+        /// <summary>A new row from the proto, authored by <paramref name="username"/> and created now.</summary>
+        private static EfLocation NewLocationRow(ProtoLocation proto, string username)
+        {
+            var row = proto.ToLocation();
+            row.Username = username;
+            row.Created = DateTime.UtcNow;
+            row.LastModified = row.Created;
+            return row;
+        }
+
+        /// <summary>Queues the insert of one batch row and adds it to <paramref name="pending"/>.</summary>
+        private async Task<LocationChangeResponse> QueueCreateAsync(ProtoLocation proto, string username, List<PendingWrite> pending, CancellationToken ct)
+        {
+            var inserted = await _context.Locations.AddAsync(NewLocationRow(proto, username), ct);
+            var rowResponse = new LocationChangeResponse { Success = true };
+            pending.Add(new PendingWrite(rowResponse, inserted.Entity, proto, IsCreate: true));
+            return rowResponse;
+        }
+
+        /// <summary>
+        /// Applies one batch row's update to the live location and adds it to <paramref name="pending"/>; Success is
+        /// false when the location is missing or an earlier row of the batch deleted it.
+        /// </summary>
+        private async Task<LocationChangeResponse> QueueUpdateAsync(ProtoLocation proto, string username, List<PendingWrite> pending, CancellationToken ct)
+        {
+            var existing = await FindLiveAsync(proto.Id, ct);
+            if (existing == null)
+                return new LocationChangeResponse { Success = false };
+
+            ApplyUpdate(proto, existing, username);
+            var rowResponse = new LocationChangeResponse { Success = true };
+            pending.Add(new PendingWrite(rowResponse, existing, proto, IsCreate: false));
+            return rowResponse;
+        }
+
+        /// <summary>
+        /// Queues the delete of one batch row's location and its links, logging each link once; Success is false when
+        /// the location does not exist.
+        /// </summary>
+        private async Task<LocationChangeResponse> QueueDeleteAsync(long id, CancellationToken ct)
+        {
+            var toDelete = await _context.Locations.FirstOrDefaultAsync(l => l.Id == id, ct);
+            if (toDelete == null)
+                return new LocationChangeResponse { Success = false };
+
+            // The link rows reference the location, so they have to go first.
+            var attached = await _context.LocationLinks
+                .Where(link => link.A == toDelete.Id || link.B == toDelete.Id).ToListAsync(ct);
+            foreach (var link in attached)
+                await LogDeletedLocationLinkAsync(link.A, link.B, ct);
+            _context.LocationLinks.RemoveRange(attached);
+
+            // The Location_delete trigger writes the DeletedLocations row (ID, Z)
+            // that incremental GetLocationChanges* calls return; queuing one here as well would
+            // fail the save on PK_DeletedLocations.
+            _context.Locations.Remove(toDelete);
+            return new LocationChangeResponse { Success = true, DeletedId = id };
         }
 
         /// <summary>

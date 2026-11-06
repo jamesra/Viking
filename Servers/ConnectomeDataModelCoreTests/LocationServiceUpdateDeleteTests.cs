@@ -153,6 +153,39 @@ namespace ConnectomeDataModelCoreTests
             Assert.True(store.Committed);
         }
 
+        [Fact]
+        public async Task CreatingStampsTheCallerAndCreationTime()
+        {
+            var store = new FakeDatabase();
+            using var db = NewContext(store);
+            var callContext = new TestCallContext();
+            var request = new UpdateLocationsRequest();
+            request.Locations.Add(new LocationChangeRequest { Create = NewLocation() });
+            var before = DateTime.UtcNow;
+
+            await NewService(db).Update(request, callContext);
+
+            var saved = db.Locations.Local.Single();
+            Assert.Equal(AnnotationRpc.CallerName(callContext), saved.Username);
+            Assert.InRange(saved.Created, before, DateTime.UtcNow);
+            Assert.Equal(saved.Created, saved.LastModified);
+        }
+
+        [Fact]
+        public async Task ARowWithNoActionFailsWithoutStoppingTheBatch()
+        {
+            var store = new FakeDatabase();
+            store.AddLocation(1, z: 10);
+            using var db = NewContext(store);
+            Track(db, store, 1);
+
+            var response = await NewService(db).Update(Request(new LocationChangeRequest(), Delete(1)), new TestCallContext());
+
+            Assert.Equal(new[] { (false, 0L), (true, 1L) }, response.Results.Select(r => (r.Success, r.DeletedId)).ToArray());
+            Assert.Equal(new[] { 1L }, store.Saved.DeletedLocations);
+            Assert.True(store.Committed);
+        }
+
         /// <summary>A link deleted, re-created and deleted again keeps the tombstone the database already holds.</summary>
         [Fact]
         public async Task DeletingALinkTheDatabaseAlreadyLoggedAddsNoTombstone()
