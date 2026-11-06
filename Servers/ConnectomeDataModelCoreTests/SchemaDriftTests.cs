@@ -13,26 +13,35 @@ using Xunit;
 namespace ConnectomeDataModelCoreTests
 {
     /// <summary>
-    /// Offline schema drift check across the three places the annotation schema is written down:
-    /// the SSDT project (<c>Servers/AnnotationDatabase/dbo/Tables</c>), the smoke-test script
+    /// Offline schema drift check across the four places the annotation schema is written down:
+    /// <c>Servers/SQL/DatabaseCreateUpdate/CreateUpdateDatabase.sql</c> (what deployed databases have), the
+    /// SSDT project (<c>Servers/AnnotationDatabase/dbo/Tables</c>), the smoke-test script
     /// (<c>scripts/minimal-schema.sql</c>) and the EF model (<see cref="AnnotationContext"/>). It compares
     /// table names, column names, column types and nullability, and checks that every object
     /// <c>minimal-schema.sql</c> creates also exists under <c>dbo/</c> and in <c>AnnotationDatabase.sqlproj</c>.
     /// No database is contacted: the SQL is read as text and the EF model is built without a connection.
     /// <para>
+    /// <c>CreateUpdateDatabase.sql</c> is replayed rather than parsed once (see <see cref="ReplayUpdateScript"/>):
+    /// its CREATE TABLE statements and its ALTER TABLE ... ADD, ALTER COLUMN and DROP COLUMN statements are applied
+    /// in file order, which is DBVersion order, so the result is the final state of a database built by the script.
+    /// </para>
+    /// <para>
     /// Every difference must be on <see cref="AllowedDifferences"/>, each with a reason. An allow-list entry
     /// that no longer matches a difference also fails, so fixing the drift forces the entry to be removed.
     /// </para>
     /// <para>
-    /// What the CREATE TABLE parser handles: <c>CREATE TABLE [dbo].[Name] ( ... )</c> with bracketed column
-    /// names, one type per column (optionally <c>(n)</c>, <c>(max)</c> or <c>(p,s)</c>, optionally
-    /// <c>[sys].</c>-qualified), and an explicit <c>NULL</c> or <c>NOT NULL</c> (a column without one is
-    /// an error, since SQL Server's default depends on session settings). Computed columns
-    /// (<c>AS (expr) [PERSISTED]</c>) compare by expression text with whitespace and case removed, not by
-    /// type. Table-level constraints, defaults, identity, indexes, triggers, extended properties,
+    /// What the CREATE TABLE parser handles: <c>CREATE TABLE [dbo].[Name] ( ... )</c> (the <c>dbo.</c> and
+    /// the brackets are optional), column names with or without brackets, one type per column (optionally
+    /// <c>(n)</c>, <c>(max)</c> or <c>(p,s)</c>, optionally <c>[sys].</c>-qualified), and an explicit
+    /// <c>NULL</c> or <c>NOT NULL</c> (a column without one is an error, since SQL Server's default depends on
+    /// session settings). Computed columns (<c>AS expr [PERSISTED]</c>) compare by expression text with
+    /// whitespace, brackets, parentheses and case removed, not by type, because SQL Server stores the
+    /// expression re-bracketed and re-parenthesised; a change that only moves parentheses is not seen.
+    /// Table-level constraints, defaults, identity, indexes, triggers, extended properties,
     /// statistics, the <c>graph</c> schema and the <c>UserActivity</c> view are not compared. <c>--</c> and
     /// <c>/* */</c> comments are removed before parsing, so a comment sign inside a string literal in a
-    /// table definition would be misread. <c>float(53)</c> and <c>float</c> are the same type.
+    /// table definition would be misread. <c>float(53)</c> and <c>float</c> are the same type, and so are
+    /// <c>timestamp</c> and <c>rowversion</c>.
     /// </para>
     /// </summary>
     public class SchemaDriftTests
@@ -40,6 +49,7 @@ namespace ConnectomeDataModelCoreTests
         private const string SqlProject = "sqlproj";
         private const string MinimalSchema = "minimal-schema";
         private const string EfModel = "EF";
+        private const string UpdateScript = "CreateUpdateDatabase";
 
         /// <summary>Unroutable endpoint; building the model never opens a connection.</summary>
         private const string UnreachableConnection =
@@ -67,6 +77,23 @@ namespace ConnectomeDataModelCoreTests
             // The EF model has no entity for the schema-version table.
             [$"table dbo.DBVersion only in {SqlProject}, not in {EfModel}"] =
                 "No EF entity for dbo.DBVersion; the services never read it.",
+            [$"table dbo.DBVersion only in {UpdateScript}, not in {EfModel}"] =
+                "No EF entity for dbo.DBVersion (see above).",
+            [$"table dbo.DBVersion only in {UpdateScript}, not in {MinimalSchema}"] =
+                "Smoke schema omits the schema-version table (see above).",
+            [$"table dbo.StructureSpatialCache only in {UpdateScript}, not in {MinimalSchema}"] =
+                "Smoke schema omits the spatial cache (see above).",
+            [$"table dbo.StructureTemplates only in {UpdateScript}, not in {MinimalSchema}"] =
+                "Smoke schema omits the template table (see above).",
+
+            // TODO: DBVersion 71 creates StructureSpatialCache.ConvexHull NOT NULL and no later step changes it, but
+            // the sqlproj and EF say NULL. The table is written only by that step's initial fill and the
+            // UpdateStructureSpatialCache trigger, both from ConvexHullAggregate over a structure's locations, so it
+            // always has a hull and nothing fails today; align the copies to NOT NULL (the deployed state) and remove these.
+            [$"column dbo.StructureSpatialCache.ConvexHull: NOT NULL in {UpdateScript}, NULL in {SqlProject}"] =
+                "Deployed databases are stricter than the sqlproj copy; see the TODO above.",
+            [$"column dbo.StructureSpatialCache.ConvexHull: NOT NULL in {UpdateScript}, NULL in {EfModel}"] =
+                "Deployed databases are stricter than the EF model; see the TODO above.",
         };
 
         /// <summary>Objects minimal-schema.sql creates that are not in dbo/ or the sqlproj, with the reason.</summary>
@@ -75,13 +102,13 @@ namespace ConnectomeDataModelCoreTests
         // ---- The checks -------------------------------------------------------------------------------
 
         [Fact]
-        public void SqlProjectMinimalSchemaAndEfModelAgreeOnTablesAndColumns()
+        public void UpdateScriptSqlProjectMinimalSchemaAndEfModelAgreeOnTablesAndColumns()
         {
             var sources = new Dictionary<string, Dictionary<string, Column>>[]
             {
-                ReadSqlProjectTables(), ParseCreateTables(ReadMinimalSchema()), ReadEfTables(),
+                ReplayUpdateScript(ReadUpdateScript()), ReadSqlProjectTables(), ParseCreateTables(ReadMinimalSchema()), ReadEfTables(),
             };
-            var names = new[] { SqlProject, MinimalSchema, EfModel };
+            var names = new[] { UpdateScript, SqlProject, MinimalSchema, EfModel };
 
             var found = new SortedSet<string>(StringComparer.Ordinal);
             for (var a = 0; a < sources.Length; a++)
@@ -125,7 +152,10 @@ namespace ConnectomeDataModelCoreTests
         public void ParsersReadEveryTableOfTheRealSources()
         {
             // Guards against a parser that silently reads nothing, which would make the drift check vacuous.
-            foreach (var tables in new[] { ReadSqlProjectTables(), ParseCreateTables(ReadMinimalSchema()), ReadEfTables() })
+            foreach (var tables in new[]
+                     {
+                         ReplayUpdateScript(ReadUpdateScript()), ReadSqlProjectTables(), ParseCreateTables(ReadMinimalSchema()), ReadEfTables(),
+                     })
             {
                 Assert.True(tables.Count >= 8, $"only {tables.Count} tables parsed");
                 var location = tables["Location"];
@@ -240,7 +270,69 @@ namespace ConnectomeDataModelCoreTests
             Assert.Equal(new Column("float", false), t["C"]);
             Assert.Equal(new Column("geometry", false), t["D"]);
             Assert.Equal(new Column("decimal(18,4)", true), t["E"]);
-            Assert.Equal(new Column("computed isnull([d].stx,(0))", false), t["F"]);
+            Assert.Equal(new Column("computed isnulld.stx,0", false), t["F"]);
+        }
+
+        [Fact]
+        public void ReplayAppliesAlterTableStatementsInFileOrder()
+        {
+            var tables = ReplayUpdateScript(
+                "CREATE TABLE [dbo].[T] ([A] [bigint] NOT NULL, [B] [ntext] NULL, [C] [float] NOT NULL, [V] [timestamp] NOT NULL)\n" +
+                "CREATE TABLE U (ID bigint NOT NULL PRIMARY KEY CLUSTERED, Shape Geometry NOT NULL)\n" +
+                "CREATE TABLE #Temp ([X] INT NULL)\n" +
+                "\tALTER TABLE T ALTER COLUMN B NVARCHAR(max) NULL\n" +
+                "\tALTER TABLE T ADD G geometry\n" +
+                "\tALTER TABLE T ALTER COLUMN [G] geometry NOT NULL\n" +
+                "\tALTER TABLE T DROP COLUMN C\n" +
+                "\tALTER TABLE T ADD C as ISNULL(G.STX, 0) PERSISTED\n" +
+                "\tALTER TABLE [dbo].[T] ADD CONSTRAINT [DF_T_A] DEFAULT ((0)) FOR [A]\n" +
+                "\tEXEC(' ALTER TABLE T ADD R as\n\t\tCASE G.STDimension()\n\t\tWHEN 0 THEN 0\n\t\tEND PERSISTED NOT NULL ')\n" +
+                "\tEXEC('ALTER TABLE [dbo].[U] ADD [Z] NVARCHAR (8) CONSTRAINT [DF_U_Z] DEFAULT (N''z'') NOT NULL')\n" +
+                "\tALTER TABLE U ADD W float NULL\n\n");
+
+            Assert.Equal(new[] { "T", "U" }, tables.Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray());
+            var t = tables["T"];
+            Assert.Equal(new[] { "A", "B", "C", "G", "R", "V" }, t.Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray());
+            Assert.Equal(new Column("nvarchar(max)", true), t["B"]);
+            Assert.Equal(new Column("geometry", false), t["G"]);
+            Assert.Equal(new Column("computed isnullg.stx,0", false), t["C"]);
+            Assert.Equal(new Column("computed caseg.stdimensionwhen0then0end", false), t["R"]);
+            Assert.Equal(new Column("rowversion", false), t["V"]);
+            var u = tables["U"];
+            Assert.Equal(new Column("geometry", false), u["Shape"]);
+            Assert.Equal(new Column("nvarchar(8)", false), u["Z"]);
+            Assert.Equal(new Column("float", true), u["W"]);
+        }
+
+        [Fact]
+        public void ReplayAddsAColumnWithoutNullabilityAsNullable()
+        {
+            var tables = ReplayUpdateScript("CREATE TABLE T ([A] INT NOT NULL)\nALTER TABLE T ADD B geometry\n");
+
+            Assert.Equal(new Column("geometry", true), tables["T"]["B"]);
+        }
+
+        [Fact]
+        public void ReplayRejectsAnAlterOfAnUnknownTableOrColumn()
+        {
+            Assert.Throws<FormatException>(() => ReplayUpdateScript("ALTER TABLE T ADD B INT NULL\n"));
+            Assert.Throws<FormatException>(() => ReplayUpdateScript("ALTER TABLE T ADD B INT NULL\nCREATE TABLE T ([A] INT NOT NULL)\n"));
+            Assert.Throws<FormatException>(() => ReplayUpdateScript("CREATE TABLE T ([A] INT NOT NULL)\nALTER TABLE T DROP COLUMN B\n"));
+            Assert.Throws<FormatException>(() => ReplayUpdateScript("CREATE TABLE T ([A] INT NOT NULL)\nALTER TABLE T ALTER COLUMN B INT NULL\n"));
+            Assert.Throws<FormatException>(() => ReplayUpdateScript("CREATE TABLE T ([A] INT NOT NULL)\nALTER TABLE T ADD A INT NULL\n"));
+        }
+
+        [Fact]
+        public void CompareReportsAnUpdateScriptStepThatChangesAColumn()
+        {
+            var script = ReadUpdateScript();
+            const string step = "ALTER TABLE Location ADD Width float NULL";
+            Assert.Single(Regex.Matches(script, Regex.Escape(step)));
+            var mutated = ReplayUpdateScript(script.Replace(step, "ALTER TABLE Location ADD Width float NOT NULL"));
+
+            var differences = Compare(UpdateScript, mutated, SqlProject, ReadSqlProjectTables()).ToList();
+
+            Assert.Contains($"column dbo.Location.Width: NOT NULL in {UpdateScript}, NULL in {SqlProject}", differences);
         }
 
         /// <summary>The script text with one exact snippet replaced; fails if the snippet is not there once.</summary>
@@ -357,10 +449,20 @@ namespace ConnectomeDataModelCoreTests
         // ---- Parsing the SQL text ---------------------------------------------------------------------
 
         private static readonly Regex CreateTableHead = new(
-            @"\bCREATE\s+TABLE\s+\[dbo\]\.\[(?<name>\w+)\]\s*\(", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            @"\bCREATE\s+TABLE\s+(?:\[?dbo\]?\.)?\[?(?<name>\w+)\]?\s*\(", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
         private static readonly Regex ColumnStart = new(
-            @"^\s*\[(?<name>[^\]]+)\]\s*(?<rest>.*)$", RegexOptions.Singleline | RegexOptions.CultureInvariant);
+            @"^\s*(?:\[(?<name>[^\]]+)\]|(?<name>\w+))\s*(?<rest>.*)$", RegexOptions.Singleline | RegexOptions.CultureInvariant);
+
+        /// <summary>
+        /// One column change in CreateUpdateDatabase.sql. The script ends statements at a line break, not with
+        /// <c>;</c>, so a definition ends at the end of its line, or, for one run by <c>EXEC('...')</c>, at the
+        /// quote that closes the string (doubled quotes inside it are skipped), since those may span lines.
+        /// </summary>
+        private static readonly Regex AlterTableColumn = new(
+            @"(?<exec>\bEXEC\s*\(\s*N?'\s*)?\bALTER\s+TABLE\s+(?:\[?dbo\]?\.)?\[?(?<table>\w+)\]?\s+(?:WITH\s+(?:NO)?CHECK\s+)?" +
+            @"(?<op>ADD|ALTER\s+COLUMN|DROP\s+COLUMN)\s+(?<body>(?(exec)(?:[^']|'')*|[^'\r\n;]*))",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
         private static readonly Regex TypeAtStart = new(
             @"^(?:\[sys\]\.)?\[?(?<type>\w+)\]?(?:\s*\(\s*(?<length>max|\d+)\s*(?:,\s*(?<scale>\d+)\s*)?\))?",
@@ -378,46 +480,106 @@ namespace ConnectomeDataModelCoreTests
             sql = StripComments(sql);
             var tables = new Dictionary<string, Dictionary<string, Column>>(StringComparer.Ordinal);
             foreach (Match head in CreateTableHead.Matches(sql))
+                tables.Add(head.Groups["name"].Value, ParseTableBody(sql, head));
+            return tables;
+        }
+
+        /// <summary>The columns of the CREATE TABLE whose head (ending at its opening parenthesis) is <paramref name="head"/>.</summary>
+        private static Dictionary<string, Column> ParseTableBody(string sql, Match head)
+        {
+            var columns = new Dictionary<string, Column>(StringComparer.Ordinal);
+            foreach (var item in SplitTopLevel(BalancedBody(sql, head.Index + head.Length - 1)))
             {
-                var body = BalancedBody(sql, head.Index + head.Length - 1);
-                var columns = new Dictionary<string, Column>(StringComparer.Ordinal);
-                foreach (var item in SplitTopLevel(body))
+                if (IsTableLevelItem(item))
+                    continue;
+                var (name, column) = ParseColumn(item);
+                columns.Add(name, column);
+            }
+            return columns;
+        }
+
+        private static bool IsTableLevelItem(string item) =>
+            TableLevelKeywords.Any(k => item.TrimStart().StartsWith(k, StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>
+        /// The final tables of a database built by CreateUpdateDatabase.sql: each CREATE TABLE sets a table and each
+        /// ALTER TABLE ... ADD, ALTER COLUMN or DROP COLUMN changes one, in file order. Temporary (<c>#</c>) tables
+        /// are skipped. A column added without NULL or NOT NULL is nullable, as on a connection with SQL Server's
+        /// default ANSI_NULL_DFLT_ON; a computed column without one is NOT NULL when its outermost call is
+        /// <c>ISNULL</c>, the only form the script uses, and nullable otherwise. Throws <see cref="FormatException"/>
+        /// when a statement names a table not created earlier, or adds a column that exists or changes one that does not.
+        /// </summary>
+        private static Dictionary<string, Dictionary<string, Column>> ReplayUpdateScript(string sql)
+        {
+            sql = StripComments(sql);
+            var tables = new Dictionary<string, Dictionary<string, Column>>(StringComparer.Ordinal);
+            var statements = CreateTableHead.Matches(sql).Concat(AlterTableColumn.Matches(sql)).OrderBy(m => m.Index);
+            foreach (var m in statements)
+            {
+                if (m.Groups["name"].Success)
                 {
-                    if (TableLevelKeywords.Any(k => item.TrimStart().StartsWith(k, StringComparison.OrdinalIgnoreCase)))
-                        continue;
-                    var (name, column) = ParseColumn(item);
-                    columns.Add(name, column);
+                    tables[m.Groups["name"].Value] = ParseTableBody(sql, m);
+                    continue;
                 }
-                tables.Add(head.Groups["name"].Value, columns);
+
+                var table = m.Groups["table"].Value;
+                var body = m.Groups["body"].Value;
+                if (!tables.TryGetValue(table, out var columns))
+                    throw new FormatException($"ALTER TABLE {table} before any CREATE TABLE {table}: {m.Value.Trim()}");
+                var op = Regex.Replace(m.Groups["op"].Value, @"\s+", " ").ToUpperInvariant();
+                if (op == "ADD" && IsTableLevelItem(body))
+                    continue;
+
+                var (name, column) = op == "DROP COLUMN" ? (body.Trim().Trim('[', ']'), (Column)null) : ParseScriptColumn(body);
+                var exists = columns.ContainsKey(name);
+                if (exists == (op == "ADD"))
+                    throw new FormatException($"{op} on dbo.{table}.{name}, which {(exists ? "already exists" : "does not exist")}: {m.Value.Trim()}");
+                if (column == null) columns.Remove(name);
+                else columns[name] = column;
             }
             return tables;
+        }
+
+        /// <summary>A column definition from an ALTER TABLE in the update script; see <see cref="ReplayUpdateScript"/> for the nullability defaults.</summary>
+        private static (string Name, Column Column) ParseScriptColumn(string item)
+        {
+            var (name, type, nullable) = ParseColumnParts(item);
+            return (name, new Column(type, nullable ?? !type.StartsWith("computed isnull", StringComparison.Ordinal)));
         }
 
         /// <summary>Parses one column definition such as <c>[ID] BIGINT IDENTITY (1, 1) NOT NULL</c>.</summary>
         private static (string Name, Column Column) ParseColumn(string item)
         {
+            var (name, type, nullable) = ParseColumnParts(item);
+            if (nullable == null)
+                throw new FormatException($"Column [{name}] has no explicit NULL or NOT NULL: {item.Trim()}");
+            return (name, new Column(type, nullable.Value));
+        }
+
+        /// <summary>The name, normalised type text and explicit nullability (null when not stated) of one column definition.</summary>
+        private static (string Name, string Type, bool? Nullable) ParseColumnParts(string item)
+        {
             var start = ColumnStart.Match(item);
             if (!start.Success)
-                throw new FormatException($"Unsupported table item (expected a bracketed column name): {item.Trim()}");
+                throw new FormatException($"Unsupported table item (expected a column name): {item.Trim()}");
             var name = start.Groups["name"].Value;
             var rest = start.Groups["rest"].Value.Trim();
             var outsideParens = RemoveParenthesised(rest);
 
-            bool nullable;
+            bool? nullable = null;
             if (Regex.IsMatch(outsideParens, @"\bNOT\s+NULL\b", RegexOptions.IgnoreCase)) nullable = false;
             else if (Regex.IsMatch(outsideParens, @"\bNULL\b", RegexOptions.IgnoreCase)) nullable = true;
-            else throw new FormatException($"Column [{name}] has no explicit NULL or NOT NULL: {rest}");
 
             if (Regex.IsMatch(rest, @"^AS\b", RegexOptions.IgnoreCase))
             {
-                var expression = BalancedBody(rest, rest.IndexOf('('));
-                return (name, new Column("computed " + NormaliseExpression(expression), nullable));
+                var expression = Regex.Replace(rest.Substring(2), @"(?:\s*\b(?:PERSISTED|NOT\s+NULL|NULL))+\s*$", "", RegexOptions.IgnoreCase);
+                return (name, "computed " + NormaliseExpression(expression), nullable);
             }
 
             var type = TypeAtStart.Match(rest);
             if (!type.Success)
                 throw new FormatException($"Column [{name}] has no recognisable type: {rest}");
-            return (name, new Column(NormaliseType(type.Groups["type"].Value, type.Groups["length"].Value, type.Groups["scale"].Value), nullable));
+            return (name, NormaliseType(type.Groups["type"].Value, type.Groups["length"].Value, type.Groups["scale"].Value), nullable);
         }
 
         /// <summary>
@@ -437,12 +599,13 @@ namespace ConnectomeDataModelCoreTests
         {
             type = type.ToLowerInvariant();
             if (type == "float") return "float";
+            if (type == "timestamp") return "rowversion";
             var size = length.Length == 0 ? "" : scale.Length == 0 ? $"({length.ToLowerInvariant()})" : $"({length},{scale})";
             return type + size;
         }
 
         private static string NormaliseExpression(string expression) =>
-            Regex.Replace(expression, @"\s+", "").ToLowerInvariant();
+            Regex.Replace(expression, @"[\s\[\]()]", "").ToLowerInvariant();
 
         internal static string StripComments(string sql) =>
             Regex.Replace(sql, @"/\*.*?\*/|--[^\r\n]*", " ", RegexOptions.Singleline);
@@ -493,9 +656,11 @@ namespace ConnectomeDataModelCoreTests
             return result.ToString();
         }
 
-        // ---- Reading the three sources ----------------------------------------------------------------
+        // ---- Reading the four sources -----------------------------------------------------------------
 
         private static string ReadMinimalSchema() => File.ReadAllText(RepoFile("Servers/AnnotationDatabase/scripts/minimal-schema.sql"));
+
+        private static string ReadUpdateScript() => File.ReadAllText(RepoFile("Servers/SQL/DatabaseCreateUpdate/CreateUpdateDatabase.sql"));
 
         private static Dictionary<string, Dictionary<string, Column>> ReadSqlProjectTables()
         {
@@ -532,7 +697,7 @@ namespace ConnectomeDataModelCoreTests
                     if (name == null) continue;
                     var computed = property.GetComputedColumnSql(store);
                     var type = computed != null
-                        ? "computed " + NormaliseExpression(BalancedBody(computed, computed.IndexOf('(')))
+                        ? "computed " + NormaliseExpression(computed)
                         : EfTypeText(property.GetColumnType(store));
                     columns.Add(name, new Column(type, property.IsColumnNullable(store)));
                 }
