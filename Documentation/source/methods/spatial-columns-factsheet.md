@@ -51,8 +51,13 @@ ALTER TABLE Location ADD X as ISNULL(MosaicShape.STCentroid().STX, ISNULL(Mosaic
 | `19b70b34` | 2015-08-26 | Add spatial index to the database |
 | `64203551` | 2016-03-24 | Spatial queries use mosaic or volume coordinates; synapse-to-lines migration |
 
-The same script has since grown to **DBVersion 86**. DBVersion 83 improved the
+The same script has gained further versions since. DBVersion 83 improved the
 spatial bounds stored procedure `SelectSectionLocationsAndLinksInMosaicBounds`.
+The latest version is the last `DBVersionID` the script checks (steps are in order):
+
+```bash
+rg -o "DBVersionID = \d+" Servers/SQL/DatabaseCreateUpdate/CreateUpdateDatabase.sql
+```
 
 ## Methods-ready paragraph (copy/paste)
 
