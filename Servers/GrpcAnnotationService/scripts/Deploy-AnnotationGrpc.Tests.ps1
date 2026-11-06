@@ -15,6 +15,11 @@
     `up -d --build grpc-annotation-service`, and a running project must keep its port. -Status
     must print each project's endpoint and health line and call nothing but `compose ls` and `ps`.
 
+    The Production guard is tested in a child PowerShell process, with arguments that stop the
+    script before docker: -Environment Production without -Confirm (or with -Confirm:$false, or
+    with -Remove) must be refused with a non-zero exit, and Test, the default, and Production
+    with -Confirm must not be.
+
     Written for Pester 3.4 (the version shipped with Windows PowerShell); the same syntax runs on
     PowerShell 7 with that module.
 
@@ -583,5 +588,59 @@ Describe 'Deploy-AnnotationGrpc -Status (docker faked)' {
             $out | Should Not Match 'Health: '
         }
         finally { $fake.ls = $saved }
+    }
+}
+
+<#
+.SYNOPSIS
+    Runs Deploy-AnnotationGrpc.ps1 in a child PowerShell process; returns its exit code and combined output.
+.DESCRIPTION
+    A child process is the only way to see what an operator sees when the script throws before doing
+    anything: parameter binding, the Production guard and the exit code are all real. Callers pass
+    arguments that make the script stop before it reaches docker (a Production run without -Confirm,
+    or an -EnvFile inside the repo), so no docker command can run.
+#>
+function Invoke-DeployScriptChild([string] $ArgumentText) {
+    $shell = (Get-Process -Id $PID).Path
+    $command = "& '$scriptPath' $ArgumentText"
+    $output = & $shell -NoProfile -NonInteractive -Command $command 2>&1 | Out-String
+    return @{ ExitCode = $LASTEXITCODE; Output = $output }
+}
+
+Describe 'Deploy-AnnotationGrpc Production guard (child process)' {
+    $refusal = 'Refusing a Production deployment without -Confirm'
+    # Inside the repo, so a run that passes the guard stops at the EnvFile check before reaching docker.
+    $repoEnv = Join-Path (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path 'pester-child.env'
+
+    It 'refuses -Environment Production without -Confirm, with a non-zero exit' {
+        $r = Invoke-DeployScriptChild "-Database Pester -Environment Production -EnvFile '$repoEnv'"
+        $r.ExitCode | Should Not Be 0
+        $r.Output | Should Match $refusal
+    }
+    It 'refuses -Environment Production when -Confirm is explicitly false' {
+        $r = Invoke-DeployScriptChild "-Database Pester -Environment Production -Confirm:`$false -EnvFile '$repoEnv'"
+        $r.ExitCode | Should Not Be 0
+        $r.Output | Should Match $refusal
+    }
+    It 'refuses removing a Production project without -Confirm' {
+        $r = Invoke-DeployScriptChild "-Database Pester -Environment Production -Remove"
+        $r.ExitCode | Should Not Be 0
+        $r.Output | Should Match $refusal
+    }
+    It 'passes the guard for -Environment Production -Confirm and stops later, at the EnvFile check' {
+        $r = Invoke-DeployScriptChild "-Database Pester -Environment Production -Confirm -EnvFile '$repoEnv'"
+        $r.ExitCode | Should Not Be 0
+        $r.Output | Should Not Match $refusal
+        $r.Output | Should Match 'EnvFile must be outside the repo'
+    }
+    It 'does not apply the guard to -Environment Test, which needs no -Confirm' {
+        $r = Invoke-DeployScriptChild "-Database Pester -Environment Test -EnvFile '$repoEnv'"
+        $r.Output | Should Not Match $refusal
+        $r.Output | Should Match 'EnvFile must be outside the repo'
+    }
+    It 'does not apply the guard when -Environment is left at its default' {
+        $r = Invoke-DeployScriptChild "-Database Pester -EnvFile '$repoEnv'"
+        $r.Output | Should Not Match $refusal
+        $r.Output | Should Match 'EnvFile must be outside the repo'
     }
 }
