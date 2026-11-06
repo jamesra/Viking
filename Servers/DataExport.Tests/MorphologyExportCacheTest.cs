@@ -130,6 +130,51 @@ public class MorphologyExportCacheTest
     }
 
     [TestMethod]
+    public async Task ResidualField_CancelledWaiterStopsWaitingAndDoesNotLoad()
+    {
+        MorphologyExportCache cache = new();
+        int loads = 0;
+        TaskCompletionSource<AnnotationVizLib.NeighborResidualField?> release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<AnnotationVizLib.NeighborResidualField?> Load(CancellationToken _)
+        {
+            Interlocked.Increment(ref loads);
+            return release.Task;
+        }
+
+        Task<AnnotationVizLib.NeighborResidualField?> holder = Task.Run(() => cache.GetOrLoadResidualFieldAsync(Load, CancellationToken.None));
+        while (Volatile.Read(ref loads) == 0)
+            await Task.Delay(10);
+
+        using CancellationTokenSource cts = new();
+        Task<AnnotationVizLib.NeighborResidualField?> waiter = cache.GetOrLoadResidualFieldAsync(Load, cts.Token);
+        cts.Cancel();
+
+        // A waiter whose request was aborted must give up on the lock instead of blocking until the load finishes.
+        Assert.AreSame(waiter, await Task.WhenAny(waiter, Task.Delay(TimeSpan.FromSeconds(5))));
+        await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => waiter);
+
+        release.SetResult(null);
+        Assert.IsNull(await holder);
+        Assert.AreEqual(1, loads);
+    }
+
+    [TestMethod]
+    public async Task ResidualField_LoadReceivesCallersToken()
+    {
+        MorphologyExportCache cache = new();
+        using CancellationTokenSource cts = new();
+        CancellationToken received = CancellationToken.None;
+
+        await cache.GetOrLoadResidualFieldAsync(token =>
+        {
+            received = token;
+            return Task.FromResult<AnnotationVizLib.NeighborResidualField?>(null);
+        }, cts.Token);
+
+        Assert.AreEqual(cts.Token, received);
+    }
+
+    [TestMethod]
     public async Task NullArguments_Throw()
     {
         MorphologyExportCache cache = new();
