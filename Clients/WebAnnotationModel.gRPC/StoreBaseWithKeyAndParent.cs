@@ -520,11 +520,6 @@ namespace WebAnnotationModel.gRPC
 
         }
 
-        Task<OBJECT> IStoreWithKey<KEY, OBJECT>.GetOrAdd(KEY key, Func<KEY, OBJECT> createFunc, out bool added)
-        {
-            return Task.FromResult(GetOrAdd(key, createFunc, out added));
-        }
-
         Task<OBJECT> IStoreWithKey<KEY, OBJECT>.Remove(KEY key)
         {
             return Remove(key);

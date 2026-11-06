@@ -156,6 +156,64 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         [Test]
+        public async Task ParentedStoreWithKeyGetOrAdd_CompletesAfterListener()
+        {
+            var structures = CreateStructureStore();
+            IStoreWithKey<long, StructureObj> store = structures;
+
+            Task<StructureObj> pending = null;
+            await AssertCompletesAfterListener(structures, NotifyCollectionChangedAction.Add,
+                () => pending = store.GetOrAdd(1, id => new StructureObj(id, 1), out _));
+
+            Assert.That((await pending).ID, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ParentedStoreWithKeyGetOrAdd_ListenerException_ReachesCaller()
+        {
+            var structures = CreateStructureStore();
+            structures.OnCollectionChanged += (_, _) => throw new InvalidOperationException("listener failed");
+            IStoreWithKey<long, StructureObj> store = structures;
+
+            Assert.That(async () => await store.GetOrAdd(1, id => new StructureObj(id, 1), out _),
+                Throws.InvalidOperationException.With.Message.EqualTo("listener failed"));
+        }
+
+        [Test]
+        public async Task ParentedStoreWithKeyGetOrAdd_WiresParentAndRoots()
+        {
+            var structures = CreateStructureStore();
+            var parent = Seed<long, StructureObj>(structures, 1, new StructureObj(1, 1) { DBAction = DBACTION.NONE });
+            IStoreWithKey<long, StructureObj> store = structures;
+
+            StructureObj child = await store.GetOrAdd(2, id => new StructureObj(id, 1) { ParentID = 1 }, out bool childAdded);
+            StructureObj root = await store.GetOrAdd(3, id => new StructureObj(id, 1), out bool rootAdded);
+
+            Assert.That(childAdded && rootAdded, Is.True);
+            Assert.That(child.Parent, Is.SameAs(parent));
+            Assert.That(parent.Children, Does.Contain(child));
+            Assert.That(structures.RootObjects, Is.EqualTo(new[] { 3L }));
+        }
+
+        [Test]
+        public async Task ParentedStoreWithKeyGetOrAdd_OfCachedKey_RaisesNothing()
+        {
+            var structures = CreateStructureStore();
+            var cached = Seed<long, StructureObj>(structures, 1, new StructureObj(1, 1));
+            int calls = 0;
+            structures.OnCollectionChanged += (_, _) => Interlocked.Increment(ref calls);
+
+            Task<StructureObj> pending = ((IStoreWithKey<long, StructureObj>)structures)
+                .GetOrAdd(1, id => new StructureObj(id, 1), out bool added);
+
+            Assert.That(pending.IsCompleted, Is.True);
+            Assert.That(await pending, Is.SameAs(cached));
+            Assert.That(added, Is.False);
+            Assert.That(calls, Is.Zero);
+            Assert.That(structures.RootObjects, Is.Empty);
+        }
+
+        [Test]
         public void Add_ListenerException_ReachesCaller()
         {
             var structures = CreateStructureStore();

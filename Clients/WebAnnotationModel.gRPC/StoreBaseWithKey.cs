@@ -1205,6 +1205,7 @@ namespace WebAnnotationModel.gRPC
         /// run and faults with a listener's exception, as for <see cref="Add(OBJECT)"/>. The public synchronous
         /// <see cref="GetOrAdd(KEY, Func{KEY, OBJECT}, out bool)"/> cannot wait: listeners such as WinForms lists
         /// marshal to the UI thread with a blocking Invoke, so blocking a UI-thread caller would deadlock.
+        /// The notify goes through the virtual inventory overload so parented stores wire Parent and RootObjects.
         /// </summary>
         Task<OBJECT> IStoreWithKey<KEY, OBJECT>.GetOrAdd(KEY key, Func<KEY, OBJECT> createFunc, out bool added)
         {
@@ -1214,7 +1215,9 @@ namespace WebAnnotationModel.gRPC
 
         private async Task<OBJECT> NotifyAddedAsync(OBJECT added)
         {
-            await CallOnCollectionChangedForAdd(added).ConfigureAwait(false);
+            var inventory = new ChangeInventory<OBJECT>(1);
+            inventory.AddedObjects.Add(added);
+            await CallOnCollectionChanged(inventory).ConfigureAwait(false);
             return added;
         }
 
