@@ -44,7 +44,7 @@ public class MorphologyControllerTest
         var mockedHttpContext = CreateMockHttpContext("?id=180;476",
             new Dictionary<string, StringValues> { { "id", "180;476" } });
 
-        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance)
+        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance, new MorphologyExportCache())
         {
             ControllerContext = new ControllerContext
             {
@@ -77,7 +77,7 @@ public class MorphologyControllerTest
         var mockedHttpContext = CreateMockHttpContext("?id=180;476",
             new Dictionary<string, StringValues> { { "id", "180;476" } });
 
-        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance)
+        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance, new MorphologyExportCache())
         {
             ControllerContext = new ControllerContext
             {
@@ -110,7 +110,7 @@ public class MorphologyControllerTest
         var mockedHttpContext = CreateMockHttpContext("?id=180;476",
             new Dictionary<string, StringValues> { { "id", "180;476" } });
 
-        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance)
+        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance, new MorphologyExportCache())
         {
             ControllerContext = new ControllerContext
             {
@@ -143,7 +143,7 @@ public class MorphologyControllerTest
         var mockedHttpContext = CreateMockHttpContext("?id=180;476",
             new Dictionary<string, StringValues> { { "id", "180;476" } });
 
-        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance)
+        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance, new MorphologyExportCache())
         {
             ControllerContext = new ControllerContext
             {
@@ -186,7 +186,7 @@ public class MorphologyControllerTest
         var mockedHttpContext = CreateMockHttpContext("?id=180;476",
             new Dictionary<string, StringValues> { { "id", "180;476" } });
 
-        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance)
+        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance, new MorphologyExportCache())
         {
             ControllerContext = new ControllerContext
             {
@@ -239,7 +239,7 @@ public class MorphologyControllerTest
         var mockedHttpContext = CreateMockHttpContext("?id=180;476",
             new Dictionary<string, StringValues> { { "id", "180;476" } });
 
-        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance)
+        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance, new MorphologyExportCache())
         {
             ControllerContext = new ControllerContext
             {
@@ -292,7 +292,7 @@ public class MorphologyControllerTest
         var mockedHttpContext = CreateMockHttpContext("?id=180;476",
             new Dictionary<string, StringValues> { { "id", "180;476" } });
 
-        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance)
+        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance, new MorphologyExportCache())
         {
             ControllerContext = new ControllerContext
             {
@@ -340,7 +340,7 @@ public class MorphologyControllerTest
         var mockedHttpContext = CreateMockHttpContext("?id=180;476",
             new Dictionary<string, StringValues> { { "id", "180;476" } });
 
-        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance)
+        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance, new MorphologyExportCache())
         {
             ControllerContext = new ControllerContext
             {
@@ -392,7 +392,7 @@ public class MorphologyControllerTest
                 { "stick", "1" }
             });
 
-        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance)
+        MorphologyController controller = new(mockEnv.Object, config, NullLogger<MorphologyController>.Instance, new MorphologyExportCache())
         {
             ControllerContext = new ControllerContext
             {

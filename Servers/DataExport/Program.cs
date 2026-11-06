@@ -14,6 +14,7 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 
 // Add services to the container.
 builder.Services.AddControllers();
+builder.Services.AddSingleton<MorphologyExportCache>();
 
 // Configure routing options
 builder.Services.Configure<RouteOptions>(options =>

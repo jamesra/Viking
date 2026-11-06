@@ -18,6 +18,7 @@ namespace DataExport.Controllers;
 /// <param name="env">The web host environment.</param>
 /// <param name="configuration">The configuration service.</param>
 /// <param name="logger">Logger for residual-field load diagnostics.</param>
+/// <param name="cache">Process-wide Scale and residual-field cache shared by every request.</param>
 /*
  * The route prefix deliberately omits [action]. With it, the controller prefix already
  * resolved to "Morphology/GetTLP" and the action template "tlp" appended to it, so the
@@ -26,16 +27,13 @@ namespace DataExport.Controllers;
  */
 [ApiController]
 [Route("[controller]")]
-public class MorphologyController(IWebHostEnvironment env, IConfiguration configuration, ILogger<MorphologyController> logger) : Controller
+public class MorphologyController(IWebHostEnvironment env, IConfiguration configuration, ILogger<MorphologyController> logger,
+    MorphologyExportCache cache) : Controller
 {
     private readonly IWebHostEnvironment _env = env ?? throw new ArgumentNullException(nameof(env));
     private readonly IConfiguration _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
     private readonly ILogger<MorphologyController> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    private UnitsAndScale.Scale? _cachedScale;
-    private readonly SemaphoreSlim _scaleLock = new(1, 1);
-    private readonly SemaphoreSlim _residualFieldLock = new(1, 1);
-    private NeighborResidualField? _cachedResidualField;
-    private bool _residualFieldResolved;
+    private readonly MorphologyExportCache _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     static readonly ConcurrentDictionary<Uri, GrpcChannel> CorrectionChannels = new();
 
     private Uri GetODataUrl()
@@ -69,35 +67,17 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
         return GetVolumeUrl();
     }
 
-    private async Task<UnitsAndScale.Scale> GetOrFetchScaleAsync()
+    internal Task<UnitsAndScale.Scale> GetOrFetchScaleAsync() => _cache.GetOrLoadScaleAsync(FetchScaleAsync);
+
+    private async Task<UnitsAndScale.Scale> FetchScaleAsync()
     {
-        if (_cachedScale != null)
+        Container container = new(GetODataUrl())
         {
-            return _cachedScale;
-        }
+            MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
+        };
 
-        await _scaleLock.WaitAsync();
-        try
-        {
-            // Double-check after acquiring lock
-            if (_cachedScale != null)
-            {
-                return _cachedScale;
-            }
-
-            Container container = new(GetODataUrl())
-            {
-                MergeOption = Microsoft.OData.Client.MergeOption.NoTracking
-            };
-
-            var scale = await Task.Run(() => container.Scale().GetValue());
-            _cachedScale = scale.ToGeometryScale();
-            return _cachedScale;
-        }
-        finally
-        {
-            _scaleLock.Release();
-        }
+        var scale = await Task.Run(() => container.Scale().GetValue());
+        return scale.ToGeometryScale();
     }
 
     private static string GetOutputFilename(ICollection<long> requestIDs, string ext)
@@ -321,34 +301,14 @@ public class MorphologyController(IWebHostEnvironment env, IConfiguration config
         MorphologyGraph.ApplyResidualField(graph, field);
     }
 
-    private async Task<NeighborResidualField?> GetOrLoadResidualFieldAsync(CancellationToken cancellationToken)
+    internal Task<NeighborResidualField?> GetOrLoadResidualFieldAsync(CancellationToken cancellationToken) =>
+        _cache.GetOrLoadResidualFieldAsync(LoadResidualFieldAsync, cancellationToken);
+
+    private async Task<NeighborResidualField?> LoadResidualFieldAsync(CancellationToken cancellationToken)
     {
-        if (_residualFieldResolved)
-            return _cachedResidualField;
-
-        await _residualFieldLock.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
-        {
-            if (_residualFieldResolved)
-                return _cachedResidualField;
-
-            NeighborResidualField? fromService = await TryLoadServiceResidualFieldAsync(cancellationToken)
-                .ConfigureAwait(false);
-            if (fromService is not null)
-            {
-                _cachedResidualField = fromService;
-                _residualFieldResolved = true;
-                return _cachedResidualField;
-            }
-
-            _cachedResidualField = TryLoadDiskResidualField();
-            _residualFieldResolved = true;
-            return _cachedResidualField;
-        }
-        finally
-        {
-            _residualFieldLock.Release();
-        }
+        NeighborResidualField? fromService = await TryLoadServiceResidualFieldAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return fromService ?? TryLoadDiskResidualField();
     }
 
     private async Task<NeighborResidualField?> TryLoadServiceResidualFieldAsync(CancellationToken cancellationToken)
