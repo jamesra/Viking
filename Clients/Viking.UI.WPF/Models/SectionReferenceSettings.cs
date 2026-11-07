@@ -187,11 +187,27 @@ namespace Viking.UI.WPF.Models
             return channelInfo;
         }
 
-        /// <summary>Parses the #AARRGGBB string that <see cref="ToDto(ChannelInfo)"/> writes.</summary>
+        /// <summary>
+        /// Parses the #AARRGGBB string that <see cref="ToDto(ChannelInfo)"/> writes. A stored alpha of 00 loads as
+        /// opaque (255); any other alpha is kept.
+        /// </summary>
+        /// <remarks>
+        /// Until 2026-10-21 <see cref="FromDto(ChannelInfoDto)"/> read the alpha byte inverted, so re-saving a file wrote
+        /// its opaque channels as #00RRGGBB. The channel color picker only makes opaque colors, so alpha 00 in this file
+        /// means one of those files, not a channel the user made invisible.
+        /// </remarks>
         private static Geometry.Graphics.Color ColorFromArgbHex(string hex)
         {
             uint argb = uint.Parse(hex.TrimStart('#'), System.Globalization.NumberStyles.HexNumber);
-            return new Geometry.Graphics.Color((byte)(argb >> 16), (byte)(argb >> 8), (byte)argb, (byte)(argb >> 24));
+            byte alpha = (byte)(argb >> 24);
+            // TODO: 2026-11-29 remove the alpha 00 -> opaque rule and return to a plain ARGB parse; it only heals
+            // section-references.json files re-saved while the alpha was read inverted.
+            if (alpha == 0)
+            {
+                alpha = byte.MaxValue;
+            }
+
+            return new Geometry.Graphics.Color((byte)(argb >> 16), (byte)(argb >> 8), (byte)argb, alpha);
         }
 
         /// <summary>

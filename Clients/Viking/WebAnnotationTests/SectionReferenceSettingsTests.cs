@@ -7,7 +7,8 @@ namespace WebAnnotationTests
     /// <summary>
     /// Pins the channel color round trip of <see cref="SectionReferenceSettings"/>: a channel saved to
     /// section-references.json must load back with the same color, including alpha, which the section viewer
-    /// uses as the channel's blend weight.
+    /// uses as the channel's blend weight. Alpha 00 is the exception: it loads opaque (see
+    /// <see cref="FromDto_AlphaZeroOrOpaque_LoadsOpaque"/>).
     /// </summary>
     [TestClass]
     public class SectionReferenceSettingsTests
@@ -31,7 +32,6 @@ namespace WebAnnotationTests
         [DataRow((byte)128)]
         [DataRow((byte)127)]
         [DataRow((byte)1)]
-        [DataRow((byte)0)]
         public void RoundTrip_KeepsColorAndAlpha(byte alpha)
         {
             ChannelInfo restored = SectionReferenceSettings.FromDto(SectionReferenceSettings.ToDto(Channel(alpha, 0x12, 0x34, 0x56)));
@@ -43,6 +43,33 @@ namespace WebAnnotationTests
             Assert.AreEqual("ch", restored.ChannelName);
             Assert.AreEqual(ChannelInfo.SectionInfo.FIXED, restored.SectionSource);
             Assert.AreEqual(7, restored.FixedSectionNumber);
+        }
+
+        /// <summary>
+        /// A file re-saved while <see cref="SectionReferenceSettings.FromDto(ChannelInfoDto)"/> read alpha inverted holds
+        /// #00RRGGBB for an opaque channel; it loads opaque with its color, and ToDto still writes the alpha it is given.
+        /// </summary>
+        [TestMethod]
+        [DataRow("#00123456")]
+        [DataRow("#FF123456")]
+        [DataRow("00123456")]
+        public void FromDto_AlphaZeroOrOpaque_LoadsOpaque(string hex)
+        {
+            Geometry.Graphics.Color color = SectionReferenceSettings.FromDto(new ChannelInfoDto { ColorHex = hex }).Color;
+
+            Assert.AreEqual((byte)255, color.A);
+            Assert.AreEqual((byte)0x12, color.R);
+            Assert.AreEqual((byte)0x34, color.G);
+            Assert.AreEqual((byte)0x56, color.B);
+        }
+
+        [TestMethod]
+        public void FromDto_AlphaZero_ResavesAsOpaque()
+        {
+            ChannelInfo healed = SectionReferenceSettings.FromDto(new ChannelInfoDto { ColorHex = "#00ABCDEF" });
+
+            Assert.AreEqual("#FFABCDEF", SectionReferenceSettings.ToDto(healed).ColorHex);
+            Assert.AreEqual("#00ABCDEF", SectionReferenceSettings.ToDto(Channel(0, 0xAB, 0xCD, 0xEF)).ColorHex);
         }
 
         [TestMethod]
