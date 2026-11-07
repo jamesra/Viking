@@ -40,6 +40,11 @@ namespace ConnectomeDataModelCoreTests
     /// <c>print N'Create Function for ...'</c> text is not read as a function named "for".
     /// </para>
     /// <para>
+    /// Triggers are compared by name and by the table each is ON, between the update script (<see cref="ReplayTriggers"/>),
+    /// the trigger statements inside <c>dbo/Tables/*.sql</c> (the sqlproj builds a trigger only through its table's file, so
+    /// that file must be on the build list) and <c>minimal-schema.sql</c>. Trigger bodies are not compared.
+    /// </para>
+    /// <para>
     /// What the CREATE TABLE parser handles: <c>CREATE TABLE [dbo].[Name] ( ... )</c> (the <c>dbo.</c> and
     /// the brackets are optional), column names with or without brackets, one type per column (optionally
     /// <c>(n)</c>, <c>(max)</c> or <c>(p,s)</c>, optionally <c>[sys].</c>-qualified), and an explicit
@@ -47,7 +52,7 @@ namespace ConnectomeDataModelCoreTests
     /// session settings). Computed columns (<c>AS expr [PERSISTED]</c>) compare by expression text with
     /// whitespace, brackets, parentheses and case removed, not by type, because SQL Server stores the
     /// expression re-bracketed and re-parenthesised; a change that only moves parentheses is not seen.
-    /// Table-level constraints, defaults, identity, indexes, triggers, extended properties,
+    /// Table-level constraints, defaults, identity, indexes, extended properties,
     /// statistics, the <c>graph</c> schema and the <c>UserActivity</c> view are not compared. <c>--</c> and
     /// <c>/* */</c> comments are removed before parsing, so a comment sign inside a string literal in a
     /// table definition would be misread. <c>float(53)</c> and <c>float</c> are the same type, and so are
@@ -350,6 +355,146 @@ namespace ConnectomeDataModelCoreTests
             var differences = CompareFunctions(UpdateScript, mutated, SqlProject, ReadSqlProjectFunctions()).ToList();
 
             Assert.Contains($"function ufnCreateCircleRenamed only in {UpdateScript}, not in {SqlProject}", differences);
+        }
+
+        [Fact]
+        public void UpdateScriptSqlProjectAndMinimalSchemaAgreeOnTriggers()
+        {
+            var sources = new IReadOnlyDictionary<string, string>[]
+            {
+                ReplayTriggers(ReadUpdateScript()), ReadSqlProjectTriggers(), ReplayTriggers(ReadMinimalSchema()),
+            };
+            var names = new[] { UpdateScript, SqlProject, MinimalSchema };
+
+            var found = new SortedSet<string>(StringComparer.Ordinal);
+            for (var a = 0; a < sources.Length; a++)
+                for (var b = a + 1; b < sources.Length; b++)
+                    found.UnionWith(CompareTriggers(names[a], sources[a], names[b], sources[b]));
+
+            AssertOnlyAllowed(found, AllowedTriggerDifferences, "trigger difference");
+        }
+
+        [Fact]
+        public void SqlProjectBuildsEveryTableFileThatDefinesATrigger()
+        {
+            // The sqlproj has no entry per trigger: a trigger reaches the SSDT build only inside its table's file.
+            Assert.Empty(TriggerFilesNotBuilt(
+                File.ReadAllText(RepoFile("Servers/AnnotationDatabase/AnnotationDatabase.sqlproj")), ReadSqlProjectTriggerFiles().Keys));
+        }
+
+        [Fact]
+        public void TriggerFileChecksReportATriggerOnTheWrongTableAndAnUnbuiltTableFile()
+        {
+            var misplaced = Assert.ThrowsAny<Exception>(() => TriggersByTableFile(new[]
+            {
+                ("Location", "CREATE TRIGGER [dbo].[Location_delete] ON [dbo].[Location] FOR DELETE AS SELECT 1"),
+                ("Structure", "CREATE TRIGGER [dbo].[Moved] ON [dbo].[Location] FOR DELETE AS SELECT 1"),
+            }));
+            Assert.Contains("Moved", misplaced.Message);
+
+            var files = TriggersByTableFile(new[]
+            {
+                ("Location", "CREATE TRIGGER [dbo].[Location_delete] ON [dbo].[Location] FOR DELETE AS SELECT 1"),
+                ("Plain", "CREATE TABLE [dbo].[Plain] ([ID] BIGINT NOT NULL)"),
+            });
+            Assert.Equal(new[] { "Location" }, files.Keys);
+
+            const string sqlproj = "<Build Include=\"dbo\\Tables\\Other.sql\" /><Build Include=\"dbo\\Functions\\Location.sql\" />";
+            Assert.Equal(new[] { "Location" }, TriggerFilesNotBuilt(sqlproj, files.Keys));
+            Assert.Empty(TriggerFilesNotBuilt(sqlproj + "<Build Include=\"dbo\\Tables\\location.sql\" />", files.Keys));
+        }
+
+        [Fact]
+        public void TriggerParsersReadTheRealSources()
+        {
+            // Guards against a parser that silently reads nothing, which would make the drift check vacuous.
+            var script = ReplayTriggers(ReadUpdateScript());
+            var project = ReadSqlProjectTriggers();
+            var minimal = ReplayTriggers(ReadMinimalSchema());
+
+            Assert.True(script.Count >= 7, $"only {script.Count} triggers replayed from the update script");
+            Assert.True(project.Count >= 7, $"only {project.Count} triggers read from dbo/Tables");
+            Assert.Equal("Location", script["UpdateStructureSpatialCache"]);
+            Assert.Equal("Location", project["Location_delete"]);
+            Assert.Equal("Structure", minimal["Structure_delete"]);
+        }
+
+        [Fact]
+        public void ReplayTriggersAppliesCreateAlterAndDropInFileOrder()
+        {
+            var triggers = ReplayTriggers(
+                "-- CREATE TRIGGER InLineComment ON T\n" +
+                "/* CREATE TRIGGER InBlockComment ON T\n DROP TRIGGER Bracketed */\n" +
+                "CREATE TRIGGER [dbo].[Bracketed]\n ON [dbo].[T] FOR UPDATE AS SELECT 1\n" +
+                "Create TRIGGER [dbo].MixedBrackets ON dbo.[U] AFTER INSERT AS SELECT 1\n" +
+                "\tCREATE TRIGGER Unqualified ON V AFTER INSERT AS SELECT 1\n" +
+                "\tEXEC('CREATE TRIGGER [dbo].[InsideExec] ON [dbo].[T] FOR DELETE AS SELECT 1')\n" +
+                "\tCREATE OR ALTER TRIGGER dbo.OrAlter ON T FOR DELETE AS SELECT 1\n" +
+                "\tCREATE TRIGGER [dbo].[Dropped] ON T FOR DELETE AS SELECT 1\n" +
+                "\tIF EXISTS(select * from sys.triggers where name = 'Dropped') DROP TRIGGER [dbo].[Dropped];\n" +
+                "\tIF EXISTS(select * from sys.triggers where name = 'Never') DROP TRIGGER dbo.[NeverCreated];\n" +
+                "\tCREATE TRIGGER DroppedThenBack ON T FOR DELETE AS SELECT 1\n" +
+                "\tDROP TRIGGER DroppedThenBack\n" +
+                "\tCREATE TRIGGER DroppedThenBack ON U FOR DELETE AS SELECT 2\n" +
+                "\tALTER TRIGGER [dbo].[Bracketed] ON [dbo].[W] FOR UPDATE AS SELECT 3\n" +
+                "\tprint N'Verify triggers are added'\n");
+
+            Assert.Equal(
+                "Bracketed:W DroppedThenBack:U InsideExec:T MixedBrackets:U OrAlter:T Unqualified:V",
+                string.Join(" ", triggers.Select(p => $"{p.Key}:{p.Value}")));
+        }
+
+        [Fact]
+        public void ReplayTriggersRejectsAnAlterOfAnUnknownTriggerAndAForeignSchema()
+        {
+            Assert.Throws<FormatException>(() => ReplayTriggers("ALTER TRIGGER dbo.Missing ON T AFTER INSERT AS SELECT 1"));
+            Assert.Throws<FormatException>(() => ReplayTriggers("CREATE TRIGGER dbo.T1 ON T AFTER INSERT AS SELECT 1\nDROP TRIGGER dbo.T1\nALTER TRIGGER dbo.T1 ON T AFTER INSERT AS SELECT 1"));
+            Assert.Throws<FormatException>(() => ReplayTriggers("CREATE TRIGGER [graph].[T1] ON T AFTER INSERT AS SELECT 1"));
+            Assert.Throws<FormatException>(() => ReplayTriggers("CREATE TRIGGER [dbo].[T1] ON [graph].[T] AFTER INSERT AS SELECT 1"));
+        }
+
+        [Fact]
+        public void TriggerCompareReportsATriggerTheUpdateScriptNoLongerLeaves()
+        {
+            var script = ReadUpdateScript();
+            const string create = "CREATE TRIGGER [dbo].[StructureLink_ReciprocalCheck]";
+            Assert.Single(Regex.Matches(script, Regex.Escape(create)));
+            var mutated = ReplayTriggers(script.Replace(create, "CREATE TABLE [dbo].[NotATrigger]"));
+
+            var differences = CompareTriggers(SqlProject, ReadSqlProjectTriggers(), UpdateScript, mutated).ToList();
+
+            Assert.Contains($"trigger StructureLink_ReciprocalCheck only in {SqlProject}, not in {UpdateScript}", differences);
+        }
+
+        [Fact]
+        public void TriggerCompareReportsATriggerOnlyTheUpdateScriptLeaves()
+        {
+            var script = ReadUpdateScript();
+            const string create = "CREATE TRIGGER [dbo].[StructureLink_ReciprocalCheck]";
+            Assert.Single(Regex.Matches(script, Regex.Escape(create)));
+            var mutated = ReplayTriggers(script.Replace(create, "CREATE TRIGGER [dbo].[StructureLink_ReciprocalCheckRenamed]"));
+
+            var differences = CompareTriggers(UpdateScript, mutated, SqlProject, ReadSqlProjectTriggers()).ToList();
+
+            Assert.Contains($"trigger StructureLink_ReciprocalCheckRenamed only in {UpdateScript}, not in {SqlProject}", differences);
+
+            var reversed = CompareTriggers(SqlProject, ReadSqlProjectTriggers(), UpdateScript, mutated).ToList();
+            Assert.Contains($"trigger StructureLink_ReciprocalCheckRenamed only in {UpdateScript}, not in {SqlProject}", reversed);
+            Assert.Contains($"trigger StructureLink_ReciprocalCheck only in {SqlProject}, not in {UpdateScript}", reversed);
+        }
+
+        [Fact]
+        public void TriggerCompareReportsATriggerMovedToAnotherTable()
+        {
+            var script = ReadUpdateScript();
+            var pattern = new Regex(@"(CREATE TRIGGER \[dbo\]\.\[StructureLink_ReciprocalCheck\]\s+ON\s+)\[dbo\]\.\[StructureLink\]");
+            Assert.Single(pattern.Matches(script));
+            var mutated = ReplayTriggers(pattern.Replace(script, "$1[dbo].[Structure]"));
+
+            var differences = CompareTriggers(UpdateScript, mutated, SqlProject, ReadSqlProjectTriggers()).ToList();
+
+            Assert.Contains(
+                $"trigger StructureLink_ReciprocalCheck: on dbo.Structure in {UpdateScript}, on dbo.StructureLink in {SqlProject}", differences);
         }
 
         [Fact]
@@ -808,6 +953,121 @@ namespace ConnectomeDataModelCoreTests
                 yield return $"function {name} only in {nameA}, not in {nameB}";
             foreach (var name in setB.Except(setA))
                 yield return $"function {name} only in {nameB}, not in {nameA}";
+        }
+
+        // ---- Triggers ---------------------------------------------------------------------------------
+
+        /// <summary>
+        /// A CREATE, CREATE OR ALTER, ALTER or DROP of a trigger. CREATE and ALTER must be followed by
+        /// <c>ON table</c>, which every DML trigger has and which names the table the trigger watches; DROP has none.
+        /// </summary>
+        private static readonly Regex TriggerStatement = new(
+            @"\b(?:(?<verb>DROP)\s+TRIGGER\s+(?:IF\s+EXISTS\s+)?(?:\[?(?<schema>\w+)\]?\.)?\[?(?<name>\w+)\]?" +
+            @"|(?<verb>CREATE\s+OR\s+ALTER|CREATE|ALTER)\s+TRIGGER\s+(?:\[?(?<schema>\w+)\]?\.)?\[?(?<name>\w+)\]?" +
+            @"\s+ON\s+(?:\[?(?<tableSchema>\w+)\]?\.)?\[?(?<table>\w+)\]?)",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        private static readonly Regex TableBuildEntry = new(
+            @"Include=""dbo\\Tables\\(?<name>[^""\\]+)\.sql""", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        /// <summary>The triggers minimal-schema.sql leaves out, with why; each is checked against both other sources.</summary>
+        private static readonly Dictionary<string, string> TriggersMissingFromMinimalSchema = new()
+        {
+            ["Location_update"] = "Smoke schema omits the trigger that stamps LastModified on UPDATE, so there LastModified keeps its default (the insert time).",
+            ["Structure_LastModified"] = "Smoke schema omits the trigger that stamps LastModified on UPDATE (see Location_update).",
+            ["StructureType_LastModified"] = "Smoke schema omits the trigger that stamps LastModified on UPDATE (see Location_update).",
+            ["StructureLink_ReciprocalCheck"] = "Smoke schema omits the reciprocal-link check; the gRPC tests never insert reciprocal links.",
+            ["UpdateStructureSpatialCache"] = "Smoke schema has no dbo.StructureSpatialCache table for the trigger to maintain (see the table allow-list).",
+        };
+
+        /// <summary>
+        /// Differences between the triggers <c>CreateUpdateDatabase.sql</c> leaves behind, the ones <c>dbo/Tables</c> defines
+        /// and the ones <c>minimal-schema.sql</c> creates, keyed by the text <see cref="CompareTriggers"/> reports.
+        /// </summary>
+        private static readonly Dictionary<string, string> AllowedTriggerDifferences =
+            TriggersMissingFromMinimalSchema
+                .SelectMany(t => new[] { UpdateScript, SqlProject }.Select(source =>
+                    (Key: $"trigger {t.Key} only in {source}, not in {MinimalSchema}", Reason: t.Value)))
+                .ToDictionary(e => e.Key, e => e.Reason);
+
+        /// <summary>
+        /// The dbo triggers (name to the table each is ON) a database built from the text ends with, replayed like
+        /// <see cref="ReplayProcedures"/>: CREATE (also OR ALTER) adds one, ALTER changes its table, DROP removes it, in
+        /// file order, inside the batch or inside <c>EXEC('...')</c>. A DROP of a trigger not created earlier is ignored
+        /// (the script and minimal-schema.sql drop under <c>sys.triggers</c> guards). Throws <see cref="FormatException"/>
+        /// for ALTER of a trigger that does not exist then, and for a non-<c>dbo</c> trigger or table. Comments are removed first.
+        /// </summary>
+        private static SortedDictionary<string, string> ReplayTriggers(string sql)
+        {
+            var triggers = new SortedDictionary<string, string>(StringComparer.Ordinal);
+            foreach (Match m in TriggerStatement.Matches(StripComments(sql)))
+            {
+                var name = m.Groups["name"].Value;
+                foreach (var schema in new[] { m.Groups["schema"], m.Groups["tableSchema"] })
+                    if (schema.Success && !schema.Value.Equals("dbo", StringComparison.OrdinalIgnoreCase))
+                        throw new FormatException($"Trigger {name} uses the non-dbo schema {schema.Value}: {m.Value.Trim()}");
+
+                var verb = Regex.Replace(m.Groups["verb"].Value, @"\s+", " ").ToUpperInvariant();
+                if (verb == "DROP")
+                    triggers.Remove(name);
+                else if (verb == "ALTER" && !triggers.ContainsKey(name))
+                    throw new FormatException($"ALTER TRIGGER {name} before any CREATE TRIGGER {name}: {m.Value.Trim()}");
+                else
+                    triggers[name] = m.Groups["table"].Value;
+            }
+            return triggers;
+        }
+
+        /// <summary>
+        /// The triggers each <c>dbo/Tables/*.sql</c> file defines, by file name. A trigger must be ON the table its
+        /// file is named for, since the SSDT project builds a trigger only through its table's file.
+        /// </summary>
+        private static Dictionary<string, SortedDictionary<string, string>> ReadSqlProjectTriggerFiles() =>
+            TriggersByTableFile(Directory
+                .GetFiles(RepoFile("Servers/AnnotationDatabase/dbo/Tables"), "*.sql")
+                .Select(file => (Table: Path.GetFileNameWithoutExtension(file), Sql: File.ReadAllText(file))));
+
+        private static Dictionary<string, SortedDictionary<string, string>> TriggersByTableFile(
+            IEnumerable<(string Table, string Sql)> tableFiles)
+        {
+            var files = new Dictionary<string, SortedDictionary<string, string>>(StringComparer.Ordinal);
+            foreach (var (table, sql) in tableFiles)
+            {
+                var triggers = ReplayTriggers(sql);
+                foreach (var (name, onTable) in triggers)
+                    Assert.True(onTable == table, $"dbo/Tables/{table}.sql defines trigger {name} ON dbo.{onTable}; it belongs in dbo/Tables/{onTable}.sql");
+                if (triggers.Count > 0)
+                    files.Add(table, triggers);
+            }
+            return files;
+        }
+
+        /// <summary>The table files (by name) that define a trigger but have no <c>dbo\Tables\Name.sql</c> build entry.</summary>
+        private static IEnumerable<string> TriggerFilesNotBuilt(string sqlprojText, IEnumerable<string> triggerTableFiles)
+        {
+            var listed = TableBuildEntry.Matches(sqlprojText).Select(m => m.Groups["name"].Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return triggerTableFiles.Where(table => !listed.Contains(table));
+        }
+
+        private static SortedDictionary<string, string> ReadSqlProjectTriggers()
+        {
+            var triggers = new SortedDictionary<string, string>(StringComparer.Ordinal);
+            foreach (var (_, defined) in ReadSqlProjectTriggerFiles())
+                foreach (var (name, table) in defined)
+                    triggers.Add(name, table);
+            return triggers;
+        }
+
+        /// <summary>Triggers present in one source only, and triggers whose table differs, as stable sentences (the allow-list keys).</summary>
+        private static IEnumerable<string> CompareTriggers(
+            string nameA, IReadOnlyDictionary<string, string> a, string nameB, IReadOnlyDictionary<string, string> b)
+        {
+            foreach (var name in a.Keys.Except(b.Keys))
+                yield return $"trigger {name} only in {nameA}, not in {nameB}";
+            foreach (var name in b.Keys.Except(a.Keys))
+                yield return $"trigger {name} only in {nameB}, not in {nameA}";
+            foreach (var name in a.Keys.Intersect(b.Keys).Where(n => a[n] != b[n]))
+                yield return $"trigger {name}: on dbo.{a[name]} in {nameA}, on dbo.{b[name]} in {nameB}";
         }
 
         // ---- Objects created by minimal-schema.sql ---------------------------------------------------
