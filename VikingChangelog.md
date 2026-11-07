@@ -25,6 +25,8 @@ Documentation/source/Client/versionhistory.rst.
 
 ## 1.2.142 — not yet released
 
+* **Export dialogs say existing files are reused.** The **Screenshot Parameters** (Capture Screen) and **Frame Capture Setup** (Export Frames) dialogs now note that image files already in the folder are not re-rendered, so repeating a capture after changing overlays or annotations keeps the old picture. To render again, choose a new or empty folder. Viking behaves as before.
+<!-- Decision D-ExportResume (C). SectionViewerControl.ExportImage skips a tile whose file exists (name: base_Z{Z}_X{X}_Y{Y}_W{control Width}_H{control Height}_DS{downsample}.png, no overlay flag); kept as a resume for long exports and only documented (ScreenshotForm.labelExistingFiles, FrameCapturesForm.labelExistingFiles, useage.rst). -->
 * **Fix: simplified outlines keep their last corner.** When Viking reduced the points of an outline from **Segment** or auto-polygonize, or of a polygon with thousands of points loaded from the server, it always dropped the corner just before the outline's starting point, however far it stood out, so the shape could lose a corner or cut across a bulge. That corner is now kept whenever leaving it out would move the outline by more than the simplify tolerance.
 <!-- Decision D-ClosedRingDouglasPeucker (A). CurveExtensions.DouglasPeuckerReduction stepped back past the closing duplicate of a closed ring but only kept the original last index, so the last distinct vertex was never judged; it now re-reduces the tail from the last keeper to the closing point (SegmentationMaskPolygonizer.SimplifyClosedRing, SqlGeometryUtils.EnsureRingUnderMaxPoints). Pen cuts (ReduceExteriorRing) already preserved it (694b2421). Open paths are unchanged. -->
 

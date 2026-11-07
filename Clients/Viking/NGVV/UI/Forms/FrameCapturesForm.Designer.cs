@@ -52,6 +52,7 @@
             this.checkIncludeOverlays = new System.Windows.Forms.CheckBox();
             this.textPath = new System.Windows.Forms.TextBox();
             this.textPrefix = new System.Windows.Forms.TextBox();
+            this.labelExistingFiles = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numStartFrame)).BeginInit();
             this.SuspendLayout();
@@ -153,7 +154,7 @@
             // 
             // btnExport
             // 
-            this.btnExport.Location = new System.Drawing.Point(12, 300);
+            this.btnExport.Location = new System.Drawing.Point(12, 334);
             this.btnExport.Name = "btnExport";
             this.btnExport.Size = new System.Drawing.Size(75, 23);
             this.btnExport.TabIndex = 11;
@@ -182,7 +183,7 @@
             // btnCancel
             // 
             this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnCancel.Location = new System.Drawing.Point(286, 299);
+            this.btnCancel.Location = new System.Drawing.Point(286, 333);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(75, 23);
             this.btnCancel.TabIndex = 13;
@@ -242,11 +243,22 @@
             this.textPrefix.TabIndex = 8;
             this.textPrefix.Text = global::Viking.Properties.Settings.Default.FrameCaptureDefaultPrefix;
             // 
+            // labelExistingFiles
+            // 
+            this.labelExistingFiles.AutoSize = true;
+            this.labelExistingFiles.Location = new System.Drawing.Point(12, 300);
+            this.labelExistingFiles.MaximumSize = new System.Drawing.Size(349, 0);
+            this.labelExistingFiles.Name = "labelExistingFiles";
+            this.labelExistingFiles.Size = new System.Drawing.Size(349, 26);
+            this.labelExistingFiles.TabIndex = 17;
+            this.labelExistingFiles.Text = "Image files already in the Path folder are reused, not re-rendered. To re-render, choose a new or empty folder.";
+            // 
             // FrameCapturesForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(373, 334);
+            this.ClientSize = new System.Drawing.Size(373, 368);
+            this.Controls.Add(this.labelExistingFiles);
             this.Controls.Add(this.checkIncludeOverlays);
             this.Controls.Add(this.numStartFrame);
             this.Controls.Add(this.label1);
@@ -289,5 +301,6 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn colImageHeight;
         private System.Windows.Forms.DataGridViewTextBoxColumn colDownSample;
         private System.Windows.Forms.CheckBox checkIncludeOverlays;
+        private System.Windows.Forms.Label labelExistingFiles;
     }
 }

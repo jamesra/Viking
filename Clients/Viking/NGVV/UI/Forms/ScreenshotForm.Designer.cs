@@ -50,6 +50,7 @@
             this.checkUseViewerDownsample = new System.Windows.Forms.CheckBox();
             this.textFilename = new System.Windows.Forms.TextBox();
             this.checkOverlays = new System.Windows.Forms.CheckBox();
+            this.labelExistingFiles = new System.Windows.Forms.Label();
             this.groupPosition.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numHeight)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numWidth)).BeginInit();
@@ -225,7 +226,7 @@
             // btnOK
             // 
             this.btnOK.DialogResult = System.Windows.Forms.DialogResult.OK;
-            this.btnOK.Location = new System.Drawing.Point(33, 460);
+            this.btnOK.Location = new System.Drawing.Point(33, 520);
             this.btnOK.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.btnOK.Name = "btnOK";
             this.btnOK.Size = new System.Drawing.Size(148, 37);
@@ -237,7 +238,7 @@
             // btnCancel
             // 
             this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnCancel.Location = new System.Drawing.Point(206, 460);
+            this.btnCancel.Location = new System.Drawing.Point(206, 520);
             this.btnCancel.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(148, 38);
@@ -326,12 +327,24 @@
             this.checkOverlays.Text = "Include overlays:";
             this.checkOverlays.UseVisualStyleBackColor = true;
             // 
+            // labelExistingFiles
+            // 
+            this.labelExistingFiles.AutoSize = true;
+            this.labelExistingFiles.Location = new System.Drawing.Point(22, 450);
+            this.labelExistingFiles.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.labelExistingFiles.MaximumSize = new System.Drawing.Size(336, 0);
+            this.labelExistingFiles.Name = "labelExistingFiles";
+            this.labelExistingFiles.Size = new System.Drawing.Size(336, 60);
+            this.labelExistingFiles.TabIndex = 28;
+            this.labelExistingFiles.Text = "Image files already in the folder are reused, not re-rendered. To re-render, choose a new or empty folder.";
+            // 
             // ScreenshotForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.btnCancel;
-            this.ClientSize = new System.Drawing.Size(380, 518);
+            this.ClientSize = new System.Drawing.Size(380, 578);
+            this.Controls.Add(this.labelExistingFiles);
             this.Controls.Add(this.textFolder);
             this.Controls.Add(this.labelFolder);
             this.Controls.Add(this.checkUseViewerDownsample);
@@ -385,5 +398,6 @@
         private System.Windows.Forms.CheckBox checkUseViewerDownsample;
         private System.Windows.Forms.TextBox textFolder;
         private System.Windows.Forms.Label labelFolder;
+        private System.Windows.Forms.Label labelExistingFiles;
     }
 }
