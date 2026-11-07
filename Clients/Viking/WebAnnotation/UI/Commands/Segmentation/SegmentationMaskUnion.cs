@@ -1,6 +1,4 @@
 using Geometry;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -142,25 +140,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>A 1-bit greyscale PNG of <paramref name="width"/> x <paramref name="height"/> pixels, 255 (or any non-zero) set.</summary>
-        public static byte[] EncodePng(byte[] pixels, int width, int height)
-        {
-            L8[] gray = new L8[pixels.Length];
-            for (int i = 0; i < pixels.Length; i++)
-                gray[i] = new L8(pixels[i]);
-
-            using MemoryStream stream = new();
-            using (var image = SixLabors.ImageSharp.Image.LoadPixelData<L8>(gray, width, height))
-            {
-                image.Save(stream, new PngEncoder
-                {
-                    ColorType = PngColorType.Grayscale,
-                    BitDepth = PngBitDepth.Bit1,
-                    CompressionLevel = PngCompressionLevel.BestCompression
-                });
-            }
-
-            return stream.ToArray();
-        }
+        public static byte[] EncodePng(byte[] pixels, int width, int height) => SegmentationPng.EncodeBlackWhite(pixels, width, height);
 
         /// <summary>The inclusive mosaic-pixel box that holds every shape and every set bitmap pixel at <paramref name="downsample"/>.</summary>
         private bool TryGetMosaicBounds(int downsample, out long xMin, out long xMax, out long yMin, out long yMax)

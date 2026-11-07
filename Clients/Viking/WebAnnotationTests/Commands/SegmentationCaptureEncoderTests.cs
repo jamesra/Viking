@@ -1,8 +1,9 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Xna.Framework;
-using SixLabors.ImageSharp.PixelFormats;
 using System.IO;
+using System.Windows.Media.Imaging;
 using WebAnnotation.UI.Commands.Segmentation;
+using MediaPixelFormats = System.Windows.Media.PixelFormats;
 
 namespace WebAnnotationTests.Commands
 {
@@ -69,16 +70,14 @@ namespace WebAnnotationTests.Commands
 
             byte[] png = SegmentationCaptureEncoder.EncodeToPng(pixels, 2, 2, grayscale: true);
 
-            using var image = SixLabors.ImageSharp.Image.Load<L8>(png);
+            DecodedPng image = DecodedPng.Read(png);
             Assert.AreEqual(2, image.Width);
             Assert.AreEqual(2, image.Height);
             Assert.AreEqual(8, png[24], "PNG bit depth");
             Assert.AreEqual(0, png[25], "PNG color type must be greyscale");
 
-            L8[] decoded = new L8[4];
-            image.CopyPixelDataTo(decoded);
-            Assert.AreEqual(0, decoded[0].PackedValue);
-            Assert.AreEqual(255, decoded[2].PackedValue);
+            Assert.AreEqual(0, image.Gray(0, 0));
+            Assert.AreEqual(255, image.Gray(0, 1));
         }
 
         [TestMethod]
@@ -91,12 +90,52 @@ namespace WebAnnotationTests.Commands
             ];
 
             byte[] png = SegmentationCaptureEncoder.EncodeToPng(pixels, 2, 1, grayscale: false);
-            using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(new MemoryStream(png));
-            Rgba32[] decoded = new Rgba32[2];
-            image.CopyPixelDataTo(decoded);
+            DecodedPng image = DecodedPng.Read(png);
 
-            Assert.AreEqual(0, decoded[0].R);
-            Assert.AreEqual(255, decoded[1].R);
+            Assert.AreEqual(6, png[25], "PNG color type is RGBA");
+            Assert.AreEqual(0, image.Red(0, 0));
+            Assert.AreEqual(255, image.Red(1, 0));
+            Assert.AreEqual(255, image.Alpha(1, 0));
+        }
+    }
+
+    /// <summary>A PNG decoded by Windows' own decoder (WIC, through WPF), as greyscale and as straight BGRA.</summary>
+    internal sealed class DecodedPng
+    {
+        private readonly byte[] gray;
+        private readonly byte[] bgra;
+
+        private DecodedPng(BitmapSource frame)
+        {
+            Width = frame.PixelWidth;
+            Height = frame.PixelHeight;
+            BitsPerPixel = frame.Format.BitsPerPixel;
+            gray = Pixels(frame, MediaPixelFormats.Gray8, 1);
+            bgra = Pixels(frame, MediaPixelFormats.Bgra32, 4);
+        }
+
+        public int Width { get; }
+        public int Height { get; }
+
+        /// <summary>Bits per pixel as stored in the file: 1 for a black-and-white mask, 8 for greyscale.</summary>
+        public int BitsPerPixel { get; }
+
+        public static DecodedPng Read(byte[] png)
+        {
+            PngBitmapDecoder decoder = new(new MemoryStream(png), BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+            return new DecodedPng(decoder.Frames[0]);
+        }
+
+        public byte Gray(int x, int y) => gray[y * Width + x];
+        public byte Red(int x, int y) => bgra[(y * Width + x) * 4 + 2];
+        public byte Alpha(int x, int y) => bgra[(y * Width + x) * 4 + 3];
+
+        private static byte[] Pixels(BitmapSource frame, System.Windows.Media.PixelFormat format, int bytesPerPixel)
+        {
+            FormatConvertedBitmap converted = new(frame, format, null, 0);
+            byte[] pixels = new byte[frame.PixelWidth * frame.PixelHeight * bytesPerPixel];
+            converted.CopyPixels(pixels, frame.PixelWidth * bytesPerPixel, 0);
+            return pixels;
         }
     }
 }
