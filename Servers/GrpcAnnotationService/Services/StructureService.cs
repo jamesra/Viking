@@ -636,15 +636,24 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// MergeId is absorbed into KeepId. Clients must drop MergeId locally; the RPC returns only KeptId.
+        /// Throws InvalidArgument when KeepId and MergeId are the same structure, and NotFound, naming the missing IDs,
+        /// when either structure does not exist; neither runs dbo.MergeStructures. The procedure is not transactional:
+        /// on a self-merge it rewrites the structure's Notes to "Merged into structure ..." and then deletes the structure,
+        /// or fails on the Location foreign key when the structure has locations.
         /// </summary>
         public override async Task<MergeResponse> Merge(MergeRequest request, ServerCallContext context)
         {
             try
             {
-                await _context.Procedures.MergeStructuresAsync(
-                    request.KeepId, request.MergeId, cancellationToken: context.CancellationToken);
+                var ct = context.CancellationToken;
+                if (request.KeepId == request.MergeId)
+                    throw new RpcException(new Status(StatusCode.InvalidArgument, "A structure cannot be merged into itself"));
+                await ThrowIfStructuresMissingAsync(new[] { request.KeepId, request.MergeId }, ct);
+
+                await _context.Procedures.MergeStructuresAsync(request.KeepId, request.MergeId, cancellationToken: ct);
                 return new MergeResponse { KeptId = request.KeepId };
             }
+            catch (RpcException) { throw; }
             catch (Exception e) { throw AnnotationRpc.Failure(_logger, nameof(Merge), e, context); }
         }
 
@@ -818,7 +827,8 @@ namespace gRPCAnnotationService
         /// <summary>
         /// Throws NotFound, naming each of <paramref name="ids"/> that is not a stored structure, when there is one:
         /// FK_StructureLinkSource_StructureBaseID and FK_StructureLinkTarget_StructureBaseID would otherwise fail the
-        /// save of a link naming it as a generic Unknown failure. No IDs cost no query.
+        /// save of a link naming it as a generic Unknown failure, and dbo.MergeStructures would fail on the Location
+        /// foreign key or silently do nothing. No IDs cost no query.
         /// </summary>
         private async Task ThrowIfStructuresMissingAsync(IEnumerable<long> ids, CancellationToken ct)
         {

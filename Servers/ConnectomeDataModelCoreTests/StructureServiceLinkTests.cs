@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
@@ -26,7 +27,10 @@ namespace ConnectomeDataModelCoreTests
     /// refused with NotFound naming the missing IDs, and nothing is saved; a valid link is saved once, stamped with the
     /// caller's name rather than the payload's; UpdateLinks reads existing links in one query, keeps the
     /// last row of a repeated (SourceId, TargetId) pair, and updates a link that exists instead of inserting it.
-    /// No database is contacted: interceptors stand in for the connection, the query and SaveChanges.
+    /// Also pins <see cref="StructureService.Merge"/>: a self-merge is refused with InvalidArgument and a missing
+    /// structure with NotFound naming it, both before dbo.MergeStructures runs.
+    /// No database is contacted: interceptors stand in for the connection, the query and SaveChanges, and
+    /// <see cref="RecordingProcedures"/> for the procedure call.
     /// </summary>
     public class StructureServiceLinkTests
     {
@@ -271,6 +275,74 @@ namespace ConnectomeDataModelCoreTests
             await service.UpdateLinks(new UpdateStructureLinksRequest(), new TestCallContext());
 
             Assert.Equal(0, table.Queries);
+        }
+
+        [Fact]
+        public async Task SelfMergeIsRefusedBeforeAnyQueryOrProcedure()
+        {
+            var table = new FakeLinkTable();
+            using var db = NewContext(new CaptureSaves(), table);
+            var procedures = new RecordingProcedures(db);
+            db.Procedures = procedures;
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => service.Merge(
+                new MergeRequest { KeepId = 5, MergeId = 5 }, new TestCallContext()));
+
+            Assert.Equal(StatusCode.InvalidArgument, ex.StatusCode);
+            Assert.Equal("A structure cannot be merged into itself", ex.Status.Detail);
+            Assert.Equal(0, table.Queries);
+            Assert.Empty(procedures.Merges);
+        }
+
+        [Theory]
+        [InlineData(99, 2, "99")]
+        [InlineData(2, 99, "99")]
+        [InlineData(98, 99, "98, 99")]
+        public async Task MergeNamingAMissingStructureIsRefusedBeforeTheProcedure(long keep, long merge, string missing)
+        {
+            using var db = NewContext(new CaptureSaves(), new FakeLinkTable());
+            var procedures = new RecordingProcedures(db);
+            db.Procedures = procedures;
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => service.Merge(
+                new MergeRequest { KeepId = keep, MergeId = merge }, new TestCallContext()));
+
+            Assert.Equal(StatusCode.NotFound, ex.StatusCode);
+            Assert.Equal($"Structures not found: {missing}", ex.Status.Detail);
+            Assert.Empty(procedures.Merges);
+        }
+
+        [Fact]
+        public async Task MergeLooksUpBothStructuresInOneQueryThenRunsTheProcedureOnce()
+        {
+            var table = new FakeLinkTable();
+            using var db = NewContext(new CaptureSaves(), table);
+            var procedures = new RecordingProcedures(db);
+            db.Procedures = procedures;
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            var response = await service.Merge(new MergeRequest { KeepId = 3, MergeId = 8 }, new TestCallContext());
+
+            Assert.Equal(3, response.KeptId);
+            Assert.Equal(new (long?, long?)[] { (3, 8) }, procedures.Merges);
+            Assert.Equal(1, table.StructureQueries);
+            Assert.Equal(2, table.MostStructureParameters);
+        }
+
+        /// <summary>Records each dbo.MergeStructures call instead of executing it.</summary>
+        private sealed class RecordingProcedures : AnnotationContextProcedures
+        {
+            public RecordingProcedures(AnnotationContext context) : base(context) { }
+
+            public List<(long? Keep, long? Merge)> Merges { get; } = new();
+
+            public override Task<MergeStructuresResult[]> MergeStructuresAsync(long? KeepStructureID, long? MergeStructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+            {
+                Merges.Add((KeepStructureID, MergeStructureID));
+                return Task.FromResult(Array.Empty<MergeStructuresResult>());
+            }
         }
 
         private static UpdateStructureLinksRequest Request(params ProtoStructureLink[] links)
