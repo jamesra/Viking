@@ -440,6 +440,8 @@ namespace gRPCAnnotationService
         /// An edit of a structure that a later row deletes, directly or as a child, keeps its Success and the delete stands.
         /// A create or update whose ParentId names a structure that does not exist or that the batch deletes, directly or as a child, reports Success = false and is not saved.
         /// A create or update whose TypeId names no structure type reports Success = false and is not saved (see <see cref="LiveTypeIdsAsync"/>).
+        /// An update that makes a structure its own parent or moves it under one of its own descendants, counting moves made earlier in the
+        /// batch, reports Success = false and is not saved (see <see cref="IsSelfOrDescendantAsync"/>).
         /// </summary>
         public override async Task<UpdateStructuresResponse> Update(UpdateStructuresRequest request, ServerCallContext context)
         {
@@ -478,7 +480,9 @@ namespace gRPCAnnotationService
 
                         case StructureChangeRequest.ActionOneofCase.Update:
                             var existing = await _context.Structures.FirstOrDefaultAsync(s => s.Id == change.Update.Id, ct);
-                            if (existing == null || (change.Update.TypeId != 0 && !liveTypes.Contains(change.Update.TypeId)))
+                            if (existing == null || (change.Update.TypeId != 0 && !liveTypes.Contains(change.Update.TypeId))
+                                || (change.Update.HasParentId && change.Update.ParentId != existing.ParentId
+                                    && await IsSelfOrDescendantAsync(change.Update.ParentId, existing.Id, ct)))
                             {
                                 rowResponse.Success = false;
                                 break;
@@ -813,6 +817,28 @@ namespace gRPCAnnotationService
                 rowResponse.Success = false;
                 rowResponse.Updated = null;
             }
+        }
+
+        /// <summary>
+        /// True when <paramref name="id"/> is <paramref name="ancestorId"/> or lies below it in the structure tree as the
+        /// batch so far leaves it, so making <paramref name="id"/> the parent of <paramref name="ancestorId"/> would close a
+        /// cycle that FK_Structure_Structure does not prevent. The walk follows ParentId upward through Find, which looks
+        /// in the change tracker before the database, so moves made earlier in the batch count; it costs one lookup per
+        /// ancestor not yet tracked and stops at a root, at a structure that is not stored, or at one it has already
+        /// visited (a cycle already stored that does not pass through <paramref name="ancestorId"/>).
+        /// </summary>
+        private async Task<bool> IsSelfOrDescendantAsync(long id, long ancestorId, CancellationToken ct)
+        {
+            var visited = new HashSet<long>();
+            long? current = id;
+            while (current.HasValue && visited.Add(current.Value))
+            {
+                if (current.Value == ancestorId)
+                    return true;
+                current = (await _context.Structures.FindAsync(new object[] { current.Value }, ct))?.ParentId;
+            }
+
+            return false;
         }
 
         /// <summary>

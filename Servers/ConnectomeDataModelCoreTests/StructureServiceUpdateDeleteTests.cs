@@ -1,3 +1,4 @@
+using FsCheck;
 using gRPCAnnotationService;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -8,6 +9,7 @@ using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Viking.AnnotationServiceTypes.gRPC.V1.Protos;
@@ -26,7 +28,7 @@ namespace ConnectomeDataModelCoreTests
     /// row that is gone: SQL Server would report no rows affected and EF would fail and roll back the whole batch.
     /// The edit row keeps its success, as for a location edited and then deleted, and the delete stands.
     /// A create under a deleted structure, or an update that moves a structure under one, fails its own row instead
-    /// of the batch's save.
+    /// of the batch's save, and so does a move of a structure under itself or one of its own descendants.
     /// No database is contacted: interceptors stand in for the connection, the transaction, the queries, the
     /// procedure and SaveChanges.
     /// </summary>
@@ -383,6 +385,167 @@ namespace ConnectomeDataModelCoreTests
             Assert.True(store.Committed);
         }
 
+        /// <summary>
+        /// FK_Structure_Structure allows a structure to name itself as its parent, which leaves a cycle every walk of
+        /// the Parent chain loops on, so only that update fails and reports no Updated.
+        /// </summary>
+        [Fact]
+        public async Task MovingAStructureUnderItselfFailsOnlyThatUpdate()
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(5);
+            store.AddStructure(9);
+            using var db = NewContext(store);
+            Track(db, store, 5, 9);
+
+            var response = await NewService(db).Update(Request(Update(5, parentId: 5), Update(9, parentId: 5)), new TestCallContext());
+
+            Assert.Equal(new[] { false, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Null(response.Results[0].Updated);
+            Assert.Equal(new[] { 9L }, store.Saved);
+            Assert.Equal(new long?[] { null, 5 }, new[] { store.Rows[5], store.Rows[9] });
+            Assert.True(store.Committed);
+        }
+
+        /// <summary>Stored chain 1 (root) &lt;- 2 &lt;- 3: the root moved under its child or grandchild, neither tracked.</summary>
+        [Theory]
+        [InlineData(2L)]
+        [InlineData(3L)]
+        public async Task MovingAStructureUnderItsOwnDescendantFailsTheUpdate(long descendant)
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(1);
+            store.AddStructure(2, parentId: 1);
+            store.AddStructure(3, parentId: 2);
+            using var db = NewContext(store);
+            Track(db, store, 1);
+
+            var response = await NewService(db).Update(Request(Update(1, parentId: descendant)), new TestCallContext());
+
+            Assert.False(Assert.Single(response.Results).Success);
+            Assert.Null(response.Results[0].Updated);
+            Assert.Empty(store.Saved);
+            Assert.Null(store.Rows[1]);
+            Assert.True(store.Committed);
+        }
+
+        [Fact]
+        public async Task MovingUnderADescendantMadeEarlierInTheBatchFailsTheLaterUpdate()
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(1);
+            store.AddStructure(2);
+            using var db = NewContext(store);
+            Track(db, store, 1, 2);
+
+            var response = await NewService(db).Update(Request(Update(2, parentId: 1), Update(1, parentId: 2)), new TestCallContext());
+
+            Assert.Equal(new[] { true, false }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Null(response.Results[1].Updated);
+            Assert.Equal(new[] { 2L }, store.Saved);
+            Assert.Equal(new long?[] { null, 1 }, new[] { store.Rows[1], store.Rows[2] });
+        }
+
+        /// <summary>Stored tree 1 (root) with children 2 and 3, and 4 under 3: moves under a sibling and a grandparent.</summary>
+        [Fact]
+        public async Task MovingUnderASiblingOrAnAncestorSavesTheUpdates()
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(1);
+            store.AddStructure(2, parentId: 1);
+            store.AddStructure(3, parentId: 1);
+            store.AddStructure(4, parentId: 3);
+            using var db = NewContext(store);
+            Track(db, store, 2, 4);
+
+            var response = await NewService(db).Update(Request(Update(2, parentId: 3), Update(4, parentId: 1)), new TestCallContext());
+
+            Assert.Equal(new[] { true, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Equal(new long?[] { 3, 1 }, new[] { store.Rows[2], store.Rows[4] });
+            Assert.True(store.Committed);
+        }
+
+        /// <summary>
+        /// A cycle already stored (1 and 2 name each other) that does not pass through the moved structure ends the
+        /// walk instead of looping forever, and the move under it stands.
+        /// </summary>
+        [Fact]
+        public async Task AStoredCycleAboveTheNewParentEndsTheWalk()
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(1, parentId: 2);
+            store.AddStructure(2, parentId: 1);
+            store.AddStructure(5);
+            using var db = NewContext(store);
+            Track(db, store, 5);
+
+            var response = await Task.Run(() => NewService(db).Update(Request(Update(5, parentId: 1)), new TestCallContext()))
+                .WaitAsync(TimeSpan.FromSeconds(30));
+
+            Assert.True(Assert.Single(response.Results).Success);
+            Assert.Equal(new[] { 5L }, store.Saved);
+        }
+
+        /// <summary>A kept, cleared or self parent needs no ancestor lookup beyond the update's own query.</summary>
+        [Theory]
+        [InlineData(1L)]
+        [InlineData(null)]
+        [InlineData(2L)]
+        public async Task KeptClearedOrSelfParentRunsNoAncestorQuery(long? parentId)
+        {
+            var store = new FakeStructureDatabase();
+            store.AddStructure(1);
+            store.AddStructure(2, parentId: 1);
+            using var db = NewContext(store);
+            Track(db, store, 2);
+
+            var response = await NewService(db).Update(Request(Update(2, parentId)), new TestCallContext());
+
+            Assert.Equal(parentId != 2, Assert.Single(response.Results).Success);
+            Assert.Equal(1, store.Queries);
+        }
+
+        /// <summary>
+        /// Moves (moved, newParent) over a random stored forest, none of it tracked, applied in order: each fails
+        /// exactly when the new parent is the moved structure or below it in the tree the earlier moves left, and the
+        /// saved tree is that tree.
+        /// </summary>
+        [Fact]
+        public void MovesFailExactlyWhenTheyWouldCloseACycle()
+        {
+            var cases =
+                from n in Gen.Choose(2, 7)
+                from parents in Gen.Sequence(Enumerable.Range(1, n).Select(i => Gen.Choose(0, i - 1)))
+                from count in Gen.Choose(1, 4)
+                from moves in Gen.ArrayOf(count, Gen.Two(Gen.Choose(1, n)))
+                select (Parents: parents.ToArray(), Moves: moves);
+
+            Prop.ForAll(Arb.From(cases), c =>
+            {
+                var store = new FakeStructureDatabase();
+                for (var i = 1; i <= c.Parents.Length; i++)
+                    store.AddStructure(i, c.Parents[i - 1] == 0 ? null : c.Parents[i - 1]);
+                var expectedParents = new Dictionary<long, long?>(store.Rows);
+                var expectedSuccess = c.Moves.Select(m =>
+                {
+                    for (long? p = m.Item2; p.HasValue; p = expectedParents[p.Value])
+                    {
+                        if (p == m.Item1)
+                            return false;
+                    }
+                    expectedParents[m.Item1] = m.Item2;
+                    return true;
+                }).ToArray();
+
+                using var db = NewContext(store);
+                var response = Task.Run(() => NewService(db).Update(
+                    Request(c.Moves.Select(m => Update(m.Item1, parentId: m.Item2)).ToArray()), new TestCallContext())).GetAwaiter().GetResult();
+
+                Assert.Equal(expectedSuccess, response.Results.Select(r => r.Success).ToArray());
+                Assert.Equal(expectedParents.OrderBy(p => p.Key), store.Rows.OrderBy(p => p.Key));
+            }).QuickCheckThrowOnFailure();
+        }
+
         private static StructureService NewService(AnnotationContext db) => new(db, NullLogger<StructureService>.Instance);
 
         private static StructureChangeRequest Delete(long id) => new() { Delete = id };
@@ -428,7 +591,8 @@ namespace ConnectomeDataModelCoreTests
 
         /// <summary>
         /// Stands in for the Structure table. Opening the connection is suppressed; commands and the transaction
-        /// are fakes. A Structure query returns the key of each stored row whose ID is among its parameter values.
+        /// are fakes. A Structure query returns each stored row whose ID is among its parameter values, in the columns
+        /// its SELECT list names (columns other than ID and ParentID hold fixed values).
         /// DeepDeleteStructure removes the structure and its children, as the procedure does. SaveChanges is
         /// suppressed and records the structures it would update; an update or delete of one whose row is gone fails
         /// the save with <see cref="DbUpdateConcurrencyException"/>, as EF does when SQL Server reports no rows affected.
@@ -439,6 +603,25 @@ namespace ConnectomeDataModelCoreTests
         /// </summary>
         private sealed class FakeStructureDatabase : IDbConnectionInterceptor, IDbCommandInterceptor, IDbTransactionInterceptor, ISaveChangesInterceptor
         {
+            private static readonly Regex SelectedColumn = new(@"\]\.\[(\w+)\]");
+
+            /// <summary>The Structure columns a query may select, from a stored row's ID and ParentID.</summary>
+            private static readonly Dictionary<string, (Type Type, Func<long, long?, object> Value)> Columns = new()
+            {
+                ["ID"] = (typeof(long), (id, _) => id),
+                ["ParentID"] = (typeof(long), (_, parentId) => parentId),
+                ["TypeID"] = (typeof(long), (_, _) => 1L),
+                ["Confidence"] = (typeof(double), (_, _) => 0.5),
+                ["Created"] = (typeof(DateTime), (_, _) => new DateTime(2026, 1, 1)),
+                ["LastModified"] = (typeof(DateTime), (_, _) => new DateTime(2026, 1, 1)),
+                ["Label"] = (typeof(string), (_, _) => null),
+                ["Notes"] = (typeof(string), (_, _) => null),
+                ["Tags"] = (typeof(string), (_, _) => null),
+                ["Username"] = (typeof(string), (_, _) => "someone"),
+                ["Verified"] = (typeof(bool), (_, _) => false),
+                ["Version"] = (typeof(byte[]), (_, _) => new byte[8]),
+            };
+
             /// <summary>Stored structures: ID to ParentID.</summary>
             public Dictionary<long, long?> Rows { get; } = new();
 
@@ -496,10 +679,15 @@ namespace ConnectomeDataModelCoreTests
                 else
                     Queries++;
                 var keys = command.Parameters.Cast<DbParameter>().SelectMany(p => KeyValues(p.Value)).ToHashSet();
+                var columns = isTypeQuery
+                    ? new[] { "ID" }
+                    : SelectedColumn.Matches(command.CommandText.Substring(0, command.CommandText.IndexOf("FROM", StringComparison.Ordinal)))
+                        .Select(m => m.Groups[1].Value).ToArray();
                 var answer = new DataTable();
-                answer.Columns.Add("ID", typeof(long));
+                foreach (var column in columns)
+                    answer.Columns.Add(column, Columns[column].Type);
                 foreach (var id in (isTypeQuery ? Types : (IEnumerable<long>)Rows.Keys).Where(keys.Contains))
-                    answer.Rows.Add(id);
+                    answer.Rows.Add(columns.Select(c => Columns[c].Value(id, isTypeQuery ? null : Rows[id]) ?? DBNull.Value).ToArray());
                 return ValueTask.FromResult(InterceptionResult<DbDataReader>.SuppressWithResult(answer.CreateDataReader()));
             }
 
