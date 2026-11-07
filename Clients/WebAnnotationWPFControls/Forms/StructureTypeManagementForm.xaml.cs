@@ -72,17 +72,13 @@ namespace WebAnnotation.WPF.Forms
                 MessageBox.Show(this, question, Title, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
                 return;
 
-            try
-            {
-                StructureTypeObjViewModel.SaveAllPending();
-            }
-            catch (Exception exp)
-            {
-                Trace.WriteLine($"Structure Type Manager save on close failed: {exp}");
-                MessageBox.Show(this, $"The changes could not be saved and are still pending:\n{exp.Message}", Title,
-                                MessageBoxButton.OK, MessageBoxImage.Error);
-                e.Cancel = true;
-            }
+            string failure = StructureTypeManagerClosePrompt.SaveFailureMessage(StructureTypeObjViewModel.SaveAllPending,
+                                                                                () => Store.StructureTypes.LastSaveFault);
+            if (failure is null)
+                return;
+
+            MessageBox.Show(this, failure, Title, MessageBoxButton.OK, MessageBoxImage.Error);
+            e.Cancel = true;
         }
 
         private void StructureTypesTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e) => Trace.WriteLine(string.Format("Selected TreeViewItem {1} -> {0}", e.NewValue, e.OldValue));

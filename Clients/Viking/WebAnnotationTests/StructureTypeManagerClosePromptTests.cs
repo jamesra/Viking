@@ -1,8 +1,10 @@
 using FsCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.ServiceModel;
 using WebAnnotation.WPF.Forms;
 using WebAnnotationModel;
 using WebAnnotationModel.Objects;
@@ -52,6 +54,38 @@ namespace WebAnnotationTests
                        (types == 0 || question.Contains($" {types} structure type")) &&
                        (links == 0 || question.Contains($" {links} link rule"));
             }).QuickCheckThrowOnFailure();
+        }
+
+        [TestMethod]
+        public void SaveSucceeded_NoMessage() => Assert.IsNull(StructureTypeManagerClosePrompt.SaveFailureMessage(() => true, () => null));
+
+        /// <summary>
+        /// The structure type store reports a failed save by returning false and setting LastSaveFault, not by throwing;
+        /// the window must still show that cause and stay open.
+        /// </summary>
+        [TestMethod]
+        public void StructureTypeSaveReturnedFalse_MessageNamesTheStoresFault()
+        {
+            string? message = StructureTypeManagerClosePrompt.SaveFailureMessage(() => false, () => new FaultException("server rejected the type"));
+
+            Assert.IsNotNull(message);
+            StringAssert.Contains(message, "still pending");
+            StringAssert.Contains(message, "server rejected the type");
+        }
+
+        [TestMethod]
+        public void StructureTypeSaveReturnedFalse_WithoutFault_StillReportsFailure() =>
+            Assert.IsNotNull(StructureTypeManagerClosePrompt.SaveFailureMessage(() => false, () => null));
+
+        /// <summary>The link store throws on failure; the thrown message is what the user sees.</summary>
+        [TestMethod]
+        public void SaveThrew_MessageNamesTheException()
+        {
+            string? message = StructureTypeManagerClosePrompt.SaveFailureMessage(() => throw new InvalidOperationException("link save failed"), () => null);
+
+            Assert.IsNotNull(message);
+            StringAssert.Contains(message, "still pending");
+            StringAssert.Contains(message, "link save failed");
         }
 
         /// <summary>

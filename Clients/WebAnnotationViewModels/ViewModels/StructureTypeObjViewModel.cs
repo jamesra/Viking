@@ -358,12 +358,17 @@ namespace Annotation.ViewModels
         /// What Apply in the F7 structure type manager saves, also used when that window is closed with Save: every
         /// changed structure type (not only the selected one), then every pending permitted link change (added links
         /// are INSERT, removed links DELETE). Links are saved even when no link was added, so a delete-only Apply
-        /// reaches the server. Throws what the store's Save throws; whatever was not saved stays pending.
+        /// reaches the server. Whatever was not saved stays pending.
         /// </summary>
-        public static void SaveAllPending()
+        /// <returns>
+        /// False when the structure type save failed; that store does not throw, it records the cause in
+        /// <c>Store.StructureTypes.LastSaveFault</c>. The link save throws what its store throws.
+        /// </returns>
+        public static bool SaveAllPending()
         {
-            Store.StructureTypes.Save();
+            bool typesSaved = Store.StructureTypes.Save();
             Store.PermittedStructureLinks.Save();
+            return typesSaved;
         }
 
         private bool CanRestoreModel(object item) => Model.DBAction != AnnotationService.Types.DBACTION.NONE;
