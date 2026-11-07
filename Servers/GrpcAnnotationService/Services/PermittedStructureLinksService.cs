@@ -44,7 +44,9 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// Inserts one permitted link and returns the stored row. Throws NotFound, naming the missing type IDs and
-        /// saving nothing, when the source or target structure type does not exist.
+        /// saving nothing, when the source or target structure type does not exist, and then AlreadyExists, naming
+        /// the pair and leaving the stored row unchanged, when a link with that source and target is stored. The key
+        /// is directional: the reverse pair is a different link.
         /// </summary>
         public override async Task<CreatePermittedStructureLinkResponse> CreatePermittedStructureLink(CreatePermittedStructureLinkRequest request, ServerCallContext context)
         {
@@ -56,6 +58,10 @@ namespace gRPCAnnotationService
                 var missing = named.Distinct().Where(id => !live.Contains(id)).ToArray();
                 if (missing.Length > 0)
                     throw new RpcException(new Status(StatusCode.NotFound, $"Structure types not found: {string.Join(", ", missing)}"));
+
+                if (await FindLiveAsync(request.NewObj, ct) != null)
+                    throw new RpcException(new Status(StatusCode.AlreadyExists,
+                        $"Permitted structure link already exists: {request.NewObj.SourceTypeId} -> {request.NewObj.TargetTypeId}"));
 
                 var new_obj = request.NewObj.ToPermittedStructureLink();
                 var ef_result = await _context.PermittedStructureLinks.AddAsync(new_obj, ct);

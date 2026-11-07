@@ -26,7 +26,8 @@ namespace ConnectomeDataModelCoreTests
     /// in the same batch: a repeated insert, an insert of a stored link or naming a missing type, and an
     /// update or delete of a link the batch deleted fail only their own row, while an insert followed by an update or delete of the
     /// same key applies to the queued row. No database is contacted: interceptors stand in for the
-    /// connection, the key lookups and SaveChanges. A single create naming a missing type is refused with NotFound.
+    /// connection, the key lookups and SaveChanges. A single create naming a missing type is refused with NotFound,
+    /// and one of a stored link with AlreadyExists.
     /// </summary>
     public class PermittedStructureLinksServiceUpdateTests
     {
@@ -255,6 +256,46 @@ namespace ConnectomeDataModelCoreTests
             Assert.Equal($"Structure types not found: {missing}", e.Status.Detail);
             Assert.Equal(0, saves.Count);
             Assert.Equal(1, table.TypeQueries);
+        }
+
+        [Fact]
+        public async Task CreateOfAStoredLinkIsAlreadyExistsAndSavesNothing()
+        {
+            var saves = new CaptureSaves();
+            var table = new FakeLinkTable(Stored(7, 9, false));
+            using var db = NewContext(saves, table);
+
+            var e = await Assert.ThrowsAsync<RpcException>(() => Create(db, 7, 9, true));
+
+            Assert.Equal(StatusCode.AlreadyExists, e.StatusCode);
+            Assert.Equal("Permitted structure link already exists: 7 -> 9", e.Status.Detail);
+            Assert.Equal(0, saves.Count);
+        }
+
+        [Fact]
+        public async Task CreateOfTheReverseOfAStoredLinkIsANewKey()
+        {
+            var saves = new CaptureSaves();
+            using var db = NewContext(saves, new FakeLinkTable(Stored(7, 9, false)));
+
+            var response = await Create(db, 9, 7, true);
+
+            Assert.Equal((9L, 7L, true), Key(response.Result));
+            Assert.Equal(new[] { (EntityState.Added, 9L, 7L, true) }, saves.Links);
+        }
+
+        [Fact]
+        public async Task CreateNamingAMissingTypeIsNotFoundBeforeTheKeyLookup()
+        {
+            var saves = new CaptureSaves();
+            var table = new FakeLinkTable(Stored(1, 99, false));
+            using var db = NewContext(saves, table);
+
+            var e = await Assert.ThrowsAsync<RpcException>(() => Create(db, 1, 99));
+
+            Assert.Equal(StatusCode.NotFound, e.StatusCode);
+            Assert.Equal(1, table.Queries);
+            Assert.Equal(0, saves.Count);
         }
 
         private static Task<CreatePermittedStructureLinkResponse> Create(AnnotationContext db, long source, long target, bool bidirectional = false) =>
