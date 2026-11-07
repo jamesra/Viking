@@ -74,6 +74,14 @@ Volume
    :num_sections: Optional, the number of section tags in the volume. Only used for loading progress bar and will eventually be removed.
    :path: Required, the URL of the root path of the volume. Only used when VikingXML is loaded from local disk.
 
+   Optional child element ``DefaultWebAnnotationUserSettings`` with a ``Uri`` attribute points at the default annotation user
+   settings file for the volume. Without it Viking uses the user's local settings copy or its built-in default settings, and
+   the volume still loads its annotations. A ``DefaultWebAnnotationUserSettings`` element without ``Uri`` is an error.
+
+   ::
+
+      <DefaultWebAnnotationUserSettings Uri="http://example.org/Rabbit/DefaultUserSettings.xml"/>
+
 stos
 ----
 
@@ -118,7 +126,31 @@ Pyramid
 
    :name: Name of the channel displayed in the Viking UI.
    :path: Relative path from the section path.
-   
+   :Crush*: Optional, see `Crushed channels`_.
+
+Crushed channels
+~~~~~~~~~~~~~~~~
+
+   Nornir marks a noise-crushed channel by adding Crush attributes to its Pyramid or Tileset element. A crushed tile stores a
+   code per pixel instead of a contrast-stretched intensity, and every tile and level of a section shares the same quanta.
+   Viking reads them only when ``CrushVersion`` is present and ``CrushStep`` and ``CrushBits`` are integers of at least 1.
+   Otherwise the element is drawn as an ordinary channel. Viking decodes only 8-bit PNG tiles, so ``CrushBits`` must be 8 or less.
+
+   ::
+
+      <Pyramid name="Crushed" path="Crushed" CrushVersion="1" CrushStep="4" CrushOffset="10" CrushBits="6" CrushDisplayMin="3" CrushDisplayMax="50">
+         <CodeHistogram>1200000 5 18 40 77 ...</CodeHistogram>
+         <Level Downsample="1" path="001"/>
+      </Pyramid>
+
+   :CrushVersion: Marks the element as crushed. Required for the other Crush attributes to be read.
+   :CrushStep: Required, counts per code (the quanta size).
+   :CrushBits: Required, bits of the code range. The largest code is 2^CrushBits - 1.
+   :CrushOffset: Optional, counts below the first code. Defaults to 0.
+   :CrushDisplayMin: Optional, first code of the default display range. Used only with CrushDisplayMax when it is larger.
+   :CrushDisplayMax: Optional, last code of the default display range.
+   :CodeHistogram: Optional child element: whitespace-separated pixel counts per code over the whole section at full resolution. Viking uses it to pick a default display range, gamma and the contrast editor's Auto setting when the display range is missing or Auto is chosen. Bin 0 (section edge) is ignored. If any entry is not an integer the whole histogram is ignored.
+
 Transform
 ---------
    
@@ -152,6 +184,7 @@ Tileset
    :FilePostfix: Extension to add to file names, must be supported by XNA library. .png format recommended.
    :TileXDim: Pixel X dimensions of each tile
    :TileYDim: Pixel Y dimensions of each tile
+   :Crush*: Optional, see `Crushed channels`_. A Tileset marked crushed carries the same attributes as a Pyramid.
 
 Level
 -----
@@ -162,7 +195,7 @@ Level
    
    <Level Downsample="1" GridDimX="462" GridDimY="466" path="001"/>
 
-   :Level: A number defining what level of the pyramid this is. Must currently be a power of two.
+   :Downsample: Integer downsample factor of this level relative to the original images. Must currently be a power of two.
    :path: Relative path from the tileset or pyramid path.
    :GridDimX: Tilesets only, Integer defining the dimensions of the grid in X
    :GridDimY: Tilesets only, Integer defining the dimensions of the grid in Y
