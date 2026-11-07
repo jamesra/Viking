@@ -445,7 +445,7 @@ namespace gRPCAnnotationService
                 var row = NewLocationRow(request.Obj, username);
                 if (!await _context.Structures.AsNoTracking().AnyAsync(s => s.Id == row.ParentId, ct))
                     throw new RpcException(new Status(StatusCode.NotFound, $"Structure not found: {row.ParentId}"));
-                await ThrowIfLocationsMissingAsync(request.Obj.Links.Where(peer => peer != 0), ct);
+                await ThrowIfLocationsMissingAsync(_context, request.Obj.Links.Where(peer => peer != 0), ct);
 
                 await using var tx = await _context.Database.BeginTransactionAsync(ct);
 
@@ -537,7 +537,7 @@ namespace gRPCAnnotationService
             {
                 var ct = context.CancellationToken;
                 if (await AddLinkIfMissing(_context, request.SourceId, request.TargetId, AnnotationRpc.CallerName(context), ct))
-                    await ThrowIfLocationsMissingAsync(new[] { request.SourceId, request.TargetId }, ct);
+                    await ThrowIfLocationsMissingAsync(_context, new[] { request.SourceId, request.TargetId }, ct);
                 await _context.SaveChangesAsync(ct);
                 return new CreateLocationLinkResponse();
             }
@@ -762,9 +762,10 @@ namespace gRPCAnnotationService
         /// <summary>
         /// Throws NotFound, naming each of <paramref name="ids"/> that is not a stored location, when there is one:
         /// FK_LocationLink_Location and FK_LocationLink_Location1 would otherwise fail the save of a link naming it as a
-        /// generic Unknown failure. No IDs cost no query.
+        /// generic Unknown failure, and StructureService's split procedures would run on a location that does not
+        /// exist. No IDs cost no query.
         /// </summary>
-        private async Task ThrowIfLocationsMissingAsync(IEnumerable<long> ids, CancellationToken ct)
+        internal static async Task ThrowIfLocationsMissingAsync(AnnotationContext db, IEnumerable<long> ids, CancellationToken ct)
         {
             var named = ids.Distinct().ToArray();
             if (named.Length == 0)
@@ -772,7 +773,7 @@ namespace gRPCAnnotationService
 
             var live = new HashSet<long>();
             foreach (var chunk in named.DistinctChunk())
-                live.UnionWith(await _context.Locations.AsNoTracking()
+                live.UnionWith(await db.Locations.AsNoTracking()
                     .Where(l => chunk.Contains(l.Id)).Select(l => l.Id).ToListAsync(ct));
 
             var missing = named.Where(id => !live.Contains(id)).ToArray();

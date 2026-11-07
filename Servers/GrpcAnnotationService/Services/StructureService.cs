@@ -379,7 +379,8 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// Inserts the structure, then its first location (optional). Circle WKT is written after
-        /// the location has an identity, same as CreateLocation.
+        /// the location has an identity, same as CreateLocation. Throws NotFound, before anything is saved, when the
+        /// first location's Links name a location that does not exist.
         /// </summary>
         public override async Task<CreateStructureResponse> CreateStructure(CreateStructureRequest request, ServerCallContext context)
         {
@@ -392,6 +393,8 @@ namespace gRPCAnnotationService
                 structure.Username = username;
                 structure.Created = DateTime.UtcNow;
                 structure.LastModified = structure.Created;
+                if (request.NewAnnotation != null)
+                    await LocationService.ThrowIfLocationsMissingAsync(_context, request.NewAnnotation.Links.Where(peer => peer != 0), ct);
 
                 await using var tx = await _context.Database.BeginTransactionAsync(ct);
 
@@ -667,7 +670,7 @@ namespace gRPCAnnotationService
             try
             {
                 var ct = context.CancellationToken;
-                await ThrowIfLocationsMissingAsync(new[] { request.FirstLocationIdOfSplitStructure }, ct);
+                await LocationService.ThrowIfLocationsMissingAsync(_context, new[] { request.FirstLocationIdOfSplitStructure }, ct);
 
                 var splitId = new OutputParameter<long?>();
                 await _context.Procedures.SplitStructureAsync(
@@ -696,7 +699,7 @@ namespace gRPCAnnotationService
                 var ct = context.CancellationToken;
                 if (request.LocationIdOfKeepStructure == request.LocationIdOfSplitStructure)
                     throw new RpcException(new Status(StatusCode.InvalidArgument, "A location cannot be split from itself"));
-                await ThrowIfLocationsMissingAsync(new[] { request.LocationIdOfKeepStructure, request.LocationIdOfSplitStructure }, ct);
+                await LocationService.ThrowIfLocationsMissingAsync(_context, new[] { request.LocationIdOfKeepStructure, request.LocationIdOfSplitStructure }, ct);
 
                 var splitId = new OutputParameter<long?>();
                 await _context.Procedures.SplitStructureAtLocationLinkAsync(
@@ -856,21 +859,6 @@ namespace gRPCAnnotationService
             var missing = named.Where(id => !live.Contains(id)).ToArray();
             if (missing.Length > 0)
                 throw new RpcException(new Status(StatusCode.NotFound, $"Structures not found: {string.Join(", ", missing)}"));
-        }
-
-        /// <summary>
-        /// Throws NotFound, naming each of <paramref name="ids"/> that is not a stored location, when there is one, so the
-        /// split procedures never run on a location that does not exist. Callers pass one or two distinct IDs, so the
-        /// lookup needs neither de-duplication nor chunking.
-        /// </summary>
-        private async Task ThrowIfLocationsMissingAsync(long[] ids, CancellationToken ct)
-        {
-            var live = await _context.Locations.AsNoTracking()
-                .Where(l => ids.Contains(l.Id)).Select(l => l.Id).ToListAsync(ct);
-
-            var missing = ids.Where(id => !live.Contains(id)).ToArray();
-            if (missing.Length > 0)
-                throw new RpcException(new Status(StatusCode.NotFound, $"Locations not found: {string.Join(", ", missing)}"));
         }
 
         /// <summary>Builds the [dbo].[integer_list] table valued parameter the network procedures take.</summary>

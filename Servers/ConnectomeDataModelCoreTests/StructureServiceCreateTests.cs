@@ -1,3 +1,4 @@
+using Grpc.Core;
 using gRPCAnnotationService;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Linq;
@@ -10,8 +11,9 @@ namespace ConnectomeDataModelCoreTests
 {
     /// <summary>
     /// Pins the links <see cref="StructureService.CreateStructure"/> saves for its first location's Links: one
-    /// LocationLink per distinct peer, none for peer 0, the new location itself, or a link the database already
-    /// holds, and a peer listed twice saves one link and commits instead of failing on an EF identity conflict.
+    /// LocationLink per distinct peer, none for peer 0 or a link the database already holds, and a peer listed twice
+    /// saves one link and commits instead of failing on an EF identity conflict. A peer that is not a stored location
+    /// is refused with NotFound before anything is saved.
     /// Offline, on the database fake of <see cref="LocationServiceUpdateDeleteTests"/>.
     /// </summary>
     public class StructureServiceCreateTests
@@ -24,7 +26,7 @@ namespace ConnectomeDataModelCoreTests
         [InlineData(new long[] { 5 }, new long[] { 5 })]
         [InlineData(new long[] { 5, 5 }, new long[] { 5 })]
         [InlineData(new long[] { 7, 5, 7 }, new long[] { 5, 7 })]
-        [InlineData(new long[] { 0, NewLocationId, 5 }, new long[] { 5 })]
+        [InlineData(new long[] { 0, 5 }, new long[] { 5 })]
         [InlineData(new long[] { 2000, 5 }, new long[] { 5, 2000 })]
         public async Task SavesOneLinkPerDistinctPeer(long[] peers, long[] linked)
         {
@@ -49,6 +51,63 @@ namespace ConnectomeDataModelCoreTests
 
             Assert.Equal(new[] { (7L, NewLocationId) }, store.Saved.AddedLinks);
             Assert.True(store.Committed);
+        }
+
+        /// <summary>
+        /// A first location whose Links name a location that does not exist would save the structure and the location,
+        /// then fail its links on FK_LocationLink_Location as Unknown. It is refused with NotFound naming each missing
+        /// peer once, in one query, before the structure is added; peer 0 and stored peers are not reported. The new
+        /// location's ID is not assigned when the check runs, so a peer naming it is missing too.
+        /// </summary>
+        [Theory]
+        [InlineData(new long[] { 0, 8, 5, 9, 8 }, "Locations not found: 8, 9")]
+        [InlineData(new long[] { 0, NewLocationId, 5 }, "Locations not found: 1001")]
+        [InlineData(new long[] { -4, 5 }, "Locations not found: -4")]
+        public async Task LinkingToMissingLocationsIsNotFoundWithoutSaving(long[] peers, string detail)
+        {
+            var store = StoreWithPeers();
+            using var db = NewContext(store);
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => NewService(db).CreateStructure(Request(peers), new TestCallContext()));
+
+            Assert.Equal((StatusCode.NotFound, detail), (ex.StatusCode, ex.Status.Detail));
+            Assert.Same(SavedRows.None, store.Saved);
+            Assert.False(store.Committed);
+            Assert.Empty(db.Structures.Local);
+            Assert.Equal(1, store.LocationQueries);
+        }
+
+        /// <summary>No peer, only peer 0, or no first location at all cannot break FK_LocationLink_Location, so it costs no location query.</summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task CreatingWithoutPeersRunsNoLocationQuery(bool withLocation)
+        {
+            var store = StoreWithPeers();
+            using var db = NewContext(store);
+            var request = Request(0);
+            if (!withLocation)
+                request.NewAnnotation = null;
+
+            var response = await NewService(db).CreateStructure(request, new TestCallContext());
+
+            Assert.Equal(FakeDatabase.FirstGeneratedId, response.NewStructure.Id);
+            Assert.Equal(withLocation, response.NewAnnotation != null);
+            Assert.Empty(store.Saved.AddedLinks);
+            Assert.Equal(0, store.LocationQueries);
+            Assert.True(store.Committed);
+        }
+
+        [Fact]
+        public async Task StoredPeersAreLookedUpInOneQuery()
+        {
+            var store = StoreWithPeers();
+            using var db = NewContext(store);
+
+            await NewService(db).CreateStructure(Request(7, 0, 5, 2000), new TestCallContext());
+
+            Assert.Equal(1, store.LocationQueries);
+            Assert.Equal(3, store.Saved.AddedLinks.Length);
         }
 
         private static StructureService NewService(Viking.DataModel.Annotation.AnnotationContext db) =>
