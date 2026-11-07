@@ -97,8 +97,9 @@ namespace gRPCAnnotationService
         /// batch already deleted, fails its own row. A delete of a type that is still in use (see
         /// <see cref="TypesInUseAsync"/>), or that an earlier create or update of the batch made a parent, also fails
         /// its own row. A create, or an update that changes ParentId, naming a parent that does not exist or that the
-        /// batch already deleted fails its own row with no Updated (see <see cref="LiveParentIdsAsync"/>). Created
-        /// rows are reported after the save, so each carries the Id the database assigned.
+        /// batch already deleted fails its own row with no Updated (see <see cref="LiveParentIdsAsync"/>), and so does an
+        /// update that moves a type under itself or one of its own descendants (see <see cref="IsSelfOrDescendantAsync"/>).
+        /// Created rows are reported after the save, so each carries the Id the database assigned.
         /// </summary>
         public override async Task<UpdateStructureTypesResponse> Update(UpdateStructureTypesRequest request, ServerCallContext context)
         {
@@ -140,7 +141,8 @@ namespace gRPCAnnotationService
                         case StructureTypeChangeRequest.ActionOneofCase.Update:
                             var obj = await FindLiveAsync(req.Update.Id, ct);
                             var moves = obj != null && req.Update.HasParentId && req.Update.ParentId != obj.ParentId;
-                            if (obj != null && (!moves || liveParents.Contains(req.Update.ParentId)))
+                            if (obj != null && (!moves || (liveParents.Contains(req.Update.ParentId)
+                                                           && !await IsSelfOrDescendantAsync(req.Update.ParentId, obj.Id, ct))))
                             {
                                 if (moves)
                                     newParents.Add(req.Update.ParentId);
@@ -252,6 +254,28 @@ namespace gRPCAnnotationService
                     .Where(t => chunk.Contains(t.Id)).Select(t => t.Id).ToListAsync(ct));
 
             return live;
+        }
+
+        /// <summary>
+        /// True when <paramref name="id"/> is <paramref name="ancestorId"/> or lies below it in the type tree as the batch
+        /// so far leaves it, so making <paramref name="id"/> the parent of <paramref name="ancestorId"/> would close a
+        /// cycle that FK_StructureType_StructureType does not prevent. The walk follows ParentId upward through
+        /// <see cref="FindLiveAsync"/>, one lookup per ancestor not yet tracked, and stops at a root, at a type the batch
+        /// deleted, or at a type it has already visited (a cycle already stored that does not pass through
+        /// <paramref name="ancestorId"/>).
+        /// </summary>
+        private async Task<bool> IsSelfOrDescendantAsync(long id, long ancestorId, CancellationToken ct)
+        {
+            var visited = new HashSet<long>();
+            long? current = id;
+            while (current.HasValue && visited.Add(current.Value))
+            {
+                if (current.Value == ancestorId)
+                    return true;
+                current = (await FindLiveAsync(current.Value, ct))?.ParentId;
+            }
+
+            return false;
         }
 
         /// <summary>

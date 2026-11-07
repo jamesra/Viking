@@ -1,3 +1,4 @@
+using FsCheck;
 using Grpc.Core;
 using gRPCAnnotationService;
 using Microsoft.AspNetCore.Http;
@@ -26,7 +27,7 @@ namespace ConnectomeDataModelCoreTests
     /// structure batch Update do, and that each change sees the changes before it in the same batch:
     /// an update or delete of a type the batch deleted fails its own row and the delete stands. A delete of a
     /// type still in use, or a create or move under a parent that is missing or that the batch deleted, fails its own row instead of
-    /// failing the whole save. No database is contacted: interceptors stand in for the connection, the Id lookups and
+    /// failing the whole save, and so does a move of a type under itself or one of its descendants. No database is contacted: interceptors stand in for the connection, the Id lookups and
     /// SaveChanges, which assigns identity values the way SQL Server would.
     /// </summary>
     public class StructureTypeServiceUpdateTests
@@ -246,7 +247,7 @@ namespace ConnectomeDataModelCoreTests
             Assert.Equal(new[] { false, true }, response.Results.Select(r => r.Success).ToArray());
             Assert.Null(response.Results[0].Updated);
             Assert.Equal(1, response.Results[1].Updated.ParentId);
-            Assert.Equal(new[] { (EntityState.Unchanged, 2L, "Old"), (EntityState.Modified, 3L, "Moved") },
+            Assert.Equal(new[] { (EntityState.Unchanged, 1L, "Parent"), (EntityState.Unchanged, 2L, "Old"), (EntityState.Modified, 3L, "Moved") },
                 identity.Types.OrderBy(t => t.Id).ToArray());
         }
 
@@ -308,6 +309,137 @@ namespace ConnectomeDataModelCoreTests
             Assert.All(response.Results, r => Assert.True(r.Success));
             Assert.Single(tables.TypeSelects, s => s == "ID");
         }
+
+        [Fact]
+        public async Task MoveUnderItselfFailsItsRowAndKeepsTheRest()
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            var tables = new FakeStructureTypeTable(Stored(1, "Old"), Stored(2, "Other"));
+            using var db = NewContext(identity, tables);
+
+            var response = await Update(db, UpdateOf(1, "Self", parentId: 1), UpdateOf(2, "Moved", parentId: 1));
+
+            Assert.Equal(1, identity.SaveCount);
+            Assert.Equal(new[] { false, true }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Null(response.Results[0].Updated);
+            Assert.Equal(new[] { (EntityState.Unchanged, 1L, "Old"), (EntityState.Modified, 2L, "Moved") },
+                identity.Types.OrderBy(t => t.Id).ToArray());
+            Assert.Null(TrackedParents(db)[1]);
+        }
+
+        /// <summary>Stored chain 1 (root) &lt;- 2 &lt;- 3 &lt;- 4: the root moved under any of its descendants.</summary>
+        [Theory]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(4)]
+        public async Task MoveUnderOwnDescendantFailsItsRow(long descendant)
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            using var db = NewContext(identity, new FakeStructureTypeTable(
+                Stored(1, "Root"), Stored(2, "Child", parentId: 1), Stored(3, "Grandchild", parentId: 2), Stored(4, "Leaf", parentId: 3)));
+
+            var response = await Update(db, UpdateOf(1, "Looped", parentId: descendant));
+
+            Assert.False(Assert.Single(response.Results).Success);
+            Assert.Null(response.Results[0].Updated);
+            Assert.DoesNotContain(identity.Types, t => t.State == EntityState.Modified);
+        }
+
+        [Fact]
+        public async Task MoveUnderADescendantMadeEarlierInTheBatchFailsTheLaterRow()
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            using var db = NewContext(identity, new FakeStructureTypeTable(Stored(1, "A"), Stored(2, "B")));
+
+            var response = await Update(db, UpdateOf(2, "B", parentId: 1), UpdateOf(1, "A", parentId: 2));
+
+            Assert.Equal(new[] { true, false }, response.Results.Select(r => r.Success).ToArray());
+            Assert.Equal(new long?[] { null, 1 }, TrackedParents(db).OrderBy(p => p.Key).Select(p => p.Value).ToArray());
+        }
+
+        [Fact]
+        public async Task MoveUnderSiblingOrAncestorOrSameParentSucceeds()
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            using var db = NewContext(identity, new FakeStructureTypeTable(
+                Stored(1, "Root"), Stored(2, "Left", parentId: 1), Stored(3, "Right", parentId: 1), Stored(4, "Leaf", parentId: 3)));
+
+            var response = await Update(db, UpdateOf(2, "Left", parentId: 3), UpdateOf(4, "Leaf", parentId: 1), UpdateOf(3, "Right", parentId: 1));
+
+            Assert.All(response.Results, r => Assert.True(r.Success));
+            Assert.Equal(new long?[] { 3, 1, 1 }, response.Results.Select(r => (long?)r.Updated.ParentId).ToArray());
+        }
+
+        /// <summary>
+        /// A cycle already stored (1 and 2 name each other) that does not pass through the moved type ends the walk
+        /// instead of looping forever, and the move under it stands.
+        /// </summary>
+        [Fact]
+        public async Task StoredCycleAboveTheNewParentEndsTheWalk()
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            using var db = NewContext(identity, new FakeStructureTypeTable(Stored(1, "A", parentId: 2), Stored(2, "B", parentId: 1), Stored(3, "C")));
+
+            var response = await Task.Run(() => Update(db, UpdateOf(3, "C", parentId: 1))).WaitAsync(TimeSpan.FromSeconds(30));
+
+            Assert.True(Assert.Single(response.Results).Success);
+        }
+
+        /// <summary>A row that keeps its parent, or names itself, needs no lookup beyond the batch's own two queries.</summary>
+        [Theory]
+        [InlineData(1L)]
+        [InlineData(2L)]
+        public async Task KeptOrSelfParentRunsNoAncestorQuery(long parentId)
+        {
+            var identity = new IdentityOnSave(firstId: 1000);
+            var tables = new FakeStructureTypeTable(Stored(1, "Parent"), Stored(2, "Child", parentId: 1));
+            using var db = NewContext(identity, tables);
+
+            var response = await Update(db, UpdateOf(2, "Child", parentId: parentId));
+
+            Assert.Equal(parentId == 1, Assert.Single(response.Results).Success);
+            Assert.Equal(2, tables.TypeSelects.Count);
+        }
+
+        /// <summary>
+        /// Moves (moved, newParent) over a random stored forest, applied in order: each fails exactly when the new
+        /// parent is the moved type or below it in the tree the earlier moves left, and the saved tree is that tree.
+        /// </summary>
+        [Fact]
+        public void MovesFailExactlyWhenTheyWouldCloseACycle()
+        {
+            var cases =
+                from n in Gen.Choose(2, 7)
+                from parents in Gen.Sequence(Enumerable.Range(1, n).Select(i => Gen.Choose(0, i - 1)))
+                from count in Gen.Choose(1, 4)
+                from moves in Gen.ArrayOf(count, Gen.Two(Gen.Choose(1, n)))
+                select (Parents: parents.ToArray(), Moves: moves);
+
+            Prop.ForAll(Arb.From(cases), c =>
+            {
+                var expectedParents = Enumerable.Range(1, c.Parents.Length).ToDictionary(i => (long)i, i => c.Parents[i - 1] == 0 ? (long?)null : c.Parents[i - 1]);
+                var expectedSuccess = c.Moves.Select(m =>
+                {
+                    for (long? p = m.Item2; p.HasValue; p = expectedParents[p.Value])
+                    {
+                        if (p == m.Item1)
+                            return false;
+                    }
+                    expectedParents[m.Item1] = m.Item2;
+                    return true;
+                }).ToArray();
+
+                using var db = NewContext(new IdentityOnSave(firstId: 1000),
+                    new FakeStructureTypeTable(expectedParents.Keys.Select(id => Stored(id, "T", c.Parents[id - 1] == 0 ? null : c.Parents[id - 1])).ToArray()));
+                var response = Task.Run(() => Update(db, c.Moves.Select(m => UpdateOf(m.Item1, "T", parentId: m.Item2)).ToArray())).GetAwaiter().GetResult();
+
+                Assert.Equal(expectedSuccess, response.Results.Select(r => r.Success).ToArray());
+                Assert.All(TrackedParents(db), p => Assert.Equal(expectedParents[p.Key], p.Value));
+            }).QuickCheckThrowOnFailure();
+        }
+
+        private static Dictionary<long, long?> TrackedParents(AnnotationContext db) =>
+            db.ChangeTracker.Entries<EfStructureType>().ToDictionary(e => e.Entity.Id, e => e.Entity.ParentId);
 
         private static Task<UpdateStructureTypesResponse> Update(AnnotationContext db, params StructureTypeChangeRequest[] changes)
         {
