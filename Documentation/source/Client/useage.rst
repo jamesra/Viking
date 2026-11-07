@@ -59,10 +59,27 @@ Keyboard commands
 Menu commands
 =============
 
-* Commands → Go to location → lets you to enter or paste (ctrl v) & jump to a site
+* Commands → Go To Location → lets you to enter or paste (ctrl v) & jump to a site
 * **Ctrl+C** copies the position of the mouse pointer as tab-separated X, Y, Z (section number) and DS (downsample) values; paste them into the Go To Location form (ctrl v) to return to that spot
 * Commands → Capture Screen → saves part of the section as a PNG: left-click and drag a rectangle on the image, release, then set the center, size, **Downsample Factor**, folder and file name in the **Screenshot Parameters** dialog and click **Capture**. **Include overlays** adds the annotations to the picture
-* Annotation → Open Structure → opens a navigation dialogue for a cell
+* Commands → Export Frames → opens **Frame Capture Setup**: a table with one row per picture (columns **X**, **Y**, **Z**, **Image Width**, **Image Height**, **Down Sample**; rows can be pasted from a spreadsheet with **Ctrl+V**), an output **Path**, a **File Prefix**, a **1st Frame #** and **Include Overlays**. **Export** saves each row as a PNG, skipping sections the volume does not have, and shows progress that you can cancel. The viewer returns to the section you were on afterwards
+* Commands → Export Tiles → opens **Export Tiles Configuration**: choose the **Output Directory**, one **Downsample Level**, and either **Export Tiles for all sections** or the **First Section in Range** and **Last Section in Range**. Viking writes the tile PNGs for each section under ``<Output Directory>/<volume name>/<section number>/Tiles/<downsample>/`` and shows progress that you can cancel
+* Commands → Show Command Help → shows or hides the scrolling hint text for the active command along the bottom of the viewer. The choice is remembered for the next time Viking starts
+* Volume → Transform → picks the volume transform to display (**None** or one of the volume's transforms; the active one is checked)
+* Volume → Clear Image Cache → deletes the image tiles (texture cache) Viking saved on this computer for the open volume. A message names the cache folder, or says why some files could not be deleted; Viking keeps working either way
+* Edit → Viewer Preferences → opens the **Viewer Preferences** window, which stays open beside the viewer. It has the groups **Section Number Overlay**, **Image Loading (Performance)** and **Animation PID Controller (Advanced)**
+* Edit → Annotation Preferences → opens the annotation settings window
+* Annotation → Open Structure → asks for a structure ID and opens that structure's properties window; Annotation → Goto Structure and Annotation → Goto Location ask for a structure ID or a location ID and move the viewer there
+* Annotation → Open Last Modified Location → moves the viewer to the annotation that was changed most recently
+* Annotation → Merge Structures → opens the **Merge Structures** dialog
+* Annotation → Choose Favorited Structure Types → opens the window that picks the structure types offered by the **F6** shortcut
+* Annotation → Pen Mode → switches Pen Mode on or off (the **\*** key does the same); Annotation → Show Pen Action Buttons shows or hides the round choice buttons that appear after a pen stroke; Annotation → Auto Polygonize Circles turns automatic circle-to-polygon conversion on or off. Each item is checked while it is on. Auto Polygonize Circles starts on for sessions with review access and off for annotate sessions until you change it
+* Annotation → Show Pen Input Window → opens the pen input window, or hides and shows it if it is already open
+* Annotation → Randomize All Colors → gives every cell a new random display color. Only what you see changes; nothing is saved, and reloading the annotations restores the original colors
+* Annotation → Select Segmentation Service… → lists the segmentation servers you may use and applies the one you pick (or **None**); it needs a signed-in session
+* Annotation → Update Volume Positions… → shown only to users with review access. It recomputes the stored volume positions under the volume's default alignment; run it after a section's alignment (.stos) changes
+* Annotation → Export → Motifs → To Tulip Format → appears when the export service is available
+* Help → Version Info shows the About box, Help → Change Log shows what changed in each Viking version, and Help → Viking Homepage opens the project web site in your browser
 * Bookmarks can be used (see below)
 * Section → Channel lists the section's channels; Section → Setup Channels... sets the volume's default channels
 * Section → Contrast... opens the contrast editor for the noise-crushed channel on screen (greyed out for other channels). It shows the channel's histogram with **Black point**, **White point** and **Gamma** sliders. **Auto** clips the darkest and brightest 0.1% of pixels and sets the gamma that puts the median pixel at mid grey. **Reset to volume range** returns to the display range stored in the volume. Changes apply as you drag and are saved for that section and channel on this computer only
