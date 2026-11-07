@@ -83,7 +83,7 @@ namespace WebAnnotationModel.gRPC
             try
             {
                 var byID = new Dictionary<long, StructureObj>();
-                foreach (StructureObj s in added.Where(s => s != null))
+                foreach (StructureObj s in added)
                     byID[s.ID] = s;
 
                 var tasks = new List<Task<bool>>();
