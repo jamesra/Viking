@@ -23,7 +23,7 @@ version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. 
 Documentation/source/Client/versionhistory.rst.
 -->
 
-## 1.2.141 — not yet released
+## 1.2.141 — 2026-11-07 (Viking Test, unsigned)
 
 * **Crushed tiles correct for filament brightness drift.** When a crushed section's tiles carry the gain Nornir measured from the overlaps between neighbouring tiles, Viking applies it on the graphics card, so tile-to-tile brightness steps over the acquisition disappear. Tiles without a gain, including Nornir's optimized tiles (already corrected), are unchanged.
 <!-- TextureReaderV2.TextureDataFromStream reads the gain from the nornir_crush tEXt chunk (PngCrushChunk) before decoding; TileView keeps it and sets TileLayout.fx TileGainScale/TileGainBias = 1/gain and (0.5 + offset/step)*(1/gain - 1)/255 (CrushInfo.GainTransform, same as Nornir noise_crush.unit_gain_correction) before the display window. The section CodeHistogram and display range are of the uncorrected codes. -->
