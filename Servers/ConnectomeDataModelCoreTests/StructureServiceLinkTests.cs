@@ -33,7 +33,8 @@ namespace ConnectomeDataModelCoreTests
     /// structure with NotFound naming it, and a KeepId below MergeId with FailedPrecondition, all before
     /// dbo.MergeStructures runs; and <see cref="StructureService.Split"/>
     /// and <see cref="StructureService.SplitAtLocationLink"/>: a missing location is refused with NotFound naming it, and a
-    /// link split of a location from itself with InvalidArgument, before the split procedure runs.
+    /// link split of a location from itself with InvalidArgument, before the split procedure runs; a split the procedure
+    /// itself refuses (THROW 50000) reaches the caller as FailedPrecondition with the procedure's reason.
     /// No database is contacted: interceptors stand in for the connection, the query and SaveChanges, and
     /// <see cref="RecordingProcedures"/> for the procedure call.
     /// </summary>
@@ -510,6 +511,43 @@ namespace ConnectomeDataModelCoreTests
         }
 
         /// <summary>
+        /// dbo.SplitStructure refuses a split whose location is linked to every other location of the cell (THROW 50000):
+        /// the caller gets FailedPrecondition with the procedure's reason, not Unknown "Split".
+        /// </summary>
+        [Fact]
+        public async Task SplitRefusedByTheProcedureReportsItsReasonAsFailedPrecondition()
+        {
+            const string reason = "The split structure is connected to the entire keep cell.  Break a location link to create two subgraphs and try again";
+            using var db = NewContext(new CaptureSaves(), new FakeLinkTable());
+            var procedures = new RecordingProcedures(db) { SplitFailure = SqlExceptionFactory.Create((50000, reason)) };
+            db.Procedures = procedures;
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => service.Split(
+                new SplitRequest { Id = 3, FirstLocationIdOfSplitStructure = 7 }, new TestCallContext()));
+
+            Assert.Equal((StatusCode.FailedPrecondition, reason), (ex.StatusCode, ex.Status.Detail));
+            Assert.Equal(new long?[] { 7 }, procedures.Splits);
+        }
+
+        /// <summary>dbo.SplitStructureAtLocationLink refuses two unlinked locations (THROW 50000) with FailedPrecondition and its reason.</summary>
+        [Fact]
+        public async Task SplitAtLocationLinkRefusedByTheProcedureReportsItsReasonAsFailedPrecondition()
+        {
+            const string reason = "The Split and Keep Location IDs must be linked";
+            using var db = NewContext(new CaptureSaves(), new FakeLinkTable());
+            var procedures = new RecordingProcedures(db) { SplitFailure = SqlExceptionFactory.Create((50000, reason)) };
+            db.Procedures = procedures;
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => service.SplitAtLocationLink(
+                new SplitAtLocationLinkRequest { LocationIdOfKeepStructure = 3, LocationIdOfSplitStructure = 8 }, new TestCallContext()));
+
+            Assert.Equal((StatusCode.FailedPrecondition, reason), (ex.StatusCode, ex.Status.Detail));
+            Assert.Equal(new (long?, long?)[] { (3, 8) }, procedures.LinkSplits);
+        }
+
+        /// <summary>
         /// Records each dbo.MergeStructures, dbo.SplitStructure and dbo.SplitStructureAtLocationLink call instead of
         /// executing it; a split answers <see cref="NewStructureId"/> as the new structure.
         /// </summary>
@@ -522,6 +560,9 @@ namespace ConnectomeDataModelCoreTests
             public RecordingProcedures(AnnotationContext context) : base(context) { }
 
             public long? NewStructureId { get; init; }
+
+            /// <summary>Thrown by a split after it is recorded, as the procedure's THROW reaches the service; null to succeed.</summary>
+            public Exception SplitFailure { get; init; }
 
             public List<(long? Keep, long? Merge)> Merges { get; } = new();
 
@@ -538,6 +579,8 @@ namespace ConnectomeDataModelCoreTests
             public override Task<SplitStructureResult[]> SplitStructureAsync(long? LocationIDOfSplitStructure, OutputParameter<long?> SplitStructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
             {
                 Splits.Add(LocationIDOfSplitStructure);
+                if (SplitFailure != null)
+                    throw SplitFailure;
                 SetOutput.Invoke(SplitStructureID, new object[] { NewStructureId });
                 return Task.FromResult(Array.Empty<SplitStructureResult>());
             }
@@ -545,6 +588,8 @@ namespace ConnectomeDataModelCoreTests
             public override Task<SplitStructureAtLocationLinkResult[]> SplitStructureAtLocationLinkAsync(long? LocationIDOfKeepStructure, long? LocationIDOfSplitStructure, OutputParameter<long?> SplitStructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
             {
                 LinkSplits.Add((LocationIDOfKeepStructure, LocationIDOfSplitStructure));
+                if (SplitFailure != null)
+                    throw SplitFailure;
                 SetOutput.Invoke(SplitStructureID, new object[] { NewStructureId });
                 return Task.FromResult(Array.Empty<SplitStructureAtLocationLinkResult>());
             }

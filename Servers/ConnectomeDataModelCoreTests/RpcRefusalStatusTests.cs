@@ -1,3 +1,4 @@
+using FsCheck;
 using Grpc.Core;
 using gRPCAnnotationService;
 using Microsoft.EntityFrameworkCore;
@@ -116,6 +117,116 @@ namespace ConnectomeDataModelCoreTests
 
             Assert.Equal((StatusCode.InvalidArgument, "why"), (ex.StatusCode, ex.Status.Detail));
             Assert.Equal(new[] { LogLevel.Warning }, log.Levels);
+        }
+
+        /// <summary>dbo.SplitStructure's refusal on a cell whose locations are all linked: THROW 50000 from the procedure call.</summary>
+        private const string SplitRefusal =
+            "The split structure is connected to the entire keep cell.  Break a location link to create two subgraphs and try again";
+
+        /// <summary>
+        /// A procedure's THROW 50000 reaches the caller as FailedPrecondition with the procedure's message, logged as a
+        /// warning, whether the procedure call raised it or a trigger did during SaveChanges (inside a DbUpdateException).
+        /// </summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void FailureTurnsADatabaseRefusalIntoFailedPrecondition(bool fromSaveChanges)
+        {
+            var log = new RecordingLogger();
+            Exception sql = SqlExceptionFactory.Create((50000, SplitRefusal));
+            var thrown = fromSaveChanges ? new DbUpdateException("save failed", sql) : sql;
+
+            var ex = AnnotationRpc.Failure(log.For<RpcRefusalStatusTests>(), "Split", thrown, new LocationServiceUpdateDeleteTests.TestCallContext());
+
+            Assert.Equal((StatusCode.FailedPrecondition, SplitRefusal), (ex.StatusCode, ex.Status.Detail));
+            Assert.Equal(new[] { LogLevel.Warning }, log.Levels);
+        }
+
+        /// <summary>
+        /// The detail is the 50000 error's own message, not SqlException.Message, which joins every error's text (a
+        /// procedure that leaves a transaction open adds error 266 after its THROW).
+        /// </summary>
+        [Fact]
+        public void DatabaseRefusalDetailIsTheRefusingErrorsMessageAlone()
+        {
+            var sql = SqlExceptionFactory.Create((266, "Transaction count after EXECUTE indicates a mismatching number of BEGIN and COMMIT statements."), (50000, SplitRefusal));
+
+            var ex = AnnotationRpc.Failure(new RecordingLogger().For<RpcRefusalStatusTests>(), "Split", sql, new LocationServiceUpdateDeleteTests.TestCallContext());
+
+            Assert.Equal((StatusCode.FailedPrecondition, SplitRefusal), (ex.StatusCode, ex.Status.Detail));
+        }
+
+        /// <summary>Of two refusals in one SqlException, the first raised is the reason reported.</summary>
+        [Fact]
+        public void FirstOfSeveralDatabaseRefusalsIsReported()
+        {
+            var sql = SqlExceptionFactory.Create((50000, "first"), (50000, "second"));
+
+            var ex = AnnotationRpc.Failure(new RecordingLogger().For<RpcRefusalStatusTests>(), "Split", sql, new LocationServiceUpdateDeleteTests.TestCallContext());
+
+            Assert.Equal((StatusCode.FailedPrecondition, "first"), (ex.StatusCode, ex.Status.Detail));
+        }
+
+        /// <summary>
+        /// Any other SQL error is a server fault: a primary or foreign key violation, a deadlock, a timeout, or a user
+        /// error number other than 50000 stays Unknown with the RPC's name, logged as an error.
+        /// </summary>
+        [Theory]
+        [InlineData(2627)]
+        [InlineData(547)]
+        [InlineData(1205)]
+        [InlineData(-2)]
+        [InlineData(50001)]
+        [InlineData(49999)]
+        public void OtherSqlErrorsStayUnknown(int number)
+        {
+            var log = new RecordingLogger();
+
+            var ex = AnnotationRpc.Failure(log.For<RpcRefusalStatusTests>(), "Split", SqlExceptionFactory.Create((number, "why")), new LocationServiceUpdateDeleteTests.TestCallContext());
+
+            Assert.Equal((StatusCode.Unknown, "Split"), (ex.StatusCode, ex.Status.Detail));
+            Assert.Equal(new[] { LogLevel.Error }, log.Levels);
+        }
+
+        /// <summary>Only a DbUpdateException is unwrapped: a 50000 inside any other exception is not a database answer to the request.</summary>
+        [Fact]
+        public void DatabaseRefusalInsideAnotherExceptionStaysUnknown()
+        {
+            var thrown = new InvalidOperationException("wrapped", SqlExceptionFactory.Create((50000, SplitRefusal)));
+
+            var ex = AnnotationRpc.Failure(new RecordingLogger().For<RpcRefusalStatusTests>(), "Split", thrown, new LocationServiceUpdateDeleteTests.TestCallContext());
+
+            Assert.Equal((StatusCode.Unknown, "Split"), (ex.StatusCode, ex.Status.Detail));
+        }
+
+        /// <summary>
+        /// SqlExceptions of one to three errors drawn from 50000 and common server faults, raised directly or inside a
+        /// DbUpdateException: FailedPrecondition with the first 50000 error's message exactly when one is present,
+        /// otherwise Unknown with the RPC's name.
+        /// </summary>
+        [Fact]
+        public void RefusedExactlyWhenSomeErrorIs50000()
+        {
+            var error =
+                from number in Gen.Elements(50000, 50000, 50000, 266, 2627, 547, 1205, -2, 50001, 0)
+                from message in Gen.Elements("a", "b", "c")
+                select (number, message);
+            var errors =
+                from count in Gen.Choose(1, 3)
+                from list in Gen.ArrayOf(count, error)
+                from wrapped in Arb.Generate<bool>()
+                select (Errors: list, Wrapped: wrapped);
+
+            Prop.ForAll(Arb.From(errors), c =>
+            {
+                Exception sql = SqlExceptionFactory.Create(c.Errors);
+                var thrown = c.Wrapped ? new DbUpdateException("save failed", sql) : sql;
+
+                var ex = AnnotationRpc.Failure(new RecordingLogger().For<RpcRefusalStatusTests>(), "Op", thrown, new LocationServiceUpdateDeleteTests.TestCallContext());
+
+                var refusal = c.Errors.Where(e => e.number == 50000).Select(e => e.message).FirstOrDefault();
+                Assert.Equal(refusal is null ? (StatusCode.Unknown, "Op") : (StatusCode.FailedPrecondition, refusal), (ex.StatusCode, ex.Status.Detail));
+            }).QuickCheckThrowOnFailure();
         }
 
         private static object[] Case(string name, string detail, Func<AnnotationContext, RecordingLogger, ServerCallContext, Task> call) =>
