@@ -1,3 +1,4 @@
+using FsCheck;
 using Grpc.Core;
 using gRPCAnnotationService;
 using Microsoft.AspNetCore.Http;
@@ -28,8 +29,9 @@ namespace ConnectomeDataModelCoreTests
     /// refused with NotFound naming the missing IDs, and nothing is saved; a valid link is saved once, stamped with the
     /// caller's name rather than the payload's; UpdateLinks reads existing links in one query, keeps the
     /// last row of a repeated (SourceId, TargetId) pair, and updates a link that exists instead of inserting it.
-    /// Also pins <see cref="StructureService.Merge"/>: a self-merge is refused with InvalidArgument and a missing
-    /// structure with NotFound naming it, both before dbo.MergeStructures runs; and <see cref="StructureService.Split"/>
+    /// Also pins <see cref="StructureService.Merge"/>: a self-merge is refused with InvalidArgument, a missing
+    /// structure with NotFound naming it, and a KeepId below MergeId with FailedPrecondition, all before
+    /// dbo.MergeStructures runs; and <see cref="StructureService.Split"/>
     /// and <see cref="StructureService.SplitAtLocationLink"/>: a missing location is refused with NotFound naming it, and a
     /// link split of a location from itself with InvalidArgument, before the split procedure runs.
     /// No database is contacted: interceptors stand in for the connection, the query and SaveChanges, and
@@ -317,6 +319,7 @@ namespace ConnectomeDataModelCoreTests
             Assert.Empty(procedures.Merges);
         }
 
+        /// <summary>Both structures are roots: one query checks both exist, and one more reads KeepId's ParentID.</summary>
         [Fact]
         public async Task MergeLooksUpBothStructuresInOneQueryThenRunsTheProcedureOnce()
         {
@@ -330,9 +333,90 @@ namespace ConnectomeDataModelCoreTests
 
             Assert.Equal(3, response.KeptId);
             Assert.Equal(new (long?, long?)[] { (3, 8) }, procedures.Merges);
-            Assert.Equal(1, table.StructureQueries);
+            Assert.Equal(2, table.StructureQueries);
             Assert.Equal(2, table.MostStructureParameters);
         }
+
+        /// <summary>
+        /// dbo.MergeStructures gives MergeId's children to KeepId, so a KeepId below MergeId would become its own parent
+        /// or close a parent cycle (before DBVersion 94), or fail with error 50000 reported as Unknown (since).
+        /// Parents are "child:parent" pairs.
+        /// </summary>
+        [Theory]
+        [InlineData("4:8")]
+        [InlineData("4:6 6:8")]
+        [InlineData("4:6 6:5 5:8 8:2")]
+        public async Task MergeIntoADescendantIsRefusedBeforeTheProcedure(string parents)
+        {
+            using var db = NewContext(new CaptureSaves(), new FakeLinkTable { Parents = ParseParents(parents) });
+            var procedures = new RecordingProcedures(db);
+            db.Procedures = procedures;
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => service.Merge(
+                new MergeRequest { KeepId = 4, MergeId = 8 }, new TestCallContext()));
+
+            Assert.Equal(StatusCode.FailedPrecondition, ex.StatusCode);
+            Assert.Equal("Structure 8 cannot be merged into 4, which lies below it", ex.Status.Detail);
+            Assert.Empty(procedures.Merges);
+        }
+
+        /// <summary>KeepId under another structure, above MergeId, beside it, or on a stored cycle that does not reach it.</summary>
+        [Theory]
+        [InlineData("4:6")]
+        [InlineData("8:4")]
+        [InlineData("8:6 6:4")]
+        [InlineData("4:6 8:6")]
+        [InlineData("4:5 5:4")]
+        public async Task MergeIntoAStructureNotBelowMergeIdRunsTheProcedureOnce(string parents)
+        {
+            using var db = NewContext(new CaptureSaves(), new FakeLinkTable { Parents = ParseParents(parents) });
+            var procedures = new RecordingProcedures(db);
+            db.Procedures = procedures;
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            var response = await service.Merge(new MergeRequest { KeepId = 4, MergeId = 8 }, new TestCallContext());
+
+            Assert.Equal(4, response.KeptId);
+            Assert.Equal(new (long?, long?)[] { (4, 8) }, procedures.Merges);
+        }
+
+        /// <summary>
+        /// Merges of two distinct structures of a random stored forest: refused exactly when MergeId is on the way up
+        /// from KeepId, and otherwise passed to the procedure once.
+        /// </summary>
+        [Fact]
+        public void MergeIsRefusedExactlyWhenKeepIdLiesBelowMergeId()
+        {
+            var cases =
+                from n in Gen.Choose(2, 7)
+                from parents in Gen.Sequence(Enumerable.Range(1, n).Select(i => Gen.Choose(0, i - 1)))
+                from keep in Gen.Choose(1, n)
+                from merge in Gen.Choose(1, n).Where(m => m != keep)
+                select (Parents: parents.ToArray(), Keep: (long)keep, Merge: (long)merge);
+
+            Prop.ForAll(Arb.From(cases), c =>
+            {
+                var stored = Enumerable.Range(1, c.Parents.Length).Where(i => c.Parents[i - 1] != 0)
+                    .ToDictionary(i => (long)i, i => (long)c.Parents[i - 1]);
+                var below = false;
+                for (long? p = c.Keep; p.HasValue && !below; p = stored.TryGetValue(p.Value, out var up) ? up : null)
+                    below = p == c.Merge;
+
+                using var db = NewContext(new CaptureSaves(), new FakeLinkTable { Parents = stored });
+                var procedures = new RecordingProcedures(db);
+                db.Procedures = procedures;
+                var merge = Task.Run(() => new StructureService(db, NullLogger<StructureService>.Instance)
+                    .Merge(new MergeRequest { KeepId = c.Keep, MergeId = c.Merge }, new TestCallContext()));
+                var refused = Record.Exception(() => merge.GetAwaiter().GetResult()) is RpcException { StatusCode: StatusCode.FailedPrecondition };
+
+                Assert.Equal(below, refused);
+                Assert.Equal(below ? 0 : 1, procedures.Merges.Count);
+            }).QuickCheckThrowOnFailure();
+        }
+
+        private static Dictionary<long, long> ParseParents(string pairs) =>
+            pairs.Split(' ').Select(p => p.Split(':')).ToDictionary(p => long.Parse(p[0]), p => long.Parse(p[1]));
 
         [Theory]
         [InlineData(99)]
@@ -506,7 +590,8 @@ namespace ConnectomeDataModelCoreTests
         /// <summary>
         /// Stands in for the StructureLink, Structure and Location tables: opening the connection is suppressed, a
         /// Structure or Location query is answered with the IDs among its parameters that <see cref="StructureExists"/>
-        /// or <see cref="LocationExists"/> accepts, and every other query with all stored links, whatever its WHERE clause says, in the column
+        /// or <see cref="LocationExists"/> accepts (a Structure query selecting whole rows, as Find does, with each one's
+        /// <see cref="Parents"/> entry), and every other query with all stored links, whatever its WHERE clause says, in the column
         /// order its SELECT list names. Counts the queries.
         /// </summary>
         private sealed class FakeLinkTable : IDbConnectionInterceptor, IDbCommandInterceptor
@@ -518,6 +603,9 @@ namespace ConnectomeDataModelCoreTests
 
             /// <summary>Stored structures: 1 to 9 by default, so a test names a missing structure with 98 or 99.</summary>
             public Func<long, bool> StructureExists { get; init; } = id => id is >= 1 and <= 9;
+
+            /// <summary>Stored ParentIDs; a structure with no entry is a root.</summary>
+            public Dictionary<long, long> Parents { get; init; } = new();
 
             /// <summary>Stored locations: 1 to 9 by default, so a test names a missing location with 98 or 99.</summary>
             public Func<long, bool> LocationExists { get; init; } = id => id is >= 1 and <= 9;
@@ -548,7 +636,9 @@ namespace ConnectomeDataModelCoreTests
                 {
                     StructureQueries++;
                     MostStructureParameters = Math.Max(MostStructureParameters, command.Parameters.Count);
-                    return ExistingIds(table, Assert.Single(columns), command, StructureExists);
+                    return columns.Length == 1
+                        ? ExistingIds(table, columns[0], command, StructureExists)
+                        : StructureRows(table, columns, command);
                 }
 
                 if (command.CommandText.Contains("FROM [Location] AS", StringComparison.Ordinal))
@@ -571,6 +661,39 @@ namespace ConnectomeDataModelCoreTests
                     table.Rows.Add(id);
                 return ValueTask.FromResult(InterceptionResult<DbDataReader>.SuppressWithResult(table.CreateDataReader()));
             }
+
+            private ValueTask<InterceptionResult<DbDataReader>> StructureRows(DataTable table, string[] columns, DbCommand command)
+            {
+                foreach (var column in columns)
+                    table.Columns.Add(column, StructureColumnType(column));
+                foreach (var id in command.Parameters.Cast<DbParameter>().Select(p => Convert.ToInt64(p.Value)).Distinct().Where(StructureExists))
+                    table.Rows.Add(columns.Select(c => StructureColumnValue(id, c)).ToArray());
+                return ValueTask.FromResult(InterceptionResult<DbDataReader>.SuppressWithResult(table.CreateDataReader()));
+            }
+
+            private static Type StructureColumnType(string column) => column switch
+            {
+                "ID" or "ParentID" or "TypeID" => typeof(long),
+                "Confidence" => typeof(double),
+                "Verified" => typeof(bool),
+                "Label" or "Notes" or "Tags" or "Username" => typeof(string),
+                "Created" or "LastModified" => typeof(DateTime),
+                "Version" => typeof(byte[]),
+                _ => throw new InvalidOperationException($"Unexpected Structure column {column}")
+            };
+
+            private object StructureColumnValue(long id, string column) => column switch
+            {
+                "ID" => id,
+                "ParentID" => Parents.TryGetValue(id, out var parent) ? (object)parent : DBNull.Value,
+                "TypeID" => 1L,
+                "Confidence" => 0.5,
+                "Verified" => false,
+                "Username" => "someone",
+                "Created" or "LastModified" => new DateTime(2026, 1, 1),
+                "Version" => new byte[8],
+                _ => DBNull.Value
+            };
 
             private static Type ColumnType(string column) => column switch
             {

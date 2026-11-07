@@ -648,10 +648,12 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// MergeId is absorbed into KeepId. Clients must drop MergeId locally; the RPC returns only KeptId.
-        /// Throws InvalidArgument when KeepId and MergeId are the same structure, and NotFound, naming the missing IDs,
-        /// when either structure does not exist; neither runs dbo.MergeStructures. The procedure is not transactional:
-        /// on a self-merge it rewrites the structure's Notes to "Merged into structure ..." and then deletes the structure,
-        /// or fails on the Location foreign key when the structure has locations.
+        /// Throws InvalidArgument when KeepId and MergeId are the same structure, NotFound, naming the missing IDs,
+        /// when either structure does not exist, and FailedPrecondition, naming both IDs, when KeepId lies below MergeId in
+        /// the structure tree (see <see cref="IsSelfOrDescendantAsync"/>); none runs dbo.MergeStructures. Before DBVersion 94
+        /// the procedure, which is not transactional, rewrote a self-merged structure's Notes to "Merged into structure ..."
+        /// and then deleted it or failed on the Location foreign key, and moving MergeId's children to a descendant KeepId
+        /// made KeepId its own parent or closed a parent cycle; since DBVersion 94 it refuses both with error 50000.
         /// </summary>
         public override async Task<MergeResponse> Merge(MergeRequest request, ServerCallContext context)
         {
@@ -661,6 +663,9 @@ namespace gRPCAnnotationService
                 if (request.KeepId == request.MergeId)
                     throw new RpcException(new Status(StatusCode.InvalidArgument, "A structure cannot be merged into itself"));
                 await ThrowIfStructuresMissingAsync(new[] { request.KeepId, request.MergeId }, ct);
+                if (await IsSelfOrDescendantAsync(request.KeepId, request.MergeId, ct))
+                    throw new RpcException(new Status(StatusCode.FailedPrecondition,
+                        $"Structure {request.MergeId} cannot be merged into {request.KeepId}, which lies below it"));
 
                 await _context.Procedures.MergeStructuresAsync(request.KeepId, request.MergeId, cancellationToken: ct);
                 return new MergeResponse { KeptId = request.KeepId };
@@ -827,7 +832,8 @@ namespace gRPCAnnotationService
         /// <summary>
         /// True when <paramref name="id"/> is <paramref name="ancestorId"/> or lies below it in the structure tree as the
         /// batch so far leaves it, so making <paramref name="id"/> the parent of <paramref name="ancestorId"/> would close a
-        /// cycle that FK_Structure_Structure does not prevent. The walk follows ParentId upward through Find, which looks
+        /// cycle that FK_Structure_Structure does not prevent (Merge asks the same of KeepId and MergeId, since
+        /// dbo.MergeStructures gives MergeId's children to KeepId). The walk follows ParentId upward through Find, which looks
         /// in the change tracker before the database, so moves made earlier in the batch count; it costs one lookup per
         /// ancestor not yet tracked and stops at a root, at a structure that is not stored, or at one it has already
         /// visited (a cycle already stored that does not pass through <paramref name="ancestorId"/>).
