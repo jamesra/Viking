@@ -301,6 +301,26 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    -- Refuses when the keep structure is the merged structure or lies below it (its children would make the keep
+    -- structure its own parent or close a cycle). The visited set ends the walk at a cycle already stored.
+    DECLARE @Ancestor bigint = @KeepStructureID;
+    DECLARE @Visited TABLE (ID bigint PRIMARY KEY);
+    DECLARE @Refusal nvarchar(400);
+    WHILE @Ancestor IS NOT NULL
+    BEGIN
+        IF @Ancestor = @MergeStructureID
+        BEGIN
+            SET @Refusal = CONCAT(N''MergeStructures: cannot merge structure '', @MergeStructureID,
+                N'' into structure '', @KeepStructureID, N'', which is the same structure or one of its descendants'');
+            THROW 50000, @Refusal, 1;
+        END
+
+        INSERT INTO @Visited (ID) VALUES (@Ancestor);
+        SET @Ancestor = (SELECT S.ParentID FROM dbo.Structure S
+                         WHERE S.ID = @Ancestor
+                           AND NOT EXISTS (SELECT 1 FROM @Visited V WHERE V.ID = S.ParentID));
+    END
+
     DECLARE @MergeNotes nvarchar(max) =
         (SELECT Notes FROM dbo.Structure WHERE ID = @MergeStructureID);
 

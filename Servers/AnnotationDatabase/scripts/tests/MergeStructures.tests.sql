@@ -68,5 +68,79 @@ IF EXISTS (SELECT 1 FROM dbo.Structure WHERE ID IN (@Base + 12, @Base + 22, @Bas
 IF NOT EXISTS (SELECT 1 FROM dbo.Structure WHERE ID = @Base + 19 AND ParentID = @Base + 11)
     THROW 50006, N'The merged structure''s child was not moved to the keep structure.', 1;
 
+-- Refused merges: the keep structure is the merged structure or lies below it, so moving the merged structure's
+-- children to it would make it its own parent or close a cycle. Each must fail with 50000 and change nothing.
+--   n=5 keep @Base+51 is a child of merge @Base+52, which has another child @Base+59
+--   n=6 keep @Base+61 is a grandchild of merge @Base+62 (through @Base+63)
+--   n=7 keep and merge are both @Base+71
+SET IDENTITY_INSERT dbo.Structure ON;
+INSERT dbo.Structure (ID, TypeID, ParentID, Notes) VALUES
+    (@Base + 52, @Base, NULL, N'merge 5'), (@Base + 62, @Base, NULL, N'merge 6'), (@Base + 71, @Base, NULL, N'self 7');
+INSERT dbo.Structure (ID, TypeID, ParentID, Notes) VALUES
+    (@Base + 51, @Base, @Base + 52, N'keep 5'), (@Base + 59, @Base, @Base + 52, NULL), (@Base + 63, @Base, @Base + 62, NULL);
+INSERT dbo.Structure (ID, TypeID, ParentID, Notes) VALUES (@Base + 61, @Base, @Base + 63, N'keep 6');
+SET IDENTITY_INSERT dbo.Structure OFF;
+
+DECLARE @Before TABLE (ID bigint, ParentID bigint NULL, Notes nvarchar(max) NULL);
+INSERT @Before SELECT ID, ParentID, Notes FROM dbo.Structure WHERE ID BETWEEN @Base + 51 AND @Base + 79;
+
+DECLARE @Refused TABLE (Keep bigint, [Merge] bigint);
+INSERT @Refused VALUES (@Base + 51, @Base + 52), (@Base + 61, @Base + 62), (@Base + 71, @Base + 71);
+
+-- XACT_ABORT OFF so a refusal caught below leaves the test transaction committable.
+SET XACT_ABORT OFF;
+DECLARE @Error int;
+WHILE EXISTS (SELECT 1 FROM @Refused)
+BEGIN
+    SELECT TOP (1) @Keep = Keep, @Merge = [Merge] FROM @Refused ORDER BY Keep;
+    DELETE @Refused WHERE Keep = @Keep;
+    SET @Error = 0;
+    BEGIN TRY
+        EXEC dbo.MergeStructures @KeepStructureID = @Keep, @MergeStructureID = @Merge;
+    END TRY
+    BEGIN CATCH
+        SET @Error = ERROR_NUMBER();
+    END CATCH
+    IF @Error <> 50000 OR XACT_STATE() <> 1
+    BEGIN
+        SET XACT_ABORT ON;
+        DECLARE @Unrefused nvarchar(200) = CONCAT(N'Merging ', @Merge, N' into ', @Keep, N' was not refused with 50000 (got ', @Error, N').');
+        THROW 50007, @Unrefused, 1;
+    END
+END
+SET XACT_ABORT ON;
+
+IF EXISTS (SELECT ID, ParentID, Notes FROM @Before
+           EXCEPT SELECT ID, ParentID, Notes FROM dbo.Structure WHERE ID BETWEEN @Base + 51 AND @Base + 79)
+    THROW 50008, N'A refused merge changed, moved or deleted a structure.', 1;
+
+-- Allowed merges the walk must not refuse:
+--   n=8 keep @Base+81 is the parent of merge @Base+82 (whose child @Base+89 moves to the keep)
+--   n=9 keep @Base+91 and merge @Base+92 are siblings under @Base+93
+--   n=10 keep @Base+101 sits on a stored parent cycle (@Base+101 <-> @Base+103) that does not reach merge @Base+102
+SET IDENTITY_INSERT dbo.Structure ON;
+INSERT dbo.Structure (ID, TypeID, ParentID) VALUES
+    (@Base + 81, @Base, NULL), (@Base + 93, @Base, NULL), (@Base + 101, @Base, NULL), (@Base + 102, @Base, NULL),
+    (@Base + 103, @Base, @Base + 101);
+INSERT dbo.Structure (ID, TypeID, ParentID) VALUES
+    (@Base + 82, @Base, @Base + 81), (@Base + 91, @Base, @Base + 93), (@Base + 92, @Base, @Base + 93);
+INSERT dbo.Structure (ID, TypeID, ParentID) VALUES (@Base + 89, @Base, @Base + 82);
+SET IDENTITY_INSERT dbo.Structure OFF;
+UPDATE dbo.Structure SET ParentID = @Base + 103 WHERE ID = @Base + 101;
+
+SET @n = 8;
+WHILE @n <= 10
+BEGIN
+    SET @Keep = @Base + 10 * @n + 1;
+    SET @Merge = @Keep + 1;
+    EXEC dbo.MergeStructures @KeepStructureID = @Keep, @MergeStructureID = @Merge;
+    SET @n += 1;
+END
+
+IF EXISTS (SELECT 1 FROM dbo.Structure WHERE ID IN (@Base + 82, @Base + 92, @Base + 102))
+    THROW 50009, N'A merge into the merged structure''s parent, a sibling or a structure on a stored cycle was refused.', 1;
+IF NOT EXISTS (SELECT 1 FROM dbo.Structure WHERE ID = @Base + 89 AND ParentID = @Base + 81)
+    THROW 50010, N'Merging a structure into its parent did not move its child to the parent.', 1;
+
 ROLLBACK;
 PRINT N'MergeStructures tests passed.';

@@ -9266,5 +9266,111 @@ BEGIN TRANSACTION main
 		      N'SET NOCOUNT ON and a header comment in SelectStructuresLinkedViaChildren' ,getDate(),User_ID())
 	 COMMIT TRANSACTION ninetythree
 	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 94)))
+	begin
+     print N'MergeStructures refuses to merge a structure into itself or into one of its own descendants'
+	 BEGIN TRANSACTION ninetyfour
+
+	 /*MergeStructures moves the merged structure's children to the keep structure. When the keep structure was
+	   one of those children it became its own parent, and when it lay deeper below the merged structure the
+	   move closed a parent cycle (Merge -> A -> Keep left A <-> Keep). A self-merge rewrote the structure's
+	   Notes and then deleted it, or failed on the Location foreign key. The body is its latest definition here (step 87) with only the header comment
+	   and the walk up from @KeepStructureID added: it THROWs 50000 before anything changes when it meets
+	   @MergeStructureID, and stops at a root, a missing structure or a cycle already stored.*/
+	 EXEC('-- MergeStructures: merges structure @MergeStructureID into @KeepStructureID. Moves its locations,
+-- child structures and structure links to the keep structure (links between the two are deleted),
+-- appends its Notes to the keep structure''s Notes between BEGIN/END MERGE FROM markers (a NULL keep
+-- Notes counts as empty), then deletes the merged structure.
+-- Refuses, with error 50000 and nothing changed, when the keep structure is the merged structure or lies
+-- below it: moving the merged structure''s children to the keep structure would make the keep structure its
+-- own parent or close a cycle of parents.
+-- Callers: gRPC StructureService.Merge (AnnotationContextProcedures.MergeStructuresAsync), WCF
+-- AnnotateService.Merge (ConnectomeDataModel).
+ ALTER PROCEDURE [dbo].[MergeStructures]
+					-- Add the parameters for the stored procedure here
+					@KeepStructureID bigint,
+					@MergeStructureID bigint
+				AS
+				BEGIN
+					-- SET NOCOUNT ON added to prevent extra result sets from
+					-- interfering with SELECT statements.
+					SET NOCOUNT ON;
+
+					-- The visited set ends the walk at a cycle already stored that does not pass through the merged structure.
+					declare @Ancestor bigint = @KeepStructureID;
+					declare @Visited table (ID bigint PRIMARY KEY);
+					declare @Refusal nvarchar(400);
+					while @Ancestor IS NOT NULL
+					BEGIN
+						IF @Ancestor = @MergeStructureID
+						BEGIN
+							set @Refusal = CONCAT(N''MergeStructures: cannot merge structure '', @MergeStructureID,
+								N'' into structure '', @KeepStructureID, N'', which is the same structure or one of its descendants'');
+							THROW 50000, @Refusal, 1;
+						END
+
+						insert into @Visited (ID) values (@Ancestor);
+						set @Ancestor = (select S.ParentID from Structure S
+										 where S.ID = @Ancestor
+										   and not exists (select 1 from @Visited V where V.ID = S.ParentID));
+					END
+
+					declare @MergeNotes nvarchar(max)
+					set @MergeNotes = (select notes from Structure where ID = @MergeStructureID)
+
+					update Location
+					set ParentID = @KeepStructureID
+					where ParentID = @MergeStructureID
+
+					update Structure
+					set ParentID = @KeepStructureID
+					where ParentID = @MergeStructureID
+
+					IF NOT (@MergeNotes IS NULL OR @MergeNotes = '''')
+					BEGIN
+						declare @crlf nvarchar(2)
+						set @crlf = CHAR(13) + CHAR(10)
+
+						declare @MergeHeader nvarchar(80)
+						declare @MergeFooter nvarchar(80)
+						set @MergeHeader = ''*****BEGIN MERGE FROM '' + CONVERT(nvarchar(80), @MergeStructureID) + ''*****''
+						set @MergeFooter = ''*****END MERGE FROM '' + CONVERT(nvarchar(80), @MergeStructureID) + ''*****''
+
+						update Structure
+						set Notes = ISNULL(Notes, N'''') + @crlf + @MergeHeader + @crlf + @MergeNotes + @crlf + @MergeFooter + @crlf
+						where ID = @KeepStructureID
+					END
+
+					-- Delete any structure links directly between the keep and merge structures, a rare occurrence from incorrect annotations
+					delete StructureLink where SourceID = @KeepStructureID AND TargetID = @MergeStructureID
+					delete StructureLink where TargetID = @KeepStructureID AND SourceID = @MergeStructureID
+
+					update StructureLink
+					set TargetID = @KeepStructureID
+					where TargetID = @MergeStructureID
+
+					update StructureLink
+					set SourceID = @KeepStructureID
+					where SourceID = @MergeStructureID
+
+					update Structure
+					set Notes = ''Merged into structure '' + CONVERT(nvarchar(80), @KeepStructureID)
+					where ID = @MergeStructureID
+
+					delete Structure
+					where ID = @MergeStructureID
+				END   ')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+
+	INSERT INTO DBVersion values (94,
+		      N'MergeStructures refuses to merge a structure into itself or into one of its own descendants' ,getDate(),User_ID())
+	 COMMIT TRANSACTION ninetyfour
+	end
 		   
 COMMIT TRANSACTION main
