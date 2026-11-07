@@ -338,6 +338,11 @@ namespace Viking.ViewModels
 
         private void RaisePropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
+        /// <summary>
+        /// The section <paramref name="channel"/> takes its images from, or null when there is none: an ABOVE or BELOW
+        /// channel with no reference section on that side (the first or last section, or the user cleared it), or a
+        /// FIXED channel whose section the volume does not have.
+        /// </summary>
         public Section GetSectionToDrawForChannel(ChannelInfo channel)
         {
             Section? sectionToDraw = null;
@@ -364,6 +369,20 @@ namespace Viking.ViewModels
             }
 
             return sectionToDraw;
+        }
+
+        /// <summary>
+        /// The channels this section draws (the volume's default channels when it has none), each with the section its
+        /// images come from. Channels with no section (see <see cref="GetSectionToDrawForChannel"/>) are left out, as
+        /// drawing leaves them out. Lazy: each channel's section is looked up as the result is enumerated.
+        /// </summary>
+        public IEnumerable<(ChannelInfo Channel, Section Section)> ChannelSectionsToDraw()
+        {
+            ChannelInfo[] channels = ChannelInfoArray;
+            if (channels.Length == 0)
+                channels = VolumeViewModel.DefaultChannels;
+
+            return ChannelSections.SkipMissing(channels, GetSectionToDrawForChannel);
         }
 
     }

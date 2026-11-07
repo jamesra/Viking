@@ -1922,13 +1922,8 @@ namespace Viking.UI.Controls
                 return false;
 
             SectionViewModel visibleSection = Volume.SectionViewModels[Z];
-            ChannelInfo[] channels = visibleSection.ChannelInfoArray;
-            if (channels.Length == 0)
-                channels = visibleSection.VolumeViewModel.DefaultChannels;
-
-            foreach (ChannelInfo channel in channels)
+            foreach ((ChannelInfo channel, Section section) in visibleSection.ChannelSectionsToDraw())
             {
-                Section section = visibleSection.GetSectionToDrawForChannel(channel);
                 MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel.ChannelName, this.CurrentTransform);
                 await Mapping.Initialize(token);
                 if (token.IsCancellationRequested)
@@ -1964,13 +1959,8 @@ namespace Viking.UI.Controls
                 return listGetTextureTasks;
 
             SectionViewModel visibleSection = Volume.SectionViewModels[sectionZ];
-            ChannelInfo[] channels = visibleSection.ChannelInfoArray;
-            if (channels.Length == 0)
-                channels = visibleSection.VolumeViewModel.DefaultChannels;
-
-            foreach (ChannelInfo channel in channels)
+            foreach ((ChannelInfo channel, Section section) in visibleSection.ChannelSectionsToDraw())
             {
-                Section section = visibleSection.GetSectionToDrawForChannel(channel);
                 MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel.ChannelName, this.CurrentTransform);
                 if (Mapping is null)
                     continue;
@@ -2134,13 +2124,8 @@ namespace Viking.UI.Controls
                 return tiles;
 
             SectionViewModel visibleSection = Volume.SectionViewModels[sectionZ];
-            ChannelInfo[] channels = visibleSection.ChannelInfoArray;
-            if (channels.Length == 0)
-                channels = visibleSection.VolumeViewModel.DefaultChannels;
-
-            foreach (ChannelInfo channel in channels)
+            foreach ((ChannelInfo channel, Section section) in visibleSection.ChannelSectionsToDraw())
             {
-                Section section = visibleSection.GetSectionToDrawForChannel(channel);
                 MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel.ChannelName, this.CurrentTransform);
                 if (Mapping is null)
                     continue;
