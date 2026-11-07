@@ -153,7 +153,11 @@ namespace VikingCoreTests
             return problems;
         }
 
-        private static string FindRepositoryRoot()
+        /// <summary>
+        /// The VikingLegacy checkout the tests were built from (the first folder above the test binaries that holds
+        /// <c>VikingChangelog.md</c>), for tests that read repository files. Marks the test inconclusive when there is none.
+        /// </summary>
+        internal static string FindRepositoryRoot()
         {
             for (DirectoryInfo dir = new(AppDomain.CurrentDomain.BaseDirectory); dir is not null; dir = dir.Parent)
             {

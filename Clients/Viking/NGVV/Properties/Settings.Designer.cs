@@ -353,7 +353,7 @@ namespace Viking.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("4")]
+        [global::System.Configuration.DefaultSettingValueAttribute("25")]
         public int SectionNumberOverlayCount {
             get {
                 return ((int)(this["SectionNumberOverlayCount"]));

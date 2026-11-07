@@ -1,4 +1,10 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Configuration;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Xml.Linq;
 using Viking.UI.WPF.Forms;
 
 namespace VikingCoreTests
@@ -7,7 +13,7 @@ namespace VikingCoreTests
     /// Pins the Viewer Preferences Cancel path: <see cref="ViewerPreferencesDialogViewModel.RevertToOriginal"/> must restore
     /// every value captured by <see cref="ViewerPreferencesDialogViewModel.LoadCurrentSettings"/> or the last
     /// <see cref="ViewerPreferencesDialogViewModel.Apply"/>, because the live overlay preview is re-applied from the
-    /// view model when Cancel is clicked.
+    /// view model when Cancel is clicked. Also pins what Reset to Defaults restores against the shipped settings defaults.
     /// </summary>
     [TestClass]
     public class ViewerPreferencesDialogViewModelTests
@@ -166,5 +172,67 @@ namespace VikingCoreTests
 
             AssertLoadedValues(vm);
         }
+
+        /// <summary>
+        /// Reset to Defaults restores the values a new install starts with (Viking's app.config): 25 sections, acceleration
+        /// 1.0, PID P500 D300 I0.01, velocity and position thresholds 0.01 (decision D-ViewerPrefDefaults).
+        /// </summary>
+        [TestMethod]
+        public void ResetToDefaults_RestoresAppConfigOverlayAndPidValues()
+        {
+            var vm = LoadedViewModel();
+            ChangeEverything(vm);
+
+            vm.ResetToDefaults();
+
+            Assert.AreEqual(25, vm.SectionNumberOverlayCount);
+            Assert.AreEqual(1.0, vm.SectionNumberOverlayAcceleration, Tolerance);
+            Assert.AreEqual(500, vm.PidProportionalGain, Tolerance);
+            Assert.AreEqual(300, vm.PidDerivativeGain, Tolerance);
+            Assert.AreEqual(0.01, vm.PidIntegralGain, Tolerance);
+            Assert.AreEqual(0.01, vm.PidVelocityThreshold, Tolerance);
+            Assert.AreEqual(0.01, vm.PidPositionThreshold, Tolerance);
+        }
+
+        /// <summary>
+        /// The overlay and PID defaults live in four places: the view model's Reset to Defaults constants, app.config (what
+        /// a new install actually starts with), Settings.settings, and the generated Settings class's default attributes
+        /// (used when a setting is missing from the config). All four must name the same value.
+        /// </summary>
+        [TestMethod]
+        public void OverlayAndPidDefaults_AgreeAcrossViewModelAppConfigAndSettings()
+        {
+            var expected = new (string Setting, double Value)[]
+            {
+                ("SectionNumberOverlayCount", ViewerPreferencesDialogViewModel.DefaultSectionNumberOverlayCount),
+                ("SectionNumberOverlayAcceleration", ViewerPreferencesDialogViewModel.DefaultAcceleration),
+                ("SectionNumberOverlayPidProportionalGain", ViewerPreferencesDialogViewModel.DefaultPidProportionalGain),
+                ("SectionNumberOverlayPidDerivativeGain", ViewerPreferencesDialogViewModel.DefaultPidDerivativeGain),
+                ("SectionNumberOverlayPidIntegralGain", ViewerPreferencesDialogViewModel.DefaultPidIntegralGain),
+                ("SectionNumberOverlayPidVelocityThreshold", ViewerPreferencesDialogViewModel.DefaultPidVelocityThreshold),
+                ("SectionNumberOverlayPidPositionThreshold", ViewerPreferencesDialogViewModel.DefaultPidPositionThreshold),
+            };
+
+            string vikingCore = Path.Combine(ChangelogTests.FindRepositoryRoot(), "Clients", "Viking", "NGVV");
+            XDocument appConfig = XDocument.Load(Path.Combine(vikingCore, "app.config"));
+            XDocument settingsFile = XDocument.Load(Path.Combine(vikingCore, "Properties", "Settings.settings"));
+            XNamespace settingsNs = settingsFile.Root!.Name.Namespace;
+
+            foreach ((string setting, double value) in expected)
+            {
+                string appConfigValue = appConfig.Descendants("setting")
+                    .Single(e => (string?)e.Attribute("name") == setting).Element("value")!.Value;
+                string settingsFileValue = settingsFile.Descendants(settingsNs + "Setting")
+                    .Single(e => (string?)e.Attribute("Name") == setting).Element(settingsNs + "Value")!.Value;
+                string attributeValue = typeof(Viking.Properties.Settings).GetProperty(setting)!
+                    .GetCustomAttribute<DefaultSettingValueAttribute>()!.Value;
+
+                Assert.AreEqual(value, ParseInvariant(appConfigValue), Tolerance, $"app.config {setting}");
+                Assert.AreEqual(value, ParseInvariant(settingsFileValue), Tolerance, $"Settings.settings {setting}");
+                Assert.AreEqual(value, ParseInvariant(attributeValue), Tolerance, $"Settings.Designer.cs {setting}");
+            }
+        }
+
+        private static double ParseInvariant(string text) => double.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture);
     }
 }

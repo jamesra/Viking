@@ -25,9 +25,19 @@ namespace Viking.UI.WPF.Forms
         public const double MaxAcceleration = 100.0;
 
         /// <summary>
+        /// Default number of section numbers shown above and below the current section.
+        /// </summary>
+        /// <remarks>
+        /// This and the other <c>Default*</c> overlay and PID values are what Reset to Defaults restores. They must equal
+        /// the <c>userSettings</c> defaults in Viking's app.config (and Settings.settings), which a new install starts
+        /// with; <c>ViewerPreferencesDialogViewModelTests</c> checks that they agree.
+        /// </remarks>
+        public const int DefaultSectionNumberOverlayCount = 25;
+
+        /// <summary>
         /// Default acceleration value
         /// </summary>
-        public const double DefaultAcceleration = 50;
+        public const double DefaultAcceleration = 1.0;
 
         /// <summary>
         /// Default opacity value
@@ -52,19 +62,19 @@ namespace Viking.UI.WPF.Forms
         public const double MaxCenterMagnification = 4.0;
 
         // PID Parameter Defaults and Ranges
-        public const double DefaultPidProportionalGain = 2500.0;
+        public const double DefaultPidProportionalGain = 500.0;
         public const double MinProportionalGain = 0.1;
         public const double MaxProportionalGain = 3000;
-        public const double DefaultPidDerivativeGain = 4500;
+        public const double DefaultPidDerivativeGain = 300;
         public const double MinDerivativeGain = 1.0;
         public const double MaxDerivativeGain = 10000;
-        public const double DefaultPidIntegralGain = 40;
+        public const double DefaultPidIntegralGain = 0.01;
         public const double MinIntegralGain = 0.0;
         public const double MaxIntegralGain = 100;
         public const double DefaultPidVelocityThreshold = 0.01;
         public const double MinVelocityThreshold = 0.001;
         public const double MaxVelocityThreshold = 0.1;
-        public const double DefaultPidPositionThreshold = 0.02;
+        public const double DefaultPidPositionThreshold = 0.01;
         public const double MinPositionThreshold = 0.001;
         public const double MaxPositionThreshold = 0.1;
 
@@ -616,7 +626,7 @@ namespace Viking.UI.WPF.Forms
         public void ResetToDefaults()
         {
             SectionNumberOverlayEnabled = true;
-            SectionNumberOverlayCount = 25;
+            SectionNumberOverlayCount = DefaultSectionNumberOverlayCount;
             SectionNumberOverlayAcceleration = DefaultAcceleration;
             SectionNumberOverlayEdge = "Left";
             SectionNumberOverlayOpacity = DefaultOpacity;
