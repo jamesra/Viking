@@ -35,7 +35,9 @@ namespace WebAnnotationModel.gRPC
             ILocationLinkStore locationLinks,
             IPermittedStructureLinkStore permittedStructureLinks,
             IRegionLoader<LocationObj> locationsByRegion,
-            LocationLinkToLocationUpdater locationLinkToLocationUpdater)
+            LocationLinkToLocationUpdater locationLinkToLocationUpdater,
+            StructureLinkToStructureUpdater structureLinkToStructureUpdater,
+            PermittedStructureLinkToStructureUpdater permittedStructureLinkToStructureUpdater)
         {
             Locations = locations;
             Structures = structures;
@@ -44,8 +46,10 @@ namespace WebAnnotationModel.gRPC
             LocationLinks = locationLinks;
             PermittedStructureLinks = permittedStructureLinks;
             LocationsByRegion = locationsByRegion;
-            // Constructed for its CollectionChanged subscription; keep the instance alive via DI.
+            // Constructed for their CollectionChanged subscriptions; keep the instances alive via DI.
             _ = locationLinkToLocationUpdater;
+            _ = structureLinkToStructureUpdater;
+            _ = permittedStructureLinkToStructureUpdater;
         }
 
         /// <summary>

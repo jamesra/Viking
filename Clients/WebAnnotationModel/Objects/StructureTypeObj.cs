@@ -202,7 +202,7 @@ namespace WebAnnotationModel.Objects
         }
          
 
-        private ConcurrentObservablePermittedStructureLinkSet _PermittedLinks;
+        private readonly ConcurrentObservablePermittedStructureLinkSet _PermittedLinks = new ConcurrentObservablePermittedStructureLinkSet();
         private SemaphoreSlim LinkLock = new SemaphoreSlim(1);
 
         public ReadOnlyObservableCollection<PermittedStructureLinkObj> PermittedLinks =>

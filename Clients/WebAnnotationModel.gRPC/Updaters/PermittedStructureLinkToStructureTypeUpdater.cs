@@ -23,12 +23,12 @@ namespace WebAnnotationModel.gRPC
     /// <summary>
     /// Attaches permitted-link rules to StructureTypeObj when PermittedStructureLinkStore changes.
     /// </summary>
-    class PermittedStructureLinkToStructureUpdater
+    public class PermittedStructureLinkToStructureUpdater
     {
         private readonly IPermittedStructureLinkStore PermittedStructureLinkStore;
         private readonly IStructureTypeStore StructureTypeStore;
 
-        PermittedStructureLinkToStructureUpdater(IPermittedStructureLinkStore permittedStructureLinkStore,
+        public PermittedStructureLinkToStructureUpdater(IPermittedStructureLinkStore permittedStructureLinkStore,
             IStructureTypeStore structureTypeStore)
         {
             PermittedStructureLinkStore = permittedStructureLinkStore;
