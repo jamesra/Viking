@@ -659,14 +659,19 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// New structure starts at FirstLocationIdOfSplitStructure. The original keeps the rest.
+        /// Throws NotFound, naming the location, when FirstLocationIdOfSplitStructure does not exist, without running
+        /// dbo.SplitStructure, which would otherwise report it as "connected to the entire keep cell".
         /// </summary>
         public override async Task<SplitResponse> Split(SplitRequest request, ServerCallContext context)
         {
             try
             {
+                var ct = context.CancellationToken;
+                await ThrowIfLocationsMissingAsync(new[] { request.FirstLocationIdOfSplitStructure }, ct);
+
                 var splitId = new OutputParameter<long?>();
                 await _context.Procedures.SplitStructureAsync(
-                    request.FirstLocationIdOfSplitStructure, splitId, cancellationToken: context.CancellationToken);
+                    request.FirstLocationIdOfSplitStructure, splitId, cancellationToken: ct);
 
                 if (splitId.Value.HasValue == false)
                     throw new RpcException(new Status(StatusCode.FailedPrecondition,
@@ -680,15 +685,22 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// Cuts the location link. LocationIdOfKeepStructure stays on the original; the other side becomes the new structure.
+        /// Throws InvalidArgument when both IDs name the same location, and NotFound, naming the missing IDs, when either
+        /// location does not exist; neither runs dbo.SplitStructureAtLocationLink, which would otherwise report both as
+        /// "must be linked".
         /// </summary>
         public override async Task<SplitAtLocationLinkResponse> SplitAtLocationLink(SplitAtLocationLinkRequest request, ServerCallContext context)
         {
             try
             {
+                var ct = context.CancellationToken;
+                if (request.LocationIdOfKeepStructure == request.LocationIdOfSplitStructure)
+                    throw new RpcException(new Status(StatusCode.InvalidArgument, "A location cannot be split from itself"));
+                await ThrowIfLocationsMissingAsync(new[] { request.LocationIdOfKeepStructure, request.LocationIdOfSplitStructure }, ct);
+
                 var splitId = new OutputParameter<long?>();
                 await _context.Procedures.SplitStructureAtLocationLinkAsync(
-                    request.LocationIdOfKeepStructure, request.LocationIdOfSplitStructure, splitId,
-                    cancellationToken: context.CancellationToken);
+                    request.LocationIdOfKeepStructure, request.LocationIdOfSplitStructure, splitId, cancellationToken: ct);
 
                 if (splitId.Value.HasValue == false)
                     throw new RpcException(new Status(StatusCode.FailedPrecondition,
@@ -844,6 +856,21 @@ namespace gRPCAnnotationService
             var missing = named.Where(id => !live.Contains(id)).ToArray();
             if (missing.Length > 0)
                 throw new RpcException(new Status(StatusCode.NotFound, $"Structures not found: {string.Join(", ", missing)}"));
+        }
+
+        /// <summary>
+        /// Throws NotFound, naming each of <paramref name="ids"/> that is not a stored location, when there is one, so the
+        /// split procedures never run on a location that does not exist. Callers pass one or two distinct IDs, so the
+        /// lookup needs neither de-duplication nor chunking.
+        /// </summary>
+        private async Task ThrowIfLocationsMissingAsync(long[] ids, CancellationToken ct)
+        {
+            var live = await _context.Locations.AsNoTracking()
+                .Where(l => ids.Contains(l.Id)).Select(l => l.Id).ToListAsync(ct);
+
+            var missing = ids.Where(id => !live.Contains(id)).ToArray();
+            if (missing.Length > 0)
+                throw new RpcException(new Status(StatusCode.NotFound, $"Locations not found: {string.Join(", ", missing)}"));
         }
 
         /// <summary>Builds the [dbo].[integer_list] table valued parameter the network procedures take.</summary>

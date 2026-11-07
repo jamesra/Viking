@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,7 +29,9 @@ namespace ConnectomeDataModelCoreTests
     /// caller's name rather than the payload's; UpdateLinks reads existing links in one query, keeps the
     /// last row of a repeated (SourceId, TargetId) pair, and updates a link that exists instead of inserting it.
     /// Also pins <see cref="StructureService.Merge"/>: a self-merge is refused with InvalidArgument and a missing
-    /// structure with NotFound naming it, both before dbo.MergeStructures runs.
+    /// structure with NotFound naming it, both before dbo.MergeStructures runs; and <see cref="StructureService.Split"/>
+    /// and <see cref="StructureService.SplitAtLocationLink"/>: a missing location is refused with NotFound naming it, and a
+    /// link split of a location from itself with InvalidArgument, before the split procedure runs.
     /// No database is contacted: interceptors stand in for the connection, the query and SaveChanges, and
     /// <see cref="RecordingProcedures"/> for the procedure call.
     /// </summary>
@@ -331,17 +334,135 @@ namespace ConnectomeDataModelCoreTests
             Assert.Equal(2, table.MostStructureParameters);
         }
 
-        /// <summary>Records each dbo.MergeStructures call instead of executing it.</summary>
+        [Theory]
+        [InlineData(99)]
+        [InlineData(0)]
+        public async Task SplitAtAMissingLocationIsRefusedBeforeTheProcedure(long location)
+        {
+            using var db = NewContext(new CaptureSaves(), new FakeLinkTable());
+            var procedures = new RecordingProcedures(db);
+            db.Procedures = procedures;
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => service.Split(
+                new SplitRequest { Id = 3, FirstLocationIdOfSplitStructure = location }, new TestCallContext()));
+
+            Assert.Equal(StatusCode.NotFound, ex.StatusCode);
+            Assert.Equal($"Locations not found: {location}", ex.Status.Detail);
+            Assert.Empty(procedures.Splits);
+        }
+
+        [Fact]
+        public async Task SplitLooksUpTheLocationOnceThenRunsTheProcedureOnce()
+        {
+            var table = new FakeLinkTable();
+            using var db = NewContext(new CaptureSaves(), table);
+            var procedures = new RecordingProcedures(db) { NewStructureId = 42 };
+            db.Procedures = procedures;
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            var response = await service.Split(
+                new SplitRequest { Id = 3, FirstLocationIdOfSplitStructure = 7 }, new TestCallContext());
+
+            Assert.Equal(42, response.SplitStructureId);
+            Assert.Equal(new long?[] { 7 }, procedures.Splits);
+            Assert.Equal(1, table.LocationQueries);
+            Assert.Equal(1, table.Queries);
+        }
+
+        [Fact]
+        public async Task SplitAtLocationLinkFromItselfIsRefusedBeforeAnyQueryOrProcedure()
+        {
+            var table = new FakeLinkTable();
+            using var db = NewContext(new CaptureSaves(), table);
+            var procedures = new RecordingProcedures(db);
+            db.Procedures = procedures;
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => service.SplitAtLocationLink(
+                new SplitAtLocationLinkRequest { LocationIdOfKeepStructure = 5, LocationIdOfSplitStructure = 5 }, new TestCallContext()));
+
+            Assert.Equal(StatusCode.InvalidArgument, ex.StatusCode);
+            Assert.Equal("A location cannot be split from itself", ex.Status.Detail);
+            Assert.Equal(0, table.Queries);
+            Assert.Empty(procedures.LinkSplits);
+        }
+
+        [Theory]
+        [InlineData(99, 2, "99")]
+        [InlineData(2, 99, "99")]
+        [InlineData(98, 99, "98, 99")]
+        public async Task SplitAtLocationLinkNamingAMissingLocationIsRefusedBeforeTheProcedure(long keep, long split, string missing)
+        {
+            using var db = NewContext(new CaptureSaves(), new FakeLinkTable());
+            var procedures = new RecordingProcedures(db);
+            db.Procedures = procedures;
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => service.SplitAtLocationLink(
+                new SplitAtLocationLinkRequest { LocationIdOfKeepStructure = keep, LocationIdOfSplitStructure = split }, new TestCallContext()));
+
+            Assert.Equal(StatusCode.NotFound, ex.StatusCode);
+            Assert.Equal($"Locations not found: {missing}", ex.Status.Detail);
+            Assert.Empty(procedures.LinkSplits);
+        }
+
+        [Fact]
+        public async Task SplitAtLocationLinkLooksUpBothLocationsInOneQueryThenRunsTheProcedureOnce()
+        {
+            var table = new FakeLinkTable();
+            using var db = NewContext(new CaptureSaves(), table);
+            var procedures = new RecordingProcedures(db) { NewStructureId = 42 };
+            db.Procedures = procedures;
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            var response = await service.SplitAtLocationLink(
+                new SplitAtLocationLinkRequest { LocationIdOfKeepStructure = 3, LocationIdOfSplitStructure = 8 }, new TestCallContext());
+
+            Assert.Equal(42, response.SplitStructureId);
+            Assert.Equal(new (long?, long?)[] { (3, 8) }, procedures.LinkSplits);
+            Assert.Equal(1, table.LocationQueries);
+            Assert.Equal(1, table.Queries);
+        }
+
+        /// <summary>
+        /// Records each dbo.MergeStructures, dbo.SplitStructure and dbo.SplitStructureAtLocationLink call instead of
+        /// executing it; a split answers <see cref="NewStructureId"/> as the new structure.
+        /// </summary>
         private sealed class RecordingProcedures : AnnotationContextProcedures
         {
+            /// <summary>The procedures' OutputParameter setter is internal to ConnectomeDataModelCore.</summary>
+            private static readonly MethodInfo SetOutput =
+                typeof(OutputParameter<long?>).GetMethod("SetValue", BindingFlags.Instance | BindingFlags.NonPublic);
+
             public RecordingProcedures(AnnotationContext context) : base(context) { }
 
+            public long? NewStructureId { get; init; }
+
             public List<(long? Keep, long? Merge)> Merges { get; } = new();
+
+            public List<long?> Splits { get; } = new();
+
+            public List<(long? Keep, long? Split)> LinkSplits { get; } = new();
 
             public override Task<MergeStructuresResult[]> MergeStructuresAsync(long? KeepStructureID, long? MergeStructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
             {
                 Merges.Add((KeepStructureID, MergeStructureID));
                 return Task.FromResult(Array.Empty<MergeStructuresResult>());
+            }
+
+            public override Task<SplitStructureResult[]> SplitStructureAsync(long? LocationIDOfSplitStructure, OutputParameter<long?> SplitStructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+            {
+                Splits.Add(LocationIDOfSplitStructure);
+                SetOutput.Invoke(SplitStructureID, new object[] { NewStructureId });
+                return Task.FromResult(Array.Empty<SplitStructureResult>());
+            }
+
+            public override Task<SplitStructureAtLocationLinkResult[]> SplitStructureAtLocationLinkAsync(long? LocationIDOfKeepStructure, long? LocationIDOfSplitStructure, OutputParameter<long?> SplitStructureID, OutputParameter<int> returnValue = null, CancellationToken cancellationToken = default)
+            {
+                LinkSplits.Add((LocationIDOfKeepStructure, LocationIDOfSplitStructure));
+                SetOutput.Invoke(SplitStructureID, new object[] { NewStructureId });
+                return Task.FromResult(Array.Empty<SplitStructureAtLocationLinkResult>());
             }
         }
 
@@ -383,9 +504,9 @@ namespace ConnectomeDataModelCoreTests
         }
 
         /// <summary>
-        /// Stands in for the StructureLink and Structure tables: opening the connection is suppressed, a
-        /// Structure query is answered with the IDs among its parameters that <see cref="StructureExists"/>
-        /// accepts, and every other query with all stored links, whatever its WHERE clause says, in the column
+        /// Stands in for the StructureLink, Structure and Location tables: opening the connection is suppressed, a
+        /// Structure or Location query is answered with the IDs among its parameters that <see cref="StructureExists"/>
+        /// or <see cref="LocationExists"/> accepts, and every other query with all stored links, whatever its WHERE clause says, in the column
         /// order its SELECT list names. Counts the queries.
         /// </summary>
         private sealed class FakeLinkTable : IDbConnectionInterceptor, IDbCommandInterceptor
@@ -398,11 +519,16 @@ namespace ConnectomeDataModelCoreTests
             /// <summary>Stored structures: 1 to 9 by default, so a test names a missing structure with 98 or 99.</summary>
             public Func<long, bool> StructureExists { get; init; } = id => id is >= 1 and <= 9;
 
+            /// <summary>Stored locations: 1 to 9 by default, so a test names a missing location with 98 or 99.</summary>
+            public Func<long, bool> LocationExists { get; init; } = id => id is >= 1 and <= 9;
+
             public int Queries { get; private set; }
 
-            public int LinkQueries => Queries - StructureQueries;
+            public int LinkQueries => Queries - StructureQueries - LocationQueries;
 
             public int StructureQueries { get; private set; }
+
+            public int LocationQueries { get; private set; }
 
             public int MostStructureParameters { get; private set; }
 
@@ -422,16 +548,27 @@ namespace ConnectomeDataModelCoreTests
                 {
                     StructureQueries++;
                     MostStructureParameters = Math.Max(MostStructureParameters, command.Parameters.Count);
-                    table.Columns.Add(Assert.Single(columns), typeof(long));
-                    foreach (var id in command.Parameters.Cast<DbParameter>().Select(p => Convert.ToInt64(p.Value)).Distinct().Where(StructureExists))
-                        table.Rows.Add(id);
-                    return ValueTask.FromResult(InterceptionResult<DbDataReader>.SuppressWithResult(table.CreateDataReader()));
+                    return ExistingIds(table, Assert.Single(columns), command, StructureExists);
+                }
+
+                if (command.CommandText.Contains("FROM [Location] AS", StringComparison.Ordinal))
+                {
+                    LocationQueries++;
+                    return ExistingIds(table, Assert.Single(columns), command, LocationExists);
                 }
 
                 foreach (var column in columns)
                     table.Columns.Add(column, ColumnType(column));
                 foreach (var row in _rows)
                     table.Rows.Add(columns.Select(c => ColumnValue(row, c)).ToArray());
+                return ValueTask.FromResult(InterceptionResult<DbDataReader>.SuppressWithResult(table.CreateDataReader()));
+            }
+
+            private static ValueTask<InterceptionResult<DbDataReader>> ExistingIds(DataTable table, string column, DbCommand command, Func<long, bool> exists)
+            {
+                table.Columns.Add(column, typeof(long));
+                foreach (var id in command.Parameters.Cast<DbParameter>().Select(p => Convert.ToInt64(p.Value)).Distinct().Where(exists))
+                    table.Rows.Add(id);
                 return ValueTask.FromResult(InterceptionResult<DbDataReader>.SuppressWithResult(table.CreateDataReader()));
             }
 
