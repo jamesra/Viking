@@ -355,7 +355,8 @@ namespace WebAnnotation.UI
                 ///     Enter 2 
 
                 LineSegment latest = _Path.NewestSegment;
-                candidates = [.. Overlay.GetAnnotations(latest.BoundingBox)];
+                //The overlay answers null while the section's annotations are still loading; that is empty space (here and in the other hit tests below)
+                candidates = [.. Overlay.GetAnnotations(latest.BoundingBox) ?? []];
 
                 point_intersect_candidates = [.. candidates.Where(o => o.obj.Contains(latest.A))];
                 point_intersections = [.. point_intersect_candidates.Select(o => (ICanvasView)o.obj)];
@@ -457,7 +458,7 @@ namespace WebAnnotation.UI
         /// </summary>
         private HitTestResult[] PenHitsAtPoint(Vector2 point)
         {
-            HitTestResult[] point_intersect_candidates = [.. Overlay.GetAnnotations(point).Where(o => o.obj.Contains(point))];
+            HitTestResult[] point_intersect_candidates = [.. (Overlay.GetAnnotations(point) ?? []).Where(o => o.obj.Contains(point))];
             //Expanding a container yields null when nothing nested is under the point (e.g. a polygon hole), which counts as empty space
             return [.. ExpandForPen(point_intersect_candidates, point)];
         }
@@ -516,7 +517,7 @@ namespace WebAnnotation.UI
 
             //Update the current intersection list
             LineSegment latest = _Path.NewestSegment;
-            HitTestResult[] candidates = [.. Overlay.GetAnnotations(latest.BoundingBox).Where(o => ((ICanvasView)o.obj).Intersects(latest) || o.obj.Contains(latest.A))];
+            HitTestResult[] candidates = [.. (Overlay.GetAnnotations(latest.BoundingBox) ?? []).Where(o => ((ICanvasView)o.obj).Intersects(latest) || o.obj.Contains(latest.A))];
             List<ICanvasView> newIntersections = [.. candidates.Select(c => c.obj as ICanvasView)];
             CurrentlyIntersected = newIntersections;
         }

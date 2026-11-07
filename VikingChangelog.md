@@ -19,6 +19,7 @@ gained from about 2026-10-20 on. Earlier changes are not listed.
 
 ## 1.2.111 — not yet released
 
+* **Fix: pen stroke right after changing section.** A pen stroke started before the new section's annotations had finished loading could raise an error instead of drawing. The stroke is now treated as over empty space until they load.
 * **Paint to segment.** **Tab** (new structure) now segments by painting instead of placing points: drag the left button to paint the object (green), **Shift**+drag to paint what is not the object (red), **Shift**+drag starting on paint erases it. A moment after you release, the paint is sent to the segmentation server and the result is shown; double-click it or press **Enter** to accept, **Esc** to cancel. The sideways wheel or **Shift**+wheel changes the brush size, and **Ctrl+Z** undoes one stroke at a time. With the pen, the barrel button takes the place of **Shift**.
 * **Paint mask on polygons and proposals.** **Segment to Polygon**, **Resegment** and linked polygon placement open the paint segmentation with the polygon or circle already painted as the object. The auto-segment proposal menu has **Paint mask**, and **Edit mask** (grow or shrink a polygon with the wheel) sends the edited mask there, so you can paint on it before accepting.
 * **Barrel button preference.** Annotation Preferences has a **Barrel button** setting: press **Click your pen button...** and then the button on your pen, and every command that uses the barrel button uses yours.

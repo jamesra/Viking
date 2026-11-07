@@ -1,7 +1,10 @@
 using Geometry;
 using GeometryTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using WebAnnotation;
 using WebAnnotation.UI;
 
 namespace WebAnnotationTests
@@ -311,6 +314,47 @@ namespace WebAnnotationTests
                 }
 
                 Assert.AreEqual(0, log.Log.Entries.Count);
+            }
+        }
+
+        /// <summary>The canvas of a section whose annotations are still loading: every hit test answers null, as AnnotationOverlay does.</summary>
+        private sealed class NotLoadedCanvas : ICanvasViewHitTesting
+        {
+            public List<HitTestResult> GetAnnotations(Vector2 WorldPosition) => null;
+
+            public List<HitTestResult> GetAnnotations(LineSegment line) => null;
+
+            public List<HitTestResult> GetAnnotations(Rectangle rect) => null;
+        }
+
+        /// <summary>
+        /// A stroke drawn while the section's annotations are still loading is over empty space: the hit test answers
+        /// null, which used to throw from the path change event on the first point and on every segment.
+        /// </summary>
+        [TestMethod]
+        public void StrokeOverNotLoadedSection_LogsEmptySpaceWithoutThrowing()
+        {
+            Path path = new Path();
+            PathInteractionLogger log = new PathInteractionLogger(path, new NotLoadedCanvas());
+            StraightIntegerXAxisPath(-8, 8).ForEach(path.Push);
+
+            CompareLogEntries([new InteractionLogEvent(AnnotationRegionInteraction.ENTER, null, 0)], log.Log.Entries);
+        }
+
+        /// <summary>Erasing a stroke drawn over a section that is not loaded yet, to one point and to a longer stroke, does not throw.</summary>
+        [TestMethod]
+        public void EraseOverNotLoadedSection_DoesNotThrow()
+        {
+            foreach (int keep in new[] { 0, 1, 2, 5 })
+            {
+                Path path = new Path();
+                PathInteractionLogger log = new PathInteractionLogger(path, new NotLoadedCanvas());
+                StraightIntegerXAxisPath(-8, 8).ForEach(path.Push);
+
+                path.Erase(keep);
+
+                Assert.AreEqual(keep, path.Points.Count);
+                Assert.IsTrue(log.Log.Entries.All(e => e.Index < Math.Max(keep, 1)));
             }
         }
 
