@@ -238,12 +238,17 @@ namespace Geometry
             return removed;
         }
 
+        /// <summary>
+        /// Removes the newest point and its segment without raising events. Callers raise the
+        /// Remove or Replace event, so the returned point must be the one removed.
+        /// </summary>
         private Vector2 Pop_NoEvent()
         {
             CheckForSelfIntersectionLossBeforePop();
 
-            Vector2 p = this.Points.First();
-            this.Points.RemoveAt(this.Points.Count - 1);
+            int iLast = this.Points.Count - 1;
+            Vector2 p = this.Points[iLast];
+            this.Points.RemoveAt(iLast);
 
             if (this._Segments.Count > 0)
             {

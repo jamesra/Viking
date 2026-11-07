@@ -1,6 +1,10 @@
+using FsCheck;
 using Geometry;
+using GeometryTests.FSCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 
 namespace GeometryTests
 {
@@ -552,6 +556,89 @@ namespace GeometryTests
             //Make sure the loop was found
             Assert.IsTrue(path.HasSelfIntersection);
             PathTest.CompareWithExpectedLoop(path.Loop, expected_loop);
+        }
+
+        /// <summary>
+        /// Paths of 3 to 40 points at volume-scale coordinates with strictly increasing X, so no two
+        /// non-adjacent segments cross and loop detection never runs into a self-intersection.
+        /// </summary>
+        private static Gen<Vector2[]> MonotonePathPoints() =>
+            from count in Gen.Choose(3, 40)
+            from originX in Gen.Choose(0, 500000)
+            from steps in Gen.ArrayOf(count, Gen.Choose(1, 2000))
+            from ys in Gen.ArrayOf(count, Gen.Choose(-500000, 500000))
+            select BuildMonotonePoints(originX, steps, ys);
+
+        private static Vector2[] BuildMonotonePoints(int originX, int[] steps, int[] ys)
+        {
+            Vector2[] points = new Vector2[steps.Length];
+            double x = originX;
+            for (int i = 0; i < points.Length; i++)
+            {
+                x += steps[i] + 0.25;
+                points[i] = new Vector2(x, ys[i] + 0.5);
+            }
+
+            return points;
+        }
+
+        private static Path BuildPath(IEnumerable<Vector2> points)
+        {
+            Path path = new();
+            foreach (Vector2 p in points)
+                path.Push(p);
+            return path;
+        }
+
+        [TestMethod]
+        public void Pop_ReturnsLastPushedPointAndKeepsPrefix() =>
+            CoreCheck.Run(
+                Prop.ForAll(Arb.From(MonotonePathPoints()), points =>
+                {
+                    Path path = BuildPath(points);
+                    Vector2 popped = path.Pop();
+                    return popped == points[points.Length - 1] &&
+                           path.Points.SequenceEqual(points.Take(points.Length - 1)) &&
+                           path.Segments.Count == points.Length - 2;
+                }),
+                nameof(Pop_ReturnsLastPushedPointAndKeepsPrefix));
+
+        [TestMethod]
+        public void Pop_RemoveEventCarriesPoppedPoint()
+        {
+            Vector2 first = new(-10, 0);
+            Vector2 last = new(20, 5);
+            Path path = BuildPath([first, new Vector2(10, 0), last]);
+
+            NotifyCollectionChangedEventArgs args = null;
+            path.OnPathChanged += (sender, e) => args = e;
+
+            Assert.AreEqual(last, path.Pop());
+            Assert.IsNotNull(args);
+            Assert.AreEqual(NotifyCollectionChangedAction.Remove, args.Action);
+            Assert.AreEqual(1, args.OldItems.Count);
+            Assert.AreEqual(last, args.OldItems[0]);
+        }
+
+        [TestMethod]
+        public void Replace_EventCarriesOldLastPoint()
+        {
+            Vector2 first = new(-10, 0);
+            Vector2 oldLast = new(20, 5);
+            Vector2 newLast = new(25, -5);
+            Path path = BuildPath([first, new Vector2(10, 0), oldLast]);
+
+            NotifyCollectionChangedEventArgs args = null;
+            path.OnPathChanged += (sender, e) => args = e;
+
+            path.Replace(newLast);
+
+            Assert.IsNotNull(args);
+            Assert.AreEqual(NotifyCollectionChangedAction.Replace, args.Action);
+            Assert.AreEqual(oldLast, args.OldItems[0]);
+            Assert.AreEqual(newLast, args.NewItems[0]);
+            Assert.AreEqual(2, args.NewStartingIndex);
+            CollectionAssert.AreEqual(new[] { first, new Vector2(10, 0), newLast }, path.Points);
         }
     }
 }
