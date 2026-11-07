@@ -466,7 +466,7 @@ namespace ConnectomeDataModelCoreTests
 
         private static StructureTypeChangeRequest DeleteOf(long id) => new() { Delete = id };
 
-        private static EfStructureType Stored(long id, string name, long? parentId = null) => new()
+        internal static EfStructureType Stored(long id, string name, long? parentId = null) => new()
         {
             Id = id, ParentId = parentId, Name = name, Code = "C", MarkupType = "Point", HotKey = "\0", Username = "stored", Version = new byte[8],
             Created = new DateTime(2020, 1, 1), LastModified = new DateTime(2020, 1, 1),
@@ -482,7 +482,7 @@ namespace ConnectomeDataModelCoreTests
         /// Suppresses the database write, gives each added structure type the next identity value, leaving
         /// the tracked entity as it would be after a real insert, and records the state of every tracked type.
         /// </summary>
-        private sealed class IdentityOnSave(long firstId) : SaveChangesInterceptor
+        internal sealed class IdentityOnSave(long firstId) : SaveChangesInterceptor
         {
             private long _next = firstId;
 
@@ -515,7 +515,7 @@ namespace ConnectomeDataModelCoreTests
         /// the rows of its table whose column holds a parameter value: StructureType rows from <c>rows</c>, in
         /// the column order its SELECT list names, and the referencing type Ids from <see cref="References"/>.
         /// </summary>
-        private sealed class FakeStructureTypeTable(params EfStructureType[] rows) : IDbConnectionInterceptor, IDbCommandInterceptor
+        internal sealed class FakeStructureTypeTable(params EfStructureType[] rows) : IDbConnectionInterceptor, IDbCommandInterceptor
         {
             private static readonly Regex SelectedColumn = new(@"\]\.\[(\w+)\]");
             private static readonly Regex FromTable = new(@"FROM \[(\w+)\]");

@@ -568,6 +568,9 @@ namespace ConnectomeDataModelCoreTests
         /// location whose ParentID is neither in <see cref="Structures"/> nor a tracked structure fails the save with
         /// <see cref="DbUpdateException"/>, as FK_Location_StructureBase1 does, and so does an added link with an end
         /// that is neither a stored nor a tracked location, or that the batch deletes, as FK_LocationLink_Location does.
+        /// An added structure whose ParentID is not in <see cref="Structures"/>, or whose TypeID is not in
+        /// <see cref="StructureTypes"/>, fails the save the same way, as FK_Structure_Structure and
+        /// FK_StructureBase_StructureType do.
         /// </summary>
         internal sealed class FakeDatabase : IDbConnectionInterceptor, IDbCommandInterceptor, IDbTransactionInterceptor, ISaveChangesInterceptor
         {
@@ -585,8 +588,14 @@ namespace ConnectomeDataModelCoreTests
             /// <summary>Stored structures: the ParentIDs a location may name.</summary>
             public HashSet<long> Structures { get; } = new() { 3 };
 
+            /// <summary>Stored structure types: the TypeIDs a structure may name.</summary>
+            public HashSet<long> StructureTypes { get; } = new() { 1 };
+
             /// <summary>Number of Structure queries run.</summary>
             public int StructureQueries { get; private set; }
+
+            /// <summary>Number of StructureType queries run.</summary>
+            public int StructureTypeQueries { get; private set; }
 
             /// <summary>Number of Location queries run.</summary>
             public int LocationQueries { get; private set; }
@@ -612,6 +621,11 @@ namespace ConnectomeDataModelCoreTests
             {
                 var tracker = eventData.Context.ChangeTracker;
                 var parents = Structures.Concat(tracker.Entries<EfStructure>().Select(e => e.Entity.Id)).ToHashSet();
+                var addedStructures = tracker.Entries<EfStructure>().Where(e => e.State == EntityState.Added).Select(e => e.Entity).ToList();
+                if (addedStructures.Any(s => s.ParentId.HasValue && !Structures.Contains(s.ParentId.Value)))
+                    throw new DbUpdateException("The INSERT statement conflicted with the FOREIGN KEY SAME TABLE constraint \"FK_Structure_Structure\".");
+                if (addedStructures.Any(s => !StructureTypes.Contains(s.TypeId)))
+                    throw new DbUpdateException("The INSERT statement conflicted with the FOREIGN KEY constraint \"FK_StructureBase_StructureType\".");
                 if (tracker.Entries<EfLocation>().Any(e => (e.State is EntityState.Added or EntityState.Modified) && !parents.Contains(e.Entity.ParentId)))
                     throw new DbUpdateException("The INSERT or UPDATE statement conflicted with the FOREIGN KEY constraint \"FK_Location_StructureBase1\".");
                 var deleted = tracker.Entries<EfLocation>().Where(e => e.State == EntityState.Deleted).Select(e => e.Entity.Id).ToHashSet();
@@ -650,11 +664,14 @@ namespace ConnectomeDataModelCoreTests
 
                 if (table == "Structure")
                     StructureQueries++;
+                if (table == "StructureType")
+                    StructureTypeQueries++;
                 if (table == "Location")
                     LocationQueries++;
                 var rows = table switch
                 {
                     "Structure" => Structures.Where(keys.Contains).Select(id => Row(("ID", id))),
+                    "StructureType" => StructureTypes.Where(keys.Contains).Select(id => Row(("ID", id))),
                     "Location" => LocationZ.Where(l => keys.Contains(l.Key))
                         .Select(l => Row(("ID", l.Key), ("Z", l.Value))),
                     "LocationLink" => Links.Where(l => Match(l.A, l.B))

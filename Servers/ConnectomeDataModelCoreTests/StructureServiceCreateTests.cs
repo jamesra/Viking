@@ -13,7 +13,8 @@ namespace ConnectomeDataModelCoreTests
     /// Pins the links <see cref="StructureService.CreateStructure"/> saves for its first location's Links: one
     /// LocationLink per distinct peer, none for peer 0 or a link the database already holds, and a peer listed twice
     /// saves one link and commits instead of failing on an EF identity conflict. A peer that is not a stored location
-    /// is refused with NotFound before anything is saved.
+    /// is refused with NotFound before anything is saved, and so is a ParentId naming no structure or a TypeId naming no
+    /// structure type.
     /// Offline, on the database fake of <see cref="LocationServiceUpdateDeleteTests"/>.
     /// </summary>
     public class StructureServiceCreateTests
@@ -98,6 +99,90 @@ namespace ConnectomeDataModelCoreTests
             Assert.True(store.Committed);
         }
 
+        /// <summary>
+        /// A ParentId naming no structure would fail the structure's save on FK_Structure_Structure as Unknown. It is
+        /// refused with NotFound naming it, in one structure query, before the type, the peers or anything else is
+        /// looked at or saved. An explicit ParentId of 0 is a parent like any other.
+        /// </summary>
+        [Theory]
+        [InlineData(99L, true)]
+        [InlineData(0L, true)]
+        [InlineData(99L, false)]
+        public async Task MissingParentIsNotFoundWithoutSaving(long parentId, bool withLocation)
+        {
+            var store = StoreWithPeers();
+            using var db = NewContext(store);
+            var request = Request(5);
+            request.NewStructure.ParentId = parentId;
+            if (!withLocation)
+                request.NewAnnotation = null;
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => NewService(db).CreateStructure(request, new TestCallContext()));
+
+            Assert.Equal((StatusCode.NotFound, $"Structures not found: {parentId}"), (ex.StatusCode, ex.Status.Detail));
+            AssertNothingSaved(store, db);
+            Assert.Equal((1, 0, 0), (store.StructureQueries, store.StructureTypeQueries, store.LocationQueries));
+        }
+
+        /// <summary>
+        /// A TypeId naming no structure type, including the proto default 0, would fail the structure's save on
+        /// FK_StructureBase_StructureType as Unknown. It is refused with NotFound naming it, in one type query, before
+        /// the peers or anything else is looked at or saved.
+        /// </summary>
+        [Theory]
+        [InlineData(42L, true)]
+        [InlineData(0L, true)]
+        [InlineData(42L, false)]
+        public async Task MissingTypeIsNotFoundWithoutSaving(long typeId, bool withLocation)
+        {
+            var store = StoreWithPeers();
+            using var db = NewContext(store);
+            var request = Request(5);
+            request.NewStructure.TypeId = typeId;
+            request.NewStructure.ParentId = 3;
+            if (!withLocation)
+                request.NewAnnotation = null;
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => NewService(db).CreateStructure(request, new TestCallContext()));
+
+            Assert.Equal((StatusCode.NotFound, $"Structure type {typeId} not found"), (ex.StatusCode, ex.Status.Detail));
+            AssertNothingSaved(store, db);
+            Assert.Equal((1, 1, 0), (store.StructureQueries, store.StructureTypeQueries, store.LocationQueries));
+        }
+
+        /// <summary>A stored parent and type save the structure under that parent, each looked up once.</summary>
+        [Fact]
+        public async Task StoredParentAndTypeSaveTheStructureUnderTheParent()
+        {
+            var store = StoreWithPeers();
+            store.StructureTypes.Add(7);
+            using var db = NewContext(store);
+            var request = Request(5);
+            request.NewStructure.ParentId = 3;
+            request.NewStructure.TypeId = 7;
+
+            var response = await NewService(db).CreateStructure(request, new TestCallContext());
+
+            Assert.Equal((FakeDatabase.FirstGeneratedId, true, 3L, 7L),
+                (response.NewStructure.Id, response.NewStructure.HasParentId, response.NewStructure.ParentId, response.NewStructure.TypeId));
+            Assert.Equal((1, 1), (store.StructureQueries, store.StructureTypeQueries));
+            Assert.True(store.Committed);
+        }
+
+        /// <summary>A root structure cannot break FK_Structure_Structure, so it costs no structure query.</summary>
+        [Fact]
+        public async Task RootStructureRunsNoParentQuery()
+        {
+            var store = StoreWithPeers();
+            using var db = NewContext(store);
+
+            var response = await NewService(db).CreateStructure(Request(5), new TestCallContext());
+
+            Assert.False(response.NewStructure.HasParentId);
+            Assert.Equal((0, 1), (store.StructureQueries, store.StructureTypeQueries));
+            Assert.True(store.Committed);
+        }
+
         [Fact]
         public async Task StoredPeersAreLookedUpInOneQuery()
         {
@@ -108,6 +193,13 @@ namespace ConnectomeDataModelCoreTests
 
             Assert.Equal(1, store.LocationQueries);
             Assert.Equal(3, store.Saved.AddedLinks.Length);
+        }
+
+        private static void AssertNothingSaved(FakeDatabase store, Viking.DataModel.Annotation.AnnotationContext db)
+        {
+            Assert.Same(SavedRows.None, store.Saved);
+            Assert.False(store.Committed);
+            Assert.Empty(db.Structures.Local);
         }
 
         private static StructureService NewService(Viking.DataModel.Annotation.AnnotationContext db) =>

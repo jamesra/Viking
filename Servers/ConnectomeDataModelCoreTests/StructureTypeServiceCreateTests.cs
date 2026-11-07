@@ -18,8 +18,8 @@ namespace ConnectomeDataModelCoreTests
 {
     /// <summary>
     /// Pins the offline behavior of <see cref="StructureTypeService.CreateStructureType"/> (one save,
-    /// caller's name rather than the payload's, database-assigned Id echoed, failures mapped to Unknown)
-    /// and of a batch <see cref="StructureTypeService.Update"/> row with no action set. No database is
+    /// caller's name rather than the payload's, database-assigned Id echoed, failures mapped to Unknown, a missing
+    /// parent refused with NotFound before the save) and of a batch <see cref="StructureTypeService.Update"/> row with no action set. No database is
     /// contacted: an interceptor stands in for SaveChanges.
     /// </summary>
     public class StructureTypeServiceCreateTests
@@ -59,6 +59,56 @@ namespace ConnectomeDataModelCoreTests
             Assert.Equal(nameof(StructureTypeService.CreateStructureType), ex.Status.Detail);
         }
 
+        /// <summary>
+        /// A ParentId naming no type, including an explicit 0, would fail the save on FK_StructureType_StructureType as
+        /// Unknown. It is refused with NotFound naming it, after one lookup, and nothing is saved.
+        /// </summary>
+        [Theory]
+        [InlineData(99L)]
+        [InlineData(0L)]
+        public async Task CreateUnderMissingParentIsNotFoundWithoutSaving(long parentId)
+        {
+            var identity = new StructureTypeServiceUpdateTests.IdentityOnSave(firstId: 1000);
+            var table = new StructureTypeServiceUpdateTests.FakeStructureTypeTable(StructureTypeServiceUpdateTests.Stored(1, "Parent"));
+            using var db = NewContext(identity, table);
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => Create(db, parentId));
+
+            Assert.Equal((StatusCode.NotFound, $"Structure Type ID {parentId} not found"), (ex.StatusCode, ex.Status.Detail));
+            Assert.Equal(0, identity.SaveCount);
+            Assert.DoesNotContain(db.ChangeTracker.Entries<EfStructureType>(), e => e.State == EntityState.Added);
+            Assert.Single(table.TypeSelects);
+        }
+
+        [Fact]
+        public async Task CreateUnderStoredParentSavesUnderIt()
+        {
+            var identity = new StructureTypeServiceUpdateTests.IdentityOnSave(firstId: 1000);
+            var table = new StructureTypeServiceUpdateTests.FakeStructureTypeTable(StructureTypeServiceUpdateTests.Stored(1, "Parent"));
+            using var db = NewContext(identity, table);
+
+            var response = await Create(db, parentId: 1);
+
+            Assert.Equal(1, identity.SaveCount);
+            Assert.Equal((1000L, true, 1L), (response.Result.Id, response.Result.HasParentId, response.Result.ParentId));
+            Assert.Single(table.TypeSelects);
+        }
+
+        /// <summary>A root type cannot break FK_StructureType_StructureType, so it costs no lookup.</summary>
+        [Fact]
+        public async Task CreateWithoutParentRunsNoQuery()
+        {
+            var identity = new StructureTypeServiceUpdateTests.IdentityOnSave(firstId: 1000);
+            var table = new StructureTypeServiceUpdateTests.FakeStructureTypeTable();
+            using var db = NewContext(identity, table);
+
+            var response = await Create(db, parentId: null);
+
+            Assert.Equal(1, identity.SaveCount);
+            Assert.False(response.Result.HasParentId);
+            Assert.Empty(table.TypeSelects);
+        }
+
         [Fact]
         public async Task BatchRowWithoutAnActionFailsAndTheBatchStillSavesOnce()
         {
@@ -74,10 +124,19 @@ namespace ConnectomeDataModelCoreTests
             Assert.Equal(new[] { false, false }, response.Results.Select(r => r.Success).ToArray());
         }
 
-        private static AnnotationContext NewContext(SaveChangesInterceptor interceptor) =>
+        private static Task<CreateStructureTypeResponse> Create(AnnotationContext db, long? parentId)
+        {
+            var type = new ProtoStructureType { Name = "Child", Code = "C" };
+            if (parentId.HasValue)
+                type.ParentId = parentId.Value;
+            return new StructureTypeService(db, NullLogger<StructureTypeService>.Instance)
+                .CreateStructureType(new CreateStructureTypeRequest { Obj = type }, new TestCallContext());
+        }
+
+        private static AnnotationContext NewContext(params IInterceptor[] interceptors) =>
             new AnnotationContext(new DbContextOptionsBuilder<AnnotationContext>()
                 .UseSqlServer(UnreachableConnection, o => o.UseNetTopologySuite())
-                .AddInterceptors(interceptor)
+                .AddInterceptors(interceptors)
                 .Options);
 
         /// <summary>Suppresses the database write, counts SaveChanges calls, records the usernames being saved and assigns Id 777 to added types.</summary>

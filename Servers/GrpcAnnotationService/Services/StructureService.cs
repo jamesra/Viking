@@ -379,8 +379,9 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// Inserts the structure, then its first location (optional). Circle WKT is written after
-        /// the location has an identity, same as CreateLocation. Throws NotFound, before anything is saved, when the
-        /// first location's Links name a location that does not exist.
+        /// the location has an identity, same as CreateLocation. Throws NotFound, naming the missing ID, before anything is
+        /// saved, when the structure's ParentId names a structure or its TypeId a structure type that does not exist, or
+        /// when the first location's Links name a location that does not exist.
         /// </summary>
         public override async Task<CreateStructureResponse> CreateStructure(CreateStructureRequest request, ServerCallContext context)
         {
@@ -393,6 +394,10 @@ namespace gRPCAnnotationService
                 structure.Username = username;
                 structure.Created = DateTime.UtcNow;
                 structure.LastModified = structure.Created;
+                if (structure.ParentId.HasValue)
+                    await ThrowIfStructuresMissingAsync(new[] { structure.ParentId.Value }, ct);
+                if (!(await StoredTypeIdsAsync(new[] { structure.TypeId }, ct)).Contains(structure.TypeId))
+                    throw new RpcException(new Status(StatusCode.NotFound, $"Structure type {structure.TypeId} not found"));
                 if (request.NewAnnotation != null)
                     await LocationService.ThrowIfLocationsMissingAsync(_context, request.NewAnnotation.Links.Where(peer => peer != 0), ct);
 
@@ -854,12 +859,20 @@ namespace gRPCAnnotationService
                 .Concat(request.Objs
                     .Where(c => c.ActionCase == StructureChangeRequest.ActionOneofCase.Update && c.Update.TypeId != 0)
                     .Select(c => c.Update.TypeId)).ToArray();
+            return await StoredTypeIdsAsync(named, ct);
+        }
 
+        /// <summary>
+        /// The structure types among <paramref name="ids"/> that exist, one query per chunk; no IDs cost no query.
+        /// FK_StructureBase_StructureType fails the save of a structure naming any other type.
+        /// </summary>
+        private async Task<HashSet<long>> StoredTypeIdsAsync(long[] ids, CancellationToken ct)
+        {
             var live = new HashSet<long>();
-            if (named.Length == 0)
+            if (ids.Length == 0)
                 return live;
 
-            foreach (var chunk in named.DistinctChunk())
+            foreach (var chunk in ids.DistinctChunk())
                 live.UnionWith(await _context.StructureTypes.AsNoTracking()
                     .Where(t => chunk.Contains(t.Id)).Select(t => t.Id).ToListAsync(ct));
             return live;
@@ -868,8 +881,8 @@ namespace gRPCAnnotationService
         /// <summary>
         /// Throws NotFound, naming each of <paramref name="ids"/> that is not a stored structure, when there is one:
         /// FK_StructureLinkSource_StructureBaseID and FK_StructureLinkTarget_StructureBaseID would otherwise fail the
-        /// save of a link naming it as a generic Unknown failure, and dbo.MergeStructures would fail on the Location
-        /// foreign key or silently do nothing. No IDs cost no query.
+        /// save of a link naming it as a generic Unknown failure, FK_Structure_Structure the save of a new structure under
+        /// it, and dbo.MergeStructures would fail on the Location foreign key or silently do nothing. No IDs cost no query.
         /// </summary>
         private async Task ThrowIfStructuresMissingAsync(IEnumerable<long> ids, CancellationToken ct)
         {
