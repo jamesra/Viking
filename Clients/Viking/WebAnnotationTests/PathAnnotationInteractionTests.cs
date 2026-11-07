@@ -266,6 +266,35 @@ namespace WebAnnotationTests
             }
         }
 
+        /// <summary>
+        /// A stroke whose first point is inside a hole logs the hole, not its container, as the first entry: the first
+        /// point is expanded for the pen the same way later points are, so leaving the hole logs the exit and the
+        /// re-entry of the container rather than a spurious exit of the container at the second point.
+        /// </summary>
+        [TestMethod]
+        public void TestPathStartingInsideHole()
+        {
+            Polygon poly = new Polygon(Primitives.BoxVerticies(5));
+            Polygon hole = new Polygon(Primitives.BoxVerticies(2));
+            DummyContainerAnnotation da = new DummyContainerAnnotation(poly, new Polygon[] { hole });
+
+            DummyCanvas dc = new DummyCanvas();
+            dc.Add(da);
+
+            Path path = new Path();
+            PathInteractionLogger log = new PathInteractionLogger(path, dc);
+            StraightIntegerXAxisPath(-1, 4).ForEach(path.Push);
+
+            InteractionLogEvent[] expected = new InteractionLogEvent[]
+            {
+                new InteractionLogEvent(AnnotationRegionInteraction.ENTER, da.Children[0], 0),
+                new InteractionLogEvent(AnnotationRegionInteraction.EXIT, da.Children[0], 4),
+                new InteractionLogEvent(AnnotationRegionInteraction.ENTER, da, 4)
+            };
+
+            CompareLogEntries(expected, log.Log.Entries);
+        }
+
         /// <summary>Popping every point of a stroke, one at a time, empties the log without throwing.</summary>
         [TestMethod]
         public void PopEveryPoint_EmptiesLog()
