@@ -50,7 +50,7 @@ Keyboard commands
 
 * **+** and **-** move up and down 1 slice (**+** goes to the next higher section number)
 * **SHIFT +** and **-** move up and down 10 slices
-* **Ctrl+Shift+Plus** and **Ctrl+Shift+Minus** brighten and darken sections Nornir built as noise-crushed; **Ctrl+Shift+0** resets the contrast. Other sections do not change
+* **Ctrl+Shift+Plus** and **Ctrl+Shift+Minus** brighten and darken sections Nornir built as noise-crushed; **Ctrl+Shift+0** undoes those brightness steps. It does not change a window saved with Section → Contrast... (see Menu commands). Other sections do not change
 * **Arrow keys** pan the view by a quarter of the screen
 * **PageUp/PageDown** zoom in/out by about 15% per press (the same step as one scroll wheel notch)
 * **Home** rounds the magnification to the nearest power of two (1, 2, 4, 8 ... or 0.5, 0.25 ...)
@@ -63,6 +63,7 @@ Menu commands
 * Annotation → Open Structure → opens a navigation dialogue for a cell
 * Bookmarks can be used (see below)
 * Section → Channel lists the section's channels; Section → Setup Channels... sets the volume's default channels
+* Section → Contrast... opens the contrast editor for the noise-crushed channel on screen (greyed out for other channels). It shows the channel's histogram with **Black point**, **White point** and **Gamma** sliders. **Auto** clips the darkest and brightest 0.1% of pixels and sets the gamma that puts the median pixel at mid grey. **Reset to volume range** returns to the display range stored in the volume. Changes apply as you drag and are saved for that section and channel on this computer only
 
 Channels
 ========
