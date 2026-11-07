@@ -3,6 +3,9 @@
 Version Information
 ###################
 
+This page is the history of the older releases, up to 1.1.280. For recent versions, open **Help > Change Log** in Viking; the same text is in
+``VikingChangelog.md`` beside Viking.exe.
+
 1.1.280
 -------
 
@@ -205,9 +208,9 @@ Version Information
 
 * Added ability for hotkey commands to automatically add tags to new structures via WebAnnotationUserSettings.xml file
    
-   * Ctrl+R : Create new ribbon post-synapse with â€œBipolarâ€�, â€œRibbonâ€�, â€œGlutamateâ€� tags.
-   * Ctrl+S : Create new conventional post-synapse with â€œConventionalâ€� tag.
-   * Ctrl+B : Create new conventional glutamatergic post-synapse with â€œBipolarâ€�, â€œConventionalâ€�, â€œGlutamateâ€� tags.
+   * Ctrl+R : Create new ribbon post-synapse with "Bipolar", "Ribbon", "Glutamate" tags.
+   * Ctrl+S : Create new conventional post-synapse with "Conventional" tag.
+   * Ctrl+B : Create new conventional glutamatergic post-synapse with "Bipolar", "Conventional", "Glutamate" tags.
     
 * Added support for hotkey commands to toggle structure attributes on/off.  Users can place the mouse over a structure and hit the hotkey to toggle one the following tags:  
    
