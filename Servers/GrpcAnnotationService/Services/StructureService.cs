@@ -528,8 +528,11 @@ namespace gRPCAnnotationService
         }
 
         /// <summary>
-        /// Creates one link. Throws InvalidArgument when source and target are the same structure, and NotFound,
-        /// naming the missing IDs, when either structure does not exist; neither saves anything.
+        /// Creates one link. Throws InvalidArgument when source and target are the same structure, NotFound, naming
+        /// the missing IDs, when either structure does not exist, and then AlreadyExists, naming the pair and leaving
+        /// the stored link unchanged, when a link with that source and target is stored; none of them saves anything.
+        /// The reverse of a stored link is left to the database's reciprocal-link trigger, which refuses it with
+        /// FailedPrecondition.
         /// </summary>
         public override async Task<CreateStructureLinkResponse> CreateStructureLink(CreateStructureLinkRequest request, ServerCallContext context)
         {
@@ -540,6 +543,9 @@ namespace gRPCAnnotationService
                 if (link.SourceId == link.TargetId)
                     throw new RpcException(new Status(StatusCode.InvalidArgument, "A structure cannot link to itself"));
                 await ThrowIfStructuresMissingAsync(new[] { link.SourceId, link.TargetId }, ct);
+                if (await _context.StructureLinks.FindAsync(new object[] { link.SourceId, link.TargetId }, ct) != null)
+                    throw new RpcException(new Status(StatusCode.AlreadyExists,
+                        $"Structure link already exists: {link.SourceId} -> {link.TargetId}"));
 
                 var row = new EfStructureLink
                 {

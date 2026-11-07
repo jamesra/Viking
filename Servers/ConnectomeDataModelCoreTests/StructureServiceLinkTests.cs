@@ -26,7 +26,8 @@ namespace ConnectomeDataModelCoreTests
     /// Pins the offline behavior of <see cref="StructureService.CreateStructureLink"/> and
     /// <see cref="StructureService.UpdateLinks"/>: a link from a structure to itself is refused with
     /// InvalidArgument before anything is queried or saved; a link to insert naming a missing structure is
-    /// refused with NotFound naming the missing IDs, and nothing is saved; a valid link is saved once, stamped with the
+    /// refused with NotFound naming the missing IDs, and nothing is saved; a create of a stored (SourceId, TargetId) pair is
+    /// refused with AlreadyExists, and nothing is saved; a valid link is saved once, stamped with the
     /// caller's name rather than the payload's; UpdateLinks reads existing links in one query, keeps the
     /// last row of a repeated (SourceId, TargetId) pair, and updates a link that exists instead of inserting it.
     /// Also pins <see cref="StructureService.Merge"/>: a self-merge is refused with InvalidArgument, a missing
@@ -111,6 +112,50 @@ namespace ConnectomeDataModelCoreTests
             Assert.Equal(new[] { "unknown" }, saves.Usernames);
             Assert.Equal((3L, 8L, true, "t"), (response.Result.SourceId, response.Result.TargetId, response.Result.Bidirectional, response.Result.Tags));
             Assert.Equal("unknown", response.Result.Username);
+        }
+
+        [Fact]
+        public async Task CreateOfAStoredLinkIsAlreadyExistsAndSavesNothing()
+        {
+            var saves = new CaptureSaves();
+            var table = new FakeLinkTable(Stored(3, 8));
+            using var db = NewContext(saves, table);
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => service.CreateStructureLink(
+                new CreateStructureLinkRequest { NewLink = Link(3, 8, true, "new") }, new TestCallContext()));
+
+            Assert.Equal(StatusCode.AlreadyExists, ex.StatusCode);
+            Assert.Equal("Structure link already exists: 3 -> 8", ex.Status.Detail);
+            Assert.Equal(1, table.LinkQueries);
+            Assert.Equal(0, saves.Count);
+        }
+
+        /// <summary>The key is directional: the reverse of a stored link passes the lookup, and the database's reciprocal-link trigger decides it.</summary>
+        [Fact]
+        public async Task CreateOfTheReverseOfAStoredLinkReachesTheSave()
+        {
+            var saves = new CaptureSaves();
+            using var db = NewContext(saves, new FakeLinkTable(Stored(3, 8)));
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            await service.CreateStructureLink(new CreateStructureLinkRequest { NewLink = Link(8, 3) }, new TestCallContext());
+
+            Assert.Equal(new[] { (EntityState.Added, 8L, 3L, false, "") }, saves.Links);
+        }
+
+        [Fact]
+        public async Task CreateNamingAMissingStructureIsNotFoundBeforeTheLinkLookup()
+        {
+            var table = new FakeLinkTable(Stored(3, 99));
+            using var db = NewContext(new CaptureSaves(), table);
+            var service = new StructureService(db, NullLogger<StructureService>.Instance);
+
+            var ex = await Assert.ThrowsAsync<RpcException>(() => service.CreateStructureLink(
+                new CreateStructureLinkRequest { NewLink = Link(3, 99) }, new TestCallContext()));
+
+            Assert.Equal(StatusCode.NotFound, ex.StatusCode);
+            Assert.Equal(0, table.LinkQueries);
         }
 
         [Fact]
@@ -605,6 +650,11 @@ namespace ConnectomeDataModelCoreTests
         private static ProtoStructureLink Link(long source, long target, bool bidirectional = false, string tags = "") =>
             new ProtoStructureLink { SourceId = source, TargetId = target, Bidirectional = bidirectional, Tags = tags };
 
+        private static EfStructureLink Stored(long source, long target) => new()
+        {
+            SourceId = source, TargetId = target, Tags = "old", Username = "someone", Created = DateTime.UtcNow, LastModified = DateTime.UtcNow
+        };
+
         private static AnnotationContext NewContext(params IInterceptor[] interceptors) =>
             new AnnotationContext(new DbContextOptionsBuilder<AnnotationContext>()
                 .UseSqlServer(UnreachableConnection, o => o.UseNetTopologySuite())
@@ -636,12 +686,14 @@ namespace ConnectomeDataModelCoreTests
         /// Stands in for the StructureLink, Structure and Location tables: opening the connection is suppressed, a
         /// Structure or Location query is answered with the IDs among its parameters that <see cref="StructureExists"/>
         /// or <see cref="LocationExists"/> accepts (a Structure query selecting whole rows, as Find does, with each one's
-        /// <see cref="Parents"/> entry), and every other query with all stored links, whatever its WHERE clause says, in the column
-        /// order its SELECT list names. Counts the queries.
+        /// <see cref="Parents"/> entry), a lookup of one (SourceID, TargetID) key, as Find sends, with the stored link of that key,
+        /// and every other query with all stored links, whatever its WHERE clause says, in the column order its SELECT list
+        /// names. Counts the queries.
         /// </summary>
         private sealed class FakeLinkTable : IDbConnectionInterceptor, IDbCommandInterceptor
         {
             private static readonly Regex SelectedColumn = new(@"\]\.\[(\w+)\]");
+            private static readonly Regex KeyLookup = new(@"\[SourceID\] = (@\w+) AND \[\w+\]\.\[TargetID\] = (@\w+)");
             private readonly EfStructureLink[] _rows;
 
             public FakeLinkTable(params EfStructureLink[] rows) => _rows = rows;
@@ -692,9 +744,17 @@ namespace ConnectomeDataModelCoreTests
                     return ExistingIds(table, Assert.Single(columns), command, LocationExists);
                 }
 
+                var rows = _rows.AsEnumerable();
+                if (KeyLookup.Match(command.CommandText) is { Success: true } key)
+                {
+                    long Parameter(int group) => Convert.ToInt64(command.Parameters.Cast<DbParameter>()
+                        .Single(p => p.ParameterName.TrimStart('@') == key.Groups[group].Value.TrimStart('@')).Value);
+                    rows = rows.Where(r => r.SourceId == Parameter(1) && r.TargetId == Parameter(2));
+                }
+
                 foreach (var column in columns)
                     table.Columns.Add(column, ColumnType(column));
-                foreach (var row in _rows)
+                foreach (var row in rows)
                     table.Rows.Add(columns.Select(c => ColumnValue(row, c)).ToArray());
                 return ValueTask.FromResult(InterceptionResult<DbDataReader>.SuppressWithResult(table.CreateDataReader()));
             }
