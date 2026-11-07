@@ -104,12 +104,43 @@ Main configuration file with default settings:
 {
   "AppSettings": {
     "VolumeURL": "https://codepharm.net/RC1",
+    "AnnotationURL": "https://codepharm.net/RC1/Annotation",
     "ODataURL": "https://codepharm.net/RC1/OData"
+  },
+  "Corrections": {
+    "ServiceUrl": "https://corrections.codepharm.net/",
+    "VolumeName": "",
+    "RootDirectory": "",
+    "StosGroup": ""
   }
 }
 ```
 
 **Note:** Scale values (X/Y/Z) are automatically retrieved from the OData service and do not need to be configured.
+
+#### AppSettings:AnnotationURL
+Host that the `StructureURL` links in exported graphs point to. The OData address in those links is derived by replacing
+`Annotation` with `OData`. When empty, the export uses `ODataURL`, then `VolumeURL`.
+
+#### Corrections
+Morphology exports (`/Morphology/*`) move each location by the published Neighbor residual field when one is available.
+The field is looked up in this order, and the first source that yields one wins; with no source the graph is exported
+uncorrected.
+
+| Setting | Meaning |
+|---|---|
+| `Corrections:ServiceUrl` | Correction service to download the field from. Empty skips the service. Must be an absolute URL, otherwise it is skipped with a warning. |
+| `Corrections:VolumeName` | Volume to request from the service. Empty derives it from the service's volume list and the OData URL. |
+| `Corrections:StosGroup` | Published correction set to use, from the service or from `RootDirectory`. Empty uses the first set (service) or the first by name (directory). |
+| `Corrections:RootDirectory` | Local directory of published correction sets, used when the service is skipped or fails (error, or no sections for the volume and group). Empty or missing leaves the graph uncorrected. |
+
+The log states which source supplied the field.
+
+#### Caching
+The volume Scale and the residual field are each loaded once per process, on the first morphology export, and shared by
+every later request. Changing the OData volume, `Corrections:*` settings, or the published corrections does not take
+effect until the service restarts. A Scale load that fails is retried on the next request. For the residual field, a load
+that completes with no field available (no source configured or found) is cached as "no field" until restart as well.
 
 ### appsettings.Development.json
 Development-specific overrides:
