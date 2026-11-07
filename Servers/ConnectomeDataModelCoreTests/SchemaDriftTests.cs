@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using System;
@@ -33,6 +33,11 @@ namespace ConnectomeDataModelCoreTests
     /// Stored procedures are compared by name only, between the update script (replayed by
     /// <see cref="ReplayProcedures"/>) and <c>dbo/Stored Procedures</c>, and the sqlproj build list must hold
     /// exactly those files. Procedure bodies are not compared.
+    /// </para>
+    /// <para>
+    /// Functions get the same name-only check (<see cref="ReplayFunctions"/>, <c>dbo/Functions</c>, the sqlproj build
+    /// list). A function statement counts only when its name is followed by a parameter list, so
+    /// <c>print N'Create Function for ...'</c> text is not read as a function named "for".
     /// </para>
     /// <para>
     /// What the CREATE TABLE parser handles: <c>CREATE TABLE [dbo].[Name] ( ... )</c> (the <c>dbo.</c> and
@@ -114,6 +119,24 @@ namespace ConnectomeDataModelCoreTests
             [$"procedure SelectStructureCenter3D only in {SqlProject}, not in {UpdateScript}"] = NoDbVersionStep,
             [$"procedure SelectStructureCenters3D only in {SqlProject}, not in {UpdateScript}"] = NoDbVersionStep,
         };
+
+        /// <summary>
+        /// Differences between the functions <c>CreateUpdateDatabase.sql</c> leaves behind and the files under
+        /// <c>dbo/Functions</c>, keyed by the text <see cref="CompareFunctions"/> reports.
+        /// </summary>
+        private static readonly Dictionary<string, string> AllowedFunctionDifferences = new()
+        {
+            [$"function ufnCenterToCenterIntersectionPoint only in {SqlProject}, not in {UpdateScript}"] = NoDbVersionStep,
+            [$"function ufnShapeDistance3D only in {SqlProject}, not in {UpdateScript}"] = NoDbVersionStep,
+            [$"function WeightedStructureCenters3D only in {UpdateScript}, not in {SqlProject}"] = NoSqlProjectFile,
+            [$"function ufnWeightedStructureCentroidXY only in {UpdateScript}, not in {SqlProject}"] = NoSqlProjectFile,
+            [$"function ufnWeightedStructureCentroidZ only in {UpdateScript}, not in {SqlProject}"] = NoSqlProjectFile,
+        };
+
+        private const string NoSqlProjectFile =
+            "Created by a DBVersion step in CreateUpdateDatabase.sql, but dbo/Functions has no file for it and the sqlproj " +
+            "does not build it (Servers/SQL/Functions holds a copy), so a database deployed from the SSDT project lacks it. " +
+            "Adding the file and the build entry is a SQL-object change; remove this entry then.";
 
         // ---- The checks -------------------------------------------------------------------------------
 
@@ -219,7 +242,116 @@ namespace ConnectomeDataModelCoreTests
             Assert.DoesNotContain("SelectStructuresForSection", script);
         }
 
+        [Fact]
+        public void UpdateScriptAndSqlProjectAgreeOnFunctions()
+        {
+            var differences = new SortedSet<string>(
+                CompareFunctions(UpdateScript, ReplayFunctions(ReadUpdateScript()), SqlProject, ReadSqlProjectFunctions()),
+                StringComparer.Ordinal);
+
+            AssertOnlyAllowed(differences, AllowedFunctionDifferences, "function difference");
+        }
+
+        [Fact]
+        public void SqlProjectBuildListHoldsExactlyTheFunctionFiles()
+        {
+            var sqlprojPath = RepoFile("Servers/AnnotationDatabase/AnnotationDatabase.sqlproj");
+            var listed = FunctionBuildEntries(File.ReadAllText(sqlprojPath));
+            var files = ReadSqlProjectFunctions().ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            Assert.Empty(files.Except(listed, StringComparer.OrdinalIgnoreCase));
+            Assert.Empty(listed.Except(files, StringComparer.OrdinalIgnoreCase));
+        }
+
+        [Fact]
+        public void FunctionParsersReadTheRealSources()
+        {
+            // Guards against a parser that silently reads nothing, which would make the drift check vacuous.
+            var script = ReplayFunctions(ReadUpdateScript());
+            var project = ReadSqlProjectFunctions();
+
+            Assert.True(script.Count >= 30, $"only {script.Count} functions replayed from the update script");
+            Assert.True(project.Count >= 30, $"only {project.Count} function files read");
+            Assert.True(FunctionBuildEntries(File.ReadAllText(RepoFile("Servers/AnnotationDatabase/AnnotationDatabase.sqlproj"))).Count >= 30);
+            Assert.Contains("SectionLocations", script);
+            Assert.Contains("SectionLocations", project);
+            Assert.Contains("TypeIDToName", script);
+            Assert.DoesNotContain("for", script);
+            Assert.DoesNotContain("ufnLastStructureModification", script);
+        }
+
         // ---- Mutation checks: the comparison must see each kind of drift ------------------------------
+
+        [Fact]
+        public void ReplayFunctionsAppliesCreateAlterAndDropInFileOrder()
+        {
+            var functions = ReplayFunctions(
+                "-- CREATE FUNCTION InLineComment()\n" +
+                "/* CREATE FUNCTION InBlockComment()\n DROP FUNCTION Bracketed */\n" +
+                "CREATE FUNCTION [dbo].[Bracketed](@A int) RETURNS int AS BEGIN RETURN 1 END\n" +
+                "Create FUNCTION [dbo].MixedBrackets (@A int) RETURNS int AS BEGIN RETURN 1 END\n" +
+                "\tCREATE FUNCTION Unqualified\n\t(@A int) RETURNS int AS BEGIN RETURN 1 END\n" +
+                "\tEXEC('CREATE FUNCTION [dbo].[InsideExec]() RETURNS int AS BEGIN RETURN 1 END')\n" +
+                "\tCREATE OR ALTER FUNCTION dbo.OrAlter() RETURNS int AS BEGIN RETURN 1 END\n" +
+                "\tCREATE FUNCTION [dbo].[Dropped]() RETURNS int AS BEGIN RETURN 1 END\n" +
+                "\tIF OBJECT_ID (N'dbo.Dropped', N'FN') IS NOT NULL DROP FUNCTION Dropped;\n" +
+                "\tDROP FUNCTION dbo.[NeverCreated];\n" +
+                "\tCREATE FUNCTION DroppedThenBack() RETURNS int AS BEGIN RETURN 1 END\n" +
+                "\tDROP FUNCTION DroppedThenBack\n" +
+                "\tCREATE FUNCTION DroppedThenBack() RETURNS int AS BEGIN RETURN 2 END\n" +
+                "\tALTER FUNCTION [dbo].[Bracketed](@A int) RETURNS int AS BEGIN RETURN 3 END\n" +
+                "\tprint N'Create Function for something'\n" +
+                "\tprint N'Create Functions for spatial queries'\n");
+
+            Assert.Equal(
+                new[] { "Bracketed", "DroppedThenBack", "InsideExec", "MixedBrackets", "OrAlter", "Unqualified" },
+                functions.OrderBy(f => f, StringComparer.Ordinal).ToArray());
+        }
+
+        [Fact]
+        public void ReplayFunctionsRejectsAnAlterOfAnUnknownFunctionAndAForeignSchema()
+        {
+            Assert.Throws<FormatException>(() => ReplayFunctions("ALTER FUNCTION dbo.Missing() RETURNS int AS BEGIN RETURN 1 END"));
+            Assert.Throws<FormatException>(() => ReplayFunctions("CREATE FUNCTION dbo.F() RETURNS int AS BEGIN RETURN 1 END\nDROP FUNCTION dbo.F\nALTER FUNCTION dbo.F() RETURNS int AS BEGIN RETURN 1 END"));
+            Assert.Throws<FormatException>(() => ReplayFunctions("CREATE FUNCTION [graph].[F]() RETURNS int AS BEGIN RETURN 1 END"));
+        }
+
+        [Fact]
+        public void FunctionBuildEntriesReadsOnlyFunctionIncludes()
+        {
+            var listed = FunctionBuildEntries(
+                "<Build Include=\"dbo\\Functions\\A.sql\"><Link>x</Link></Build>\n" +
+                "<Build Include=\"dbo\\Stored Procedures\\B.sql\" />\n" +
+                "<Build Include=\"dbo\\Functions\\C.sql\" />");
+
+            Assert.Equal(new[] { "A", "C" }, listed.OrderBy(n => n, StringComparer.Ordinal).ToArray());
+        }
+
+        [Fact]
+        public void FunctionCompareReportsAFunctionTheUpdateScriptNoLongerLeaves()
+        {
+            var script = ReadUpdateScript();
+            const string create = "CREATE FUNCTION [dbo].[ResidualFieldCandidateLocations]";
+            Assert.Single(Regex.Matches(script, Regex.Escape(create)));
+            var mutated = ReplayFunctions(script.Replace(create, "CREATE TABLE [dbo].[NotAFunction]"));
+
+            var differences = CompareFunctions(SqlProject, ReadSqlProjectFunctions(), UpdateScript, mutated).ToList();
+
+            Assert.Contains($"function ResidualFieldCandidateLocations only in {SqlProject}, not in {UpdateScript}", differences);
+        }
+
+        [Fact]
+        public void FunctionCompareReportsAFunctionOnlyTheUpdateScriptLeaves()
+        {
+            var script = ReadUpdateScript();
+            const string create = "CREATE FUNCTION dbo.ufnCreateCircle(";
+            Assert.Single(Regex.Matches(script, Regex.Escape(create)));
+            var mutated = ReplayFunctions(script.Replace(create, "CREATE FUNCTION dbo.ufnCreateCircleRenamed("));
+
+            var differences = CompareFunctions(UpdateScript, mutated, SqlProject, ReadSqlProjectFunctions()).ToList();
+
+            Assert.Contains($"function ufnCreateCircleRenamed only in {UpdateScript}, not in {SqlProject}", differences);
+        }
 
         [Fact]
         public void ReplayProceduresAppliesCreateAlterAndDropInFileOrder()
@@ -603,6 +735,80 @@ namespace ConnectomeDataModelCoreTests
                 yield return $"procedure {name} only in {nameA}, not in {nameB}";
             foreach (var name in setB.Except(setA))
                 yield return $"procedure {name} only in {nameB}, not in {nameA}";
+        }
+
+        // ---- Functions --------------------------------------------------------------------------------
+
+        /// <summary>
+        /// A CREATE, CREATE OR ALTER, ALTER or DROP of a function. CREATE and ALTER must be followed by the
+        /// parameter list's <c>(</c>: that skips <c>print N'Create Function for ...'</c> text, which names no function.
+        /// </summary>
+        private static readonly Regex FunctionStatement = new(
+            @"\b(?:(?<verb>DROP)\s+FUNCTION\s+(?:IF\s+EXISTS\s+)?(?:\[?(?<schema>\w+)\]?\.)?\[?(?<name>\w+)\]?" +
+            @"|(?<verb>CREATE\s+OR\s+ALTER|CREATE|ALTER)\s+FUNCTION\s+(?:\[?(?<schema>\w+)\]?\.)?\[?(?<name>\w+)\]?(?=\s*\())",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        private static readonly Regex FunctionBuildEntry = new(
+            @"Include=""dbo\\Functions\\(?<name>[^""\\]+)\.sql""", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        /// <summary>
+        /// The dbo functions a database built by CreateUpdateDatabase.sql ends with, replayed like
+        /// <see cref="ReplayProcedures"/>: CREATE (also OR ALTER) adds one, DROP removes it, in file order, inside
+        /// the batch or inside <c>EXEC('...')</c>. A DROP of a function not created earlier is ignored (the script drops
+        /// retired functions under <c>OBJECT_ID</c> guards) and so is a repeated CREATE. Throws
+        /// <see cref="FormatException"/> for ALTER of a function that does not exist then, and for a non-<c>dbo</c> schema.
+        /// Comments are removed first.
+        /// </summary>
+        private static SortedSet<string> ReplayFunctions(string sql)
+        {
+            var functions = new SortedSet<string>(StringComparer.Ordinal);
+            foreach (Match m in FunctionStatement.Matches(StripComments(sql)))
+            {
+                var schema = m.Groups["schema"];
+                var name = m.Groups["name"].Value;
+                if (schema.Success && !schema.Value.Equals("dbo", StringComparison.OrdinalIgnoreCase))
+                    throw new FormatException($"Function {schema.Value}.{name} is not in the dbo schema: {m.Value.Trim()}");
+
+                var verb = Regex.Replace(m.Groups["verb"].Value, @"\s+", " ").ToUpperInvariant();
+                if (verb == "DROP")
+                    functions.Remove(name);
+                else if (verb == "ALTER" && !functions.Contains(name))
+                    throw new FormatException($"ALTER FUNCTION {name} before any CREATE FUNCTION {name}: {m.Value.Trim()}");
+                else
+                    functions.Add(name);
+            }
+            return functions;
+        }
+
+        /// <summary>The functions of <c>dbo/Functions/*.sql</c>; each file must create exactly the function it is named for.</summary>
+        private static SortedSet<string> ReadSqlProjectFunctions()
+        {
+            var directory = RepoFile("Servers/AnnotationDatabase/dbo/Functions");
+            var functions = new SortedSet<string>(StringComparer.Ordinal);
+            foreach (var file in Directory.GetFiles(directory, "*.sql"))
+            {
+                var expected = Path.GetFileNameWithoutExtension(file);
+                var created = ReplayFunctions(File.ReadAllText(file));
+                Assert.True(created.Count == 1 && created.Contains(expected),
+                    $"{file} should create exactly dbo.{expected}, found: {string.Join(", ", created)}");
+                functions.Add(expected);
+            }
+            return functions;
+        }
+
+        private static HashSet<string> FunctionBuildEntries(string sqlprojText) =>
+            FunctionBuildEntry.Matches(sqlprojText).Select(m => m.Groups["name"].Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Functions present in one source only, as stable sentences (the allow-list keys).</summary>
+        private static IEnumerable<string> CompareFunctions(
+            string nameA, IEnumerable<string> a, string nameB, IEnumerable<string> b)
+        {
+            var setA = a.ToHashSet(StringComparer.Ordinal);
+            var setB = b.ToHashSet(StringComparer.Ordinal);
+            foreach (var name in setA.Except(setB))
+                yield return $"function {name} only in {nameA}, not in {nameB}";
+            foreach (var name in setB.Except(setA))
+                yield return $"function {name} only in {nameB}, not in {nameA}";
         }
 
         // ---- Objects created by minimal-schema.sql ---------------------------------------------------
