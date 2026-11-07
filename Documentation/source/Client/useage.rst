@@ -54,12 +54,14 @@ Keyboard commands
 * **Arrow keys** pan the view by a quarter of the screen
 * **PageUp/PageDown** zoom in/out by about 15% per press (the same step as one scroll wheel notch)
 * **Home** rounds the magnification to the nearest power of two (1, 2, 4, 8 ... or 0.5, 0.25 ...)
+* **Ctrl+Z** undoes your last annotation edit; repeated presses step back through up to 50 edits. It covers moving or reshaping a location, changing its type, cutting a hole, toggling Terminal or Off Edge, and giving an overlap to a cell. Creating, deleting, linking, merging and splitting are not undone. It does nothing while another command (a drag or pen stroke) is active
    
 Menu commands
 =============
 
 * Commands → Go to location → lets you to enter or paste (ctrl v) & jump to a site
 * **Ctrl+C** copies the position of the mouse pointer as tab-separated X, Y, Z (section number) and DS (downsample) values; paste them into the Go To Location form (ctrl v) to return to that spot
+* Commands → Capture Screen → saves part of the section as a PNG: left-click and drag a rectangle on the image, release, then set the center, size, **Downsample Factor**, folder and file name in the **Screenshot Parameters** dialog and click **Capture**. **Include overlays** adds the annotations to the picture
 * Annotation → Open Structure → opens a navigation dialogue for a cell
 * Bookmarks can be used (see below)
 * Section → Channel lists the section's channels; Section → Setup Channels... sets the volume's default channels
