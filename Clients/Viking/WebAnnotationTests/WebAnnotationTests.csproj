@@ -179,6 +179,7 @@
     <Compile Include="TranslateCurveLocationCommandTests.cs" />
     <Compile Include="PenLocationLinksTests.cs" />
     <Compile Include="WpfButtonWiringTests.cs" />
+    <Compile Include="StructureTypeManagerClosePromptTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

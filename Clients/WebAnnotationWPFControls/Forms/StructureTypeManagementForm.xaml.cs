@@ -1,6 +1,7 @@
 using Viking.AnnotationServiceTypes.Interfaces;
 using Annotation.ViewModels;
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
@@ -34,6 +35,7 @@ namespace WebAnnotation.WPF.Forms
             ListPermittedOutputs.Items.Filter = new Predicate<object>(o => FilterOutputs(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLinkReadOnly));
             */
             this.Loaded += this.OnLoaded;
+            this.Closing += this.OnClosing;
 
             System.Diagnostics.Debug.Assert(ListPermittedBidirectional.Items.CanFilter, "Collection view does not support required filtering");
         }
@@ -51,6 +53,37 @@ namespace WebAnnotation.WPF.Forms
             */
         }
 
+
+        /// <summary>
+        /// Title-bar X or Alt+F4 while structure type or link rule edits are pending: asks whether to save them (as
+        /// Apply does) or close and leave them pending in the stores. A failed save shows why and keeps the window
+        /// open, with the unsaved edits still pending.
+        /// </summary>
+        private void OnClosing(object sender, CancelEventArgs e)
+        {
+            // The General tab's text boxes update the type on lost focus, and clicking X does not move focus, so the
+            // edit being typed would otherwise be neither counted nor saved.
+            if (Keyboard.FocusedElement is TextBox focused)
+                focused.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+
+            string question = StructureTypeManagerClosePrompt.Question(Store.StructureTypes.PendingChangeCount,
+                                                                       Store.PermittedStructureLinks.PendingChangeCount);
+            if (question is null ||
+                MessageBox.Show(this, question, Title, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+
+            try
+            {
+                StructureTypeObjViewModel.SaveAllPending();
+            }
+            catch (Exception exp)
+            {
+                Trace.WriteLine($"Structure Type Manager save on close failed: {exp}");
+                MessageBox.Show(this, $"The changes could not be saved and are still pending:\n{exp.Message}", Title,
+                                MessageBoxButton.OK, MessageBoxImage.Error);
+                e.Cancel = true;
+            }
+        }
 
         private void StructureTypesTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e) => Trace.WriteLine(string.Format("Selected TreeViewItem {1} -> {0}", e.NewValue, e.OldValue));
 

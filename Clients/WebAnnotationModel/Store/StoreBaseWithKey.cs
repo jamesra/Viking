@@ -67,6 +67,12 @@ namespace WebAnnotationModel
 
         protected ConcurrentDictionary<KEY, OBJECT> ChangedObjects = new();
 
+        /// <summary>
+        /// How many objects have edits, inserts or deletes the next <see cref="Save()"/> sends. Read-only; safe from
+        /// any thread. A failed save puts its objects back, so they count again.
+        /// </summary>
+        public int PendingChangeCount => ChangedObjects.Count;
+
         protected System.ComponentModel.PropertyChangedEventHandler OnOBJECTPropertyChangedEventHandler;
 
         public StoreBaseWithKey()
