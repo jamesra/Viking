@@ -45,7 +45,7 @@ Neuron connectivity network
    **Format:**
       * **TLP** - Tulip file format
       * **DOT** - Graphviz DOT file format
-      * **GraphML** - GraphML file format
+      * **GML** - GraphML file format (the URL ends in ``gml``; the downloaded file has a ``.graphml`` extension)
       * **JSON** - Java script object notation
         
    :query id: ID numbers of cells to include in connectivity graph.  Commas separate multiple IDs.
@@ -102,18 +102,17 @@ Motif connectivity
    **Format:**
       * **TLP** - Tulip file format
       * **DOT** - Graphviz DOT file format
-      * **GraphML** - GraphML file format
       * **JSON** - Java script object notation
      
    :resheader Content-Type: text/plain
    
    **Example request**
    
-      Get a dot file of the morphology for use in Graphviz
+      Get a dot file of the motif graph for use in Graphviz
       
       .. sourcecode:: http   
          
-         http://websvc1.connectomes.utah.edu/RC1/export/motifs/dot
+         http://websvc1.connectomes.utah.edu/RC1/export/motif/dot
          
    **Motif Node Properties:**
    
