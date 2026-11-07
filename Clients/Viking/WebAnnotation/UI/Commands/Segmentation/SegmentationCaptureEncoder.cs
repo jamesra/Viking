@@ -1,6 +1,4 @@
 using Microsoft.Xna.Framework;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -174,49 +172,29 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
         }
 
-        /// <summary>
-        /// zlib level 6 rather than BestSpeed: about 6% fewer bytes on EM tiles for about 25 ms more encoding, off the
-        /// UI thread. Lossless, so the server's pixel-keyed embedding cache still matches. A lossy format (JPEG or WebP
-        /// at quality 90 is about 45% smaller) needs a mask-quality comparison first.
-        /// </summary>
-        private const PngCompressionLevel TileCompression = PngCompressionLevel.DefaultCompression;
-
+        // PNG stays lossless, so the server's pixel-keyed embedding cache still matches. A lossy format (JPEG or WebP at
+        // quality 90 is about 45% smaller) needs a mask-quality comparison first.
         private static byte[] EncodeGrayscalePng(byte[] luma, int width, int height, byte lo, byte hi)
         {
-            L8[] pixels = new L8[luma.Length];
+            byte[] pixels = new byte[luma.Length];
             for (int i = 0; i < luma.Length; i++)
-                pixels[i] = new L8(Stretch(luma[i], lo, hi));
+                pixels[i] = Stretch(luma[i], lo, hi);
 
-            using MemoryStream stream = new();
-            using var image = SixLabors.ImageSharp.Image.LoadPixelData<L8>(pixels, width, height);
-            image.Save(stream, new PngEncoder
-            {
-                ColorType = PngColorType.Grayscale,
-                BitDepth = PngBitDepth.Bit8,
-                CompressionLevel = TileCompression
-            });
-            return stream.ToArray();
+            return SegmentationPng.EncodeGray8(pixels, width, height);
         }
 
         private static byte[] EncodeRgbPng(Color[] source, int width, int height, byte lo, byte hi)
         {
-            Rgba32[] pixels = new Rgba32[source.Length];
-            for (int i = 0; i < source.Length; i++)
+            byte[] bgra = new byte[source.Length * 4];
+            for (int i = 0, j = 0; i < source.Length; i++, j += 4)
             {
-                pixels[i] = new Rgba32(
-                    Stretch(source[i].R, lo, hi),
-                    Stretch(source[i].G, lo, hi),
-                    Stretch(source[i].B, lo, hi),
-                    source[i].A);
+                bgra[j] = Stretch(source[i].B, lo, hi);
+                bgra[j + 1] = Stretch(source[i].G, lo, hi);
+                bgra[j + 2] = Stretch(source[i].R, lo, hi);
+                bgra[j + 3] = source[i].A;
             }
 
-            using MemoryStream stream = new();
-            using var image = SixLabors.ImageSharp.Image.LoadPixelData<Rgba32>(pixels, width, height);
-            image.Save(stream, new PngEncoder
-            {
-                CompressionLevel = TileCompression
-            });
-            return stream.ToArray();
+            return SegmentationPng.EncodeBgra32(bgra, width, height);
         }
 
         private static byte Luminance(Color color)

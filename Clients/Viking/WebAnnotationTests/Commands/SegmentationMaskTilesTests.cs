@@ -1,7 +1,5 @@
 using Geometry;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -50,13 +48,13 @@ namespace WebAnnotationTests.Commands
             if (tile.Png.IsEmpty)
                 return pixels;
 
-            using Image<L8> png = Image.Load<L8>(tile.Png.ToByteArray());
+            DecodedPng png = DecodedPng.Read(tile.Png.ToByteArray());
             int scale = tile.Scale > 1 ? (int)tile.Scale : 1;
             Assert.AreEqual(Tile / scale, png.Width);
             Assert.AreEqual(Tile / scale, png.Height);
             for (int row = 0; row < Tile; row++)
                 for (int column = 0; column < Tile; column++)
-                    pixels[row * Tile + column] = png[column / scale, row / scale].PackedValue != 0;
+                    pixels[row * Tile + column] = png.Gray(column / scale, row / scale) != 0;
 
             return pixels;
         }
@@ -101,10 +99,10 @@ namespace WebAnnotationTests.Commands
             Assert.IsFalse(corner.Full);
             Assert.IsFalse(corner.Png.IsEmpty);
             Assert.AreEqual(0u, corner.Scale, "scale is unset at full resolution");
-            using Image<L8> png = Image.Load<L8>(corner.Png.ToByteArray());
+            DecodedPng png = DecodedPng.Read(corner.Png.ToByteArray());
             Assert.AreEqual(Tile, png.Width);
             Assert.AreEqual(Tile, png.Height);
-            Assert.AreEqual(1, Image.Identify(corner.Png.ToByteArray()).PixelType.BitsPerPixel);
+            Assert.AreEqual(1, png.BitsPerPixel);
         }
 
         [TestMethod]
@@ -113,11 +111,11 @@ namespace WebAnnotationTests.Commands
             // A strip across the top 10 mosaic rows of tile (0, 0): y 1014..1023.
             List<MaskTile> tiles = SegmentationMaskTiles.BuildBitmap(UnionOf(Box(100, 1014, 400, 1024)), 1, MaskKind.Foreground, null, 0, 1);
             MaskTile tile = tiles.Single();
-            using Image<L8> png = Image.Load<L8>(tile.Png.ToByteArray());
+            DecodedPng png = DecodedPng.Read(tile.Png.ToByteArray());
 
-            Assert.AreEqual(255, png[200, 0].PackedValue, "row 0 is y = 1023");
-            Assert.AreEqual(255, png[200, 9].PackedValue, "row 9 is y = 1014");
-            Assert.AreEqual(0, png[200, 10].PackedValue, "row 10 is below the strip");
+            Assert.AreEqual(255, png.Gray(200, 0), "row 0 is y = 1023");
+            Assert.AreEqual(255, png.Gray(200, 9), "row 9 is y = 1014");
+            Assert.AreEqual(0, png.Gray(200, 10), "row 10 is below the strip");
         }
 
         [TestMethod]
@@ -165,8 +163,8 @@ namespace WebAnnotationTests.Commands
 
             Assert.AreEqual(fine.Count, coarse.Count);
             Assert.IsTrue(coarse.Where(tile => !tile.Full).All(tile => tile.Scale == 4));
-            using (Image<L8> png = Image.Load<L8>(coarse.First(tile => !tile.Full).Png.ToByteArray()))
             {
+                DecodedPng png = DecodedPng.Read(coarse.First(tile => !tile.Full).Png.ToByteArray());
                 Assert.AreEqual(256, png.Width);
                 Assert.AreEqual(256, png.Height);
             }
@@ -300,7 +298,7 @@ namespace WebAnnotationTests.Commands
             foreach (MaskTile tile in tiles)
             {
                 Assert.AreEqual(4u, tile.Scale);
-                using Image<L8> png = Image.Load<L8>(tile.Png.ToByteArray());
+                DecodedPng png = DecodedPng.Read(tile.Png.ToByteArray());
                 Assert.AreEqual(256, png.Width);
                 Assert.AreEqual(256, png.Height);
             }
