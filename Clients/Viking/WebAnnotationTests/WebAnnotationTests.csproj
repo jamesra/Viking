@@ -180,6 +180,7 @@
     <Compile Include="PenLocationLinksTests.cs" />
     <Compile Include="WpfButtonWiringTests.cs" />
     <Compile Include="StructureTypeManagerClosePromptTests.cs" />
+    <Compile Include="StructureDeletePromptTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

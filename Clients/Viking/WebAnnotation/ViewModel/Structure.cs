@@ -352,22 +352,52 @@ namespace WebAnnotation.ViewModel
             AnnotationOverlay.GoToLocation(loc);
         }
 
-        public override void Delete() => Store.Structures.Remove(modelObj);/*
-            Structure OriginalParent = this.Parent;
-            this.Parent = null;
+        /// <summary>
+        /// Deletes this structure on the server now, from the context menu's Delete. The server also deletes every location of
+        /// the structure, so the user confirms a question naming the structure and its location count, and a user who is not
+        /// the structure's user also needs Review access (<see cref="StructureDeletePrompt"/>). Nothing is sent when the
+        /// location count cannot be read. A failed save shows the server's fault and leaves no delete pending, so a later
+        /// unrelated structure save cannot send it.
+        /// </summary>
+        public override void Delete()
+        {
+            long? locationCount = Store.Structures.NumberOfLocations(ID);
+            if (locationCount is null)
+                return;
 
-            DBACTION originalAction = this.DBAction;
-            this.DBAction = DBACTION.DELETE;
-
-            bool success = Store.Structures.Save();
-            if (!success)
+            string name = StructureDeletePrompt.Name(modelObj.Type?.Name, ID, modelObj.Label);
+            if (!StructureDeletePrompt.MayDelete(Username, Viking.UI.State.UserCredentials?.UserName, VolumeAccessRoles.HasReviewAccess()))
             {
-                //Write straight to data since we have an assert to check whether an object is being deleted, but
-                //in this case we know it is ok
-                this.Data.DBAction = originalAction;
-                this.Parent = OriginalParent;
+                MessageBox.Show(StructureDeletePrompt.RefusalMessage(name, Username), "Delete structure", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
-            */
+
+            if (MessageBox.Show(StructureDeletePrompt.Question(name, locationCount.Value), "Delete structure",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+            {
+                return;
+            }
+
+            AnnotationService.Types.DBACTION originalAction = modelObj.DBAction;
+            bool saved = false;
+            Store.Structures.Remove(modelObj);
+            try
+            {
+                Store.Structures.Save();
+                saved = true;
+            }
+            catch (System.ServiceModel.FaultException e)
+            {
+                AnnotationOverlay.ShowFaultExceptionMsgBox(e);
+            }
+            finally
+            {
+                // The store puts a failed save's objects back in its pending set; without this the DELETE would ride along
+                // with the next structure save.
+                if (!saved)
+                    modelObj.DBAction = originalAction;
+            }
+        }
 
         bool IEquatable<Structure>.Equals(Structure other) => modelObj.ID == other.modelObj.ID;
 

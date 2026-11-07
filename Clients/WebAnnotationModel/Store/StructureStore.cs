@@ -162,23 +162,29 @@ namespace WebAnnotationModel
             if (obj is null)
                 return;
 
-            long numLocs = 0;
-            try
-            {
-                IClientChannel proxy = CreateProxy();
-                numLocs = ((IAnnotateStructures)proxy).NumberOfLocationsForStructure(ID);
-            }
-            catch (Exception e)
-            {
-                ShowStandardExceptionMessage(e);
-                return;
-            }
-
-            if (numLocs == 0)
+            if (NumberOfLocations(ID) == 0)
             {
                 Remove(obj);
                 Save();
                 Trace.WriteLine("Removing childless structure: " + obj.ToString(), "WebAnnotation");
+            }
+        }
+
+        /// <summary>
+        /// Asks the server how many locations structure <paramref name="ID"/> has. Returns null, after showing the standard
+        /// error message, when the call fails. Called by <see cref="CheckForOrphan"/> and by the structure Delete confirmation.
+        /// </summary>
+        public long? NumberOfLocations(long ID)
+        {
+            try
+            {
+                IClientChannel proxy = CreateProxy();
+                return ((IAnnotateStructures)proxy).NumberOfLocationsForStructure(ID);
+            }
+            catch (Exception e)
+            {
+                ShowStandardExceptionMessage(e);
+                return null;
             }
         }
 
