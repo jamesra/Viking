@@ -379,9 +379,10 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// Inserts the structure, then its first location (optional). Circle WKT is written after
-        /// the location has an identity, same as CreateLocation. Throws NotFound, naming the missing ID, before anything is
-        /// saved, when the structure's ParentId names a structure or its TypeId a structure type that does not exist, or
-        /// when the first location's Links name a location that does not exist.
+        /// the location has an identity, same as CreateLocation. Throws InvalidArgument when the request carries no
+        /// structure, and NotFound, naming the missing ID, before anything is saved, when the structure's ParentId names
+        /// a structure or its TypeId a structure type that does not exist, or when the first location's Links name a
+        /// location that does not exist.
         /// </summary>
         public override async Task<CreateStructureResponse> CreateStructure(CreateStructureRequest request, ServerCallContext context)
         {
@@ -390,7 +391,8 @@ namespace gRPCAnnotationService
                 var ct = context.CancellationToken;
                 var username = AnnotationRpc.CallerName(context);
 
-                var structure = request.NewStructure.ToStructure();
+                var structure = (request.NewStructure
+                    ?? throw new RpcException(new Status(StatusCode.InvalidArgument, "A structure is required"))).ToStructure();
                 structure.Username = username;
                 structure.Created = DateTime.UtcNow;
                 structure.LastModified = structure.Created;
@@ -528,9 +530,10 @@ namespace gRPCAnnotationService
         }
 
         /// <summary>
-        /// Creates one link. Throws InvalidArgument when source and target are the same structure, NotFound, naming
-        /// the missing IDs, when either structure does not exist, and then AlreadyExists, naming the pair and leaving
-        /// the stored link unchanged, when a link with that source and target is stored; none of them saves anything.
+        /// Creates one link. Throws InvalidArgument when the request carries no link or source and target are the same
+        /// structure, NotFound, naming the missing IDs, when either structure does not exist, and then AlreadyExists,
+        /// naming the pair and leaving the stored link unchanged, when a link with that source and target is stored;
+        /// none of them saves anything.
         /// The reverse of a stored link is left to the database's reciprocal-link trigger, which refuses it with
         /// FailedPrecondition.
         /// </summary>
@@ -539,7 +542,8 @@ namespace gRPCAnnotationService
             try
             {
                 var ct = context.CancellationToken;
-                var link = request.NewLink;
+                var link = request.NewLink
+                    ?? throw new RpcException(new Status(StatusCode.InvalidArgument, "A structure link is required"));
                 if (link.SourceId == link.TargetId)
                     throw new RpcException(new Status(StatusCode.InvalidArgument, "A structure cannot link to itself"));
                 await ThrowIfStructuresMissingAsync(new[] { link.SourceId, link.TargetId }, ct);

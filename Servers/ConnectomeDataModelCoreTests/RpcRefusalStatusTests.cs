@@ -58,6 +58,22 @@ namespace ConnectomeDataModelCoreTests
                 "POLYGON locations require a volume shape: the client derives it from the mosaic shape under the volume's default transform.",
                 (db, log, ctx) => new LocationService(db, log.For<LocationService>())
                     .CreateLocation(new CreateLocationRequest { Obj = PolygonWithoutVolumeShape() }, ctx));
+            // proto3 leaves an unset message field null; each Create RPC refuses it before any query.
+            yield return Case("Location.CreateLocation without location", "A location is required",
+                (db, log, ctx) => new LocationService(db, log.For<LocationService>())
+                    .CreateLocation(new CreateLocationRequest(), ctx));
+            yield return Case("StructureType.CreateStructureType without structure type", "A structure type is required",
+                (db, log, ctx) => new StructureTypeService(db, log.For<StructureTypeService>())
+                    .CreateStructureType(new CreateStructureTypeRequest(), ctx));
+            yield return Case("Structure.CreateStructure without structure", "A structure is required",
+                (db, log, ctx) => new StructureService(db, log.For<StructureService>())
+                    .CreateStructure(new CreateStructureRequest { NewAnnotation = new ProtoLocation { Section = 1 } }, ctx));
+            yield return Case("Structure.CreateStructureLink without link", "A structure link is required",
+                (db, log, ctx) => new StructureService(db, log.For<StructureService>())
+                    .CreateStructureLink(new CreateStructureLinkRequest(), ctx));
+            yield return Case("PermittedStructureLinks.CreatePermittedStructureLink without link", "A permitted structure link is required",
+                (db, log, ctx) => new PermittedStructureLinksService(db, log.For<PermittedStructureLinksService>())
+                    .CreatePermittedStructureLink(new CreatePermittedStructureLinkRequest(), ctx));
         }
 
         private static ProtoLocation PolygonWithoutVolumeShape() => new()
@@ -81,6 +97,25 @@ namespace ConnectomeDataModelCoreTests
             Assert.True((StatusCode.InvalidArgument, detail) == (ex.StatusCode, ex.Status.Detail),
                 $"{name}: expected InvalidArgument '{detail}', got {ex.StatusCode} '{ex.Status.Detail}'");
             Assert.DoesNotContain(LogLevel.Error, log.Levels);
+        }
+
+        /// <summary>
+        /// Every Create RPC whose request carries a message field has a "without" case in <see cref="RefusedCalls"/>,
+        /// so a new Create RPC fails here until its missing-object refusal is pinned.
+        /// </summary>
+        [Fact]
+        public void EveryCreateRpcWithAMessageFieldRefusesItMissing()
+        {
+            var covered = RefusedCalls().Select(c => (string)c[0]).ToArray();
+            var creates = typeof(CreateLocationRequest).Assembly.GetTypes()
+                .Where(t => t.Name.StartsWith("Create") && t.Name.EndsWith("Request") && typeof(Google.Protobuf.IMessage).IsAssignableFrom(t))
+                .Where(t => ((Google.Protobuf.Reflection.MessageDescriptor)t.GetProperty("Descriptor")!.GetValue(null)!)
+                    .Fields.InFieldNumberOrder().Any(f => f.FieldType == Google.Protobuf.Reflection.FieldType.Message))
+                .Select(t => t.Name[..^"Request".Length])
+                .ToArray();
+
+            Assert.Equal(5, creates.Length);
+            Assert.All(creates, rpc => Assert.Contains(covered, name => name.Contains($".{rpc} without ")));
         }
 
         /// <summary>Every status code, so a code added to Grpc.Core is covered without editing this test.</summary>

@@ -28,16 +28,17 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// Inserts one type, stamping the caller name and Created/LastModified server-side.
-        /// The response carries the row with its database-assigned Id. Throws NotFound, naming the ParentId, without
-        /// saving when the parent type does not exist; FK_StructureType_StructureType would otherwise fail the save
-        /// as a generic Unknown failure.
+        /// The response carries the row with its database-assigned Id. Throws InvalidArgument when the request carries
+        /// no structure type, and NotFound, naming the ParentId, without saving when the parent type does not exist;
+        /// FK_StructureType_StructureType would otherwise fail the save as a generic Unknown failure.
         /// </summary>
         public override async Task<CreateStructureTypeResponse> CreateStructureType(CreateStructureTypeRequest request, ServerCallContext context)
         {
             try
             {
                 var ct = context.CancellationToken;
-                var row = request.Obj.ToStructureType();
+                var row = (request.Obj
+                    ?? throw new RpcException(new Status(StatusCode.InvalidArgument, "A structure type is required"))).ToStructureType();
                 if (row.ParentId.HasValue && await FindLiveAsync(row.ParentId.Value, ct) == null)
                     throw new RpcException(new Status(StatusCode.NotFound, $"Structure Type ID {row.ParentId} not found"));
                 row.Username = AnnotationRpc.CallerName(context);

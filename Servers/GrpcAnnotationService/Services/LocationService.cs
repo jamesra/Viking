@@ -433,26 +433,29 @@ namespace gRPCAnnotationService
 
         /// <summary>
         /// Inserts the row, then PersistCircleShapesIfNeededAsync. NTS cannot write SQL CurvePolygon;
-        /// circles are stored as POINT until that SQL update. Throws NotFound, before anything is saved, when ParentId
-        /// names no structure or Links name a location that does not exist.
+        /// circles are stored as POINT until that SQL update. Throws InvalidArgument when the request carries no
+        /// location, and NotFound, before anything is saved, when ParentId names no structure or Links name a location
+        /// that does not exist.
         /// </summary>
         public override async Task<CreateLocationResponse> CreateLocation(CreateLocationRequest request, ServerCallContext context)
         {
             try
             {
                 var ct = context.CancellationToken;
+                var obj = request.Obj
+                    ?? throw new RpcException(new Status(StatusCode.InvalidArgument, "A location is required"));
                 var username = AnnotationRpc.CallerName(context);
-                var row = NewLocationRow(request.Obj, username);
+                var row = NewLocationRow(obj, username);
                 if (!await _context.Structures.AsNoTracking().AnyAsync(s => s.Id == row.ParentId, ct))
                     throw new RpcException(new Status(StatusCode.NotFound, $"Structure not found: {row.ParentId}"));
-                await ThrowIfLocationsMissingAsync(_context, request.Obj.Links.Where(peer => peer != 0), ct);
+                await ThrowIfLocationsMissingAsync(_context, obj.Links.Where(peer => peer != 0), ct);
 
                 await using var tx = await _context.Database.BeginTransactionAsync(ct);
 
                 var added = await _context.Locations.AddAsync(row, ct);
                 await _context.SaveChangesAsync(ct);
-                await PersistCircleShapesIfNeededAsync(request.Obj, added.Entity, ct);
-                await PersistProtoLinksAsync(_context, request.Obj.Links, added.Entity.Id, username, ct);
+                await PersistCircleShapesIfNeededAsync(obj, added.Entity, ct);
+                await PersistProtoLinksAsync(_context, obj.Links, added.Entity.Id, username, ct);
                 await _context.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
 
