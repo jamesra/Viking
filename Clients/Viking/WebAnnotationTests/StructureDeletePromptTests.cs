@@ -1,5 +1,7 @@
 using FsCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.ServiceModel;
 using WebAnnotation.ViewModel;
 
 namespace WebAnnotationTests
@@ -66,6 +68,32 @@ namespace WebAnnotationTests
 
             StringAssert.StartsWith(message, "Cell #180 was last edited by jamesan.");
             StringAssert.Contains(message, "Review access");
+        }
+
+        [TestMethod]
+        public void SaveSucceeded_NoFailure() =>
+            Assert.IsNull(StructureDeletePrompt.SaveFailure(() => true, () => new FaultException("stale fault")));
+
+        /// <summary>
+        /// The structure store reports a server rejection by returning false and setting LastSaveFault; Delete must still
+        /// see it, show it and clear the pending DELETE.
+        /// </summary>
+        [TestMethod]
+        public void SaveReturnedFalse_ReturnsTheStoresFault()
+        {
+            FaultException fault = new("delete rejected");
+            Assert.AreSame(fault, StructureDeletePrompt.SaveFailure(() => false, () => fault));
+        }
+
+        [TestMethod]
+        public void SaveReturnedFalse_WithoutFault_StillFails() =>
+            Assert.IsNotNull(StructureDeletePrompt.SaveFailure(() => false, () => null));
+
+        [TestMethod]
+        public void SaveThrew_ReturnsTheException()
+        {
+            InvalidOperationException thrown = new("save threw");
+            Assert.AreSame(thrown, StructureDeletePrompt.SaveFailure(() => throw thrown, () => null));
         }
 
         [TestMethod]

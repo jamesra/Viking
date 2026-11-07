@@ -379,24 +379,15 @@ namespace WebAnnotation.ViewModel
             }
 
             AnnotationService.Types.DBACTION originalAction = modelObj.DBAction;
-            bool saved = false;
             Store.Structures.Remove(modelObj);
-            try
-            {
-                Store.Structures.Save();
-                saved = true;
-            }
-            catch (System.ServiceModel.FaultException e)
-            {
-                AnnotationOverlay.ShowFaultExceptionMsgBox(e);
-            }
-            finally
-            {
-                // The store puts a failed save's objects back in its pending set; without this the DELETE would ride along
-                // with the next structure save.
-                if (!saved)
-                    modelObj.DBAction = originalAction;
-            }
+            Exception? failure = StructureDeletePrompt.SaveFailure(Store.Structures.Save, () => Store.Structures.LastSaveFault);
+            if (failure is null)
+                return;
+
+            // The store puts a failed save's objects back in its pending set; without this the DELETE would ride along with
+            // the next structure save.
+            modelObj.DBAction = originalAction;
+            AnnotationOverlay.ShowFaultExceptionMsgBox(failure);
         }
 
         bool IEquatable<Structure>.Equals(Structure other) => modelObj.ID == other.modelObj.ID;

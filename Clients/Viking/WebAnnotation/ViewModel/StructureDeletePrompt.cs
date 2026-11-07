@@ -43,6 +43,23 @@ namespace WebAnnotation.ViewModel
             return whose + " Deleting a structure that is not yours needs Review access to this volume.";
         }
 
+        /// <summary>
+        /// Runs <paramref name="save"/> and returns null when it succeeded, otherwise the exception to show: the one it threw,
+        /// or, when it returned false, <paramref name="lastSaveFault"/> (or a generic one when the store recorded none). The
+        /// structure store reports a rejected save by returning false and setting LastSaveFault, not by throwing.
+        /// </summary>
+        public static Exception? SaveFailure(Func<bool> save, Func<Exception?> lastSaveFault)
+        {
+            try
+            {
+                return save() ? null : lastSaveFault() ?? new InvalidOperationException("The server did not confirm the delete.");
+            }
+            catch (Exception e)
+            {
+                return e;
+            }
+        }
+
         private static bool IsSameUser(string? a, string? b) =>
             !string.IsNullOrWhiteSpace(a) && !string.IsNullOrWhiteSpace(b) &&
             string.Equals(a!.Trim(), b!.Trim(), StringComparison.OrdinalIgnoreCase);
