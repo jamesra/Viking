@@ -467,7 +467,21 @@ namespace WebAnnotation.UI.Actions
         /// <param name="smooth_volume_shape"></param>
         /// <param name="path"></param>
         /// <returns></returns>
-        public static List<IAction> IdentifyPossibleInteriorActions(long origin_ID, IShape2D volume_shape, IShape2D smooth_volume_shape, Path path)
+        public static List<IAction> IdentifyPossibleInteriorActions(long origin_ID, IShape2D volume_shape, IShape2D smooth_volume_shape, Path path) =>
+            IdentifyPossibleInteriorActions(volume_shape, smooth_volume_shape, path,
+                () => Store.Locations.GetObjectByID(origin_ID),
+                () => AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform);
+
+        /// <summary>
+        /// <see cref="IdentifyPossibleInteriorActions(long, IShape2D, IShape2D, Path)"/> with the store lookup and the section
+        /// transform passed in, so the choices can be built without the store or the overlay. Runs on pen mouse-up with no
+        /// handler above it, so a loop that cannot become a hole offers no choice instead of throwing.
+        /// </summary>
+        /// <param name="volume_shape">The location's control polygon in volume space (unsmoothed); the replaced hole is added to it.</param>
+        /// <param name="smooth_volume_shape">The location as drawn (smoothed), which decides whether the loop is inside it and which holes it touches.</param>
+        /// <param name="findLocation">Looks the location up; called only once the loop qualifies. Null means it left the store.</param>
+        /// <param name="sectionTransform">The section-to-volume transform on screen; called only once the loop qualifies.</param>
+        internal static List<IAction> IdentifyPossibleInteriorActions(IShape2D volume_shape, IShape2D smooth_volume_shape, Path path, Func<LocationObj?> findLocation, Func<IVolumeToSectionTransform> sectionTransform)
         {
             List<IAction> actions = [];
 
@@ -501,42 +515,22 @@ namespace WebAnnotation.UI.Actions
                         }
                     }
 
-                    LocationObj origin_loc = Store.Locations.GetObjectByID(origin_ID);
+                    // The view can outlive its store entry (deleted or replaced by a poll)
+                    LocationObj? origin_loc = findLocation();
+                    if (origin_loc is null)
+                        return actions;
 
                     //Remove the intersected interior polygons, add the new interior polygon
                     if (IntersectedInteriorPolygons.Count > 0)
                     {
-                        Polygon? volume_shape_copy = ((Polygon)volume_shape).Clone() as Polygon;
-
                         IntersectedInteriorPolygons.Reverse(); //Have to delete high to low to remove the correct polygons
-                        foreach (int iInnerPoly in IntersectedInteriorPolygons)
-                        {
-                            volume_shape_copy.RemoveInteriorRing(iInnerPoly);
-                        }
-
-                        volume_shape_copy.AddInteriorRing(closedpath);
-
-                        IVolumeToSectionTransform transform = WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.ActiveSectionToVolumeTransform;
-
-                        // The stored shape keeps its own points; only the new hole is mapped to the section
-                        Polygon mosaic_shape_copy = origin_loc.MosaicShape.ToPolygon();
-                        foreach (int iInnerPoly in IntersectedInteriorPolygons)
-                        {
-                            mosaic_shape_copy.RemoveInteriorRing(iInnerPoly);
-                        }
-
-                        Polygon mosaic_hole = LocationVolumeGeometry.TryMapPolygonToMosaic(closedpath, transform);
-                        if (mosaic_hole is null)
-                            return actions;
-
-                        mosaic_shape_copy.AddInteriorRing(mosaic_hole);
-
-                        Change2DContourAction action = new(origin_ID, RetraceCommandAction.REPLACE_INTERIOR_RING, mosaic_shape_copy, volume_shape_copy, transform: transform);
-                        actions.Add(action);
+                        Change2DContourAction? action = ReplaceHolesWithLoop(origin_loc, (Polygon)volume_shape, closedpath, IntersectedInteriorPolygons, sectionTransform());
+                        if (action is not null)
+                            actions.Add(action);
                     }
                     else
                     {
-                        CutHoleAction cutHoleAction = new(origin_loc, closedpath);
+                        CutHoleAction cutHoleAction = new(origin_loc, closedpath, sectionTransform());
                         actions.Add(cutHoleAction);
                     }
                 }
@@ -546,16 +540,62 @@ namespace WebAnnotation.UI.Actions
         }
 
         /// <summary>
+        /// The choice that replaces <paramref name="holes"/> with <paramref name="loop"/> in both the volume control polygon and
+        /// the stored mosaic shape, or null when either refuses the loop as a hole. The loop was accepted against the outline
+        /// as drawn (smoothed), which bulges past the control polygon, so it can still cross the control outline or a hole
+        /// left in place.
+        /// </summary>
+        /// <param name="volumeShape">The location's control polygon in volume space; not modified.</param>
+        /// <param name="holes">Indexes of the holes the loop touches, highest first so each removal keeps the rest in place.</param>
+        private static Change2DContourAction? ReplaceHolesWithLoop(LocationObj location, Polygon volumeShape, Polygon loop, IReadOnlyList<int> holes, IVolumeToSectionTransform transform)
+        {
+            // The stored shape keeps its own points; only the new hole is mapped to the section
+            Polygon mosaic_hole = LocationVolumeGeometry.TryMapPolygonToMosaic(loop, transform);
+            if (mosaic_hole is null)
+                return null;
+
+            Polygon volume_shape_copy = (Polygon)volumeShape.Clone();
+            Polygon mosaic_shape_copy = location.MosaicShape.ToPolygon();
+            try
+            {
+                foreach (int hole in holes)
+                {
+                    volume_shape_copy.RemoveInteriorRing(hole);
+                    mosaic_shape_copy.RemoveInteriorRing(hole);
+                }
+
+                volume_shape_copy.AddInteriorRing(loop);
+                mosaic_shape_copy.AddInteriorRing(mosaic_hole);
+            }
+            catch (ArgumentException e)
+            {
+                Trace.WriteLine($"Pen loop over location {location.ID}: the loop cannot replace hole(s) {string.Join(", ", holes)} ({e.Message}); that choice is not offered.");
+                return null;
+            }
+
+            return new Change2DContourAction(location, RetraceCommandAction.REPLACE_INTERIOR_RING, mosaic_shape_copy, volume_shape_copy, transform: transform);
+        }
+
+        /// <summary>
         /// Check if we should replace the entire shape or cut a new hole into an existing shape
         /// </summary>
         /// <param name="origin_ID"></param>
         /// <param name="smooth_volume_shape"></param>
         /// <param name="path"></param>
         /// <returns></returns>
-        public static List<IAction> IdentifyPossibleReshapeAction(long origin_ID, IShape2D smooth_volume_shape, Path path)
+        public static List<IAction> IdentifyPossibleReshapeAction(long origin_ID, IShape2D smooth_volume_shape, Path path) =>
+            IdentifyPossibleReshapeAction(Store.Locations.GetObjectByID(origin_ID), smooth_volume_shape, path);
+
+        /// <summary>
+        /// <see cref="IdentifyPossibleReshapeAction(long, IShape2D, Path)"/> for a location already looked up. Runs on pen
+        /// mouse-up with no handler above it.
+        /// </summary>
+        /// <param name="origin_loc">The location under the stroke, or null when the view outlived its store entry (deleted or replaced by a poll); null offers no choice.</param>
+        internal static List<IAction> IdentifyPossibleReshapeAction(LocationObj? origin_loc, IShape2D smooth_volume_shape, Path path)
         {
             List<IAction> actions = [];
-            LocationObj origin_loc = Store.Locations.GetObjectByID(origin_ID);
+            if (origin_loc is null)
+                return actions;
 
             //2D Case: If we draw a loop around an annotation we should offer to replace that annotations contour's with the closed loop
             if (origin_loc.TypeCode.AllowsClosed2DShape() && path.HasSelfIntersection)

@@ -31,6 +31,8 @@ Documentation/source/Client/versionhistory.rst.
 <!-- Global.GetEndpointFromXML no longer throws XMLMissingDataException when <DefaultWebAnnotationUserSettings> is absent; LoadServerUserSettingsAsync already falls back to RABBIT/WebAnnotationUserSettings.xml when UserSettingsUri is null. -->
 * **Fix: pen erase at the start of a stroke.** Erasing a stroke you are drawing (with the pen's eraser or the middle mouse button) back across its first stretch showed an error instead of shortening the stroke. The stroke now shortens and you can keep drawing from where it was cut.
 <!-- PathInteractionLogger.RemoveLogEntriesAfterErase read Path.NewestSegment with one point left (ArgumentOutOfRange) and Log.Last before Log.Empty (NullReference when emptied). -->
+* **Fix: pen loop around a hole near the outline.** In Pen Mode, closing a loop around a hole close to the polygon's edge could show an error instead of the choice buttons, because the loop crossed the outline's control points where the drawn curve bulges past them. That replace-hole choice is now simply not offered, and the other choices still appear. A loop over a polygon that was just deleted or reloaded no longer shows an error either.
+<!-- Shared2DShapeActionsForPath.IdentifyPossibleInteriorActions accepted the loop against the smoothed exterior but called AddInteriorRing on the unsmoothed control polygon and mosaic shape (ArgumentException); it and IdentifyPossibleReshapeAction also dereferenced a null Store.Locations lookup. -->
 
 ## 1.2.140 — 2026-11-06 (Viking Test, unsigned)
 

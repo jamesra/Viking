@@ -36,6 +36,7 @@
         <Compile Include="Actions\ChangeContourActionTests.cs" />
         <Compile Include="Actions\PolygonCutTests.cs" />
         <Compile Include="Actions\HoleSplitChoiceTests.cs" />
+        <Compile Include="Actions\InteriorLoopActionsTests.cs" />
         <Compile Include="Actions\PenRegionCutTests.cs" />
         <Compile Include="Actions\MouseOverEffectTests.cs" />
         <Compile Include="Actions\CreateNewLinkedLocationActionTests.cs" />
