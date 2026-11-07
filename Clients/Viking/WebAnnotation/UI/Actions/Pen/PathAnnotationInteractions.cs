@@ -440,12 +440,20 @@ namespace WebAnnotation.UI
             return expanded;
         }
 
+        /// <summary>
+        /// The annotations under a single point, expanded for the pen (<see cref="ExpandForPen"/>). This is what the pen is
+        /// over when the path has only that point.
+        /// </summary>
+        private HitTestResult[] PenHitsAtPoint(Vector2 point)
+        {
+            HitTestResult[] point_intersect_candidates = [.. Overlay.GetAnnotations(point).Where(o => o.obj.Contains(point))];
+            //Expanding a container yields null when nothing nested is under the point (e.g. a polygon hole), which counts as empty space
+            return [.. ExpandForPen(point_intersect_candidates, point)];
+        }
+
         private void AddLogEntryForFirstPoint()
         {
-            HitTestResult[] candidates = [.. Overlay.GetAnnotations(_Path.Points[0])];
-            HitTestResult[] point_intersect_candidates = [.. candidates.Where(o => o.obj.Contains(_Path.Points[0]))];
-            //Expanding a container yields null when nothing nested is under the point (e.g. a polygon hole), which counts as empty space
-            point_intersect_candidates = [.. ExpandForPen(point_intersect_candidates, _Path.Points[0])];
+            HitTestResult[] point_intersect_candidates = PenHitsAtPoint(_Path.Points[0]);
 
             if (point_intersect_candidates.Length > 0)
             {
@@ -470,14 +478,29 @@ namespace WebAnnotation.UI
         }
 
         /// <summary>
-        /// Removes all entries with an index higher than the path length
+        /// Removes all entries with an index higher than the path length and recomputes what the tip of the path is over.
+        /// The path may be erased down to one point or none (an erase across the first segment, or a pop of every point),
+        /// so this must not assume a segment remains.
         /// </summary>
         private void RemoveLogEntriesAfterErase()
         {
             int max_index = _Path.Points.Count - 1;
-            while (Log.Last.Index > max_index && Log.Empty == false)
+            while (Log.Empty == false && Log.Last.Index > max_index)
             {
                 Log.Pop();
+            }
+
+            if (_Path.Points.Count == 0)
+            {
+                CurrentlyIntersected = [];
+                return;
+            }
+
+            if (_Path.HasSegment == false)
+            {
+                //Match the state AddLogEntryForFirstPoint leaves, so drawing on from the remaining point logs as a fresh stroke does
+                CurrentlyIntersected = [.. PenHitsAtPoint(_Path.Points[0]).Select(c => (ICanvasView)c.obj)];
+                return;
             }
 
             //Update the current intersection list

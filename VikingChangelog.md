@@ -29,6 +29,8 @@ Documentation/source/Client/versionhistory.rst.
 <!-- TextureReaderV2.TextureDataFromStream reads the gain from the nornir_crush tEXt chunk (PngCrushChunk) before decoding; TileView keeps it and sets TileLayout.fx TileGainScale/TileGainBias = 1/gain and (0.5 + offset/step)*(1/gain - 1)/255 (CrushInfo.GainTransform, same as Nornir noise_crush.unit_gain_correction) before the display window. The section CodeHistogram and display range are of the uncorrected codes. -->
 * **Fix: annotations missing on some volumes.** A volume whose VikingXML had no default annotation user settings (RC1 v2 was one) opened with no annotations at all and no message. Viking now loads that volume's annotations and uses the default user settings.
 <!-- Global.GetEndpointFromXML no longer throws XMLMissingDataException when <DefaultWebAnnotationUserSettings> is absent; LoadServerUserSettingsAsync already falls back to RABBIT/WebAnnotationUserSettings.xml when UserSettingsUri is null. -->
+* **Fix: pen erase at the start of a stroke.** Erasing a stroke you are drawing (with the pen's eraser or the middle mouse button) back across its first stretch showed an error instead of shortening the stroke. The stroke now shortens and you can keep drawing from where it was cut.
+<!-- PathInteractionLogger.RemoveLogEntriesAfterErase read Path.NewestSegment with one point left (ArgumentOutOfRange) and Log.Last before Log.Empty (NullReference when emptied). -->
 
 ## 1.2.140 — 2026-11-06 (Viking Test, unsigned)
 
