@@ -129,14 +129,13 @@ namespace ConnectomeDataModelCoreTests
             [$"function ufnCenterToCenterIntersectionPoint only in {SqlProject}, not in {UpdateScript}"] = NoDbVersionStep,
             [$"function ufnShapeDistance3D only in {SqlProject}, not in {UpdateScript}"] = NoDbVersionStep,
             [$"function WeightedStructureCenters3D only in {UpdateScript}, not in {SqlProject}"] = NoSqlProjectFile,
-            [$"function ufnWeightedStructureCentroidXY only in {UpdateScript}, not in {SqlProject}"] = NoSqlProjectFile,
-            [$"function ufnWeightedStructureCentroidZ only in {UpdateScript}, not in {SqlProject}"] = NoSqlProjectFile,
         };
 
         private const string NoSqlProjectFile =
             "Created by a DBVersion step in CreateUpdateDatabase.sql, but dbo/Functions has no file for it and the sqlproj " +
             "does not build it (Servers/SQL/Functions holds a copy), so a database deployed from the SSDT project lacks it. " +
-            "Adding the file and the build entry is a SQL-object change; remove this entry then.";
+            "Its parameter is the table type dbo.mem_integer_list, which the sqlproj does not define yet; add that type " +
+            "first, then the file and the build entry, and remove this entry.";
 
         // ---- The checks -------------------------------------------------------------------------------
 
