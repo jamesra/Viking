@@ -109,7 +109,7 @@
         </Grid.RowDefinitions>
 
         <DockPanel Grid.Column="0" Grid.Row="0" Grid.RowSpan="2">
-            <Button DockPanel.Dock="Bottom">Create New Type</Button>
+            <Button DockPanel.Dock="Bottom" Click="OnCreateNewType">Create New Type</Button>
             <TreeView
                       SelectedValuePath="ID"
                       Name="StructureTypesTree"

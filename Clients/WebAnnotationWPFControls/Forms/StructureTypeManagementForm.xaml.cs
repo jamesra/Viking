@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using WebAnnotationModel;
 
 namespace WebAnnotation.WPF.Forms
@@ -15,8 +16,17 @@ namespace WebAnnotation.WPF.Forms
     /// </summary>
     public partial class StructureTypeManagementForm : Window
     {
-        public StructureTypeManagementForm()
+        private readonly Func<StructureTypeObj> createNewType;
+
+        /// <summary>Creates the window; the host sets <see cref="FrameworkElement.DataContext"/> to the structure type store.</summary>
+        /// <param name="createNewType">
+        /// Runs the host's create-structure-type flow for a root type when the user clicks Create New Type, and returns
+        /// the type the server created, or null when nothing was created. This library cannot reach the WinForms
+        /// properties dialog that flow shows, so the host supplies it.
+        /// </param>
+        public StructureTypeManagementForm(Func<StructureTypeObj> createNewType)
         {
+            this.createNewType = createNewType ?? throw new ArgumentNullException(nameof(createNewType));
             InitializeComponent();
             /*
             ListPermittedBidirectional.Items.Filter = new Predicate<object>(o => FilterBidirectional(StructureTypeDetailsTabControl.DataContext, o as IPermittedStructureLinkReadOnly));
@@ -79,6 +89,32 @@ namespace WebAnnotation.WPF.Forms
                 catch (Exception exp)
                 {
                     Trace.WriteLine($"{exp}");
+                }
+            }
+        }
+
+        private void OnCreateNewType(object sender, RoutedEventArgs e)
+        {
+            StructureTypeObj created = createNewType();
+            if (created is null)
+                return;
+
+            // The tree's root items rebind from the store's RootObjects notification, but their containers are generated
+            // in the next layout pass; select after it.
+            Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() => SelectRootType(created.ID)));
+        }
+
+        /// <summary>Selects and scrolls to the root type with this ID; does nothing when the tree does not show it.</summary>
+        private void SelectRootType(long id)
+        {
+            foreach (object item in StructureTypesTree.Items)
+            {
+                if (item is StructureTypeObj type && type.ID == id &&
+                    StructureTypesTree.ItemContainerGenerator.ContainerFromItem(item) is TreeViewItem container)
+                {
+                    container.IsSelected = true;
+                    container.BringIntoView();
+                    return;
                 }
             }
         }

@@ -1833,7 +1833,7 @@ break;
                     autoPolygonizeController?.ResubmitVisible();
                     return;
                 case Keys.F7:
-                    WPF.Forms.StructureTypeManagementForm StructureTypeManagementForm = new()
+                    WPF.Forms.StructureTypeManagementForm StructureTypeManagementForm = new(() => ViewModel.StructureType.CreateWithPropertiesDialog(null, null))
                     {
                         DataContext = Store.StructureTypes
                     };

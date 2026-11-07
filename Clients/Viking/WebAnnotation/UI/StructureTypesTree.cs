@@ -293,23 +293,9 @@ namespace WebAnnotation.UI
 
         private void OnNewStructureType(object sender, EventArgs e)
         {
-            StructureTypeObj newTypeObj = new();
-            StructureType newType = new(newTypeObj);
-
-            if (newType.ShowPropertiesDialog(ParentForm) == DialogResult.OK)
-            {
-                try
-                {
-                    newTypeObj = Store.StructureTypes.Create(newTypeObj);
-                    Store.StructureTypes.Save();
-                }
-                catch (System.ServiceModel.FaultException ex)
-                {
-                    AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
-                }
-
-                Viking.UI.State.SelectedObject = new StructureType(newTypeObj);
-            }
+            StructureTypeObj? created = StructureType.CreateWithPropertiesDialog(null, ParentForm);
+            if (created is not null)
+                Viking.UI.State.SelectedObject = new StructureType(created);
         }
     }
 }

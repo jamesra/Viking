@@ -170,25 +170,37 @@ namespace WebAnnotation.ViewModel
 
         #endregion
 
-        protected void ContextMenu_OnNewStructureType(object sender, EventArgs e)
-        {
-            StructureTypeObj newType = new(modelObj);
-            StructureType newTypeView = new(newType);
-            DialogResult result = Viking.UI.Forms.PropertySheetForm.ShowDialog(newTypeView, null);
+        protected void ContextMenu_OnNewStructureType(object sender, EventArgs e) => CreateWithPropertiesDialog(modelObj, null);
 
-            if (result != DialogResult.Cancel)
+        /// <summary>
+        /// Shows the properties dialog for a new structure type and, when the user clicks OK, creates the type on the
+        /// annotation server and saves the store. A server fault is shown to the user in a message box. Used by the
+        /// Structure Types tree's New menus and by Create New Type in the structure type manager (F7). Call on the UI
+        /// thread; the dialog is modal.
+        /// </summary>
+        /// <param name="parent">The new type's parent, or null for a root type.</param>
+        /// <param name="owner">The dialog's owner, or null to own it by the active window.</param>
+        /// <returns>
+        /// The type the server created, or null when the user cancelled or the server did not create it.
+        /// </returns>
+        public static StructureTypeObj? CreateWithPropertiesDialog(StructureTypeObj? parent, Form? owner)
+        {
+            StructureTypeObj draft = new(parent);
+            if (Viking.UI.Forms.PropertySheetForm.ShowDialog(new StructureType(draft), owner) != DialogResult.OK)
+                return null;
+
+            StructureTypeObj? created = null;
+            try
             {
-                try
-                {
-                    newType = Store.StructureTypes.Create(newType);
-                    Store.StructureTypes.Save();
-                }
-                catch (System.ServiceModel.FaultException ex)
-                {
-                    AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
-                }
+                created = Store.StructureTypes.Create(draft);
+                Store.StructureTypes.Save();
+            }
+            catch (System.ServiceModel.FaultException ex)
+            {
+                AnnotationOverlay.ShowFaultExceptionMsgBox(ex);
             }
 
+            return created;
         }
 
 
