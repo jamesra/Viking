@@ -243,5 +243,100 @@ namespace GeometryTests
                     return c.Polygon.ExteriorRing.All(p => DistanceToRing(reduced, p) <= c.Tolerance + slack);
                 }),
                 nameof(ReduceExteriorRingStaysWithinToleranceOfEveryVertex));
+
+        /// <summary>
+        /// The same bound for DouglasPeuckerReduction on a closed ring, which the segmentation polygonizer and the SQL
+        /// pre-simplify call without preserving anything: the result is still closed, keeps source vertices in order,
+        /// and leaves no source vertex farther than the tolerance from it.
+        /// </summary>
+        [TestMethod]
+        public void DouglasPeuckerClosedRingStaysWithinToleranceOfEveryVertex() =>
+            CoreCheck.Run(
+                Prop.ForAll(ArbStarRing(), c =>
+                {
+                    Vector2[] source = c.Polygon.ExteriorRing;
+                    Vector2[] reduced = [.. source.DouglasPeuckerReduction(c.Tolerance)];
+
+                    int[] sourceIndices = [.. reduced.Take(reduced.Length - 1).Select(p => Array.IndexOf(source, p))];
+                    bool inOrder = sourceIndices[0] == 0 && sourceIndices.Zip(sourceIndices.Skip(1), (a, b) => a < b).All(ok => ok);
+
+                    double slack = c.Tolerance * 1e-9;
+                    return reduced[0].Equals(reduced[reduced.Length - 1]) && inOrder &&
+                           source.All(p => DistanceToRing(reduced, p) <= c.Tolerance + slack);
+                }),
+                nameof(DouglasPeuckerClosedRingStaysWithinToleranceOfEveryVertex));
+
+        /// <summary>
+        /// Pen cuts preserve the last distinct vertex (ReduceExteriorRing), so the closed-ring fix changes nothing for
+        /// them: with that vertex preserved, the reduction keeps exactly the vertices it kept before.
+        /// </summary>
+        [TestMethod]
+        public void DouglasPeuckerWithTheLastDistinctVertexPreservedIsUnchanged() =>
+            CoreCheck.Run(
+                Prop.ForAll(ArbStarRing(), c =>
+                {
+                    Vector2[] ring = c.Polygon.ExteriorRing;
+                    int[] preserve = [ring.Length - 2];
+                    return Phase7ReferenceImplementations.DouglasPeuckerReduction(ring, c.Tolerance, preserve)
+                        .SequenceEqual(ring.DouglasPeuckerReduction(c.Tolerance, preserve));
+                }),
+                nameof(DouglasPeuckerWithTheLastDistinctVertexPreservedIsUnchanged));
+
+        /// <summary>
+        /// The tail after a preserved last vertex is not reduced again: (12,10.3) is within the tolerance of the edge
+        /// (0,100)-(10,0) it sits on, though 12 pixels from the chord (0,100)-(0,0), and is dropped as before.
+        /// </summary>
+        [TestMethod]
+        public void DouglasPeuckerAddsNoVertexBeforeAPreservedLastVertex()
+        {
+            Vector2[] ring = [new(0, 0), new(-40, 50), new(0, 100), new(12, 10.3), new(10, 0), new(0, 0)];
+            int[] preserve = [ring.Length - 2];
+
+            CollectionAssert.AreEqual(
+                new[] { new Vector2(0, 0), new(-40, 50), new(0, 100), new(10, 0), new(0, 0) },
+                ring.DouglasPeuckerReduction(4, preserve));
+        }
+
+        /// <summary>
+        /// Regression: the ring repeats its first point, so the reduction stopped at the last distinct vertex and never
+        /// kept it. Here that vertex is a corner, (0,10), and the square came back as a triangle.
+        /// A repeated closing point must not change the result.
+        /// </summary>
+        [TestMethod]
+        public void DouglasPeuckerKeepsTheCornerBeforeTheClosingVertex()
+        {
+            Vector2[] square = [new(0, 0), new(10, 0), new(10, 10), new(0, 10), new(0, 0)];
+            Vector2[] expected = [new(0, 0), new(10, 0), new(10, 10), new(0, 10), new(0, 0)];
+
+            CollectionAssert.AreEqual(expected, square.DouglasPeuckerReduction(1.0));
+            CollectionAssert.AreEqual(expected, new[] { new Vector2(0, 0), new(10, 0), new(10, 10), new(0, 10), new(0, 0), new(0, 0) }.DouglasPeuckerReduction(1.0));
+        }
+
+        /// <summary>
+        /// The last distinct vertex is a ring vertex like any other: on the chord to the closing point it is dropped.
+        /// </summary>
+        [TestMethod]
+        public void DouglasPeuckerDropsAColinearVertexBeforeTheClosingVertex()
+        {
+            Vector2[] square = [new(0, 0), new(10, 0), new(10, 10), new(0, 10), new(0, 5), new(0, 0)];
+
+            CollectionAssert.AreEqual(
+                new[] { new Vector2(0, 0), new(10, 0), new(10, 10), new(0, 10), new(0, 0) },
+                square.DouglasPeuckerReduction(1.0));
+        }
+
+        /// <summary>
+        /// A ring that lies within the tolerance of the chord from its first to its last distinct vertex reduces to that
+        /// chord and back, never to its first point alone: (20,0) is 20 pixels from the start and must stay.
+        /// </summary>
+        [TestMethod]
+        public void DouglasPeuckerReducesASliverRingToItsChord()
+        {
+            Vector2[] sliver = [new(0, 0), new(10, 0.1), new(20, 0), new(0, 0)];
+
+            CollectionAssert.AreEqual(
+                new[] { new Vector2(0, 0), new(20, 0), new(0, 0) },
+                sliver.DouglasPeuckerReduction(1.0));
+        }
     }
 }

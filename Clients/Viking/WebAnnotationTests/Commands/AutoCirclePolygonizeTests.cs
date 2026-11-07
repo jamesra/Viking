@@ -509,8 +509,14 @@ namespace WebAnnotationTests.Commands
             Assert.IsFalse(simplified.ExteriorSegments.SelfIntersects(LineSetOrdering.Closed));
         }
 
+        /// <summary>
+        /// The created-shape threshold keeps a 10-pixel lobe and every corner. A looser threshold drops the lobe's
+        /// shoulders and the corner (0,20) but still keeps the tip, an extreme of the outline, and stays within its
+        /// tolerance of every source vertex. Before the closed-ring Douglas-Peucker fix the looser outline lost the tip
+        /// instead, because the reduction never judged the last distinct vertex.
+        /// </summary>
         [TestMethod]
-        public void CreatedShapeSimplifyKeepsALobeTheLooserThresholdCuts()
+        public void CreatedShapeSimplifyKeepsALobeAndALooserThresholdKeepsItsTip()
         {
             Polygon polygon = new(
             [
@@ -525,15 +531,16 @@ namespace WebAnnotationTests.Commands
             ]);
             Vector2 lobeTip = new(20, 30);
 
-            Polygon created = new(AutoPolygonizeSelection.SimplifyProposal(
-                polygon,
-                AutoPolygonizeSelection.CreatedShapeSimplifyPixels).ExteriorRing.CalculateCurvePoints(8, true));
-            // Half-budget stages: need total travel > 2× lobe height (10) for the tip to drop.
-            Polygon looser = new(AutoPolygonizeSelection.SimplifyProposal(polygon, 24)
-                .ExteriorRing.CalculateCurvePoints(8, true));
+            const double looserTolerance = 24;
+            Polygon createdControl = AutoPolygonizeSelection.SimplifyProposal(polygon, AutoPolygonizeSelection.CreatedShapeSimplifyPixels);
+            Polygon looserControl = AutoPolygonizeSelection.SimplifyProposal(polygon, looserTolerance);
+            Polygon created = new(createdControl.ExteriorRing.CalculateCurvePoints(8, true));
+            Polygon looser = new(looserControl.ExteriorRing.CalculateCurvePoints(8, true));
 
-            Assert.IsTrue(created.Distance(lobeTip) <= AutoPolygonizeSelection.CreatedShapeSimplifyPixels + 0.5);
-            Assert.IsTrue(looser.Distance(lobeTip) > created.Distance(lobeTip));
+            Assert.IsTrue(polygon.ExteriorRing.All(p => created.Distance(p) <= AutoPolygonizeSelection.CreatedShapeSimplifyPixels + 0.5));
+            Assert.IsTrue(looserControl.TotalUniqueVertices < createdControl.TotalUniqueVertices);
+            Assert.IsTrue(looserControl.ExteriorRing.Contains(lobeTip));
+            Assert.IsTrue(polygon.ExteriorRing.All(p => looser.Distance(p) <= looserTolerance + 0.5));
         }
 
         [TestMethod]

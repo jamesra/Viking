@@ -545,6 +545,57 @@ namespace GeometryTests
         public static int[] PointsToPreserveIndices(IList<Vector2> Points, ICollection<Vector2> PointsToPreserve)
             => [.. PointsToPreserve.Where(p => Points.Contains(p)).Select(p => Points.IndexOf(p))];
 
+        /// <summary>
+        /// CurveExtensions.DouglasPeuckerReduction(Points, Tolerance, indices) before the closed-ring fix. Open paths
+        /// must still match it; on a closed ring it drops the last distinct vertex, which was the bug.
+        /// </summary>
+        public static List<Vector2> DouglasPeuckerReduction(IList<Vector2> Points, double Tolerance, IEnumerable<int> PointsToPreserveIndicies = null)
+        {
+            if (Points is null || Points.Count < 3)
+                return [.. Points];
+
+            int firstPoint = 0;
+            int lastPoint = Points.Count - 1;
+            SortedSet<int> pointIndexsToKeep = [firstPoint, lastPoint];
+            if (PointsToPreserveIndicies != null)
+                pointIndexsToKeep.UnionWith(PointsToPreserveIndicies);
+
+            while (Points[firstPoint].Equals(Points[lastPoint]))
+                lastPoint--;
+
+            DouglasPeuckerReduction(Points, firstPoint, lastPoint, Tolerance, pointIndexsToKeep);
+
+            List<Vector2> returnPoints = [];
+            foreach (int index in pointIndexsToKeep)
+                returnPoints.Add(Points[index]);
+
+            return returnPoints;
+        }
+
+        private static void DouglasPeuckerReduction(IList<Vector2> points, int firstPoint, int lastPoint, double tolerance, SortedSet<int> pointIndexsToKeep)
+        {
+            double maxDistance = 0;
+            int indexFarthest = 0;
+            LineSegment reference_line = new(points[firstPoint], points[lastPoint]);
+
+            for (int index = firstPoint + 1; index < lastPoint; index++)
+            {
+                double distance = reference_line.DistanceToPoint(points[index]);
+                if (distance > maxDistance)
+                {
+                    maxDistance = distance;
+                    indexFarthest = index;
+                }
+            }
+
+            if (maxDistance > tolerance && indexFarthest != 0)
+            {
+                pointIndexsToKeep.Add(indexFarthest);
+                DouglasPeuckerReduction(points, firstPoint, indexFarthest, tolerance, pointIndexsToKeep);
+                DouglasPeuckerReduction(points, indexFarthest, lastPoint, tolerance, pointIndexsToKeep);
+            }
+        }
+
         #endregion
     }
 }

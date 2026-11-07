@@ -126,8 +126,8 @@ namespace Geometry
             if (tolerance <= 0 || polygon.ExteriorRing.Length < 5)
                 return polygon;
 
-            // The ring repeats its first point at the end, so the reduction stops at the last distinct vertex and would
-            // drop it whatever its distance; it is a ring vertex like any other, so it is preserved.
+            // The last distinct vertex is preserved even when it lies on the chord, as the summary promises
+            // (PolygonCutTests pins the extra vertex on a cut piece).
             List<Vector2> reduced = polygon.ExteriorRing.DouglasPeuckerReduction(tolerance, [polygon.ExteriorRing.Length - 2]);
             if (reduced.Count < 3 || reduced.Count >= polygon.ExteriorRing.Length)
                 return polygon;

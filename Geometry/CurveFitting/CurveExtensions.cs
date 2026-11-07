@@ -367,11 +367,13 @@ namespace Geometry
 
         /// <summary>
         /// Uses the Douglas Peucker algorithm to reduce the number of points.
+        /// The first and last points are always kept. When the last point repeats the first (a closed ring), every vertex
+        /// of the ring, including the last distinct one, is judged against the reduced ring and the result is closed.
         /// </summary>
         /// <param name="Points">The points.</param>
         /// <param name="Tolerance">The tolerance.</param>
         /// <param name="PointsToPreserveIndicies">Indices of points that must be kept in the result</param>
-        /// <returns></returns>
+        /// <returns>The kept points in their original order.</returns>
         public static List<Vector2> DouglasPeuckerReduction
         (this IList<Vector2> Points, Double Tolerance, IEnumerable<int>? PointsToPreserveIndicies = null)
         {
@@ -399,6 +401,20 @@ namespace Geometry
 
             DouglasPeuckerReduction(Points, firstPoint, lastPoint,
             Tolerance, ref pointIndexsToKeep);
+
+            int closingPoint = Points.Count - 1;
+            if (lastPoint < closingPoint)
+            {
+                // A closed ring was reduced only up to its last distinct vertex, which served as a chord end but is not
+                // in the keepers. Re-reduce the tail against the chord from the last keeper to the closing point. When
+                // that chord has no length (usually because nothing was kept, so the ring is within tolerance of the
+                // chord to the last distinct vertex), that vertex stays instead.
+                int tailStart = pointIndexsToKeep.GetViewBetween(firstPoint, lastPoint).Max;
+                if (Points[tailStart].Equals(Points[closingPoint]))
+                    pointIndexsToKeep.Add(lastPoint);
+                else
+                    DouglasPeuckerReduction(Points, tailStart, closingPoint, Tolerance, ref pointIndexsToKeep);
+            }
 
             List<Vector2> returnPoints = [];
             foreach (Int32 index in pointIndexsToKeep)

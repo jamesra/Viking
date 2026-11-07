@@ -1,8 +1,11 @@
-﻿using Geometry;
+﻿using FsCheck;
+using Geometry;
+using GeometryTests.FSCheck;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Random = System.Random;
 
 namespace GeometryTests
 {
@@ -389,6 +392,49 @@ namespace GeometryTests
             List<Vector2> preserve = [new(5, 5)];
             Assert.AreEqual(2, two.DouglasPeuckerReduction(1.0, preserve).Count);
             Assert.ThrowsException<ArgumentNullException>(() => two.DouglasPeuckerReduction(1.0, (ICollection<Vector2>)null));
+        }
+
+        /// <summary>
+        /// The closed-ring handling only runs when the path ends where it starts. An open path, with or without preserved
+        /// indices, reduces exactly as before at every scale, origins up to 500,000 pixels included.
+        /// </summary>
+        [TestMethod]
+        public void DouglasPeuckerOpenPathMatchesReference() =>
+            CoreCheck.Run(
+                Prop.ForAll(
+                    Arb.From(
+                        from length in Gen.Choose(3, 60)
+                        from scaleIndex in Gen.Choose(0, Scales.Length - 1)
+                        from origin in Gen.Elements(0.0, 500000.0)
+                        from steps in Gen.ArrayOf(length, Gen.Two(Gen.Choose(-1000, 1000)))
+                        from preserve in Gen.ArrayOf(Gen.Choose(0, length - 1))
+                        from tolerancePermille in Gen.Choose(1, 50)
+                        select (Path: RandomWalk(steps, Scales[scaleIndex], origin), Preserve: preserve, Tolerance: Scales[scaleIndex] * tolerancePermille / 1000.0)),
+                    c =>
+                    {
+                        if (c.Path[0].Equals(c.Path[c.Path.Count - 1]))
+                            return;
+
+                        AssertSame(
+                            () => Phase7ReferenceImplementations.DouglasPeuckerReduction(c.Path, c.Tolerance, c.Preserve),
+                            () => c.Path.DouglasPeuckerReduction(c.Tolerance, c.Preserve),
+                            (e, a) => Phase7MeshCurveTests.AssertBitIdentical(e, a, "open path"),
+                            "open path");
+                    }),
+                nameof(DouglasPeuckerOpenPathMatchesReference));
+
+        /// <summary>A path whose steps are up to 5% of <paramref name="scale"/> in each axis, starting at <paramref name="origin"/>.</summary>
+        private static List<Vector2> RandomWalk(Tuple<int, int>[] steps, double scale, double origin)
+        {
+            List<Vector2> path = [];
+            Vector2 position = new(origin, origin);
+            foreach (Tuple<int, int> step in steps)
+            {
+                position += new Vector2(step.Item1 * scale * 0.00005, step.Item2 * scale * 0.00005);
+                path.Add(position);
+            }
+
+            return path;
         }
     }
 }

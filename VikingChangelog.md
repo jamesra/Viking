@@ -11,7 +11,7 @@ Notes for whoever updates this file. Comments like this one are not shown in Vik
   changes, rename the unreleased heading to the new version; when a version ships, replace "not yet released" with the date
   and channel, for example "2026-10-26 (Viking Test, unsigned)".
 
-Committed application version: 1.2.141.0.
+Committed application version: 1.2.142.0.
 1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109;
 their changes are listed under 1.2.109. Builds 1.2.128 and 1.2.129 are listed under 1.2.129 (it went out as Viking Test
 and as a signed release on 2026-10-27). Viking Test builds 1.2.130 to 1.2.136 were folded into the 1.2.136 release on
@@ -22,6 +22,11 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. Older 1.1.x notes live in
 Documentation/source/Client/versionhistory.rst.
 -->
+
+## 1.2.142 — not yet released
+
+* **Fix: simplified outlines keep their last corner.** When Viking reduced the points of an outline from **Segment** or auto-polygonize, or of a polygon with thousands of points loaded from the server, it always dropped the corner just before the outline's starting point, however far it stood out, so the shape could lose a corner or cut across a bulge. That corner is now kept whenever leaving it out would move the outline by more than the simplify tolerance.
+<!-- Decision D-ClosedRingDouglasPeucker (A). CurveExtensions.DouglasPeuckerReduction stepped back past the closing duplicate of a closed ring but only kept the original last index, so the last distinct vertex was never judged; it now re-reduces the tail from the last keeper to the closing point (SegmentationMaskPolygonizer.SimplifyClosedRing, SqlGeometryUtils.EnsureRingUnderMaxPoints). Pen cuts (ReduceExteriorRing) already preserved it (694b2421). Open paths are unchanged. -->
 
 ## 1.2.141 — 2026-11-07 (Viking Test, unsigned)
 
