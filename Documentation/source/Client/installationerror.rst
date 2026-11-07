@@ -11,7 +11,7 @@ New Installations
 
 	Common installation issues:
 
-		* Missing packages listed in the `Installation Requirements`_, such as the XNA Redistributable
+		* Missing the requirements listed under :doc:`Viking Client Installation </index>`, such as .NET Framework 4.8 on a version of Windows older than Windows 10 1903
 		* Missing critical hardware such as a GPU
 		* Very rarely environmental issues such as IT departments blocking connections
     
@@ -39,4 +39,3 @@ Known issues with specific versions of Viking
 	 
 	 
 .. _contact: https://github.com/connectomes/Viking/issues
-.. _Installation Requirements: http://connectomes.utah.edu/

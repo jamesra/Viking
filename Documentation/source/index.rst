@@ -19,10 +19,8 @@ Viking Client Installation
 ==========================
 
 Viking requires the following:
-   * Windows 7+ 
-   * `.NET Framework 4.8`_
-   * `XNA 4.0 Framework Redistributable`_
-   * A dedicated GPU.  Intel chips with embedded graphics also work.
+   * 64-bit Windows.  Windows 10 (version 1903 or later) and Windows 11 include `.NET Framework 4.8`_; earlier versions must install it first.
+   * A GPU with DirectX 11 support.  Intel chips with embedded graphics also work.
    * An internet connection
    
 **Note for IT Administrators:** Viking's installer is signed by the University of Utah. 
@@ -61,12 +59,11 @@ Indices and tables
 * :ref:`search`
 
 .. _Papers: 
-.. _Click here to install the Viking client: http://connectomes.utah.edu/Software/Viking4/setup.exe
+.. _Click here to install the Viking client: https://websvc.codepharm.net/Software/Viking/Viking-win-Setup.exe
 .. _Marc Lab : http://marclab.org/
 .. _Marc Lab Papers: http://marclab.org/science/papers/
 .. _Nornir: http://nornir.github.io
 .. _SSTEM and Computation Molecular Phenotyping: http://www.plosbiology.org/article/info%3Adoi%2F10.1371%2Fjournal.pbio.1000074#abstract0
 .. _original visualization site: http://connectomes.utah.edu/viz/
-.. _.NET Framework 4.6: https://www.microsoft.com/en-us/download/details.aspx?id=48130
-.. _XNA 4.0 Framework Redistributable: http://connectomes.utah.edu/XNA Framework 4.0 Redist.msi
+.. _.NET Framework 4.8: https://dotnet.microsoft.com/download/dotnet-framework/net48
 .. _public key: https://connectomes.utah.edu/Software/Viking4/VikingPublicKey.cer
