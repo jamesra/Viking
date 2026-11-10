@@ -214,6 +214,9 @@ def test_the_odata_root_comes_from_the_template_else_the_annotation_service() ->
     assert odata_base(_volume(), {}) == BASE
     assert odata_base(_volume(), {"SEGMENTATION_ODATA_TEMPLATE": "https://o/{volume}/OData/"}) == "https://o/RC2/OData"
     assert odata_base(_volume(annotation_endpoint="https://x/other"), {}) == ""
+    # RC1's older VikingXML names the service by its own file, not Service.svc.
+    legacy = _volume(annotation_endpoint="https://websvc.codepharm.net/RC1/Annotation/Annotation.AnnotateService.svc")
+    assert odata_base(legacy, {}) == "https://websvc.codepharm.net/RC1/OData"
 
 
 def test_a_row_without_a_section_is_skipped_and_a_circle_keeps_its_own_centre() -> None:

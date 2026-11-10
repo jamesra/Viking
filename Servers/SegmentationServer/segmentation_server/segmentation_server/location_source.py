@@ -53,7 +53,7 @@ SECTION_SECONDS = 60.0
 SECTIONS_KEPT = 16
 STRUCTURE_SECONDS = 600.0
 _TIMEOUT_SECONDS = 60.0
-_SERVICE_SUFFIX = re.compile(r"/Annotation/Service\.svc/?$", re.IGNORECASE)
+_SERVICE_SUFFIX = re.compile(r"/Annotation/[^/]+\.svc/?$", re.IGNORECASE)
 
 # url -> decoded JSON document. Injected in tests.
 GetJson = Callable[[str], Dict[str, Any]]
