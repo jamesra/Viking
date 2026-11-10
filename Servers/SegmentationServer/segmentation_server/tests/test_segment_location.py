@@ -263,3 +263,7 @@ async def test_the_status_lists_each_assigned_volume_and_whether_its_images_are_
     assert [(v.annotation_context_id, v.name, v.readable) for v in status.readable_volumes] == [
         (7, "RC2", True), (9, "RPC1", False),
     ]
+    # A client that reads the same VikingXML itself picks its context by the URL, and its filter from the tilesets.
+    assert [(v.viking_xml, list(v.tilesets)) for v in status.readable_volumes] == [
+        ("http://h/RC2.xml", ["TEM"]), ("http://h/RPC1.xml", []),
+    ]

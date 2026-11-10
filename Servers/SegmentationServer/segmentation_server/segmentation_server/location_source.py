@@ -414,7 +414,17 @@ class LocationPrompts:
         z = sections.pop()
 
         section = volume.sections.get(z)
-        tileset = volume.tileset_for(section) if section is not None else None
+        if start.HasField("tileset"):
+            # A client that names its tileset (the gallery's converter) gets that one or a refusal, never another.
+            tileset = section.tilesets.get(start.tileset) if section is not None else None
+            if tileset is None:
+                have = sorted(section.tilesets) if section is not None else []
+                raise LocationError(
+                    grpc.StatusCode.FAILED_PRECONDITION,
+                    f"Section {z} of {volume.name} has no tileset {start.tileset!r}; it has {have}.",
+                )
+        else:
+            tileset = volume.tileset_for(section) if section is not None else None
         readable = tileset is not None and 1 in tileset.levels
         tileset_name = tileset.name if tileset is not None else volume.default_tileset
         if not tileset_name:

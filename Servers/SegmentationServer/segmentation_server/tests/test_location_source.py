@@ -210,6 +210,30 @@ async def test_a_section_without_its_tileset_at_full_resolution_is_not_readable(
     assert not prepared.readable
 
 
+@pytest.mark.asyncio
+async def test_a_named_tileset_is_the_one_the_prompt_is_built_on() -> None:
+    leveled = Tileset("TEM.Leveled", "TEM/Leveled", 256, 256, "", ".png", "03d", {1: TilesetLevel(1, 10, 10)})
+    plain = Tileset("TEM", "TEM", 256, 256, "", ".png", "03d", {1: TilesetLevel(1, 10, 10)})
+    volume = _volume(sections={536: VolumeSection(536, "0536", {"TEM": plain, "TEM.Leveled": leveled})})
+    provider = _Provider()
+    odata = _OData([_entity(1, 1000.0, 1000.0)], [], [])
+
+    await _prompts(odata, provider, _Volumes(volume)).prepare(_start(tileset="TEM.Leveled"))
+    await _prompts(odata, provider, _Volumes(volume)).prepare(_start())
+
+    assert [item.tileset for item in provider.inputs] == ["TEM.Leveled", "TEM"]
+
+
+@pytest.mark.asyncio
+async def test_a_named_tileset_the_section_lacks_is_refused_not_replaced() -> None:
+    odata = _OData([_entity(1, 1000.0, 1000.0)], [], [])
+
+    with pytest.raises(LocationError) as raised:
+        await _prompts(odata).prepare(_start(tileset="TEM.Leveled"))
+
+    assert raised.value.code == grpc.StatusCode.FAILED_PRECONDITION
+
+
 def test_the_odata_root_comes_from_the_template_else_the_annotation_service() -> None:
     assert odata_base(_volume(), {}) == BASE
     assert odata_base(_volume(), {"SEGMENTATION_ODATA_TEMPLATE": "https://o/{volume}/OData/"}) == "https://o/RC2/OData"

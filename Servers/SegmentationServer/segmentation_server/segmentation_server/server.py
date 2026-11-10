@@ -973,6 +973,9 @@ class SegmentationServicer(SegmentationServiceServicer):
                 annotation_context_id=context.annotation_context_id,
                 name=volume.name if volume is not None else context.name,
                 readable=volume is not None and any(section.tilesets for section in volume.sections.values()),
+                viking_xml=context.endpoint,
+                tilesets=sorted({name for section in volume.sections.values() for name in section.tilesets})
+                if volume is not None else [],
             )
             for context, volume in pairs
         ]
