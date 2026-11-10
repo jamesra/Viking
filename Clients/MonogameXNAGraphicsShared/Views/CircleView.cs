@@ -23,13 +23,71 @@ namespace VikingXNAGraphics
         }
 
         /// <summary>
-        /// The border drawn round every arrow marker: the outline color the label outline preference gives labels (white when it is off),
-        /// so arrows stand out from the image as labels do. Read each time arrows are drawn, so it follows the preference.
+        /// The border round a grey arrow marker (<see cref="ArrowBorderColorFor"/>): the outline color the label outline preference gives
+        /// labels (white when it is off), so it stands out from the image as labels do. Read each time arrows are drawn, so it follows the preference.
         /// </summary>
         public static Color ArrowBorderColor()
         {
             LabelOutlineStyle style = LabelView.OutlineStyleAccessor();
             return LabelView.OutlineColors(Color.Black, style == LabelOutlineStyle.Off ? LabelOutlineStyle.BlackTextWhiteOutline : style).Outline;
+        }
+
+        /// <summary>Saturation (HSV) at and above which an arrow's color counts as saturated, so its border is the pale version.</summary>
+        public const float SaturatedArrowThreshold = 0.5f;
+
+        /// <summary>Below this saturation an arrow's color is grey and has no hue to borrow, so its border is <see cref="ArrowBorderColor"/>.</summary>
+        public const float GreyArrowThreshold = 0.1f;
+
+        /// <summary>Saturation of the pale border round a saturated arrow.</summary>
+        public const float PaleBorderSaturation = 0.25f;
+
+        /// <summary>
+        /// The border of an arrow drawn in <paramref name="arrowColor"/>: the same hue at full brightness, fully saturated when the
+        /// arrow's color is pale and pale (<see cref="PaleBorderSaturation"/>) when it is saturated, so the border differs from the
+        /// fill while keeping its hue. A grey arrow has no hue and keeps the label-outline border <paramref name="greyBorder"/>.
+        /// </summary>
+        public static Color ArrowBorderColorFor(Color arrowColor, Color greyBorder)
+        {
+            float r = arrowColor.R / 255f;
+            float g = arrowColor.G / 255f;
+            float b = arrowColor.B / 255f;
+            float max = Math.Max(r, Math.Max(g, b));
+            float min = Math.Min(r, Math.Min(g, b));
+            float chroma = max - min;
+            float saturation = max > 0 ? chroma / max : 0;
+            if (saturation < GreyArrowThreshold)
+                return greyBorder;
+
+            float hue; // In sixths of a turn, 0 to 6
+            if (max == r)
+                hue = (g - b) / chroma;
+            else if (max == g)
+                hue = ((b - r) / chroma) + 2;
+            else
+                hue = ((r - g) / chroma) + 4;
+            if (hue < 0)
+                hue += 6;
+
+            float borderSaturation = saturation >= SaturatedArrowThreshold ? PaleBorderSaturation : 1f;
+            return FromHsv(hue, borderSaturation, 1f);
+        }
+
+        /// <summary>RGB of a color with <paramref name="hue"/> in sixths of a turn (0 to 6) and HSV saturation and value from 0 to 1.</summary>
+        private static Color FromHsv(float hue, float saturation, float value)
+        {
+            float chroma = value * saturation;
+            float x = chroma * (1 - Math.Abs((hue % 2) - 1));
+            float m = value - chroma;
+            (float r, float g, float b) = (int)hue switch
+            {
+                0 => (chroma, x, 0f),
+                1 => (x, chroma, 0f),
+                2 => (0f, chroma, x),
+                3 => (0f, x, chroma),
+                4 => (x, 0f, chroma),
+                _ => (chroma, 0f, x),
+            };
+            return new Color(r + m, g + m, b + m);
         }
 
         /// <summary>
@@ -185,11 +243,12 @@ namespace VikingXNAGraphics
 
                 // An arrow is drawn from its outlined map; an older compiled shader without the technique draws it plain
                 Texture2D outlined = OutlinedArrow(textureGroup.Key);
-                if (outlined is not null && overlayEffect.HasTechnique(OverlayShaderEffect.Techniques.CircleSingleColorTextureLumaOutlinedOverlayEffect))
+                bool drawOutlined = outlined is not null && overlayEffect.HasTechnique(OverlayShaderEffect.Techniques.CircleSingleColorTextureLumaOutlinedOverlayEffect);
+                Color greyBorder = ArrowBorderColor();
+                if (drawOutlined)
                 {
                     overlayEffect.AnnotationTexture = outlined;
                     overlayEffect.Technique = OverlayShaderEffect.Techniques.CircleSingleColorTextureLumaOutlinedOverlayEffect;
-                    overlayEffect.SetMarkerBorder(ArrowBorderColor(), LabelOutlineEffect.OutlineWidth, LabelOutlineEffect.OutlineBlur);
                 }
                 else
                 {
@@ -199,6 +258,10 @@ namespace VikingXNAGraphics
 
                 foreach (TextureCircleView cv in textureGroup)
                 {
+                    // Each arrow's border is its own hue (ArrowBorderColorFor), so it is set per arrow
+                    if (drawOutlined)
+                        overlayEffect.SetMarkerBorder(ArrowBorderColorFor(cv.Color, greyBorder), LabelOutlineEffect.OutlineWidth, LabelOutlineEffect.OutlineBlur);
+
                     overlayEffect.AnnotationColorHSL = cv.HSLColor;
                     overlayEffect.WorldViewProjMatrix = (cv.ModelMatrix * scene.World) * scene.ViewProj;
                     overlayEffect.InputLumaAlphaValue = 0f;
