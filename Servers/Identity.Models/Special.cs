@@ -50,55 +50,5 @@ namespace Viking.Identity.Models
                 nameof(Models.SegmentationService)
             };
         }
-
-        public static class Permissions
-        {
-            public static class Group
-            {
-                public const string AccessManager = "Access Manager";
-            }
-            
-            public static class OrgUnit
-            {
-                public const string Admin = "Administrator";
-            }
-
-            /// <summary>
-            /// The only permission on an annotation context. It decides whether the context is listed when a user
-            /// launches Viking, and is required to open it. Rights to the data (Read / Annotate / Review) live on the
-            /// context's <see cref="AnnotationServer"/>.
-            /// </summary>
-            public static class AnnotationContext
-            {
-                public const string Access = "Access";
-
-                public static readonly string[] All = { Access };
-            }
-
-            /// <summary>
-            /// Rights to one annotation database. Token scopes ({ServerName}.Annotate) are built from these.
-            /// </summary>
-            public static class AnnotationServer
-            {
-                public const string Read = "Read";
-                public const string Annotate = "Annotate";
-                public const string Review = "Review";
-
-                public static readonly string[] All = { Read, Annotate, Review };
-            }
-
-            public static class SegmentationService
-            {
-                public const string AccessManager = "Access Manager";
-                public const string User = "User";
-            }
-
-            public static class CorrectionService
-            {
-                public const string AccessManager = "Access Manager";
-                public const string User = "User";
-            }
-        }
-
     }
 }

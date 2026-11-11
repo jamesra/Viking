@@ -212,7 +212,7 @@ namespace TestIdentityModel
             var rc1 = AddContext(db, "RC1");
             await Member(db, utah, rc1);
 
-            Assert.False(await db.IsUserPermitted(rc1.Id, user.Id, Special.Permissions.AnnotationContext.Access));
+            Assert.False(await db.IsUserPermitted(rc1.Id, user.Id, AnnotationContextPermission.Access.Id()));
         }
 
         [Fact]

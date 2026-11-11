@@ -28,7 +28,7 @@ namespace TestIdentityModel
             await db.SaveChangesAsync();
             db.GrantedUserPermissions.Add(new GrantedUserPermission
             {
-                PermissionId = Special.Permissions.AnnotationServer.Read,
+                PermissionId = AnnotationServerPermission.Read.Id(),
                 ResourceId = volume.Id,
                 UserId = userId
             });
@@ -66,7 +66,7 @@ namespace TestIdentityModel
             await db.SaveChangesAsync();
             db.GrantedUserPermissions.Add(new GrantedUserPermission
             {
-                PermissionId = Special.Permissions.AnnotationServer.Read,
+                PermissionId = AnnotationServerPermission.Read.Id(),
                 ResourceId = volume.Id,
                 UserId = userId
             });

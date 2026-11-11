@@ -52,7 +52,7 @@ namespace Viking.Identity.Server.Extensions.Services
         public static async Task<bool> IsOrgUnitAdminAnywhereAsync(ApplicationDbContext context, string userId)
         {
             var grants = await context.UserResourcePermissionsByType(userId, new[] { nameof(OrganizationalUnit) });
-            return grants.Values.Any(permissions => permissions.Contains(Special.Permissions.OrgUnit.Admin));
+            return grants.Values.Any(permissions => permissions.Contains(OrgUnitPermission.Admin.Id()));
         }
     }
 }

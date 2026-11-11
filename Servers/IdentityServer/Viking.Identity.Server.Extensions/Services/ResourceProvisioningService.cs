@@ -42,7 +42,7 @@ namespace Viking.Identity.Server.Extensions.Services
             var adminUsers = await _context.GetUsersInAdminRole().ToListAsync();
             foreach (var adminUser in adminUsers)
             {
-                await GrantUserPermissionIfMissingAsync(adminUser.Id, orgId, Special.Permissions.OrgUnit.Admin);
+                await GrantUserPermissionIfMissingAsync(adminUser.Id, orgId, OrgUnitPermission.Admin.Id());
             }
 
             await _context.SaveChangesAsync();
@@ -85,7 +85,7 @@ namespace Viking.Identity.Server.Extensions.Services
 
         public async Task GrantUserOrgUnitAdminAsync(string userId, long orgId)
         {
-            await GrantUserPermissionIfMissingAsync(userId, orgId, Special.Permissions.OrgUnit.Admin);
+            await GrantUserPermissionIfMissingAsync(userId, orgId, OrgUnitPermission.Admin.Id());
             await _context.SaveChangesAsync();
         }
 
@@ -100,11 +100,11 @@ namespace Viking.Identity.Server.Extensions.Services
                 .Select(v => v.AnnotationServerId)
                 .FirstOrDefaultAsync();
 
-            await GrantUserPermissionIfMissingAsync(userId, annotationContextId, Special.Permissions.AnnotationContext.Access);
+            await GrantUserPermissionIfMissingAsync(userId, annotationContextId, AnnotationContextPermission.Access.Id());
 
             if (annotationServerId.HasValue)
             {
-                foreach (var permissionId in Special.Permissions.AnnotationServer.All)
+                foreach (var permissionId in PermissionRegistry.Ids<AnnotationServerPermission>())
                     await GrantUserPermissionIfMissingAsync(userId, annotationServerId.Value, permissionId);
             }
 

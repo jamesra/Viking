@@ -360,6 +360,96 @@ namespace TestIdentityModel
         }
 
         [Fact]
+        public async Task TypeListing_AnnotationServerWithReadFilter_NeedsNoContextAccess_DetailsAreAuthorizedPerId()
+        {
+            await using var db = CatalogDb.Create();
+            var (server, _, _) = await CatalogDb.AddSharedServerAsync(db);
+            var userId = db.CreateUser("db-reader", "x");
+            await db.SaveChangesAsync();
+            db.GrantedUserPermissions.Add(Grant(server.Id, "Annotate", userId)); // no context Access at all
+            await db.SaveChangesAsync();
+            var service = new PermissionService(db, Microsoft.Extensions.Logging.Abstractions.NullLogger<PermissionService>.Instance, new NoDebugLogging());
+
+            var readable = await service.GetUserPermissionsByTypeAsync(userId, "AnnotationServer", new[] { "Read" });
+            var entry = Assert.Single(readable).Value;
+            Assert.Equal(server.Id, entry.Id);
+            Assert.Equal(VolumeMetadata.CorrectionDatabaseName(server), entry.Metadata[VolumeMetadata.AnnotationDatabaseName]);
+            Assert.Single(entry.Metadata); // no URLs on the list
+
+            var details = await service.GetReadableAnnotationServerDetailsAsync(userId, new[] { server.Id, 999999L });
+            var detail = Assert.Single(details).Value;
+            Assert.Equal(AnnotationServiceUrls.ODataUrl(server), detail[VolumeMetadata.ODataEndpoint]);
+            Assert.Equal(VolumeMetadata.CorrectionDatabaseName(server), detail[VolumeMetadata.AnnotationDatabaseName]);
+
+            var stranger = db.CreateUser("stranger", "x");
+            await db.SaveChangesAsync();
+            Assert.Empty(await service.GetReadableAnnotationServerDetailsAsync(stranger, new[] { server.Id }));
+
+            Assert.Empty(await service.GetUserPermissionsByTypeAsync(userId, "AnnotationServer", new[] { "Read", "Review" }));
+            Assert.Single(await service.GetUserPermissionsByTypeAsync(userId, "AnnotationServer"));
+        }
+
+        [Fact]
+        public async Task PermissionTable_AgreesWithTheEnums_AndTheCatalogServesThem()
+        {
+            await using var db = CatalogDb.Create();
+            var service = new PermissionService(db, Microsoft.Extensions.Logging.Abstractions.NullLogger<PermissionService>.Instance, new NoDebugLogging());
+
+            // Drift check: the stored rows are exactly the rows the enums seed.
+            var stored = db.Permissions.AsEnumerable()
+                .Select(p => (p.ResourceTypeId, p.PermissionId, p.Description)).OrderBy(x => x).ToList();
+            var fromEnums = PermissionRegistry.SeedRows()
+                .Select(p => (p.ResourceTypeId, p.PermissionId, p.Description)).OrderBy(x => x).ToList();
+            Assert.Equal(fromEnums, stored);
+
+            var catalog = await service.GetResourceTypeCatalogAsync();
+            foreach (var typeId in PermissionRegistry.Types.Keys)
+            {
+                var type = Assert.Single(catalog, t => t.ResourceTypeId == typeId);
+                Assert.Equal(PermissionRegistry.Entries(typeId).Select(e => e.Id), type.Permissions.Select(p => p.PermissionId));
+            }
+
+            var server = Assert.Single(await service.GetResourceTypeCatalogAsync(nameof(AnnotationServer)));
+            Assert.Equal(new[] { "Read", "Annotate", "Review" }, server.Permissions.Select(p => p.PermissionId));
+            Assert.All(server.Permissions, p => Assert.False(string.IsNullOrWhiteSpace(p.Description)));
+            Assert.Empty(await service.GetResourceTypeCatalogAsync("NoSuchType"));
+        }
+
+        [Fact]
+        public void PermissionIds_AreTheStringsPersistedToday_AndRoundTrip()
+        {
+            Assert.Equal("Read", AnnotationServerPermission.Read.Id());
+            Assert.Equal("Access", AnnotationContextPermission.Access.Id());
+            Assert.Equal("Access Manager", GroupPermission.AccessManager.Id());
+            Assert.Equal("Administrator", OrgUnitPermission.Admin.Id());
+            Assert.Equal("Access Manager", SegmentationServicePermission.AccessManager.Id());
+            Assert.Equal("User", CorrectionServicePermission.User.Id());
+
+            Assert.True(PermissionRegistry.TryParse<GroupPermission>("access manager", out var group));
+            Assert.Equal(GroupPermission.AccessManager, group);
+            Assert.True(PermissionRegistry.TryParse<OrgUnitPermission>("Administrator", out var org));
+            Assert.Equal(OrgUnitPermission.Admin, org);
+            Assert.False(PermissionRegistry.TryParse<GroupPermission>("AccessManager", out _));
+
+            foreach (var enumType in PermissionRegistry.Types.Values)
+            {
+                var ids = Enum.GetValues(enumType).Cast<Enum>().Select(e => e.Id()).ToList();
+                Assert.Equal(ids.Count, ids.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+            }
+        }
+
+        [Fact]
+        public void PermissionFilter_NamesTheValidPermissions_WhenGivenAnUnknownOne()
+        {
+            Assert.Null(PermissionRegistry.FilterError(nameof(AnnotationServer), new[] { "read", "Review" }));
+
+            var error = PermissionRegistry.FilterError(nameof(AnnotationServer), new[] { "Read", "Write" });
+            Assert.Contains("'Write'", error);
+            Assert.Contains("Read, Annotate, Review", error);
+            Assert.Contains("(none)", PermissionRegistry.FilterError("Connectome", new[] { "Read" }));
+        }
+
+        [Fact]
         public async Task DataRightsGrantedOnAContext_AreIgnored()
         {
             await using var db = CatalogDb.Create();

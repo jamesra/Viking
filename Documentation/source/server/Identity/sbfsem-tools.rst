@@ -184,7 +184,36 @@ Request                                       Result
 ``GET /Permissions/CurrentUserId``            The user's identifier, as a JSON string
 ``GET /Permissions/AccessibleVolumes``        Every volume the user may access, keyed by volume id
 ``GET /Permissions/resource/{volume}``        The user's permissions on one volume
+``GET /Permissions/type/AnnotationServer``    The annotation databases the user holds grants on (see below)
 ============================================  ==========================================================
+
+Listing annotation databases directly
+-------------------------------------
+
+``GET /Permissions/type/{resourceType}`` lists the resources of one type the token's user holds grants on, keyed by
+resource id; each entry has ``id``, ``name``, ``resourceType`` and ``permissions``. Repeat ``?permission=Read`` to keep
+only resources on which the user holds all the named permissions. For ``AnnotationServer`` (an annotation database) this
+needs no annotation context: ``/Permissions/type/AnnotationServer?permission=Read`` returns every database the user may
+read (Annotate and Review imply Read). Each entry has ``id``, ``name`` (the annotation server resource name, also the token
+scope prefix), ``resourceType``, ``permissions`` and, for ``AnnotationServer`` only, ``AnnotationDatabaseName`` (the stored
+database name, or the server name when none is stored; the same value as on ``/Permissions/AnnotationServers``). Match
+volumes on ``AnnotationDatabaseName``.
+
+``GET /Permissions/AnnotationServers?id=3&id=7`` returns the details of those databases in one call, keyed by id:
+``AnnotationDatabaseName``, ``BaseUrl``, ``AnnotationEndpoint``, ``ODataEndpoint``, ``ExportEndpoint`` and
+``Description``. Each id is authorized on its own: an id that does not exist or that the user cannot read is left out.
+So a client with N databases makes two calls. A context's VikingXML (``Endpoint``) stays on ``AccessibleVolumes``.
+
+Reading permission names
+------------------------
+
+Do not hardcode permission names. ``GET /Permissions/ResourceTypes`` returns every resource type with the permissions it
+defines, and ``GET /Permissions/ResourceTypes/{resourceTypeId}`` (for example ``AnnotationServer``) returns one; ``404`` when the
+type does not exist. Each type is ``{"resourceTypeId", "description", "permissions": [{"permissionId", "description"}]}``.
+The list is the same for every caller (no per-user data) but needs a valid token. It is read from the
+``ResourceTypePermission`` table, which is seeded from, and a test keeps equal to, the permission enums in code (``AnnotationServerPermission`` and so on, registered in ``PermissionRegistry``). Each member maps explicitly to its stored string, so ``Access Manager`` and ``Administrator`` are unchanged.
+Asking ``/Permissions/type/{resourceType}?permission=Name`` for a name the type does not define answers ``400`` and lists
+the valid names, rather than an empty result.
 
 Listing the volumes a user can access
 -------------------------------------

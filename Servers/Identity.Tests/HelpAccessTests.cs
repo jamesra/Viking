@@ -19,7 +19,7 @@ namespace TestIdentityModel
             db.GrantedUserPermissions.Add(new GrantedUserPermission
             {
                 ResourceId = org.Id,
-                PermissionId = Special.Permissions.OrgUnit.Admin,
+                PermissionId = OrgUnitPermission.Admin.Id(),
                 UserId = userId
             });
             await db.SaveChangesAsync();

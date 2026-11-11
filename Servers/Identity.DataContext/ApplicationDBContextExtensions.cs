@@ -31,17 +31,17 @@ namespace Viking.Identity.Data
 
         public static IQueryable<ApplicationUser> GetGroupAccessManagers(this ApplicationDbContext context, long ResourceId)
         {
-            return context.GetPermittedUsers(ResourceId, Special.Permissions.Group.AccessManager);
+            return context.GetPermittedUsers(ResourceId, GroupPermission.AccessManager.Id());
         }
 
         public static Task<bool> IsOrgAdministrator(this ApplicationDbContext context, long GroupId, string UserId)
         {
-            return context.IsUserPermitted(GroupId, UserId, Special.Permissions.OrgUnit.Admin);
+            return context.IsUserPermitted(GroupId, UserId, OrgUnitPermission.Admin.Id());
         }
 
         public static Task<bool> IsGroupAccessManager(this ApplicationDbContext context, long GroupId, string UserId)
         {
-            return context.IsUserPermitted(GroupId, UserId, Special.Permissions.Group.AccessManager);
+            return context.IsUserPermitted(GroupId, UserId, GroupPermission.AccessManager.Id());
         }
 
         private static readonly string[] ApiFacingResourceTypeIds = Special.ResourceTypes.ApiFacing;
@@ -80,18 +80,18 @@ namespace Viking.Identity.Data
         public static string[] WithImpliedRead(IEnumerable<string> permissionIds)
         {
             var set = new HashSet<string>(permissionIds ?? Array.Empty<string>());
-            if (set.Contains(Special.Permissions.AnnotationServer.Annotate) || set.Contains(Special.Permissions.AnnotationServer.Review))
-                set.Add(Special.Permissions.AnnotationServer.Read);
+            if (set.Contains(AnnotationServerPermission.Annotate.Id()) || set.Contains(AnnotationServerPermission.Review.Id()))
+                set.Add(AnnotationServerPermission.Read.Id());
 
             return set
-                .OrderBy(p => Array.IndexOf(Special.Permissions.AnnotationServer.All, p) is var i && i >= 0 ? i : int.MaxValue)
+                .OrderBy(p => Array.IndexOf(PermissionRegistry.Ids<AnnotationServerPermission>(), p) is var i && i >= 0 ? i : int.MaxValue)
                 .ThenBy(p => p, StringComparer.Ordinal)
                 .ToArray();
         }
 
         /// <summary>
         /// Annotation contexts the user may open, each with the data rights of its annotation server(s).
-        /// A context is listed only when the user holds <see cref="Special.Permissions.AnnotationContext.Access"/> on it
+        /// A context is listed only when the user holds <see cref="AnnotationContextPermission.Access.Id()"/> on it
         /// (directly, through a group, or as a site administrator). The permissions returned for a context are the
         /// Read / Annotate / Review rights on its annotation server(s), with Read implied; a context with no
         /// annotation server (images only) is listed with no rights. Nothing is read from the context itself beyond Access.
@@ -120,7 +120,7 @@ namespace Viking.Identity.Data
                 return result;
 
             var accessibleIds = grants
-                .Where(g => g.Value.Contains(Special.Permissions.AnnotationContext.Access))
+                .Where(g => g.Value.Contains(AnnotationContextPermission.Access.Id()))
                 .Select(g => g.Key)
                 .ToList();
             if (accessibleIds.Count == 0)
@@ -150,7 +150,7 @@ namespace Viking.Identity.Data
                 var rights = serverIds
                     .Distinct()
                     .SelectMany(id => grants.TryGetValue(id, out var perms) ? perms : Array.Empty<string>())
-                    .Where(p => Special.Permissions.AnnotationServer.All.Contains(p));
+                    .Where(p => PermissionRegistry.Ids<AnnotationServerPermission>().Contains(p));
 
                 result[c.Id] = WithImpliedRead(rights);
             }
@@ -202,7 +202,7 @@ namespace Viking.Identity.Data
                 return true;
 
             var permissions = await context.UserEffectiveResourcePermissionsAsync(userId, annotationContext);
-            return permissions.Contains(Special.Permissions.AnnotationContext.Access);
+            return permissions.Contains(AnnotationContextPermission.Access.Id());
         }
 
         public static async Task<bool> IsUserPermitted(this ApplicationDbContext context, long ResourceId, string UserId, string PermissionId)
@@ -363,7 +363,7 @@ namespace Viking.Identity.Data
          
         public static IQueryable<ApplicationUser> GetGroupAccessManagers(this ApplicationDbContext context, IEnumerable<long> ResourceIds, string PermissionId)
         {
-            return context.GetPermittedUsers(ResourceIds, Special.Permissions.Group.AccessManager);
+            return context.GetPermittedUsers(ResourceIds, GroupPermission.AccessManager.Id());
         }
 
         /// <summary>

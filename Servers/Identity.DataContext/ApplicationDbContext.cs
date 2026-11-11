@@ -278,35 +278,24 @@ namespace Viking.Identity.Data
             ///////////////////////////////////////
             /// Create resource types and standard resource permisssions
             /// 
+            // Every permission row derives from the enums in PermissionRegistry.
+            builder.Entity<ResourceTypePermission>().HasData(PermissionRegistry.SeedRows());
+
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.Resource) });
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.OrganizationalUnit) });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(OrganizationalUnit),
-                                                                                            PermissionId = Models.Special.Permissions.OrgUnit.Admin, 
-                                                                                            Description = "Edit all aspects of an organizational unit and CRUD operations on all child resources" });
 
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.Group) });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Group),
-                                                                                            PermissionId = Models.Special.Permissions.Group.AccessManager, 
-                                                                                            Description = "Add/Remove group members" });
 
             // Connectome is not ApiFacing; no annotate scopes.
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.Connectome) });
 
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.AnnotationContext) });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.AnnotationContext), PermissionId = Models.Special.Permissions.AnnotationContext.Access, Description = "See this context in Viking and open it; data rights come from its annotation server" });
 
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.AnnotationServer) });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.AnnotationServer), PermissionId = Models.Special.Permissions.AnnotationServer.Read, Description = "View annotations and the images of every linked volume" });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.AnnotationServer), PermissionId = Models.Special.Permissions.AnnotationServer.Annotate, Description = "Create and edit annotations; implies Read" });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.AnnotationServer), PermissionId = Models.Special.Permissions.AnnotationServer.Review, Description = "Review and correct annotations; implies Read" });
 
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.SegmentationService) });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.SegmentationService), PermissionId = Models.Special.Permissions.SegmentationService.AccessManager});
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.SegmentationService), PermissionId = Models.Special.Permissions.SegmentationService.User});
 
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.CorrectionService) });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.CorrectionService), PermissionId = Models.Special.Permissions.CorrectionService.AccessManager, Description = "Manage access to correction service resources" });
-            builder.Entity<ResourceTypePermission>().HasData(new ResourceTypePermission() { ResourceTypeId = nameof(Models.CorrectionService), PermissionId = Models.Special.Permissions.CorrectionService.User, Description = "Use the correction service" });
 
             //////////////////////////
             /// Create standard groups

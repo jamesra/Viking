@@ -110,7 +110,7 @@ Experiment: Slice to volume</Notes>
             await service.GrantSiteAdminsOrgUnitAdminAsync(org.Id);
 
             Assert.True(org.Id > 0);
-            Assert.True(await _dbContext.IsUserPermitted(org.Id, _adminUserId, Special.Permissions.OrgUnit.Admin));
+            Assert.True(await _dbContext.IsUserPermitted(org.Id, _adminUserId, OrgUnitPermission.Admin.Id()));
         }
 
         [Fact]
@@ -133,8 +133,8 @@ Experiment: Slice to volume</Notes>
             // A new context has no annotation server yet (catalog sync links it), so only Access is granted.
             Assert.Equal(1, await _dbContext.GrantedUserPermissions.CountAsync(p =>
                 p.UserId == userId && p.ResourceId == volume.Id));
-            Assert.True(await _dbContext.IsUserPermitted(volume.Id, userId, Special.Permissions.AnnotationContext.Access));
-            Assert.False(await _dbContext.IsUserPermitted(volume.Id, userId, Special.Permissions.AnnotationServer.Read));
+            Assert.True(await _dbContext.IsUserPermitted(volume.Id, userId, AnnotationContextPermission.Access.Id()));
+            Assert.False(await _dbContext.IsUserPermitted(volume.Id, userId, AnnotationServerPermission.Read.Id()));
         }
     }
 
@@ -219,8 +219,8 @@ Experiment: Slice to volume</Notes>
 
             Assert.True(result.ExistingUserGranted);
             Assert.Null(result.InviteToken);
-            Assert.True(await _dbContext.IsUserPermitted(result.OrganizationalUnitId, userId, Special.Permissions.OrgUnit.Admin));
-            Assert.True(await _dbContext.IsUserPermitted(result.AnnotationContextId, userId, Special.Permissions.AnnotationContext.Access));
+            Assert.True(await _dbContext.IsUserPermitted(result.OrganizationalUnitId, userId, OrgUnitPermission.Admin.Id()));
+            Assert.True(await _dbContext.IsUserPermitted(result.AnnotationContextId, userId, AnnotationContextPermission.Access.Id()));
         }
 
         [Fact]
@@ -268,8 +268,8 @@ Experiment: Slice to volume</Notes>
 
             await service.RedeemInviteAsync(created.InviteToken, userId, email);
 
-            Assert.True(await _dbContext.IsUserPermitted(created.OrganizationalUnitId, userId, Special.Permissions.OrgUnit.Admin));
-            Assert.True(await _dbContext.IsUserPermitted(created.AnnotationContextId, userId, Special.Permissions.AnnotationContext.Access));
+            Assert.True(await _dbContext.IsUserPermitted(created.OrganizationalUnitId, userId, OrgUnitPermission.Admin.Id()));
+            Assert.True(await _dbContext.IsUserPermitted(created.AnnotationContextId, userId, AnnotationContextPermission.Access.Id()));
 
             var invite = await _dbContext.CollaboratorInvites.FindAsync(created.InviteToken);
             Assert.NotNull(invite.ClaimedAtUtc);

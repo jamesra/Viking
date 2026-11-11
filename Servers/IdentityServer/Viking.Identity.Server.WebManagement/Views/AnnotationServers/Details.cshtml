@@ -74,7 +74,7 @@
 
                     <dt class="col-sm-4">Token scopes</dt>
                     <dd class="col-sm-8">
-                        @foreach (var permission in Special.Permissions.AnnotationServer.All)
+                        @foreach (var permission in PermissionRegistry.Ids<AnnotationServerPermission>())
                         {
                             <code class="me-2">@($"{Model.Name}.{permission}")</code>
                         }

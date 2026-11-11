@@ -152,7 +152,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
             List<string> InvolvedAdmins = new List<string>();
 
-            Dictionary<long, List<ApplicationUser>> OrgAdmins = await _context.GetOrganizationAdminMapAsync(Special.Permissions.Group.AccessManager);
+            Dictionary<long, List<ApplicationUser>> OrgAdmins = await _context.GetOrganizationAdminMapAsync(GroupPermission.AccessManager.Id());
 
             //Create the message
             string message = string.Format("<p><b>{0}</b> is requesting additional claims:</p>", System.Net.WebUtility.HtmlEncode(user.UserName));

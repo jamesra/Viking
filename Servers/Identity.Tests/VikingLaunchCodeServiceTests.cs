@@ -50,7 +50,7 @@ namespace TestIdentityModel
             await db.SaveChangesAsync();
             db.GrantedUserPermissions.Add(new GrantedUserPermission
             {
-                PermissionId = Special.Permissions.AnnotationContext.Access,
+                PermissionId = AnnotationContextPermission.Access.Id(),
                 ResourceId = volume.Id,
                 UserId = userId
             });

@@ -22,7 +22,21 @@ namespace Viking.Identity.Server.Extensions.Services
             _debugLoggingService = debugLoggingService;
         }
 
-        public async Task<Dictionary<long, UserResourcePermissions>> GetUserPermissionsByTypeAsync(string userId, string resourceTypeId)
+        public async Task<Dictionary<long, UserResourcePermissions>> GetUserPermissionsByTypeAsync(
+            string userId, string resourceTypeId, IReadOnlyCollection<string> requiredPermissions = null)
+        {
+            var result = await UserPermissionsByTypeAsync(userId, resourceTypeId);
+            if (requiredPermissions == null || requiredPermissions.Count == 0)
+                return result;
+
+            // Only resources on which the user holds every requested permission (Read already implied where it is).
+            return result
+                .Where(kvp => requiredPermissions.All(rp =>
+                    kvp.Value.Permissions.Contains(rp, StringComparer.OrdinalIgnoreCase)))
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        }
+
+        private async Task<Dictionary<long, UserResourcePermissions>> UserPermissionsByTypeAsync(string userId, string resourceTypeId)
         {
             string[] resourceTypes = Array.Empty<string>();
             if (resourceTypeId != null)
@@ -33,7 +47,7 @@ namespace Viking.Identity.Server.Extensions.Services
                 return await VolumesWithPermissionsAsync(await _context.UserAnnotationContextPermissionsAsync(userId));
 
             var userPermittedResources = await _context.UserResourcePermissionsByType(userId, resourceTypes);
-            if (resourceTypeId == nameof(AnnotationServer))
+            if (string.Equals(resourceTypeId, nameof(AnnotationServer), StringComparison.OrdinalIgnoreCase))
             {
                 foreach (var id in userPermittedResources.Keys.ToList())
                     userPermittedResources[id] = ApplicationDBContextExtensions.WithImpliedRead(userPermittedResources[id]);
@@ -48,10 +62,56 @@ namespace Viking.Identity.Server.Extensions.Services
                                   ResourceType = r.ResourceTypeId,
                                   Permissions = userPermittedResources[upr],
                                   ParentId = r.ParentID,
-                                  Metadata = new Dictionary<string, object>()
+                                  // An annotation database is listed with its database name (the stored value, else the
+                                  // server name) so a client can match volumes without a second call. No URLs here.
+                                  Metadata = r is AnnotationServer server
+                                      ? new Dictionary<string, object> { [VolumeMetadata.AnnotationDatabaseName] = VolumeMetadata.CorrectionDatabaseName(server) }
+                                      : new Dictionary<string, object>()
                               };
             return resourceMap.ToDictionary(r => r.Id, r => r);
         }
+
+        public async Task<List<ResourceTypeInfo>> GetResourceTypeCatalogAsync(string resourceTypeId = null)
+        {
+            var types = await _context.ResourceTypes
+                .Where(t => resourceTypeId == null || t.Id == resourceTypeId)
+                .OrderBy(t => t.Id)
+                .Select(t => new { t.Id, t.Description })
+                .ToListAsync();
+
+            // The permissions come from the enums, the same source the ResourceTypePermission rows are seeded from.
+            return types.Select(t => new ResourceTypeInfo
+            {
+                ResourceTypeId = t.Id,
+                Description = t.Description,
+                Permissions = PermissionRegistry.Entries(t.Id)
+                    .Select(p => new PermissionInfo { PermissionId = p.Id, Description = p.Description })
+                    .ToList()
+            }).ToList();
+        }
+
+        public async Task<Dictionary<long, Dictionary<string, object>>> GetReadableAnnotationServerDetailsAsync(
+            string userId, IReadOnlyCollection<long> ids)
+        {
+            var readable = await GetUserPermissionsByTypeAsync(userId, nameof(AnnotationServer), new[] { AnnotationServerPermission.Read.Id() });
+            var wanted = ids.Where(readable.ContainsKey).Distinct().ToList();
+            if (wanted.Count == 0)
+                return new Dictionary<long, Dictionary<string, object>>();
+
+            var servers = await _context.Set<AnnotationServer>().Where(s => wanted.Contains(s.Id)).ToListAsync();
+            return servers.ToDictionary(s => s.Id, ServerMetadata);
+        }
+
+        /// <summary>Name and service URLs of an annotation database (annotation server), keyed like <see cref="VolumeMetadata"/>.</summary>
+        internal static Dictionary<string, object> ServerMetadata(AnnotationServer server) => new Dictionary<string, object>
+        {
+            [VolumeMetadata.Description] = server.Description,
+            [VolumeMetadata.AnnotationDatabaseName] = VolumeMetadata.CorrectionDatabaseName(server),
+            [VolumeMetadata.BaseUrl] = server.BaseUrl,
+            [VolumeMetadata.AnnotationEndpoint] = AnnotationServiceUrls.AnnotationUrl(server),
+            [VolumeMetadata.ODataEndpoint] = AnnotationServiceUrls.ODataUrl(server),
+            [VolumeMetadata.ExportEndpoint] = AnnotationServiceUrls.ExportUrl(server)
+        };
 
         public async Task<List<UserResourcePermissions>> GetUserPermissionsAsync(string userId)
         {

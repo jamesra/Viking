@@ -51,15 +51,67 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             return user.Id;
         }
 
-        [HttpGet("type/{resourceTypeId}")]
-        public async Task<ActionResult<Dictionary<long, object>>> UserPermissionsByType(string resourceTypeId = null)
+        /// <summary>
+        /// The permission catalog: every resource type with the permissions it defines (<c>permissionId</c>,
+        /// <c>description</c>). Clients read permission names here instead of hardcoding them. Not user specific.
+        /// </summary>
+        [HttpGet("ResourceTypes")]
+        public async Task<ActionResult<List<ResourceTypeDto>>> ResourceTypes()
         {
             var caller = await GetAuthenticatedUserAsync();
             if (caller == null)
                 return Unauthorized();
 
-            var permissions = await _permissionService.GetUserPermissionsByTypeAsync(caller.Id, resourceTypeId);
-            return ToObjectDictionary(permissions);
+            return (await _permissionService.GetResourceTypeCatalogAsync()).Select(ToDto).ToList();
+        }
+
+        /// <summary>One entry of <see cref="ResourceTypes"/>; 404 when the type does not exist.</summary>
+        [HttpGet("ResourceTypes/{resourceTypeId}")]
+        public async Task<ActionResult<ResourceTypeDto>> ResourceTypeById(string resourceTypeId)
+        {
+            var caller = await GetAuthenticatedUserAsync();
+            if (caller == null)
+                return Unauthorized();
+
+            var type = (await _permissionService.GetResourceTypeCatalogAsync(resourceTypeId)).FirstOrDefault();
+            if (type == null)
+                return NotFound();
+            return ToDto(type);
+        }
+
+        private static ResourceTypeDto ToDto(ResourceTypeInfo type) => new ResourceTypeDto
+        {
+            ResourceTypeId = type.ResourceTypeId,
+            Description = type.Description,
+            Permissions = type.Permissions
+                .Select(p => new PermissionDto { PermissionId = p.PermissionId, Description = p.Description })
+                .ToList()
+        };
+
+        /// <summary>
+        /// Resources of one type the caller holds grants on, keyed by resource id, each with <c>id</c>, <c>name</c>,
+        /// <c>resourceType</c> and <c>permissions</c>. Repeat <c>?permission=Read</c> to keep only resources on which the
+        /// caller holds all the named permissions, e.g. <c>type/AnnotationServer?permission=Read</c> lists the annotation
+        /// databases the caller may read, whatever annotation contexts they have. Details (URLs) are read with
+        /// <see cref="AnnotationServerDetails"/>.
+        /// </summary>
+        [HttpGet("type/{resourceTypeId}")]
+        public async Task<ActionResult<Dictionary<long, object>>> UserPermissionsByType(
+            string resourceTypeId = null, [FromQuery(Name = "permission")] string[] permission = null)
+        {
+            var caller = await GetAuthenticatedUserAsync();
+            if (caller == null)
+                return Unauthorized();
+
+            if (resourceTypeId != null && permission != null && permission.Length > 0)
+            {
+                var error = PermissionRegistry.FilterError(resourceTypeId, permission);
+                if (error != null)
+                    return BadRequest(error);
+            }
+
+            var permissions = await _permissionService.GetUserPermissionsByTypeAsync(caller.Id, resourceTypeId, permission);
+            return ToTypeListing(permissions);
         }
 
         [HttpGet]
@@ -150,6 +202,24 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             return MapToDto(tree);
         }
 
+        /// <summary>
+        /// Database name and service URLs of annotation servers (annotation databases), several ids per call:
+        /// <c>AnnotationServers?id=3&amp;id=7</c>. Keyed by id. Each entry is authorized on its own: ids that do not
+        /// exist or on which the caller lacks Read are omitted from the result.
+        /// </summary>
+        [HttpGet("AnnotationServers")]
+        public async Task<ActionResult<Dictionary<long, Dictionary<string, object>>>> AnnotationServerDetails(
+            [FromQuery(Name = "id")] long[] id)
+        {
+            var caller = await GetAuthenticatedUserAsync();
+            if (caller == null)
+                return Unauthorized();
+            if (id == null || id.Length == 0)
+                return BadRequest("at least one id is required");
+
+            return await _permissionService.GetReadableAnnotationServerDetailsAsync(caller.Id, id);
+        }
+
         [HttpGet("AccessibleSegmentationServices")]
         public async Task<ActionResult<Dictionary<long, object>>> UserAccessibleSegmentationServices()
         {
@@ -198,6 +268,30 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             return await _authService.GetApplicationUserAsync(User, HttpContext);
         }
 
+        /// <summary>
+        /// Slim per-type listing: identity and permissions only. Annotation servers add <c>AnnotationDatabaseName</c>;
+        /// other types carry no extra field.
+        /// </summary>
+        private static Dictionary<long, object> ToTypeListing(Dictionary<long, UserResourcePermissions> permissions)
+        {
+            return permissions.ToDictionary(
+                kvp => kvp.Key,
+                kvp =>
+                {
+                    var p = kvp.Value;
+                    var entry = new Dictionary<string, object>
+                    {
+                        ["id"] = p.Id,
+                        ["name"] = p.Name,
+                        ["resourceType"] = p.ResourceType,
+                        ["permissions"] = p.Permissions
+                    };
+                    if (p.Metadata.TryGetValue(VolumeMetadata.AnnotationDatabaseName, out var databaseName))
+                        entry["AnnotationDatabaseName"] = databaseName;
+                    return (object)entry;
+                });
+        }
+
         private static Dictionary<long, object> ToObjectDictionary(Dictionary<long, UserResourcePermissions> permissions)
         {
             return permissions.ToDictionary(
@@ -213,6 +307,7 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
                         p.Name,
                         Description = description,
                         Endpoint = endpoint,
+                        ResourceType = p.ResourceType,
                         permissions = p.Permissions
                     };
                 });

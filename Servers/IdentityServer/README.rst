@@ -72,13 +72,13 @@ Authorization Policies
 The system uses policy-based authorization for fine-grained access control:
 
 **OrgUnitAdmin** (``Policy.OrgUnitAdmin``)
-    - Permission: ``Special.Permissions.OrgUnit.Admin``
+    - Permission: ``OrgUnitPermission.Admin``
     - Allows administration of Organizational Units
     - Can create, edit, and delete resources within the organizational unit
     - Can manage group memberships
 
 **GroupAccessManager** (``Policy.GroupAccessManager``)
-    - Permission: ``Special.Permissions.Group.AccessManager``
+    - Permission: ``GroupPermission.AccessManager``
     - Allows adding and removing group members
     - Required for managing user and group assignments
 
