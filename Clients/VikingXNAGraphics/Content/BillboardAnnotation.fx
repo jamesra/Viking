@@ -34,6 +34,8 @@ uniform const float markerBorderWidth = 1.5;
 uniform const float markerBorderBlur = 2;
 //Texture coordinates G spans either side of the edge (MarkerOutlineMap.DistanceRange).
 uniform const float markerDistanceRange = 0.0625;
+//How far the icon's luma moves from the image under it: 0 none, negative that fraction toward black, positive toward white.
+uniform const float markerFillLumaShift = 0;
 
 //Linear filtering in both directions: the distance field must interpolate smoothly when the marker is drawn larger than its texture,
 //where AnnotationTextureSampler's point magnification would turn every texel into a step in the edge.
@@ -534,12 +536,15 @@ PixelShaderOutput CircleGrayscaleTextureOutlinedOverBackgroundLumaPixelShaderFun
 	float fillAlpha = saturate(0.5 - edgeDistance);
 	float halfBlur = max(markerBorderBlur, 1) * 0.5;
 	//G clamps to 0 beyond the field's range, which a small marker can reach within the border: no border there
-	float borderAlpha = (1 - smoothstep(markerBorderWidth - halfBlur, markerBorderWidth + halfBlur, edgeDistance)) * saturate(map.g * 255);
+	//A width of 0 is no border at all, not the half pixel the blur would leave round the edge
+	float borderAlpha = markerBorderWidth > 0 ? (1 - smoothstep(markerBorderWidth - halfBlur, markerBorderWidth + halfBlur, edgeDistance)) * saturate(map.g * 255) : 0;
 	float alpha = fillAlpha + borderAlpha * (1 - fillAlpha);
 
 	float2 ScreenTexCoord = input.Position.xy / input.Position.w;
 	float4 RGBBackgroundColor = tex2D(BackgroundTextureSampler, ((ScreenTexCoord.xy) / (RenderTargetSize.xy)));
-	float4 fill = BlendHCLColorOverBackground(input.HSLColor, RGBBackgroundColor, 1.0f - map.a);
+	//Scaling the background toward black or white scales its luma the same way, so the icon keeps the image's texture
+	float4 shiftedBackground = markerFillLumaShift < 0 ? RGBBackgroundColor * (1 + markerFillLumaShift) : RGBBackgroundColor + ((1 - RGBBackgroundColor) * markerFillLumaShift);
+	float4 fill = BlendHCLColorOverBackground(input.HSLColor, shiftedBackground, 1.0f - map.a);
 
 	//The icon over its border, unpremultiplied like the plain icon's output
 	output.Color.rgb = ((fill.rgb * fillAlpha) + (markerBorderColor * borderAlpha * (1 - fillAlpha))) / max(alpha, 0.00001);

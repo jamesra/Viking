@@ -38,6 +38,23 @@ namespace VikingCoreTests
         }
 
         [TestMethod]
+        public void AColoredArrowIsDarkerThanALightCellAndLighterThanADarkOne()
+        {
+            Assert.AreEqual(-TextureCircleView.ArrowLumaContrast, TextureCircleView.ArrowFillLumaShift(new Color(0, 255, 255)), "cyan is light");
+            Assert.AreEqual(-TextureCircleView.ArrowLumaContrast, TextureCircleView.ArrowFillLumaShift(new Color(255, 255, 0)), "yellow is light");
+            Assert.AreEqual(TextureCircleView.ArrowLumaContrast, TextureCircleView.ArrowFillLumaShift(new Color(80, 60, 200)), "slate blue is dark");
+            Assert.AreEqual(TextureCircleView.ArrowLumaContrast, TextureCircleView.ArrowFillLumaShift(new Color(255, 0, 0)), "red is dark");
+        }
+
+        [TestMethod]
+        public void OnlyAGreyArrowKeepsItsBorder()
+        {
+            Assert.IsFalse(TextureCircleView.ArrowHasHue(new Color(128, 128, 128)));
+            Assert.IsFalse(TextureCircleView.ArrowHasHue(Color.Black));
+            Assert.IsTrue(TextureCircleView.ArrowHasHue(new Color(255, 180, 180)));
+        }
+
+        [TestMethod]
         public void AGreyArrowKeepsTheLabelOutlineBorder()
         {
             Assert.AreEqual(GreyBorder, TextureCircleView.ArrowBorderColorFor(new Color(128, 128, 128), GreyBorder));

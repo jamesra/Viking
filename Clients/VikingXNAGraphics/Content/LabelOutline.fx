@@ -5,6 +5,10 @@
 // screen-space slope of G is the fall per screen pixel, however far the label is scaled. Dividing the fall already made by that slope
 // gives the distance from the text in screen pixels, which is what the border and shadow widths are in.
 //
+// The map's B channel is one line of text's height as a fraction of the map's height (0 when not known). Times the map's height on screen
+// it gives the text's height on screen; below FullOutlineTextHeight the border is thinned and faded in proportion, so small text keeps
+// its pixels for the letters.
+//
 // The vertex color is the text color; its alpha scales everything drawn.
 
 #if OPENGL
@@ -25,6 +29,8 @@ float3 OutlineColor = float3(0, 0, 0);
 float OutlineWidth = 1.5;
 // Screen pixels the border takes to fade out, centred on OutlineWidth. 1 is a crisp edge; larger blurs the border.
 float OutlineBlur = 2;
+// Screen pixels of line height at and above which the border and shadow are drawn in full.
+float FullOutlineTextHeight = 16;
 
 float3 ShadowColor = float3(0, 0, 0);
 // 0 draws no shadow.
@@ -55,16 +61,23 @@ float4 Compose(VertexShaderOutput input, float withBorder, float withText)
 	float2 slope = float2(ddx(g), ddy(g));
 	float perPixel = max(length(slope), 0.00001);
 
+	// The text's line height on screen: the map's height on screen is 1 / (the change in V per screen pixel), measured both ways so a
+	// rotated label reads the same. It is smooth across the whole label, unlike G's slope, which is flat inside the letters.
+	float2 vSlope = float2(ddx(input.TextureCoordinates.y), ddy(input.TextureCoordinates.y));
+	float textHeight = map.b / max(length(vSlope), 0.000001);
+	float sizeScale = map.b > 0 ? saturate(textHeight / max(FullOutlineTextHeight, 1)) : 1;
+
 	// Screen pixels from the text's edge. Zero on the text, large where G has run out.
 	float edgeDistance = (1 - g) / perPixel;
 	float halfBlur = max(OutlineBlur, 1) * 0.5;
-	float borderAlpha = 1 - smoothstep(OutlineWidth - halfBlur, OutlineWidth + halfBlur, edgeDistance);
+	float width = OutlineWidth * sizeScale;
+	float borderAlpha = sizeScale * (1 - smoothstep(width - halfBlur, width + halfBlur, edgeDistance));
 
 	float2 uvPerX = ddx(input.TextureCoordinates);
 	float2 uvPerY = ddy(input.TextureCoordinates);
 	float2 shadowUV = input.TextureCoordinates - uvPerX * ShadowOffset.x - uvPerY * ShadowOffset.y;
 	float shadowDistance = (1 - tex2D(SpriteTextureSampler, shadowUV).g) / perPixel;
-	float shadowAlpha = ShadowOpacity * (1 - smoothstep(0, max(ShadowBlur, 1), shadowDistance));
+	float shadowAlpha = sizeScale * ShadowOpacity * (1 - smoothstep(0, max(ShadowBlur, 1), shadowDistance));
 
 	float opacity = input.Color.a;
 	float4 result = float4(0, 0, 0, 0);

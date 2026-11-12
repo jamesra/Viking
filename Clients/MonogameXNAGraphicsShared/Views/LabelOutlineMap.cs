@@ -10,7 +10,8 @@ namespace VikingXNAGraphics
     /// <remarks>
     /// Four bytes per pixel, in the order of an XNA <c>SurfaceFormat.Color</c>: R is the text's coverage (255 inside the glyphs, antialiased
     /// at their edges), G is <c>255 * (1 - distance / range)</c> where the distance is in pixels from the glyphs' edge, so it is 255 on the
-    /// text and falls linearly to 0 at <c>range</c> pixels away, B is unused and A is 255. The picture carries <c>range</c> blank pixels around
+    /// text and falls linearly to 0 at <c>range</c> pixels away, B is the height of one line of text as a fraction of the picture's height
+    /// (<see cref="LineHeightFraction"/>, the same in every pixel; 0 when not known) and A is 255. The picture carries <c>range</c> blank pixels around
     /// the text so the fall-off is never cut off. The shader reads the slope of G per screen pixel from the screen-space derivatives of G, which
     /// is why G must be a clean linear ramp.
     /// </remarks>
@@ -24,15 +25,18 @@ namespace VikingXNAGraphics
 
         /// <summary>
         /// Builds the picture from <paramref name="coverage"/>, <paramref name="width"/> x <paramref name="height"/> bytes (0 outside the text,
-        /// 255 inside), which must already include <paramref name="range"/> blank pixels on every side. Returns RGBA bytes, row major.
+        /// 255 inside), which must already include <paramref name="range"/> blank pixels on every side. <paramref name="lineHeight"/> is the
+        /// height in pixels of one line of the text, which lets the shader thin the border of small text; 0 leaves it out. Returns RGBA
+        /// bytes, row major.
         /// </summary>
-        public static byte[] Build(byte[] coverage, int width, int height, int range = DefaultRange)
+        public static byte[] Build(byte[] coverage, int width, int height, int range = DefaultRange, float lineHeight = 0f)
         {
             if (coverage is null || coverage.Length != width * height)
                 throw new ArgumentException($"A {width} x {height} picture needs {width * height} coverage bytes.", nameof(coverage));
             if (range < 1)
                 throw new ArgumentOutOfRangeException(nameof(range));
 
+            byte lineHeightFraction = LineHeightFraction(lineHeight, height);
             float[] outside = DistanceToInside(coverage, width, height);
             byte[] packed = new byte[width * height * 4];
             for (int i = 0; i < coverage.Length; i++)
@@ -43,11 +47,24 @@ namespace VikingXNAGraphics
                 int offset = i * 4;
                 packed[offset] = coverage[i];
                 packed[offset + 1] = (byte)Math.Round(ramp * 255f);
-                packed[offset + 2] = 0;
+                packed[offset + 2] = lineHeightFraction;
                 packed[offset + 3] = 255;
             }
 
             return packed;
+        }
+
+        /// <summary>
+        /// The B channel: <paramref name="lineHeight"/> as a fraction of <paramref name="height"/>, in 255ths, at least 1 when there is a line
+        /// height, so 0 means none. The fraction rather than the pixel count survives being drawn at any size: the shader multiplies it by the
+        /// picture's height on screen.
+        /// </summary>
+        public static byte LineHeightFraction(float lineHeight, int height)
+        {
+            if (!(lineHeight > 0f) || height <= 0)
+                return 0;
+
+            return (byte)Math.Max(1, Math.Min(255, Math.Round(255f * lineHeight / height)));
         }
 
         /// <summary>

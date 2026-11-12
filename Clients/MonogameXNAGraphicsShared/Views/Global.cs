@@ -88,7 +88,8 @@ namespace VikingXNAGraphics
 
         /// <summary>
         /// <see cref="UpArrowTexture"/> and <see cref="DownArrowTexture"/> as <see cref="MarkerOutlineMap"/>s, which
-        /// <see cref="TextureCircleView"/> draws in place of either arrow so every arrow gets a contrasting border
+        /// <see cref="TextureCircleView"/> draws in place of either arrow, with the outer ring on the marker's edge: a colored arrow in its
+        /// cell's hue, lighter or darker (<see cref="TextureCircleView.ArrowFillLumaShift"/>), with no border, a grey one with a contrasting border
         /// (<see cref="TextureCircleView.ArrowBorderColorFor"/>). Null until the host builds them with <see cref="CreateOutlinedMarker"/>.
         /// </summary>
         public static Texture2D UpArrowOutlinedTexture;
@@ -112,7 +113,7 @@ namespace VikingXNAGraphics
             }
 
             Texture2D map = new(icon.GraphicsDevice, icon.Width, icon.Height, false, SurfaceFormat.Color);
-            map.SetData(MarkerOutlineMap.Build(rgba, icon.Width, icon.Height));
+            map.SetData(MarkerOutlineMap.Build(rgba, icon.Width, icon.Height, MarkerOutlineMap.FitScale(rgba, icon.Width, icon.Height)));
             return map;
         }
 

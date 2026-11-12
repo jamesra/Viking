@@ -982,7 +982,7 @@ namespace VikingXNAGraphics
             for (int i = 0; i < pixels.Length; i++)
                 coverage[i] = pixels[i].A;
 
-            byte[] packed = LabelOutlineMap.Build(coverage, width, height, pad);
+            byte[] packed = LabelOutlineMap.Build(coverage, width, height, pad, totalHeight / _Rows.Length);
             using Texture2D source = new(device, width, height, false, SurfaceFormat.Color);
             source.SetData(packed);
 

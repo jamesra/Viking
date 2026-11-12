@@ -9,7 +9,7 @@ namespace VikingXNAGraphics
     /// </summary>
     /// <remarks>
     /// Four bytes per pixel, in the order of an XNA <c>SurfaceFormat.Color</c>, all from the source icon shrunk by <c>scale</c> about the
-    /// centre so its outer ring has room for a border inside the quad. G is the icon's signed distance field:
+    /// centre (by <see cref="FitScale"/> for the arrows, which puts the outer ring on the marker's edge). G is the icon's signed distance field:
     /// <c>255 * (0.5 - distance / (2 * range))</c>, where the distance from the icon's edge is in pixels, negative inside, and
     /// <c>range = width * <see cref="DistanceRange"/></c>; so G is 128 on the edge, above it inside and 0 from <c>range</c> pixels
     /// outside. The shader draws the icon's edge and the border from G alone, antialiased in screen pixels at any size, and nothing where
@@ -23,10 +23,41 @@ namespace VikingXNAGraphics
         public const float DefaultScale = 0.85f;
 
         /// <summary>
+        /// The scale that puts the icon's outermost covered pixel on the circle the picture's disc is clipped to, so the icon's outer ring
+        /// meets the edge of the marker with no clear band outside it (the border, if any, then only shows inside the icon's gaps). An icon
+        /// with no coverage keeps <see cref="DefaultScale"/>.
+        /// </summary>
+        public static float FitScale(byte[] source, int width, int height)
+        {
+            if (source is null || source.Length != width * height * 4)
+                throw new ArgumentException($"A {width} x {height} picture needs {width * height * 4} bytes.", nameof(source));
+
+            double outer = 0;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    if (source[(y * width + x) * 4] < InsideThreshold)
+                        continue;
+
+                    // The far side of the pixel from the centre
+                    double dx = Math.Abs(x + 0.5 - width / 2.0) + 0.5;
+                    double dy = Math.Abs(y + 0.5 - height / 2.0) + 0.5;
+                    outer = Math.Max(outer, Math.Sqrt(dx * dx + dy * dy));
+                }
+            }
+
+            return outer > 0 ? (float)(Math.Min(width, height) / 2.0 / outer) : DefaultScale;
+        }
+
+        /// <summary>
         /// The distance G spans either side of the edge, as a fraction of the picture's width (the shader's <c>markerDistanceRange</c>).
         /// 1/16 is 32 pixels of a 512 picture: room for the border on a marker as small as 40 screen pixels, at four steps of G a pixel.
         /// </summary>
         public const float DistanceRange = 1f / 16f;
+
+        /// <summary>The largest scale <see cref="Build"/> takes: an icon whose ring stops short of its picture is enlarged to meet the edge.</summary>
+        public const float MaxScale = 2f;
 
         /// <summary>Times finer than the picture the edge is measured at.</summary>
         private const int Supersample = 2;
@@ -42,7 +73,7 @@ namespace VikingXNAGraphics
         {
             if (source is null || source.Length != width * height * 4)
                 throw new ArgumentException($"A {width} x {height} picture needs {width * height * 4} bytes.", nameof(source));
-            if (scale <= 0f || scale > 1f)
+            if (scale <= 0f || scale > MaxScale)
                 throw new ArgumentOutOfRangeException(nameof(scale));
 
             float[] distance = SignedDistance(source, width, height, scale);

@@ -122,10 +122,40 @@ namespace VikingCoreTests
         }
 
         [TestMethod]
+        public void TheFitScalePutsTheOuterRingOnTheEdgeOfTheMarker()
+        {
+            // A ring stopping at radius 40 of a 50 radius picture is enlarged so its outer edge meets the disc the shader clips to
+            byte[] icon = RingIcon();
+            for (int y = 0; y < Size; y++)
+            {
+                for (int x = 0; x < Size; x++)
+                {
+                    double r = Math.Sqrt(Math.Pow(x + 0.5 - Size / 2.0, 2) + Math.Pow(y + 0.5 - Size / 2.0, 2));
+                    int i = (y * Size + x) * 4;
+                    icon[i] = icon[i + 1] = icon[i + 2] = r >= 35 && r <= 40 ? (byte)255 : (byte)0;
+                }
+            }
+
+            float scale = MarkerOutlineMap.FitScale(icon, Size, Size);
+            Assert.AreEqual(50.0 / 40.0, scale, 0.03);
+
+            byte[] map = MarkerOutlineMap.Build(icon, Size, Size, scale);
+            Assert.AreEqual(255, Channel(map, 50 + 48, 50, 0), "the ring reaches the edge");
+            Assert.IsTrue(Channel(map, 50 + 49, 50, 1) >= 120, "the edge of the field is at the disc's edge");
+        }
+
+        [TestMethod]
+        public void AnEmptyIconKeepsTheDefaultScale()
+        {
+            Assert.AreEqual(MarkerOutlineMap.DefaultScale, MarkerOutlineMap.FitScale(new byte[Size * Size * 4], Size, Size));
+        }
+
+        [TestMethod]
         public void ABadSizeOrScaleIsRefused()
         {
             Assert.ThrowsException<ArgumentException>(() => MarkerOutlineMap.Build(new byte[10], Size, Size));
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => MarkerOutlineMap.Build(RingIcon(), Size, Size, 0f));
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => MarkerOutlineMap.Build(RingIcon(), Size, Size, MarkerOutlineMap.MaxScale + 0.1f));
         }
     }
 }

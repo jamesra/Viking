@@ -72,6 +72,38 @@ namespace VikingXNAGraphics
             return FromHsv(hue, borderSaturation, 1f);
         }
 
+        /// <summary>
+        /// How far a colored arrow's luma is moved from the image under it (<see cref="ArrowFillLumaShift"/>): toward black by this fraction
+        /// for a light cell color, toward white for a dark one.
+        /// </summary>
+        public const float ArrowLumaContrast = 0.40f;
+
+        /// <summary>Perceptual luma (0 to 1) of a cell color at and above which its arrow is drawn darker than the cell, below it lighter.</summary>
+        public const float ArrowLumaMid = 0.5f;
+
+        /// <summary>
+        /// True when an arrow in <paramref name="arrowColor"/> has a hue, so it is drawn without a border, lighter or darker than its cell
+        /// (<see cref="ArrowFillLumaShift"/>). A grey arrow keeps its border.
+        /// </summary>
+        public static bool ArrowHasHue(Color arrowColor)
+        {
+            float max = Math.Max(arrowColor.R, Math.Max(arrowColor.G, arrowColor.B)) / 255f;
+            float min = Math.Min(arrowColor.R, Math.Min(arrowColor.G, arrowColor.B)) / 255f;
+            return max > 0 && (max - min) / max >= GreyArrowThreshold;
+        }
+
+        /// <summary>
+        /// The <see cref="OverlayShaderEffect.MarkerFillLumaShift"/> of a colored arrow: the ring and arrow keep the cell's hue and the
+        /// image's texture, with the luma moved <see cref="ArrowLumaContrast"/> toward black when the cell color is light
+        /// (perceptual luma at or above <see cref="ArrowLumaMid"/>) and toward white when it is dark, so the marker stands apart from
+        /// the cell it sits on without a border.
+        /// </summary>
+        public static float ArrowFillLumaShift(Color arrowColor)
+        {
+            float luma = ((0.3f * arrowColor.R) + (0.59f * arrowColor.G) + (0.11f * arrowColor.B)) / 255f;
+            return luma >= ArrowLumaMid ? -ArrowLumaContrast : ArrowLumaContrast;
+        }
+
         /// <summary>RGB of a color with <paramref name="hue"/> in sixths of a turn (0 to 6) and HSV saturation and value from 0 to 1.</summary>
         private static Color FromHsv(float hue, float saturation, float value)
         {
@@ -258,9 +290,20 @@ namespace VikingXNAGraphics
 
                 foreach (TextureCircleView cv in textureGroup)
                 {
-                    // Each arrow's border is its own hue (ArrowBorderColorFor), so it is set per arrow
+                    // A colored arrow has no border and is drawn lighter or darker than its cell; a grey arrow keeps the label-outline border
                     if (drawOutlined)
-                        overlayEffect.SetMarkerBorder(ArrowBorderColorFor(cv.Color, greyBorder), LabelOutlineEffect.OutlineWidth, LabelOutlineEffect.OutlineBlur);
+                    {
+                        if (ArrowHasHue(cv.Color))
+                        {
+                            overlayEffect.SetMarkerBorder(Color.Black, 0f, LabelOutlineEffect.OutlineBlur);
+                            overlayEffect.MarkerFillLumaShift = ArrowFillLumaShift(cv.Color);
+                        }
+                        else
+                        {
+                            overlayEffect.SetMarkerBorder(ArrowBorderColorFor(cv.Color, greyBorder), LabelOutlineEffect.OutlineWidth, LabelOutlineEffect.OutlineBlur);
+                            overlayEffect.MarkerFillLumaShift = 0f;
+                        }
+                    }
 
                     overlayEffect.AnnotationColorHSL = cv.HSLColor;
                     overlayEffect.WorldViewProjMatrix = (cv.ModelMatrix * scene.World) * scene.ViewProj;

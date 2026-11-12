@@ -72,6 +72,24 @@ namespace VikingCoreTests
         }
 
         [TestMethod]
+        public void BlueIsTheLineHeightAsAFractionOfThePictureInEveryPixel()
+        {
+            byte[] packed = LabelOutlineMap.Build(Block(), Size, Size, Range, lineHeight: 5f);
+
+            byte expected = (byte)System.Math.Round(255.0 * 5 / Size);
+            Assert.AreEqual(expected, Channel(packed, 20, 20, 2), "on the text");
+            Assert.AreEqual(expected, Channel(packed, 2, 2, 2), "far from it, so mip levels keep the same value");
+        }
+
+        [TestMethod]
+        public void WithoutALineHeightBlueIsZeroAndATinyOneIsStillMarked()
+        {
+            Assert.AreEqual(0, Channel(LabelOutlineMap.Build(Block(), Size, Size, Range), 20, 20, 2));
+            Assert.AreEqual(1, LabelOutlineMap.LineHeightFraction(0.01f, 1000));
+            Assert.AreEqual(255, LabelOutlineMap.LineHeightFraction(2000f, 1000));
+        }
+
+        [TestMethod]
         public void AWrongSizedPictureIsRefused()
         {
             Assert.ThrowsException<System.ArgumentException>(() => LabelOutlineMap.Build(new byte[10], Size, Size, Range));

@@ -20,6 +20,12 @@ namespace VikingXNAGraphics
         /// <summary>Screen pixels the border takes to fade out; 1 is a crisp edge, larger blurs it. On by default.</summary>
         public static float OutlineBlur { get; set; } = 2f;
 
+        /// <summary>
+        /// Screen pixels of line height at and above which a label gets its full border and shadow. Smaller text gets a border thinned and
+        /// faded in proportion, so when zoomed out the border blends instead of taking over the few pixels the letters have.
+        /// </summary>
+        public static float FullOutlineTextHeight { get; set; } = 16f;
+
         /// <summary>How opaque the shadow is, 0 to 1. Off (0) by default.</summary>
         public static float ShadowOpacity { get; set; } = 0f;
 
@@ -35,6 +41,7 @@ namespace VikingXNAGraphics
         private EffectParameter outlineColor;
         private EffectParameter outlineWidth;
         private EffectParameter outlineBlur;
+        private EffectParameter fullOutlineTextHeight;
         private EffectParameter shadowColor;
         private EffectParameter shadowOpacity;
         private EffectParameter shadowOffset;
@@ -48,6 +55,7 @@ namespace VikingXNAGraphics
                 outlineColor = Effect.Parameters["OutlineColor"];
                 outlineWidth = Effect.Parameters["OutlineWidth"];
                 outlineBlur = Effect.Parameters["OutlineBlur"];
+                fullOutlineTextHeight = Effect.Parameters["FullOutlineTextHeight"];
                 shadowColor = Effect.Parameters["ShadowColor"];
                 shadowOpacity = Effect.Parameters["ShadowOpacity"];
                 shadowOffset = Effect.Parameters["ShadowOffset"];
@@ -95,6 +103,7 @@ namespace VikingXNAGraphics
             shadowColor.SetValue(rgb);
             outlineWidth.SetValue(OutlineWidth);
             outlineBlur.SetValue(OutlineBlur);
+            fullOutlineTextHeight?.SetValue(FullOutlineTextHeight);
             shadowOpacity.SetValue(ShadowOpacity);
             shadowOffset.SetValue(ShadowOffset);
             shadowBlur.SetValue(ShadowBlur);

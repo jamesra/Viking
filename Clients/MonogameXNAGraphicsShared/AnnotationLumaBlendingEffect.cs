@@ -211,6 +211,7 @@ namespace VikingXNAGraphics
         private EffectParameter _MarkerBorderWidth;
         private EffectParameter _MarkerBorderBlur;
         private EffectParameter _MarkerDistanceRange;
+        private EffectParameter _MarkerFillLumaShift;
 
         private EffectParameter _InputLumaAlpha;
 
@@ -419,6 +420,18 @@ namespace VikingXNAGraphics
             _MarkerDistanceRange?.SetValue(MarkerOutlineMap.DistanceRange);
         }
 
+        /// <summary>
+        /// How the luma of an outlined marker's icon is moved from the image under it
+        /// (<see cref="Techniques.CircleSingleColorTextureLumaOutlinedOverlayEffect"/>): 0 keeps the image's luma, a negative value
+        /// moves it that fraction toward black and a positive one toward white, so the icon keeps the image's texture. Ignored by an
+        /// older compiled shader without the parameter.
+        /// </summary>
+        public float MarkerFillLumaShift
+        {
+            get => _MarkerFillLumaShift?.GetValueSingle() ?? 0f;
+            set => _MarkerFillLumaShift?.SetValue(value);
+        }
+
         /// <summary>True when the compiled shader has <paramref name="technique"/>; an older build of the content may not.</summary>
         public bool HasTechnique(Techniques technique) => effect?.Techniques[technique.ToString()] is not null;
 
@@ -505,6 +518,7 @@ namespace VikingXNAGraphics
             _MarkerBorderWidth = effect.Parameters["markerBorderWidth"];
             _MarkerBorderBlur = effect.Parameters["markerBorderBlur"];
             _MarkerDistanceRange = effect.Parameters["markerDistanceRange"];
+            _MarkerFillLumaShift = effect.Parameters["markerFillLumaShift"];
 
             _InputLumaAlpha = effect.Parameters["InputLumaAlpha"];
             _AnnotationHSLColor = effect.Parameters["AnnotationHSLColor"];
