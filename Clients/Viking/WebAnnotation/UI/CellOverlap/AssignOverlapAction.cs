@@ -20,15 +20,26 @@ namespace WebAnnotation.UI.CellOverlap
     /// Edits start from the owner's volume polygon and save mosaic through <see cref="LocationShapeUpdate"/>
     /// (<c>annotation-volume-geometry.mdc</c>). When the cut splits the other outline, the part that holds its seed stays on
     /// the location and every other part becomes a new unlinked location on the same structure and section, as the pen's
-    /// split does (<c>RetraceAndReplacePathCommand.ApplyCut</c>). Nothing is saved unless every piece maps. One Ctrl+Z
-    /// undoes the whole edit.
+    /// split does (<c>RetraceAndReplacePathCommand.ApplyCut</c>). The pieces are saved as cut, without the save-time curve
+    /// fit (<see cref="AutoPolygonizeSelection.SimplifyForSave"/>): their points are already the two outlines' own, and the fit
+    /// moves control points far out at the sharp corners where the cut meets the outline, back over the winner, so the
+    /// overlap stayed and giving it again changed nothing. Nothing is saved unless every piece maps. One Ctrl+Z undoes the
+    /// whole edit.
     /// </remarks>
     internal static class AssignOverlapAction
     {
         /// <summary>
-        /// The pieces an assignment produces; <see cref="Outline"/> stays on the location, <see cref="Extras"/> become new locations.
+        /// The pieces an assignment produces, ready to save as they are; <see cref="Outline"/> stays on the location,
+        /// <see cref="Extras"/> become new locations.
         /// </summary>
         internal sealed record Plan(LocationObj Loser, Polygon Outline, IReadOnlyList<Polygon> Extras);
+
+        /// <summary>
+        /// Volume pixels around the region within which the winner's outline is cut from the other cell
+        /// (<see cref="CellOverlapGeometry.AreaToGive"/>): enough to reach past the region's rounded edges, narrow enough that
+        /// another overlap of the same two cells is left for its own menu.
+        /// </summary>
+        internal const double GiveMargin = 16;
 
         /// <summary>
         /// Works out what giving <paramref name="region"/> to <paramref name="winnerId"/> does to the other cell.
@@ -50,7 +61,15 @@ namespace WebAnnotation.UI.CellOverlap
                 return null;
             }
 
-            if (!CellOverlapGeometry.TrySubtract(outline, region.Shape, loser.VolumeCenter(), out Polygon? primary, out IReadOnlyList<Polygon> extras) ||
+            // What the other cell gives up: the winner's own outline near the region (the region itself when the winner's
+            // outline is not at hand).
+            LocationObj? winner = Store.Locations.GetObjectByID(winnerId, false);
+            Polygon give = winner is not null && AutoPolygonizeSelection.TryGetVolumePolygon(winner, transform, out Polygon? winnerOutline) && winnerOutline is not null
+                ? CellOverlapGeometry.AreaToGive(region.Shape, winnerOutline, GiveMargin) ?? region.Shape
+                : region.Shape;
+
+            Vector2 keepPoint = loser.VolumeCenter();
+            if (!CellOverlapGeometry.TrySubtract(outline, give, keepPoint, out Polygon? primary, out IReadOnlyList<Polygon> extras) ||
                 primary is null)
             {
                 failure = $"The overlap covers all of structure {loser.ParentID} here, so nothing would be left of it. Delete that annotation instead.";
@@ -89,11 +108,11 @@ namespace WebAnnotation.UI.CellOverlap
                     if (loser.Width.HasValue)
                         sibling.Width = loser.Width;
 
-                    LocationShapeUpdate.AssignSimplifiedVolumePolygon(sibling, extra, transform, parent.Downsample);
+                    LocationShapeUpdate.AssignVolumePolygon(sibling, extra, transform);
                     siblings.Add(sibling);
                 }
 
-                LocationShapeUpdate.AssignSimplifiedVolumePolygon(loser, plan.Outline, transform, parent.Downsample);
+                LocationShapeUpdate.AssignVolumePolygon(loser, plan.Outline, transform);
             }
             catch (ArgumentException ex)
             {

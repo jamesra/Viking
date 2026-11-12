@@ -233,6 +233,55 @@ namespace VikingCoreTests
             }
         }
 
+        /// <summary>
+        /// The overlay has an on/off setting per kind of volume: on by default for aligned or annotated volumes, off for plain
+        /// image stacks. Reset to Defaults restores the default of the open volume's kind.
+        /// </summary>
+        [TestMethod]
+        public void ResetToDefaults_ShowsTheOverlayOnlyForAlignedOrAnnotatedVolumes()
+        {
+            var vm = LoadedViewModel();
+            vm.SectionNumberOverlayEnabled = false;
+            vm.ResetToDefaults();
+            Assert.IsTrue(vm.SectionNumberOverlayEnabled, "aligned or annotated volume");
+
+            vm = LoadedViewModel();
+            vm.OpenVolumeIsImageStack = true;
+            vm.SectionNumberOverlayEnabled = true;
+            vm.ResetToDefaults();
+            Assert.IsFalse(vm.SectionNumberOverlayEnabled, "plain image stack");
+        }
+
+        /// <summary>The two overlay on/off defaults agree across the view model, app.config, Settings.settings and Settings.Designer.cs.</summary>
+        [TestMethod]
+        public void OverlayOnOffDefaults_AgreeAcrossViewModelAppConfigAndSettings()
+        {
+            var expected = new (string Setting, bool Value)[]
+            {
+                ("SectionNumberOverlayEnabled", ViewerPreferencesDialogViewModel.DefaultSectionNumberOverlayEnabled),
+                ("SectionNumberOverlayEnabledImageStacks", ViewerPreferencesDialogViewModel.DefaultSectionNumberOverlayEnabledImageStacks),
+            };
+
+            string vikingCore = Path.Combine(ChangelogTests.FindRepositoryRoot(), "Clients", "Viking", "NGVV");
+            XDocument appConfig = XDocument.Load(Path.Combine(vikingCore, "app.config"));
+            XDocument settingsFile = XDocument.Load(Path.Combine(vikingCore, "Properties", "Settings.settings"));
+            XNamespace settingsNs = settingsFile.Root!.Name.Namespace;
+
+            foreach ((string setting, bool value) in expected)
+            {
+                string appConfigValue = appConfig.Descendants("setting")
+                    .Single(e => (string?)e.Attribute("name") == setting).Element("value")!.Value;
+                string settingsFileValue = settingsFile.Descendants(settingsNs + "Setting")
+                    .Single(e => (string?)e.Attribute("Name") == setting).Element(settingsNs + "Value")!.Value;
+                string attributeValue = typeof(Viking.Properties.Settings).GetProperty(setting)!
+                    .GetCustomAttribute<DefaultSettingValueAttribute>()!.Value;
+
+                Assert.AreEqual(value, bool.Parse(appConfigValue), $"app.config {setting}");
+                Assert.AreEqual(value, bool.Parse(settingsFileValue), $"Settings.settings {setting}");
+                Assert.AreEqual(value, bool.Parse(attributeValue), $"Settings.Designer.cs {setting}");
+            }
+        }
+
         private static double ParseInvariant(string text) => double.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture);
     }
 }

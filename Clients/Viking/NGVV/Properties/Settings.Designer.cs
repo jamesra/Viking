@@ -353,6 +353,18 @@ namespace Viking.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool SectionNumberOverlayEnabledImageStacks {
+            get {
+                return ((bool)(this["SectionNumberOverlayEnabledImageStacks"]));
+            }
+            set {
+                this["SectionNumberOverlayEnabledImageStacks"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("25")]
         public int SectionNumberOverlayCount {
             get {

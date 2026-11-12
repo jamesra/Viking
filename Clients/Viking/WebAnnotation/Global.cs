@@ -53,41 +53,8 @@ namespace WebAnnotation
         /// </summary>
         /// <param name="context">The extension load context providing access to VikingXML</param>
         /// <returns>True if the extension should load, false otherwise</returns>
-        public static bool ShouldLoad(Viking.Common.IExtensionLoadContext context)
-        {
-            if (AccessibleVolumeSession.AnnotationServiceEndpoint != null)
-                return true;
-
-            if (context is null)
-            {
-                return false;
-            }
-
-            XElement volumeElement = context.VolumeElement;
-            if (volumeElement is null)
-            {
-                return false;
-            }
-
-            // Check for VolumeToEndpoint element with Endpoint attribute
-            IEnumerable<XElement> mappingElements = volumeElement.Elements().Where(e => e.Name.LocalName == "VolumeToEndpoint");
-
-            if (!mappingElements.Any())
-            {
-                return false;
-            }
-
-            XElement volumeToEndpointElement = mappingElements.First();
-            XAttribute endpointAttribute = volumeToEndpointElement.Attribute("Endpoint");
-
-            if (endpointAttribute is null || string.IsNullOrWhiteSpace(endpointAttribute.Value))
-            {
-                return false;
-            }
-
-            // Both VolumeToEndpoint element and Endpoint attribute are present
-            return true;
-        }
+        public static bool ShouldLoad(Viking.Common.IExtensionLoadContext context) =>
+            AnnotationEndpointConfig.IsConfigured(context?.VolumeElement);
 
         /// <summary>
         /// Returns true if a SegmentationService is configured and available with a valid URL format.

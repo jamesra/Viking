@@ -97,6 +97,9 @@
     <Setting Name="SectionNumberOverlayEnabled" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
+    <Setting Name="SectionNumberOverlayEnabledImageStacks" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
     <Setting Name="SectionNumberOverlayCount" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">25</Value>
     </Setting>

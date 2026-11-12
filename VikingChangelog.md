@@ -11,8 +11,8 @@ Notes for whoever updates this file. Comments like this one are not shown in Vik
   changes, rename the unreleased heading to the new version; when a version ships, replace "not yet released" with the date
   and channel, for example "2026-10-26 (Viking Test, unsigned)".
 
-Committed application version: 1.2.142.0.
-1.2.70 and 1.2.75 were intermediate bumps and have no section of their own. Neither do the builds between 1.2.78 and 1.2.109;
+Committed application version: 1.2.144.0.
+1.2.70, 1.2.75 and 1.2.143 were intermediate bumps and have no section of their own (1.2.143's change is listed under 1.2.144). Neither do the builds between 1.2.78 and 1.2.109;
 their changes are listed under 1.2.109. Builds 1.2.128 and 1.2.129 are listed under 1.2.129 (it went out as Viking Test
 and as a signed release on 2026-10-27). Viking Test builds 1.2.130 to 1.2.136 were folded into the 1.2.136 release on
 2026-11-02, leaving out fixes for bugs only those test builds had; their own sections are in git history before that
@@ -22,6 +22,13 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. Older 1.1.x notes live in
 Documentation/source/Client/versionhistory.rst.
 -->
+
+## 1.2.144 — 2026-11-12 (Viking Test, unsigned)
+
+* **Fix: Give overlap to clears the overlap.** After **Give overlap to**, part of the checkerboard could stay where the cut met the other cell's outline, and choosing **Give overlap to** again there changed nothing. The other cell's outline is now cut along the chosen cell's own edge and saved as cut, so the overlap is gone after one step. <!-- test-regression: 1.2.137 -->
+<!-- AssignOverlapAction saved the cut through SimplifyForSave, a Catmull-Rom control-point fit that pushes control points far out at the sharp corners where the cut meets the outline (30 px in CellOverlapGeometryTests), back over the winner; the overlap index compares control polygons, so the region stayed and a second give re-fit to the same outline. Now LocationShapeUpdate.AssignVolumePolygon saves the cut unfitted. It also cuts CellOverlapGeometry.AreaToGive (the winner outline within 16 px of the region) instead of the computed intersection, which left a zero-width spike at a corner inside the winner. -->
+* **Section number wheel off for plain image stacks.** The column of section numbers on the edge of the view now has two on/off settings: one for volumes with slice-to-volume transforms or an annotation database (on until you turn it off) and one for plain image stacks with neither (off until you turn it on). **Enable Section Number Overlay** under **Section Number Overlay** in **Viewer Preferences** (Edit menu) changes the setting for the kind of volume that is open, so turning the wheel off or on for an image stack leaves annotated volumes as they were.
+<!-- SectionViewerControl.OpenVolumeIsImageStack: TransformNames empty and !AnnotationEndpointConfig.IsConfigured (the WebAnnotation ShouldLoad rule, moved to Common). Settings SectionNumberOverlayEnabled (default True) and SectionNumberOverlayEnabledImageStacks (default False); ViewerPreferencesDialogViewModel.OpenVolumeIsImageStack picks the Reset to Defaults value. -->
 
 ## 1.2.142 — 2026-11-12 (Viking Test, unsigned)
 

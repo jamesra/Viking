@@ -93,6 +93,36 @@ namespace WebAnnotation.UI.CellOverlap
             }
         }
 
+        /// <summary>
+        /// The area to cut from the other cell when <paramref name="region"/> is given to <paramref name="winner"/>: the winner's
+        /// own outline within <paramref name="margin"/> of the region. Cutting the computed intersection itself leaves
+        /// hair-thin slivers where its edges round off the outlines', which become spikes in the saved outline; cutting the
+        /// winner's outline does not. The margin keeps other overlaps of the same two cells out of it. Null when the
+        /// geometry fails, so the caller can fall back to <paramref name="region"/>.
+        /// </summary>
+        public static Polygon? AreaToGive(Polygon region, Polygon winner, double margin)
+        {
+            if (region is null || winner is null)
+                return null;
+
+            try
+            {
+                SqlGeometry near = AutoPolygonizeSelection.EnsureValid(region.ToSqlGeometry()).STBuffer(margin);
+                SqlGeometry owned = AutoPolygonizeSelection.EnsureValid(winner.ToSqlGeometry());
+                if (near is null || near.IsNull || owned is null || owned.IsNull)
+                    return null;
+
+                return Parts(AutoPolygonizeSelection.EnsureValid(owned.STIntersection(near)))
+                    .OrderByDescending(part => part.Area)
+                    .FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Cell overlap area to give failed: {ex.Message}");
+                return null;
+            }
+        }
+
         private static IEnumerable<Polygon> Parts(SqlGeometry geometry)
         {
             foreach (SqlGeometry part in AutoPolygonizeSelection.EnumeratePolygons(geometry))

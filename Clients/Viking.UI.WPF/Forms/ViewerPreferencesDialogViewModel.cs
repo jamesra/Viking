@@ -35,6 +35,18 @@ namespace Viking.UI.WPF.Forms
         public const int DefaultSectionNumberOverlayCount = 25;
 
         /// <summary>
+        /// Default for showing the section number overlay on a volume with slice-to-volume transforms or an annotation
+        /// database (the <c>SectionNumberOverlayEnabled</c> setting).
+        /// </summary>
+        public const bool DefaultSectionNumberOverlayEnabled = true;
+
+        /// <summary>
+        /// Default for showing the section number overlay on a plain image stack, with no slice-to-volume transforms and no
+        /// annotation database (the <c>SectionNumberOverlayEnabledImageStacks</c> setting).
+        /// </summary>
+        public const bool DefaultSectionNumberOverlayEnabledImageStacks = false;
+
+        /// <summary>
         /// Default acceleration value
         /// </summary>
         public const double DefaultAcceleration = 1.0;
@@ -621,11 +633,17 @@ namespace Viking.UI.WPF.Forms
         }
 
         /// <summary>
+        /// True when the open volume is a plain image stack, so <see cref="SectionNumberOverlayEnabled"/> edits the image-stack
+        /// setting and <see cref="ResetToDefaults"/> restores <see cref="DefaultSectionNumberOverlayEnabledImageStacks"/>.
+        /// </summary>
+        public bool OpenVolumeIsImageStack { get; set; }
+
+        /// <summary>
         /// Reset all settings to their defaults
         /// </summary>
         public void ResetToDefaults()
         {
-            SectionNumberOverlayEnabled = true;
+            SectionNumberOverlayEnabled = OpenVolumeIsImageStack ? DefaultSectionNumberOverlayEnabledImageStacks : DefaultSectionNumberOverlayEnabled;
             SectionNumberOverlayCount = DefaultSectionNumberOverlayCount;
             SectionNumberOverlayAcceleration = DefaultAcceleration;
             SectionNumberOverlayEdge = "Left";

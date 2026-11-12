@@ -3415,9 +3415,13 @@ namespace Viking.UI.Controls
         /// </summary>
         private void InitializeSectionNumberOverlay()
         {
+            bool imageStack = OpenVolumeIsImageStack();
+            bool enabled = SectionNumberOverlayEnabledSetting(imageStack);
+            Trace.WriteLine($"Section number overlay {(enabled ? "shown" : "hidden")}: the volume is {(imageStack ? "a plain image stack (no slice-to-volume transforms, no annotation database)" : "aligned or annotated")}");
+
             sectionNumberOverlay = new SectionNumberOverlayView
             {
-                Enabled = Viking.Properties.Settings.Default.SectionNumberOverlayEnabled,
+                Enabled = enabled,
                 SectionsAboveBelow = Viking.Properties.Settings.Default.SectionNumberOverlayCount,
                 Edge = ParseOverlayEdge(Viking.Properties.Settings.Default.SectionNumberOverlayEdge),
                 Opacity = Viking.Properties.Settings.Default.SectionNumberOverlayOpacity,
@@ -3455,6 +3459,24 @@ namespace Viking.UI.Controls
                 sectionNumberOverlay.Initialize(Section.Number);
             }
         }
+
+        /// <summary>
+        /// True for a plain image stack: a volume with no slice-to-volume transforms and no annotation database
+        /// (<see cref="AnnotationEndpointConfig.IsConfigured"/>). The section number overlay has a separate on/off setting
+        /// for these (<see cref="SectionNumberOverlayEnabledSetting"/>), off until the user turns it on.
+        /// </summary>
+        private static bool OpenVolumeIsImageStack() =>
+            State.volume is not null &&
+            State.volume.TransformNames.Length == 0 &&
+            !AnnotationEndpointConfig.IsConfigured(State.volume.VolumeElement);
+
+        /// <summary>
+        /// The saved on/off setting of the section number overlay for the open volume's kind: <c>SectionNumberOverlayEnabledImageStacks</c>
+        /// for a plain image stack, <c>SectionNumberOverlayEnabled</c> otherwise. Each keeps its default until the user saves it.
+        /// </summary>
+        private static bool SectionNumberOverlayEnabledSetting(bool imageStack) => imageStack
+            ? Viking.Properties.Settings.Default.SectionNumberOverlayEnabledImageStacks
+            : Viking.Properties.Settings.Default.SectionNumberOverlayEnabled;
 
         /// <summary>
         /// Update the section number overlay when section changes
@@ -3619,10 +3641,11 @@ namespace Viking.UI.Controls
                 return;
             }
 
-            // Create ViewModel and load current settings
-            var viewModel = new Viking.UI.WPF.Forms.ViewerPreferencesDialogViewModel();
+            // Create ViewModel and load current settings. The overlay checkbox edits the on/off setting of the open volume's kind.
+            bool imageStack = OpenVolumeIsImageStack();
+            var viewModel = new Viking.UI.WPF.Forms.ViewerPreferencesDialogViewModel { OpenVolumeIsImageStack = imageStack };
             viewModel.LoadCurrentSettings(
-                Viking.Properties.Settings.Default.SectionNumberOverlayEnabled,
+                SectionNumberOverlayEnabledSetting(imageStack),
                 Viking.Properties.Settings.Default.SectionNumberOverlayCount,
                 Viking.Properties.Settings.Default.SectionNumberOverlayAcceleration,
                 Viking.Properties.Settings.Default.SectionNumberOverlayEdge,
@@ -3712,11 +3735,16 @@ namespace Viking.UI.Controls
         }
 
         /// <summary>
-        /// Save viewer preferences from viewmodel to settings
+        /// Save viewer preferences from viewmodel to settings. The overlay's on/off checkbox is saved to the setting of the open
+        /// volume's kind (<see cref="SectionNumberOverlayEnabledSetting"/>); the other kind's setting is left alone.
         /// </summary>
         private static void SaveViewerPreferencesFromViewModel(Viking.UI.WPF.Forms.ViewerPreferencesDialogViewModel viewModel)
         {
-            Viking.Properties.Settings.Default.SectionNumberOverlayEnabled = viewModel.SectionNumberOverlayEnabled;
+            if (viewModel.OpenVolumeIsImageStack)
+                Viking.Properties.Settings.Default.SectionNumberOverlayEnabledImageStacks = viewModel.SectionNumberOverlayEnabled;
+            else
+                Viking.Properties.Settings.Default.SectionNumberOverlayEnabled = viewModel.SectionNumberOverlayEnabled;
+
             Viking.Properties.Settings.Default.SectionNumberOverlayCount = viewModel.SectionNumberOverlayCount;
             Viking.Properties.Settings.Default.SectionNumberOverlayAcceleration = viewModel.SectionNumberOverlayAcceleration;
             Viking.Properties.Settings.Default.SectionNumberOverlayEdge = viewModel.SectionNumberOverlayEdge;

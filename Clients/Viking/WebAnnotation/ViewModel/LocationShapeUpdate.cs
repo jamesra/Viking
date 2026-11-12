@@ -86,10 +86,27 @@ namespace WebAnnotation.ViewModel
                 throw new ArgumentNullException(nameof(transform));
 
             // Single save-time pass at the "Simplify Polygon" menu tolerance; no second fit follows.
-            Polygon simplified = AutoPolygonizeSelection.SimplifyForSave(volumePolygon, mustContain);
+            AssignVolumePolygon(modelObj, AutoPolygonizeSelection.SimplifyForSave(volumePolygon, mustContain), transform);
+        }
+
+        /// <summary>
+        /// Writes <paramref name="volumePolygon"/> as it is, without simplifying it, as the location's mosaic control points and
+        /// smoothed volume shape, converting the location to CURVEPOLYGON. For a caller that has already simplified the ring and
+        /// then adjusted it, such as the Give overlap action, which cuts the other cell out again after simplifying.
+        /// </summary>
+        /// <exception cref="ArgumentException">A point cannot be mapped into the section (the message says which) or the mapped
+        /// polygon is not valid; the location, its type included, is then unchanged.</exception>
+        public static void AssignVolumePolygon(LocationObj modelObj, Polygon volumePolygon, IVolumeToSectionTransform transform)
+        {
+            if (modelObj is null)
+                throw new ArgumentNullException(nameof(modelObj));
+            if (volumePolygon is null)
+                throw new ArgumentNullException(nameof(volumePolygon));
+            if (transform is null)
+                throw new ArgumentNullException(nameof(transform));
 
             // Mapped before anything changes, so a refused result leaves the location as it was.
-            MosaicGeometry mosaic = LocationVolumeGeometry.ToMosaic(LocationType.CURVEPOLYGON, simplified, transform);
+            MosaicGeometry mosaic = LocationVolumeGeometry.ToMosaic(LocationType.CURVEPOLYGON, volumePolygon, transform);
             if (!mosaic.Succeeded)
                 throw new ArgumentException(mosaic.Failure);
 

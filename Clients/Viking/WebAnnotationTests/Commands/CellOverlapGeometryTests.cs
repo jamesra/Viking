@@ -87,6 +87,44 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual(0, CellOverlapGeometry.Intersection(winner, remaining!).Count);
         }
 
+        /// <summary>A many-sided circle, like a traced cell outline.</summary>
+        private static Polygon Round(double centerX, double centerY, double radius, int sides = 96) =>
+            new([.. Enumerable.Range(0, sides + 1).Select(i =>
+            {
+                double angle = 2 * System.Math.PI * (i % sides) / sides;
+                return new Vector2(centerX + (radius * System.Math.Cos(angle)), centerY + (radius * System.Math.Sin(angle)));
+            })]);
+
+        /// <summary>
+        /// The bug: the cut outline was saved through the save-time curve fit, which moves control points far out at the sharp
+        /// corners where the cut meets the outline, back over the winner, so the overlap stayed and giving it again changed
+        /// nothing. Subtracting the computed intersection also left a hair-thin spike at a corner inside the winner. The outline
+        /// the action saves (the cut of the winner's own outline near the region) must not overlap the winner or wander.
+        /// </summary>
+        [TestMethod]
+        public void TheSimplifiedOutlineAroundARoundWinnerStaysOutsideIt()
+        {
+            Polygon winner = Round(0, 0, 200);
+            Polygon loser = Box(150, -120, 400, 120);
+            Polygon region = CellOverlapGeometry.Intersection(winner, loser).Single();
+            Polygon give = CellOverlapGeometry.AreaToGive(region, winner, WebAnnotation.UI.CellOverlap.AssignOverlapAction.GiveMargin)!;
+            Assert.IsNotNull(give);
+            Assert.IsTrue(CellOverlapGeometry.TrySubtract(loser, give, new Vector2(350, 0), out Polygon? remaining, out var extras));
+            Assert.AreEqual(0, extras.Count);
+
+            Polygon toSave = remaining!;
+            Polygon fitted = WebAnnotation.UI.AutoPolygonize.AutoPolygonizeSelection.SimplifyForSave(toSave);
+            Assert.AreNotEqual(0, CellOverlapGeometry.Intersection(winner, fitted).Count,
+                "the save-time curve fit puts control points back over the winner, which is why the action saves the cut as it is");
+
+            Assert.AreEqual(0, CellOverlapGeometry.Intersection(winner, toSave).Count, "the saved outline does not overlap the winner");
+            Assert.IsTrue(toSave.Covers(new Vector2(350, 0)));
+            double expected = loser.Area - region.Area;
+            Assert.AreEqual(expected, toSave.Area, expected * 0.02, $"only the overlap is lost (saved {toSave.Area:F0})");
+            Assert.IsTrue(toSave.ExteriorRing.All(p => p.X >= 150 - 4 && p.X <= 400 + 4 && p.Y >= -124 && p.Y <= 124),
+                "no point moves outside the original outline");
+        }
+
         [TestMethod]
         public void TheRegionOfTwoCellsKnowsTheOtherCell()
         {
