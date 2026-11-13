@@ -39,7 +39,7 @@ Do **not** merge the whole `dev` branch into `Legacy`. A previous full merge alr
 
 ## Source
 
-Use the local `dev` worktree at [D:/src/git/VikingLegacy](D:/src/git/VikingLegacy), **HEAD `e62c6546`** (`Port Legacy marching squares and ribbon tangents into Geometry.Core.`). Path-checkout from that commit.
+Use the local `dev` worktree at [D:/src/git/Viking-Net4.8](D:/src/git/Viking-Net4.8), **HEAD `e62c6546`** (`Port Legacy marching squares and ribbon tangents into Geometry.Core.`). Path-checkout from that commit.
 
 `e62c6546` also touched `Clients/MonogameXNAGraphicsShared/RoundCurve.cs` and Bifrost `RoundCurve.cs`. **Do not** checkout those files; update Legacy `RoundCurve` during the consumer compile-fix so it calls `Vector2.CalculateRibbonTangents`.
 
@@ -97,7 +97,7 @@ Rename map (same as `dev`):
 - `.Convert()` → `ToPolygon()` / `ToCircle()` / `ToLineSegment()` / `ToRectangle()`
 - `IRectangle` → `IRectangle2D`
 
-**XNA clash:** `Geometry.Vector2` vs `Microsoft.Xna.Framework.Vector2`. Follow the `dev` pattern already in [D:/src/git/VikingLegacy/Clients/MonogameXNAGraphicsShared](D:/src/git/VikingLegacy/Clients/MonogameXNAGraphicsShared): `using Vector2 = Microsoft.Xna.Framework.Vector2;` and qualify `Geometry.Vector2` / `Geometry.Rectangle`. Use `dev` as a **rename reference only** — do not copy those files over Legacy graphics fixes (circle IB reset, alpha BasicEffect cache, etc.).
+**XNA clash:** `Geometry.Vector2` vs `Microsoft.Xna.Framework.Vector2`. Follow the `dev` pattern already in [D:/src/git/Viking-Net4.8/Clients/MonogameXNAGraphicsShared](D:/src/git/Viking-Net4.8/Clients/MonogameXNAGraphicsShared): `using Vector2 = Microsoft.Xna.Framework.Vector2;` and qualify `Geometry.Vector2` / `Geometry.Rectangle`. Use `dev` as a **rename reference only** — do not copy those files over Legacy graphics fixes (circle IB reset, alpha BasicEffect cache, etc.).
 
 **`Contains` vs `Covers` (do not blind-rename):** On `dev`, `Contains(point)` is interior-only; **`Covers` includes the boundary**. Hit-tests that used Legacy `Contains` (boundary counted) must become `Covers`. Do not “finish” sibling grouping on `bool Intersects` — see the follow-up below.
 
@@ -122,7 +122,7 @@ flowchart LR
 
 Switch auto-polygonize sibling grouping from `current.Polygon.Intersects(other.Polygon)` in [AutoPolygonizeSelection.CollectOverlappingSameCellComponent](Clients/Viking/WebAnnotation/UI/AutoPolygonize/AutoPolygonizeSelection.cs) to **`GetRelation` / `ShapeRelation`**.
 
-`ShapeRelation` is a `[Flags]` enum in [Geometry.Core/Primitives/Interfaces.cs](D:/src/git/VikingLegacy/Geometry.Core/Primitives/Interfaces.cs): `None`, `Contained`, `Touching`, `Intersecting`. `Contains` / `Covers` / `Intersects` are wrappers over it. Grouping should decide from the relation (for example merge on `Contained` or `Intersecting`, maybe skip bare `Touching`), not from a boolean that collapses all of those.
+`ShapeRelation` is a `[Flags]` enum in [Geometry.Core/Primitives/Interfaces.cs](D:/src/git/Viking-Net4.8/Geometry.Core/Primitives/Interfaces.cs): `None`, `Contained`, `Touching`, `Intersecting`. `Contains` / `Covers` / `Intersects` are wrappers over it. Grouping should decide from the relation (for example merge on `Contained` or `Intersecting`, maybe skip bare `Touching`), not from a boolean that collapses all of those.
 
 This is **not** part of the Geometry checkout. It is the next change once Viking compiles against the new types. Do not treat a successful `Intersects` compile-fix as done for the three-C606 process case.
 

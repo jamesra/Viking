@@ -7,7 +7,7 @@ Segment Anything 2 in Docker. A simple, easy to use Docker image for Meta's SAM2
 
 📰 New: The project has been restructured into three separate components:
 1. **segmentation_grpc**: Contains the gRPC interface definition and code generation
-2. **Example**: The Python point-prompt sample lives in VikingLegacy at `Servers/SegmentationServer/Example`.
+2. **Example**: The Python point-prompt sample lives in Viking-Net4.8 at `Servers/SegmentationServer/Example`.
 3. **segmentation_server**: Contains the server implementation that runs in the Docker container
 
 📰 We also have a ROS Noetic supported image in the [ROS Noetic branch](https://github.com/peasant98/SAM2-Docker/tree/ros-noetic)!
@@ -91,7 +91,7 @@ python -m segmentation_grpc
 
 ### Example
 
-The command-line sample is `Servers/SegmentationServer/Example` in the VikingLegacy repo (`python client_example.py`). This tree no longer contains a copy.
+The command-line sample is `Servers/SegmentationServer/Example` in the Viking-Net4.8 repo (`python client_example.py`). This tree no longer contains a copy.
 
 ### segmentation_server
 

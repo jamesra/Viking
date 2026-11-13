@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Docker host layout for Viking stacks
 
-VikingLegacy runs no containers (its one server, the WCF AnnotationService, is an IIS site deployed by Viking's
+Viking-Net4.8 runs no containers (its one server, the WCF AnnotationService, is an IIS site deployed by Viking's
 `deploy/Deploy-VikingIis.ps1`): the stacks, `deploy/stacks.psd1` and `deploy/examples/` live in Viking
 (`d:\src\git\Viking`, branch `dev`), which keeps the canonical copy of this rule. Make Docker changes there.
 

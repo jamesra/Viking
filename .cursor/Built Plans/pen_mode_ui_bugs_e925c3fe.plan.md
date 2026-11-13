@@ -40,7 +40,7 @@ flowchart TD
 
 **1. Closed-curve (and similar) crash — high**
 
-[LocationClosedCurveView.cs](Clients/Viking/WebAnnotation/View/LocationClosedCurveView.cs) throws `NotImplementedException` from both `GetPenContactActionForPositionOnAnnotation` and `GetPenActionsForShapeAnnotation`. Dispatch and `UpdatePenCursor` have no try/catch (Legacy [AnnotationOverlay OnPenContact](d:/src/git/VikingLegacy/Clients/Viking/WebAnnotation/UI/AnnotationOverlay.cs) swallowed this). Hover, tap, or a stroke that touches a closed curve can crash; stroke completion never reaches the confirmation ring (`OnPenPathComplete` → `OnInteractionAdded` → `GetPenActionsForShapeAnnotation`).
+[LocationClosedCurveView.cs](Clients/Viking/WebAnnotation/View/LocationClosedCurveView.cs) throws `NotImplementedException` from both `GetPenContactActionForPositionOnAnnotation` and `GetPenActionsForShapeAnnotation`. Dispatch and `UpdatePenCursor` have no try/catch (Legacy [AnnotationOverlay OnPenContact](d:/src/git/Viking-Net4.8/Clients/Viking/WebAnnotation/UI/AnnotationOverlay.cs) swallowed this). Hover, tap, or a stroke that touches a closed curve can crash; stroke completion never reaches the confirmation ring (`OnPenPathComplete` → `OnInteractionAdded` → `GetPenActionsForShapeAnnotation`).
 
 Same throw pattern: [LocationLineView.cs](Clients/Viking/WebAnnotation/View/LocationLineView.cs) (one subclass), [OverlappedLocationView.cs](Clients/Viking/WebAnnotation/View/OverlappedLocationView.cs) `GetPenActionsForShapeAnnotation`.
 

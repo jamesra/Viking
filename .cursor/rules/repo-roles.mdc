@@ -1,5 +1,5 @@
 ---
-description: Viking is servers, containers and the gRPC clients; VikingLegacy is the WCF clients; keep the two client trees in parallel
+description: Viking is servers, containers and the gRPC clients; Viking-Net4.8 is the WCF clients; keep the two client trees in parallel
 alwaysApply: true
 ---
 
@@ -10,24 +10,24 @@ Two checkouts share this product. Put the change in the repo that owns that kind
 | Work | Repo | Path | Branch |
 |------|------|------|--------|
 | Servers, Docker, containers, identity, annotation, export, OData, segmentation, section correction, `gRPC_Protos`, and the gRPC clients (the gRPC Viking, Jotunn) | **Viking** | `d:\src\git\Viking` | `dev` |
-| WCF clients (Viking, VikingAU, MonogameTestbed, shared client libraries) and the production WCF annotation server (`Servers/AnnotationService`, built and deployed from here); Viking Test builds are packed from here | **VikingLegacy** | `d:\src\git\VikingLegacy` | `Net4.8` |
+| WCF clients (Viking, VikingAU, MonogameTestbed, shared client libraries) and the production WCF annotation server (`Servers/AnnotationService`, built and deployed from here); Viking Test builds are packed from here | **Viking-Net4.8** | `d:\src\git\Viking-Net4.8` | `Net4.8` |
 
-The VikingLegacy branch was called `Legacy` until 2026-11-01; older commits, plans and reports use that name.
+The Viking-Net4.8 branch was called `Legacy` until 2026-11-01; older commits, plans and reports use that name.
 
 ## Keep clients in parallel
 
-Viking has a `Clients/` tree too: the gRPC client was ported from VikingLegacy's. Keep the two aligned so fixes reach both.
+Viking has a `Clients/` tree too: the gRPC client was ported from Viking-Net4.8's. Keep the two aligned so fixes reach both.
 
-- Land WCF client changes in **VikingLegacy** first.
+- Land WCF client changes in **Viking-Net4.8** first.
 - Mirror the same change into Viking `Clients/` (and any shared client projects it touches) on a best-effort basis in the same piece of work, where the gRPC client has the same code.
-- If a client fix is made in Viking and it affects the WCF client, back port it into VikingLegacy the same way.
+- If a client fix is made in Viking and it affects the WCF client, back port it into Viking-Net4.8 the same way.
 - Do not let the two client trees drift when the mirror is practical in the same change.
 
-Server and container changes stay in Viking; the one exception is the WCF annotation server, which lives only in VikingLegacy.
+Server and container changes stay in Viking; the one exception is the WCF annotation server, which lives only in Viking-Net4.8.
 
 ```text
 WCF Viking annotation fix
-  → edit Clients/Viking in VikingLegacy
+  → edit Clients/Viking in Viking-Net4.8
   → mirror the same edit under Clients/ in Viking
 
 IdentityServer compose / cert change

@@ -379,7 +379,7 @@ Documentation/source/Client/versionhistory.rst.
 * **Fix: washed-out view after a monitor move.** Moving the window between an HDR monitor and an SDR monitor recreates the swap chain so the view does not stay washed out.
 * **Clearer link save errors.** A failed location or structure link save shows the inner database or fault message.
 * **Shortcuts file recovery.** An unreadable shortcuts file is replaced from the server. A failed download leaves the settings already in memory.
-* **Python sample moved.** The Python SegmentationClient sample is no longer in this tree. The point-prompt example lives in VikingLegacy at `Servers/SegmentationServer/Example`.
+* **Python sample moved.** The Python SegmentationClient sample is no longer in this tree. The point-prompt example lives in Viking-Net4.8 at `Servers/SegmentationServer/Example`.
 * **Stability fixes.** Evicted tile-cache entries are disposed; SQL spatial types stay on version 16; a stos zip entry that would write outside the cache folder is rejected; in-flight region queries and a failed save no longer leave the canvas empty or the edit half-applied; nested R-tree locks no longer deadlock. Identity discovery failures include the server error text.
 
 ## 1.2.68 — 2026-09-22

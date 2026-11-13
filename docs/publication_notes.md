@@ -1,4 +1,4 @@
-# Publication notes: VikingLegacy
+# Publication notes: Viking-Net4.8
 
 The WCF Viking client (released Viking, VikingAU, MonogameTestbed) on the `Net4.8` branch (named `Legacy` until 2026-11-01) of the Viking repo. Material
 for future papers: citations, formulas, algorithmic decisions and the reasoning behind them. Entries made before

@@ -1,4 +1,4 @@
-# VikingLegacy
+# Viking-Net4.8
 
 Rules and skills are authored for Cursor in `.cursor/` and imported here by reference, so there is one source of truth. Edit the `.cursor` files, not copies.
 

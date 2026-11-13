@@ -8,8 +8,8 @@ Each wake works one track. The scout rotates tracks as well as categories (see [
 
 | Track | Repo / branch | Paths | Build and test |
 |-------|---------------|-------|----------------|
-| **Client** (WCF) | `d:\src\git\VikingLegacy` / `Net4.8` | `Clients/Viking`, `Clients/MonogameTestbed`, shared client libraries those compile, `Clients/VikingBenchmarks` | Viking (net48), MonogameTestbed (net9.0), covering test projects |
-| **Docs** | `d:\src\git\VikingLegacy` / `Net4.8` | see [docs.md](docs.md) | documented commands actually run |
+| **Client** (WCF) | `d:\src\git\Viking-Net4.8` / `Net4.8` | `Clients/Viking`, `Clients/MonogameTestbed`, shared client libraries those compile, `Clients/VikingBenchmarks` | Viking (net48), MonogameTestbed (net9.0), covering test projects |
+| **Docs** | `d:\src\git\Viking-Net4.8` / `Net4.8` | see [docs.md](docs.md) | documented commands actually run |
 
 ## Rules
 

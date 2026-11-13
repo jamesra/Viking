@@ -1,4 +1,4 @@
-# Root EditorConfig for VikingLegacy (env and script line endings for Docker/Unix)
+# Root EditorConfig for Viking-Net4.8 (env and script line endings for Docker/Unix)
 # https://editorconfig.org
 root = true
 

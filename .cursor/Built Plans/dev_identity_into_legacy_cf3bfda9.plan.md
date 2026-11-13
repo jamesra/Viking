@@ -12,7 +12,7 @@ todos:
     content: Add Identity project entries to Everything.sln from dev; minimal Directory.Build.props / package alignment until build passes
     status: completed
   - id: remove-symlinks-commit
-    content: Remove Viking↔VikingLegacy symlinks; .gitignore secrets/logs; add, build, smoke-test, push Legacy
+    content: Remove Viking↔Viking-Net4.8 symlinks; .gitignore secrets/logs; add, build, smoke-test, push Legacy
     status: completed
 isProject: false
 ---
@@ -21,7 +21,7 @@ isProject: false
 
 ## Context (verified)
 
-- **[`D:\src\git\Viking`](D:\src\git\Viking)** and **[`D:\src\git\VikingLegacy`](D:\src\git\VikingLegacy)** are two clones of the same remote (`https://github.com/jamesra/Viking`). There is **no** branch named `VikingLegacy` on that remote; the long-lived line is **`Legacy`** (your Viking Legacy checkout uses it).
+- **[`D:\src\git\Viking`](D:\src\git\Viking)** and **[`D:\src\git\Viking-Net4.8`](D:\src\git\Viking-Net4.8)** are two clones of the same remote (`https://github.com/jamesra/Viking`). There is **no** branch named `Viking-Net4.8` on that remote; the long-lived line is **`Legacy`** (your Viking Legacy checkout uses it).
 - **`origin/Legacy`** has **no** `Servers/IdentityServer` tree; **`origin/dev`** has **~440** tracked files there, plus **`Servers/Identity.DataContext`**, **`Servers/Identity.Models`**, **`Servers/Identity.Tests`**.
 - **`Servers/SQL`**: Legacy has **183** paths, dev **192** — branches have **diverged** (commits on Legacy not in dev and vice versa). A blind `checkout dev -- Servers/SQL` can **drop Legacy-only scripts** unless you verify afterward.
 - A **full** `git merge origin/dev` into `Legacy` touches **~2218 files** ([`Everything.sln`](Everything.sln) alone is **~574 insertions / 301 deletions** vs Legacy). You chose **selective** integration; that is the right call unless you intend to align the entire repos.
@@ -44,7 +44,7 @@ flowchart LR
 
 ## Recommended Git workflow (selective)
 
-Work in **one** clone you will push from (e.g. [`D:\src\git\VikingLegacy`](D:\src\git\VikingLegacy) on `Legacy`).
+Work in **one** clone you will push from (e.g. [`D:\src\git\Viking-Net4.8`](D:\src\git\Viking-Net4.8) on `Legacy`).
 
 1. **`git fetch origin`** and ensure you are on **`Legacy`** (or a topic branch off `Legacy` for the PR).
 2. **Bring trees from `dev` in one or two commits:**
@@ -59,7 +59,7 @@ Work in **one** clone you will push from (e.g. [`D:\src\git\VikingLegacy`](D:\sr
    - **`Everything.sln`**: On `dev`, Identity appears as at least **`Servers\IdentityServer\IdentityServer\IdentityServer.csproj`**. On **`origin/Legacy`**, a search shows **no** Identity entries. Do **not** replace the whole `.sln` with `dev`’s (huge churn). Instead, **copy only the Identity-related `Project(...)` blocks** (and any needed **solution folder** / nesting GUID lines) from `origin/dev`’s [`Everything.sln`](Everything.sln) into your Legacy `.sln`, then open in VS and fix load errors.
    - **[`Directory.Build.props`](Directory.Build.props)**: `dev` vs `Legacy` differs (including deletions on `dev`). After adding projects, **build** and align shared MSBuild props only as needed (SDK versions, nullable, shared package versions)—prefer minimal edits over wholesale replacement.
 5. **Optional related paths** (only if builds or Docker docs require them): e.g. any **`.dockerignore`**, **compose** files, or **IdentityServer**-specific docs you rely on—take them explicitly with `git checkout origin/dev -- <path>` rather than merging all of `dev`.
-6. **Stop using symlinks / junctions** to [`D:\src\git\Viking`](D:\src\git\Viking): delete the link(s), ensure the real trees live under the **VikingLegacy** working tree, then **`git add`** and commit. Confirm nothing sensitive (e.g. `.env`, log folders under `Servers/IdentityServer/logs`) is tracked; use **`.gitignore`** and templates (your `dev` tree already includes examples like `secrets.json.example`).
+6. **Stop using symlinks / junctions** to [`D:\src\git\Viking`](D:\src\git\Viking): delete the link(s), ensure the real trees live under the **Viking-Net4.8** working tree, then **`git add`** and commit. Confirm nothing sensitive (e.g. `.env`, log folders under `Servers/IdentityServer/logs`) is tracked; use **`.gitignore`** and templates (your `dev` tree already includes examples like `secrets.json.example`).
 7. **Build and smoke-test**: build the new projects, run your existing Identity Docker/dev scripts (`restart_omni.cmd` or equivalent from `dev` history), and hit the management site / token flows.
 
 ## Why not cherry-pick?

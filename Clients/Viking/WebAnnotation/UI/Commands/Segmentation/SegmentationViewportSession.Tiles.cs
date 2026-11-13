@@ -19,7 +19,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 {
     /// <summary>
     /// 1024x1024 mosaic tile upload and SegmentTiles helpers.
-    /// Ported from VikingLegacy SegmentationCommand so the client trees stay aligned.
+    /// Ported from Viking-Net4.8 SegmentationCommand so the client trees stay aligned.
     /// </summary>
     internal sealed partial class SegmentationViewportSession
     {

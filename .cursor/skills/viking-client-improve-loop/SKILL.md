@@ -2,7 +2,7 @@
 name: viking-client-improve-loop
 description: >-
   Runs a timed improvement loop over the Viking WCF client in
-  d:\src\git\VikingLegacy (branch Net4.8): one refactoring, bug-fix, test,
+  d:\src\git\Viking-Net4.8 (branch Net4.8): one refactoring, bug-fix, test,
   performance, or docs change per wake, gated by tests and benchmarks,
   committed when green, with the client published to Viking Test after every
   six client commits and dated review reports. Deep links, auth, on-disk
@@ -51,7 +51,7 @@ Keep the parent transcript thin:
 
 ## Scope
 
-One repo, one branch: `d:\src\git\VikingLegacy` on `Net4.8`, edited through the tracks in [scope.md](scope.md). The scout picks the track as well as the category, rotating so no track starves; `STEERING.md` `focus:` wins.
+One repo, one branch: `d:\src\git\Viking-Net4.8` on `Net4.8`, edited through the tracks in [scope.md](scope.md). The scout picks the track as well as the category, rotating so no track starves; `STEERING.md` `focus:` wins.
 
 Priority when several tracks have candidates: a bug likely in real use, then docs mismatches, then the rest.
 
@@ -59,7 +59,7 @@ Priority when several tracks have candidates: a bug likely in real use, then doc
 
 **Launch** runs Sync once in the main session. On **later wakes**, the **scout** runs Sync first (not main), so fetch/merge output stays out of the long-lived chat context.
 
-- `d:\src\git\VikingLegacy` (`Net4.8`): `git fetch origin`, then `git merge --ff-only @{u}`. Sync never edits.
+- `d:\src\git\Viking-Net4.8` (`Net4.8`): `git fetch origin`, then `git merge --ff-only @{u}`. Sync never edits.
 - Fast-forward only. If a repo cannot fast-forward (diverged history, or uncommitted local edits the incoming commits touch), leave it as it is, work from the current tree, and record `{repo, reason, date}` in `syncSkips`, keeping one entry per repo and reason (update its date instead of appending a duplicate; divergence normally persists until the user reconciles it by hand). Never stash, reset, rebase, force, or discard anything to make a pull succeed, and never push.
 - If the pull touches the `candidate`'s files, the scout re-checks the candidate before the implementer runs. If it breaks a build or a green test, do not fix it as part of the sync; it shows up at the next baseline run.
 
@@ -69,7 +69,7 @@ If a wake passes about 60 minutes of work without a candidate clearing the gates
 
 ## Launch
 
-1. Start the session in `d:\src\git\VikingLegacy` so this project skill loads. Scheduling uses the `ScheduleWakeup` tool, one wake at a time. Never create a repeating schedule.
+1. Start the session in `d:\src\git\Viking-Net4.8` so this project skill loads. Scheduling uses the `ScheduleWakeup` tool, one wake at a time. Never create a repeating schedule.
 2. Create the reports folder, `.loop\ledger.json`, and `STEERING.md` if missing. Run Sync from the remote. Build `hotspots` and `complexity`, run the baselines (gates.md Baselines: tests, builds, warnings), then run one wake immediately.
 3. Schedule the next wake with `ScheduleWakeup`: `delaySeconds` = Y in seconds (the tool clamps to 60-3600; for a longer Y, set `nextWakeAt` in the ledger and re-schedule silently, doing no work, until it is due), `noop` = true when the wake did nothing, a short `reason`, and this `prompt`:
 
