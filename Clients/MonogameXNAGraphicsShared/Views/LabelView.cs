@@ -150,6 +150,62 @@ namespace VikingXNAGraphics
             }
         }
 
+        /// <summary>
+        /// The color of the annotation this label sits on, when it sits on one (a cell's number on the cell's fill). Lets the
+        /// label pick its colors from the fill (<see cref="FillLabelColors"/>). Null when the label sits on the bare image.
+        /// </summary>
+        public Color? FillColor { get; set; }
+
+        /// <summary>
+        /// Screen pixels per line below which a label on a known fill has no outline (<see cref="FillLabelColors"/>): twice
+        /// <see cref="LabelOutlineEffect.FullOutlineTextHeight"/>.
+        /// </summary>
+        public static float FillOutlineStartHeight => 2f * LabelOutlineEffect.FullOutlineTextHeight;
+
+        /// <summary>Screen pixels per line from which a label on a known fill has its full outline (<see cref="FillOutlineOpacity"/>).</summary>
+        public static float FillOutlineFullHeight => 2f * FillOutlineStartHeight;
+
+        /// <summary>True for text whose outline follows the fill under it: black or white text on a known fill.</summary>
+        private static bool FollowsFill(Color text, Color? fill) =>
+            fill.HasValue && ((text.R == 0 && text.G == 0 && text.B == 0) || (text.R == 255 && text.G == 255 && text.B == 255));
+
+        /// <summary>
+        /// The colors of an outlined label that sits on a known <paramref name="fill"/>, or null to use
+        /// <see cref="OutlineColors"/>. The text is black on a light fill and white on a dark one at every size, and the outline
+        /// is the other of the two, so the text never changes color as the label grows. The outline is left out below
+        /// <see cref="FillOutlineStartHeight"/> screen pixels per line, where it covers more of the letters than it separates,
+        /// and fades in to full at <see cref="FillOutlineFullHeight"/> (<see cref="FillOutlineOpacity"/>). Only black or white
+        /// text is recolored; text in another color (a flagged annotation's orange, a parent ID's red) carries meaning and keeps
+        /// <see cref="OutlineColors"/>.
+        /// </summary>
+        /// <returns>The text color, the outline color at full strength, and the factor to multiply the outline by.</returns>
+        public static (Color Text, Color Outline, float OutlineOpacity)? FillLabelColors(Color text, Color? fill, float lineHeight)
+        {
+            if (!FollowsFill(text, fill))
+                return null;
+
+            Color background = fill.Value;
+            float brightness = ((0.3f * background.R) + (0.59f * background.G) + (0.11f * background.B)) / 255f;
+            byte value = brightness > 0.5f ? (byte)0 : (byte)255;
+            byte other = (byte)(255 - value);
+            return (new Color(value, value, value, text.A), new Color(other, other, other, text.A), FillOutlineOpacity(text, fill, lineHeight));
+        }
+
+        /// <summary>
+        /// The opacity of the outline of a label <paramref name="lineHeight"/> screen pixels per line, as a factor of the outline
+        /// color. A label on a known fill (<see cref="FillLabelColors"/>) fades its outline in from nothing at
+        /// <see cref="FillOutlineStartHeight"/> to full at <see cref="FillOutlineFullHeight"/>; any other label's is 1.
+        /// </summary>
+        public static float FillOutlineOpacity(Color text, Color? fill, float lineHeight)
+        {
+            if (!FollowsFill(text, fill) || float.IsNaN(lineHeight))
+                return 1f;
+
+            float start = FillOutlineStartHeight;
+            float range = Math.Max(FillOutlineFullHeight - start, 1f);
+            return MathHelper.Clamp((lineHeight - start) / range, 0f, 1f);
+        }
+
         /// <summary>The outline style for this label right now, <see cref="LabelOutlineStyle.Off"/> unless it is <see cref="Outlined"/>.</summary>
         private LabelOutlineStyle CurrentOutlineStyle => OutlineStyleOverride ?? (Outlined ? OutlineStyleAccessor() : LabelOutlineStyle.Off);
 
@@ -166,7 +222,23 @@ namespace VikingXNAGraphics
                 return;
             }
 
-            (Color text, Color outline) = OutlineColors(this._Color, style);
+            float lineHeight = font.LineSpacing * Math.Abs(fontScale);
+            Color text, outline;
+            if (FillLabelColors(this._Color, FillColor, lineHeight) is (Color fillText, Color fillOutline, float opacity))
+            {
+                if (opacity <= 0f)
+                {
+                    spriteBatch.DrawString(font, row, position, fillText, screenRotation, origin, fontScale, SpriteEffects.None, 0);
+                    return;
+                }
+
+                (text, outline) = (fillText, fillOutline * opacity);
+            }
+            else
+            {
+                (text, outline) = OutlineColors(this._Color, style);
+            }
+
             DrawOutlinedString(spriteBatch, font, row, position, text, outline, screenRotation, origin, fontScale);
         }
 
@@ -1125,15 +1197,22 @@ namespace VikingXNAGraphics
 
                 var destRect = new Microsoft.Xna.Framework.Rectangle((int)drawPos.X, (int)drawPos.Y, (int)textureWidth, (int)textureHeight);
                 LabelOutlineStyle style = CurrentOutlineStyle;
+                float lineHeight = textureHeight / _Rows.Length;
                 if (style == LabelOutlineStyle.Off)
                 {
                     spriteBatch.Draw(texture, destRect, null, Premultiply(this._Color));
                 }
+                else if (FillLabelColors(this._Color, FillColor, lineHeight) is (Color fillText, Color fillOutline, float opacity))
+                {
+                    if (opacity <= 0f)
+                        spriteBatch.Draw(texture, destRect, null, Premultiply(fillText));
+                    else
+                        DrawOutlined(new RectangleDraw(spriteBatch, texture, destRect), Premultiply(fillText), Premultiply(fillOutline) * opacity, lineHeight);
+                }
                 else
                 {
                     (Color textColor, Color outlineColor) = OutlineColors(this._Color, style);
-                    DrawOutlined(new RectangleDraw(spriteBatch, texture, destRect), Premultiply(textColor), Premultiply(outlineColor),
-                        textureHeight / _Rows.Length);
+                    DrawOutlined(new RectangleDraw(spriteBatch, texture, destRect), Premultiply(textColor), Premultiply(outlineColor), lineHeight);
                 }
             }
         }

@@ -135,5 +135,49 @@ namespace WebAnnotationTests
             Assert.IsTrue(vm.LabelOutlineEnabled);
             Assert.IsFalse(vm.LabelOutlineWhiteText);
         }
+
+        [TestMethod]
+        public void OnAKnownFillTheTextContrastsWithTheFillAtEverySizeAndTheOutlineIsTheOther()
+        {
+            Color yellow = new(255, 255, 0);
+            Color navy = new(20, 20, 120);
+            Color black = new((byte)0, (byte)0, (byte)0, (byte)192);
+            Color white = new((byte)255, (byte)255, (byte)255, (byte)192);
+
+            foreach (float height in new[] { 10f, LabelView.FillOutlineStartHeight, LabelView.FillOutlineFullHeight * 2f })
+            {
+                (Color text, Color outline, _) = LabelView.FillLabelColors(DefaultLabelBlack, yellow, height)!.Value;
+                Assert.AreEqual(black, text, $"black on a light fill at {height}");
+                Assert.AreEqual(white, outline);
+
+                (text, outline, _) = LabelView.FillLabelColors(DefaultLabelBlack, navy, height)!.Value;
+                Assert.AreEqual(white, text, $"white on a dark fill at {height}");
+                Assert.AreEqual(black, outline);
+            }
+        }
+
+        [TestMethod]
+        public void OnAKnownFillTheOutlineStaysOffUntilTwiceTheFullOutlineHeightThenFadesIn()
+        {
+            Color navy = new(20, 20, 120);
+            float start = LabelView.FillOutlineStartHeight;
+            float full = LabelView.FillOutlineFullHeight;
+
+            Assert.AreEqual(2f * LabelOutlineEffect.FullOutlineTextHeight, start);
+            Assert.AreEqual(0f, LabelView.FillLabelColors(DefaultLabelBlack, navy, 10f)!.Value.OutlineOpacity);
+            Assert.AreEqual(0f, LabelView.FillLabelColors(DefaultLabelBlack, navy, start)!.Value.OutlineOpacity, 1e-6f);
+            Assert.AreEqual(0.5f, LabelView.FillLabelColors(DefaultLabelBlack, navy, (start + full) / 2f)!.Value.OutlineOpacity, 1e-6f);
+            Assert.AreEqual(1f, LabelView.FillLabelColors(DefaultLabelBlack, navy, full * 2f)!.Value.OutlineOpacity, 1e-6f);
+            Assert.AreEqual(1f, LabelView.FillLabelColors(DefaultLabelBlack, navy, float.NaN)!.Value.OutlineOpacity, "unknown size");
+        }
+
+        [TestMethod]
+        public void TheBareImageOrColoredTextKeepsTheOutlinePreference()
+        {
+            Color navy = new(20, 20, 120);
+
+            Assert.IsNull(LabelView.FillLabelColors(DefaultLabelBlack, null, 10f), "no fill under the label");
+            Assert.IsNull(LabelView.FillLabelColors(new Color((byte)255, (byte)0, (byte)0, (byte)192), navy, 10f), "a parent ID's red");
+        }
     }
 }
