@@ -53,6 +53,26 @@ namespace WebAnnotationTests
         }
 
         [TestMethod]
+        public void TheOutlineIsFullOnLargeTextAndFadesInProportionOnSmallText()
+        {
+            float full = LabelOutlineEffect.FullOutlineTextHeight;
+
+            Assert.AreEqual((1f, 8), LabelView.OutlineFade(full), "at the threshold");
+            Assert.AreEqual((1f, 8), LabelView.OutlineFade(full * 3), "above it");
+            Assert.AreEqual((1f, 8), LabelView.OutlineFade(float.NaN), "height not known");
+
+            (float opacity, int copies) = LabelView.OutlineFade(full * 0.75f);
+            Assert.AreEqual(0.75f, opacity, 1e-6);
+            Assert.AreEqual(8, copies, "diagonals kept down to half the threshold");
+
+            (opacity, copies) = LabelView.OutlineFade(full * 0.25f);
+            Assert.AreEqual(0.25f, opacity, 1e-6);
+            Assert.AreEqual(4, copies, "small text keeps only the four straight copies");
+
+            Assert.AreEqual(0f, LabelView.OutlineFade(-5f).Opacity, "a negative height draws no outline");
+        }
+
+        [TestMethod]
         public void OnlyLabelsThatAskForAnOutlineAreOutlined()
         {
             // The constructor needs a loaded font, so look at the default on an instance made without it.

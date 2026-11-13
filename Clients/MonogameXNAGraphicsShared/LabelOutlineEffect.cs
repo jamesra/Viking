@@ -24,7 +24,7 @@ namespace VikingXNAGraphics
         /// Screen pixels of line height at and above which a label gets its full border and shadow. Smaller text gets a border thinned and
         /// faded in proportion, so when zoomed out the border blends instead of taking over the few pixels the letters have.
         /// </summary>
-        public static float FullOutlineTextHeight { get; set; } = 16f;
+        public static float FullOutlineTextHeight { get; set; } = 24f;
 
         /// <summary>How opaque the shadow is, 0 to 1. Off (0) by default.</summary>
         public static float ShadowOpacity { get; set; } = 0f;

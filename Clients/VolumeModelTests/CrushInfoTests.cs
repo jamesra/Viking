@@ -42,12 +42,36 @@ namespace VolumeModelTests
         }
 
         [TestMethod]
-        public void TheDisplayRangeBecomesAWindowOfPngSamples()
+        public void TheDefaultWindowIsTheAutoRangeEvenWhenTheVolumeSentADisplayRange()
         {
-            (float min, float max) = CrushInfo.FromElement(XElement.Parse(Crushed))!.DefaultWindow();
+            CrushInfo crush = CrushInfo.FromElement(XElement.Parse(Crushed))!;
+            (float min, float max) = crush.DefaultWindow();
+
+            // Codes 1..3 hold every pixel outside the empty bin; Nornir's 0..46 is ignored.
+            Assert.AreEqual(1f / 255f, min, 1e-6);
+            Assert.AreEqual(3f / 255f, max, 1e-6);
+            Assert.AreEqual((1.0, 3.0), crush.AutoRange(), "same window as Auto");
+        }
+
+        [TestMethod]
+        public void WithoutAHistogramTheDefaultWindowIsTheDisplayRange()
+        {
+            (float min, float max) = CrushInfo.FromElement(XElement.Parse(
+                "<Pyramid CrushVersion=\"1\" CrushStep=\"10\" CrushBits=\"8\" CrushDisplayMin=\"0\" CrushDisplayMax=\"46\" />"))!.DefaultWindow();
 
             Assert.AreEqual(0f, min);
             Assert.AreEqual(46f / 255f, max, 1e-6);
+        }
+
+        [TestMethod]
+        public void TheDefaultGammaIsTheAutoGammaOfTheDefaultWindow()
+        {
+            CrushInfo dark = new(10, 0, 8, null, [1000000, 100, 100, 100, 100, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
+            (double min, double max) = dark.AutoRange();
+
+            Assert.AreEqual(dark.AutoGamma(min, max), dark.DefaultGamma(), 1e-12);
+            Assert.IsTrue(dark.DefaultGamma() > 1.0, "a dark section is lifted");
+            Assert.AreEqual(1.0, new CrushInfo(10, 0, 8, (5.0, 40.0), null).DefaultGamma(), "linear without a histogram");
         }
 
         [TestMethod]

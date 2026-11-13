@@ -9,8 +9,8 @@ namespace VikingCoreTests
 {
     /// <summary>
     /// <see cref="SectionViewerControl.CrushDisplayWindowFor"/> picks the shader's display window for a channel: the whole
-    /// range for anything that is not a decodable crushed channel, otherwise the channel's display range narrowed by the
-    /// user's contrast. <see cref="State.CrushContrast"/> is process-wide, so every test restores it.
+    /// range for anything that is not a decodable crushed channel, otherwise the channel's default window narrowed by the
+    /// user's contrast. These channels have no histogram, so their default window is Nornir's display range. <see cref="State.CrushContrast"/> is process-wide, so every test restores it.
     /// </summary>
     [TestClass]
     public class SectionViewerCrushWindowTests

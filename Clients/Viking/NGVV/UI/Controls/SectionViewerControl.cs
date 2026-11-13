@@ -354,6 +354,7 @@ namespace Viking.UI.Controls
 
                 // Update the section number overlay with the new section
                 UpdateSectionNumberOverlay();
+                UpdateContrastWindow();
 
                 // Cancel in-flight mapping initializations only for sections that are not the current section or adjacent to it (so adjacent sections keep loading)
                 int currentSectionNumber = _Section.Number;
@@ -1614,7 +1615,9 @@ namespace Viking.UI.Controls
             "F1: Expand full list of commands",
             "CTRL + G: Open goto position dialog",
             "Space bar: Hide annotations",
-            "Space bar + CTRL: Show only annotations"
+            "Space bar + CTRL: Show only annotations",
+            "CTRL + Shift + +/-: Brighten/darken quantized sections",
+            "CTRL + Shift + 0: Reset quantized section brightness"
             ];
 
         public string[] HelpStrings
@@ -2204,7 +2207,8 @@ namespace Viking.UI.Controls
 
         /// <summary>
         /// The window of texture samples (0 to 1) that shows a channel from black to white. A crushed channel's tiles hold codes, so
-        /// the window is its display range, narrowed by <see cref="State.CrushContrast"/>. Every other channel, and a crushed
+        /// the window is the user's saved one or else the Auto window (<see cref="CrushInfo.DefaultWindow"/>), narrowed by
+        /// <see cref="State.CrushContrast"/>. Every other channel, and a crushed
         /// channel in a storage Viking does not decode, uses the whole range, which leaves the tile unchanged.
         /// </summary>
         internal static (float Min, float Max) CrushDisplayWindowFor(Section section, string channel, CrushContrastSetting? user = null)
@@ -2219,7 +2223,7 @@ namespace Viking.UI.Controls
                 return (0f, 1f);
             }
 
-            // The user's window for this section, saved on this computer, replaces the volume's display range.
+            // The user's window for this section, saved on this computer, replaces the Auto window.
             (float min, float max) = userCodes is { } chosen
                 ? ((float)(chosen.Min / CrushInfo.StorageMaximum), (float)(chosen.Max / CrushInfo.StorageMaximum))
                 : crush.DefaultWindow();
@@ -2227,11 +2231,23 @@ namespace Viking.UI.Controls
             return (min, (float)(min + ((max - min) / contrast)));
         }
 
-        /// <summary>The gamma the user chose for a crushed channel; 1 (linear) for every other channel and when none was chosen.</summary>
-        internal static float CrushDisplayGammaFor(Section section, string channel, CrushContrastSetting? user = null) =>
-            user is { } setting && section.CrushedChannels.TryGetValue(channel, out CrushInfo? crush) && crush.IsSupported
-                ? (float)CrushContrastSetting.ClampGamma(setting.Gamma)
-                : 1f;
+        /// <summary>
+        /// The gamma for a crushed channel: the user's; the Auto gamma of the user's window when they left gamma on Auto; else the
+        /// default Auto gamma (<see cref="CrushInfo.DefaultGamma"/>). 1 (linear) for every other channel.
+        /// </summary>
+        internal static float CrushDisplayGammaFor(Section section, string channel, CrushContrastSetting? user = null)
+        {
+            if (!section.CrushedChannels.TryGetValue(channel, out CrushInfo? crush) || !crush.IsSupported)
+                return 1f;
+
+            double gamma = user switch
+            {
+                { AutoGamma: true } auto => crush.AutoGamma(Math.Round(auto.Min), Math.Round(auto.Max)),
+                { } chosen => chosen.Gamma,
+                null => crush.DefaultGamma(),
+            };
+            return (float)CrushContrastSetting.ClampGamma(gamma);
+        }
 
         /// <summary>
         /// Draws the tiles of one section and channel into a viewport-sized render target.
@@ -3011,6 +3027,24 @@ namespace Viking.UI.Controls
 
         private CrushContrastWindow? _contrastWindow;
 
+        /// <summary>
+        /// Points an open Contrast window at the section and channel now on screen, so it never edits a section that is not shown.
+        /// A section whose channel cannot be adjusted leaves the window open with its controls disabled.
+        /// </summary>
+        private void UpdateContrastWindow()
+        {
+            if (_contrastWindow is null || Section?.section is not { } section)
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(UpdateContrastWindow));
+                return;
+            }
+
+            _contrastWindow.ShowSection(CurrentCrushInfo(), State.volume?.Name, section.Number, CurrentChannel);
+        }
+
         private void menuSectionContrast_Click(object sender, EventArgs e)
         {
             // One editor at a time: reopening it replaces the one for the section that was on screen before.
@@ -3301,6 +3335,9 @@ namespace Viking.UI.Controls
         {
             //TODO: Cancel the active command
             System.Diagnostics.Trace.WriteLine($"SectionViewerControl: Property '{e.PropertyName}' changed, invalidating", "SectionViewerControl");
+            if (e.PropertyName == nameof(SectionViewModel.ActiveChannel))
+                UpdateContrastWindow();
+
             this.Invalidate();
         }
 

@@ -12,9 +12,11 @@ namespace Viking.UI
 {
     /// <summary>
     /// What a user chose to show a crushed channel with: the codes shown from black to white and a gamma. A gamma above 1 lifts
-    /// the dark and middle tones, 1 leaves the window linear.
+    /// the dark and middle tones, 1 leaves the window linear. <paramref name="AutoGamma"/> true ignores <paramref name="Gamma"/> and
+    /// uses the gamma that shows the window's median pixel at mid grey (<see cref="Viking.VolumeModel.CrushInfo.AutoGamma"/>), so it
+    /// follows the black and white points.
     /// </summary>
-    internal readonly record struct CrushContrastSetting(double Min, double Max, double Gamma = 1.0)
+    internal readonly record struct CrushContrastSetting(double Min, double Max, double Gamma = 1.0, bool AutoGamma = false)
     {
         public const double MinGamma = 0.25;
         public const double MaxGamma = 4.0;
@@ -39,7 +41,7 @@ namespace Viking.UI
 
         public CrushContrastStore(string path) => _path = path;
 
-        /// <summary>The setting the user chose, or null when the section uses the volume's display range.</summary>
+        /// <summary>The setting the user chose, or null when the section uses the default (Auto) window and gamma.</summary>
         public CrushContrastSetting? Get(string? volume, int section, string channel)
         {
             lock (_lock)
@@ -49,19 +51,19 @@ namespace Viking.UI
         }
 
         /// <summary>Remembers a setting and saves it. A window with no width is ignored; a gamma outside the range is clamped.</summary>
-        public void Set(string? volume, int section, string channel, double min, double max, double gamma = 1.0)
+        public void Set(string? volume, int section, string channel, double min, double max, double gamma = 1.0, bool autoGamma = false)
         {
             if (!(max > min))
                 return;
 
             lock (_lock)
             {
-                Settings()[Key(volume, section, channel)] = new CrushContrastSetting(min, max, CrushContrastSetting.ClampGamma(gamma));
+                Settings()[Key(volume, section, channel)] = new CrushContrastSetting(min, max, CrushContrastSetting.ClampGamma(gamma), autoGamma);
                 Save();
             }
         }
 
-        /// <summary>Forgets the user's setting so the section returns to the volume's display range.</summary>
+        /// <summary>Forgets the user's setting so the section returns to the default (Auto) window and gamma.</summary>
         public void Clear(string? volume, int section, string channel)
         {
             lock (_lock)
@@ -94,8 +96,10 @@ namespace Viking.UI
                     {
                         // Files written before gamma existed have no gamma attribute and mean a linear window.
                         double gamma = double.TryParse((string?)e.Attribute("gamma"), NumberStyles.Float, CultureInfo.InvariantCulture, out double g) ? g : 1.0;
+                        // Files written before the Auto gamma box existed hold a gamma the user set, so they keep it.
+                        bool autoGamma = string.Equals((string?)e.Attribute("autoGamma"), "true", StringComparison.OrdinalIgnoreCase);
                         _settings[Key((string?)e.Attribute("volume"), section, (string?)e.Attribute("channel") ?? "")] =
-                            new CrushContrastSetting(min, max, CrushContrastSetting.ClampGamma(gamma));
+                            new CrushContrastSetting(min, max, CrushContrastSetting.ClampGamma(gamma), autoGamma);
                     }
                 }
             }
@@ -122,7 +126,8 @@ namespace Viking.UI
                             new XAttribute("channel", w.Key.Channel),
                             new XAttribute("min", w.Value.Min.ToString("R", CultureInfo.InvariantCulture)),
                             new XAttribute("max", w.Value.Max.ToString("R", CultureInfo.InvariantCulture)),
-                            new XAttribute("gamma", w.Value.Gamma.ToString("R", CultureInfo.InvariantCulture))))));
+                            new XAttribute("gamma", w.Value.Gamma.ToString("R", CultureInfo.InvariantCulture)),
+                            new XAttribute("autoGamma", w.Value.AutoGamma ? "true" : "false")))));
 
                 string temp = _path + ".tmp";
                 doc.Save(temp);

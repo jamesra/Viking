@@ -101,13 +101,33 @@ namespace VikingXNAGraphics
         /// </summary>
         public LabelOutlineStyle? OutlineStyleOverride { get; set; }
 
-        /// <summary>Screen-pixel offsets at which the outline copies of the text are drawn, one pixel in each direction.</summary>
+        /// <summary>
+        /// Screen-pixel offsets at which the outline copies of the text are drawn, one pixel in each direction. The four
+        /// straight ones come first, so <see cref="OutlineFade"/> can drop the diagonals by drawing only the first four.
+        /// </summary>
         private static readonly Vector2[] OutlineOffsets =
         [
-            new(-1, -1), new(0, -1), new(1, -1),
-            new(-1, 0), new(1, 0),
-            new(-1, 1), new(0, 1), new(1, 1),
+            new(0, -1), new(-1, 0), new(1, 0), new(0, 1),
+            new(-1, -1), new(1, -1), new(-1, 1), new(1, 1),
         ];
+
+        /// <summary>
+        /// How strongly a label whose lines are <paramref name="lineHeight"/> screen pixels tall is outlined. From
+        /// <see cref="LabelOutlineEffect.FullOutlineTextHeight"/> up the outline is drawn in full. Below it the outline's opacity
+        /// falls in proportion, and below half that height the diagonal copies are left out, so on small text the outline no
+        /// longer fills the gaps between strokes and covers the letters. An unknown height (NaN) gets the full outline.
+        /// </summary>
+        /// <returns>The factor to multiply the outline color by (premultiplied, so every channel) and how many of
+        /// <see cref="OutlineOffsets"/> to draw.</returns>
+        public static (float Opacity, int Copies) OutlineFade(float lineHeight)
+        {
+            float full = Math.Max(LabelOutlineEffect.FullOutlineTextHeight, 1f);
+            if (float.IsNaN(lineHeight) || lineHeight >= full)
+                return (1f, OutlineOffsets.Length);
+
+            float opacity = Math.Max(lineHeight, 0f) / full;
+            return (opacity, opacity < 0.5f ? 4 : OutlineOffsets.Length);
+        }
 
         /// <summary>
         /// The colors an outlined label is drawn in. The outline keeps the text's alpha.
@@ -157,13 +177,16 @@ namespace VikingXNAGraphics
         }
 
         /// <summary>
-        /// The one outline: <paramref name="draw"/> is called with each of <see cref="OutlineOffsets"/> and <paramref name="outlineColor"/>,
-        /// then unshifted in <paramref name="textColor"/>, so the text lies over its outline. Every outlined draw goes through here.
+        /// The one outline: <paramref name="draw"/> is called with <see cref="OutlineOffsets"/> and <paramref name="outlineColor"/>,
+        /// faded for text <paramref name="lineHeight"/> screen pixels tall (<see cref="OutlineFade"/>), then unshifted in
+        /// <paramref name="textColor"/>, so the text lies over its outline. Every outlined draw goes through here.
         /// </summary>
-        private static void DrawOutlined<T>(T draw, Color textColor, Color outlineColor) where T : struct, IOutlineDraw
+        private static void DrawOutlined<T>(T draw, Color textColor, Color outlineColor, float lineHeight = float.NaN) where T : struct, IOutlineDraw
         {
-            foreach (Vector2 offset in OutlineOffsets)
-                draw.Draw(offset, outlineColor);
+            (float opacity, int copies) = OutlineFade(lineHeight);
+            Color faded = outlineColor * opacity;
+            for (int i = 0; i < copies; i++)
+                draw.Draw(OutlineOffsets[i], faded);
 
             draw.Draw(Vector2.Zero, textColor);
         }
@@ -195,11 +218,13 @@ namespace VikingXNAGraphics
 
         /// <summary>
         /// Draws <paramref name="text"/> in <paramref name="textColor"/> over copies of it in <paramref name="outlineColor"/>
-        /// shifted one screen pixel in each direction. The caller has begun <paramref name="spriteBatch"/>.
+        /// shifted one screen pixel in each direction, fainter on small text (<see cref="OutlineFade"/>). The caller has begun
+        /// <paramref name="spriteBatch"/>.
         /// </summary>
         public static void DrawOutlinedString(SpriteBatch spriteBatch, SpriteFont font, string text, Vector2 position,
             Color textColor, Color outlineColor, float rotation, Vector2 origin, float scale) =>
-            DrawOutlined(new StringDraw(spriteBatch, font, text, position, rotation, origin, scale), textColor, outlineColor);
+            DrawOutlined(new StringDraw(spriteBatch, font, text, position, rotation, origin, scale), textColor, outlineColor,
+                font.LineSpacing * Math.Abs(scale));
 
         /// <summary>
         /// Draws a white-on-clear <paramref name="texture"/> (such as <see cref="ArrowGlyph"/>) tinted like outlined text: in
@@ -1107,7 +1132,8 @@ namespace VikingXNAGraphics
                 else
                 {
                     (Color textColor, Color outlineColor) = OutlineColors(this._Color, style);
-                    DrawOutlined(new RectangleDraw(spriteBatch, texture, destRect), Premultiply(textColor), Premultiply(outlineColor));
+                    DrawOutlined(new RectangleDraw(spriteBatch, texture, destRect), Premultiply(textColor), Premultiply(outlineColor),
+                        textureHeight / _Rows.Length);
                 }
             }
         }

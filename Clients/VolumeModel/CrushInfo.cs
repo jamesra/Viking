@@ -45,6 +45,11 @@ namespace Viking.VolumeModel
             Bits = bits;
             DisplayRange = displayRange;
             CodeHistogram = codeHistogram;
+            _defaultGamma = new Lazy<double>(() =>
+            {
+                (double min, double max) = AutoRange();
+                return AutoGamma(Math.Round(min), Math.Round(max));
+            });
         }
 
         /// <summary>
@@ -85,15 +90,23 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
-        /// The display window in PNG sample units (0 to 1) to show the codes with: Nornir's range when it sent one, otherwise a
-        /// range from the histogram, otherwise every code. Bin 0 is ignored when the histogram is used because the section edge puts
-        /// millions of empty pixels there.
+        /// The display window in PNG sample units (0 to 1) a section is shown with until the user saves one: the Auto window
+        /// (<see cref="AutoRange"/>). Nornir's display range is used only when there is no histogram to compute it from.
         /// </summary>
         public (float Min, float Max) DefaultWindow()
         {
-            (double min, double max) = DisplayRange ?? HistogramRange() ?? (0, (1 << Math.Min(Bits, 16)) - 1);
+            (double min, double max) = AutoRange();
             return ((float)(min / StorageMaximum), (float)(max / StorageMaximum));
         }
+
+        /// <summary>
+        /// The gamma a section is shown with until the user saves one: the Auto gamma (<see cref="AutoGamma"/>) for the default
+        /// window, so the median pixel shows at mid grey. 1 (linear) without a usable histogram.
+        /// </summary>
+        public double DefaultGamma() => _defaultGamma.Value;
+
+        // Read for every crushed tile batch drawn, so worked out once; the histogram never changes.
+        private readonly Lazy<double> _defaultGamma;
 
         /// <summary>
         /// The scale and bias that gain-correct a tile's samples (PNG value 0 to 1) into this section's quanta, or null when the gain
@@ -113,8 +126,9 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>
-        /// A window in codes that clips the darkest 0.1% and the brightest 0.1% of the pixels, which is the Auto setting of the
-        /// contrast editor. Falls back to <see cref="DefaultWindow"/> when the VikingXML has no usable histogram.
+        /// A window in codes that clips the darkest 0.1% and the brightest 0.1% of the pixels, skipping bin 0 (the section edge puts
+        /// millions of empty pixels there). This is the default and the contrast editor's Auto. Without a usable histogram it is
+        /// Nornir's display range, otherwise every code.
         /// </summary>
         public (double Min, double Max) AutoRange()
         {
@@ -165,7 +179,7 @@ namespace Viking.VolumeModel
         }
 
         /// <summary>The codes that hold <paramref name="lowFraction"/> and <paramref name="highFraction"/> of the pixels, skipping bin 0.</summary>
-        private (double, double)? HistogramRange(double lowFraction = 0.0001, double highFraction = 0.9999)
+        private (double, double)? HistogramRange(double lowFraction, double highFraction)
         {
             if (CodeHistogram is null || CodeHistogram.Count < 2)
                 return null;

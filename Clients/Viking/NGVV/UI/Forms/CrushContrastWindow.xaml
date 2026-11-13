@@ -53,6 +53,7 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="48" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock Text="Gamma" VerticalAlignment="Center" Margin="0,0,12,0"
                        ToolTip="Above 1 lifts the dark and middle tones; 1 is linear" />
@@ -60,14 +61,15 @@
                     TickFrequency="1" TickPlacement="BottomRight" IsMoveToPointEnabled="True" VerticalAlignment="Center"
                     ValueChanged="OnGammaChanged" />
             <TextBlock x:Name="GammaText" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" />
+            <CheckBox x:Name="AutoGammaBox" Grid.Column="3" Content="Auto" VerticalAlignment="Center" Margin="12,0,0,0"
+                      Checked="OnAutoGammaChanged" Unchecked="OnAutoGammaChanged"
+                      ToolTip="Keep the gamma that shows the median pixel between the black and white points at mid grey, following the points as they move. Clear it to set the gamma yourself." />
         </Grid>
 
         <DockPanel Grid.Row="5" Margin="0,16,0,0" LastChildFill="False">
             <Button Content="Close" DockPanel.Dock="Right" MinWidth="88" Padding="12,5" IsDefault="True" IsCancel="True" Click="OnCloseClick" />
-            <Button Content="Reset to volume range" DockPanel.Dock="Left" Padding="12,5" Margin="0,0,8,0" Click="OnResetClick"
-                    ToolTip="Go back to the display range stored in the volume" />
-            <Button Content="Auto" DockPanel.Dock="Left" MinWidth="72" Padding="12,5" Click="OnAutoClick"
-                    ToolTip="Clip the darkest and brightest 0.1% of the pixels and set the gamma that puts the median pixel at mid grey" />
+            <Button x:Name="AutoButton" Content="Auto" DockPanel.Dock="Left" MinWidth="72" Padding="12,5" Click="OnAutoClick"
+                    ToolTip="Forget this section's setting and go back to the default: clip the darkest and brightest 0.1% of the pixels and set the gamma that puts the median pixel at mid grey" />
         </DockPanel>
     </Grid>
 </Window>

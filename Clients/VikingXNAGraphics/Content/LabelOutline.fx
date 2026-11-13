@@ -30,7 +30,7 @@ float OutlineWidth = 1.5;
 // Screen pixels the border takes to fade out, centred on OutlineWidth. 1 is a crisp edge; larger blurs the border.
 float OutlineBlur = 2;
 // Screen pixels of line height at and above which the border and shadow are drawn in full.
-float FullOutlineTextHeight = 16;
+float FullOutlineTextHeight = 24;
 
 float3 ShadowColor = float3(0, 0, 0);
 // 0 draws no shadow.

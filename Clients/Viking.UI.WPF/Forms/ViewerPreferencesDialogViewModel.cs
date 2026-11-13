@@ -29,10 +29,12 @@ namespace Viking.UI.WPF.Forms
         /// </summary>
         /// <remarks>
         /// This and the other <c>Default*</c> overlay and PID values are what Reset to Defaults restores. They must equal
-        /// the <c>userSettings</c> defaults in Viking's app.config (and Settings.settings), which a new install starts
-        /// with; <c>ViewerPreferencesDialogViewModelTests</c> checks that they agree.
+        /// the <c>DefaultSettingValueAttribute</c> in VikingCore's Settings.Designer.cs, which is what a new install starts
+        /// with: VikingCore is a library, so .NET never reads its app.config (VikingCore.dll.config). Settings.settings and
+        /// that app.config are kept equal too; <c>ViewerPreferencesDialogViewModelTests</c> checks that all four agree.
+        /// The count was briefly 25 (1.2.142 to 1.2.144), which drew the wheel's numbers about six times smaller.
         /// </remarks>
-        public const int DefaultSectionNumberOverlayCount = 25;
+        public const int DefaultSectionNumberOverlayCount = 4;
 
         /// <summary>
         /// Default for showing the section number overlay on a volume with slice-to-volume transforms or an annotation

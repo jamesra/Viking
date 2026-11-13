@@ -11,7 +11,7 @@ Notes for whoever updates this file. Comments like this one are not shown in Vik
   changes, rename the unreleased heading to the new version; when a version ships, replace "not yet released" with the date
   and channel, for example "2026-10-26 (Viking Test, unsigned)".
 
-Committed application version: 1.2.144.0.
+Committed application version: 1.2.145.0.
 1.2.70, 1.2.75 and 1.2.143 were intermediate bumps and have no section of their own (1.2.143's change is listed under 1.2.144). Neither do the builds between 1.2.78 and 1.2.109;
 their changes are listed under 1.2.109. Builds 1.2.128 and 1.2.129 are listed under 1.2.129 (it went out as Viking Test
 and as a signed release on 2026-10-27). Viking Test builds 1.2.130 to 1.2.136 were folded into the 1.2.136 release on
@@ -22,6 +22,20 @@ Some Velopack builds skipped patch numbers in a single bump (for example 1.2.48 
 version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. Older 1.1.x notes live in
 Documentation/source/Client/versionhistory.rst.
 -->
+
+## 1.2.145 — not yet released
+
+* **Fix: section number wheel back to its size.** Since 1.2.142 the wheel showed 25 sections above and below the current one instead of 4, so its numbers were drawn about six times smaller. It shows 4 again. If you changed the number in **Viewer Preferences** (Edit menu) > **Section Number Overlay** since then, your choice is kept; set it there to change it.
+<!-- Bug only in Viking Test builds since 1.2.142: add test-regression: 1.2.142 to the bullet when this section is dated as a Viking Test build. 440de994 (D-ViewerPrefDefaults) set the Settings.Designer.cs default of SectionNumberOverlayCount from 4 to 25 to match VikingCore's app.config, assuming a new install starts from it; VikingCore is a library and .NET never reads VikingCore.dll.config, so the Designer attribute is the real default and the change resized the wheel. All four places are 4 now. -->
+* **Label borders fade on small text.** The white or black border around annotation labels (cell numbers, link labels) now fades as the text gets small on screen, and below 12 screen pixels of line height it is also thinner, so zoomed-out labels are no longer white smudges. Text at least 24 pixels tall keeps the full border. The 1.2.142 note said this already applied to labels; it applied only to the section number wheel.
+* **Section number wheel borders lighter.** The border around the wheel's numbers now starts thinning and fading below 24 screen pixels of line height instead of 16.
+<!-- LabelView.OutlineFade: the 8-copy 1 px stamped outline (DrawOutlined) has opacity lineHeight / LabelOutlineEffect.FullOutlineTextHeight below that height, and only the 4 straight copies below half of it. Alternatives the user wants kept: (2) draw annotation labels with the LabelOutline.fx shader like the wheel; (3) below a size, no border and black/white text chosen against the cell's fill. -->
+<!-- LabelOutlineEffect.FullOutlineTextHeight (and the LabelOutline.fx default) 16 -> 24, at user request. -->
+* **Quantized sections open with Auto contrast.** A quantized section you have not adjusted is now shown with the same black point, white point and gamma that **Auto** in the **Contrast** window picks, instead of the display range stored in the volume. **Auto** now also forgets a section's saved setting, so the separate **Reset to volume range** button is gone. Sections you already adjusted keep your setting.
+* **Auto gamma box in the Contrast window.** A new **Auto** check box beside the gamma slider, on by default, keeps the gamma that shows the middle pixel at mid grey and updates it as you move the black and white points. Clear it to set the gamma with the slider yourself. Sections whose gamma you set before this version keep it, with the box cleared.
+* **Contrast window follows the section on screen.** With the **Contrast** window open, changing section or channel now shows that section's histogram and setting, so your changes always apply to what you see. On a section or channel that is not quantized the window stays open with its controls disabled.
+* **Brightness keys in the help list.** Press F1 to see **Ctrl+Shift+Plus/Minus** (brighten or darken quantized sections) and **Ctrl+Shift+0** (reset) in the full list of commands.
+<!-- CrushInfo.DefaultWindow = AutoRange (Nornir's CrushDisplayMin/Max only without a CodeHistogram); CrushInfo.DefaultGamma = AutoGamma of that window, used by CrushDisplayGammaFor when nothing is saved. At user request. -->
 
 ## 1.2.144 — 2026-11-12 (Viking Test, unsigned)
 

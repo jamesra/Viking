@@ -185,7 +185,7 @@ namespace VikingCoreTests
 
             vm.ResetToDefaults();
 
-            Assert.AreEqual(25, vm.SectionNumberOverlayCount);
+            Assert.AreEqual(4, vm.SectionNumberOverlayCount);
             Assert.AreEqual(1.0, vm.SectionNumberOverlayAcceleration, Tolerance);
             Assert.AreEqual(500, vm.PidProportionalGain, Tolerance);
             Assert.AreEqual(300, vm.PidDerivativeGain, Tolerance);

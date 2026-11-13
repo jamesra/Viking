@@ -93,6 +93,18 @@ namespace VikingCoreTests
 
             File.WriteAllText(_path, "<CrushContrast><Window volume=\"RC2\" section=\"7\" channel=\"X\" min=\"1\" max=\"9\"/></CrushContrast>");
             Assert.AreEqual(1.0, new CrushContrastStore(_path).Get("RC2", 7, "X")!.Value.Gamma);
+            Assert.IsFalse(new CrushContrastStore(_path).Get("RC2", 7, "X")!.Value.AutoGamma, "an older file's gamma was set by hand");
+        }
+
+        [TestMethod]
+        public void AutoGammaIsSavedAndReadBack()
+        {
+            CrushContrastStore store = new(_path);
+            store.Set("RC2", 139, "TEM.Raw8", 5, 40, 1.7, autoGamma: true);
+            store.Set("RC2", 140, "TEM.Raw8", 5, 40, 1.7);
+
+            Assert.IsTrue(new CrushContrastStore(_path).Get("RC2", 139, "TEM.Raw8")!.Value.AutoGamma);
+            Assert.IsFalse(new CrushContrastStore(_path).Get("RC2", 140, "TEM.Raw8")!.Value.AutoGamma);
         }
 
         [TestMethod]
@@ -105,7 +117,17 @@ namespace VikingCoreTests
             CrushContrastSetting chosen = new(0, 100, 2.0);
 
             Assert.AreEqual(2f, SectionViewerControl.CrushDisplayGammaFor(section, "Crushed", chosen));
-            Assert.AreEqual(1f, SectionViewerControl.CrushDisplayGammaFor(section, "Crushed", null), "nothing chosen");
+            Assert.AreEqual(1f, SectionViewerControl.CrushDisplayGammaFor(section, "Crushed", null), "nothing chosen, no histogram");
+            CrushInfo dark = new(10, 0, 8, null, [1000000, 100, 100, 100, 100, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
+            section.CrushedChannels["Dark"] = dark;
+            Assert.AreEqual((float)dark.DefaultGamma(), SectionViewerControl.CrushDisplayGammaFor(section, "Dark", null), "nothing chosen: Auto gamma");
+            Assert.AreEqual(2f, SectionViewerControl.CrushDisplayGammaFor(section, "Dark", chosen), "the user's gamma wins");
+
+            // Auto gamma follows the user's window, whatever gamma was stored with it.
+            CrushContrastSetting autoGamma = new(1, 16, 0.5, AutoGamma: true);
+            Assert.AreEqual((float)dark.AutoGamma(1, 16), SectionViewerControl.CrushDisplayGammaFor(section, "Dark", autoGamma), "auto, wide window");
+            Assert.AreEqual((float)dark.AutoGamma(1, 4), SectionViewerControl.CrushDisplayGammaFor(section, "Dark", autoGamma with { Max = 4 }), "auto, narrow window");
+            Assert.AreNotEqual(dark.AutoGamma(1, 16), dark.AutoGamma(1, 4), "the two windows need different gammas for this test to mean anything");
             Assert.AreEqual(1f, SectionViewerControl.CrushDisplayGammaFor(section, "Raw", chosen), "not crushed");
             Assert.AreEqual(1f, SectionViewerControl.CrushDisplayGammaFor(section, "Wide", chosen), "storage Viking cannot decode");
         }

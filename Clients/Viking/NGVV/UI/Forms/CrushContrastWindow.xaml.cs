@@ -11,71 +11,128 @@ using Viking.VolumeModel;
 namespace Viking.UI.Forms
 {
     /// <summary>
-    /// Edits the contrast window of one crushed section and channel. The black and white points are codes (0 to 255 for 8-bit
-    /// tiles); every change is saved on this computer and redrawn at once.
+    /// Edits the contrast window of the crushed section and channel on screen. The black and white points are codes (0 to 255 for
+    /// 8-bit tiles); every change is saved on this computer and redrawn at once. The viewer calls <see cref="ShowSection"/> when the
+    /// section or channel on screen changes, so the window always edits what is shown.
     /// </summary>
     public partial class CrushContrastWindow : Window
     {
-        private readonly CrushInfo _crush;
-        private readonly string? _volume;
-        private readonly int _section;
-        private readonly string _channel;
+        // Null while the channel on screen is not a crushed channel Viking can adjust; the controls are then disabled.
+        private CrushInfo? _crush;
+        private string? _volume;
+        private int _section;
+        private string _channel = "";
         private readonly Action _redraw;
-        // True until the constructor has set the sliders, so the changes it makes are not saved.
+        // True while the sliders are being set from a saved setting, so those changes are not saved back.
         private bool _loading = true;
 
         internal CrushContrastWindow(CrushInfo crush, string? volume, int section, string channel, Action redraw, IntPtr ownerHandle)
         {
             InitializeComponent();
 
-            _crush = crush;
-            _volume = volume;
-            _section = section;
-            _channel = channel;
             _redraw = redraw;
 
             if (ownerHandle != IntPtr.Zero)
                 new WindowInteropHelper(this).Owner = ownerHandle;
 
-            int maxCode = (1 << Math.Min(crush.Bits, 8)) - 1;
-            BlackSlider.Maximum = WhiteSlider.Maximum = maxCode;
-            BlackSlider.TickFrequency = WhiteSlider.TickFrequency = Math.Max(1, (maxCode + 1) / 16);
-            Histogram.Counts = crush.CodeHistogram;
-
-            Title = $"Contrast - Section {section}";
-            Heading.Text = $"Section {section}, channel {channel}";
-
-            CrushContrastSetting now = EffectiveSetting();
-            Load(now.Min, now.Max, now.Gamma);
+            ShowSection(crush, volume, section, channel);
         }
 
-        /// <summary>What is drawn now: the user's setting, else the volume's display range at gamma 1.</summary>
-        private CrushContrastSetting EffectiveSetting()
+        /// <summary>
+        /// Shows the setting of another section or channel. <paramref name="crush"/> null (or a storage Viking cannot decode) means
+        /// the channel on screen cannot be adjusted: the window says so and its controls are disabled until a crushed one is shown.
+        /// </summary>
+        internal void ShowSection(CrushInfo? crush, string? volume, int section, string channel)
+        {
+            _crush = crush is { IsSupported: true } ? crush : null;
+            _volume = volume;
+            _section = section;
+            _channel = channel ?? "";
+
+            Title = $"Contrast - Section {section}";
+            bool adjustable = _crush is not null;
+            Heading.Text = adjustable
+                ? $"Section {section}, channel {_channel}"
+                : $"Section {section}, channel {_channel}: not a quantized channel Viking can adjust";
+            BlackSlider.IsEnabled = WhiteSlider.IsEnabled = AutoGammaBox.IsEnabled = AutoButton.IsEnabled = adjustable;
+            GammaSlider.IsEnabled = adjustable && !AutoGammaOn;
+
+            if (_crush is null)
+            {
+                Histogram.Counts = null;
+                return;
+            }
+
+            int maxCode = (1 << Math.Min(_crush.Bits, 8)) - 1;
+            _loading = true;
+            BlackSlider.Maximum = WhiteSlider.Maximum = maxCode;
+            BlackSlider.TickFrequency = WhiteSlider.TickFrequency = Math.Max(1, (maxCode + 1) / 16);
+            Histogram.Counts = _crush.CodeHistogram;
+            Load(EffectiveSetting(_crush));
+        }
+
+        /// <summary>What is drawn now: the user's setting, else the Auto window with Auto gamma.</summary>
+        private CrushContrastSetting EffectiveSetting(CrushInfo crush)
         {
             if (CrushContrastStore.Default.Get(_volume, _section, _channel) is { } saved)
                 return saved;
 
-            (float min, float max) = _crush.DefaultWindow();
-            return new CrushContrastSetting(min * CrushInfo.StorageMaximum, max * CrushInfo.StorageMaximum, 1.0);
+            (float min, float max) = crush.DefaultWindow();
+            return new CrushContrastSetting(min * CrushInfo.StorageMaximum, max * CrushInfo.StorageMaximum, crush.DefaultGamma(), AutoGamma: true);
         }
 
         /// <summary>The gamma slider is on a log2 scale, so equal steps lift and darken equally and 1 sits in the middle.</summary>
         private double Gamma => Math.Pow(2, GammaSlider.Value);
 
-        private void Load(double min, double max, double gamma)
+        private bool AutoGammaOn => AutoGammaBox.IsChecked == true;
+
+        private void Load(CrushContrastSetting setting)
         {
             _loading = true;
             try
             {
-                BlackSlider.Value = Math.Min(Math.Max(Math.Round(min), 0), BlackSlider.Maximum);
-                WhiteSlider.Value = Math.Min(Math.Max(Math.Round(max), 0), WhiteSlider.Maximum);
-                GammaSlider.Value = Math.Log(CrushContrastSetting.ClampGamma(gamma), 2);
+                BlackSlider.Value = Math.Min(Math.Max(Math.Round(setting.Min), 0), BlackSlider.Maximum);
+                WhiteSlider.Value = Math.Min(Math.Max(Math.Round(setting.Max), 0), WhiteSlider.Maximum);
+                GammaSlider.Value = Math.Log(CrushContrastSetting.ClampGamma(setting.Gamma), 2);
+                AutoGammaBox.IsChecked = setting.AutoGamma;
+                GammaSlider.IsEnabled = !setting.AutoGamma;
+                FollowAutoGamma();
                 ShowValues();
             }
             finally
             {
                 _loading = false;
             }
+        }
+
+        /// <summary>With Auto checked, moves the gamma slider to the Auto gamma of the current black and white points.</summary>
+        private void FollowAutoGamma()
+        {
+            if (!AutoGammaOn || _crush is null)
+                return;
+
+            bool wasLoading = _loading;
+            _loading = true;
+            try
+            {
+                GammaSlider.Value = Math.Log(CrushContrastSetting.ClampGamma(_crush.AutoGamma(BlackSlider.Value, WhiteSlider.Value)), 2);
+            }
+            finally
+            {
+                _loading = wasLoading;
+            }
+        }
+
+        /// <summary>Checked pins the gamma to Auto; cleared, the slider starts from that gamma and moves freely.</summary>
+        private void OnAutoGammaChanged(object sender, RoutedEventArgs e)
+        {
+            GammaSlider.IsEnabled = _crush is not null && !AutoGammaOn;
+            if (_loading)
+                return;
+
+            FollowAutoGamma();
+            ShowValues();
+            Save();
         }
 
         private void ShowValues()
@@ -117,31 +174,31 @@ namespace Viking.UI.Forms
                 _loading = false;
             }
 
+            FollowAutoGamma();
             ShowValues();
             Save();
         }
 
         private void Save()
         {
-            if (WhiteSlider.Value > BlackSlider.Value)
+            if (_crush is not null && WhiteSlider.Value > BlackSlider.Value)
             {
-                CrushContrastStore.Default.Set(_volume, _section, _channel, BlackSlider.Value, WhiteSlider.Value, Gamma);
+                CrushContrastStore.Default.Set(_volume, _section, _channel, BlackSlider.Value, WhiteSlider.Value, Gamma, AutoGammaOn);
                 _redraw();
             }
         }
 
+        /// <summary>
+        /// Auto is the default, so it forgets the section's saved setting rather than saving the Auto values: the section then
+        /// follows the default if it changes.
+        /// </summary>
         private void OnAutoClick(object sender, RoutedEventArgs e)
         {
-            (double min, double max) = _crush.AutoRange();
-            Load(min, max, _crush.AutoGamma(Math.Round(min), Math.Round(max)));
-            Save();
-        }
+            if (_crush is null)
+                return;
 
-        private void OnResetClick(object sender, RoutedEventArgs e)
-        {
             CrushContrastStore.Default.Clear(_volume, _section, _channel);
-            CrushContrastSetting now = EffectiveSetting();
-            Load(now.Min, now.Max, now.Gamma);
+            Load(EffectiveSetting(_crush));
             _redraw();
         }
 
