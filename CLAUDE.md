@@ -57,6 +57,7 @@ Same `SKILL.md` format as Claude skills. Read the SKILL.md when the task matches
 | `sam2-grounding` | Planning/editing SAM2 integration in SegmentationServer |
 | `deploy-viking-test` | Publishing the VikingTest Velopack build and announcing in Slack #betatest |
 | `docker-letsencrypt-sidecar` | Adding HTTPS to a container from the single `viking-certs` renewer (`/certs`, `viking.tls-reload`) |
+| `mosaic-annotation-remap` | Moving a section's annotations to a rebuilt `.mosaic` through tile coordinates (VikingAU `remap-to-tiles` / `remap-from-tiles`): checks, dry runs, report, undo |
 | `slack-ai-channel` | Posting/reading Slack #ai with the `[Viking-Server]` protocol |
 | `viking-server-ai-watch` | Launching the self-pacing Slack #ai server watch |
 | `viking-server-improve-loop` | Launching the timed gRPC client / server / SQL improvement loop (branch `dev`) |
