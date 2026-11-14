@@ -26,7 +26,7 @@ namespace Geometry.Transforms
         public List<double[]?>? Alternates { get; set; }
     }
 
-    /// <summary>One part of a shape (a ring, a line, a point, a circle's five samples) as runs of tile vertices.</summary>
+    /// <summary>One part of a shape (a ring, a line, a point, a circle's centre) as runs of tile vertices.</summary>
     public sealed class TilePart
     {
         public const string Exterior = "exterior";
@@ -34,8 +34,8 @@ namespace Geometry.Transforms
         public const string Line = "line";
         public const string Point = "point";
 
-        /// <summary>The circle's centre then its east, north, west and south rim points (<see cref="CircleMapping.SamplePoints"/>).</summary>
-        public const string CircleSamples = "circle";
+        /// <summary>A circle's centre; its radius is <see cref="TileShape.Radius"/>.</summary>
+        public const string CircleCentre = "circle";
 
         public string Role { get; set; } = Exterior;
 
@@ -51,7 +51,10 @@ namespace Geometry.Transforms
         /// <summary>The shape's <see cref="ShapeType2D"/> name.</summary>
         public string Kind { get; set; } = string.Empty;
 
-        /// <summary>A circle's mosaic radius in the old mosaic; null for other shapes.</summary>
+        /// <summary>
+        /// A circle's mosaic radius, kept unchanged: both mosaics place the same tile images at full resolution, so a mosaic
+        /// pixel is a tile pixel in either. Null for other shapes.
+        /// </summary>
         public double? Radius { get; set; }
 
         public List<TilePart> Parts { get; set; } = [];
@@ -97,13 +100,13 @@ namespace Geometry.Transforms
     /// <summary>
     /// Moves a mosaic shape from an old mosaic to a rebuilt one through the tiles both place: each vertex goes to a tile pixel
     /// through the old mosaic (<see cref="ToTiles"/>), then to mosaic space through the new mosaic's transform for the same
-    /// tile (<see cref="FromTiles"/>). Vertices are grouped in runs that share a tile. A circle is carried as its centre and
-    /// four rim points and rebuilt by the five-point mean scale (<see cref="CircleMapping"/>,
-    /// <c>.cursor/rules/circle-mapping-scale.mdc</c>).
+    /// tile (<see cref="FromTiles"/>). Vertices are grouped in runs that share a tile. A circle maps its centre and keeps its
+    /// radius: old and new mosaic are both mosaic space at the tile images' pixel scale, so the five-point scale rule of
+    /// <c>.cursor/rules/circle-mapping-scale.mdc</c> (for mosaic to volume) does not apply.
     /// </summary>
     public static class TileRemap
     {
-        /// <summary>The vertices of a shape in the order <see cref="ToTiles"/> walks them (a circle gives its five samples).</summary>
+        /// <summary>The vertices of a shape in the order <see cref="ToTiles"/> walks them (a circle gives its centre).</summary>
         /// <exception cref="NotSupportedException">The shape is not a point, circle, line segment, polyline or polygon.</exception>
         public static IEnumerable<Vector2> Vertices(IShape2D shape) => Parts(shape).SelectMany(p => p.Vertices);
 
@@ -127,7 +130,6 @@ namespace Geometry.Transforms
             {
                 TilePart part = new() { Role = role };
                 TileRun? run = null;
-                int? centreTile = null;
                 foreach (Vector2 v in vertices)
                 {
                     TilePoint located = oldMosaic.Locate(v, out TilePoint? alternate);
@@ -135,23 +137,6 @@ namespace Geometry.Transforms
                     {
                         result.Uncovered.Add(v);
                         continue;
-                    }
-
-                    // A circle's rim samples measure the local scale at its centre, so they go through the centre's tile
-                    // wherever its image holds them. Through a neighbouring tile that the new mosaic places elsewhere (a
-                    // repair moves misplaced tiles by thousands of pixels) one rim sample would inflate the five-point mean.
-                    if (role == TilePart.CircleSamples)
-                    {
-                        if (centreTile is null)
-                        {
-                            centreTile = located.TileNumber;
-                        }
-                        else if (located.TileNumber != centreTile.Value &&
-                                 oldMosaic.TryLocateOnTile(centreTile.Value, v, out TilePoint onCentreTile))
-                        {
-                            alternate = located.Status == TileMappingStatus.Mapped ? located : null;
-                            located = onCentreTile;
-                        }
                     }
 
                     if (run is null || run.Tile != located.TileNumber)
@@ -269,14 +254,11 @@ namespace Geometry.Transforms
 
                 case ShapeType2D.Circle:
                 {
-                    Vector2[] samples = Single(parts, TilePart.CircleSamples);
-                    if (samples.Length != CircleMapping.PointCount || tileShape.Radius is not double radius)
-                        throw new ArgumentException("A circle needs its radius and five sample points");
+                    Vector2[] centre = Single(parts, TilePart.CircleCentre);
+                    if (centre.Length != 1 || !(tileShape.Radius is double radius && radius > 0))
+                        throw new ArgumentException("A circle needs its centre and a positive radius");
 
-                    if (!CircleMapping.TryCircleFromMappedPoints(radius, samples, RimSamplesToUse(tileShape), out Circle circle))
-                        throw new ArgumentException("The circle's samples give no radius");
-
-                    return circle;
+                    return new Circle(centre[0], radius);
                 }
 
                 case ShapeType2D.Line:
@@ -302,20 +284,6 @@ namespace Geometry.Transforms
             }
         }
 
-        /// <summary>
-        /// Which of a circle's five samples set its new radius: the centre, and the rim samples on the centre's tile when at
-        /// least one is; otherwise every rim sample. A rim sample off the centre's tile image lies on a neighbour, and a
-        /// repaired mosaic may have moved that neighbour thousands of pixels (RC2 1240: a 1,346 px circle became 12,769 px).
-        /// Tile images are not rescaled between mosaics, so the centre tile's local scale is the circle's.
-        /// </summary>
-        private static bool[] RimSamplesToUse(TileShape tileShape)
-        {
-            int[] tiles = [.. tileShape.Parts.Single(p => p.Role == TilePart.CircleSamples)
-                                     .Runs.SelectMany(r => r.Points.Select(_ => r.Tile))];
-            bool anyRimOnCentre = tiles.Skip(1).Any(t => t == tiles[0]);
-            return [.. tiles.Select((t, i) => i == 0 || !anyRimOnCentre || t == tiles[0])];
-        }
-
         private static Vector2[] Single(List<(string Role, Vector2[] Vertices)> parts, string role)
         {
             var matches = parts.Where(p => p.Role == role).ToList();
@@ -332,7 +300,7 @@ namespace Geometry.Transforms
                     yield return (TilePart.Point, [point]);
                     break;
                 case Circle circle:
-                    yield return (TilePart.CircleSamples, CircleMapping.SamplePoints(circle.Center, circle.Radius));
+                    yield return (TilePart.CircleCentre, [circle.Center]);
                     break;
                 case LineSegment segment:
                     yield return (TilePart.Line, [segment.A, segment.B]);

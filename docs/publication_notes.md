@@ -618,13 +618,14 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   nearest, the rule nornir's Assemble composites by, so a vertex follows the tile the annotator saw. The work is split
   in two steps with a file between them: (tile, x, y) per vertex, grouped in runs of consecutive vertices on one tile,
   so the intermediate is auditable and step 2 needs only the new `.mosaic`. Circles go through as the five-point sample
-  (centre, E, N, W, S) and are rebuilt by the five-point mean scale (`circle-mapping-scale.mdc`), with two refinements
-  found on RC2 1240 (116 locations, 104 circles): a rim sample goes through the centre's tile wherever that tile's
-  image holds it, and when any rim sample is on the centre's tile only those set the radius. Without them, a rim
-  sample on a neighbouring tile that the repair had moved 40,000-54,000 px gave five circles radii of 10,500-14,700 px
-  (from 95-1,346 px); with them all 104 radii stay within 1% (tile images are not rescaled between mosaics). On the
-  same section the old-mosaic round trip returns within 0.15 px, and where the C# and Python remappers pick the same tile
-  they agree to a median of 0.09 px (max 1.45 px). Policies: a location with any vertex no old tile covers, or on a
+  A circle maps its centre and keeps its radius: both mosaics place the same tile images at full resolution, so a
+  mosaic pixel is a tile pixel in either, and the five-point scale rule (`circle-mapping-scale.mdc`) is for mosaic to
+  volume, where a `.stos` really scales. Measured on RC2 1240 (116 locations, 106 circles): mapping the five samples
+  instead gave five circles radii of 10,500-14,700 px (from 95-1,346 px), because one rim sample lay on a neighbouring
+  tile that the repair had moved 40,000-54,000 px, and it left two circles unmapped because a rim sample fell off every
+  tile; even with the far samples excluded the measured radius changed by at most 0.3% (grid refinement warp). With
+  centre only, all 116 locations map, the largest move is 3,669 px, and the old-mosaic round trip is exact. Where the
+  C# and Python remappers pick the same tile they agree to a median of 0.09 px (max 1.45 px). Policies: a location with any vertex no old tile covers, or on a
   tile the new mosaic drops, is left unchanged and listed for hand review (user decision, 2026-11-13); a vertex inside a
   tile's outline that inverts off its image (warp edge) is used and counted as extrapolated; a location edited after
   the export is skipped. The report gives shift statistics, the overlap disagreement (the distance between the two

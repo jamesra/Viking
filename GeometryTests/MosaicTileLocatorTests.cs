@@ -184,37 +184,36 @@ namespace GeometryTests
         }
 
         [TestMethod]
-        public void CircleRimOnTheCentresTileImageStaysOnThatTile()
+        public void CircleMapsItsCentreAndKeepsItsRadius()
         {
-            // Centre on tile 1; the east rim point (x = 960) is nearer tile 2's centre but still on tile 1's image, so it
-            // goes through tile 1 and tile 2's move does not change the radius. Found on RC2 1240, where a neighbouring tile
-            // moved 40,000 px in the repaired mosaic and took one rim sample with it.
-            Circle circle = new(new Vector2(940, 500), 20);
-            ToTilesResult tiles = TileRemap.ToTiles(circle, TwoTiles());
-            Assert.AreEqual(20.0, tiles.Shape!.Radius);
-            Assert.IsTrue(tiles.Shape.Parts.Single().Runs.All(r => r.Tile == 1));
-
-            FromTilesResult moved = TileRemap.FromTiles(tiles.Shape, TwoTiles(shiftTile2X: 8));
-            Assert.IsTrue(moved.Succeeded, moved.Failure);
-            Circle result = (Circle)moved.Shape!;
-            Assert.AreEqual(0, Vector2.Distance(circle.Center, result.Center), 1e-6);
-            Assert.AreEqual(20, result.Radius, 1e-6);
-            Assert.IsTrue(moved.OverlapDisagreements.Any(d => Math.Abs(d - 8) < 1e-6), "tile 2's position for the rim point is still reported");
-        }
-
-        [TestMethod]
-        public void CircleRimOffTheCentresTileDoesNotSetTheRadius()
-        {
-            // Centre on tile 1 (x = 940); the east rim point (x = 1040) is off tile 1's image, so it goes through tile 2,
-            // which the new mosaic moved 30,000 px. Only the rim samples on the centre's tile set the radius.
+            // Both mosaics place the same tile images at full resolution, so the radius carries over unchanged. The circle
+            // reaches onto tile 2, which the new mosaic moves 30,000 px; only the centre's tile (1) decides where it goes.
+            // Found on RC2 1240, where mapping rim points through such a neighbour gave 10,000 px radii.
             Circle circle = new(new Vector2(940, 500), 100);
             ToTilesResult tiles = TileRemap.ToTiles(circle, TwoTiles());
-            Assert.AreEqual(2, tiles.Shape!.Parts.Single().Runs.Select(r => r.Tile).Distinct().Count());
+            Assert.AreEqual(100.0, tiles.Shape!.Radius);
+            Assert.AreEqual(1, tiles.Shape.Parts.Single().VertexCount);
+            Assert.AreEqual(1, tiles.Shape.Parts.Single().Runs.Single().Tile);
 
             FromTilesResult moved = TileRemap.FromTiles(tiles.Shape, TwoTiles(shiftTile2X: 30000));
             Assert.IsTrue(moved.Succeeded, moved.Failure);
-            Assert.AreEqual(100, ((Circle)moved.Shape!).Radius, 1e-6);
-            Assert.AreEqual(0, Vector2.Distance(circle.Center, ((Circle)moved.Shape!).Center), 1e-6);
+            Circle result = (Circle)moved.Shape!;
+            Assert.AreEqual(0, Vector2.Distance(circle.Center, result.Center), 1e-6);
+            Assert.AreEqual(100, result.Radius, 1e-9);
+        }
+
+        [TestMethod]
+        public void CircleWhoseRimLeavesEveryTileStillMapsByItsCentre()
+        {
+            // Centre on tile 2 near its right edge (x = 1890); the circle reaches past every tile, which no longer matters.
+            Circle circle = new(new Vector2(1890, 500), 300);
+            ToTilesResult tiles = TileRemap.ToTiles(circle, TwoTiles());
+            Assert.IsNotNull(tiles.Shape);
+
+            FromTilesResult moved = TileRemap.FromTiles(tiles.Shape, TwoTiles(shiftTile2X: 12));
+            Assert.IsTrue(moved.Succeeded, moved.Failure);
+            Assert.AreEqual(1902, ((Circle)moved.Shape!).Center.X, 1e-6);
+            Assert.AreEqual(300, ((Circle)moved.Shape!).Radius, 1e-9);
         }
 
         [TestMethod]

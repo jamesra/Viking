@@ -29,6 +29,11 @@ section-to-volume transform (a stos warp scales, rotates and shears). A radius i
 Use `CircleMapping.TryMapCircle` / `IVolumeToSectionTransform.TryMapShape` for this. Do not hand-roll it, and do not map the
 ring and rebuild the circle from its bounding box (a rotated ring's box shrinks).
 
+**Old mosaic to new mosaic is not crossing spaces.** Moving a section's annotations to a rebuilt `.mosaic` (VikingAU
+`remap-to-tiles` / `remap-from-tiles`, `TileRemap`) maps the centre through its tile and keeps the radius: both mosaics
+place the same tile images at full resolution, so the radius is valid in both. Rim samples there would land on neighbouring
+tiles that a repair may have moved thousands of pixels (RC2 1240: radii of 10,000+ px).
+
 ## Editing a circle in the viewer
 The user draws in volume space (what is on screen), so a volume circle is the edit, and mosaic is what is saved
 (`annotation-volume-geometry.mdc`): `LocationVolumeGeometry.ToMosaic(Circle, transform)` maps the centre back and solves
