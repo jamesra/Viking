@@ -38,6 +38,9 @@ namespace TestIdentityModel
             Assert.StartsWith("viking://open?code=", url);
             Assert.Contains("volumeName=RPC1", url);
             Assert.DoesNotContain("&api=", url);
+            Assert.DoesNotContain("context=", url);
+
+            Assert.Contains($"&context={volume.Id}", VikingLaunchCodeService.BuildOpenUrl(code, contextId: volume.Id));
         }
 
         [Fact]

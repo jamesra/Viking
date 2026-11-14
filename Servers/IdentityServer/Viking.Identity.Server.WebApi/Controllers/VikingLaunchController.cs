@@ -83,7 +83,7 @@ namespace Viking.Identity.Server.WebApi.ApiControllers
             {
                 Code = launchCode.Code,
                 ExpiresIn = (int)VikingLaunchCodeService.CodeLifetime.TotalSeconds,
-                VikingUrl = VikingLaunchCodeService.BuildOpenUrl(launchCode)
+                VikingUrl = VikingLaunchCodeService.BuildOpenUrl(launchCode, contextId: volume.Id)
             });
         }
 

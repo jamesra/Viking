@@ -63,7 +63,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             }
 
             var launchCode = await _launchCodes.CreateAsync(userId, resolved);
-            return Redirect(VikingLaunchCodeService.BuildOpenUrl(launchCode, location, _webApiOptions.BaseUrl));
+            return Redirect(VikingLaunchCodeService.BuildOpenUrl(launchCode, location, _webApiOptions.BaseUrl, resolved?.Id));
         }
     }
 }

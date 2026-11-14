@@ -114,12 +114,17 @@ namespace Viking.Identity.Server.Extensions.Services
         /// Builds viking://open. <paramref name="location"/> and <paramref name="apiBase"/> are
         /// query-only (not stored). Omit apiBase on the bearer-minted URL; the desktop uses
         /// LaunchExchangeBaseUrl and must not take an exchange host from the link.
+        /// <paramref name="contextId"/> is the annotation context the code was minted for, sent as <c>context=</c>:
+        /// several contexts share a name (RC1 has three VikingXMLs), and Viking uses the id to find the window that has
+        /// exactly that context open. Viking before 1.2.145 ignores it.
         /// </summary>
-        public static string BuildOpenUrl(VikingLaunchCode launchCode, string location = null, string apiBase = null)
+        public static string BuildOpenUrl(VikingLaunchCode launchCode, string location = null, string apiBase = null, long? contextId = null)
         {
             ArgumentNullException.ThrowIfNull(launchCode);
 
             var vikingUrl = "viking://open?code=" + Uri.EscapeDataString(launchCode.Code);
+            if (contextId > 0)
+                vikingUrl += "&context=" + contextId.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (!string.IsNullOrEmpty(launchCode.VolumeUrl))
                 vikingUrl += "&volume=" + Uri.EscapeDataString(launchCode.VolumeUrl);
             if (!string.IsNullOrWhiteSpace(launchCode.VolumeName))
