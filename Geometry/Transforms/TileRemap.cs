@@ -127,6 +127,7 @@ namespace Geometry.Transforms
             {
                 TilePart part = new() { Role = role };
                 TileRun? run = null;
+                int? centreTile = null;
                 foreach (Vector2 v in vertices)
                 {
                     TilePoint located = oldMosaic.Locate(v, out TilePoint? alternate);
@@ -134,6 +135,23 @@ namespace Geometry.Transforms
                     {
                         result.Uncovered.Add(v);
                         continue;
+                    }
+
+                    // A circle's rim samples measure the local scale at its centre, so they go through the centre's tile
+                    // wherever its image holds them. Through a neighbouring tile that the new mosaic places elsewhere (a
+                    // repair moves misplaced tiles by thousands of pixels) one rim sample would inflate the five-point mean.
+                    if (role == TilePart.CircleSamples)
+                    {
+                        if (centreTile is null)
+                        {
+                            centreTile = located.TileNumber;
+                        }
+                        else if (located.TileNumber != centreTile.Value &&
+                                 oldMosaic.TryLocateOnTile(centreTile.Value, v, out TilePoint onCentreTile))
+                        {
+                            alternate = located.Status == TileMappingStatus.Mapped ? located : null;
+                            located = onCentreTile;
+                        }
                     }
 
                     if (run is null || run.Tile != located.TileNumber)
@@ -255,7 +273,7 @@ namespace Geometry.Transforms
                     if (samples.Length != CircleMapping.PointCount || tileShape.Radius is not double radius)
                         throw new ArgumentException("A circle needs its radius and five sample points");
 
-                    if (!CircleMapping.TryCircleFromMappedPoints(radius, samples, [.. Enumerable.Repeat(true, CircleMapping.PointCount)], out Circle circle))
+                    if (!CircleMapping.TryCircleFromMappedPoints(radius, samples, RimSamplesToUse(tileShape), out Circle circle))
                         throw new ArgumentException("The circle's samples give no radius");
 
                     return circle;
@@ -282,6 +300,20 @@ namespace Geometry.Transforms
                 default:
                     throw new ArgumentException($"Shape kind {kind} is not remapped");
             }
+        }
+
+        /// <summary>
+        /// Which of a circle's five samples set its new radius: the centre, and the rim samples on the centre's tile when at
+        /// least one is; otherwise every rim sample. A rim sample off the centre's tile image lies on a neighbour, and a
+        /// repaired mosaic may have moved that neighbour thousands of pixels (RC2 1240: a 1,346 px circle became 12,769 px).
+        /// Tile images are not rescaled between mosaics, so the centre tile's local scale is the circle's.
+        /// </summary>
+        private static bool[] RimSamplesToUse(TileShape tileShape)
+        {
+            int[] tiles = [.. tileShape.Parts.Single(p => p.Role == TilePart.CircleSamples)
+                                     .Runs.SelectMany(r => r.Points.Select(_ => r.Tile))];
+            bool anyRimOnCentre = tiles.Skip(1).Any(t => t == tiles[0]);
+            return [.. tiles.Select((t, i) => i == 0 || !anyRimOnCentre || t == tiles[0])];
         }
 
         private static Vector2[] Single(List<(string Role, Vector2[] Vertices)> parts, string role)

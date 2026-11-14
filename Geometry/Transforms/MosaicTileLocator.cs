@@ -155,6 +155,25 @@ namespace Geometry.Transforms
             return chosen ?? extrapolated ?? TilePoint.NoTile;
         }
 
+        /// <summary>
+        /// The point's position on one given tile, when that tile's image holds it (within the margin); used to keep a shape
+        /// that must move as one piece, such as a circle's rim samples, on the tile its centre lies on.
+        /// </summary>
+        /// <returns>False when the mosaic has no such tile, its transform does not invert at the point, or the pixel is off its image.</returns>
+        public bool TryLocateOnTile(int tileNumber, Vector2 mosaicPoint, out TilePoint tilePoint)
+        {
+            tilePoint = TilePoint.NoTile;
+            if (!_ByNumber.TryGetValue(tileNumber, out Tile tile) ||
+                !tile.Transform.TryInverseTransform(mosaicPoint, out Vector2 pixel) ||
+                !tile.ImageHolds(pixel, _Margin))
+            {
+                return false;
+            }
+
+            tilePoint = new TilePoint(tile.Number, pixel, TileMappingStatus.Mapped);
+            return true;
+        }
+
         /// <summary>Maps a pixel on the tile with this number to mosaic space through this mosaic's transform for it.</summary>
         /// <returns>False when this mosaic has no tile with that number, or its transform cannot map the pixel.</returns>
         public bool TryMapFromTile(int tileNumber, Vector2 pixel, out Vector2 mosaicPoint)

@@ -114,6 +114,9 @@ namespace Viking.AU
         /// <summary>Overlap disagreement above this many pixels is counted in the report.</summary>
         private const double DisagreementReportPixels = 5.0;
 
+        /// <summary>A circle whose radius changes by more than this fraction is listed in the report.</summary>
+        private const double RadiusChangeReportFraction = 0.05;
+
         private static readonly JsonSerializerSettings JsonSettings = new()
         {
             Formatting = Formatting.Indented,
@@ -212,6 +215,7 @@ namespace Viking.AU
             List<(long Id, string Reason)> skipped = [.. file.Skipped.Select(s => (s.Id, "step 1: " + s.Reason))];
             List<double> shifts = [];
             List<double> disagreements = [];
+            List<string> radiusChanges = [];
             List<(LocationObj Location, SqlGeometry Before, SqlGeometry After)> changed = [];
 
             foreach (TileRemapLocation entry in file.Locations)
@@ -253,7 +257,16 @@ namespace Viking.AU
                     continue;
                 }
 
-                shifts.AddRange(TileRemap.Vertices(oldShape).Zip(result.NewVertices, (a, b) => Vector2.Distance(a, b)));
+                // A circle moves with its centre; a rim sample on a moved neighbour tile does not set its radius.
+                if (oldShape is Circle movedFrom && result.Shape is Circle movedTo)
+                    shifts.Add(Vector2.Distance(movedFrom.Center, movedTo.Center));
+                else
+                    shifts.AddRange(TileRemap.Vertices(oldShape).Zip(result.NewVertices, (a, b) => Vector2.Distance(a, b)));
+                if (oldShape is Circle oldCircle && result.Shape is Circle newCircle &&
+                    Math.Abs(newCircle.Radius / oldCircle.Radius - 1) > RadiusChangeReportFraction)
+                {
+                    radiusChanges.Add($"{entry.Id}: radius {oldCircle.Radius:F1} -> {newCircle.Radius:F1} px");
+                }
                 disagreements.AddRange(result.OverlapDisagreements);
                 changed.Add((loc, before, LocationVolumeGeometry.ToSqlGeometry(result.Shape)));
             }
@@ -264,7 +277,7 @@ namespace Viking.AU
             if (!options.DryRun && changed.Count > 0)
                 saved = await Store.Locations.Save();
 
-            string report = BuildReport(options, file, newMosaic, changed.Count, skipped, shifts, disagreements, overlaps, saved);
+            string report = BuildReport(options, file, newMosaic, changed.Count, skipped, shifts, disagreements, overlaps, radiusChanges, saved);
             string reportPath = options.ReportFile ?? options.InputFile + ".report.txt";
             File.WriteAllText(reportPath, report);
             Console.WriteLine(report);
@@ -342,7 +355,7 @@ namespace Viking.AU
 
         private static string BuildReport(RemapFromTilesOptions options, TileRemapFile file, MosaicTileLocator newMosaic, int changedCount,
                                           List<(long Id, string Reason)> skipped, List<double> shifts, List<double> disagreements,
-                                          List<string> overlaps, bool saved)
+                                          List<string> overlaps, List<string> radiusChanges, bool saved)
         {
             static string F(double v) => v.ToString("F2", CultureInfo.InvariantCulture);
             static double Percentile(List<double> sorted, double p) => sorted.Count == 0 ? double.NaN : sorted[(int)Math.Min(sorted.Count - 1, Math.Round(p * (sorted.Count - 1)))];
@@ -359,9 +372,10 @@ namespace Viking.AU
             r.AppendLine();
             r.AppendLine($"Locations remapped: {changedCount}{(options.DryRun ? " (would be saved)" : saved ? " (saved)" : " (SAVE FAILED)")}");
             r.AppendLine($"Locations skipped (unchanged): {skipped.Count}");
-            r.AppendLine($"Vertex shift px: median {F(Percentile(sortedShifts, 0.5))}, p95 {F(Percentile(sortedShifts, 0.95))}, max {F(sortedShifts.Count == 0 ? double.NaN : sortedShifts[sortedShifts.Count - 1])} over {sortedShifts.Count} vertices");
+            r.AppendLine($"Vertex shift px: median {F(Percentile(sortedShifts, 0.5))}, p95 {F(Percentile(sortedShifts, 0.95))}, max {F(sortedShifts.Count == 0 ? double.NaN : sortedShifts[sortedShifts.Count - 1])} over {sortedShifts.Count} vertices (circles: centre only)");
             r.AppendLine($"Vertices in a tile overlap: {disagreements.Count}; overlapping tiles disagree by > {DisagreementReportPixels} px at {disagreements.Count(d => d > DisagreementReportPixels)}");
             r.AppendLine($"New overlaps between different cells: {overlaps.Count}");
+            r.AppendLine($"Circles whose radius changed by more than {RadiusChangeReportFraction:P0}: {radiusChanges.Count}");
 
             if (skipped.Count > 0)
             {
@@ -369,6 +383,14 @@ namespace Viking.AU
                 r.AppendLine("Skipped locations (look at these by hand):");
                 foreach (var (id, reason) in skipped.OrderBy(s => s.Id))
                     r.AppendLine($"  {id}: {reason}");
+            }
+
+            if (radiusChanges.Count > 0)
+            {
+                r.AppendLine();
+                r.AppendLine("Circles whose radius changed (tile images are not rescaled, so look at these):");
+                foreach (string c in radiusChanges)
+                    r.AppendLine("  " + c);
             }
 
             if (overlaps.Count > 0)
