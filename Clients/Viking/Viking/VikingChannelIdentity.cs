@@ -25,6 +25,7 @@ namespace Viking
         // that process hands off via these pipes when Test already owns the volume).
         public const string PipePrefix = "VikingLegacy.Activation.";
         public const string PipeNamePrefix = "VikingLegacy.Activation.Name.";
+        public const string PipeContextPrefix = "VikingLegacy.Activation.Context.";
 
         public static string ProtocolPrefix => ProtocolScheme + ":";
         public static string OpenUrlBase => ProtocolScheme + "://open";

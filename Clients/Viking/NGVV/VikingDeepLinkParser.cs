@@ -13,6 +13,13 @@ namespace Viking
         public string? Code { get; set; }
         public string? VolumeUrl { get; set; }
         public string? VolumeName { get; set; }
+
+        /// <summary>
+        /// Identity annotation context id (<c>context=</c>). One database name can have several contexts (RC1 has three
+        /// VikingXMLs), so the id is the only key that names exactly one; it is matched before the URL and name.
+        /// </summary>
+        public long? ContextId { get; set; }
+
         public NameValueCollection Place { get; set; } = [];
     }
 
@@ -107,6 +114,13 @@ namespace Viking
                     link.VolumeName = volume;
             }
 
+            if (query.TryGetValue("context", out string? context)
+                && long.TryParse(context?.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out long contextId)
+                && contextId > 0)
+            {
+                link.ContextId = contextId;
+            }
+
             return link;
         }
 
@@ -191,6 +205,8 @@ namespace Viking
         public static string BuildActivationUrl(VikingDeepLink link)
         {
             var parts = new List<string>();
+            if (link.ContextId > 0)
+                parts.Add("context=" + link.ContextId.Value.ToString(CultureInfo.InvariantCulture));
             if (!string.IsNullOrWhiteSpace(link.VolumeUrl))
                 parts.Add("volume=" + Uri.EscapeDataString(link.VolumeUrl));
             if (!string.IsNullOrWhiteSpace(link.VolumeName))
@@ -219,6 +235,20 @@ namespace Viking
         /// Scheme used when building activation URLs. Defaults to viking; test builds set viking-test at startup.
         /// </summary>
         public static string ProtocolScheme { get; set; } = "viking";
+
+        /// <summary>
+        /// True when the incoming link targets the volume already open. When both sides know the annotation context id
+        /// it decides alone: contexts sharing a name (RC1 and its other VikingXMLs) must not take each other's links.
+        /// Otherwise the URL or the Identity name must match.
+        /// </summary>
+        public static bool VolumeTargetsMatch(long? linkContextId, string? linkVolumeUrl, string? linkVolumeName,
+            long openContextId, string? openVolumeUrl, string? openVolumeName)
+        {
+            if (linkContextId > 0 && openContextId > 0)
+                return linkContextId.Value == openContextId;
+
+            return VolumeTargetsMatch(linkVolumeUrl, linkVolumeName, openVolumeUrl, openVolumeName);
+        }
 
         /// <summary>
         /// True when the incoming link targets the volume already open (URL and/or Identity name).

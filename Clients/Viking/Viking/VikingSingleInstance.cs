@@ -12,8 +12,14 @@ namespace Viking
 {
     /// <summary>
     /// Per-volume single-instance activation for viking:// deep links via named pipe + mutex.
-    /// Listens on both the volume URL and Identity volume name so SBFSEM/Identity links match
-    /// whichever identifier they send.
+    /// Listens on the annotation context id, the volume URL and the Identity volume name, so a link reaches the Viking
+    /// that has its volume open by whichever identifier it sends. The context id comes first: several contexts share a
+    /// name (RC1 has three VikingXMLs), so a link that names its context is never sent by name.
+    /// <para>
+    /// A Viking started by a link listens on that link's keys from the start (<see cref="ListenWhileStarting"/>) and
+    /// queues what arrives until the volume is open, so a second click during sign-in does not start a third Viking.
+    /// A key another Viking owns is retried every few seconds, so when that Viking closes this one takes the key over.
+    /// </para>
     /// </summary>
     public static class VikingSingleInstance
     {
@@ -22,10 +28,13 @@ namespace Viking
         public const string AckVolumeMismatch = "VOLUME_MISMATCH";
 
         private const int ConnectTimeoutMs = 1500;
+        private static readonly TimeSpan TakeoverRetry = TimeSpan.FromSeconds(3);
 
         private static CancellationTokenSource? _listenCts;
         private static readonly List<Mutex> _mutexes = [];
+        private static readonly object _mutexLock = new();
         private static Func<string, string>? _handler;
+        private static string? _queuedUrl;
         private static int _shuttingDown;
 
         /// <summary>
@@ -54,7 +63,8 @@ namespace Viking
             if (!VikingDeepLinkParser.TryParse(vikingUrl, out VikingDeepLink? link) || link is null)
                 return false;
 
-            foreach (string pipeName in PipeNamesFor(link.VolumeUrl, link.VolumeName))
+            // A link that names its context is not sent by name: another context of the same name may own that pipe.
+            foreach (string pipeName in PipeNamesFor(link.ContextId ?? 0, link.VolumeUrl, link.ContextId > 0 ? null : link.VolumeName))
             {
                 if (TryForwardToPipe(pipeName, vikingUrl))
                     return true;
@@ -64,26 +74,94 @@ namespace Viking
         }
 
         /// <summary>
-        /// Start accepting viking:// activations for the open volume. No-op for a key another instance already owns.
+        /// Called by a Viking that a link started, once forwarding found no Viking with that volume: listen on the link's
+        /// keys while signing in and loading, and queue the links that arrive (the latest wins) for
+        /// <see cref="TakeQueuedActivation"/>. <see cref="StartListening"/> replaces this once the volume is open.
         /// </summary>
-        public static void StartListening(string volumeUrl, string? volumeName, Func<string, string> handler)
+        public static void ListenWhileStarting(VikingDeepLink link)
         {
-            StopListening();
+            if (link is null)
+                return;
 
+            Listen(link.ContextId ?? 0, link.VolumeUrl, link.VolumeName, QueueUntilOpen);
+        }
+
+        /// <summary>
+        /// Start accepting viking:// activations for the open volume. A key another instance owns is retried until that
+        /// instance exits. Call <see cref="TakeQueuedActivation"/> afterwards for a link that arrived while starting.
+        /// </summary>
+        public static void StartListening(long contextId, string volumeUrl, string? volumeName, Func<string, string> handler)
+        {
             if (handler is null)
                 return;
+
+            Listen(contextId, volumeUrl, volumeName, handler);
+        }
+
+        /// <summary>The last link that arrived while this Viking was starting, or null; each link is returned once.</summary>
+        public static string? TakeQueuedActivation() => Interlocked.Exchange(ref _queuedUrl, null);
+
+        private static string QueueUntilOpen(string vikingUrl)
+        {
+            if (IsShuttingDown)
+                return AckNotReady;
+
+            Interlocked.Exchange(ref _queuedUrl, vikingUrl);
+            Trace.WriteLine("[Viking] Deep-link queued until the volume is open.", "Viking");
+            return AckOk;
+        }
+
+        private static void Listen(long contextId, string? volumeUrl, string? volumeName, Func<string, string> handler)
+        {
+            StopListening();
 
             _handler = handler;
             _listenCts = new CancellationTokenSource();
             CancellationToken token = _listenCts.Token;
 
-            foreach (string pipeName in PipeNamesFor(volumeUrl, volumeName))
+            var waiting = new List<string>();
+            foreach (string pipeName in PipeNamesFor(contextId, volumeUrl, volumeName))
             {
-                if (!TryOwnPipe(pipeName))
-                    continue;
-                string captured = pipeName;
-                Task.Run(() => ListenLoop(captured, token), token);
-                Trace.WriteLine($"[Viking] Deep-link server listening on pipe {pipeName}", "Viking");
+                if (TryOwnPipe(pipeName))
+                    StartListenLoop(pipeName, token);
+                else
+                    waiting.Add(pipeName);
+            }
+
+            if (waiting.Count > 0)
+                Task.Run(() => TakeOverWhenFree(waiting, token), token);
+        }
+
+        private static void StartListenLoop(string pipeName, CancellationToken token)
+        {
+            Task.Run(() => ListenLoop(pipeName, token), token);
+            Trace.WriteLine($"[Viking] Deep-link server listening on pipe {pipeName}", "Viking");
+        }
+
+        /// <summary>
+        /// Retries the keys another Viking owns. Without this, when the owner closed nobody listened on its keys and the
+        /// next click started yet another Viking although this one had the volume open.
+        /// </summary>
+        private static async Task TakeOverWhenFree(List<string> waiting, CancellationToken token)
+        {
+            try
+            {
+                while (waiting.Count > 0 && !token.IsCancellationRequested)
+                {
+                    await Task.Delay(TakeoverRetry, token).ConfigureAwait(false);
+                    for (int i = waiting.Count - 1; i >= 0; i--)
+                    {
+                        if (token.IsCancellationRequested || !TryOwnPipe(waiting[i], quiet: true))
+                            continue;
+
+                        Trace.WriteLine($"[Viking] Took over deep-link pipe {waiting[i]} from a Viking that closed.", "Viking");
+                        StartListenLoop(waiting[i], token);
+                        waiting.RemoveAt(i);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
             }
         }
 
@@ -101,16 +179,12 @@ namespace Viking
             _listenCts = null;
             _handler = null;
 
-            foreach (Mutex mutex in _mutexes)
+            lock (_mutexLock)
             {
-                try
-                {
-                    mutex.ReleaseMutex();
-                }
-                catch { /* ignore */ }
-                mutex.Dispose();
+                foreach (Mutex mutex in _mutexes)
+                    mutex.Dispose();
+                _mutexes.Clear();
             }
-            _mutexes.Clear();
         }
 
         internal static string NormalizeVolumeUrl(string url) => VikingDeepLinkParser.NormalizeVolumeUrl(url);
@@ -140,20 +214,27 @@ namespace Viking
             }
         }
 
-        private static bool TryOwnPipe(string pipeName)
+        /// <summary>
+        /// The key belongs to whichever process created its named mutex; it is freed when the last handle closes (the
+        /// owner disposing it or exiting). The mutex is never acquired, only held open, so the takeover task may claim
+        /// it on a pool thread and <see cref="StopListening"/> drop it on any thread.
+        /// </summary>
+        private static bool TryOwnPipe(string pipeName, bool quiet = false)
         {
             string mutexName = @"Local\" + pipeName;
             try
             {
-                var mutex = new Mutex(true, mutexName, out bool createdNew);
+                var mutex = new Mutex(false, mutexName, out bool createdNew);
                 if (!createdNew)
                 {
-                    Trace.WriteLine($"[Viking] Another instance already listens on {pipeName}.", "Viking");
+                    if (!quiet)
+                        Trace.WriteLine($"[Viking] Another instance already listens on {pipeName}; retrying until it closes.", "Viking");
                     mutex.Dispose();
                     return false;
                 }
 
-                _mutexes.Add(mutex);
+                lock (_mutexLock)
+                    _mutexes.Add(mutex);
                 return true;
             }
             catch (Exception ex)
@@ -299,9 +380,11 @@ namespace Viking
 
         private const int SwRestore = 9;
 
-        private static IEnumerable<string> PipeNamesFor(string? volumeUrl, string? volumeName)
+        internal static IReadOnlyList<string> PipeNamesFor(long contextId, string? volumeUrl, string? volumeName)
         {
             var names = new List<string>();
+            if (contextId > 0)
+                names.Add(VikingChannelIdentity.PipeContextPrefix + contextId.ToString(System.Globalization.CultureInfo.InvariantCulture));
             if (!string.IsNullOrWhiteSpace(volumeUrl) && VikingDeepLinkParser.LooksLikeVolumeUrl(volumeUrl))
                 names.Add(VikingChannelIdentity.PipePrefix + HashKey(VikingDeepLinkParser.NormalizeVolumeUrl(volumeUrl!)));
             if (!string.IsNullOrWhiteSpace(volumeName))

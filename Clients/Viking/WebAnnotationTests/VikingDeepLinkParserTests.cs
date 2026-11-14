@@ -61,6 +61,31 @@ namespace WebAnnotationTests
             Assert.IsFalse(VikingDeepLinkParser.VolumeTargetsMatch(urlA, "RC1", "https://example.com/RC2", "RC2"));
         }
 
+        /// <summary>
+        /// RC1 has several annotation contexts under one name; the context id names exactly one, so it decides alone
+        /// when both sides know it, and is carried through forwarding.
+        /// </summary>
+        [TestMethod]
+        public void ContextId_IsParsedForwardedAndDecidesTheMatch()
+        {
+            Assert.IsTrue(VikingDeepLinkParser.TryParse("viking://open?code=abc&volumeName=RC1&context=7&location=6743", out VikingDeepLink link));
+            Assert.AreEqual(7L, link.ContextId);
+
+            Assert.IsTrue(VikingDeepLinkParser.TryParse(VikingDeepLinkParser.BuildActivationUrl(link), out VikingDeepLink forwarded));
+            Assert.AreEqual(7L, forwarded.ContextId);
+            Assert.AreEqual("RC1", forwarded.VolumeName);
+
+            Assert.IsTrue(VikingDeepLinkParser.VolumeTargetsMatch(7, null, "RC1", 7, "https://example.com/RC1", "RC1"));
+            Assert.IsFalse(VikingDeepLinkParser.VolumeTargetsMatch(7, null, "RC1", 3, "https://example.com/RC1", "RC1"),
+                "another context of the same name must not take the link");
+            Assert.IsTrue(VikingDeepLinkParser.VolumeTargetsMatch(7, null, "RC1", 0, "https://example.com/RC1", "RC1"),
+                "a Viking that does not know its context falls back to the name");
+            Assert.IsTrue(VikingDeepLinkParser.VolumeTargetsMatch(null, null, "RC1", 3, "https://example.com/RC1", "RC1"));
+
+            Assert.IsTrue(VikingDeepLinkParser.TryParse("viking://open?volumeName=RC1&context=abc", out VikingDeepLink bad));
+            Assert.IsNull(bad.ContextId);
+        }
+
         [TestMethod]
         public void MergePlace_DoesNotOverwriteExistingLocation()
         {

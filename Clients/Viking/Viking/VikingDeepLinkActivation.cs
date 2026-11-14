@@ -42,8 +42,12 @@ namespace Viking
                 return VikingSingleInstance.AckNotReady;
 
             string? openName = State.IdentityVolumeName ?? State.volume?.Name;
-            if (!VikingDeepLinkParser.VolumeTargetsMatch(link.VolumeUrl, link.VolumeName, State.VolumeUrl, openName))
+            if (!VikingDeepLinkParser.VolumeTargetsMatch(link.ContextId, link.VolumeUrl, link.VolumeName,
+                    Viking.Common.AccessibleVolumeSession.AnnotationContextId, State.VolumeUrl, openName))
+            {
+                Trace.WriteLine($"[Viking] Deep-link VOLUME_MISMATCH: link context={link.ContextId} url={link.VolumeUrl} name={link.VolumeName}", "Viking");
                 return VikingSingleInstance.AckVolumeMismatch;
+            }
 
             NameValueCollection place = link.Place;
 

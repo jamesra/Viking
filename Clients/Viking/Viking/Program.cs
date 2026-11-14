@@ -238,7 +238,21 @@ namespace Viking
                         VikingSingleInstance.BeginShutdown();
                 };
                 string? volumeName = UI.State.IdentityVolumeName ?? UI.State.volume?.Name;
-                VikingSingleInstance.StartListening(UI.State.VolumeUrl!, volumeName, VikingDeepLinkActivation.HandleIncomingUrl);
+                VikingSingleInstance.StartListening(Viking.Common.AccessibleVolumeSession.AnnotationContextId,
+                    UI.State.VolumeUrl!, volumeName, VikingDeepLinkActivation.HandleIncomingUrl);
+
+                // A link clicked while this Viking was signing in or loading is newer than the one that started it.
+                string? queued = VikingSingleInstance.TakeQueuedActivation();
+                if (queued != null)
+                {
+                    UI.State.StartupArguments = [];
+                    string ack = VikingDeepLinkActivation.HandleIncomingUrl(queued);
+                    Trace.WriteLine($"[Viking] Queued deep link applied: {ack}", "Viking");
+                }
+            }
+            else
+            {
+                VikingSingleInstance.StopListening();
             }
 
             Application.Run(context);
@@ -323,6 +337,8 @@ namespace Viking
                     return true;
                 }
 
+                VikingSingleInstance.ListenWhileStarting(link);
+
                 if (string.IsNullOrEmpty(exchanged.AccessToken))
                 {
                     var detail = exchanged.Error ?? "no token returned";
@@ -342,6 +358,8 @@ namespace Viking
                 forwardedToExisting = true;
                 return true;
             }
+
+            VikingSingleInstance.ListenWhileStarting(link);
 
             if (!string.IsNullOrEmpty(link.VolumeUrl) || !string.IsNullOrEmpty(link.VolumeName))
             {

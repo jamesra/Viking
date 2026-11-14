@@ -144,6 +144,12 @@ namespace WebAnnotation.UI.AutoPolygonize
         private int reclipPosted;
 
         /// <summary>
+        /// Counts store changes (a location added, removed or replaced) and outline changes of watched locations. A fit that
+        /// ran off the UI thread compares it with its carve's value to know whether to carve again before publishing.
+        /// </summary>
+        private int outlineChangeStamp;
+
+        /// <summary>
         /// Next request ticket. Taken when a segmentation request starts, so a larger ticket always
         /// means a request the user asked for later, whatever order the answers arrive in.
         /// </summary>
@@ -1719,7 +1725,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
                 AutoPolygonizeMaskOverlay? mask = AutoPolygonizeMaskOverlay.TryCreate(session, response);
                 int verticesBefore = first.TotalUniqueVertices;
-                // Fit after carve on the UI thread so boolean densification is not what we draw or save.
+                // Fit after the carve (below) so boolean densification is not what we draw or save.
                 return (first, mask, verticesBefore);
             }).ConfigureAwait(false);
             long polygonMs = polygonTimer.ElapsedMilliseconds;
@@ -1728,25 +1734,29 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (dispatcher is null)
                 return;
 
-            await dispatcher.InvokeAsync(() =>
+            bool StillWanted() =>
+                !processToken.IsCancellationRequested &&
+                enabled &&
+                IsStillCircle(circle.ID) &&
+                cache.IsGenerationCurrent(circle.ID, generation) &&
+                parent.Section is not null &&
+                parent.Section.Number == sectionNumber;
+
+            // The carve reads the store and the open section, so it runs on the UI thread; the fit after it is pure
+            // geometry and runs on a pool thread (see FitOffUiThreadAsync).
+            Stopwatch renderPreparationTimer = Stopwatch.StartNew();
+            (Polygon? Carved, int ChangeStamp) carve = await dispatcher.InvokeAsync(() =>
             {
-                if (processToken.IsCancellationRequested ||
-                    !enabled ||
-                    !IsStillCircle(circle.ID) ||
-                    !cache.IsGenerationCurrent(circle.ID, generation) ||
-                    parent.Section is null ||
-                    parent.Section.Number != sectionNumber)
-                {
-                    return;
-                }
+                if (!StillWanted())
+                    return ((Polygon?)null, 0);
 
                 if (processed.Polygon is null)
                 {
                     RememberEmptyMask(circle, sectionNumber, session, downsample);
-                    return;
+                    return ((Polygon?)null, 0);
                 }
 
-                Stopwatch renderPreparationTimer = Stopwatch.StartNew();
+                int stamp = Volatile.Read(ref outlineChangeStamp);
                 Polygon? carved = CarveAgainstExistingPolygons(
                     processed.Polygon,
                     [circle.ID],
@@ -1754,12 +1764,26 @@ namespace WebAnnotation.UI.AutoPolygonize
                     circle.ParentID,
                     foreground);
                 if (carved is null)
+                    RememberEmptyMask(circle, sectionNumber, session, downsample);
+                return (carved, stamp);
+            }).Task.ConfigureAwait(false);
+            if (carve.Carved is null)
+                return;
+
+            Polygon fitted = await FitOffUiThreadAsync(carve.Carved, simplifyTolerance, foreground).ConfigureAwait(false);
+
+            await dispatcher.InvokeAsync(() =>
+            {
+                if (!StillWanted())
+                    return;
+
+                Polygon? ready = RecarveIfOutlinesChanged(fitted, carve.ChangeStamp, [circle.ID], circle.VolumeCenter(), circle.ParentID, foreground);
+                if (ready is null)
                 {
                     RememberEmptyMask(circle, sectionNumber, session, downsample);
                     return;
                 }
 
-                Polygon ready = AutoPolygonizeSelection.FitMinErrorCurvePolygon(carved, simplifyTolerance, foreground);
                 IReadOnlyList<Vector2> sourceKeepPoints = extraKeepPoints is { Count: > 0 }
                     ? [.. foreground, .. extraKeepPoints]
                     : foreground;
@@ -2920,6 +2944,35 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
+        /// Fits the carved ring on a pool thread. The fit is pure geometry, and run on the UI thread for every segmentation
+        /// result (and every merge, as when cached segmentations load) it held up circle editing for seconds.
+        /// Carve on the UI thread first and publish with <see cref="RecarveIfOutlinesChanged"/>.
+        /// </summary>
+        private static Task<Polygon> FitOffUiThreadAsync(Polygon carved, double simplifyTolerance, IReadOnlyList<Vector2>? foreground) =>
+            Task.Run(() => AutoPolygonizeSelection.FitMinErrorCurvePolygon(carved, simplifyTolerance, foreground));
+
+        /// <summary>
+        /// UI thread, after <see cref="FitOffUiThreadAsync"/>: if a location was added, removed or reshaped since the carve
+        /// (<paramref name="carveStamp"/>), carve the fitted ring again against the outlines as they are now, since cell
+        /// boundaries never overlap. Otherwise the fitted ring is returned as it is, exactly what fitting on the UI thread
+        /// gave. Null when nothing is left.
+        /// </summary>
+        private Polygon? RecarveIfOutlinesChanged(
+            Polygon fitted,
+            int carveStamp,
+            IReadOnlyCollection<long> excludeLocationIds,
+            Vector2 keepPoint,
+            long? excludeParentId,
+            IReadOnlyList<Vector2>? mustContain)
+        {
+            if (Volatile.Read(ref outlineChangeStamp) == carveStamp)
+                return fitted;
+
+            SegmentationDiag.Log($"Recarve after fit: outlines changed during the fit, ids=[{string.Join(",", excludeLocationIds)}]");
+            return CarveAgainstExistingPolygons(fitted, excludeLocationIds, keepPoint, excludeParentId, mustContain);
+        }
+
+        /// <summary>
         /// Listens to <paramref name="locations"/> of other cells so that a change to one of their outlines (a pen
         /// refinement, a move, a delete) re-clips the proposals, not only an accept. Cell boundaries never overlap.
         /// </summary>
@@ -2962,6 +3015,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (!enabled || sender is not LocationObj location || !AutoPolygonizeSelection.IsGeometryProperty(e.PropertyName))
                 return;
 
+            Interlocked.Increment(ref outlineChangeStamp);
             sectionsToReclip[location.Section] = 0;
             if (Interlocked.Exchange(ref reclipPosted, 1) == 0)
                 parent.BeginInvoke(new Action(ReclipProposals));
@@ -3159,20 +3213,33 @@ namespace WebAnnotation.UI.AutoPolygonize
                 if (dispatcher is null)
                     return;
 
+                Vector2 KeepPoint() => Store.Locations.GetObjectByID(locationIds[0], false)?.VolumeCenter() ?? unionKeepPoint;
+
+                // Carve on the UI thread, fit on a pool thread, publish on the UI thread (FitOffUiThreadAsync).
+                (bool Wanted, Polygon? Carved, int ChangeStamp) carve = await dispatcher.InvokeAsync(() =>
+                {
+                    if (processToken.IsCancellationRequested || !locationIds.All(IsGroupMemberValid))
+                        return (false, (Polygon?)null, 0);
+
+                    int stamp = Volatile.Read(ref outlineChangeStamp);
+                    Polygon? carved = merged is null ? null : CarveAgainstExistingPolygons(merged, locationIds, KeepPoint(), parentId, foreground);
+                    return (true, carved, stamp);
+                }).Task.ConfigureAwait(false);
+                if (!carve.Wanted)
+                    return;
+
+                Polygon? fitted = carve.Carved is null
+                    ? null
+                    : await FitOffUiThreadAsync(carve.Carved, simplifyTolerance, foreground).ConfigureAwait(false);
+
                 await dispatcher.InvokeAsync(() =>
                 {
                     if (processToken.IsCancellationRequested || !locationIds.All(IsGroupMemberValid))
                         return;
 
-                    Polygon? polygon = merged;
-                    if (polygon is not null)
-                    {
-                        LocationObj? keepLocation = Store.Locations.GetObjectByID(locationIds[0], false);
-                        Vector2 keepPoint = keepLocation?.VolumeCenter() ?? unionKeepPoint;
-                        polygon = CarveAgainstExistingPolygons(polygon, locationIds, keepPoint, parentId, foreground);
-                        if (polygon is not null)
-                            polygon = AutoPolygonizeSelection.FitMinErrorCurvePolygon(polygon, simplifyTolerance, foreground);
-                    }
+                    Polygon? polygon = fitted is null
+                        ? null
+                        : RecarveIfOutlinesChanged(fitted, carve.ChangeStamp, locationIds, KeepPoint(), parentId, foreground);
 
                     // Members keep their upload so the group does not lose the image its masks were captured from.
                     AutoPolygonizeUploadContext? groupUpload = null;
@@ -3287,6 +3354,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>Clears cache and overlay when a location is deleted or is no longer a circle.</summary>
         private void OnLocationsChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
+            Interlocked.Increment(ref outlineChangeStamp);
             if (e.Action == NotifyCollectionChangedAction.Remove && e.OldItems is not null)
             {
                 foreach (object item in e.OldItems)
