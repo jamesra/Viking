@@ -26,20 +26,9 @@ using System.Xml.Linq;
 
 namespace Viking.AU
 {
-    partial class CommandLineOptions
+    [Verb("update-positions", isDefault: true, HelpText = "Recompute the stored volume positions (the cache) of every location, optionally translating sections first. The default verb.")]
+    partial class CommandLineOptions : VolumeOptions
     {
-        [Option('v', "VolumeURL", Required = true, HelpText = "URL of VolumeXML file")]
-        public string VolumeURL { get; set; }
-
-        [Option('u', "username", Required = false, HelpText = "Username for identity server authentication")]
-        public string Username { get; set; } = "Anonymous";
-
-        [Option('p', "password", Required = false, HelpText = "Password")]
-        public string Password { get; set; } = "connectome";
-
-        [Option("identity-server-url", Required = false, HelpText = "Identity server URL (default from config or https://identity.codepharm.net:5001/)")]
-        public string IdentityServerUrl { get; set; } = null;
-
         [Option('c', "closed_interpolation_points", Required = false, HelpText = "Number of closed curve interpolation points")]
         public int NumClosedInterpolationPoints { get; set; } = 10;
 
@@ -195,16 +184,33 @@ namespace Viking.AU
         static SectionTranslations SectionTranslations = [];
 
 
-        static async Task Main(string[] args)
+        static async Task<int> Main(string[] args)
         {
-            var parse_result = CommandLine.Parser.Default.ParseArguments<CommandLineOptions>(args);
+            var parse_result = CommandLine.Parser.Default.ParseArguments<CommandLineOptions, RemapToTilesOptions, RemapFromTilesOptions>(args);
             parse_result.WithNotParsed(e => ShowErrorsAsync(parse_result, e));
-            await parse_result.WithParsedAsync(RunAsync);
 
+            int exitCode = 0;
+            await parse_result.WithParsedAsync<CommandLineOptions>(RunAsync);
+            await parse_result.WithParsedAsync<RemapToTilesOptions>(async o =>
+            {
+                await ConnectAsync(o);
+                exitCode = await MosaicRemap.RemapToTilesAsync(o, CancellationToken.None);
+            });
+            await parse_result.WithParsedAsync<RemapFromTilesOptions>(async o =>
+            {
+                await ConnectAsync(o);
+                exitCode = await MosaicRemap.RemapFromTilesAsync(o, CancellationToken.None);
+            });
+
+            return exitCode;
         }
 
-        static void ShowErrorsAsync(ParserResult<CommandLineOptions> result, IEnumerable<Error> errors)
+        static void ShowErrorsAsync(ParserResult<object> result, IEnumerable<Error> errors)
         {
+            // --help and --version are reported as errors; let the parser's own output stand.
+            if (errors.All(e => e.Tag is ErrorType.HelpRequestedError or ErrorType.HelpVerbRequestedError or ErrorType.VersionRequestedError))
+                Environment.Exit(0);
+
             // Create a new help text with error information
             HelpText errorHelpText = HelpText.AutoBuild(result);
             errorHelpText.AddPreOptionsLine("ERROR: Unable to parse command line arguments.");
@@ -232,6 +238,28 @@ namespace Viking.AU
 
             int numThreads = options.NumThreads ?? System.Environment.ProcessorCount + 1;
 
+            await ConnectAsync(options);
+
+            //Preload all structures
+            Console.WriteLine("Begin preload all structures");
+            await Store.Structures.GetAll();
+            Console.WriteLine("Finished loading all structures");
+
+            IList<long> SectionsToProcess = options.Sections.Count == 0
+                ? [.. State.Volume.Sections.Values.Select(s => (long)s.Number)]
+                : [.. options.Sections.Where(sectionNumber => State.Volume.Sections.ContainsKey((int)sectionNumber))];
+
+            await UpdateVolumePositionsAsync(SectionsToProcess, numThreads, CancellationToken.None);
+
+            System.GC.Collect();
+        }
+
+        /// <summary>
+        /// Signs in (review rights), loads the volume and its mappings, and binds the gRPC annotation stores: what every verb
+        /// needs before it reads or writes locations.
+        /// </summary>
+        static async Task ConnectAsync(VolumeOptions options)
+        {
 #if NETFRAMEWORK
             System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=16.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
 #endif
@@ -283,21 +311,6 @@ namespace Viking.AU
             WebAnnotationModel.State.Endpoint = State.Volume.Endpoint.EndpointURL;
             WebAnnotationModel.State.UserCredentials = credentials;
             await InitializeAnnotationStores(WebAnnotationModel.State.Endpoint);
-
-            //Preload all structures
-            Console.WriteLine("Begin preload all structures");
-            await Store.Structures.GetAll();
-            Console.WriteLine("Finished loading all structures");
-
-            IList<long> SectionsToProcess = options.Sections.Count == 0
-                ? [.. State.Volume.Sections.Values.Select(s => (long)s.Number)]
-                : [.. options.Sections.Where(sectionNumber => State.Volume.Sections.ContainsKey((int)sectionNumber))];
-
-            //OK.  Figure out which command we are executing.
-            await UpdateVolumePositionsAsync(SectionsToProcess, numThreads, CancellationToken.None);
-            //UpdateVolumePositions(SectionsToProcess);
-
-            System.GC.Collect();
         }
 
         /*

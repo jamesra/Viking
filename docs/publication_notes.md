@@ -610,6 +610,24 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   Later the same day WCF was retired on dev: gRPC now refuses a point without a volume shape too (its volume position is
   no longer used; the only caller, the gRPC client, always sends the shape), and the WCF service, with its fallback, lives
   in VikingLegacy.
+- **2026-11-13 Moving annotations to a rebuilt mosaic through tile coordinates** (VikingAU `remap-to-tiles` /
+  `remap-from-tiles`; `Geometry/Transforms/MosaicTileLocator.cs`, `TileRemap.cs`). When a section's mosaic is rebuilt
+  (nornir rescue-damaged-section) the tile images are unchanged and only their placement moves, so a mosaic vertex $p$
+  drawn on tile $t$ moves to $p' = T^{new}_t\big((T^{old}_t)^{-1}(p)\big)$, where $T_t$ maps tile pixels to mosaic
+  space. No tissue matching is involved. The tile is the one whose image holds $p$ and whose mapped image centre is
+  nearest, the rule nornir's Assemble composites by, so a vertex follows the tile the annotator saw. The work is split
+  in two steps with a file between them: (tile, x, y) per vertex, grouped in runs of consecutive vertices on one tile,
+  so the intermediate is auditable and step 2 needs only the new `.mosaic`. Circles go through as the five-point sample
+  (centre, E, N, W, S) and are rebuilt by the five-point mean scale (`circle-mapping-scale.mdc`); rim points on another
+  tile change the radius by that tile's displacement. Policies: a location with any vertex no old tile covers, or on a
+  tile the new mosaic drops, is left unchanged and listed for hand review (user decision, 2026-11-13); a vertex inside a
+  tile's outline that inverts off its image (warp edge) is used and counted as extrapolated; a location edited after
+  the export is skipped. The report gives shift statistics, the overlap disagreement (the distance between the two
+  new positions a vertex in a tile overlap gets through either tile; large where the old mosaic misregistered the
+  overlap) and pairs of different cells that overlap only after the move (reported, not clipped). Mirrors nornir
+  `nornir_imageregistration/mosaic_remap.py` (`MosaicPointRemapper`), which the transfer-map sample reports use.
+  Rejected: an affine per piece fitted from matching tissue (only needed when tiles themselves change); anchoring the
+  new mosaic on one tile (fixes only one rigid piece).
 
 ## Discussion points
 
