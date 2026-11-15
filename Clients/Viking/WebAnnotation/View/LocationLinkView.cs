@@ -1134,13 +1134,10 @@ namespace WebAnnotation.ViewModel
         {
             float visibility = Global.AnnotationSettings.LocationLinkVisibility;
 
-            // Labels sit on the image, so they are always outlined, in the colors the label outline preference picks.
-            LabelOutlineStyle style = LabelView.OutlineStyleAccessor();
-            (Color textColor, Color outlineColor) = LabelView.OutlineColors(Color.Black,
-                style == LabelOutlineStyle.Off ? LabelOutlineStyle.BlackTextWhiteOutline : style);
-
             foreach (LocationLinkView link in listToDraw.Where(l => l is not null))
             {
+                (Color textColor, Color outlineColor) = LabelColorsFor(link.Color);
+
                 Geometry.Vector2 screenA = scene.WorldToScreen(link.A.Center);
                 Geometry.Vector2 screenB = scene.WorldToScreen(link.B.Center);
                 Vector2 delta = new((float)(screenB.X - screenA.X), (float)(screenB.Y - screenA.Y));
@@ -1175,20 +1172,35 @@ namespace WebAnnotation.ViewModel
                     continue;
 
                 Color text = textColor * alpha;
-                Color outline = outlineColor * alpha;
 
+                // Each end's outline fades in with its own text size, as annotation labels' do
                 if (LabelHeightPerRadius * radiusA >= MinLabelPixels)
                 {
+                    Color outline = outlineColor * (alpha * LabelView.AnnotationOutlineOpacity(font.LineSpacing * scaleA));
                     DrawEndLabel(spriteBatch, font, screenA, towardB, radiusA, gapA, textA, sizeA, uprightAtA, scaleA, text, outline,
                         SectionArrowAt(link.SectionA, link.SectionB, link.Z));
                 }
 
                 if (LabelHeightPerRadius * radiusB >= MinLabelPixels)
                 {
+                    Color outline = outlineColor * (alpha * LabelView.AnnotationOutlineOpacity(font.LineSpacing * scaleB));
                     DrawEndLabel(spriteBatch, font, screenB, -towardB, radiusB, gapB, textB, sizeB, uprightAtB, scaleB, text, outline,
                         SectionArrowAt(link.SectionB, link.SectionA, link.Z));
                 }
             }
+        }
+
+        /// <summary>
+        /// The text and outline colors of a label on a link of color <paramref name="linkColor"/>: black text on a light link and
+        /// white on a dark one, outlined in the link's own hue at another brightness (a pale tint behind black text, a deep shade
+        /// behind white text, <see cref="LabelView.OutlineInHue"/>). The outline is at full strength; fade it with
+        /// <see cref="LabelView.AnnotationOutlineOpacity"/>.
+        /// </summary>
+        internal static (Color Text, Color Outline) LabelColorsFor(Color linkColor)
+        {
+            bool blackText = BorderColorFor(linkColor) == Color.Black;
+            Color text = blackText ? Color.Black : Color.White;
+            return (text, LabelView.OutlineInHue(linkColor, light: blackText, (byte)255));
         }
 
         /// <summary>

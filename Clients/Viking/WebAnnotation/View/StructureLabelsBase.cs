@@ -136,7 +136,7 @@ namespace WebAnnotation.View
             if (ParentStructureLabelView != null)
                 rows.Add(new RowTarget(LabelRowKind.Parent, ParentStructureLabelView, ParentScale));
 
-            // The rows sit on the cell's fill, so they take their colors from it (LabelView.FillLabelColors)
+            // The rows sit on the cell's fill, so they take their colors from it (LabelView.AnnotationLabelColors)
             Color fill = locationObj.Parent is null ? Color.Gray : LocationCanvasView.ColorForStructure(locationObj.Parent, 1f);
             foreach (RowTarget row in rows)
                 row.View.FillColor = fill;
