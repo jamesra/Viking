@@ -5,8 +5,8 @@ using WebAnnotation.ViewModel;
 namespace WebAnnotationTests
 {
     /// <summary>
-    /// A location link (the hourglass between two markers) gets a thin border in a color that contrasts with the link, so
-    /// it stands out from the image under it. Pins which color a link gets.
+    /// A location link (the hourglass between two markers) gets a shadow in a color that contrasts with the link, so it
+    /// stands out from the image under it, and no border. Pins which color a link gets.
     /// </summary>
     [TestClass]
     public class LocationLinkBorderTests
@@ -40,10 +40,16 @@ namespace WebAnnotationTests
         }
 
         [TestMethod]
-        public void TheBorderIsOpaqueAndThin()
+        public void TheContrastColorIsOpaque()
         {
             Assert.AreEqual(255, LocationLinkView.BorderColorFor(Color.Red).A);
-            Assert.IsTrue(LocationLinkView.BorderPixels > 0f && LocationLinkView.BorderPixels <= 3f);
+        }
+
+        /// <summary>Links are drawn without the border (the shadow keeps the contrast color); the shader still supports one.</summary>
+        [TestMethod]
+        public void LinksAreDrawnWithoutABorder()
+        {
+            Assert.AreEqual(0f, LocationLinkView.BorderPixels);
         }
     }
 }

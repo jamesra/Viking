@@ -199,8 +199,11 @@ namespace WebAnnotation.ViewModel
         /// </summary>
         internal const double MaxPickableFadeDepth = 0.75;
 
-        /// <summary>Width in screen pixels of the contrasting border drawn just inside a link's outline.</summary>
-        internal const float BorderPixels = 1.5f;
+        /// <summary>
+        /// Width in screen pixels of the contrasting border drawn just inside a link's outline: 0, no border. The pinched line
+        /// shader still draws one at any other width (<see cref="RoundLineCode.RoundLineManager.DrawPinched"/>).
+        /// </summary>
+        internal const float BorderPixels = 0f;
 
         /// <summary>
         /// Width in screen pixels of the contrasting shadow drawn outside a link's outline. It is as opaque as the link at
