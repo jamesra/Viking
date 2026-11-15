@@ -39,6 +39,25 @@ namespace Viking.Common
         Pen, PenContact,
     }
 
+    /// <summary>
+    /// Where the help window (F1) lists an entry. <see cref="Command"/> is 0, so an entry its source does not tag is the
+    /// command's; the window shows the sections in its own order (<c>HelpWindow.SectionOrder</c>).
+    /// </summary>
+    public enum HelpSection
+    {
+        /// <summary>What the active command (or the idle viewer) does. The default.</summary>
+        Command = 0,
+
+        /// <summary>What can be done with the annotation under the mouse while no other command runs.</summary>
+        MouseOver,
+
+        /// <summary>The annotation hotkeys from the user settings file; they work while no other command runs.</summary>
+        AnnotationShortcuts,
+
+        /// <summary>Keys and mouse actions that work whatever command runs: the viewer's, the annotation overlay's and every command's defaults.</summary>
+        AlwaysActive,
+    }
+
     /// <summary>What kind of picture an input is drawn as.</summary>
     public enum HelpInputKind
     {
@@ -75,6 +94,12 @@ namespace Viking.Common
 
         /// <summary>The divider between plain-text and keyed entries.</summary>
         public static HelpEntry Divider { get; } = new("") { IsDivider = true };
+
+        /// <summary>The help window section the entry is listed in; <see cref="HelpSection.Command"/> unless its source says otherwise.</summary>
+        public HelpSection Section { get; init; }
+
+        /// <summary>This entry, listed in <paramref name="section"/> of the help window.</summary>
+        public HelpEntry In(HelpSection section) => this with { Section = section };
 
         /// <summary>A plain-text entry.</summary>
         public static HelpEntry Text(string line) => new(line);

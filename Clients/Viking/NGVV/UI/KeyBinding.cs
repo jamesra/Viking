@@ -67,6 +67,10 @@ namespace Viking.UI
 
         /// <summary>True when some binding in <paramref name="table"/> would take <paramref name="keyData"/> now.</summary>
         public static bool Handles(IEnumerable<KeyBinding> table, Keys keyData) => table.Any(b => b.Matches(keyData));
+
+        /// <summary>The bindings with their help listed in <paramref name="section"/> of the help window; matching is unchanged.</summary>
+        public static KeyBinding[] InSection(this IEnumerable<KeyBinding> table, HelpSection section) =>
+            [.. table.Select(b => b with { Help = b.Help.In(section) })];
     }
 
     /// <summary>How help inputs and modifiers relate to WinForms <see cref="Keys"/>.</summary>

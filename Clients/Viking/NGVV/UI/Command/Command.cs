@@ -213,22 +213,25 @@ namespace Viking.UI.Commands
 
         protected PenEventArgs? oldPen = null;
 
-        /// <summary>The mouse actions every command inherits from the viewer: moving the view, zooming and changing sections.</summary>
+        /// <summary>
+        /// The mouse actions every command inherits from the viewer: moving the view, zooming and changing sections. Listed under
+        /// Always active in the help window.
+        /// </summary>
         public static readonly HelpEntry[] DefaultMouseHelp =
         [
-            HelpEntry.For(HelpInput.RightDrag, "Move view"),
-            HelpEntry.For(HelpInput.Wheel, "Zoom"),
-            HelpEntry.For(HelpInput.BackForwardButtons, "Change sections"),
+            HelpEntry.For(HelpInput.RightDrag, "Move view").In(HelpSection.AlwaysActive),
+            HelpEntry.For(HelpInput.Wheel, "Zoom").In(HelpSection.AlwaysActive),
+            HelpEntry.For(HelpInput.BackForwardButtons, "Change sections").In(HelpSection.AlwaysActive),
         ];
 
         private KeyBinding[]? _defaultKeyTable;
 
         /// <summary>
         /// The keys every command handles: cancel, section steps, magnification and moving the view. <see cref="OnKeyDown"/>
-        /// dispatches through <see cref="KeyTable"/>, which starts from these.
+        /// dispatches through <see cref="KeyTable"/>, which starts from these. Listed under Always active in the help window.
         /// </summary>
-        protected IReadOnlyList<KeyBinding> DefaultKeyTable => _defaultKeyTable ??=
-        [
+        protected IReadOnlyList<KeyBinding> DefaultKeyTable => _defaultKeyTable ??= new KeyBinding[]
+        {
             KeyBinding.Do(HelpEntry.For(HelpInput.Escape, "Cancel command"), _ => CancelCommand()),
             KeyBinding.Do(new HelpEntry("Step up/down a section", HelpModifiers.None, [HelpInput.Plus, HelpInput.Minus]),
                 e => StepSections(e.KeyCode, 1)),
@@ -239,7 +242,7 @@ namespace Viking.UI.Commands
             KeyBinding.Do(HelpEntry.For(HelpInput.Arrows, "Move view"), e => PanByArrowKey(e.KeyCode)),
             KeyBinding.Do(HelpEntry.For(HelpInput.Home, "Round magnification to nearest power of 2"),
                 _ => { Parent.Downsample = ViewerMagnificationSteps.NearestPowerOfTwo(Parent.Downsample); Parent.Invalidate(); }),
-        ];
+        }.InSection(HelpSection.AlwaysActive);
 
         /// <summary>
         /// The keys this command handles, first match wins. A command with keys of its own returns them before

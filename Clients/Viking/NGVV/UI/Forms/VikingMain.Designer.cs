@@ -67,7 +67,7 @@ namespace Viking
             // commandHelpWindowToolStripMenuItem
             // 
             this.commandHelpWindowToolStripMenuItem.Name = "commandHelpWindowToolStripMenuItem";
-            this.commandHelpWindowToolStripMenuItem.ShortcutKeyDisplayString = "Shift+F1";
+            this.commandHelpWindowToolStripMenuItem.ShortcutKeyDisplayString = "F1";
             this.commandHelpWindowToolStripMenuItem.Size = new System.Drawing.Size(240, 22);
             this.commandHelpWindowToolStripMenuItem.Text = "Command Help Window";
             this.commandHelpWindowToolStripMenuItem.Click += new System.EventHandler(this.commandHelpWindowToolStripMenuItem_Click);

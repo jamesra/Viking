@@ -1,6 +1,7 @@
 using Geometry;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Forms;
 using Viking.Common;
 
@@ -56,7 +57,9 @@ namespace Viking.UI.Commands
             }
             else
             {
-                s.AddRange(GetHelpFromObject(LastNearestObject));
+                // The help window lists these under Mouse over; entries the object already tagged keep their section
+                s.AddRange(GetHelpFromObject(LastNearestObject)
+                    .Select(e => e.Section == HelpSection.Command ? e.In(HelpSection.MouseOver) : e));
             }
 
             return [.. s];

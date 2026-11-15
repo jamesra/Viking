@@ -4,7 +4,7 @@ using Viking.UI.WPF;
 
 namespace VikingCoreTests
 {
-    /// <summary>The help window (Shift+F1) adds a column of help rows for each <see cref="HelpWindow.ColumnWidth"/> of width.</summary>
+    /// <summary>The help window (F1) adds a column of help rows for each <see cref="HelpWindow.ColumnWidth"/> of width.</summary>
     [TestClass]
     public class HelpWindowLayoutTests
     {
@@ -36,6 +36,30 @@ namespace VikingCoreTests
             var runs = HelpWindow.SplitIntoColumns(10, 3);
             CollectionAssert.AreEqual(new[] { (0, 4), (4, 3), (7, 3) }, runs.ToArray());
             Assert.AreEqual(10, runs.Sum(r => r.Count));
+        }
+
+        [TestMethod]
+        public void EntriesAreGroupedBySectionInSectionOrderLeavingOutEmptySections()
+        {
+            Viking.Common.HelpEntry always = Viking.Common.HelpEntry.For(Viking.Common.HelpInput.Escape, "Cancel command").In(Viking.Common.HelpSection.AlwaysActive);
+            Viking.Common.HelpEntry command = Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Place a point");
+            Viking.Common.HelpEntry shortcut = Viking.Common.HelpEntry.For(Viking.Common.HelpInput.S, "Synapse", Viking.Common.HelpModifiers.Ctrl).In(Viking.Common.HelpSection.AnnotationShortcuts);
+
+            var sections = HelpWindow.GroupIntoSections([always, command, shortcut, always]);
+            CollectionAssert.AreEqual(
+                new[] { Viking.Common.HelpSection.AnnotationShortcuts, Viking.Common.HelpSection.Command, Viking.Common.HelpSection.AlwaysActive },
+                sections.Select(s => s.Section).ToArray());
+            Assert.AreEqual(1, sections[2].Rows.Count, "a repeated entry is listed once");
+
+            Viking.Common.HelpEntry hover = Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag, "Move the annotation").In(Viking.Common.HelpSection.MouseOver);
+            CollectionAssert.AreEqual(
+                new[] { Viking.Common.HelpSection.Command, Viking.Common.HelpSection.MouseOver, Viking.Common.HelpSection.AlwaysActive },
+                HelpWindow.GroupIntoSections([always, hover, command]).Select(s => s.Section).ToArray(),
+                "mouse over sits between the command and the always-active keys");
+
+            var onlyCommand = HelpWindow.GroupIntoSections([command]);
+            Assert.AreEqual(1, onlyCommand.Count);
+            Assert.AreEqual(Viking.Common.HelpSection.Command, onlyCommand[0].Section, "untagged entries are the command's");
         }
 
         [TestMethod]

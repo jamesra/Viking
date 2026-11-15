@@ -242,7 +242,7 @@ namespace Viking
 
         private void changeLogToolStripMenuItem_Click(object sender, EventArgs e) => ChangelogStartup.Show();
 
-        /// <summary>Opens the command help window (as Shift+F1 in the viewer does); nothing happens before a viewer is open.</summary>
+        /// <summary>Opens the command help window (as F1 in the viewer does); nothing happens before a viewer is open.</summary>
         private void commandHelpWindowToolStripMenuItem_Click(object sender, EventArgs e) => Viking.UI.State.ViewerControl?.ShowHelpWindow();
 
         /// <summary>Shows the change log the first time this version starts, once the main window is up.</summary>

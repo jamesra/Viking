@@ -85,10 +85,29 @@ namespace Viking.UI.Controls
                 commandHelpText.Entries = entries;
 
             if (_helpWindow is not null)
+            {
+                _helpWindow.AlwaysActive = HelpForEveryCommand();
                 _helpWindow.Entries = entries;
+            }
         }
 
-        /// <summary>The help window (Shift+F1, Help > Command Help Window); null while it is closed.</summary>
+        /// <summary>
+        /// The help the help window lists whatever command runs: the viewer's keys and every overlay entry outside the
+        /// <see cref="HelpSection.Command"/> section (the overlay's own keys, and its annotation shortcuts while they work).
+        /// </summary>
+        private HelpEntry[] HelpForEveryCommand()
+        {
+            List<HelpEntry> help = [.. Help];
+            foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays ?? [])
+            {
+                if (overlay is IHelp overlayHelp)
+                    help.AddRange(overlayHelp.Help.Where(e => e.Section != HelpSection.Command));
+            }
+
+            return [.. help];
+        }
+
+        /// <summary>The help window (F1, Help > Command Help Window); null while it is closed.</summary>
         private Viking.UI.WPF.HelpWindow? _helpWindow;
 
         /// <summary>True while the help window is open; the help bar under the viewer is hidden meanwhile.</summary>
@@ -130,7 +149,7 @@ namespace Viking.UI.Controls
             window.Show();
         }
 
-        /// <summary>Opens the help window, or closes it when it is open (Shift+F1).</summary>
+        /// <summary>Opens the help window, or closes it when it is open (F1).</summary>
         private void ToggleHelpWindow()
         {
             if (_helpWindow is { } open)
@@ -1680,10 +1699,9 @@ namespace Viking.UI.Controls
         /// help lists it, so the two cannot disagree. Holding Ctrl alone (to reveal annotations while Space is held) is handled
         /// beside it, since it is part of Ctrl+Space rather than a key of its own.
         /// </summary>
-        public IReadOnlyList<KeyBinding> KeyTable => _keyTable ??=
-        [
-            KeyBinding.Do(HelpEntry.For(HelpInput.F1, "Expand full list of commands"), _ => ToggleHelpList()),
-            KeyBinding.Do(HelpEntry.For(HelpInput.F1, "Open or close the help window", HelpModifiers.Shift), _ => ToggleHelpWindow()),
+        public IReadOnlyList<KeyBinding> KeyTable => _keyTable ??= new KeyBinding[]
+        {
+            KeyBinding.Do(HelpEntry.For(HelpInput.F1, "Open or close the help window"), _ => ToggleHelpWindow()),
             KeyBinding.Do(HelpEntry.For(HelpInput.G, "Open goto position dialog", HelpModifiers.Ctrl), _ => ShowGoToLocationForm()),
             KeyBinding.Do(HelpEntry.For(HelpInput.C, "Copy the position under the mouse", HelpModifiers.Ctrl), _ => CopyPositionToClipboard()),
             KeyBinding.Do(HelpEntry.For(HelpInput.Space, "Hide annotations while held"), _ => { SetOverlayVisiblity(false, true); Invalidate(); }),
@@ -1693,7 +1711,7 @@ namespace Viking.UI.Controls
             KeyBinding.Do(HelpEntry.For(HelpInput.D0, "Reset quantized section brightness", HelpModifiers.Ctrl | HelpModifiers.Shift),
                 e => AdjustCrushContrast(e.KeyCode)),
             KeyBinding.Do(HelpEntry.For(HelpInput.Z, "Capture a screenshot"), _ => StartScreenCapture()),
-        ];
+        }.InSection(HelpSection.AlwaysActive);
 
         /// <summary>The viewer's own keys, listed in every command's idle help.</summary>
         public HelpEntry[] Help => [.. KeyBindings.Help(KeyTable)];
@@ -1705,22 +1723,6 @@ namespace Viking.UI.Controls
                 active.CommandActive = false;
 
             CurrentCommand = new Viking.UI.Commands.ScreenCaptureCommand(this);
-        }
-
-        private void ToggleHelpList()
-        {
-            // The help window already shows the whole list, and the bar is hidden while it is open
-            if (_helpWindow is { } open)
-            {
-                open.Activate();
-                return;
-            }
-
-            if (commandHelpText is null)
-                return;
-
-            commandHelpText.IsDropDownOpen = !commandHelpText.IsDropDownOpen;
-            timerHelpTextChange.Enabled = !commandHelpText.IsDropDownOpen;
         }
 
         private void CopyPositionToClipboard()
@@ -3485,7 +3487,8 @@ namespace Viking.UI.Controls
 
         private void timerHelpTextChange_Tick(object sender, EventArgs e)
         {
-            if (this.commandHelpText is null)
+            // The list a click on the bar drops down stays put while it is open
+            if (this.commandHelpText is null || this.commandHelpText.IsDropDownOpen)
                 return;
 
             this.commandHelpText.ShowNext();

@@ -1702,7 +1702,7 @@ break;
                 HelpModifiers modifiers = (hotkey.Shift ? HelpModifiers.Shift : HelpModifiers.None) |
                                           (hotkey.Ctrl ? HelpModifiers.Ctrl : HelpModifiers.None) |
                                           (hotkey.Alt ? HelpModifiers.Alt : HelpModifiers.None);
-                help.Add(new HelpEntry(description, modifiers, [input], Label: label));
+                help.Add(new HelpEntry(description, modifiers, [input], Label: label).In(HelpSection.AnnotationShortcuts));
             }
 
             return [.. help];
@@ -1869,8 +1869,8 @@ break;
             /// uses that copy to know which chords are reserved. Rows that return false leave the key unhandled, as the overlay
             /// always did for them, so a command that also binds the key (F5 and Enter in the paint command) still gets it.
             /// </summary>
-            internal static KeyBinding[] Create(AnnotationOverlay? overlay) =>
-            [
+            internal static KeyBinding[] Create(AnnotationOverlay? overlay) => Viking.UI.KeyBindings.InSection(new KeyBinding[]
+            {
                 KeyBinding.Do(HelpEntry.For(HelpInput.Tab, "Place a new structure with segmentation"),
                     _ => overlay?.StartNewStructureSegmentation(), anyModifiers: true),
                 Unhandled(new HelpEntry("Create new annotation linked to the last placed annotation", HelpModifiers.None, [HelpInput.F3, HelpInput.Enter]),
@@ -1894,7 +1894,7 @@ break;
                     _ => overlay is not null && overlay.UndoLastEditIfIdle()),
                 KeyBinding.Do(HelpEntry.For(HelpInput.NumStar, "Toggle Pen Mode"), _ => { if (overlay is not null) AnnotationMenu.OnPenMode(overlay, EventArgs.Empty); }, anyModifiers: true),
                 KeyBinding.Do(HelpEntry.For(HelpInput.D8, "Toggle Pen Mode", HelpModifiers.Shift), _ => { if (overlay is not null) AnnotationMenu.OnPenMode(overlay, EventArgs.Empty); }),
-            ];
+            }, HelpSection.AlwaysActive);
 
             /// <summary>A row that runs <paramref name="run"/> and leaves the key unhandled.</summary>
             private static KeyBinding Unhandled(HelpEntry help, System.Action run, bool anyModifiers = true) =>
