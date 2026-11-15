@@ -27,6 +27,8 @@ Documentation/source/Client/versionhistory.rst.
 
 * **Location links have no border.** The thin black or white line along the edge of a location link (the hourglass between two linked locations on different sections) is gone. The contrasting shadow around a link's ends stays.
 <!-- LocationLinkView.BorderPixels 1.5 -> 0 at user request; RoundLineManager.DrawPinched and the pinched line shader still draw a border at any width above 0. -->
+* **Help window.** **Shift+F1**, or **Help > Command Help Window**, opens the command help in a window of its own that you can move and resize. It shows the help of whatever you are doing and changes as each command starts. Made wide enough, it lists the help in several columns. While it is open the help bar under the viewer is hidden; close the window (or press **Shift+F1** again) to bring the bar back.
+<!-- Viking.UI.WPF.HelpWindow (rows from HelpRowConverter, HelpEntry.Arrange order, one column per HelpWindow.ColumnWidth = 420 DIP, consecutive runs). SectionViewerControl.BindCommandHelp sets its Entries with the bar's; ShowHelpBarIfWanted hides the bar and its timer while it is open; Show Command Help still sets the ShowCommandHelp setting. -->
 
 ## 1.2.145 — 2026-11-14 (Viking Test, unsigned)
 

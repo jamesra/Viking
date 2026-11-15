@@ -76,14 +76,84 @@ namespace Viking.UI.Controls
             if (command is DefaultCommand idle)
                 _idleHelp = idle;
 
-            if (commandHelpText is null)
-                return;
-
             IObservableHelp? help = command as IObservableHelp ?? _idleHelp;
             if (help is null)
                 return;
 
-            commandHelpText.Entries = help.ObservableHelp;
+            System.Collections.ObjectModel.ObservableCollection<HelpEntry> entries = help.ObservableHelp;
+            if (commandHelpText is not null)
+                commandHelpText.Entries = entries;
+
+            if (_helpWindow is not null)
+                _helpWindow.Entries = entries;
+        }
+
+        /// <summary>The help window (Shift+F1, Help > Command Help Window); null while it is closed.</summary>
+        private Viking.UI.WPF.HelpWindow? _helpWindow;
+
+        /// <summary>True while the help window is open; the help bar under the viewer is hidden meanwhile.</summary>
+        public bool IsHelpWindowOpen => _helpWindow is not null;
+
+        /// <summary>
+        /// Opens the help window, which shows the active command's help and follows each command as it starts, and hides the help
+        /// bar until the window is closed. If it is already open, brings it to the front.
+        /// </summary>
+        public void ShowHelpWindow()
+        {
+            if (_helpWindow is { } open)
+            {
+                open.Activate();
+                return;
+            }
+
+            Form? owner = this.FindForm();
+            Viking.UI.WPF.HelpWindow window = new(owner?.Handle ?? IntPtr.Zero);
+
+            // Start beside the viewer's bottom right corner, where the help bar was.
+            System.Drawing.Point corner = this.PointToScreen(new System.Drawing.Point(this.ClientSize.Width, this.ClientSize.Height));
+            double scale = DeviceDpi / 96.0;
+            window.Left = Math.Max(0, (corner.X / scale) - window.Width - 16);
+            window.Top = Math.Max(0, (corner.Y / scale) - window.Height - 16);
+
+            window.Closed += (_, _) =>
+            {
+                if (!ReferenceEquals(_helpWindow, window))
+                    return;
+
+                _helpWindow = null;
+                ShowHelpBarIfWanted();
+            };
+
+            _helpWindow = window;
+            BindCommandHelp(CurrentCommand);
+            ShowHelpBarIfWanted();
+            window.Show();
+        }
+
+        /// <summary>Opens the help window, or closes it when it is open (Shift+F1).</summary>
+        private void ToggleHelpWindow()
+        {
+            if (_helpWindow is { } open)
+                open.Close();
+            else
+                ShowHelpWindow();
+        }
+
+        /// <summary>
+        /// Shows the help bar when the user wants it (<c>ShowCommandHelp</c>, Show Command Help menu) and the help window is
+        /// closed; hides it otherwise. Its timer runs only while it is shown.
+        /// </summary>
+        private void ShowHelpBarIfWanted()
+        {
+            if (commandHelpTextScrollerHost is null)
+                return;
+
+            bool show = Viking.Properties.Settings.Default.ShowCommandHelp && _helpWindow is null;
+            if (!show && commandHelpText is not null)
+                commandHelpText.IsDropDownOpen = false;
+
+            commandHelpTextScrollerHost.Visible = show;
+            timerHelpTextChange.Enabled = show;
         }
 
         public Viking.UI.Commands.CommandQueue CommandQueue = new();
@@ -673,11 +743,11 @@ namespace Viking.UI.Controls
             {
                 TabStop = false,
                 Dock = DockStyle.Bottom,
-                Visible = Viking.Properties.Settings.Default.ShowCommandHelp,
+                Visible = Viking.Properties.Settings.Default.ShowCommandHelp && _helpWindow is null,
                 Parent = this
             };
             menuShowCommandHelp.Checked = Viking.Properties.Settings.Default.ShowCommandHelp;
-            timerHelpTextChange.Enabled = Viking.Properties.Settings.Default.ShowCommandHelp;
+            timerHelpTextChange.Enabled = commandHelpTextScrollerHost.Visible;
 
             this.Controls.Add(commandHelpTextScrollerHost);
 
@@ -1613,6 +1683,7 @@ namespace Viking.UI.Controls
         public IReadOnlyList<KeyBinding> KeyTable => _keyTable ??=
         [
             KeyBinding.Do(HelpEntry.For(HelpInput.F1, "Expand full list of commands"), _ => ToggleHelpList()),
+            KeyBinding.Do(HelpEntry.For(HelpInput.F1, "Open or close the help window", HelpModifiers.Shift), _ => ToggleHelpWindow()),
             KeyBinding.Do(HelpEntry.For(HelpInput.G, "Open goto position dialog", HelpModifiers.Ctrl), _ => ShowGoToLocationForm()),
             KeyBinding.Do(HelpEntry.For(HelpInput.C, "Copy the position under the mouse", HelpModifiers.Ctrl), _ => CopyPositionToClipboard()),
             KeyBinding.Do(HelpEntry.For(HelpInput.Space, "Hide annotations while held"), _ => { SetOverlayVisiblity(false, true); Invalidate(); }),
@@ -1638,6 +1709,13 @@ namespace Viking.UI.Controls
 
         private void ToggleHelpList()
         {
+            // The help window already shows the whole list, and the bar is hidden while it is open
+            if (_helpWindow is { } open)
+            {
+                open.Activate();
+                return;
+            }
+
             if (commandHelpText is null)
                 return;
 
@@ -3415,12 +3493,12 @@ namespace Viking.UI.Controls
 
         private void menuShowCommandHelp_Click(object sender, EventArgs e)
         {
-            this.commandHelpTextScrollerHost.Visible = !this.commandHelpTextScrollerHost.Visible;
-            menuShowCommandHelp.Checked = this.commandHelpTextScrollerHost.Visible;
-            timerHelpTextChange.Enabled = this.commandHelpTextScrollerHost.Visible;
-
-            Viking.Properties.Settings.Default.ShowCommandHelp = this.commandHelpTextScrollerHost.Visible;
+            // The setting says whether the bar is wanted; it stays hidden while the help window is open
+            bool show = !Viking.Properties.Settings.Default.ShowCommandHelp;
+            menuShowCommandHelp.Checked = show;
+            Viking.Properties.Settings.Default.ShowCommandHelp = show;
             Viking.Properties.Settings.Default.Save();
+            ShowHelpBarIfWanted();
         }
 
         #region Section Number Overlay

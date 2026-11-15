@@ -34,6 +34,7 @@ namespace Viking
             this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.versionInfoToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.changeLogToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.commandHelpWindowToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.vikingHomepageToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.CacheCleaningTimer = new System.Windows.Forms.Timer(this.components);
             this.TabsModules = new Viking.UI.BaseClasses.ModuleTabControl();
@@ -55,12 +56,21 @@ namespace Viking
             // 
             this.helpToolStripMenuItem.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
             this.helpToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.commandHelpWindowToolStripMenuItem,
             this.versionInfoToolStripMenuItem,
             this.changeLogToolStripMenuItem,
             this.vikingHomepageToolStripMenuItem});
             this.helpToolStripMenuItem.Name = "helpToolStripMenuItem";
             this.helpToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
             this.helpToolStripMenuItem.Text = "Help";
+            // 
+            // commandHelpWindowToolStripMenuItem
+            // 
+            this.commandHelpWindowToolStripMenuItem.Name = "commandHelpWindowToolStripMenuItem";
+            this.commandHelpWindowToolStripMenuItem.ShortcutKeyDisplayString = "Shift+F1";
+            this.commandHelpWindowToolStripMenuItem.Size = new System.Drawing.Size(240, 22);
+            this.commandHelpWindowToolStripMenuItem.Text = "Command Help Window";
+            this.commandHelpWindowToolStripMenuItem.Click += new System.EventHandler(this.commandHelpWindowToolStripMenuItem_Click);
             // 
             // versionInfoToolStripMenuItem
             // 
@@ -149,6 +159,7 @@ namespace Viking
         private System.Windows.Forms.ToolStripMenuItem vikingHomepageToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem versionInfoToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem changeLogToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem commandHelpWindowToolStripMenuItem;
     }
 }
 
