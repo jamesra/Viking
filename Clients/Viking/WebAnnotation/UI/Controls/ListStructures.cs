@@ -1,70 +1,52 @@
 ﻿using System;
-using System.ComponentModel;
-using System.Diagnostics;
 using Viking.Common;
-using WebAnnotation.ViewModel;
-using WebAnnotationModel;
+using WebAnnotation.StructureLocations;
 
 namespace WebAnnotation.UI.Controls
 {
-    [Viking.Common.SupportedUITypes(typeof(StructureObj))]
+    /// <summary>
+    /// The table of structures in a property tab (a structure's children, a type's structures), filled a page at a time as
+    /// the OData pages arrive (<see cref="ODataListLoad{TRow}"/>).
+    /// </summary>
+    [Viking.Common.SupportedUITypes(typeof(StructureRow))]
     public partial class ListStructures : Viking.UI.BaseClasses.DockingListControl
     {
-        private Structure[]? _structures;
-        private readonly EventHandler StructureCreateEventHandler;
-
         public ListStructures()
         {
             InitializeComponent();
-
             ListItems.ShowPropertiesOnDoubleClick = false;
-            InitializeComponent();
-
-            StructureCreateEventHandler = new EventHandler(OnLocationCreate);
-            LocationObj.Create += StructureCreateEventHandler;
         }
 
-        public void SetStructures(Structure[] structures)
+        /// <summary>Empties the table and sets its columns.</summary>
+        public void ClearStructures() => ListItems.DisplayObjects(Array.Empty<StructureRow>());
+
+        /// <summary>Adds one page of rows below the ones already listed (in the current sort order when the user sorted).</summary>
+        public void AppendStructures(StructureRow[] rows)
         {
-            _structures = structures;
-
-            ListItems.DisplayObjects(_structures);
+            ListItems.BeginUpdate();
+            try
+            {
+                foreach (StructureRow row in rows)
+                {
+                    ListItems.AddObject(row);
+                }
+            }
+            finally
+            {
+                ListItems.EndUpdate();
+            }
         }
 
+        /// <summary>Number of rows listed.</summary>
+        public int StructureCount => ListItems.Items.Count;
+
+        /// <summary>Goes to the structure's location nearest its middle (<see cref="StructureGoTo.Center"/>).</summary>
         protected override void OnObjectDoubleClick(IUIObject obj)
         {
-            Structure? s = obj as Structure;
-            Debug.Assert(s != null);
-
-            LocationObj centerLoc = s.Center;
-            if (centerLoc != null)
+            if (obj is StructureRow row)
             {
-                AnnotationOverlay.GoToLocation(centerLoc);
+                _ = StructureGoTo.GoToAsync(row.ID, placed => StructureGoTo.Center(placed, StructureGoTo.GlobalScale));
             }
-        }
-
-        public void OnLocationCreate(object sender, EventArgs e)
-        {
-            Structure? structure = sender as Structure;
-            Debug.Assert(structure != null);
-            if (structure != null)
-            {
-                if (InvokeRequired)
-                {
-                    ListItems.Invoke(new Action(() => ListItems.AddObject(structure)));
-                }
-                else
-                {
-                    ListItems.AddObject(structure);
-                }
-            }
-        }
-
-        protected override void parentForm_Closing(object sender, CancelEventArgs e)
-        {
-            LocationObj.Create -= StructureCreateEventHandler;
-
-            base.parentForm_Closing(sender, e);
         }
 
         private void ListStructures_Load(object sender, EventArgs e)

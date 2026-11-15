@@ -89,6 +89,8 @@
         <Compile Include="ConvertShapeMenuTests.cs" />
         <Compile Include="TemporarilyHiddenAnnotationsTests.cs" />
         <Compile Include="LabelOutlineTests.cs" />
+        <Compile Include="StructureLocationsODataQueryTests.cs" />
+        <Compile Include="StructureListODataQueryTests.cs" />
         <Compile Include="LabelRotationTests.cs" />
         <Compile Include="LocationLinkBorderTests.cs" />
         <Compile Include="LocationLinkVisibilityTests.cs" />

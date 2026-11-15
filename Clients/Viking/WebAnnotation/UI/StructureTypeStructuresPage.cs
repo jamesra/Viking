@@ -1,23 +1,36 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using Viking.Common;
+using WebAnnotation.StructureLocations;
 using WebAnnotation.ViewModel;
-using WebAnnotationModel;
 
 namespace WebAnnotation.UI
 {
+    /// <summary>
+    /// The Structures tab of a structure type's properties: every structure of the type as a table, read from OData a page
+    /// at a time off the UI thread (<see cref="StructureListODataQuery.OfTypeUri"/>, <see cref="ODataListLoad{TRow}"/>), so
+    /// a type with tens of thousands of structures shows its first rows quickly. The load's progress, count or failure (and
+    /// Retry) is shown above the table.
+    /// </summary>
     [PropertyPage(typeof(StructureType), 3)]
     public partial class StructureTypeStructuresPage : Viking.UI.BaseClasses.PropertyPageBase
     {
         private StructureType? Obj = null;
-        private bool listLoaded = false;
+
+        private readonly ODataListLoad<StructureRow> load;
 
         public StructureTypeStructuresPage()
         {
             InitializeComponent();
 
             Title = "Structures";
+
+            load = new ODataListLoad<StructureRow>(this, "structure", "structures",
+                root => StructureListODataQuery.OfTypeUri(root, Obj!.ID),
+                json => (StructureListODataQuery.ParsePage(json, out Uri? next), next),
+                listStructures.ClearStructures,
+                listStructures.AppendStructures,
+                () => listStructures.StructureCount);
         }
 
         protected override void OnInitPage() => base.OnInitPage();
@@ -26,35 +39,21 @@ namespace WebAnnotation.UI
         {
             Obj = Object as StructureType;
             Debug.Assert(Obj != null);
+
+            load.Reset();
+            if (Visible)
+            {
+                _ = load.LoadIfNeededAsync();
+            }
         }
 
-        /// <summary>
-        /// Wait to initialize the list until we are displayed
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
+        /// <summary>Loads the list the first time it is shown for this type.</summary>
         private void listStructures_VisibleChanged(object sender, EventArgs e)
         {
-            if (!listLoaded)
+            if (listStructures.Visible)
             {
-                UseWaitCursor = true;
-
-                ICollection<StructureObj> structureObjs = Store.Structures.GetStructuresOfType(Obj.ID);
-
-                List<Structure> structures = new(structureObjs.Count);
-
-                foreach (StructureObj s in structureObjs)
-                {
-                    structures.Add(new Structure(s));
-                }
-
-                listStructures.SetStructures([.. structures]);
-
-                listLoaded = true;
-
-                UseWaitCursor = false;
+                _ = load.LoadIfNeededAsync();
             }
-
         }
     }
 }

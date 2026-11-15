@@ -115,61 +115,6 @@ namespace WebAnnotation.ViewModel
             structObj.Attributes = listAttributes;
         }
 
-        public LocationObj Center
-        {
-            get
-            {
-                LocationObj[] locations = [.. Store.Locations.GetLocationsForStructure(ID)];
-
-                if (locations != null && locations.Length > 0)
-                {
-                    double sumX = 0;
-                    double sumY = 0;
-                    double sumZ = 0;
-                    double sumRadiusSquared = 0;
-                    foreach (LocationObj loc in locations)
-                    {
-                        double RadiusSquared = loc.Radius * loc.Radius;
-                        sumX += loc.VolumePosition.X * RadiusSquared;
-                        sumY += loc.VolumePosition.Y * RadiusSquared;
-                        sumZ += loc.Z * RadiusSquared;
-                        sumRadiusSquared += RadiusSquared;
-                    }
-
-                    sumX /= sumRadiusSquared;
-                    sumY /= sumRadiusSquared;
-                    sumZ /= sumRadiusSquared;
-
-                    double meanX = (sumX) * Global.Scale.X;
-                    double meanY = (sumY) * Global.Scale.Y;
-                    double meanZ = (sumZ) * Global.Scale.Z;
-
-                    Geometry.Vector3 MeanPosition = new(meanX, meanY, meanZ);
-
-                    //Find the location closest to the mean position
-                    double minDistance = double.MaxValue;
-                    int iClosest = 0;
-                    for (int iLoc = 0; iLoc < locations.Length; iLoc++)
-                    {
-                        Geometry.Vector3 locPosition = new(locations[iLoc].VolumePosition.X * Global.Scale.X,
-                                                                                    locations[iLoc].VolumePosition.Y * Global.Scale.Y,
-                                                                                    locations[iLoc].Z * Global.Scale.Z);
-
-                        double distance = Geometry.Vector3.Distance(MeanPosition, locPosition);
-                        if (distance < minDistance)
-                        {
-                            iClosest = iLoc;
-                            minDistance = distance;
-                        }
-                    }
-
-                    return locations[iClosest];
-                }
-
-                return null;
-            }
-        }
-
         #region IUIObject Members : IUIObject
 
         public new event PropertyChangedEventHandler ValueChanged

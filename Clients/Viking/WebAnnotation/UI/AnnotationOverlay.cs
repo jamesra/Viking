@@ -394,43 +394,18 @@ namespace WebAnnotation
 
         int Viking.Common.ISectionOverlayExtension.DrawOrder() => 10;
 
-        public static void GoToStructure(long locID)
+        /// <summary>
+        /// Go to Structure: goes to the structure's location nearest the last mouse-down point on the current section. Only
+        /// the locations' positions are downloaded, off the UI thread, then the one location it goes to
+        /// (<see cref="WebAnnotation.StructureLocations.StructureGoTo"/>); it returns at once.
+        /// </summary>
+        public static void GoToStructure(long structureID)
         {
-            StructureObj s = Store.Structures.GetObjectByID(locID);
-            if (s is null)
-            {
-                return;
-            }
-
-            GoToStructure(s);
-        }
-
-        public static void GoToStructure(StructureObj s)
-        {
-            if (s is null)
-            {
-                return;
-            }
-
-            ICollection<LocationObj> locations = Store.Locations.GetLocationsForStructure(s.ID);
-            if (!locations.Any())
-            {
-                return;
-            }
-
-            {
-                //ICanvasView lastObj = 
-                Geometry.Vector2 lastObjCenter = WebAnnotation.AnnotationOverlay.CurrentOverlay.LastMouseDownCoords;
-                Geometry.Vector3 origin = new(lastObjCenter.X * Global.Scale.X, lastObjCenter.Y * Global.Scale.Y, WebAnnotation.AnnotationOverlay.CurrentOverlay.Parent.Section.Number * Global.Scale.Z);
-
-                //Sort locations by distance
-                List<LocationObj> nearest = [.. locations.OrderBy(l => l.DistanceToPoint3D(origin))];
-
-                List<double> Distance = [.. nearest.Select(l => l.DistanceToPoint3D(origin))];
-                List<double> Depth = [.. nearest.Select(l => l.Z)];
-
-                GoToLocation(nearest.First());
-            }
+            Geometry.Vector2 lastMouseDown = CurrentOverlay.LastMouseDownCoords;
+            Geometry.Vector3 scale = WebAnnotation.StructureLocations.StructureGoTo.GlobalScale;
+            Geometry.Vector3 origin = new(lastMouseDown.X * scale.X, lastMouseDown.Y * scale.Y, CurrentOverlay.Parent.Section.Number * scale.Z);
+            _ = WebAnnotation.StructureLocations.StructureGoTo.GoToAsync(structureID,
+                placed => WebAnnotation.StructureLocations.StructureGoTo.Nearest(placed, origin, scale));
         }
 
         public static void GoToLocation(long locID)
