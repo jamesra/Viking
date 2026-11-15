@@ -2048,7 +2048,7 @@ namespace Viking.UI.Controls
             SectionViewModel visibleSection = Volume.SectionViewModels[Z];
             foreach ((ChannelInfo channel, Section section) in visibleSection.ChannelSectionsToDraw())
             {
-                MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel.ChannelName, this.CurrentTransform);
+                MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, ChannelToDraw(channel, visibleSection), this.CurrentTransform);
                 await Mapping.Initialize(token);
                 if (token.IsCancellationRequested)
                     return false;
@@ -2085,7 +2085,7 @@ namespace Viking.UI.Controls
             SectionViewModel visibleSection = Volume.SectionViewModels[sectionZ];
             foreach ((ChannelInfo channel, Section section) in visibleSection.ChannelSectionsToDraw())
             {
-                MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel.ChannelName, this.CurrentTransform);
+                MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, ChannelToDraw(channel, visibleSection), this.CurrentTransform);
                 if (Mapping is null)
                     continue;
 
@@ -2250,7 +2250,7 @@ namespace Viking.UI.Controls
             SectionViewModel visibleSection = Volume.SectionViewModels[sectionZ];
             foreach ((ChannelInfo channel, Section section) in visibleSection.ChannelSectionsToDraw())
             {
-                MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, channel.ChannelName, this.CurrentTransform);
+                MappingBase Mapping = Viking.UI.State.volume.GetTileMapping(section.Number, ChannelToDraw(channel, visibleSection), this.CurrentTransform);
                 if (Mapping is null)
                     continue;
 
@@ -2369,6 +2369,14 @@ namespace Viking.UI.Controls
             };
             return (float)CrushContrastSetting.ClampGamma(gamma);
         }
+
+        /// <summary>
+        /// The tileset or pyramid a channel set entry draws: its own, or for a "Selected" entry (ChannelInfo.FromXML stores an
+        /// empty name) the channel selected in <paramref name="viewed"/>. Tiles, crush display range and contrast are all
+        /// looked up by this name, so the composite draws the selected channel exactly as the single-channel view does.
+        /// </summary>
+        internal static string ChannelToDraw(ChannelInfo channel, SectionViewModel viewed) =>
+            string.IsNullOrEmpty(channel.ChannelName) ? viewed.ActiveChannel : channel.ChannelName;
 
         /// <summary>
         /// Draws the tiles of one section and channel into a viewport-sized render target.
@@ -2666,11 +2674,7 @@ namespace Viking.UI.Controls
                     if (sectionToDraw is null)
                         continue;
 
-                    string ChannelName = channel.ChannelName;
-                    if (ChannelName.Length == 0)
-                    {
-                        ChannelName = this.CurrentChannel;
-                    }
+                    string ChannelName = ChannelToDraw(channel, this.Section);
 
                     //Find the mapping to use
                     MappingBase mapping = this.Section.VolumeViewModel.GetTileMapping(Volume.ActiveVolumeTransform,
@@ -2707,7 +2711,8 @@ namespace Viking.UI.Controls
 
                     //                Geometry.Rectangle renderTargetBounds = scene.VisibleWorldBounds;
 
-                    var renderTarget = DrawSection(graphicsDevice, sectionToDraw, channel.ChannelName, scene);
+                    // The resolved name: a "Selected" channel must get the selected channel's crush display range and contrast
+                    var renderTarget = DrawSection(graphicsDevice, sectionToDraw, ChannelName, scene);
 
                     if (channel.Greyscale)
                     {

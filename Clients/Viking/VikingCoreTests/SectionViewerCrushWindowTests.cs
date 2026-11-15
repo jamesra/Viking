@@ -64,6 +64,26 @@ namespace VikingCoreTests
             AssertWindow(0, 1, SectionViewerControl.CrushDisplayWindowFor(section, ""));
         }
 
+        /// <summary>
+        /// A channel set's "Selected" entry (empty name) draws the selected channel, so it gets that channel's display window;
+        /// with the empty name itself the composite drew crushed TEM unscaled, about 48/255 bright (RC1_Crush section 1).
+        /// </summary>
+        [TestMethod]
+        public void ASelectedChannelSetEntryUsesTheSelectedChannelsWindow()
+        {
+            State.CrushContrast = 1.0;
+            Section section = SectionWith(("TEM.Quantized", Supported()));
+            Viking.ViewModels.SectionViewModel viewed = (Viking.ViewModels.SectionViewModel)FormatterServices.GetUninitializedObject(typeof(Viking.ViewModels.SectionViewModel));
+            viewed.ActiveChannel = "TEM.Quantized";
+
+            string selected = SectionViewerControl.ChannelToDraw(new ChannelInfo { ChannelName = "" }, viewed);
+            Assert.AreEqual("TEM.Quantized", selected);
+            AssertWindow(0.2, 0.4, SectionViewerControl.CrushDisplayWindowFor(section, selected));
+
+            Assert.AreEqual("Glycine.VikingTEM", SectionViewerControl.ChannelToDraw(new ChannelInfo { ChannelName = "Glycine.VikingTEM" }, viewed),
+                "a named channel draws itself");
+        }
+
         [TestMethod]
         public void CrushedCodesWiderThanEightBitsUseTheWholeRange()
         {
