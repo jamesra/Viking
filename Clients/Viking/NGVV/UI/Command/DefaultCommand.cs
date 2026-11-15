@@ -45,7 +45,8 @@ namespace Viking.UI.Commands
             {
                 foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
                 {
-                    s.AddRange(GetHelpFromObject(overlay));
+                    // Status bar items are listed only in the help window (SectionViewerControl.HelpForEveryCommand)
+                    s.AddRange(GetHelpFromObject(overlay).Where(e => e.Section != HelpSection.StatusBar));
                 }
             }
 

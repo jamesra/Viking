@@ -196,6 +196,20 @@ namespace WebAnnotation.UI
             return ("Seg Ready", true, false, false, false);
         }
 
+        /// <summary>
+        /// The help window's Status bar entries for the three chips; change them with <see cref="OnChipClicked"/>.
+        /// <see cref="AnnotationOverlay.Help"/> lists them.
+        /// </summary>
+        internal static readonly Viking.Common.HelpEntry[] Help =
+        [
+            Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Turn Pen Mode on or off", where: "on Pen On/Off")
+                .In(Viking.Common.HelpSection.StatusBar),
+            Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Turn idle auto-polygonize of circles in view on or off (Zoom: paused, zoomed out too far)", where: "on AutoPoly")
+                .In(Viking.Common.HelpSection.StatusBar),
+            Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Choose, change or clear the segmentation service", where: "on Seg")
+                .In(Viking.Common.HelpSection.StatusBar),
+        ];
+
         private static void OnChipClicked(object? sender, ViewerStatusChipSlot slot)
         {
             switch (slot)

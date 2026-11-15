@@ -17,7 +17,7 @@ namespace Viking.UI.WPF
     /// The command help in a window of its own (F1, or Help > Command Help Window), which the user can move and resize.
     /// The viewer sets <see cref="Entries"/> to each command's help as the command starts, and <see cref="AlwaysActive"/> to
     /// the keys that work whatever command runs. Entries are grouped by <see cref="HelpEntry.Section"/> into collapsible
-    /// sections (annotation shortcuts, the current command, always active; empty ones are left out). Within a section rows
+    /// sections (annotation shortcuts, the current command, mouse over, always active, status bar; empty ones are left out). Within a section rows
     /// are drawn as on the help bar (<see cref="HelpRowConverter"/>), arranged by <see cref="HelpEntry.Arrange"/>, and flow
     /// down as many columns as fit the window's width (<see cref="ColumnCount"/>).
     /// </summary>
@@ -89,6 +89,7 @@ namespace Viking.UI.WPF
             HelpSection.Command,
             HelpSection.MouseOver,
             HelpSection.AlwaysActive,
+            HelpSection.StatusBar,
         ];
 
         /// <summary>The heading of a section.</summary>
@@ -98,6 +99,7 @@ namespace Viking.UI.WPF
             HelpSection.Command => "Active command",
             HelpSection.MouseOver => "Mouse over",
             HelpSection.AlwaysActive => "Always active",
+            HelpSection.StatusBar => "Status bar",
             _ => section.ToString(),
         };
 

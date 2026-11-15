@@ -93,11 +93,12 @@ namespace Viking.UI.Controls
 
         /// <summary>
         /// The help the help window lists whatever command runs: the viewer's keys and every overlay entry outside the
-        /// <see cref="HelpSection.Command"/> section (the overlay's own keys, and its annotation shortcuts while they work).
+        /// <see cref="HelpSection.Command"/> section (the overlay's own keys, its annotation shortcuts while they work, and its
+        /// status bar items), plus the viewer's own status bar items (<see cref="StatusBarHelp"/>).
         /// </summary>
         private HelpEntry[] HelpForEveryCommand()
         {
-            List<HelpEntry> help = [.. Help];
+            List<HelpEntry> help = [.. Help, .. StatusBarHelp];
             foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays ?? [])
             {
                 if (overlay is IHelp overlayHelp)
@@ -250,6 +251,22 @@ namespace Viking.UI.Controls
         protected System.Windows.Forms.ToolStripItem tsSection;
         protected System.Windows.Forms.ToolStripItem tsMagnification;
         protected System.Windows.Forms.ToolStripItem tsChannels;
+
+        /// <summary>
+        /// The help window's Status bar section for the viewer's own items, left to right. Change it with the items
+        /// (constructor, <see cref="StatusChannels"/>) and the Corrections click (<c>OnCorrectionStatusClicked</c>).
+        /// Overlays add their status items' help (the Pen, AutoPoly and Seg chips) in their own <see cref="IHelp"/>.
+        /// </summary>
+        private static readonly HelpEntry[] StatusBarHelp =
+        [
+            HelpEntry.Text("Section: the section shown").In(HelpSection.StatusBar),
+            HelpEntry.Text("X, Y: the volume position under the mouse").In(HelpSection.StatusBar),
+            HelpEntry.Text("Magnification: the downsample; larger is zoomed further out").In(HelpSection.StatusBar),
+            HelpEntry.Text("Channels: the channels drawn, each in its colour").In(HelpSection.StatusBar),
+            HelpEntry.Text("Hover an item to read its tooltip").In(HelpSection.StatusBar),
+            HelpEntry.For(HelpInput.LeftClick, "Turn section corrections on or off; while the service is in error, show the error", where: "on Corrections").In(HelpSection.StatusBar),
+            HelpEntry.For(HelpInput.LeftClick, "Cancel the running job", where: "on Cancel").In(HelpSection.StatusBar),
+        ];
 
         private Geometry.Vector2 _StatusPosition;
 

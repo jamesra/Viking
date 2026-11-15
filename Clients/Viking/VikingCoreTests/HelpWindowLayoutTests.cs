@@ -63,6 +63,23 @@ namespace VikingCoreTests
         }
 
         [TestMethod]
+        public void TheStatusBarSectionComesLast()
+        {
+            Viking.Common.HelpEntry status = Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Turn Pen Mode on or off", where: "on Pen On/Off").In(Viking.Common.HelpSection.StatusBar);
+            Viking.Common.HelpEntry always = Viking.Common.HelpEntry.For(Viking.Common.HelpInput.Escape, "Cancel command").In(Viking.Common.HelpSection.AlwaysActive);
+
+            var sections = HelpWindow.GroupIntoSections([status, always]);
+            CollectionAssert.AreEqual(
+                new[] { Viking.Common.HelpSection.AlwaysActive, Viking.Common.HelpSection.StatusBar },
+                sections.Select(s => s.Section).ToArray());
+            Assert.AreEqual("Status bar", HelpWindow.TitleOf(Viking.Common.HelpSection.StatusBar));
+            CollectionAssert.AreEquivalent(
+                System.Enum.GetValues(typeof(Viking.Common.HelpSection)),
+                HelpWindow.SectionOrder,
+                "every section is shown somewhere");
+        }
+
+        [TestMethod]
         public void OneColumnHoldsEveryRow()
         {
             CollectionAssert.AreEqual(new[] { (0, 7) }, HelpWindow.SplitIntoColumns(7, 1).ToArray());

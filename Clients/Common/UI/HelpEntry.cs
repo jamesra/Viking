@@ -56,6 +56,9 @@ namespace Viking.Common
 
         /// <summary>Keys and mouse actions that work whatever command runs: the viewer's, the annotation overlay's and every command's defaults.</summary>
         AlwaysActive,
+
+        /// <summary>What the items on the viewer's status bar show and what clicking them does. Listed only in the help window.</summary>
+        StatusBar,
     }
 
     /// <summary>What kind of picture an input is drawn as.</summary>

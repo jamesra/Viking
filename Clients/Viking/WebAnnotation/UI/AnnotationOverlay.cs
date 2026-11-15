@@ -524,7 +524,7 @@ namespace WebAnnotation
 
         /// <summary>
         /// The user settings hotkeys (while no other command runs), the overlay's own keys (<see cref="KeyTable"/>), the
-        /// auto-polygonize gestures and the auto-polygonize checkbox note.
+        /// auto-polygonize gestures, the auto-polygonize checkbox note and the status bar chips (help window only).
         /// </summary>
         public HelpEntry[] Help
         {
@@ -545,6 +545,7 @@ namespace WebAnnotation
                 }
 
                 help.Add(HelpEntry.Text("Checkbox \"Auto polygonize circles in view\" turns idle segmentation off"));
+                help.AddRange(AnnotationStatusChips.Help);
 
                 return [.. help];
             }
