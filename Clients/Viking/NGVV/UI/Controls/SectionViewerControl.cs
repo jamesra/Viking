@@ -68,19 +68,25 @@ namespace Viking.UI.Controls
         }
 
         /// <summary>
-        /// Points the F1 bar at the active command when that command publishes help.
-        /// Otherwise restores the idle catalog captured from <see cref="DefaultCommand"/>.
+        /// Points the help bar and the help window at the active command's help. A command that publishes none shows only its
+        /// keys, never the idle catalog: that catalog stops updating once another command starts, so it would keep showing the
+        /// annotation that was under the mouse (with its pen and drag gestures) while, say, a circle is being resized. With no
+        /// command the idle catalog captured from <see cref="DefaultCommand"/> is shown.
         /// </summary>
         private void BindCommandHelp(Viking.UI.Commands.Command? command)
         {
             if (command is DefaultCommand idle)
                 _idleHelp = idle;
 
-            IObservableHelp? help = command as IObservableHelp ?? _idleHelp;
-            if (help is null)
+            System.Collections.ObjectModel.ObservableCollection<HelpEntry>? entries = command switch
+            {
+                IObservableHelp observable => observable.ObservableHelp,
+                null => _idleHelp?.ObservableHelp,
+                _ => new(command.KeyHelp),
+            };
+            if (entries is null)
                 return;
 
-            System.Collections.ObjectModel.ObservableCollection<HelpEntry> entries = help.ObservableHelp;
             if (commandHelpText is not null)
                 commandHelpText.Entries = entries;
 
@@ -253,17 +259,13 @@ namespace Viking.UI.Controls
         protected System.Windows.Forms.ToolStripItem tsChannels;
 
         /// <summary>
-        /// The help window's Status bar section for the viewer's own items, left to right. Change it with the items
-        /// (constructor, <see cref="StatusChannels"/>) and the Corrections click (<c>OnCorrectionStatusClicked</c>).
+        /// The help window's Status bar section for the viewer's own items that toggle or change state (those right of the
+        /// channels); the section, position, magnification and channel readouts need no help. Change it with the
+        /// Corrections click (<c>OnCorrectionStatusClicked</c>) and the job Cancel button (<c>OnViewerTaskCancel</c>).
         /// Overlays add their status items' help (the Pen, AutoPoly and Seg chips) in their own <see cref="IHelp"/>.
         /// </summary>
         private static readonly HelpEntry[] StatusBarHelp =
         [
-            HelpEntry.Text("Section: the section shown").In(HelpSection.StatusBar),
-            HelpEntry.Text("X, Y: the volume position under the mouse").In(HelpSection.StatusBar),
-            HelpEntry.Text("Magnification: the downsample; larger is zoomed further out").In(HelpSection.StatusBar),
-            HelpEntry.Text("Channels: the channels drawn, each in its colour").In(HelpSection.StatusBar),
-            HelpEntry.Text("Hover an item to read its tooltip").In(HelpSection.StatusBar),
             HelpEntry.For(HelpInput.LeftClick, "Turn section corrections on or off; while the service is in error, show the error", where: "on Corrections").In(HelpSection.StatusBar),
             HelpEntry.For(HelpInput.LeftClick, "Cancel the running job", where: "on Cancel").In(HelpSection.StatusBar),
         ];

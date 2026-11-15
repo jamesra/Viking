@@ -1,12 +1,25 @@
 using Geometry;
+using System.Collections.ObjectModel;
+using Viking.Common;
 using System.Windows.Forms;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-    internal class ResizeCircleCommand : Viking.UI.Commands.Command
+    internal class ResizeCircleCommand : Viking.UI.Commands.Command, IHelp, IObservableHelp
     {
+        /// <summary>The mouse handling below (<see cref="OnMouseMove"/>, <see cref="OnMouseUp"/>); change them together.</summary>
+        private static readonly HelpEntry[] MouseHelp =
+        [
+            HelpEntry.Text("Move the mouse to set the circle's radius"),
+            HelpEntry.For(HelpInput.LeftClick, "Release to set the radius"),
+        ];
+
+        public HelpEntry[] Help => [.. MouseHelp, .. KeyHelp];
+
+        public ObservableCollection<HelpEntry> ObservableHelp => new(Help);
+
         public double Radius;
 
         public Geometry.Vector2 Origin;

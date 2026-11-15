@@ -79,6 +79,23 @@ namespace VikingCoreTests
                 "every section is shown somewhere");
         }
 
+        /// <summary>Plain-text lines span the window above the columns, so only keyed rows are split and the divider never sits in a column.</summary>
+        [TestMethod]
+        public void TextLinesAndTheDividerStayOutOfTheColumns()
+        {
+            Viking.Common.HelpEntry note = Viking.Common.HelpEntry.Text("Move the mouse to set the circle's radius");
+            Viking.Common.HelpEntry click = Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Release to set the radius");
+            Viking.Common.HelpEntry escape = Viking.Common.HelpEntry.For(Viking.Common.HelpInput.Escape, "Cancel command");
+
+            var rows = Viking.Common.HelpEntry.Arrange([escape, note, click]);
+            Assert.IsTrue(rows.Any(r => r.IsDivider), "Arrange separates text from keyed entries");
+
+            var (text, keyed) = HelpWindow.SplitAtDivider(rows);
+            CollectionAssert.AreEqual(new[] { note }, text.ToArray());
+            Assert.AreEqual(2, keyed.Count);
+            Assert.IsFalse(keyed.Any(r => r.IsDivider || !r.IsKeyed));
+        }
+
         [TestMethod]
         public void OneColumnHoldsEveryRow()
         {
