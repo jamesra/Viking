@@ -1,0 +1,32 @@
+﻿<UserControl x:Class="Viking.UI.WPF.HelpBar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:Viking.UI.WPF"
+             mc:Ignorable="d"
+             d:DesignHeight="50" d:DesignWidth="300"
+             IsTabStop="False"
+             Focusable="False"
+             Margin="0" Padding="0">
+    <UserControl.Resources>
+        <local:HelpRowConverter x:Key="HelpRow" />
+    </UserControl.Resources>
+    <ComboBox Name="comboHelp" IsEditable="False" FontSize="16" IsTabStop="False" Focusable="False">
+        <ComboBox.ItemTemplate>
+            <DataTemplate>
+                <ContentControl Focusable="False" Content="{Binding Converter={StaticResource HelpRow}}" />
+            </DataTemplate>
+        </ComboBox.ItemTemplate>
+        <ComboBox.ItemContainerStyle>
+            <Style TargetType="ComboBoxItem">
+                <Style.Triggers>
+                    <!-- The divider between plain-text and keyed lines cannot be picked. -->
+                    <DataTrigger Binding="{Binding IsDivider}" Value="True">
+                        <Setter Property="IsEnabled" Value="False" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </ComboBox.ItemContainerStyle>
+    </ComboBox>
+</UserControl>

@@ -261,7 +261,6 @@ namespace Viking.UI.Controls
             // 
             // SectionViewerControl
             // 
-            this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.SectionViewerControl_KeyDown);
             this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.SectionViewerControl_MouseDown);
             this.menuStrip.ResumeLayout(false);
             this.menuStrip.PerformLayout();

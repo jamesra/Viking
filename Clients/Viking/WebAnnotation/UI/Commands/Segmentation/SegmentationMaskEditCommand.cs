@@ -3,9 +3,12 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Forms;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Viking.Common;
+using Viking.UI;
 using Viking.UI.Commands;
 using Viking.UI.Controls;
 using VikingXNAGraphics;
@@ -28,7 +31,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// (<see cref="SegmentationMaskEdit"/>), so a tick re-thresholds the bitmap and re-uploads one texture; there is no
     /// polygon rebuild. All members are used on the UI thread.
     /// </remarks>
-    internal sealed class SegmentationMaskEditCommand : Command, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal sealed class SegmentationMaskEditCommand : Command, IHelp, IObservableHelp
     {
         private const double DefaultStepNanometers = 20;
 
@@ -94,21 +97,36 @@ namespace WebAnnotation.UI.Commands.Segmentation
         private RasterMask Placed() => input.Translated(offsetColumns, offsetRows);
 
         #region Help Strings
-        /// <summary>Help lines shown while the command is active.</summary>
-        public string[] HelpStrings =>
+        /// <summary>The wheel, drag and double-click gestures; the keys come from <see cref="KeyTable"/>.</summary>
+        public static readonly HelpEntry[] MouseHelp =
         [
-            "Scroll wheel: Grow (up) or shrink (down) the mask",
-            "Shift + scroll wheel: Fine steps",
-            "Hold Left click + Drag: Move the mask",
-            "Double-click the mask: Accept the mask",
-            "Ctrl + scroll wheel: Zoom",
-            "Enter or the green check: Accept the mask",
-            "Escape or the red X: Cancel",
-            "Hold Right click + Drag: Move view",
+            HelpEntry.For(HelpInput.Wheel, "Grow (up) or shrink (down) the mask"),
+            HelpEntry.For(HelpInput.Wheel, "Fine steps", HelpModifiers.Shift),
+            HelpEntry.For(HelpInput.LeftDrag, "Move the mask"),
+            HelpEntry.For(HelpInput.LeftDoubleClick, "Accept the mask", where: "on the mask"),
+            HelpEntry.For(HelpInput.Wheel, "Zoom", HelpModifiers.Ctrl),
+            HelpEntry.For(HelpInput.RightDrag, "Move view"),
         ];
 
+        /// <summary>Help shown while the command is active.</summary>
+        public HelpEntry[] Help => [.. MouseHelp, .. KeyHelp];
+
         /// <inheritdoc />
-        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
+        public ObservableCollection<HelpEntry> ObservableHelp => new(Help);
+
+        private KeyBinding[]? _maskEditKeyTable;
+
+        /// <summary>
+        /// Enter accepts (as the green check does) and Escape cancels (as the red X does), then the default keys without their
+        /// Escape row so the help lists Escape once. Enter with Shift accepts as before; with Ctrl or Alt it does not.
+        /// </summary>
+        protected override IReadOnlyList<KeyBinding> KeyTable => _maskEditKeyTable ??=
+        [
+            new KeyBinding(HelpEntry.For(HelpInput.Enter, "Accept the mask (or the green check)"),
+                e => { if (e.Control || e.Alt) return false; Accept(); return true; }, AnyModifiers: true),
+            KeyBinding.Do(HelpEntry.For(HelpInput.Escape, "Cancel (or the red X)"), _ => CancelCommand()),
+            .. DefaultKeyTable.Where(b => !(b.Help.Inputs is { Length: 1 } inputs && inputs[0] == HelpInput.Escape)),
+        ];
         #endregion
 
         /// <inheritdoc />
@@ -236,19 +254,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             }
 
             base.OnMouseDoubleClick(sender, e);
-        }
-
-        /// <inheritdoc />
-        protected override void OnKeyPress(object sender, KeyPressEventArgs e)
-        {
-            if (e.KeyChar == '\r')
-            {
-                Accept();
-                e.Handled = true;
-                return;
-            }
-
-            base.OnKeyPress(sender, e);
         }
 
         /// <summary>Clamps <paramref name="radius"/>, re-thresholds the bitmap and marks the texture for upload.</summary>

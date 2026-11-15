@@ -337,11 +337,11 @@ namespace WebAnnotation.View
             }
         }
 
-        public override string[] HelpStrings => [
-                    "Hold left click + SHIFT on control point: Move all control points",
-                    "Hold left click off control point: Create/Link annotation",
-                    "Left click + CTRL on control point: Remove control point",
-                    "Left click + CTRL off control point: Add a control point",
+        public override Viking.Common.HelpEntry[] Help => [
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag, "Move all control points", Viking.Common.HelpModifiers.Shift, "on control point"),
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag, "Create/Link annotation", where: "off control point"),
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Remove control point", Viking.Common.HelpModifiers.Ctrl, "on control point"),
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Add a control point", Viking.Common.HelpModifiers.Ctrl, "off control point"),
                 ];
 
         public abstract double LineWidth { get; }

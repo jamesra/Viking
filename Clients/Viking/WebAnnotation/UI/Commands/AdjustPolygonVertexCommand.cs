@@ -19,7 +19,7 @@ namespace WebAnnotation.UI.Commands
     /// Drags a vertex of the polygon the forward owner draws (<c>LocationVolumeGeometry.ControlPolygon</c>) and saves the
     /// result mapped back to mosaic by the inverse owner.
     /// </summary>
-    internal class AdjustPolygonVertexCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal class AdjustPolygonVertexCommand : AnnotationCommandBase, Viking.Common.IHelp, Viking.Common.IObservableHelp
     {
         private readonly Polygon OriginalVolumePolygon;
 
@@ -42,9 +42,9 @@ namespace WebAnnotation.UI.Commands
         private readonly OnCommandSuccess success_callback;
         private readonly Viking.VolumeModel.IVolumeToSectionTransform mapping;
 
-        public string[] HelpStrings => ["Release Left Mouse Button to place control point"];
+        public Viking.Common.HelpEntry[] Help => [Viking.Common.HelpEntry.Text("Release Left Mouse Button to place control point"), .. KeyHelp];
 
-        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
+        public ObservableCollection<Viking.Common.HelpEntry> ObservableHelp => new(Help);
 
         /// <param name="volume_polygon">The location's control polygon in volume space, from the forward owner.</param>
         public AdjustPolygonVertexCommand(Viking.UI.Controls.SectionViewerControl parent,

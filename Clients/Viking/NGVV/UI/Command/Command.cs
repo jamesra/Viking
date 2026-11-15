@@ -213,48 +213,42 @@ namespace Viking.UI.Commands
 
         protected PenEventArgs? oldPen = null;
 
-        /*
-        public static readonly DependencyProperty HelpStringsProperty;
+        /// <summary>The mouse actions every command inherits from the viewer: moving the view, zooming and changing sections.</summary>
+        public static readonly HelpEntry[] DefaultMouseHelp =
+        [
+            HelpEntry.For(HelpInput.RightDrag, "Move view"),
+            HelpEntry.For(HelpInput.Wheel, "Zoom"),
+            HelpEntry.For(HelpInput.BackForwardButtons, "Change sections"),
+        ];
 
-        public string[] HelpStrings
-        {
-            get { return (string[])GetValue(Command.HelpStringsProperty); }
-            set { SetValue(Command.HelpStringsProperty, value); }
-        }
+        private KeyBinding[]? _defaultKeyTable;
 
-        static Command()
-        {
-            Command.HelpStringsProperty = DependencyProperty.Register("HelpStringsProperty",
-                typeof(string[]),
-                typeof(Command),
-                new FrameworkPropertyMetadata(Command.AllDefaultHelpStrings));
-        }
-        */
+        /// <summary>
+        /// The keys every command handles: cancel, section steps, magnification and moving the view. <see cref="OnKeyDown"/>
+        /// dispatches through <see cref="KeyTable"/>, which starts from these.
+        /// </summary>
+        protected IReadOnlyList<KeyBinding> DefaultKeyTable => _defaultKeyTable ??=
+        [
+            KeyBinding.Do(HelpEntry.For(HelpInput.Escape, "Cancel command"), _ => CancelCommand()),
+            KeyBinding.Do(new HelpEntry("Step up/down a section", HelpModifiers.None, [HelpInput.Plus, HelpInput.Minus]),
+                e => StepSections(e.KeyCode, 1)),
+            KeyBinding.Do(new HelpEntry("Step up/down ten sections", HelpModifiers.Shift, [HelpInput.Plus, HelpInput.Minus]),
+                e => StepSections(e.KeyCode, 10)),
+            KeyBinding.Do(new HelpEntry("Change magnification", HelpModifiers.None, [HelpInput.PageUp, HelpInput.PageDown]),
+                e => { StepCameraDistance(HelpInputKeys.Matches(HelpInput.PageUp, e.KeyCode) ? 1 : -1); Parent.Invalidate(); }),
+            KeyBinding.Do(HelpEntry.For(HelpInput.Arrows, "Move view"), e => PanByArrowKey(e.KeyCode)),
+            KeyBinding.Do(HelpEntry.For(HelpInput.Home, "Round magnification to nearest power of 2"),
+                _ => { Parent.Downsample = ViewerMagnificationSteps.NearestPowerOfTwo(Parent.Downsample); Parent.Invalidate(); }),
+        ];
 
-        public static string[] DefaultMouseHelpStrings = [
-            "Hold Right click + Drag: Move view",
-            "Scroll wheel: Zoom",
-            "Forward/Backward button click: Change sections",
-            ];
+        /// <summary>
+        /// The keys this command handles, first match wins. A command with keys of its own returns them before
+        /// <see cref="DefaultKeyTable"/> (or instead of entries it replaces). Its help lists <see cref="KeyHelp"/>.
+        /// </summary>
+        protected virtual IReadOnlyList<KeyBinding> KeyTable => DefaultKeyTable;
 
-        public static string[] DefaultKeyHelpStrings = [
-            "Escape Key: Cancel command",
-            "+/- key: Step up/down a section",
-            "Shift +/- key: Step up/down ten sections",
-            "Page up/down key: Change Magnification",
-            "Arrow key: Move view",
-            "Home key: Round magnification to nearest power of 2"
-            ];
-
-        public static string[] AllDefaultHelpStrings
-        {
-            get
-            {
-                List<string> s = [.. DefaultMouseHelpStrings];
-                s.AddRange(DefaultKeyHelpStrings);
-                return [.. s];
-            }
-        }
+        /// <summary>The help entries of <see cref="KeyTable"/>.</summary>
+        public IEnumerable<HelpEntry> KeyHelp => KeyBindings.Help(KeyTable);
 
         /// <summary>
         /// If the base Command class' OnMouseMove is called this variable contains the mouse position at the last mouse move
@@ -705,49 +699,14 @@ namespace Viking.UI.Commands
         }
 
         #region Key Event Handlers
+        /// <summary>
+        /// Characters typed that no key binding took (bindings suppress the key press of a key they handle) go on to
+        /// <see cref="OnUnhandledKeyPress"/>. Z starts a screen capture in the viewer (<c>SectionViewerControl.KeyTable</c>),
+        /// which ends this command.
+        /// </summary>
         protected virtual void OnKeyPress(object sender, KeyPressEventArgs e)
         {
-
-            //Escape cancels the current command and sets the selected item to null
-            if (e.KeyChar == (char)Keys.Escape)
-            {
-                CancelCommand();
-            }
-            else if (e.KeyChar == '=' || e.KeyChar == '+')
-            {
-                if (((int)Control.ModifierKeys & (int)Keys.Shift) > 0)
-                {
-                    Parent.StepUpNSections(10);
-                }
-                else
-                {
-                    Parent.StepUpNSections(1);
-                }
-            }
-            else if (e.KeyChar == '-' || e.KeyChar == '_')
-            {
-                if (((int)Control.ModifierKeys & (int)Keys.Shift) > 0)
-                {
-                    Parent.StepDownNSections(10);
-                }
-                else
-                {
-                    Parent.StepDownNSections(1);
-                }
-            }
-            else if (e.KeyChar == (char)Keys.PrintScreen ||
-                     e.KeyChar == 'z')
-            {
-
-                this.CommandActive = false;
-
-                //     Parent.TakeScreenShot(); 
-            }
-            else
-            {
-                Command.OnUnhandledKeyPress?.Invoke(sender, e);
-            }
-
+            Command.OnUnhandledKeyPress?.Invoke(sender, e);
             Parent.Invalidate();
         }
 
@@ -756,19 +715,28 @@ namespace Viking.UI.Commands
             return;
         }
 
+        /// <summary>Runs the binding in <see cref="KeyTable"/> for the key, if any.</summary>
         protected virtual void OnKeyDown(object sender, KeyEventArgs e)
         {
+            if (!e.Handled)
+                KeyBindings.TryDispatch(KeyTable, e);
+        }
 
-            switch (e.KeyCode)
+        private void StepSections(Keys keyCode, int count)
+        {
+            if (keyCode is Keys.Oemplus or Keys.Add)
+                Parent.StepUpNSections(count);
+            else
+                Parent.StepDownNSections(count);
+
+            Parent.Invalidate();
+        }
+
+        /// <summary>Moves the view a quarter of the screen in the arrow's direction.</summary>
+        private void PanByArrowKey(Keys keyCode)
+        {
+            switch (keyCode)
             {
-                case Keys.PageUp:
-                    StepCameraDistance(1);
-                    this.Parent.Invalidate();
-                    break;
-                case Keys.PageDown:
-                    StepCameraDistance(-1);
-                    this.Parent.Invalidate();
-                    break;
                 case Keys.Left:
                     Geometry.Vector2 Left = Parent.ScreenToWorld(Parent.ClientRectangle.Left, Parent.ClientRectangle.Top);
                     Geometry.Vector2 Right = Parent.ScreenToWorld(Parent.ClientRectangle.Right, Parent.ClientRectangle.Top);
@@ -803,10 +771,6 @@ namespace Viking.UI.Commands
                     Diff *= 0.25;
 
                     Parent.Camera.LookAt -= new Vector2((float)Diff.X, (float)Diff.Y);
-                    this.Parent.Invalidate();
-                    break;
-                case Keys.Home:
-                    Parent.Downsample = ViewerMagnificationSteps.NearestPowerOfTwo(Parent.Downsample);
                     this.Parent.Invalidate();
                     break;
             }

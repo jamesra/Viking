@@ -17,7 +17,7 @@ namespace WebAnnotation.UI.Commands
     /// Created after a location for a new structure has been determined, but we
     /// have to choose a parent for the new structure. 
     /// </summary>
-    internal class LinkStructureToParentCommand : AnnotationCommandBase, Viking.Common.IObservableHelpStrings, Viking.Common.IHelpStrings
+    internal class LinkStructureToParentCommand : AnnotationCommandBase, Viking.Common.IObservableHelp, Viking.Common.IHelp
     {
         /// <summary>
         /// New Locations position in world space
@@ -33,10 +33,12 @@ namespace WebAnnotation.UI.Commands
         private Microsoft.Xna.Framework.Color linecolor;
         private CurveLabel? labelView = null;
 
-        public string[] HelpStrings => [ "Left Mouse Button Release over parent structure annotation: Set annotation's parent structure",
-                                      "Escape: Cancel command"];
+        public Viking.Common.HelpEntry[] Help => [
+            Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag, "Set annotation's parent structure", where: "release over parent structure annotation"),
+            Viking.Common.HelpEntry.For(Viking.Common.HelpInput.PenContact, "Set annotation's parent structure", where: "on parent structure annotation"),
+            .. KeyHelp];
 
-        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
+        public ObservableCollection<Viking.Common.HelpEntry> ObservableHelp => new(Help);
 
         public LinkStructureToParentCommand(Viking.UI.Controls.SectionViewerControl parent,
                                                StructureObj structure,

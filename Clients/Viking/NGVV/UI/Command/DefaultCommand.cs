@@ -11,64 +11,58 @@ namespace Viking.UI.Commands
     /// The default command allows scrolling around the view and selecting existing items
     /// </summary>
     [Viking.Common.CommandAttribute()]
-    public class DefaultCommand : Command, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    public class DefaultCommand : Command, Viking.Common.IHelp, Viking.Common.IObservableHelp
     {
         public DefaultCommand(Viking.UI.Controls.SectionViewerControl parent)
             : base(parent)
         {
-            _ObservableHelpStrings = new ObservableCollection<string>(this.HelpStrings);
+            _ObservableHelp = new ObservableCollection<HelpEntry>(this.Help);
         }
 
-        public virtual string[] HelpStrings => BuildHelpStrings();
+        public virtual HelpEntry[] Help => BuildHelp();
 
-        private readonly ObservableCollection<string> _ObservableHelpStrings;
+        private readonly ObservableCollection<HelpEntry> _ObservableHelp;
 
-        public virtual ObservableCollection<string> ObservableHelpStrings => _ObservableHelpStrings;
+        public virtual ObservableCollection<HelpEntry> ObservableHelp => _ObservableHelp;
 
         private object? LastNearestObject = null;
 
         /// <summary>
-        /// Idle F1 catalog. Order is viewer keys, then overlay keys, then either the annotation
-        /// under the cursor or the idle command lines. Lines are not sorted, so a sequence of steps stays in order.
+        /// Idle F1 catalog: the viewer's keys, the overlays' keys, then either the annotation under the cursor or the idle
+        /// command's keys and mouse actions. The help bar arranges it (plain-text lines in this order, then keys sorted).
         /// </summary>
-        private string[] BuildHelpStrings()
+        private HelpEntry[] BuildHelp()
         {
-            List<string> s = [];
+            List<HelpEntry> s = [];
 
-            if (Parent is IHelpStrings parentHelp)
+            if (Parent is IHelp parentHelp)
             {
-                s.AddRange(parentHelp.HelpStrings);
+                s.AddRange(parentHelp.Help);
             }
 
             if (ExtensionManager.SectionOverlays != null)
             {
                 foreach (ISectionOverlayExtension overlay in ExtensionManager.SectionOverlays)
                 {
-                    s.AddRange(GetHelpStringsFromObject(overlay));
+                    s.AddRange(GetHelpFromObject(overlay));
                 }
             }
 
             if (LastNearestObject is null)
             {
-                s.AddRange(Command.DefaultKeyHelpStrings);
-                s.AddRange(Command.DefaultMouseHelpStrings);
-                s.Add("Double Right Click: Open context menu for annotation");
+                s.AddRange(KeyHelp);
+                s.AddRange(Command.DefaultMouseHelp);
+                s.Add(HelpEntry.For(HelpInput.RightDoubleClick, "Open context menu for annotation"));
             }
             else
             {
-                s.AddRange(GetHelpStringsFromObject(LastNearestObject));
+                s.AddRange(GetHelpFromObject(LastNearestObject));
             }
 
             return [.. s];
         }
 
-        private string[] GetHelpStringsFromObject(object obj)
-        {
-            if (obj is not IHelpStrings helpStrings)
-                return [];
-
-            return helpStrings.HelpStrings;
-        }
+        private static HelpEntry[] GetHelpFromObject(object obj) => obj is IHelp help ? help.Help : [];
 
         protected object NearestObjectAtPositionAcrossAllExtensions(Vector2 WorldPosition)
         {
@@ -98,10 +92,10 @@ namespace Viking.UI.Commands
                 return;
 
             LastNearestObject = nearest;
-            ObservableHelpStrings.Clear();
-            foreach (string helpStr in HelpStrings)
+            ObservableHelp.Clear();
+            foreach (HelpEntry entry in Help)
             {
-                ObservableHelpStrings.Add(helpStr);
+                ObservableHelp.Add(entry);
             }
         }
 

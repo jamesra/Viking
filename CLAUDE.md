@@ -11,7 +11,7 @@ Rules and skills are authored for Cursor in `.cursor/` and imported here by refe
 
 ## Conditional rules (read the file when the situation matches)
 Rules with `globs:` (`annotation-volume-geometry`, `circle-mapping-scale`, `coordinate-precision`,
-`docker-config-and-builds-location`) also load
+`docker-config-and-builds-location`, `help-entries`) also load
 automatically: `.claude/sync_claude_rules.py` mirrors them into `.claude/rules/<name>.md` with a `paths:` list. After
 adding or editing a `.cursor/rules` `.mdc` file, rerun `python .claude/sync_claude_rules.py` and commit the result;
 never edit `.claude/rules/` by hand (`python .claude/sync_claude_rules.py --check` reports drift). The rules without
@@ -22,6 +22,7 @@ globs below must be read by hand.
 - `.cursor/rules/circle-mapping-scale.mdc` — before touching circle annotations: centre from `X,Y`/`VolumeX,VolumeY`; radius across mosaic/volume by five-point mean scale (`Clients/VolumeModel`, mapping/annotation geometry, `WebAnnotation`).
 - `.cursor/rules/coordinate-precision.mdc` — before touching `Geometry/Transforms`, `Geometry/Primitives`, `Geometry.Core/Primitives`, `Geometry/CurveFitting`, `Geometry/Meshing`, `Clients/VolumeModel`.
 - `.cursor/rules/docker-config-and-builds-location.mdc` — before touching docker-compose files, Dockerfiles, or `config-template/`.
+- `.cursor/rules/help-entries.mdc` — before touching a command's or view's key, mouse or pen handling or its help: keys come from `KeyBinding` tables that drive both dispatch and help; mouse and pen `HelpEntry` lists change with their handlers.
 - `.cursor/rules/graphics-library-choice.mdc` — before working on XNA/MonoGame projects.
 - `.cursor/rules/templates.mdc` — before editing anything that looks generated (edit the template or generator input instead).
 - `.cursor/rules/slack-ai-protocol.mdc` — only when asked to post to or watch Slack `#ai`, `#ai-requests`, `#ai-offtopic`. Do not adopt the `[Viking-Client]` Slack identity otherwise.

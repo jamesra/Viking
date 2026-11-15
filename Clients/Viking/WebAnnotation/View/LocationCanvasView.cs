@@ -19,7 +19,7 @@ namespace WebAnnotation.View
     public delegate ContextMenuStrip ContextMenuGeneratorDelegate(IViewLocation locationID);
 
     public abstract class LocationCanvasView(LocationObj obj) : IComparable<LocationCanvasView>, IUIObjectBasic, ICanvasGeometryView, IEquatable<LocationCanvasView>,
-                                               IMouseActionSupport, IPenActionSupport, IViewLocation, IHelpStrings, IContextMenu
+                                               IMouseActionSupport, IPenActionSupport, IViewLocation, IHelp, IContextMenu
     {
         #region static
 
@@ -352,7 +352,7 @@ namespace WebAnnotation.View
         }
 
         public abstract Rectangle BoundingBox { get; }
-        public abstract string[] HelpStrings { get; }
+        public abstract HelpEntry[] Help { get; }
 
         internal virtual void OnParentPropertyChanged(object o, PropertyChangedEventArgs args)
         {

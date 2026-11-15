@@ -186,7 +186,7 @@ namespace WebAnnotation.UI.Commands
     /// <summary>
     /// Freehand pen stroke. Release finishes the stroke. A closed loop opens the choice buttons.
     /// </summary>
-    internal abstract class PlaceGeometryWithPenCommandBase : LineGeometryCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal abstract class PlaceGeometryWithPenCommandBase : LineGeometryCommandBase, Viking.Common.IHelp, Viking.Common.IObservableHelp
     {
         public abstract uint NumCurveInterpolations
         {
@@ -202,25 +202,15 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         public virtual double ControlPointRadius => LineWidth / 2.0;
 
-        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
+        public ObservableCollection<Viking.Common.HelpEntry> ObservableHelp => new(Help);
 
+        public Viking.Common.HelpEntry[] Help => [.. PenStrokeHelp, .. KeyHelp];
 
-        public string[] HelpStrings =>
-        [
-            .. DefaultMouseHelpStrings,
-            .. DefaultKeyHelpStrings
-        ];
-
-        public new static string[] DefaultMouseHelpStrings = [
-            "Release to finish the stroke",
-            "A closed loop opens the choice buttons"
-            ];
-
-        public new static string[] DefaultKeyHelpStrings = [
-            "Escape Key: Cancel command",
-            "Page up/down key: Change Magnification",
-            "Arrow key: Move view",
-            "Home key: Round magnification to nearest power of 2"
+        /// <summary>The steps of a freehand stroke.</summary>
+        public static readonly Viking.Common.HelpEntry[] PenStrokeHelp = [
+            Viking.Common.HelpEntry.Text("Release to finish the stroke"),
+            Viking.Common.HelpEntry.Text("A closed loop opens the choice buttons"),
+            new("Cancel", Viking.Common.HelpModifiers.None, [Viking.Common.HelpInput.LeftClick, Viking.Common.HelpInput.PenContact], "on the red X"),
             ];
 
         //protected List<Geometry.Vector2> vert_stack = new List<Geometry.Vector2>();

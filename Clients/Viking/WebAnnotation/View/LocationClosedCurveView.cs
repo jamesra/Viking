@@ -17,7 +17,7 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
-    internal class LocationClosedCurveView : LocationCurveView, ILabelView, ICanvasViewContainer, Viking.Common.IHelpStrings, IOverlappedLinkHost
+    internal class LocationClosedCurveView : LocationCurveView, ILabelView, ICanvasViewContainer, Viking.Common.IHelp, IOverlappedLinkHost
     {
         public CurveView curveView;
 
@@ -34,14 +34,12 @@ namespace WebAnnotation.View
 
         private ICollection<long> overlappedLinks = [];
 
-        public override string[] HelpStrings
-        {
-            get
-            {
-                List<string> listStrings = [.. base.HelpStrings, "Hold Left Click and drag near label: Move all control points", "Hold Left Click and drag near edge: Create link"];
-                return [.. listStrings];
-            }
-        }
+        public override Viking.Common.HelpEntry[] Help =>
+        [
+            .. base.Help,
+            Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag, "Move all control points", where: "near label"),
+            Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag, "Create link", where: "near edge"),
+        ];
 
         public override Microsoft.Xna.Framework.Color Color
         {

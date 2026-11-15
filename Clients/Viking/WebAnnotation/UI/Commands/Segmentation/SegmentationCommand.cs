@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Viking.Common;
 using Viking.UI;
 using Viking.UI.Controls;
 using Viking.VolumeModel;
@@ -37,7 +38,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// Users place foreground (green) and background (red) points, and the system generates a segmentation mask
     /// via gRPC, which can then be converted to a polygon annotation.
     /// </summary>
-    internal class SegmentationCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal class SegmentationCommand : AnnotationCommandBase, IHelp, IObservableHelp
     {
         #region Constants
         private const int DEFAULT_DEBOUNCE_MS = 500;
@@ -195,36 +196,41 @@ namespace WebAnnotation.UI.Commands.Segmentation
         #endregion
 
         #region Help Strings
-        public new static string[] DefaultMouseHelpStrings =
+        /// <summary>The prompt gestures: points, finalizing and deleting points.</summary>
+        public static readonly HelpEntry[] MouseHelp =
         [
-            "Left-click: Add foreground point (green)",
-            "Double-click a green point: Finalize and create annotation",
-            "Middle-click: Remove nearest point",
-            "Right-click: Add background point (red)",
-            "Ctrl + Left-click: Delete foreground point",
-            "Ctrl + Right-click: Delete background point",
-            "Ctrl + drag Left: Delete foreground points under cursor",
-            "Ctrl + drag Right: Delete background points under cursor"
+            HelpEntry.For(HelpInput.LeftClick, "Add foreground point (green)"),
+            HelpEntry.For(HelpInput.LeftDoubleClick, "Finalize and create annotation", where: "on a green point"),
+            HelpEntry.For(HelpInput.MiddleClick, "Remove nearest point"),
+            HelpEntry.For(HelpInput.RightClick, "Add background point (red)"),
+            HelpEntry.For(HelpInput.LeftClick, "Delete foreground point", HelpModifiers.Ctrl),
+            HelpEntry.For(HelpInput.RightClick, "Delete background point", HelpModifiers.Ctrl),
+            HelpEntry.For(HelpInput.LeftDrag, "Delete foreground points under cursor", HelpModifiers.Ctrl),
+            HelpEntry.For(HelpInput.RightDrag, "Delete background points under cursor", HelpModifiers.Ctrl),
         ];
 
-        public string[] HelpStrings
-        {
-            get
-            {
-                List<string> s = [.. DefaultMouseHelpStrings];
-                foreach (string line in Viking.UI.Commands.Command.DefaultKeyHelpStrings)
-                {
-                    if (placementFallback is not null && line.StartsWith("Escape", StringComparison.Ordinal))
-                        s.Add("Escape: Place the dragged polygon without waiting");
-                    else
-                        s.Add(line);
-                }
+        public HelpEntry[] Help => [.. MouseHelp, .. KeyHelp];
 
-                return [.. s];
-            }
-        }
+        public ObservableCollection<HelpEntry> ObservableHelp => new(Help);
 
-        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
+        /// <summary>True when Escape places the dragged polygon (<see cref="placementFallback"/>) instead of cancelling.</summary>
+        protected bool HasPlacementFallback => placementFallback is not null;
+
+        private KeyBinding[]? _segmentationKeyTable;
+
+        /// <summary>
+        /// Escape places <see cref="placementFallback"/> and leaves the command queue intact; callers that passed no fallback
+        /// keep the default cancel, which clears the queue. Debug builds also request a segmentation on Enter.
+        /// </summary>
+        protected override IReadOnlyList<KeyBinding> KeyTable => _segmentationKeyTable ??=
+        [
+            KeyBinding.Do(HelpEntry.For(HelpInput.Escape, "Place the dragged polygon without waiting"), _ => AcceptPlacementFallback(),
+                when: () => HasPlacementFallback),
+#if DEBUG
+            KeyBinding.Do(HelpEntry.For(HelpInput.Enter, "Request a segmentation (debug build)"), e => _ = RequestSegmentation()),
+#endif
+            .. DefaultKeyTable,
+        ];
 
 
         /// <summary>
@@ -799,31 +805,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Parent.Invalidate();
         }
 
-        /// <summary>
-        /// Escape places <see cref="placementFallback"/> and leaves the command queue intact.
-        /// Callers that passed no fallback keep the base cancel, which clears the queue.
-        /// </summary>
-        protected override void OnKeyPress(object sender, KeyPressEventArgs e)
-        {
-            if (e.KeyChar == (char)Keys.Escape && placementFallback is not null)
-            {
-                AcceptPlacementFallback();
-                return;
-            }
-
-            base.OnKeyPress(sender, e);
-        }
-
-#if DEBUG
-        protected override void OnKeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Return)
-            {
-                _ = RequestSegmentation();
-            }
-            base.OnKeyDown(sender, e);
-        }
-#endif
         #endregion
 
         #region Pan/Zoom Handling

@@ -493,7 +493,7 @@ namespace WebAnnotationTests
             public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, Keys ModifierKeys, out long LocationID) => throw new NotSupportedException();
             public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, Keys ModifierKeys, out long LocationID) => throw new NotSupportedException();
             public override List<IAction> GetPenActionsForShapeAnnotation(Geometry.Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new NotSupportedException();
-            public override string[] HelpStrings => [];
+            public override Viking.Common.HelpEntry[] Help => [];
         }
     }
 }

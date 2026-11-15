@@ -2,17 +2,13 @@ using Geometry;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Forms;
+using Viking.Common;
 using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-    internal abstract class RotateTranslateScaleCommand(Viking.UI.Controls.SectionViewerControl parent, Geometry.Vector2 VolumePosition) : TranslateScaleCommandBase(parent, VolumePosition), Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal abstract class RotateTranslateScaleCommand(Viking.UI.Controls.SectionViewerControl parent, Geometry.Vector2 VolumePosition) : TranslateScaleCommandBase(parent, VolumePosition), IHelp, IObservableHelp
     {
-        public new static string[] DefaultMouseHelpStrings =
-        [
-            "Hold Right click and drag: Rotate"
-        ];
-
         /// <summary>
         /// This is the center point about which we are rotating.  Usually the center of the shape
         /// </summary>
@@ -39,17 +35,14 @@ namespace WebAnnotation.UI.Commands
         protected abstract void OnAngleChanged();
 
 
-        public virtual string[] HelpStrings
-        {
-            get
-            {
-                List<string> s = [.. RotateTranslateScaleCommand.DefaultMouseHelpStrings];
-                s.AddRange(TranslateScaleCommandBase.DefaultMouseHelpStrings);
-                s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
-                s.Sort();
-                return [.. s];
-            }
-        }
+        /// <summary>Rotate, reset and the shared move-and-resize actions (<see cref="OnMouseDown"/> takes the middle and right buttons), then the keys.</summary>
+        public virtual HelpEntry[] Help =>
+        [
+            HelpEntry.For(HelpInput.RightDrag, "Rotate"),
+            HelpEntry.For(HelpInput.MiddleClick, "Reset to original size"),
+            .. TranslateScaleHelp,
+            .. KeyHelp,
+        ];
 
         protected override void OnMouseDown(object sender, MouseEventArgs e)
         {
@@ -95,6 +88,6 @@ namespace WebAnnotation.UI.Commands
             }
         }
 
-        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
+        public ObservableCollection<HelpEntry> ObservableHelp => new(Help);
     }
 }

@@ -27,7 +27,7 @@ namespace WebAnnotation.UI.Commands
     /// <summary>
     /// Presents a set of overlays on a canvas that allow the user to select an action
     /// </summary>
-    internal class ActionSelectionCanvasControl : Viking.UI.Commands.Command, IHelpStrings, IObservableHelpStrings
+    internal class ActionSelectionCanvasControl : Viking.UI.Commands.Command, IHelp, IObservableHelp
     {
         /// <summary>
         /// Maintains the set of interactable elements associated with each action. 
@@ -65,16 +65,16 @@ namespace WebAnnotation.UI.Commands
 
         private CircularButton[] Buttons => _Buttons;
 
-        private readonly ObservableCollection<string> _choiceHelp = [];
+        private readonly ObservableCollection<HelpEntry> _choiceHelp = [];
 
         /// <summary>
-        /// One F1 line per choice button, using the same captions as <see cref="LabelFor"/>, then Cancel.
+        /// One F1 line per choice button, using the same captions as <see cref="LabelFor"/>, then Cancel and the keys.
         /// Bound while this command is current so the bar does not keep the freehand stroke's text.
         /// </summary>
-        public ObservableCollection<string> ObservableHelpStrings => _choiceHelp;
+        public ObservableCollection<HelpEntry> ObservableHelp => _choiceHelp;
 
-        /// <inheritdoc cref="ObservableHelpStrings"/>
-        public string[] HelpStrings => [.. _choiceHelp];
+        /// <inheritdoc cref="ObservableHelp"/>
+        public HelpEntry[] Help => [.. _choiceHelp];
 
 
 
@@ -179,25 +179,28 @@ namespace WebAnnotation.UI.Commands
 
         /// <summary>
         /// Fills the F1 bar from the choice captions. Newlines in a button label become spaces so the combo stays one line per choice.
-        /// Always lists Cancel and Escape so hidden action buttons do not hide how to leave the command.
+        /// Always lists Cancel and the keys (Escape cancels) so hidden action buttons do not hide how to leave the command.
         /// A stroke that splits a hole adds a line saying what a click on the hole and on the polygon fills.
         /// </summary>
         private void PublishChoiceHelp(IEnumerable<IAction> actions)
         {
             _choiceHelp.Clear();
-            _choiceHelp.Add(Global.ShowPenActionButtons
+            _choiceHelp.Add(HelpEntry.Text(Global.ShowPenActionButtons
                 ? "Click a button to choose"
-                : "Click a shape preview to choose");
+                : "Click a shape preview to choose"));
             if (actions.Any(a => a is Change2DContourAction { FilledHolePart: not null }))
-                _choiceHelp.Add("Click a part of the hole to fill it; click the polygon to fill the smaller part");
+                _choiceHelp.Add(HelpEntry.Text("Click a part of the hole to fill it; click the polygon to fill the smaller part"));
             foreach (IAction action in actions)
             {
                 string line = LabelFor(action).Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
-                _choiceHelp.Add(line);
+                _choiceHelp.Add(HelpEntry.Text(line));
             }
 
-            _choiceHelp.Add("Cancel");
-            _choiceHelp.Add("Escape: Cancel");
+            _choiceHelp.Add(new HelpEntry("Choose", HelpModifiers.None, [HelpInput.LeftClick, HelpInput.PenContact],
+                Global.ShowPenActionButtons ? "on a button" : "on a shape preview"));
+            _choiceHelp.Add(new HelpEntry("Cancel", HelpModifiers.None, [HelpInput.LeftClick, HelpInput.PenContact], "on the red X"));
+            foreach (HelpEntry key in KeyHelp)
+                _choiceHelp.Add(key);
         }
 
         /// <summary>

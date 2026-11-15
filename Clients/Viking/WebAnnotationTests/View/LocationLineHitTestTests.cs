@@ -130,7 +130,7 @@ namespace WebAnnotationTests.View
             public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID) => throw new System.NotSupportedException();
             public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID) => throw new System.NotSupportedException();
             public override List<IAction> GetPenActionsForShapeAnnotation(Geometry.Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new System.NotSupportedException();
-            public override string[] HelpStrings => [];
+            public override Viking.Common.HelpEntry[] Help => [];
         }
 
         private sealed class StubCurve : LocationCurveView, IStub
@@ -148,7 +148,7 @@ namespace WebAnnotationTests.View
             public override LocationAction GetMouseClickActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID) => throw new System.NotSupportedException();
             public override LocationAction GetPenContactActionForPositionOnAnnotation(GridVector2 WorldPosition, int VisibleSectionNumber, System.Windows.Forms.Keys ModifierKeys, out long LocationID) => throw new System.NotSupportedException();
             public override List<IAction> GetPenActionsForShapeAnnotation(Geometry.Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => throw new System.NotSupportedException();
-            public override string[] HelpStrings => [];
+            public override Viking.Common.HelpEntry[] Help => [];
         }
     }
 }

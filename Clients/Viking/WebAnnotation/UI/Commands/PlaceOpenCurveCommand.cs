@@ -235,41 +235,24 @@ namespace WebAnnotation.UI.Commands
     /// Double left-click to complete polyline creation
     /// Right-click to remove the last polyline vertex
     /// </summary> 
-    internal abstract class PlaceCurveCommand : ControlPointCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal abstract class PlaceCurveCommand : ControlPointCommandBase, Viking.Common.IHelp, Viking.Common.IObservableHelp
     {
         public abstract uint NumCurveInterpolations
         {
             get;
         }
 
-        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
+        public ObservableCollection<Viking.Common.HelpEntry> ObservableHelp => new(Help);
 
+        public Viking.Common.HelpEntry[] Help => [.. PlaceCurveMouseHelp, .. KeyHelp];
 
-        public string[] HelpStrings
-        {
-            get
-            {
-                List<string> s = [.. PlaceCurveCommand.DefaultMouseHelpStrings, .. PlaceCurveCommand.DefaultKeyHelpStrings];
-
-                return [.. s];
-            }
-
-        }
-
-
-        public new static string[] DefaultMouseHelpStrings = [
-            "Double Left Click: Place final control point, save and exit command",
-            "Double Right Click: Pop last control point",
-            "Left Click and Drag Control Point: Move existing control point",
-            "Left Click last control point: Save and exit command",
-            "No cursor: Command cannot be completed at this location due to invalid geometry. Typically crossed lines."
-            ];
-
-        public new static string[] DefaultKeyHelpStrings = [
-            "Escape Key: Cancel command",
-            "Page up/down key: Change Magnification",
-            "Arrow key: Move view",
-            "Home key: Round magnification to nearest power of 2"
+        /// <summary>The mouse actions of placing control points (see the class summary).</summary>
+        public static readonly Viking.Common.HelpEntry[] PlaceCurveMouseHelp = [
+            Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDoubleClick, "Place final control point, save and exit command"),
+            Viking.Common.HelpEntry.For(Viking.Common.HelpInput.RightDoubleClick, "Pop last control point"),
+            Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag, "Move existing control point", where: "on control point"),
+            Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Save and exit command", where: "on last control point"),
+            Viking.Common.HelpEntry.Text("No cursor: Command cannot be completed at this location due to invalid geometry. Typically crossed lines.")
             ];
 
         protected Stack<Geometry.Vector2> vert_stack = new();

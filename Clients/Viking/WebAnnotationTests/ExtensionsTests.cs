@@ -11,24 +11,13 @@ using WebAnnotation;
 namespace WebAnnotationTests
 {
     /// <summary>
-    /// Pins the pure helpers in <c>WebAnnotation/Extensions.cs</c>: hotkey modifier text, modifier
+    /// Pins the pure helpers in <c>WebAnnotation/Extensions.cs</c>: modifier
     /// key checks (flag tests: Ctrl+Shift counts as both, Alt is ignored), the user-settings
     /// annotation-type-name mapping, and nearest-location-link selection.
     /// </summary>
     [TestClass]
     public class ExtensionsTests
     {
-        [TestMethod]
-        [DataRow(false, false, "")]
-        [DataRow(true, false, "CTRL + ")]
-        [DataRow(false, true, "SHIFT + ")]
-        [DataRow(true, true, "CTRL + SHIFT + ")]
-        public void BuildModifierStringListsCtrlBeforeShift(bool ctrl, bool shift, string expected)
-        {
-            Hotkey hotkey = new() { Ctrl = ctrl, Shift = shift };
-            Assert.AreEqual(expected, hotkey.BuildModifierString());
-        }
-
         [TestMethod]
         public void PlainShiftIsShiftNotCtrl()
         {

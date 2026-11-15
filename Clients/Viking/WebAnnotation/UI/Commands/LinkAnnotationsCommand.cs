@@ -21,7 +21,7 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 namespace WebAnnotation.UI.Commands
 {
     internal class LinkAnnotationsCommand(Viking.UI.Controls.SectionViewerControl parent,
-                                           LocationObj existingLoc) : AnnotationCommandBase(parent), Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+                                           LocationObj existingLoc) : AnnotationCommandBase(parent), Viking.Common.IHelp, Viking.Common.IObservableHelp
     {
         private readonly LocationObj OriginObj = existingLoc;
 
@@ -38,11 +38,15 @@ namespace WebAnnotation.UI.Commands
         /// </summary>
         private Geometry.Rectangle NearestTargetBoundingBox = default;
 
-        public string[] HelpStrings => [ "Left Mouse Button Release over annotation from the same structure: Link locations to indicate morphological connection",
-                                      "Left Mouse Button Release over annotation from different structure: Link structures to indicate relationship connection, for example Pre- & Post- Synaptic densities",
-                                      "Escape: Cancel command"];
+        public Viking.Common.HelpEntry[] Help => [
+            Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag, "Link locations to indicate morphological connection",
+                where: "release over annotation from the same structure"),
+            Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag,
+                "Link structures to indicate relationship connection, for example Pre- & Post- Synaptic densities",
+                where: "release over annotation from different structure"),
+            .. KeyHelp];
 
-        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
+        public ObservableCollection<Viking.Common.HelpEntry> ObservableHelp => new(Help);
 
         /// <summary>Where the feedback line starts: the middle point of a line or curve as drawn, else the location's volume centre.</summary>
         private static Geometry.Vector2 GetOriginForLocation(LocationObj obj)

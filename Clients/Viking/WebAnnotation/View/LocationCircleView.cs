@@ -221,11 +221,12 @@ namespace WebAnnotation.View
             return list;
         }
 
-        public override string[] HelpStrings => [
-                    "Pen contact: Start a freehand stroke",
-                    "Shift or Ctrl: Create a linked location on the adjacent section",
-                    "A closed loop over this arrow offers Linked location: a new polygon on this section, not a replacement of the other section's circle",
-                    "Hold left click and drag the inscribed arrow: Create a linked annotation on the adjacent section"
+        public override Viking.Common.HelpEntry[] Help => [
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.PenContact, "Start a freehand stroke"),
+                    new("Create a linked location on the adjacent section", Viking.Common.HelpModifiers.Shift),
+                    new("Create a linked location on the adjacent section", Viking.Common.HelpModifiers.Ctrl),
+                    Viking.Common.HelpEntry.Text("A closed loop over this arrow offers Linked location: a new polygon on this section, not a replacement of the other section's circle"),
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag, "Create a linked annotation on the adjacent section", where: "on the inscribed arrow"),
                 ];
 
         public static void Draw(GraphicsDevice device,
@@ -455,13 +456,13 @@ namespace WebAnnotation.View
             throw new ArgumentException("Wrong section for location");
         }
 
-        public override string[] HelpStrings => [
-                    "Pen contact: Start a freehand stroke",
-                    "Pen contact near the center: Resize and move",
-                    "A closed loop that overlaps this circle offers Convert id to polygon",
-                    "Hold left click on the edge: Resize",
-                    "Hold left click between the edge and the center: Create a link",
-                    "Hold left click on the center: Move the annotation"
+        public override Viking.Common.HelpEntry[] Help => [
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.PenContact, "Start a freehand stroke"),
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.PenContact, "Resize and move", where: "near the center"),
+                    Viking.Common.HelpEntry.Text("A closed loop that overlaps this circle offers Convert id to polygon"),
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag, "Resize", where: "on the edge"),
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag, "Create a link", where: "between the edge and the center"),
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag, "Move the annotation", where: "on the center"),
                 ];
 
 

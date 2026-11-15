@@ -1,31 +1,22 @@
-﻿using System.Collections.Generic;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
+using Viking.Common;
 
 namespace WebAnnotation.UI.Commands
 {
-    internal class CutHoleCommand : Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    /// <summary>Help for cutting a hole. Nothing constructs this class; it only holds the help list.</summary>
+    internal class CutHoleCommand : IHelp, IObservableHelp
     {
-        public static string[] DefaultCutHoleHelpStrings =
+        public static readonly HelpEntry[] DefaultCutHoleHelp =
         [
-            "CTRL+Click another curve: Copy control points",
-            "Middle Button click: Reset to original size",
-            "Hold Right click and drag: Rotate",
-            "Mouse Wheel: Change annotation size",
-            "SHIFT + Scroll wheel: Scale annotation size slowly"
+            new("Copy control points", HelpModifiers.Ctrl, Where: "over another curve"),
+            HelpEntry.For(HelpInput.MiddleClick, "Reset to original size"),
+            HelpEntry.For(HelpInput.RightDrag, "Rotate"),
+            HelpEntry.For(HelpInput.Wheel, "Change annotation size"),
+            HelpEntry.For(HelpInput.Wheel, "Scale annotation size slowly", HelpModifiers.Shift),
         ];
 
-        public virtual string[] HelpStrings
-        {
-            get
-            {
-                List<string> s = [.. CutHoleCommand.DefaultCutHoleHelpStrings];
-                s.AddRange(TranslateScaleCommandBase.DefaultMouseHelpStrings);
-                s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
-                s.Sort();
-                return [.. s];
-            }
-        }
+        public virtual HelpEntry[] Help => DefaultCutHoleHelp;
 
-        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
+        public ObservableCollection<HelpEntry> ObservableHelp => new(Help);
     }
 }

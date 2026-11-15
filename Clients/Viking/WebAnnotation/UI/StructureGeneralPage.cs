@@ -81,42 +81,47 @@ namespace WebAnnotation.UI
 
         }
 
+        private Viking.UI.KeyBinding[]? _tagGridKeys;
+
+        /// <summary>The tag grid's keys: Delete (with any modifier) removes the rows of the selected cells.</summary>
+        private Viking.UI.KeyBinding[] TagGridKeys => _tagGridKeys ??=
+        [
+            Viking.UI.KeyBinding.Do(HelpEntry.For(HelpInput.Delete, "Delete the selected tags"), _ => DeleteSelectedTagRows(), anyModifiers: true),
+        ];
+
         private void dataGridTags_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Delete)
-            {
-                List<int> iDeleteRowList = new(dataGridTags.SelectedCells.Count);
-                foreach (DataGridViewCell cell in dataGridTags.SelectedCells)
-                {
-                    if (iDeleteRowList.Contains(cell.RowIndex))
-                    {
-                        continue;
-                    }
-
-                    iDeleteRowList.Add(cell.RowIndex);
-                }
-
-                iDeleteRowList.Sort();
-                iDeleteRowList.Reverse();
-
-                foreach (int iDelRow in iDeleteRowList)
-                {
-                    //Don't delete the new row, it is an invalid operation.
-                    if (dataGridTags.Rows[iDelRow].IsNewRow)
-                    {
-                        continue;
-                    }
-
-                    dataGridTags.Rows.RemoveAt(iDelRow);
-                }
-
-                e.Handled = true;
-            }
-            else
-            {
+            if (!Viking.UI.KeyBindings.TryDispatch(TagGridKeys, e))
                 e.Handled = false;
+        }
+
+        /// <summary>Removes the rows of the selected cells, last first, leaving the grid's new-row placeholder.</summary>
+        private void DeleteSelectedTagRows()
+        {
+            List<int> iDeleteRowList = new(dataGridTags.SelectedCells.Count);
+            foreach (DataGridViewCell cell in dataGridTags.SelectedCells)
+            {
+                if (iDeleteRowList.Contains(cell.RowIndex))
+                {
+                    continue;
+                }
+
+                iDeleteRowList.Add(cell.RowIndex);
             }
 
+            iDeleteRowList.Sort();
+            iDeleteRowList.Reverse();
+
+            foreach (int iDelRow in iDeleteRowList)
+            {
+                //Don't delete the new row, it is an invalid operation.
+                if (dataGridTags.Rows[iDelRow].IsNewRow)
+                {
+                    continue;
+                }
+
+                dataGridTags.Rows.RemoveAt(iDelRow);
+            }
         }
 
         private void dataGridTags_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)

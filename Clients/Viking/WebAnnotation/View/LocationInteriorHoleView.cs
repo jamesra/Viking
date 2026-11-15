@@ -3,6 +3,7 @@ using Microsoft.SqlServer.Types;
 using SqlGeometryUtils;
 using System.Collections.Generic;
 using System.Windows.Forms;
+using Viking.Common;
 using VikingXNA;
 using WebAnnotation.UI;
 
@@ -18,7 +19,7 @@ namespace WebAnnotation.View
     /// <param name="innerPoly"></param>
     /// <param name="volumePolygon">The interior polygon</param>
     /// <param name="smoothVolumePolygon">The smoothed interior polygon</param>
-    internal class LocationInteriorHoleView(long LocationID, int innerPoly, Polygon volumePolygon, Polygon smoothVolumePolygon) : ICanvasGeometryView, Viking.Common.IHelpStrings, Viking.Common.IContextMenu,
+    internal class LocationInteriorHoleView(long LocationID, int innerPoly, Polygon volumePolygon, Polygon smoothVolumePolygon) : ICanvasGeometryView, Viking.Common.IHelp,Viking.Common.IContextMenu,
                                        IMouseActionSupport, IPenActionSupport
     {
         private readonly Polygon VolumePolygon = volumePolygon;
@@ -39,20 +40,20 @@ namespace WebAnnotation.View
 
         public Rectangle BoundingBox => SmoothedVolumePolygon.BoundingBox;
 
-        public string[] HelpStrings
+        public HelpEntry[] Help
         {
             get
             {
-                List<string> listStrings = [];
+                List<HelpEntry> entries = [];
                 if (Global.PenMode)
                 {
-                    listStrings.Add("Pen: Draw across the shape to replace the boundary");
+                    entries.Add(HelpEntry.For(HelpInput.Pen, "Draw across the shape to replace the boundary"));
                 }
 
-                listStrings.Add("CTRL + Left click on interior hole: Remove interior hole");
-                listStrings.Add("CTRL + Left click inside shape: Cut hole in annotation");
+                entries.Add(HelpEntry.For(HelpInput.LeftClick, "Remove interior hole", HelpModifiers.Ctrl, "on interior hole"));
+                entries.Add(HelpEntry.For(HelpInput.LeftClick, "Cut hole in annotation", HelpModifiers.Ctrl, "inside shape"));
 
-                return [.. listStrings];
+                return [.. entries];
             }
         }
 

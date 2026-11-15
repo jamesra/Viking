@@ -2,8 +2,8 @@ using Geometry;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using SIMeasurement;
-using System.Collections.Generic;
 using System.Windows.Forms;
+using Viking.Common;
 using VikingXNA;
 using VikingXNAGraphics;
 
@@ -12,27 +12,23 @@ using Vector2 = Microsoft.Xna.Framework.Vector2;
 namespace MeasurementExtension
 {
     [Viking.Common.CommandAttribute()]
-    public class MeasureCommand : Viking.UI.Commands.Command, Viking.Common.IObservableHelpStrings
+    public class MeasureCommand : Viking.UI.Commands.Command, Viking.Common.IHelp, Viking.Common.IObservableHelp
     {
         Geometry.Vector2 Origin;
         private readonly LengthMeasurement PixelSize;
 
-        private static readonly string[] DefaultHelpStrings =
+        /// <summary>The mouse actions and held modifiers <see cref="OnMouseDown"/> and <see cref="OnDraw"/> respond to.</summary>
+        private static readonly HelpEntry[] MeasureHelp =
         [
-            "Hold SHIFT: Force horizontal measurement line"
+            HelpEntry.For(HelpInput.LeftClick, "Start measuring from this point"),
+            HelpEntry.For(HelpInput.RightClick, "Finish measuring"),
+            new("Hold to measure a horizontal line", HelpModifiers.Shift),
+            new("Hold to measure a vertical line", HelpModifiers.Ctrl),
         ];
 
-        public virtual string[] HelpStrings
-        {
-            get
-            {
-                List<string> s = [.. MeasureCommand.DefaultHelpStrings, "SHIFT - Horizontal measurement", "CTRL - Vertical measurement"];
-                s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
-                return [.. s];
-            }
-        }
+        public virtual HelpEntry[] Help => [.. MeasureHelp, .. KeyHelp];
 
-        public System.Collections.ObjectModel.ObservableCollection<string> ObservableHelpStrings => new(this.HelpStrings);
+        public System.Collections.ObjectModel.ObservableCollection<HelpEntry> ObservableHelp => new(this.Help);
 
         public MeasureCommand(Viking.UI.Controls.SectionViewerControl parent, LengthMeasurement pixelSize)
             : base(parent)

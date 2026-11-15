@@ -10,7 +10,7 @@ using VikingXNAWinForms;
 
 namespace WebAnnotation.UI.Commands
 {
-    internal class AdjustCurveControlPointCommand : AnnotationCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal class AdjustCurveControlPointCommand : AnnotationCommandBase, Viking.Common.IHelp, Viking.Common.IObservableHelp
     {
         //LocationObj Loc;
         private CurveView curveView;
@@ -25,9 +25,9 @@ namespace WebAnnotation.UI.Commands
 
         private readonly OnCommandSuccess success_callback;
 
-        public string[] HelpStrings => ["Release Left Mouse Button to place control point"];
+        public Viking.Common.HelpEntry[] Help => [Viking.Common.HelpEntry.Text("Release Left Mouse Button to place control point"), .. KeyHelp];
 
-        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
+        public ObservableCollection<Viking.Common.HelpEntry> ObservableHelp => new(Help);
 
         /// <summary>Drags one control point of a line or curve, starting from the control points the forward owner draws.</summary>
         /// <param name="OriginalVolumeControlPoints">The location's control points in volume space (<c>LocationVolumeGeometry.ControlPoints</c>).</param>

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
+using Viking.Common;
 using VikingXNAGraphics;
 using VikingXNAWinForms;
 
@@ -177,8 +178,19 @@ LineGeometryCommandBase.OnCommandSuccess success_callback) : Viking.UI.Commands.
     /// Double left-click to complete polyline creation
     /// Right-click to remove the last polyline vertex
     /// </summary>
-    internal class PlacePolylineCommand : PolyLineCommandBase
+    internal class PlacePolylineCommand : PolyLineCommandBase, IHelp
     {
+        /// <summary>The vertex gestures in the class summary, then the keys.</summary>
+        public HelpEntry[] Help =>
+        [
+            HelpEntry.For(HelpInput.LeftClick, "Add a vertex"),
+            HelpEntry.For(HelpInput.LeftClick, "Finish the line", where: "on the last vertex"),
+            HelpEntry.For(HelpInput.LeftDrag, "Move the vertex", where: "on a vertex"),
+            HelpEntry.For(HelpInput.LeftDoubleClick, "Place the final vertex and finish"),
+            HelpEntry.For(HelpInput.RightDoubleClick, "Remove the last vertex"),
+            .. KeyHelp,
+        ];
+
         private readonly Stack<Geometry.Vector2> vert_stack = new();
 
         /// <summary>

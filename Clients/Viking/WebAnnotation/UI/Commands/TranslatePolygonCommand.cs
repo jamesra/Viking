@@ -12,23 +12,12 @@ using VikingXNAGraphics;
 
 namespace WebAnnotation.UI.Commands
 {
-    internal class TranslatePolygonCommand : RotateTranslateScaleCommand, Viking.Common.IHelpStrings
+    internal class TranslatePolygonCommand : RotateTranslateScaleCommand
     {
         public delegate void OnCommandSuccess(Polygon MosaicPolygon, Geometry.Vector2[] transformedExtraPoints);
         protected OnCommandSuccess success_callback;
 
         public override double AnnotationRadius => Math.Sqrt(OriginalMosaicPolygon.Area / Math.PI);
-
-        public override string[] HelpStrings
-        {
-            get
-            {
-                List<string> s = [.. base.HelpStrings];
-                s.AddRange(TranslateOpenCurveCommand.DefaultMouseHelpStrings);
-                s.Sort();
-                return [.. s];
-            }
-        }
 
         protected Geometry.Vector2 DeltaSum = new(0, 0);
 

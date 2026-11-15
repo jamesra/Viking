@@ -133,8 +133,9 @@ namespace WebAnnotation.View
         /// </summary>
         public override List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => [];
 
-        public override string[] HelpStrings => [
-                    "Hold left click + drag on inscribed arrow: Create additional annotation for this structure linked to the annotation on the adjacent section."
+        public override Viking.Common.HelpEntry[] Help => [
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag,
+                        "Create additional annotation for this structure linked to the annotation on the adjacent section", where: "on inscribed arrow")
                 ];
 
         public new ContextMenuStrip ContextMenu => new Location_CanvasContextMenuView(ID).ContextMenu;

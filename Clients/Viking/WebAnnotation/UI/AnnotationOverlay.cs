@@ -33,6 +33,7 @@ using WebAnnotation.View;
 using WebAnnotation.ViewModel;
 using WebAnnotationModel;
 
+using KeyBinding = Viking.UI.KeyBinding;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
@@ -52,7 +53,7 @@ namespace WebAnnotation
     }
 
     [Viking.Common.SectionOverlay("Annotation")]
-    internal class AnnotationOverlay : Viking.Common.ISectionOverlayExtension, Viking.Common.IHelpStrings, Viking.Common.IHandleOverlayMouseDoubleClick, ICanvasViewHitTesting
+    internal class AnnotationOverlay : Viking.Common.ISectionOverlayExtension, Viking.Common.IHelp, Viking.Common.IHandleOverlayMouseDoubleClick, ICanvasViewHitTesting
     {
         public static float LocationTextScaleFactor => Global.AnnotationSettings.LocationTextScaleFactor;
         public static float ReferenceLocationTextScaleFactor => Global.AnnotationSettings.ReferenceLocationTextScaleFactor;
@@ -521,31 +522,33 @@ namespace WebAnnotation
             return GetOrCreateAnnotationsForSectionAsync(SectionNumber).GetAwaiter().GetResult();
         }
 
-        public string[] HelpStrings
+        /// <summary>
+        /// The user settings hotkeys (while no other command runs), the overlay's own keys (<see cref="KeyTable"/>), the
+        /// auto-polygonize gestures and the auto-polygonize checkbox note.
+        /// </summary>
+        public HelpEntry[] Help
         {
             get
             {
-                List<string> helpstrings = new();
+                List<HelpEntry> help = [];
                 if (IsCommandDefault())
                 {
-                    helpstrings.AddRange(BuildHotkeyHelpStrings());
+                    help.AddRange(UserHotkeyHelp());
                 }
 
-                helpstrings.AddRange(DefaultKeyHelpStrings());
+                help.AddRange(Viking.UI.KeyBindings.Help(KeyTable));
 
                 if (autoPolygonizeController?.IsEnabled == true)
                 {
-                    helpstrings.Add("Double-click result polyline: Accept auto polygonalization");
-                    helpstrings.Add("Double right-click result polyline: Accept / Reject menu");
+                    help.Add(HelpEntry.For(HelpInput.LeftDoubleClick, "Accept auto polygonalization", where: "on result polyline"));
+                    help.Add(HelpEntry.For(HelpInput.RightDoubleClick, "Accept / Reject menu", where: "on result polyline"));
                 }
 
-                helpstrings.Add("Checkbox \"Auto polygonize circles in view\" turns idle segmentation off");
+                help.Add(HelpEntry.Text("Checkbox \"Auto polygonize circles in view\" turns idle segmentation off"));
 
-                return [.. helpstrings];
+                return [.. help];
             }
         }
-
-        protected string[] LastMouseOverHelpStrings = new string[] { };
 
         public static void GotoLastModifiedLocation()
         {
@@ -1630,36 +1633,91 @@ break;
 
             StopPenPath();
 
-        private static string[] DefaultKeyHelpStrings()
-        {
-            return new string[]
-            {
-                "F3 or Enter Key: Create new annotation linked to the last placed annotation",
-                "Tab: Place a new structure with segmentation",
-                "F5 Key: Reload section annotations",
-                "Back Key: Return to last edited location",
-                "F12: Open goto location ID dialog",
-                "F11: Open goto structure ID dialog",
-                "SHIFT + F8: Send the circles in view to auto-polygonize again",
-                "Numpad * or SHIFT + 8: Toggle Pen Mode",
-                "DEL: Hide the auto-segmentation ring, annotation or link under the mouse for a while (time is in Annotation Preferences) to reach one beneath it; it fades back in",
-                "INSERT: Bring back the hidden ring, annotation or link under the mouse now"
-            };
-        }
+        private KeyBinding[]? _keyTable;
 
-        private string[] BuildHotkeyHelpStrings()
-        {
-            if (Global.UserSettings is null)
-                return Array.Empty<string>();
+        /// <summary>
+        /// The keys the overlay handles itself, whatever command is active (<see cref="OverlayKeyTable"/>). A chord in this table
+        /// never reaches the user settings hotkeys (<see cref="OverlayHotkeys.IsReserved"/>).
+        /// </summary>
+        internal IReadOnlyList<KeyBinding> KeyTable => _keyTable ??= OverlayKeyTable.Create(this);
 
-            List<string> hotkeyStrings = new(Global.UserSettings.Shortcuts.Hotkey.Count);
-            foreach (Hotkey hkey in Global.UserSettings.Shortcuts.Hotkey)
+        /// <summary>The settings <see cref="_userHotkeyHelp"/> was built for; a reload of the settings rebuilds it.</summary>
+        private UserSettings? _userHotkeyHelpSettings;
+        private HelpEntry[] _userHotkeyHelp = [];
+
+        /// <summary>
+        /// Help for the user settings hotkeys, built from the loaded <see cref="Hotkey"/> objects that <see cref="OnKeyDown"/>
+        /// dispatches. Built, and its unusable hotkeys traced, once per loaded settings.
+        /// </summary>
+        private HelpEntry[] UserHotkeyHelp()
+        {
+            UserSettings? settings = Global.UserSettings;
+            if (settings is null)
+                return [];
+
+            if (!ReferenceEquals(settings, _userHotkeyHelpSettings))
             {
-                string keystr = hkey.BuildModifierString() + hkey.KeyName + ": " + hkey.Action;
-                hotkeyStrings.Add(keystr);
+                _userHotkeyHelp = BuildUserHotkeyHelp(settings.Shortcuts.Hotkey, _Parent?.KeyTable,
+                    message => Trace.WriteLine(message, "Hotkeys"));
+                _userHotkeyHelpSettings = settings;
             }
 
-            return [.. hotkeyStrings];
+            return _userHotkeyHelp;
+        }
+
+        /// <summary>The chord a hotkey fires on: its key code plus its modifier flags, as in <see cref="KeyEventArgs.KeyData"/>.</summary>
+        internal static Keys ChordOf(Hotkey hotkey) =>
+            hotkey.KeyCode | (hotkey.Shift ? Keys.Shift : Keys.None) | (hotkey.Ctrl ? Keys.Control : Keys.None) | (hotkey.Alt ? Keys.Alt : Keys.None);
+
+        /// <summary>
+        /// One help entry per hotkey, in the given order: its modifiers, its key (<see cref="HelpInput.Other"/> with the key
+        /// name when there is no member for it) and its action. A hotkey that can never fire, because the overlay
+        /// (<see cref="OverlayHotkeys"/>) or the viewer (<paramref name="viewerTable"/>) owns its chord or an earlier hotkey
+        /// has it, is still listed, with why appended, and reported once to <paramref name="report"/>.
+        /// </summary>
+        /// <param name="viewerTable">The viewer's keys; null when there is no viewer (tests).</param>
+        internal static HelpEntry[] BuildUserHotkeyHelp(IEnumerable<Hotkey> hotkeys, IReadOnlyList<KeyBinding>? viewerTable, System.Action<string>? report)
+        {
+            List<HelpEntry> help = [];
+            Dictionary<Keys, Hotkey> firstByChord = [];
+            foreach (Hotkey hotkey in hotkeys)
+            {
+                Keys chord = ChordOf(hotkey);
+                string? usedBy = UnavailableBecause(chord, viewerTable)
+                    ?? (firstByChord.TryGetValue(chord, out Hotkey? earlier) ? $"the hotkey for {earlier.Action}" : null);
+                if (!firstByChord.ContainsKey(chord))
+                    firstByChord.Add(chord, hotkey);
+
+                string description = hotkey.Action;
+                if (usedBy is not null)
+                {
+                    description += $" (not available: used by {usedBy})";
+                    report?.Invoke($"Hotkey {chord} ({hotkey.Action}) never fires: it is used by {usedBy}");
+                }
+
+                (HelpInput input, string? label) = Viking.UI.HelpInputKeys.FromKey(hotkey.KeyCode);
+                if (input == HelpInput.Other)
+                    label = string.IsNullOrWhiteSpace(hotkey.KeyName) ? label : hotkey.KeyName;
+
+                HelpModifiers modifiers = (hotkey.Shift ? HelpModifiers.Shift : HelpModifiers.None) |
+                                          (hotkey.Ctrl ? HelpModifiers.Ctrl : HelpModifiers.None) |
+                                          (hotkey.Alt ? HelpModifiers.Alt : HelpModifiers.None);
+                help.Add(new HelpEntry(description, modifiers, [input], Label: label));
+            }
+
+            return [.. help];
+        }
+
+        /// <summary>What owns <paramref name="chord"/> before the hotkeys see it: the overlay's or the viewer's binding, else null.</summary>
+        private static string? UnavailableBecause(Keys chord, IReadOnlyList<KeyBinding>? viewerTable)
+        {
+            if (OverlayHotkeys.ClaimedBy(OverlayHotkeys.Table, chord) is { } overlayKey)
+                return $"the annotation overlay ({overlayKey.Help.Description})";
+
+            if (viewerTable is not null && OverlayHotkeys.ClaimedBy(viewerTable, chord) is { } viewerKey)
+                return $"the viewer ({viewerKey.Help.Description})";
+
+            return null;
         }
 
 
@@ -1801,74 +1859,86 @@ break;
         }
 
         /// <summary>
-        /// Runs the overlay's own action for a key that <see cref="OverlayHotkeys.IsReserved"/> accepted.
-        /// Called only from <see cref="OnKeyDown"/>, which skips the user settings shortcuts afterwards.
+        /// Builds the overlay's key table. Nested so its handlers reach the overlay's private members without running
+        /// <see cref="AnnotationOverlay"/>'s static constructor, which <see cref="OverlayHotkeys"/> (and its tests) must not do.
         /// </summary>
-        private void OnReservedKeyDown(object sender, KeyEventArgs e)
+        internal static class OverlayKeyTable
         {
-            switch (e.KeyCode)
+            /// <summary>
+            /// The overlay's keys. With a null <paramref name="overlay"/> the handlers do nothing; <see cref="OverlayHotkeys"/>
+            /// uses that copy to know which chords are reserved. Rows that return false leave the key unhandled, as the overlay
+            /// always did for them, so a command that also binds the key (F5 and Enter in the paint command) still gets it.
+            /// </summary>
+            internal static KeyBinding[] Create(AnnotationOverlay? overlay) =>
+            [
+                KeyBinding.Do(HelpEntry.For(HelpInput.Tab, "Place a new structure with segmentation"),
+                    _ => overlay?.StartNewStructureSegmentation(), anyModifiers: true),
+                Unhandled(new HelpEntry("Create new annotation linked to the last placed annotation", HelpModifiers.None, [HelpInput.F3, HelpInput.Enter]),
+                    () => overlay?.OnContinueLastTrace()),
+                Unhandled(HelpEntry.For(HelpInput.F5, "Reload section annotations"), () => overlay?.ResetAnnotations()),
+                Unhandled(HelpEntry.For(HelpInput.F6, "Open favorite structure types"), () => overlay?.OpenFavoriteStructureTypes()),
+                Unhandled(HelpEntry.For(HelpInput.F7, "Open structure type management"), () => overlay?.OpenStructureTypeManagement()),
+                // Plain F8 is the Done tag hotkey in the shipped settings, so only Shift+F8 is the overlay's.
+                Unhandled(HelpEntry.For(HelpInput.F8, "Send the circles in view to auto-polygonize again", HelpModifiers.Shift),
+                    () => overlay?.autoPolygonizeController?.ResubmitVisible(), anyModifiers: false),
+                Unhandled(HelpEntry.For(HelpInput.F11, "Open goto structure ID dialog"), () => overlay?.OpenGotoStructureForm()),
+                Unhandled(HelpEntry.For(HelpInput.F12, "Open goto location ID dialog"), () => overlay?.OpenGotoLocationForm()),
+                Unhandled(HelpEntry.For(HelpInput.Backspace, "Return to last edited location"), () => overlay?.ReturnToLastEditedLocation()),
+                KeyBinding.Do(HelpEntry.For(HelpInput.Delete,
+                        "Hide the auto-segmentation ring, annotation or link under the mouse for a while (time is in Annotation Preferences) to reach one beneath it; it fades back in"),
+                    _ => overlay?.HideAnnotationUnderMouse()),
+                KeyBinding.Do(HelpEntry.For(HelpInput.Insert, "Bring back the hidden ring, annotation or link under the mouse now"),
+                    _ => overlay?.RestoreAnnotationUnderMouse()),
+                // Another command (a drag, a pen stroke, the paint command's own Ctrl+Z) keeps Ctrl+Z while it runs.
+                new KeyBinding(HelpEntry.For(HelpInput.Z, "Undo the last annotation edit", HelpModifiers.Ctrl),
+                    _ => overlay is not null && overlay.UndoLastEditIfIdle()),
+                KeyBinding.Do(HelpEntry.For(HelpInput.NumStar, "Toggle Pen Mode"), _ => { if (overlay is not null) AnnotationMenu.OnPenMode(overlay, EventArgs.Empty); }, anyModifiers: true),
+                KeyBinding.Do(HelpEntry.For(HelpInput.D8, "Toggle Pen Mode", HelpModifiers.Shift), _ => { if (overlay is not null) AnnotationMenu.OnPenMode(overlay, EventArgs.Empty); }),
+            ];
+
+            /// <summary>A row that runs <paramref name="run"/> and leaves the key unhandled.</summary>
+            private static KeyBinding Unhandled(HelpEntry help, System.Action run, bool anyModifiers = true) =>
+                new(help, _ => { run(); return false; }, AnyModifiers: anyModifiers);
+        }
+
+        /// <summary>F6: the favorite structure types window.</summary>
+        private void OpenFavoriteStructureTypes()
+        {
+            UI.Forms.SelectStructureTypeForm StructureIDChoiceForm = new();
+            Annotation.ViewModels.FavoriteStructureIDsViewModel favorite_view_model = new(Global.UserFavoriteStructureTypes);
+            StructureIDChoiceForm.DataContext = favorite_view_model;
+            System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(StructureIDChoiceForm);
+            StructureIDChoiceForm.Show();
+        }
+
+        /// <summary>F7: the structure type management window.</summary>
+        private void OpenStructureTypeManagement()
+        {
+            WPF.Forms.StructureTypeManagementForm StructureTypeManagementForm = new(() => ViewModel.StructureType.CreateWithPropertiesDialog(null, null))
             {
-                case Keys.Tab:
-                    e.Handled = true;
-                    e.SuppressKeyPress = true;
-                    StartNewStructureSegmentation();
-                    return;
-                //Refresh the annotations on F5
-                case Keys.F5:
-                    ResetAnnotations();
-                    return;
-                case Keys.F3:
-                case Keys.Enter:
-                    OnContinueLastTrace();
-                    return;
-                case Keys.F6:
-                    UI.Forms.SelectStructureTypeForm StructureIDChoiceForm = new();
-                    Annotation.ViewModels.FavoriteStructureIDsViewModel favorite_view_model = new(Global.UserFavoriteStructureTypes);
-                    StructureIDChoiceForm.DataContext = favorite_view_model;
-                    System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(StructureIDChoiceForm);
-                    StructureIDChoiceForm.Show();
-                    return;
-                // Shift+F8: send every circle in view to auto-segmentation again, discarding what is shown for this section.
-                case Keys.F8:
-                    autoPolygonizeController?.ResubmitVisible();
-                    return;
-                case Keys.F7:
-                    WPF.Forms.StructureTypeManagementForm StructureTypeManagementForm = new(() => ViewModel.StructureType.CreateWithPropertiesDialog(null, null))
-                    {
-                        DataContext = Store.StructureTypes
-                    };
-                    System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(StructureTypeManagementForm);
-                    StructureTypeManagementForm.Show();
-                    return;
-                case Keys.Delete:
-                    e.Handled = true;
-                    HideAnnotationUnderMouse();
-                    return;
-                case Keys.Insert:
-                    e.Handled = true;
-                    RestoreAnnotationUnderMouse();
-                    return;
-                case Keys.Back:
-                    if (Global.LastEditedAnnotationID.HasValue)
-                        GoToLocation(Global.LastEditedAnnotationID.Value);
-                    else
-                        GotoLastModifiedLocation();
-                    return;
-                // Ctrl+Z: undo the last recorded annotation edit, unless another command (drag, pen stroke) is active.
-                case Keys.Z:
-                    e.Handled = true;
-                    e.SuppressKeyPress = true;
-                    if (IsCommandDefault())
-                        UndoManager.UndoLast();
-                    return;
-                // Pen Mode toggle: main-keyboard * (Shift+8) and numpad *.
-                case Keys.Multiply:
-                case Keys.D8:
-                    e.Handled = true;
-                    e.SuppressKeyPress = true;
-                    AnnotationMenu.OnPenMode(sender, EventArgs.Empty);
-                    return;
-            }
+                DataContext = Store.StructureTypes
+            };
+            System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(StructureTypeManagementForm);
+            StructureTypeManagementForm.Show();
+        }
+
+        /// <summary>Backspace: the last location edited in this session, else the last one modified on the server.</summary>
+        private void ReturnToLastEditedLocation()
+        {
+            if (Global.LastEditedAnnotationID.HasValue)
+                GoToLocation(Global.LastEditedAnnotationID.Value);
+            else
+                GotoLastModifiedLocation();
+        }
+
+        /// <summary>Ctrl+Z: undoes the last recorded annotation edit; false (key left to the command) while another command runs.</summary>
+        private bool UndoLastEditIfIdle()
+        {
+            if (!IsCommandDefault())
+                return false;
+
+            UndoManager.UndoLast();
+            return true;
         }
 
         /// <summary>
@@ -1979,30 +2049,30 @@ break;
             }, TaskScheduler.Default);
         }
 
+        /// <summary>
+        /// Runs the overlay's binding for the key (<see cref="KeyTable"/>); a chord the overlay owns stops there. Otherwise the
+        /// user settings hotkeys for the chord run, unless the viewer owns the chord (its help says so, see
+        /// <see cref="BuildUserHotkeyHelp"/>).
+        /// </summary>
         protected void OnKeyDown(object sender, KeyEventArgs e)
         {
-            // Keys the overlay owns never reach the user settings shortcuts (see OverlayHotkeys).
-            if (OverlayHotkeys.IsReserved(e.KeyData))
+            // Shift and Ctrl alone only change the cursor: modifier tracking, not a key binding.
+            if (e.KeyCode is Keys.ShiftKey or Keys.ControlKey)
             {
-                OnReservedKeyDown(sender, e);
+                //TODO: Track if the last input was from pen or mouse and update accordingly
+                if (IsCommandDefault())
+                    UpdateMouseCursor();
+            }
+
+            // Keys the overlay owns never reach the user settings shortcuts (see OverlayHotkeys).
+            if (OverlayHotkeys.ClaimedBy(KeyTable, e.KeyData) is not null)
+            {
+                Viking.UI.KeyBindings.TryDispatch(KeyTable, e);
                 return;
             }
 
-            switch (e.KeyCode)
-            {
-                case Keys.ShiftKey:
-                case Keys.ControlKey:
-                    //TODO: Track if the last input was from pen or mouse and update accordingly
-                    if(IsCommandDefault())
-                        UpdateMouseCursor();
-                    break;
-                case Keys.F12:
-                    OpenGotoLocationForm();
-                    break;
-                case Keys.F11:
-                    OpenGotoStructureForm();
-                    break;
-            }
+            if (OverlayHotkeys.ClaimedBy(_Parent.KeyTable, e.KeyData) is not null)
+                return;
 
             try
             {
@@ -2110,21 +2180,24 @@ break;
 
         private void GoToLocationForm_Closed(object sender, EventArgs e) => WebAnnotation.AnnotationOverlay.GoToLocationForm = null;
 
+        /// <summary>
+        /// Releasing Space (the end of the viewer's "hide annotations while held", documented by its Space binding) reloads the
+        /// section's annotations; releasing Shift or Ctrl refreshes the cursor. A key release is state tracking, not a key
+        /// binding, so it is not in <see cref="KeyTable"/>.
+        /// </summary>
         protected void OnKeyUp(object sender, KeyEventArgs e)
         {
-            switch (e.KeyCode)
+            if (e.KeyCode is Keys.ControlKey or Keys.ShiftKey)
             {
-                case Keys.Space:
-                    RequestCurrentSectionAnnotationsLoad();
-                    InvalidateParent();
+                UpdateMouseCursor();
+                return;
+            }
 
-                    break;
-                case Keys.ControlKey:
-                    UpdateMouseCursor();
-                    break;
-                case Keys.ShiftKey:
-                    UpdateMouseCursor();
-                    break;
+            // Releasing Space ends the viewer's hold-Space binding (SectionViewerControl.KeyTable); reload what was hidden.
+            if (Viking.UI.HelpInputKeys.Matches(HelpInput.Space, e.KeyCode))
+            {
+                RequestCurrentSectionAnnotationsLoad();
+                InvalidateParent();
             }
         }
 

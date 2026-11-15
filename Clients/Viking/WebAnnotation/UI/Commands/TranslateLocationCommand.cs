@@ -66,7 +66,7 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
                                     Geometry.Vector2[] StartVolumeControlPoints,
                                     Microsoft.Xna.Framework.Color color,
                                     double LineWidth,
-TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurveLocationCommand(parent, VolumePosition, StartVolumeControlPoints, color, LineWidth, success_callback), Viking.Common.IHelpStrings
+TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurveLocationCommand(parent, VolumePosition, StartVolumeControlPoints, color, LineWidth, success_callback)
     {
         private double _lineWidthScale = 1.0;
         protected double LineWidthScale
@@ -96,21 +96,13 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
 
         protected override double CalculateFinalLineWidth() => OriginalLineWidth * _lineWidthScale;
 
-        public override string[] HelpStrings
-        {
-            get
-            {
-                List<string> s = [.. base.HelpStrings];
-                s.AddRange(TranslateOpenCurveCommand.DefaultMouseHelpStrings);
-                s.Sort();
-                return [.. s];
-            }
-        }
-
-        public new static string[] DefaultMouseHelpStrings =
+        /// <summary>Shift + wheel changes the line width here (<see cref="OnMouseWheel"/>), not the size.</summary>
+        public override HelpEntry[] Help =>
         [
-            "Mouse Wheel + SHIFT: Change line width",
+            .. base.Help.Where(h => !(h.Modifiers == HelpModifiers.Shift && h.Inputs is { Length: 1 } inputs && inputs[0] == HelpInput.Wheel)),
+            HelpEntry.For(HelpInput.Wheel, "Change line width", HelpModifiers.Shift),
         ];
+
         private int scroll_wheel_delta = 0;
         protected override void OnMouseWheel(object sender, MouseEventArgs e)
         {
@@ -155,7 +147,7 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
 
     }
 
-    internal abstract class TranslateCurveLocationCommand : RotateTranslateScaleCommand, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal abstract class TranslateCurveLocationCommand : RotateTranslateScaleCommand
     {
         protected CurveView curveView;
         protected Geometry.Vector2[] OriginalVolumeControlPoints;
@@ -172,28 +164,11 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
         protected abstract Geometry.Vector2[] CalculateTranslatedVolumeControlPoints();
         protected abstract double CalculateFinalLineWidth();
 
-        string[] IHelpStrings.HelpStrings
-        {
-            get
-            {
-                List<string> s = [.. TranslateCurveLocationCommand.DefaultMouseHelpStrings];
-                s.AddRange(RotateTranslateScaleCommand.DefaultMouseHelpStrings);
-                s.AddRange(TranslateScaleCommandBase.DefaultMouseHelpStrings);
-                s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
-                s.Sort();
-                return [.. s];
-            }
-        }
-
-        public new ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
-
-        public new static string[] DefaultMouseHelpStrings =
+        /// <summary>Pressing Ctrl over another open curve copies its control points (<see cref="OnKeyDown"/>), then the move, rotate and resize actions.</summary>
+        public override HelpEntry[] Help =>
         [
-            "CTRL+Click another curve: Copy control points",
-            "Middle Button click: Reset to original size",
-            "Hold Right click and drag: Rotate",
-            "Mouse Wheel: Change annotation size",
-            "SHIFT + Scroll wheel: Scale annotation size slowly"
+            new("Copy control points", HelpModifiers.Ctrl, Where: "over another curve"),
+            .. base.Help,
         ];
 
         protected override Geometry.Vector2 VolumeRotationOrigin => curveView.ControlPoints.Average();
@@ -228,6 +203,11 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
         /// <returns>The hit with the smallest <see cref="HitTestResult.Distance"/> (the first listed wins a tie), or null when <paramref name="hits"/> is null or empty.</returns>
         internal static HitTestResult PickNearest(IEnumerable<HitTestResult> hits) => hits?.OrderBy(h => h.Distance).FirstOrDefault();
 
+        /// <summary>
+        /// Any key with Ctrl held (pressing Ctrl itself first) copies the control points of the open curve under the mouse; a
+        /// modifier held over a target is not a key a <see cref="Viking.UI.KeyBinding"/> can match, so it stays outside
+        /// <see cref="Viking.UI.Commands.Command.KeyTable"/>. Other keys go to the table.
+        /// </summary>
         protected override void OnKeyDown(object sender, KeyEventArgs e)
         {
             if (e.Control)
@@ -258,24 +238,22 @@ TranslateCurveLocationCommand.OnCommandSuccess success_callback) : TranslateCurv
                                     Microsoft.Xna.Framework.Graphics.BasicEffect basicEffect) => CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, [curveView]);
     }
 
-    internal class TranslateCircleLocationCommand : TranslateScaleCommandBase, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal class TranslateCircleLocationCommand : TranslateScaleCommandBase, IHelp, IObservableHelp
     {
         private CircleView circleView;
         private readonly Circle OriginalCircle;
 
         public override double AnnotationRadius => OriginalCircle.Radius;
 
-        public ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
+        public ObservableCollection<HelpEntry> ObservableHelp => new(Help);
 
-        public string[] HelpStrings
-        {
-            get
-            {
-                List<string> s = [.. TranslateScaleCommandBase.DefaultMouseHelpStrings];
-                s.AddRange(Viking.UI.Commands.Command.DefaultKeyHelpStrings);
-                return [.. s];
-            }
-        }
+        /// <summary>The shared move-and-resize actions, middle click to reset the size (<see cref="OnMouseDown"/>), then the keys.</summary>
+        public HelpEntry[] Help =>
+        [
+            .. TranslateScaleHelp,
+            HelpEntry.For(HelpInput.MiddleClick, "Reset to original size"),
+            .. KeyHelp,
+        ];
 
         /// <summary>
         /// The circle the user left on screen, in volume space. The callback saves it through the inverse owner

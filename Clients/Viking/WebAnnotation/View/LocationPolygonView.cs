@@ -21,7 +21,7 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
-    internal class LocationPolygonView : LocationCanvasView, ILabelView, ICanvasViewContainer, Viking.Common.IHelpStrings, IColorView, IOverlappedLinkHost
+    internal class LocationPolygonView : LocationCanvasView, ILabelView, ICanvasViewContainer, Viking.Common.IHelp, IColorView, IOverlappedLinkHost
     {
         private StructureLabelsBase? curveLabels;
         private OverlappedLinkCircleView? OverlappedLinkView;
@@ -51,26 +51,27 @@ namespace WebAnnotation.View
         private Polygon SmoothedVolumePolygon;
         private readonly PointSetView ControlPointView;
 
-        public override string[] HelpStrings
+        public override Viking.Common.HelpEntry[] Help
         {
             get
             {
-                List<string> listStrings = [];
                 if (Global.PenMode)
                 {
-                    listStrings.Add("Pen: Draw across the shape to replace the boundary");
-                    listStrings.Add("Shift: Move the shape or create a link");
-                    listStrings.Add("Ctrl: Cut a hole or remove a hole");
-                }
-                else
-                {
-                    listStrings.Add("SHIFT + Hold Left Button near the interior: Move shape");
-                    listStrings.Add("SHIFT + Hold Left Button near edge: Create link");
-                    listStrings.Add("CTRL + Left click off control point: Add a control point");
-                    listStrings.Add("CTRL + Left click on control point: Remove control point");
+                    return
+                    [
+                        Viking.Common.HelpEntry.For(Viking.Common.HelpInput.Pen, "Draw across the shape to replace the boundary"),
+                        new("Move the shape or create a link", Viking.Common.HelpModifiers.Shift),
+                        new("Cut a hole or remove a hole", Viking.Common.HelpModifiers.Ctrl),
+                    ];
                 }
 
-                return [.. listStrings];
+                return
+                [
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag, "Move shape", Viking.Common.HelpModifiers.Shift, "near the interior"),
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag, "Create link", Viking.Common.HelpModifiers.Shift, "near edge"),
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Add a control point", Viking.Common.HelpModifiers.Ctrl, "off control point"),
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Remove control point", Viking.Common.HelpModifiers.Ctrl, "on control point"),
+                ];
             }
         }
 

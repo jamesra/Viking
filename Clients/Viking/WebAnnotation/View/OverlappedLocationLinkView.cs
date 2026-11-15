@@ -18,7 +18,7 @@ namespace WebAnnotation.View
     /// Renders arrows for location links that are overlapped by an annotation on the section
     /// </summary>
     internal class OverlappedLocationLinkView : ICanvasGeometryView, IColorView, ILabelView,
-                                       IMouseActionSupport, IPenActionSupport, IViewLocationLink, IViewLocation, Viking.Common.IHelpStrings
+                                       IMouseActionSupport, IPenActionSupport, IViewLocationLink, IViewLocation, Viking.Common.IHelp
     {
         private readonly TextureCircleView circleView;
         private readonly LabelView label;
@@ -163,10 +163,12 @@ namespace WebAnnotation.View
 
         public List<IAction> GetPenActionsForShapeAnnotation(Path path, IReadOnlyList<InteractionLogEvent> interaction_log, int VisibleSectionNumber) => [];
 
-        public string[] HelpStrings => [
-                    "Hold left click + drag: Create additional annotation for this structure linked to the annotation on the adjacent section.",
-                    "Del: Hide this link marker for a while. Insert: Bring it back.",
-                    "Double right click: Delete the link or split the structure."
+        public Viking.Common.HelpEntry[] Help => [
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag,
+                        "Create additional annotation for this structure linked to the annotation on the adjacent section"),
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.Delete, "Hide this link marker for a while"),
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.Insert, "Bring the hidden link marker under the mouse back"),
+                    Viking.Common.HelpEntry.For(Viking.Common.HelpInput.RightDoubleClick, "Delete the link or split the structure"),
                 ];
 
         int ICanvasView.VisualHeight => 0;

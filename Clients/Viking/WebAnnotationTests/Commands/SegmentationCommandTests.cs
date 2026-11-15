@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Viking.Common;
 using WebAnnotation.UI.Commands.Segmentation;
 
 namespace WebAnnotationTests.Commands
@@ -22,10 +23,11 @@ namespace WebAnnotationTests.Commands
         [TestMethod]
         public void MouseHelpDescribesDoubleClickFinalize()
         {
-            string[] help = SegmentationCommand.DefaultMouseHelpStrings;
+            HelpEntry[] help = SegmentationCommand.MouseHelp;
 
-            Assert.IsTrue(help.Any(line => line.StartsWith("Double-click a green point", StringComparison.Ordinal)));
-            Assert.IsFalse(help.Any(line => line.Contains("Left-click inside polygon")));
+            Assert.IsTrue(help.Any(e => e.Inputs is { Length: 1 } inputs && inputs[0] == HelpInput.LeftDoubleClick && e.Where == "on a green point" &&
+                                        e.Description.StartsWith("Finalize", StringComparison.Ordinal)));
+            Assert.IsFalse(help.Any(e => e.ToString().Contains("inside polygon")));
         }
 
         #endregion

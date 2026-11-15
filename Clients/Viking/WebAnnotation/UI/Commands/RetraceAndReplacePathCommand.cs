@@ -18,7 +18,7 @@ using WebAnnotationModel;
 
 namespace WebAnnotation.UI.Commands
 {
-    internal class RetraceAndReplacePathCommand : PlaceGeometryWithPenCommandBase, IHelpStrings, IObservableHelpStrings
+    internal class RetraceAndReplacePathCommand : PlaceGeometryWithPenCommandBase, IHelp, IObservableHelp
     {
         //Original Polygons
         private readonly Polygon OriginalMosaicPolygon;
@@ -84,14 +84,14 @@ namespace WebAnnotation.UI.Commands
         /// Pen help for a retrace cut. Ctrl swaps the kept side. Shift keeps both sides as two annotations.
         /// View keys stay. The freehand control-point lines are not included.
         /// </summary>
-        public new string[] HelpStrings =>
+        public new HelpEntry[] Help =>
         [
-            .. DefaultKeyHelpStrings,
-            "Ctrl: Keep the other side of the cut",
-            "Shift: Keep both sides as two annotations"
+            .. KeyHelp,
+            new("Keep the other side of the cut", HelpModifiers.Ctrl),
+            new("Keep both sides as two annotations", HelpModifiers.Shift)
         ];
 
-        public new ObservableCollection<string> ObservableHelpStrings => new(HelpStrings);
+        public new ObservableCollection<HelpEntry> ObservableHelp => new(Help);
 
         public bool IsCutComplete => PolyBeingCut.HasValue;
 
@@ -512,6 +512,7 @@ namespace WebAnnotation.UI.Commands
             return SwitchSide ? CounterClockwiseCutPolygon : ClockwiseCutPolygon;
         }
 
+        // Ctrl and Shift change the previewed pieces while held (SwitchSide, KeepBothPieces); modifier tracking, not key bindings.
         protected override void OnKeyUp(object sender, KeyEventArgs e)
         {
             if (e.Control || e.Shift)

@@ -28,15 +28,15 @@ using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace Viking.UI.Controls
 {
-    public partial class SectionViewerControl : VikingXNAWinForms.ViewerControl, IHelpStrings, IPenEvents, IGestureEvents
+    public partial class SectionViewerControl : VikingXNAWinForms.ViewerControl, IHelp, IPenEvents, IGestureEvents
     {
         Viking.UI.Commands.Command? _CurrentCommand;
 
         /// <summary>
         /// F1 lines for <see cref="DefaultCommand"/>. A command that does not implement
-        /// <see cref="IObservableHelpStrings"/> binds this instead of leaving the previous command's text on the bar.
+        /// <see cref="IObservableHelp"/> binds this instead of leaving the previous command's text on the bar.
         /// </summary>
-        private IObservableHelpStrings? _idleHelp;
+        private IObservableHelp? _idleHelp;
 
         public Viking.UI.Commands.Command? CurrentCommand
         {
@@ -79,12 +79,11 @@ namespace Viking.UI.Controls
             if (commandHelpText is null)
                 return;
 
-            IObservableHelpStrings? help = command as IObservableHelpStrings ?? _idleHelp;
+            IObservableHelp? help = command as IObservableHelp ?? _idleHelp;
             if (help is null)
                 return;
 
-            commandHelpText.DataContext = help;
-            commandHelpText.TextArray = help.ObservableHelpStrings;
+            commandHelpText.Entries = help.ObservableHelp;
         }
 
         public Viking.UI.Commands.CommandQueue CommandQueue = new();
@@ -502,7 +501,7 @@ namespace Viking.UI.Controls
         }
 
         private ElementHost commandHelpTextScrollerHost;
-        private Viking.UI.WPF.StringArrayAutoScroller commandHelpText;
+        private Viking.UI.WPF.HelpBar commandHelpText;
 
         private PenEventManager penEventManager;
         private GestureEventManager gestureEventManager;
@@ -684,14 +683,9 @@ namespace Viking.UI.Controls
 
             try
             {
-                commandHelpText = new Viking.UI.WPF.StringArrayAutoScroller
-                {
-                    DataContext = this.CurrentCommand as IHelpStrings
-                };
-
-                //commandHelpText.TextArray = new String[] { "Hello", "world" };
-                //commandHelpText.InitializeComponent();
+                commandHelpText = new Viking.UI.WPF.HelpBar();
                 commandHelpTextScrollerHost.Child = commandHelpText;
+                BindCommandHelp(CurrentCommand);
             }
             catch (Exception ex)
             {
@@ -1609,25 +1603,55 @@ namespace Viking.UI.Controls
         }
 
 
-        public static string[] DefaultMouseHelpStrings = [];
+        private KeyBinding[]? _keyTable;
 
-        public static string[] DefaultKeyHelpStrings = [
-            "F1: Expand full list of commands",
-            "CTRL + G: Open goto position dialog",
-            "Space bar: Hide annotations",
-            "Space bar + CTRL: Show only annotations",
-            "CTRL + Shift + +/-: Brighten/darken quantized sections",
-            "CTRL + Shift + 0: Reset quantized section brightness"
-            ];
+        /// <summary>
+        /// The keys the viewer handles whatever command is active. <see cref="OnKeyDown"/> dispatches through this table and the
+        /// help lists it, so the two cannot disagree. Holding Ctrl alone (to reveal annotations while Space is held) is handled
+        /// beside it, since it is part of Ctrl+Space rather than a key of its own.
+        /// </summary>
+        public IReadOnlyList<KeyBinding> KeyTable => _keyTable ??=
+        [
+            KeyBinding.Do(HelpEntry.For(HelpInput.F1, "Expand full list of commands"), _ => ToggleHelpList()),
+            KeyBinding.Do(HelpEntry.For(HelpInput.G, "Open goto position dialog", HelpModifiers.Ctrl), _ => ShowGoToLocationForm()),
+            KeyBinding.Do(HelpEntry.For(HelpInput.C, "Copy the position under the mouse", HelpModifiers.Ctrl), _ => CopyPositionToClipboard()),
+            KeyBinding.Do(HelpEntry.For(HelpInput.Space, "Hide annotations while held"), _ => { SetOverlayVisiblity(false, true); Invalidate(); }),
+            KeyBinding.Do(HelpEntry.For(HelpInput.Space, "Show only annotations while held", HelpModifiers.Ctrl), _ => { SetOverlayVisiblity(true, true); Invalidate(); }),
+            KeyBinding.Do(new HelpEntry("Brighten/darken quantized sections", HelpModifiers.Ctrl | HelpModifiers.Shift, [HelpInput.Plus, HelpInput.Minus]),
+                e => AdjustCrushContrast(e.KeyCode)),
+            KeyBinding.Do(HelpEntry.For(HelpInput.D0, "Reset quantized section brightness", HelpModifiers.Ctrl | HelpModifiers.Shift),
+                e => AdjustCrushContrast(e.KeyCode)),
+            KeyBinding.Do(HelpEntry.For(HelpInput.Z, "Capture a screenshot"), _ => StartScreenCapture()),
+        ];
 
-        public string[] HelpStrings
+        /// <summary>The viewer's own keys, listed in every command's idle help.</summary>
+        public HelpEntry[] Help => [.. KeyBindings.Help(KeyTable)];
+
+        /// <summary>Ends the active command, as Z always has, and starts a screen capture.</summary>
+        private void StartScreenCapture()
         {
-            get
-            {
-                List<string> listHelp = [.. DefaultKeyHelpStrings];
-                listHelp.AddRange(DefaultMouseHelpStrings);
-                return [.. listHelp];
-            }
+            if (CurrentCommand is { } active)
+                active.CommandActive = false;
+
+            CurrentCommand = new Viking.UI.Commands.ScreenCaptureCommand(this);
+        }
+
+        private void ToggleHelpList()
+        {
+            if (commandHelpText is null)
+                return;
+
+            commandHelpText.IsDropDownOpen = !commandHelpText.IsDropDownOpen;
+            timerHelpTextChange.Enabled = !commandHelpText.IsDropDownOpen;
+        }
+
+        private void CopyPositionToClipboard()
+        {
+            if (Section is null)
+                return;
+
+            Geometry.Vector2 pos = StatusPosition;
+            Clipboard.SetText(Util.CoordinatesToCopyPaste(pos.X, pos.Y, Section.Number, Downsample));
         }
 
         VikingXNAGraphics.Controls.CircularButton upSectionButton;
@@ -2852,51 +2876,21 @@ namespace Viking.UI.Controls
             this.Invalidate();
         }
 
+        /// <summary>
+        /// Runs the viewer's binding for the key (<see cref="KeyTable"/>), then raises KeyDown as before so the command and the
+        /// overlays see the key too; the command skips a key the viewer marked handled.
+        /// </summary>
         protected override void OnKeyDown(KeyEventArgs e)
         {
-            switch (e.KeyCode)
+            if (e.KeyCode is Keys.Control or Keys.ControlKey)
             {
-                case Keys.C:
-                    if (e.Control == true)
-                    {
-                        if (Section is null)
-                            break;
-
-                        //On Ctrl+C, copy current mouse position to keyboard
-                        Geometry.Vector2 Pos = StatusPosition;
-                        string PosText = Util.CoordinatesToCopyPaste(Pos.X, Pos.Y, Section.Number, Downsample);
-                        Clipboard.SetText(PosText);
-
-                    }
-                    break;
-                case Keys.Space:
-                    SetOverlayVisiblity(e.Control, true);
-                    this.Invalidate();
-                    break;
-                case Keys.Oemplus:
-                case Keys.Add:
-                case Keys.OemMinus:
-                case Keys.Subtract:
-                case Keys.D0:
-                case Keys.NumPad0:
-                    if (e.Control && e.Shift)
-                    {
-                        AdjustCrushContrast(e.KeyCode);
-                        e.Handled = true;
-                    }
-                    break;
-                case Keys.Control:
-                case Keys.ControlKey:
-                    SetOverlayVisiblity(true, System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.Space));
-                    this.Invalidate();
-                    break;
-                case Keys.F1:
-                    if (commandHelpText != null)
-                    {
-                        this.commandHelpText.IsDropDownOpen = !this.commandHelpText.IsDropDownOpen;
-                        this.timerHelpTextChange.Enabled = !this.commandHelpText.IsDropDownOpen;
-                    }
-                    break;
+                // Ctrl pressed while Space is held: part of Ctrl+Space (show only annotations).
+                SetOverlayVisiblity(true, System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.Space));
+                this.Invalidate();
+            }
+            else
+            {
+                KeyBindings.TryDispatch(KeyTable, e);
             }
 
             base.OnKeyDown(e);
@@ -2905,17 +2899,16 @@ namespace Viking.UI.Controls
 
         protected override void OnKeyUp(KeyEventArgs e)
         {
-            switch (e.KeyCode)
+            if (e.KeyCode is Keys.Control or Keys.ControlKey)
             {
-                case Keys.Control:
-                case Keys.ControlKey:
-                    SetOverlayVisiblity(false, System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.Space));
-                    this.Invalidate();
-                    break;
-                case Keys.Space:
-                    SetOverlayVisiblity(e.Control, false);
-                    this.Invalidate();
-                    break;
+                SetOverlayVisiblity(false, System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.Space));
+                this.Invalidate();
+            }
+            else if (HelpInputKeys.Matches(HelpInput.Space, e.KeyCode))
+            {
+                // The release of the Space and Ctrl+Space bindings in KeyTable (annotations hidden or shown only while held).
+                SetOverlayVisiblity(e.Control, false);
+                this.Invalidate();
             }
 
             base.OnKeyUp(e);
@@ -2923,14 +2916,8 @@ namespace Viking.UI.Controls
 
         protected override void OnKeyPress(KeyPressEventArgs e)
         {
+            // Z (screen capture) is in KeyTable, which suppresses its key press.
             base.OnKeyPress(e);
-
-            //Escape cancels the current command and sets the selected item to null
-            if (e.KeyChar == (char)Keys.PrintScreen || e.KeyChar == 'z')
-            {
-                this.CurrentCommand = new Viking.UI.Commands.ScreenCaptureCommand(this);
-                e.Handled = true;
-            }
         }
 
 
@@ -3291,15 +3278,6 @@ namespace Viking.UI.Controls
 
         private void menuCaptureScreen_Click(object sender, EventArgs e) => this.CurrentCommand = new Viking.UI.Commands.ScreenCaptureCommand(this);
 
-        private void SectionViewerControl_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Control && e.KeyCode == Keys.G)
-            {
-                ShowGoToLocationForm();
-                e.Handled = true;
-            }
-        }
-
         private void menuSetupChannels_Click(object sender, EventArgs e)
         {
             using SetupChannelsForm ChannelSetup = new(this.Section.VolumeViewModel.DefaultChannels, this.Section.VolumeViewModel.ChannelNames);
@@ -3432,7 +3410,7 @@ namespace Viking.UI.Controls
             if (this.commandHelpText is null)
                 return;
 
-            this.commandHelpText.TextArrayIndex++;
+            this.commandHelpText.ShowNext();
         }
 
         private void menuShowCommandHelp_Click(object sender, EventArgs e)

@@ -7,6 +7,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Forms;
+using Viking.Common;
 using Viking.UI;
 using Viking.UI.Controls;
 using VikingXNA;
@@ -20,8 +21,15 @@ namespace WebAnnotation.UI.Commands
     /// <summary>
     /// Presents the drawn shape and a cancel button.  User either accepts or rejects the shape.
     /// </summary>
-    public class ActionConfirmationCommand : Viking.UI.Commands.Command
+    public class ActionConfirmationCommand : Viking.UI.Commands.Command, IHelp
     {
+        /// <summary>Click or touch a button to choose it, or the cancel button; then the keys.</summary>
+        public HelpEntry[] Help =>
+        [
+            new("Choose", HelpModifiers.None, [HelpInput.LeftClick, HelpInput.PenContact], "on a button"),
+            .. KeyHelp,
+        ];
+
         //private IShape2D VolumeShape = null;
 
         //Shapes the user can click to confirm

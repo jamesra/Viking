@@ -1,11 +1,13 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Forms;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Viking.Common;
 using Viking.Services.Grpc;
 using Viking.UI;
 using Viking.UI.Controls;
@@ -30,7 +32,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// the server has them encoded when the request comes. Double-clicking the result, Enter and the check
     /// button accept; Escape and the red X cancel. The point placing <see cref="SegmentationCommand"/> it derives from is retired; this command replaces it. Everything here runs on the UI thread; the server request and the polygonizing are the base class's.
     /// </remarks>
-    internal sealed class SegmentationPaintCommand : SegmentationCommand, Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    internal sealed class SegmentationPaintCommand : SegmentationCommand, IHelp, IObservableHelp
     {
         /// <summary>Quiet time after the last button release before the masks are sent.</summary>
         public const int SubmitPauseMilliseconds = 350;
@@ -126,27 +128,46 @@ namespace WebAnnotation.UI.Commands.Segmentation
         public double RadiusPixels => radiusPixels;
 
         #region Help Strings
-        /// <summary>Help lines shown while the command is active.</summary>
-        public static readonly string[] PaintHelpStrings =
+        /// <summary>The painting, brush and pen gestures; the keys come from <see cref="KeyTable"/>.</summary>
+        public static readonly HelpEntry[] PaintMouseHelp =
         [
-            "Left-click + drag: Paint foreground (the object)",
-            "Shift + Left-click + drag: Paint background (not the object)",
-            "Shift + Left-click on paint + drag: Erase paint (foreground and background)",
-            "Pen: the barrel button works like Shift; the check button accepts, the red X cancels",
-            "Sideways wheel or Shift + wheel: Brush size",
-            "F5 or the blue arrow: Send the masks again (after a server error or timeout)",
-            "Ctrl + Z: Undo the last stroke",
-            "Ctrl + Delete or the purple crossed square: Clear all paint",
-            "Double-click the result or press Enter: Accept",
-            "Escape or the red X: Cancel",
-            "Hold Right click + Drag: Move view",
+            HelpEntry.For(HelpInput.LeftDrag, "Paint foreground (the object)"),
+            HelpEntry.For(HelpInput.LeftDrag, "Paint background (not the object)", HelpModifiers.Shift),
+            HelpEntry.For(HelpInput.LeftDrag, "Erase paint (foreground and background)", HelpModifiers.Shift, "on paint"),
+            HelpEntry.For(HelpInput.Pen, "The barrel button works like Shift; the check button accepts, the red X cancels"),
+            HelpEntry.For(HelpInput.TiltWheel, "Brush size"),
+            HelpEntry.For(HelpInput.Wheel, "Brush size", HelpModifiers.Shift),
+            HelpEntry.For(HelpInput.LeftDoubleClick, "Accept", where: "on the result"),
+            HelpEntry.For(HelpInput.RightDrag, "Move view"),
         ];
 
-        /// <summary>Help lines shown while the command is active.</summary>
-        public new string[] HelpStrings => PaintHelpStrings;
+        /// <summary>Help shown while the command is active.</summary>
+        public new HelpEntry[] Help => [.. PaintMouseHelp, .. KeyHelp];
 
-        /// <inheritdoc cref="HelpStrings" />
-        public new ObservableCollection<string> ObservableHelpStrings => new(PaintHelpStrings);
+        /// <inheritdoc cref="Help" />
+        public new ObservableCollection<HelpEntry> ObservableHelp => new(Help);
+
+        private KeyBinding[]? _paintKeyTable;
+
+        /// <summary>
+        /// The paint keys, then the segmentation keys. Escape cancels here (the red X does the same) unless the command has a
+        /// dragged polygon to place, which the segmentation table's Escape handles; the default Escape row is dropped so the
+        /// help lists Escape once. F5, Ctrl+Z and Ctrl+Delete take any Shift as before; Ctrl or Alt keeps F5 and Alt keeps Z
+        /// from firing.
+        /// </summary>
+        protected override IReadOnlyList<KeyBinding> KeyTable => _paintKeyTable ??=
+        [
+            new KeyBinding(HelpEntry.For(HelpInput.F5, "Send the masks again (or the blue arrow) after a server error or timeout"),
+                e => { if (e.Control || e.Alt) return false; OnResubmitButton(); return true; }, AnyModifiers: true),
+            new KeyBinding(HelpEntry.For(HelpInput.Z, "Undo the last stroke", HelpModifiers.Ctrl),
+                e => { if (!e.Control || e.Alt) return false; UndoLastStroke(); return true; }, AnyModifiers: true),
+            new KeyBinding(HelpEntry.For(HelpInput.Delete, "Clear all paint (or the purple crossed square)", HelpModifiers.Ctrl),
+                e => { if (!e.Control) return false; OnClearMaskButton(); return true; }, AnyModifiers: true),
+            new KeyBinding(HelpEntry.For(HelpInput.Enter, "Accept"),
+                e => { if (e.Control || e.Alt) return false; AcceptBestPolygon(); return true; }, AnyModifiers: true),
+            KeyBinding.Do(HelpEntry.For(HelpInput.Escape, "Cancel (or the red X)"), _ => CancelCommand(), when: () => !HasPlacementFallback),
+            .. base.KeyTable.Where(b => !(b.When is null && b.Help.Inputs is { Length: 1 } inputs && inputs[0] == HelpInput.Escape)),
+        ];
         #endregion
 
         #region Lifecycle
@@ -541,46 +562,6 @@ namespace WebAnnotation.UI.Commands.Segmentation
             Parent.Invalidate();
         }
 
-        /// <summary>F5 resubmits; Ctrl+Delete clears all paint.</summary>
-        protected override void OnKeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.F5 && !e.Control && !e.Alt)
-            {
-                OnResubmitButton();
-                e.Handled = true;
-                return;
-            }
-
-            if (e.KeyCode == Keys.Z && e.Control && !e.Alt)
-            {
-                UndoLastStroke();
-                e.Handled = true;
-                e.SuppressKeyPress = true;
-                return;
-            }
-
-            if (e.KeyCode == Keys.Delete && e.Control)
-            {
-                OnClearMaskButton();
-                e.Handled = true;
-                return;
-            }
-
-            base.OnKeyDown(sender, e);
-        }
-
-        /// <inheritdoc />
-        protected override void OnKeyPress(object sender, KeyPressEventArgs e)
-        {
-            if (e.KeyChar == '\r')
-            {
-                AcceptBestPolygon();
-                e.Handled = true;
-                return;
-            }
-
-            base.OnKeyPress(sender, e);
-        }
         #endregion
 
         #region Pen

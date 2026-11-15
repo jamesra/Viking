@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -6,6 +7,7 @@ using System.Windows.Forms;
 using System.Xml.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using rogue1.codepharm.net.XSD.WebAnnotationUserSettings.xsd;
+using Viking.Common;
 using WebAnnotation;
 
 namespace WebAnnotationTests
@@ -13,7 +15,8 @@ namespace WebAnnotationTests
     /// <summary>
     /// Checks the repo copy of the default shortcuts file (<c>Clients/Viking/WebAnnotation/UserSettings.xml</c>,
     /// deployed to the server as <c>WebAnnotationUserSettings.xml</c>) against <see cref="OverlayHotkeys"/>:
-    /// a chord bound twice or bound to a key the overlay handles in code is a shortcut that never fires.
+    /// a chord bound twice or bound to a key the overlay handles in code is a shortcut that never fires. Also checks that
+    /// the reserved chords are exactly the overlay's key table and that the hotkey help says which hotkeys cannot fire.
     /// </summary>
     [TestClass]
     public class OverlayHotkeysTests
@@ -41,10 +44,9 @@ namespace WebAnnotationTests
             return "";
         }
 
-        private static Keys KeyData(Hotkey h) =>
-            h.KeyCode | (h.Shift ? Keys.Shift : Keys.None) | (h.Ctrl ? Keys.Control : Keys.None) | (h.Alt ? Keys.Alt : Keys.None);
+        private static Keys KeyData(Hotkey h) => AnnotationOverlay.ChordOf(h);
 
-        private static string Describe(Hotkey h) => $"{h.BuildModifierString()}{h.KeyName} ({h.Action})";
+        private static string Describe(Hotkey h) => $"{KeyData(h)} ({h.Action})";
 
         [TestMethod]
         public void RepoUserSettingsIsWellFormedXml()
@@ -99,11 +101,63 @@ namespace WebAnnotationTests
         [DataRow(Keys.Shift | Keys.D8, true)]
         [DataRow(Keys.D8, false)]
         [DataRow(Keys.Multiply, true)]
-        [DataRow(Keys.F11, false, DisplayName = "F11 also lets the shortcuts run")]
+        [DataRow(Keys.F11, true, DisplayName = "F11 (goto structure) is the overlay's")]
+        [DataRow(Keys.Control | Keys.F12, true, DisplayName = "F12 (goto location) is taken with any modifier")]
+        [DataRow(Keys.F3, true)]
+        [DataRow(Keys.Back, true)]
         [DataRow(Keys.Shift | Keys.ShiftKey, false)]
         public void IsReservedMatchesTheOverlayHandlers(Keys keyData, bool expected)
         {
             Assert.AreEqual(expected, OverlayHotkeys.IsReserved(keyData));
+        }
+
+        /// <summary>F6, F7 and Ctrl+Z were handled without help lines; every overlay key now has one.</summary>
+        [TestMethod]
+        [DataRow(HelpInput.F6, HelpModifiers.None)]
+        [DataRow(HelpInput.F7, HelpModifiers.None)]
+        [DataRow(HelpInput.Z, HelpModifiers.Ctrl)]
+        [DataRow(HelpInput.F11, HelpModifiers.None)]
+        [DataRow(HelpInput.F12, HelpModifiers.None)]
+        public void TheOverlayTableDocumentsItsKeys(HelpInput input, HelpModifiers modifiers)
+        {
+            Assert.IsTrue(OverlayHotkeys.Table.Any(b => b.Help.Modifiers == modifiers && b.Help.Inputs!.Contains(input) &&
+                                                        b.Help.Description.Length > 0));
+        }
+
+        private static Hotkey NewHotkey(string keyName, string action, bool shift = false, bool ctrl = false) =>
+            new() { KeyName = keyName, Action = action, Shift = shift, Ctrl = ctrl, Alt = false };
+
+        [TestMethod]
+        public void HotkeyHelpMarksTheHotkeysThatCannotFire()
+        {
+            List<string> reported = [];
+            HelpEntry[] help = AnnotationOverlay.BuildUserHotkeyHelp(
+            [
+                NewHotkey("C", "Circle"),
+                NewHotkey("F5", "Shadowed by reload"),
+                NewHotkey("C", "Second C"),
+                NewHotkey("OemPeriod", "Period", ctrl: true),
+            ], null, reported.Add);
+
+            Assert.AreEqual(4, help.Length);
+            Assert.AreEqual("Circle", help[0].Description);
+            CollectionAssert.AreEqual(new[] { HelpInput.C }, help[0].Inputs);
+            StringAssert.StartsWith(help[1].Description, "Shadowed by reload (not available: used by the annotation overlay");
+            StringAssert.StartsWith(help[2].Description, "Second C (not available: used by the hotkey for Circle");
+            Assert.AreEqual(HelpInput.Other, help[3].Inputs![0]);
+            Assert.AreEqual("OemPeriod", help[3].Label);
+            Assert.AreEqual(HelpModifiers.Ctrl, help[3].Modifiers);
+            Assert.AreEqual(2, reported.Count);
+        }
+
+        [TestMethod]
+        public void RepoHotkeyHelpHasNoUnavailableHotkey()
+        {
+            UserSettings settings = UserSettings.Load(FindRepoUserSettings());
+            List<string> reported = [];
+            HelpEntry[] help = AnnotationOverlay.BuildUserHotkeyHelp(settings.Shortcuts.Hotkey, null, reported.Add);
+            Assert.AreEqual(settings.Shortcuts.Hotkey.Count, help.Length);
+            Assert.AreEqual(0, reported.Count, string.Join("\n", reported));
         }
     }
 }

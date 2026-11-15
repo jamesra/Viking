@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Viking.Common;
 using Viking.UI;
 using Viking.VolumeModel;
 using VikingXNAWinForms;
@@ -12,11 +13,14 @@ namespace WebAnnotation.UI.Commands
 {
     internal abstract class TranslateScaleCommandBase : AnnotationCommandBase
     {
-        public new static string[] DefaultMouseHelpStrings = [
-           "Hold Left+Click Drag to move",
-           "Release Left button to place",
-           "Scroll wheel: Change size",
-           "SHIFT + Scroll wheel: Change size slowly"
+        /// <summary>The mouse actions every move-and-resize command shares: drag to move, release to place, wheel to resize.</summary>
+        protected static readonly HelpEntry[] TranslateScaleHelp =
+        [
+            HelpEntry.Text("Release Left button to place"),
+            HelpEntry.For(HelpInput.LeftDrag, "Move"),
+            HelpEntry.For(HelpInput.Pen, "Move (drag with the pen in contact)"),
+            HelpEntry.For(HelpInput.Wheel, "Change size"),
+            HelpEntry.For(HelpInput.Wheel, "Change size slowly", HelpModifiers.Shift),
         ];
 
         protected Viking.VolumeModel.IVolumeToSectionTransform mapping;

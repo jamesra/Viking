@@ -417,7 +417,7 @@ namespace WebAnnotation.UI.AutoPolygonize
     /// <see cref="Global.AnnotationSettings.AutoPolygonizeHideSegmentationRings"/> is set.
     /// Prompt dots follow <see cref="Global.AnnotationSettings.AutoPolygonizeOverlayPrompts"/>.
     /// </summary>
-    internal sealed class AutoPolygonizeProposal : IHandleMouseDoubleClick, IHelpStrings, IContextMenu
+    internal sealed class AutoPolygonizeProposal : IHandleMouseDoubleClick, IHelp, IContextMenu
     {
         private const float RingSaturation = 0.80f;
         private const float DefaultLightness = 0.70f;
@@ -691,10 +691,10 @@ namespace WebAnnotation.UI.AutoPolygonize
             }
         }
 
-        public string[] HelpStrings =>
+        public HelpEntry[] Help =>
         [
-            "Double-click: Accept polygonalization",
-            "Double right-click: Proposal menu (Accept / Paint mask / Reject)"
+            HelpEntry.For(HelpInput.LeftDoubleClick, "Accept polygonalization"),
+            HelpEntry.For(HelpInput.RightDoubleClick, "Proposal menu (Accept / Paint mask / Reject)")
         ];
 
         /// <summary>

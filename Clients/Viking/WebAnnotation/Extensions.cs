@@ -13,25 +13,6 @@ using WebAnnotationModel;
 namespace WebAnnotation
 {
 
-    public static class HotkeyExtensions
-    {
-        public static string BuildModifierString(this Hotkey hkey)
-        {
-            string keystr = "";
-            if (hkey.Ctrl)
-            {
-                keystr += "CTRL + ";
-            }
-
-            if (hkey.Shift)
-            {
-                keystr += "SHIFT + ";
-            }
-
-            return keystr;
-        }
-    }
-
     /// <summary>
     /// Modifier checks on <see cref="System.Windows.Forms.Control.ModifierKeys"/> for pen and mouse annotation actions.
     /// Each is a flag test: Ctrl+Shift satisfies both <see cref="ShiftPressed"/> and <see cref="CtrlPressed"/>

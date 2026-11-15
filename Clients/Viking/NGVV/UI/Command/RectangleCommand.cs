@@ -4,24 +4,25 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.ObjectModel;
 using System.Windows.Forms;
-using VikingXNAWinForms;
+using VikingXNAWinForms;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace Viking.UI.Commands
 {
-    public class RectangleCommand(Viking.UI.Controls.SectionViewerControl parent) : DefaultCommand(parent), Viking.Common.IHelpStrings, Viking.Common.IObservableHelpStrings
+    public class RectangleCommand(Viking.UI.Controls.SectionViewerControl parent) : DefaultCommand(parent), Viking.Common.IHelp, Viking.Common.IObservableHelp
     {
         protected Geometry.Vector2 Origin;
         protected Geometry.Rectangle MyRect;
         protected Microsoft.Xna.Framework.Color Color;
 
-        public override string[] HelpStrings => [
-                    "Left click to set origin of rectangle",
-                    "Drag mouse to size rectangle",
-                    "Release left button to finish rectangle"];
+        public override Viking.Common.HelpEntry[] Help => [
+                    Viking.Common.HelpEntry.Text("Left click to set origin of rectangle"),
+                    Viking.Common.HelpEntry.Text("Drag mouse to size rectangle"),
+                    Viking.Common.HelpEntry.Text("Release left button to finish rectangle"),
+                    .. KeyHelp];
 
-        public override ObservableCollection<string> ObservableHelpStrings => new(this.HelpStrings);
+        public override ObservableCollection<Viking.Common.HelpEntry> ObservableHelp => new(this.Help);
 
         protected override void OnMouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
         {
