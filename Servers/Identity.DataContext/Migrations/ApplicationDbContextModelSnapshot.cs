@@ -515,24 +515,6 @@ namespace Viking.Identity.Data.Migrations
                     b.HasData(
                         new
                         {
-                            ResourceTypeId = "OrganizationalUnit",
-                            PermissionId = "Administrator",
-                            Description = "Edit all aspects of an organizational unit and CRUD operations on all child resources"
-                        },
-                        new
-                        {
-                            ResourceTypeId = "Group",
-                            PermissionId = "Access Manager",
-                            Description = "Add/Remove group members"
-                        },
-                        new
-                        {
-                            ResourceTypeId = "AnnotationContext",
-                            PermissionId = "Access",
-                            Description = "See this context in Viking and open it; data rights come from its annotation server"
-                        },
-                        new
-                        {
                             ResourceTypeId = "AnnotationServer",
                             PermissionId = "Read",
                             Description = "View annotations and the images of every linked volume"
@@ -548,6 +530,24 @@ namespace Viking.Identity.Data.Migrations
                             ResourceTypeId = "AnnotationServer",
                             PermissionId = "Review",
                             Description = "Review and correct annotations; implies Read"
+                        },
+                        new
+                        {
+                            ResourceTypeId = "AnnotationContext",
+                            PermissionId = "Access",
+                            Description = "See this context in Viking and open it; data rights come from its annotation server"
+                        },
+                        new
+                        {
+                            ResourceTypeId = "Group",
+                            PermissionId = "Access Manager",
+                            Description = "Add/Remove group members"
+                        },
+                        new
+                        {
+                            ResourceTypeId = "OrganizationalUnit",
+                            PermissionId = "Administrator",
+                            Description = "Edit all aspects of an organizational unit and CRUD operations on all child resources"
                         },
                         new
                         {
@@ -784,6 +784,11 @@ namespace Viking.Identity.Data.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("ConnectomeId");
 
+                    b.Property<long?>("DefaultAnnotationContextId")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasColumnType("bigint")
+                        .HasColumnName("DefaultAnnotationContextId");
+
                     b.Property<string>("ExportUrl")
                         .HasColumnType("nvarchar(max)");
 
@@ -793,6 +798,8 @@ namespace Viking.Identity.Data.Migrations
 
                     b.HasIndex("ConnectomeId");
 
+                    b.HasIndex("DefaultAnnotationContextId");
+
                     b.HasDiscriminator().HasValue("AnnotationServer");
                 });
 
@@ -801,7 +808,9 @@ namespace Viking.Identity.Data.Migrations
                     b.HasBaseType("Viking.Identity.Models.Resource");
 
                     b.Property<long?>("DefaultAnnotationContextId")
-                        .HasColumnType("bigint");
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasColumnType("bigint")
+                        .HasColumnName("DefaultAnnotationContextId");
 
                     b.HasIndex("DefaultAnnotationContextId");
 
@@ -1143,7 +1152,14 @@ namespace Viking.Identity.Data.Migrations
                         .HasForeignKey("ConnectomeId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Viking.Identity.Models.AnnotationContext", "DefaultAnnotationContext")
+                        .WithMany()
+                        .HasForeignKey("DefaultAnnotationContextId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Connectome");
+
+                    b.Navigation("DefaultAnnotationContext");
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.Connectome", b =>

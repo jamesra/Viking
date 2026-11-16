@@ -38,6 +38,12 @@ namespace Viking.Identity.Server.Extensions.Services
 
         public string ODataEndpoint { get; set; }
 
+        /// <summary>
+        /// The default annotation server's own default context (<see cref="AnnotationServer.DefaultAnnotationContextId"/>):
+        /// the context services work in when several read that database. Null when the database names none.
+        /// </summary>
+        public long? DatabaseDefaultContextId { get; set; }
+
         /// <summary>The assignment row for <paramref name="c"/>, loaded with <see cref="VolumeMetadata.WithCatalog"/>.</summary>
         public static AssignedAnnotationContext From(AnnotationContext c)
         {
@@ -51,7 +57,8 @@ namespace Viking.Identity.Server.Extensions.Services
                 AnnotationDatabaseName = VolumeMetadata.CorrectionDatabaseName(server),
                 BaseUrl = server?.BaseUrl,
                 AnnotationEndpoint = AnnotationServiceUrls.AnnotationUrl(server),
-                ODataEndpoint = AnnotationServiceUrls.ODataUrl(server)
+                ODataEndpoint = AnnotationServiceUrls.ODataUrl(server),
+                DatabaseDefaultContextId = server?.DefaultAnnotationContextId
             };
         }
     }

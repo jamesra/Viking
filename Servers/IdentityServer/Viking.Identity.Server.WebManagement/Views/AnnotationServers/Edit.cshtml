@@ -56,6 +56,17 @@
             </div>
 
             <div class="mb-3">
+                <label asp-for="DefaultAnnotationContextId" class="form-label"></label>
+                <select asp-for="DefaultAnnotationContextId" class="form-select" asp-items="ViewBag.LinkedContexts">
+                    <option value="">No Default</option>
+                </select>
+                <span asp-validation-for="DefaultAnnotationContextId" class="text-danger"></span>
+                <small class="form-text text-muted">
+                    The context services such as the annotation gallery work in when several contexts read this database.
+                </small>
+            </div>
+
+            <div class="mb-3">
                 <label asp-for="BaseUrl" class="form-label"></label>
                 <input asp-for="BaseUrl" class="form-control" placeholder="https://websvc.example/RC1" />
                 <span asp-validation-for="BaseUrl" class="text-danger"></span>

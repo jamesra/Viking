@@ -39,6 +39,18 @@
                     <dt class="col-sm-4">Description</dt>
                     <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Description) ? "No description" : Model.Description)</dd>
 
+                    <dt class="col-sm-4">@Html.DisplayNameFor(m => m.DefaultAnnotationContextId)</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.DefaultAnnotationContext != null)
+                        {
+                            <a asp-controller="AnnotationContexts" asp-action="Details" asp-route-id="@Model.DefaultAnnotationContext.Id">@Model.DefaultAnnotationContext.Name (@Model.DefaultAnnotationContext.Id)</a>
+                        }
+                        else
+                        {
+                            <span class="text-muted">No default</span>
+                        }
+                    </dd>
+
                     <dt class="col-sm-4">@Html.DisplayNameFor(m => m.BaseUrl)</dt>
                     <dd class="col-sm-8"><code>@Model.BaseUrl</code></dd>
 

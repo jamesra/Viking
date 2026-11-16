@@ -185,6 +185,21 @@ namespace Viking.Identity.Data
                 .HasForeignKey(c => c.DefaultAnnotationContextId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // TPH: an annotation database's default context shares the connectome's column and foreign key.
+            builder.Entity<Connectome>()
+                .Property(c => c.DefaultAnnotationContextId)
+                .HasColumnName(nameof(Connectome.DefaultAnnotationContextId));
+
+            builder.Entity<AnnotationServer>()
+                .Property(s => s.DefaultAnnotationContextId)
+                .HasColumnName(nameof(AnnotationServer.DefaultAnnotationContextId));
+
+            builder.Entity<AnnotationServer>()
+                .HasOne(s => s.DefaultAnnotationContext)
+                .WithMany()
+                .HasForeignKey(s => s.DefaultAnnotationContextId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             builder.Entity<AnnotationServer>()
                 .HasOne(s => s.Connectome)
                 .WithMany(c => c.AnnotationServers)

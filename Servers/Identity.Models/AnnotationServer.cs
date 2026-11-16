@@ -47,6 +47,18 @@ namespace Viking.Identity.Models
         public virtual Connectome Connectome { get; set; }
 
         /// <summary>
+        /// The context services work in for this database when several contexts read it (RC1 has three). Must be one of
+        /// the contexts linked through <see cref="ContextLinks"/>. Shares the <c>DefaultAnnotationContextId</c> column
+        /// with <see cref="Connectome.DefaultAnnotationContextId"/> (TPH), so the same Restrict foreign key covers it.
+        /// </summary>
+        [Display(Name = "Default Annotation Context", Description = "Context services work in for this database")]
+        public virtual long? DefaultAnnotationContextId { get; set; }
+
+        [ForeignKey(nameof(DefaultAnnotationContextId))]
+        [Display(Name = "Default Annotation Context", Description = "Context services work in for this database")]
+        public virtual AnnotationContext DefaultAnnotationContext { get; set; }
+
+        /// <summary>
         /// Contexts whose default annotation server is this database.
         /// Prefer <see cref="ContextLinks"/> for the full many-to-many set.
         /// </summary>

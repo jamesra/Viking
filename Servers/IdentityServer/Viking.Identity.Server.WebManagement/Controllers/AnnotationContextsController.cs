@@ -505,15 +505,21 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return Forbid();
             }
 
+            ViewBag.DefaultHolders = await DefaultContextReplacement.HoldersAsync(_context, volume.Id);
             return View(volume);
         }
 
         // POST: Volumes/Delete/5
+        // A connectome or annotation database that names this context as its default gets the new default chosen on the
+        // page (replacement[holderId] = "none" or a context id) before the context is deleted.
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(long id)
+        public async Task<IActionResult> DeleteConfirmed(long id, [FromForm] Dictionary<long, string> replacement)
         {
-            var volume = await _context.AnnotationContexts.FindAsync(id);
+            var volume = await _context.AnnotationContexts
+                .Include(v => v.Parent)
+                .Include(v => v.ResourceType)
+                .FirstOrDefaultAsync(m => m.Id == id);
             if(volume == null)
             {
                 return NotFound();
@@ -522,6 +528,16 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             if (false == await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, volume))
             {
                 return Unauthorized();
+            }
+
+            var problems = await DefaultContextReplacement.ApplyAsync(_context, id, replacement ?? new Dictionary<long, string>());
+            if (problems.Count > 0)
+            {
+                foreach (var problem in problems)
+                    ModelState.AddModelError(string.Empty, problem);
+                ViewBag.DefaultHolders = await DefaultContextReplacement.HoldersAsync(_context, id);
+                ViewBag.Replacement = replacement;
+                return View(volume);
             }
 
             await _onboarding.DeleteInvitesForAnnotationContextAsync(id);

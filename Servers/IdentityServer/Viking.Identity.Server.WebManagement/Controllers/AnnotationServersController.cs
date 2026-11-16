@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
@@ -57,6 +58,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
             var server = await _context.AnnotationServers
                 .Include(s => s.Parent)
+                .Include(s => s.DefaultAnnotationContext)
                 .Include(s => s.AnnotationContexts)
                     .ThenInclude(v => v.Volume)
                         .ThenInclude(i => i.Mirrors)
@@ -84,13 +86,30 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return Forbid();
 
             ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, server.ParentID);
+            ViewBag.LinkedContexts = await LinkedContextOptionsAsync(server.Id, server.DefaultAnnotationContextId);
             return View(server);
+        }
+
+        /// <summary>
+        /// The contexts linked to this database (<see cref="AnnotationContextServer"/>), the choices for its default
+        /// context.
+        /// </summary>
+        private async Task<SelectList> LinkedContextOptionsAsync(long serverId, long? selected)
+        {
+            var linked = await _context.Set<AnnotationContextServer>()
+                .Where(l => l.AnnotationServerId == serverId)
+                .Select(l => new { l.AnnotationContext.Id, l.AnnotationContext.Name, l.AnnotationContext.Endpoint })
+                .ToListAsync();
+            var items = linked
+                .OrderBy(c => c.Name).ThenBy(c => c.Id)
+                .Select(c => new { c.Id, Text = $"{c.Name} ({c.Id}) {c.Endpoint}" });
+            return new SelectList(items, "Id", "Text", selected);
         }
 
         // POST: AnnotationServers/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(long id, [Bind("Id,Name,Description,ParentID,BaseUrl,ExportUrl")] AnnotationServer input)
+        public async Task<IActionResult> Edit(long id, [Bind("Id,Name,Description,ParentID,BaseUrl,ExportUrl,DefaultAnnotationContextId")] AnnotationServer input)
         {
             if (id != input.Id)
                 return NotFound();
@@ -128,9 +147,14 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             else if (await _context.AnnotationServers.AnyAsync(s => s.Id != id && s.BaseUrl == baseUrl))
                 ModelState.AddModelError(nameof(input.BaseUrl), "Another annotation server already uses this Base URL.");
 
+            if (input.DefaultAnnotationContextId is long defaultContextId
+                && !await _context.Set<AnnotationContextServer>().AnyAsync(l => l.AnnotationServerId == id && l.AnnotationContextId == defaultContextId))
+                ModelState.AddModelError(nameof(input.DefaultAnnotationContextId), "The default context must be one of the contexts linked to this annotation database.");
+
             if (!ModelState.IsValid)
             {
                 ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, input.ParentID);
+                ViewBag.LinkedContexts = await LinkedContextOptionsAsync(id, input.DefaultAnnotationContextId);
                 input.BaseUrl = existing.BaseUrl;
                 return View(input);
             }
@@ -140,6 +164,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             existing.ParentID = input.ParentID;
             existing.BaseUrl = baseUrl;
             existing.ExportUrl = input.ExportUrl;
+            existing.DefaultAnnotationContextId = input.DefaultAnnotationContextId;
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] = $"Saved annotation server {existing.Name}.";
