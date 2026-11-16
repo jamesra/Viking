@@ -976,6 +976,7 @@ class SegmentationServicer(SegmentationServiceServicer):
                 viking_xml=context.endpoint,
                 tilesets=sorted({name for section in volume.sections.values() for name in section.tilesets})
                 if volume is not None else [],
+                database_default_context_id=context.database_default_context_id,
             )
             for context, volume in pairs
         ]

@@ -42,6 +42,8 @@ class LocalContext:
     name: str
     # The context's VikingXML URL.
     endpoint: str
+    # The default context of the context's annotation database (Identity's databaseDefaultContextId), 0 for none.
+    database_default_context_id: int = 0
 
 
 def _http_call(url: str, form: Optional[Dict[str, str]], headers: Dict[str, str]) -> bytes:
@@ -124,7 +126,12 @@ class IdentityAssignments:
             context_id = int(lowered.get("annotationcontextid") or 0)
             endpoint = lowered.get("endpoint")
             if context_id > 0 and endpoint:
-                contexts[context_id] = LocalContext(context_id, str(lowered.get("name") or ""), str(endpoint))
+                contexts[context_id] = LocalContext(
+                    context_id,
+                    str(lowered.get("name") or ""),
+                    str(endpoint),
+                    int(lowered.get("databasedefaultcontextid") or 0),
+                )
         return contexts
 
     async def get(self, annotation_context_id: int) -> Optional[LocalContext]:

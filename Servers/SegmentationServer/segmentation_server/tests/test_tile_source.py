@@ -288,13 +288,17 @@ _OPTIONS = IdentityOptions(
 @pytest.mark.asyncio
 async def test_identity_lists_the_local_contexts_with_a_client_credentials_token() -> None:
     calls: list = []
-    rows = [{"annotationContextId": 5, "name": "Rabbit", "endpoint": XML_URL}, {"annotationContextId": 6, "endpoint": None}]
+    rows = [
+        {"annotationContextId": 5, "name": "Rabbit", "endpoint": XML_URL, "databaseDefaultContextId": 5},
+        {"annotationContextId": 6, "endpoint": None},
+    ]
     clock = [0.0]
     assignments = IdentityAssignments(_OPTIONS, http_call=_identity(rows, calls), time_fn=lambda: clock[0])
 
     local = await assignments.get(5)
 
     assert local is not None and local.endpoint == XML_URL
+    assert local.database_default_context_id == 5
     assert await assignments.get(6) is None
     token_url, form, _ = calls[0]
     assert token_url == "https://identity.example/id/connect/token"

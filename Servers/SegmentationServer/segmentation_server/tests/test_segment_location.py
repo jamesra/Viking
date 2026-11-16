@@ -243,7 +243,7 @@ class _ContextSource:
 
         tileset = Tileset("TEM", "TEM", 256, 256, "", ".png", "03d", {1: TilesetLevel(1, 1, 1)})
         readable = VikingVolume("RC2", "http://h/RC2", {1: VolumeSection(1, "0001", {"TEM": tileset})})
-        return [(LocalContext(7, "RC2", "http://h/RC2.xml"), readable), (LocalContext(9, "RPC1", "http://h/RPC1.xml"), None)]
+        return [(LocalContext(7, "RC2", "http://h/RC2.xml", 7), readable), (LocalContext(9, "RPC1", "http://h/RPC1.xml"), None)]
 
     async def fetch(self, annotation_context_id, coord):
         return None
@@ -267,3 +267,5 @@ async def test_the_status_lists_each_assigned_volume_and_whether_its_images_are_
     assert [(v.viking_xml, list(v.tilesets)) for v in status.readable_volumes] == [
         ("http://h/RC2.xml", ["TEM"]), ("http://h/RPC1.xml", []),
     ]
+    # Each context carries its annotation database's default context, 0 when the database names none.
+    assert [v.database_default_context_id for v in status.readable_volumes] == [7, 0]
