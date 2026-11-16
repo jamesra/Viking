@@ -39,7 +39,7 @@ namespace Viking.Identity.Server.WebManagement.Models.UserViewModels
         public static readonly string[] GroupMemberResourceTypes =
         {
             nameof(AnnotationContext), nameof(OrganizationalUnit), nameof(SegmentationService),
-            nameof(CorrectionService), nameof(AnnotationServer), nameof(Connectome),
+            nameof(CorrectionService), nameof(AnnotationServer),
         };
 
         /// <summary>Form field prefix of a context service's assigned-resource checklist on its Edit page.</summary>

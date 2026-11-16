@@ -120,6 +120,8 @@ namespace TestIdentityModel
             Assert.Equal("RC1db", server.AnnotationDatabaseName);
             Assert.Equal(server.Id, (await db.AnnotationContexts.FindAsync(rc1.Id)).AnnotationServerId);
             Assert.Equal(server.Id, (await db.AnnotationContexts.FindAsync(internalCopy.Id)).AnnotationServerId);
+            // The first context linked to a new database becomes its default; the second leaves it alone.
+            Assert.Equal(rc1.Id, server.DefaultAnnotationContextId);
 
             // Volumes are never merged: each keeps its own image set with its URL as the first mirror.
             Assert.Equal(2, await db.Volumes.CountAsync());
@@ -446,7 +448,7 @@ namespace TestIdentityModel
             var error = PermissionRegistry.FilterError(nameof(AnnotationServer), new[] { "Read", "Write" });
             Assert.Contains("'Write'", error);
             Assert.Contains("Read, Annotate, Review", error);
-            Assert.Contains("(none)", PermissionRegistry.FilterError("Connectome", new[] { "Read" }));
+            Assert.Contains("(none)", PermissionRegistry.FilterError(nameof(Viking.Identity.Models.Resource), new[] { "Read" }));
         }
 
         [Fact]
@@ -713,25 +715,13 @@ namespace TestIdentityModel
 
         public static AnnotationContext AddVolume(ApplicationDbContext db, string name, string url)
         {
-            var connectome = new Connectome
-            {
-                Name = name,
-                ResourceTypeId = nameof(Connectome)
-            };
-            db.Connectomes.Add(connectome);
-            db.SaveChanges();
-
             var context = new AnnotationContext
             {
                 Name = name,
                 ResourceTypeId = nameof(AnnotationContext),
-                Endpoint = new Uri(url),
-                ConnectomeId = connectome.Id
+                Endpoint = new Uri(url)
             };
             db.AnnotationContexts.Add(context);
-            db.SaveChanges();
-
-            connectome.DefaultAnnotationContextId = context.Id;
             db.SaveChanges();
             return context;
         }
@@ -747,8 +737,7 @@ namespace TestIdentityModel
             {
                 Name = "RC1",
                 ResourceTypeId = nameof(AnnotationServer),
-                BaseUrl = "https://webann.example/RC1",
-                ConnectomeId = rc1.ConnectomeId
+                BaseUrl = "https://webann.example/RC1"
             };
             db.AnnotationServers.Add(server);
             rc1.AnnotationServer = server;

@@ -49,22 +49,11 @@ namespace Viking.Identity.Server.Extensions.Services
         }
 
         /// <summary>
-        /// Creates a Connectome and its default AnnotationContext (same name). Catalog sync attaches
-        /// Volume and AnnotationServer and sets ConnectomeId on them.
+        /// Creates an AnnotationContext. The catalog sync attaches its Volume and AnnotationServer.
         /// </summary>
         public async Task<AnnotationContext> CreateAnnotationContextAsync(string name, string description, long? parentId, Uri endpointUrl)
         {
             var parent = parentId == 0 ? null : parentId;
-
-            var connectome = new Connectome
-            {
-                Name = name,
-                Description = description,
-                ParentID = parent,
-                ResourceTypeId = nameof(Connectome)
-            };
-            _context.Connectomes.Add(connectome);
-            await _context.SaveChangesAsync();
 
             var context = new AnnotationContext
             {
@@ -72,13 +61,9 @@ namespace Viking.Identity.Server.Extensions.Services
                 Description = description,
                 ParentID = parent,
                 Endpoint = endpointUrl,
-                ResourceTypeId = nameof(AnnotationContext),
-                ConnectomeId = connectome.Id
+                ResourceTypeId = nameof(AnnotationContext)
             };
             _context.AnnotationContexts.Add(context);
-            await _context.SaveChangesAsync();
-
-            connectome.DefaultAnnotationContextId = context.Id;
             await _context.SaveChangesAsync();
             return context;
         }

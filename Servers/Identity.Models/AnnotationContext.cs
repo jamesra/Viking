@@ -6,9 +6,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Viking.Identity.Models
 {
     /// <summary>
-    /// One openable binding of a <see cref="Models.Volume"/> to an <see cref="Models.AnnotationServer"/>
-    /// under a <see cref="Models.Connectome"/>. Clients launch a context; the connectome's default
-    /// context keeps today's {Name}.Read|Annotate|Review token scopes.
+    /// One openable binding of a <see cref="Models.Volume"/> to one or more <see cref="Models.AnnotationServer"/>s.
+    /// Clients launch a context; data rights come from its annotation server.
     /// </summary>
     public class AnnotationContext : Resource
     {
@@ -17,13 +16,6 @@ namespace Viking.Identity.Models
         /// </summary>
         [Display(Name = "Endpoint", Description = "URL to access resource")]
         public virtual Uri Endpoint { get; set; }
-
-        [Display(Name = "Connectome", Description = "Connectome this annotation context belongs to")]
-        public virtual long? ConnectomeId { get; set; }
-
-        [ForeignKey(nameof(ConnectomeId))]
-        [Display(Name = "Connectome", Description = "Connectome this annotation context belongs to")]
-        public virtual Connectome Connectome { get; set; }
 
         [Display(Name = "Annotation Server", Description = "Annotation database this context reads and writes")]
         public virtual long? AnnotationServerId { get; set; }

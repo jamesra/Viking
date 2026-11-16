@@ -74,9 +74,8 @@
                     @foreach (var holder in holders)
                     {
                         replacement.TryGetValue(holder.Id, out var chosen);
-                        var kind = holder.ResourceTypeId == nameof(Viking.Identity.Models.AnnotationServer) ? "Annotation database" : "Connectome";
                         <div class="mb-2">
-                            <label class="form-label" for="replacement-@holder.Id">@kind <strong>@holder.Name</strong> (@holder.Id)</label>
+                            <label class="form-label" for="replacement-@holder.Id">Annotation database <strong>@holder.Name</strong> (@holder.Id)</label>
                             <select class="form-select" id="replacement-@holder.Id" name="replacement[@holder.Id]" required>
                                 <option value="" selected="@(string.IsNullOrEmpty(chosen))" disabled>Choose…</option>
                                 <option value="@DefaultContextReplacement.NoDefault" selected="@(chosen == DefaultContextReplacement.NoDefault)">No Default</option>

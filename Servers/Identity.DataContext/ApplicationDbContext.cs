@@ -111,7 +111,6 @@ namespace Viking.Identity.Data
             builder.Entity<Resource>()
                 .HasDiscriminator<string>(nameof(Models.Resource.ResourceTypeId))
                 .HasValue<Resource>(nameof(Models.Resource))
-                .HasValue<Connectome>(nameof(Models.Connectome))
                 .HasValue<AnnotationContext>(nameof(Models.AnnotationContext))
                 .HasValue<OrganizationalUnit>(nameof(Models.OrganizationalUnit))
                 .HasValue<Group>(nameof(Models.Group))
@@ -163,47 +162,11 @@ namespace Viking.Identity.Data
                 .HasForeignKey(c => c.VolumeId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // TPH: AnnotationContext and AnnotationServer both use ConnectomeId on Resource.
-            builder.Entity<AnnotationContext>()
-                .Property(c => c.ConnectomeId)
-                .HasColumnName(nameof(AnnotationContext.ConnectomeId));
-
-            builder.Entity<AnnotationServer>()
-                .Property(s => s.ConnectomeId)
-                .HasColumnName(nameof(AnnotationServer.ConnectomeId));
-
-            builder.Entity<AnnotationContext>()
-                .HasOne(c => c.Connectome)
-                .WithMany(conn => conn.AnnotationContexts)
-                .HasForeignKey(c => c.ConnectomeId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Default context is a self-FK on Resource; Restrict avoids cascade cycles.
-            builder.Entity<Connectome>()
-                .HasOne(c => c.DefaultAnnotationContext)
-                .WithMany()
-                .HasForeignKey(c => c.DefaultAnnotationContextId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // TPH: an annotation database's default context shares the connectome's column and foreign key.
-            builder.Entity<Connectome>()
-                .Property(c => c.DefaultAnnotationContextId)
-                .HasColumnName(nameof(Connectome.DefaultAnnotationContextId));
-
-            builder.Entity<AnnotationServer>()
-                .Property(s => s.DefaultAnnotationContextId)
-                .HasColumnName(nameof(AnnotationServer.DefaultAnnotationContextId));
-
+            // An annotation database's default context is a self-FK on Resource; Restrict avoids cascade cycles.
             builder.Entity<AnnotationServer>()
                 .HasOne(s => s.DefaultAnnotationContext)
                 .WithMany()
                 .HasForeignKey(s => s.DefaultAnnotationContextId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<AnnotationServer>()
-                .HasOne(s => s.Connectome)
-                .WithMany(c => c.AnnotationServers)
-                .HasForeignKey(s => s.ConnectomeId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<AnnotationContextServer>()
@@ -237,12 +200,6 @@ namespace Viking.Identity.Data
 
             builder.Entity<Volume>()
                 .HasIndex(v => v.ContentHash);
-
-            builder.Entity<Volume>()
-                .HasOne(v => v.Connectome)
-                .WithMany(c => c.Volumes)
-                .HasForeignKey(v => v.ConnectomeId)
-                .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<VolumeMirror>()
                 .ToTable("VolumeMirrors")
@@ -300,9 +257,6 @@ namespace Viking.Identity.Data
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.OrganizationalUnit) });
 
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.Group) });
-
-            // Connectome is not ApiFacing; no annotate scopes.
-            builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.Connectome) });
 
             builder.Entity<ResourceType>().HasData(new ResourceType() { Id = nameof(Models.AnnotationContext) });
 
@@ -416,7 +370,6 @@ namespace Viking.Identity.Data
 
         public DbSet<OrganizationalUnit> OrgUnit { get; set; }
 
-        public DbSet<Connectome> Connectomes { get; set; }
          
         public DbSet<AnnotationContext> AnnotationContexts { get; set; }
 

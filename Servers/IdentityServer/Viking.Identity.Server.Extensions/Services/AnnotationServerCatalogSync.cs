@@ -189,8 +189,6 @@ namespace Viking.Identity.Server.Extensions.Services
             var entry = fetched.Entry;
             var notes = new List<string>();
 
-            await EnsureConnectomeAsync(volume, cancellationToken);
-
             result.CreatedVolume = await EnsureVolumeAsync(volume, entry.ContentHash, now, notes, cancellationToken);
 
             if (volume.AnnotationServerPinned && volume.AnnotationServerId.HasValue)
@@ -235,15 +233,10 @@ namespace Viking.Identity.Server.Extensions.Services
                     Description = $"Annotation database for {volume.Name}, created from its VikingXML.",
                     ParentID = volume.ParentID,
                     ResourceTypeId = nameof(AnnotationServer),
-                    BaseUrl = baseUrl,
-                    ConnectomeId = volume.ConnectomeId
+                    BaseUrl = baseUrl
                 };
                 _context.AnnotationServers.Add(server);
                 result.CreatedAnnotationServer = true;
-            }
-            else if (server.ConnectomeId == null && volume.ConnectomeId != null)
-            {
-                server.ConnectomeId = volume.ConnectomeId;
             }
 
             server.AnnotationDatabaseName ??= Truncate(entry.AnnotationDatabaseName, 128);
@@ -273,12 +266,9 @@ namespace Viking.Identity.Server.Extensions.Services
                 : $"Linked to annotation server {server.Name}.");
             result.Message = string.Join(" ", notes);
 
-            if (volume.Connectome != null
-                && volume.Connectome.DefaultAnnotationContextId == null
-                && volume.Id != 0)
-            {
-                volume.Connectome.DefaultAnnotationContextId = volume.Id;
-            }
+            // The first context linked to a database is its default until an administrator chooses another.
+            if (server.DefaultAnnotationContextId == null && volume.Id != 0)
+                server.DefaultAnnotationContextId = volume.Id;
 
             await RecordAsync(volume, result, now, cancellationToken);
             result.AnnotationServerId = volume.AnnotationServerId ?? server.Id;
@@ -322,7 +312,7 @@ namespace Viking.Identity.Server.Extensions.Services
         }
 
         /// <summary>
-        /// Sets <see cref="Connectome.Endpoint"/> of every connectome using <paramref name="imageSet"/> to its
+        /// Sets <see cref="AnnotationContext.Endpoint"/> of every context using <paramref name="imageSet"/> to its
         /// preferred enabled mirror, so clients that only read Endpoint follow mirror changes. Does not save.
         /// </summary>
         public async Task ApplyPrimaryMirrorAsync(Volume imageSet, CancellationToken cancellationToken = default)
@@ -375,34 +365,6 @@ namespace Viking.Identity.Server.Extensions.Services
             return report;
         }
 
-        private async Task EnsureConnectomeAsync(AnnotationContext context, CancellationToken cancellationToken)
-        {
-            if (context.ConnectomeId.HasValue)
-            {
-                if (context.Connectome == null)
-                    await _context.Entry(context).Reference(c => c.Connectome).LoadAsync(cancellationToken);
-                return;
-            }
-
-            var connectome = new Connectome
-            {
-                Name = context.Name,
-                Description = context.Description,
-                ParentID = context.ParentID,
-                ResourceTypeId = nameof(Connectome),
-                DefaultAnnotationContextId = context.Id != 0 ? context.Id : null
-            };
-            _context.Connectomes.Add(connectome);
-            await _context.SaveChangesAsync(cancellationToken);
-            context.ConnectomeId = connectome.Id;
-            context.Connectome = connectome;
-            if (connectome.DefaultAnnotationContextId == null && context.Id != 0)
-            {
-                connectome.DefaultAnnotationContextId = context.Id;
-                await _context.SaveChangesAsync(cancellationToken);
-            }
-        }
-
         private async Task<bool> EnsureVolumeAsync(AnnotationContext volume, string contentHash, DateTime now, List<string> notes, CancellationToken cancellationToken)
         {
             if (volume.Endpoint == null)
@@ -419,8 +381,7 @@ namespace Viking.Identity.Server.Extensions.Services
                     Name = volume.Name,
                     Description = volume.Description,
                     ContentHash = contentHash,
-                    CreatedUtc = now,
-                    ConnectomeId = volume.ConnectomeId
+                    CreatedUtc = now
                 };
                 imageSet.Mirrors.Add(new VolumeMirror
                 {
@@ -434,9 +395,6 @@ namespace Viking.Identity.Server.Extensions.Services
                 volume.Volume = imageSet;
                 return true;
             }
-
-            if (imageSet.ConnectomeId == null && volume.ConnectomeId != null)
-                imageSet.ConnectomeId = volume.ConnectomeId;
 
             var mirrorsEntry = _context.Entry(imageSet).Collection(i => i.Mirrors);
             if (!mirrorsEntry.IsLoaded)

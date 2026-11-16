@@ -111,15 +111,15 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 .FirstOrDefaultAsync(v => v.Name == volumeName);
         }
 
-        private async Task<bool> UserCanAccessVolume(AnnotationContext connectome, string userId)
+        private async Task<bool> UserCanAccessVolume(AnnotationContext annotationContext, string userId)
         {
             if (User.IsInRole(Special.Roles.Admin))
                 return true;
 
-            if (await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, connectome))
+            if (await _authorization.IsParentOrgUnitAdminAsync(HttpContext.User, annotationContext))
                 return true;
 
-            return await _context.UserHasContextAccessAsync(userId, connectome);
+            return await _context.UserHasContextAccessAsync(userId, annotationContext);
         }
     }
 }

@@ -476,10 +476,6 @@ namespace Viking.Identity.Data.Migrations
                         },
                         new
                         {
-                            Id = "Connectome"
-                        },
-                        new
-                        {
                             Id = "AnnotationContext"
                         },
                         new
@@ -628,9 +624,6 @@ namespace Viking.Identity.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
-                    b.Property<long?>("ConnectomeId")
-                        .HasColumnType("bigint");
-
                     b.Property<string>("ContentHash")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
@@ -657,8 +650,6 @@ namespace Viking.Identity.Data.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ConnectomeId");
 
                     b.HasIndex("ContentHash");
 
@@ -737,11 +728,6 @@ namespace Viking.Identity.Data.Migrations
                     b.Property<DateTime?>("CatalogSyncedUtc")
                         .HasColumnType("datetime2");
 
-                    b.Property<long?>("ConnectomeId")
-                        .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("bigint")
-                        .HasColumnName("ConnectomeId");
-
                     b.Property<string>("Endpoint")
                         .ValueGeneratedOnUpdateSometimes()
                         .HasColumnType("nvarchar(max)")
@@ -755,8 +741,6 @@ namespace Viking.Identity.Data.Migrations
                         .HasColumnType("bigint");
 
                     b.HasIndex("AnnotationServerId");
-
-                    b.HasIndex("ConnectomeId");
 
                     b.HasIndex("VolumeId");
 
@@ -779,15 +763,8 @@ namespace Viking.Identity.Data.Migrations
                         .HasColumnType("nvarchar(400)")
                         .HasColumnName("BaseUrl");
 
-                    b.Property<long?>("ConnectomeId")
-                        .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("bigint")
-                        .HasColumnName("ConnectomeId");
-
                     b.Property<long?>("DefaultAnnotationContextId")
-                        .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("bigint")
-                        .HasColumnName("DefaultAnnotationContextId");
+                        .HasColumnType("bigint");
 
                     b.Property<string>("ExportUrl")
                         .HasColumnType("nvarchar(max)");
@@ -796,25 +773,9 @@ namespace Viking.Identity.Data.Migrations
                         .IsUnique()
                         .HasFilter("[BaseUrl] IS NOT NULL");
 
-                    b.HasIndex("ConnectomeId");
-
                     b.HasIndex("DefaultAnnotationContextId");
 
                     b.HasDiscriminator().HasValue("AnnotationServer");
-                });
-
-            modelBuilder.Entity("Viking.Identity.Models.Connectome", b =>
-                {
-                    b.HasBaseType("Viking.Identity.Models.Resource");
-
-                    b.Property<long?>("DefaultAnnotationContextId")
-                        .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("bigint")
-                        .HasColumnName("DefaultAnnotationContextId");
-
-                    b.HasIndex("DefaultAnnotationContextId");
-
-                    b.HasDiscriminator().HasValue("Connectome");
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.ContextService", b =>
@@ -1100,16 +1061,6 @@ namespace Viking.Identity.Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Viking.Identity.Models.Volume", b =>
-                {
-                    b.HasOne("Viking.Identity.Models.Connectome", "Connectome")
-                        .WithMany("Volumes")
-                        .HasForeignKey("ConnectomeId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Connectome");
-                });
-
             modelBuilder.Entity("Viking.Identity.Models.VolumeMirror", b =>
                 {
                     b.HasOne("Viking.Identity.Models.Volume", "Volume")
@@ -1128,11 +1079,6 @@ namespace Viking.Identity.Data.Migrations
                         .HasForeignKey("AnnotationServerId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Viking.Identity.Models.Connectome", "Connectome")
-                        .WithMany("AnnotationContexts")
-                        .HasForeignKey("ConnectomeId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("Viking.Identity.Models.Volume", "Volume")
                         .WithMany("AnnotationContexts")
                         .HasForeignKey("VolumeId")
@@ -1140,29 +1086,10 @@ namespace Viking.Identity.Data.Migrations
 
                     b.Navigation("AnnotationServer");
 
-                    b.Navigation("Connectome");
-
                     b.Navigation("Volume");
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.AnnotationServer", b =>
-                {
-                    b.HasOne("Viking.Identity.Models.Connectome", "Connectome")
-                        .WithMany("AnnotationServers")
-                        .HasForeignKey("ConnectomeId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Viking.Identity.Models.AnnotationContext", "DefaultAnnotationContext")
-                        .WithMany()
-                        .HasForeignKey("DefaultAnnotationContextId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Connectome");
-
-                    b.Navigation("DefaultAnnotationContext");
-                });
-
-            modelBuilder.Entity("Viking.Identity.Models.Connectome", b =>
                 {
                     b.HasOne("Viking.Identity.Models.AnnotationContext", "DefaultAnnotationContext")
                         .WithMany()
@@ -1210,15 +1137,6 @@ namespace Viking.Identity.Data.Migrations
                     b.Navigation("AnnotationContexts");
 
                     b.Navigation("ContextLinks");
-                });
-
-            modelBuilder.Entity("Viking.Identity.Models.Connectome", b =>
-                {
-                    b.Navigation("AnnotationContexts");
-
-                    b.Navigation("AnnotationServers");
-
-                    b.Navigation("Volumes");
                 });
 
             modelBuilder.Entity("Viking.Identity.Models.ContextService", b =>

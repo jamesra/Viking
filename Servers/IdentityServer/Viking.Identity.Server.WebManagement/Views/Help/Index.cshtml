@@ -22,26 +22,23 @@
     {
         ("Organizational Unit", "OrganizationalUnits",
             "A folder-like owner of resources, arranged in a hierarchy. Administering an organizational unit means managing the resources inside it.",
-            "Every other resource has an organizational unit as its parent. The Administrator permission on a unit lets someone create, edit and delete the resources under it and manage who can access them. It does not by itself give anyone annotation rights in Viking."),
-        ("Connectome", "Connectomes",
-            "A project-level grouping of everything that belongs to one dataset: its annotation contexts, annotation servers and volumes.",
-            "Names one default annotation context. Not a permission-bearing resource itself, so a connectome can share a name with its default context without clashing.")
+            "Every other resource has an organizational unit as its parent. The Administrator permission on a unit lets someone create, edit and delete the resources under it and manage who can access them. It does not by itself give anyone annotation rights in Viking.")
     };
 
     var data = new (string Term, string Controller, string Purpose, string Relations)[]
     {
         ("Volume", null,
             "The set of images and slice-to-slice transforms, described by a VikingXML file. A new build of the images is a new volume.",
-            "A plain record, not a grantable resource. Belongs to a connectome and is shown by annotation contexts."),
+            "A plain record, not a grantable resource. Shown by annotation contexts."),
         ("Volume Mirror", null,
             "An exact clone of a volume at another URL, typically in another region. Clients may spread load across enabled mirrors, preferring the lowest priority number.",
             "Belongs to one volume. Never differs in content from its volume."),
         ("Annotation Server", "AnnotationServers",
             "One annotation SQL database exposed at a service URL, with its annotation, OData and export endpoints derived from that URL.",
-            "The only place Read, Annotate and Review are granted. Every annotation context linked to the server uses those rights. Servers are normally created by the Volume Catalog Sync from each volume's VikingXML; choosing one by hand on a context pins it so the sync leaves it alone."),
+            "The only place Read, Annotate and Review are granted. Every annotation context linked to the server uses those rights. Names one default annotation context: the one services such as the annotation gallery work in when several contexts read the database. Servers are normally created by the Volume Catalog Sync from each volume's VikingXML; choosing one by hand on a context pins it so the sync leaves it alone."),
         ("Annotation Context", "AnnotationContexts",
             "The thing a user opens in Viking: one volume bound to one or more annotation servers, plus its registration and optional correction service.",
-            "Lives in a connectome. Its default annotation server supplies the annotation, OData and export URLs; alternates are offered at login. Its only permission is Access, which decides whether a user sees it when launching Viking. What the user can do inside it comes from the Read, Annotate and Review grants on its annotation server."),
+            "Its default annotation server supplies the annotation, OData and export URLs; alternates are offered at login. Its only permission is Access, which decides whether a user sees it when launching Viking. What the user can do inside it comes from the Read, Annotate and Review grants on its annotation server."),
         ("Registration (StosGroup)", null,
             "The slice-to-slice transform group that aligns the volume's images with the annotation database. Set per annotation context.",
             "Empty uses the VikingXML default; None means the images are already in volume space. Together with the annotation database it identifies a published set of section corrections.")
@@ -101,9 +98,9 @@
         <svg class="rel-diagram" viewBox="0 0 1000 520" role="img" aria-labelledby="relTitle relDesc" xmlns="http://www.w3.org/2000/svg">
             <title id="relTitle">Relationships between Identity resources</title>
             <desc id="relDesc">
-                Organizational units own connectomes and services. A connectome groups annotation contexts, annotation servers
-                and volumes. An annotation context shows one volume, reads and writes one or more annotation servers, and may be
-                corrected by a correction service. Users belong to groups; users and groups are granted permissions on annotation
+                Organizational units own annotation contexts, annotation servers and services. An annotation context shows one
+                volume, reads and writes one or more annotation servers, and may be corrected by a correction service. An
+                annotation server names one default annotation context. Users belong to groups; users and groups are granted permissions on annotation
                 servers and services.
             </desc>
             <defs>
@@ -115,7 +112,7 @@
             <rect class="dg-box dg-org" x="380" y="16" width="240" height="54" rx="8"/>
             <text class="dg-title" x="500" y="39" text-anchor="middle">Organizational Unit</text>
             <text class="dg-sub" x="500" y="57" text-anchor="middle">owns resources · Administrator</text>
-            <path class="dg-own" d="M500 70 V116" marker-end="url(#arrOwn)"/>
+            <path class="dg-own" d="M500 70 V188" marker-end="url(#arrOwn)"/>
             <text class="dg-sub" x="508" y="98">owns</text>
             <path class="dg-own" d="M620 43 H985 V420 H962" marker-end="url(#arrOwn)"/>
             <path class="dg-own" d="M985 220 H962" marker-end="url(#arrOwn)"/>
@@ -134,11 +131,6 @@
             <path class="dg-line" d="M170 165 H205 V350"/>
             <path class="dg-line" d="M170 295 H205 V350 H448" marker-end="url(#arr)"/>
             <text class="dg-sub" x="214" y="368">grants: Read / Annotate / Review</text>
-
-            <!-- Connectome -->
-            <rect class="dg-frame" x="230" y="118" width="540" height="300" rx="10"/>
-            <text class="dg-title" x="246" y="142">Connectome</text>
-            <text class="dg-sub" x="246" y="404">groups its contexts, servers and volumes and names one default context</text>
 
             <rect class="dg-box dg-data" x="250" y="190" width="150" height="60" rx="8"/>
             <text class="dg-title" x="325" y="217" text-anchor="middle">Volume</text>
@@ -161,6 +153,8 @@
             <path class="dg-line" d="M550 250 V318" marker-end="url(#arr)"/>
             <text class="dg-sub" x="558" y="278">reads and writes</text>
             <text class="dg-sub" x="558" y="294">default + alternates</text>
+            <path class="dg-line" d="M630 318 V252" marker-end="url(#arr)"/>
+            <text class="dg-sub" x="638" y="300">default context</text>
 
             <!-- Services -->
             <rect class="dg-box dg-service" x="800" y="190" width="160" height="60" rx="8"/>

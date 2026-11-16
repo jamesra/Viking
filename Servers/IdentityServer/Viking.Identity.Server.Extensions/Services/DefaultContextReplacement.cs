@@ -7,44 +7,29 @@ using Viking.Identity.Models;
 
 namespace Viking.Identity.Server.Extensions.Services
 {
-    /// <summary>A context another context's holder could take as its default instead.</summary>
+    /// <summary>A context an annotation database could take as its default instead.</summary>
     public record ContextChoice(long Id, string Name, string Endpoint);
 
     /// <summary>
-    /// A connectome or annotation database that names the context being deleted as its default, and the contexts it could
-    /// name instead: the connectome's own contexts, or the contexts linked to the database.
+    /// An annotation database that names the context being deleted as its default, and the other contexts linked to it,
+    /// which it could name instead.
     /// </summary>
-    public record DefaultContextHolder(long Id, string Name, string ResourceTypeId, IReadOnlyList<ContextChoice> Alternatives);
+    public record DefaultContextHolder(long Id, string Name, IReadOnlyList<ContextChoice> Alternatives);
 
     /// <summary>
-    /// Deleting an annotation context that a connectome or an annotation database names as its default would break the
-    /// Restrict foreign key on <c>DefaultAnnotationContextId</c>. The administrator chooses each holder's new default
-    /// ("No Default" or one of its other contexts) on the delete page, and <see cref="ApplyAsync"/> sets them before the delete.
+    /// Deleting an annotation context that an annotation database names as its default would break the Restrict foreign
+    /// key on <c>DefaultAnnotationContextId</c>. The administrator chooses each database's new default ("No Default" or
+    /// one of its other contexts) on the delete page, and <see cref="ApplyAsync"/> sets them before the delete.
     /// </summary>
     public static class DefaultContextReplacement
     {
         /// <summary>The form value that means "No Default".</summary>
         public const string NoDefault = "none";
 
-        /// <summary>Every connectome and annotation database whose default is <paramref name="contextId"/>.</summary>
+        /// <summary>Every annotation database whose default is <paramref name="contextId"/>.</summary>
         public static async Task<List<DefaultContextHolder>> HoldersAsync(ApplicationDbContext db, long contextId)
         {
             var holders = new List<DefaultContextHolder>();
-
-            var connectomes = await db.Connectomes
-                .Where(c => c.DefaultAnnotationContextId == contextId)
-                .Include(c => c.AnnotationContexts)
-                .ToListAsync();
-            foreach (var connectome in connectomes)
-            {
-                var others = connectome.AnnotationContexts
-                    .Where(c => c.Id != contextId)
-                    .OrderBy(c => c.Name).ThenBy(c => c.Id)
-                    .Select(c => new ContextChoice(c.Id, c.Name, c.Endpoint?.ToString()))
-                    .ToList();
-                holders.Add(new DefaultContextHolder(connectome.Id, connectome.Name, nameof(Connectome), others));
-            }
-
             var servers = await db.AnnotationServers
                 .Where(s => s.DefaultAnnotationContextId == contextId)
                 .ToListAsync();
@@ -58,16 +43,16 @@ namespace Viking.Identity.Server.Extensions.Services
                     .OrderBy(c => c.Name).ThenBy(c => c.Id)
                     .Select(c => new ContextChoice(c.Id, c.Name, c.Endpoint?.ToString()))
                     .ToList();
-                holders.Add(new DefaultContextHolder(server.Id, server.Name, nameof(AnnotationServer), others));
+                holders.Add(new DefaultContextHolder(server.Id, server.Name, others));
             }
 
             return holders;
         }
 
         /// <summary>
-        /// Sets each holder's new default from <paramref name="choices"/> (holder id to <see cref="NoDefault"/> or a
-        /// context id), without saving. Returns the problems instead, and changes nothing, when a holder has no choice or
-        /// its choice is not one of its alternatives.
+        /// Sets each database's new default from <paramref name="choices"/> (database id to <see cref="NoDefault"/> or a
+        /// context id), without saving. Returns the problems instead, and changes nothing, when a database has no choice
+        /// or its choice is not one of its other linked contexts.
         /// </summary>
         public static async Task<List<string>> ApplyAsync(ApplicationDbContext db, long contextId, IReadOnlyDictionary<long, string> choices)
         {
@@ -100,12 +85,7 @@ namespace Viking.Identity.Server.Extensions.Services
                 return errors;
 
             foreach (var (holder, id) in picked)
-            {
-                if (holder.ResourceTypeId == nameof(Connectome))
-                    (await db.Connectomes.FindAsync(holder.Id)).DefaultAnnotationContextId = id;
-                else
-                    (await db.AnnotationServers.FindAsync(holder.Id)).DefaultAnnotationContextId = id;
-            }
+                (await db.AnnotationServers.FindAsync(holder.Id)).DefaultAnnotationContextId = id;
 
             return errors;
         }

@@ -30,7 +30,7 @@ namespace Viking.Identity.Server.Extensions.Services
         }
 
         /// <summary>
-        /// Resolves a connectome by Identity name, numeric id, or endpoint URL.
+        /// Resolves an annotation context by Identity name, numeric id, or endpoint URL.
         /// Name wins over endpoint so AccessibleAnnotationContexts names are unambiguous.
         /// </summary>
         public async Task<AnnotationContext> ResolveVolumeAsync(string volumeKey)
@@ -39,39 +39,39 @@ namespace Viking.Identity.Server.Extensions.Services
                 return null;
 
             var key = volumeKey.Trim();
-            var connectomes = _context.AnnotationContexts
+            var contexts = _context.AnnotationContexts
                 .Include(v => v.Parent)
                 .Include(v => v.UsersWithPermissions)
                 .Include(v => v.GroupsWithPermissions);
 
             if (long.TryParse(key, out var id))
-                return await connectomes.FirstOrDefaultAsync(v => v.Id == id);
+                return await contexts.FirstOrDefaultAsync(v => v.Id == id);
 
-            return await connectomes.FirstOrDefaultAsync(v => v.Name == key)
-                ?? await connectomes.FirstOrDefaultAsync(v => v.Endpoint != null && v.Endpoint.ToString() == key);
+            return await contexts.FirstOrDefaultAsync(v => v.Name == key)
+                ?? await contexts.FirstOrDefaultAsync(v => v.Endpoint != null && v.Endpoint.ToString() == key);
         }
 
         /// <summary>
         /// Same access rule as the management CreateCode action: site admin, parent OrgUnit admin,
         /// or the Access permission on the annotation context (direct or through a group).
         /// </summary>
-        public async Task<bool> UserCanAccessVolumeAsync(AnnotationContext connectome, ClaimsPrincipal user, string userId)
+        public async Task<bool> UserCanAccessVolumeAsync(AnnotationContext context, ClaimsPrincipal user, string userId)
         {
-            if (connectome == null || string.IsNullOrEmpty(userId))
+            if (context == null || string.IsNullOrEmpty(userId))
                 return false;
 
             if (user?.IsInRole(Special.Roles.Admin) == true
                 || await _context.GetUsersInAdminRole().AnyAsync(u => u.Id == userId))
                 return true;
 
-            if (user != null && await _authorization.IsParentOrgUnitAdminAsync(user, connectome))
+            if (user != null && await _authorization.IsParentOrgUnitAdminAsync(user, context))
                 return true;
 
-            return await _context.UserHasContextAccessAsync(userId, connectome);
+            return await _context.UserHasContextAccessAsync(userId, context);
         }
 
         /// <summary>
-        /// Enabled mirror URLs of the connectome's volume, preferred first. Empty when the connectome
+        /// Enabled mirror URLs of the context's volume, preferred first. Empty when the context
         /// has no volume yet.
         /// </summary>
         public async Task<List<string>> GetMirrorUrlsAsync(string volumeName)
@@ -92,8 +92,8 @@ namespace Viking.Identity.Server.Extensions.Services
             return mirrors.Where(u => u != null).Select(u => u.ToString()).ToList();
         }
 
-        /// <summary>Persists a one-use code bound to <paramref name="userId"/> and optional connectome.</summary>
-        public async Task<VikingLaunchCode> CreateAsync(string userId, AnnotationContext connectome)
+        /// <summary>Persists a one-use code bound to <paramref name="userId"/> and optional annotation context.</summary>
+        public async Task<VikingLaunchCode> CreateAsync(string userId, AnnotationContext context)
         {
             ArgumentException.ThrowIfNullOrEmpty(userId);
 
@@ -101,8 +101,8 @@ namespace Viking.Identity.Server.Extensions.Services
             {
                 Code = Guid.NewGuid().ToString("N"),
                 UserId = userId,
-                VolumeUrl = connectome?.Endpoint?.ToString(),
-                VolumeName = connectome?.Name,
+                VolumeUrl = context?.Endpoint?.ToString(),
+                VolumeName = context?.Name,
                 ExpiresAtUtc = DateTime.UtcNow.Add(CodeLifetime)
             };
             _context.VikingLaunchCodes.Add(launchCode);

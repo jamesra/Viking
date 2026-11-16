@@ -56,13 +56,6 @@ namespace Viking.Identity.Models
         [Display(Name = "Created", Description = "When the volume was registered (UTC)")]
         public DateTime CreatedUtc { get; set; }
 
-        [Display(Name = "Connectome", Description = "Connectome this volume belongs to")]
-        public virtual long? ConnectomeId { get; set; }
-
-        [ForeignKey(nameof(ConnectomeId))]
-        [Display(Name = "Connectome", Description = "Connectome this volume belongs to")]
-        public virtual Connectome Connectome { get; set; }
-
         [InverseProperty(nameof(VolumeMirror.Volume))]
         [Display(Name = "Mirrors", Description = "Hosts serving an exact copy of these images")]
         public virtual List<VolumeMirror> Mirrors { get; } = new List<VolumeMirror>();

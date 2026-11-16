@@ -510,8 +510,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         }
 
         // POST: Volumes/Delete/5
-        // A connectome or annotation database that names this context as its default gets the new default chosen on the
-        // page (replacement[holderId] = "none" or a context id) before the context is deleted.
+        // An annotation database that names this context as its default gets the new default chosen on the page (replacement[holderId] = "none" or a context id) before the context is deleted.
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(long id, [FromForm] Dictionary<long, string> replacement)

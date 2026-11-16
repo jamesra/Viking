@@ -39,17 +39,10 @@ namespace Viking.Identity.Models
         [Display(Name = "Authentication URL", Description = "Identity server the VikingXML names for this database")]
         public virtual Uri AuthenticationUrl { get; set; }
 
-        [Display(Name = "Connectome", Description = "Connectome this annotation database belongs to")]
-        public virtual long? ConnectomeId { get; set; }
-
-        [ForeignKey(nameof(ConnectomeId))]
-        [Display(Name = "Connectome", Description = "Connectome this annotation database belongs to")]
-        public virtual Connectome Connectome { get; set; }
-
         /// <summary>
         /// The context services work in for this database when several contexts read it (RC1 has three). Must be one of
-        /// the contexts linked through <see cref="ContextLinks"/>. Shares the <c>DefaultAnnotationContextId</c> column
-        /// with <see cref="Connectome.DefaultAnnotationContextId"/> (TPH), so the same Restrict foreign key covers it.
+        /// the contexts linked through <see cref="ContextLinks"/>. Restrict foreign key: deleting that context first
+        /// chooses a new default (DefaultContextReplacement).
         /// </summary>
         [Display(Name = "Default Annotation Context", Description = "Context services work in for this database")]
         public virtual long? DefaultAnnotationContextId { get; set; }

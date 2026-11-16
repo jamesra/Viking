@@ -40,8 +40,6 @@ namespace Viking.Identity.Models
             /// Resource types that become Duende ApiResources with {Name}.{Permission} scopes.
             /// Order is the preference when one name matches several types: the annotation server
             /// that holds the grants wins over an annotation context that points at it.
-            /// Connectome is intentionally excluded so a connectome named RC1 does not steal scopes
-            /// from the default annotation context / annotation server also named RC1.
             /// </summary>
             public static readonly string[] ApiFacing =
             {
