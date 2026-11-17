@@ -29,4 +29,8 @@
 	<ProjectReference Include="..\..\SqlServerTypesLoader\SqlServerTypesLoader.csproj" />
 	  
   </ItemGroup>
+  <ItemGroup>
+    <!-- SqlServerTypesLoader loads msvcr120 and SqlServerSpatial from SqlServerTypes\<arch>\ beside the exe. -->
+    <None Include="..\Viking\Viking\SqlServerTypes\**\*.dll" LinkBase="SqlServerTypes" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
