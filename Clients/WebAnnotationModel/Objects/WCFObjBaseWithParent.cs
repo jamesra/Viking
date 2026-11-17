@@ -19,6 +19,13 @@ namespace WebAnnotationModel.Objects
         protected abstract THISTYPE OnMissingParent();
 
         private THISTYPE _Parent = null;
+
+        /// <summary>
+        /// Drops the cached parent so the next <see cref="Parent"/> get reloads it for the current <see cref="ParentID"/>.
+        /// Used by <c>Update</c> overrides that change ParentID without going through the Parent setter.
+        /// </summary>
+        protected void ClearCachedParent() => _Parent = null;
+
         public abstract KEY? ParentID { get; set; }
 
         public THISTYPE Parent

@@ -49,7 +49,6 @@ namespace WebAnnotationTests.Tools
         [
             ("ViewModel/Location_ViewModelBase.cs", "VolumeX => modelObj.VolumePosition.X", "the VolumeX property column shows the stored cache itself"),
             ("ViewModel/Location_ViewModelBase.cs", "VolumeY => modelObj.VolumePosition.Y", "the VolumeY property column shows the stored cache itself"),
-            ("UI/AutoPolygonize/AutoPolygonizeSelection.cs", "nameof(LocationObj.VolumeShape)", "IsGeometryProperty names the property in a change filter; it reads nothing"),
         ];
 
         private static string WebAnnotationDirectory([CallerFilePath] string thisFile = "") =>

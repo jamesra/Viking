@@ -47,15 +47,14 @@ namespace WebAnnotationModel
 
     public class LocationObj : WCFObjBaseWithKey<long, Location>, ILocationReadOnly
     {
+        /// <summary>
+        /// True when <paramref name="propertyName"/> is a shape field that requires tearing down and rebuilding the
+        /// canvas view. Store merges raise named events only; an empty name is not treated as geometry.
+        /// </summary>
         public static bool IsGeometryProperty(string propertyName)
         {
-            if (string.IsNullOrEmpty(propertyName))
-                return true;
-
             return propertyName switch
             {
-                //case "VolumeShape":
-                //  return true;
                 "MosaicShape" => true,
                 // Radius is derived from the shape and always changes together with MosaicShape, which already
                 // reported the geometry change. Counting it here made every shape edit rebuild each view twice.
@@ -797,32 +796,96 @@ namespace WebAnnotationModel
 
 
         /// <summary>
-        /// Override and write each property individually so we send specific property changed events
+        /// Merges a server/store <see cref="Location"/> into this object and raises named change events only for fields
+        /// that differ. Shape WKB changes raise a single <c>MosaicShape</c> notify (not Radius) so
+        /// <see cref="IsGeometryProperty"/> rebuilds the view once. Called by the location store's <c>InternalUpdate</c>.
         /// </summary>
-        /// <param name="newdata"></param>
         internal override void Update(Location newdata)
         {
-            Debug.Assert(this.Data.ID == newdata.ID);
-            this.Data.DBAction = AnnotationService.Types.DBACTION.NONE;
-            this.Data.Closed = newdata.Closed;
-            this.Data.TypeCode = newdata.TypeCode;
-            this.Data.Position = newdata.Position;
-            this.Data.VolumePosition = newdata.VolumePosition;
-            this.Data.Radius = newdata.Radius;
-            this.Data.Section = newdata.Section;
-            this.Data.Terminal = newdata.Terminal;
-            this.Data.OffEdge = newdata.OffEdge;
-            this.Data.ParentID = newdata.ParentID;
-            this.Data.Username = newdata.Username;
-            this.Data.LastModified = newdata.LastModified;
-            this.Data.Links = newdata.Links;
-            this._Attributes = null;
-            this._VolumeShape = null;
-            this._MosaicShape = null;
-            this._VolumePosition = default;
-            this._MosaicPosition = default;
-            this.Data.VolumeShapeWKB = newdata.VolumeShapeWKB;
-            this.Data.MosaicShapeWKB = newdata.MosaicShapeWKB;
+            Debug.Assert(Data.ID == newdata.ID);
+            Data.DBAction = AnnotationService.Types.DBACTION.NONE;
+
+            bool shapeChanged = !ByteArraysEqual(Data.MosaicShapeWKB, newdata.MosaicShapeWKB)
+                || !ByteArraysEqual(Data.VolumeShapeWKB, newdata.VolumeShapeWKB);
+            bool widthChanged = Data.Width != newdata.Width;
+            bool terminalChanged = Data.Terminal != newdata.Terminal;
+            bool offEdgeChanged = Data.OffEdge != newdata.OffEdge;
+            bool typeChanged = Data.TypeCode != newdata.TypeCode;
+            bool closedChanged = Data.Closed != newdata.Closed;
+            bool parentChanged = Data.ParentID != newdata.ParentID;
+            bool attributesChanged = !string.Equals(Data.AttributesXml, newdata.AttributesXml, StringComparison.Ordinal);
+
+            if (shapeChanged)
+                OnPropertyChanging("MosaicShape");
+            if (widthChanged)
+                OnPropertyChanging("Width");
+            if (terminalChanged)
+                OnPropertyChanging("Terminal");
+            if (offEdgeChanged)
+                OnPropertyChanging("OffEdge");
+            if (typeChanged)
+                OnPropertyChanging("TypeCode");
+            if (closedChanged)
+                OnPropertyChanging("Closed");
+            if (parentChanged)
+                OnPropertyChanging("ParentID");
+            if (attributesChanged)
+                OnPropertyChanging("Attributes");
+
+            Data.Closed = newdata.Closed;
+            Data.TypeCode = newdata.TypeCode;
+            Data.Position = newdata.Position;
+            Data.VolumePosition = newdata.VolumePosition;
+            Data.Radius = newdata.Radius;
+            Data.Section = newdata.Section;
+            Data.Terminal = newdata.Terminal;
+            Data.OffEdge = newdata.OffEdge;
+            Data.ParentID = newdata.ParentID;
+            Data.Username = newdata.Username;
+            Data.LastModified = newdata.LastModified;
+            Data.Links = newdata.Links;
+            Data.Width = newdata.Width;
+            Data.AttributesXml = newdata.AttributesXml;
+            Data.VolumeShapeWKB = newdata.VolumeShapeWKB;
+            Data.MosaicShapeWKB = newdata.MosaicShapeWKB;
+
+            _Attributes = null;
+            _VolumeShape = null;
+            _MosaicShape = null;
+            _VolumePosition = default;
+            _MosaicPosition = default;
+
+            if (shapeChanged)
+                OnPropertyChanged("MosaicShape");
+            if (widthChanged)
+                OnPropertyChanged("Width");
+            if (terminalChanged)
+                OnPropertyChanged("Terminal");
+            if (offEdgeChanged)
+                OnPropertyChanged("OffEdge");
+            if (typeChanged)
+                OnPropertyChanged("TypeCode");
+            if (closedChanged)
+                OnPropertyChanged("Closed");
+            if (parentChanged)
+                OnPropertyChanged("ParentID");
+            if (attributesChanged)
+                OnPropertyChanged("Attributes");
+        }
+
+        private static bool ByteArraysEqual(byte[] a, byte[] b)
+        {
+            if (ReferenceEquals(a, b))
+                return true;
+            if (a is null || b is null || a.Length != b.Length)
+                return false;
+            for (int i = 0; i < a.Length; i++)
+            {
+                if (a[i] != b[i])
+                    return false;
+            }
+
+            return true;
         }
 
 

@@ -812,11 +812,12 @@ namespace WebAnnotationTests.Commands
         public void GeometryPropertyNamesAreRecognized()
         {
             Assert.IsTrue(AutoPolygonizeSelection.IsGeometryProperty(nameof(LocationObj.MosaicShape)));
-            Assert.IsTrue(AutoPolygonizeSelection.IsGeometryProperty(nameof(LocationObj.VolumeShape)));
-            Assert.IsTrue(AutoPolygonizeSelection.IsGeometryProperty(nameof(LocationObj.Position)));
-            Assert.IsTrue(AutoPolygonizeSelection.IsGeometryProperty(nameof(LocationObj.Radius)));
-            Assert.IsTrue(AutoPolygonizeSelection.IsGeometryProperty(null));
-            Assert.IsTrue(AutoPolygonizeSelection.IsGeometryProperty(""));
+            Assert.IsTrue(AutoPolygonizeSelection.IsGeometryProperty(nameof(LocationObj.Width)));
+            Assert.IsFalse(AutoPolygonizeSelection.IsGeometryProperty(nameof(LocationObj.VolumeShape)));
+            Assert.IsFalse(AutoPolygonizeSelection.IsGeometryProperty(nameof(LocationObj.Position)));
+            Assert.IsFalse(AutoPolygonizeSelection.IsGeometryProperty(nameof(LocationObj.Radius)));
+            Assert.IsFalse(AutoPolygonizeSelection.IsGeometryProperty(null));
+            Assert.IsFalse(AutoPolygonizeSelection.IsGeometryProperty(""));
             Assert.IsFalse(AutoPolygonizeSelection.IsGeometryProperty(nameof(LocationObj.TypeCode)));
         }
 

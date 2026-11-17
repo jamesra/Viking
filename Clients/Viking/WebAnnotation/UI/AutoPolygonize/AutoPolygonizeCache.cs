@@ -364,7 +364,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             if (typeCode != LocationType.CIRCLE)
             {
                 if (AutoPolygonizeSelection.IsGeometryProperty(propertyName) ||
-                    propertyName is nameof(LocationObj.TypeCode) or null or "")
+                    propertyName == nameof(LocationObj.TypeCode))
                 {
                     Remove(locationId);
                 }

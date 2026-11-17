@@ -201,18 +201,24 @@ namespace WebAnnotation.View
             return InfoLabel.Trim();
         }
 
+        /// <summary>
+        /// True when a location property change should rebuild label text/markers. Empty names are ignored; store
+        /// merges raise named events only.
+        /// </summary>
         protected bool IsLocationPropertyAffectingLabels(string PropertyName)
         {
-            return string.IsNullOrEmpty(PropertyName) ||
-                PropertyName == "Terminal" ||
+            return PropertyName == "Terminal" ||
                 PropertyName == "OffEdge" ||
                 PropertyName == "Attributes";
         }
 
+        /// <summary>
+        /// True when a parent structure property change should rebuild labels. Empty names are ignored; structure
+        /// store merges raise named events only.
+        /// </summary>
         protected static bool IsParentPropertyAffectingLabels(string PropertyName)
         {
-            return string.IsNullOrEmpty(PropertyName) ||
-                PropertyName == "Label" ||
+            return PropertyName == "Label" ||
                 PropertyName == "Attributes" ||
                 PropertyName == "ParentID";
         }

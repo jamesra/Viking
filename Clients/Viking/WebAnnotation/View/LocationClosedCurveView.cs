@@ -6,19 +6,31 @@ using SqlGeometryUtils;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using VikingXNA;
 using VikingXNAGraphics;
 using WebAnnotation.UI;
 using WebAnnotation.UI.Actions;
 using WebAnnotationModel;
 using Vector2 = Microsoft.Xna.Framework.Vector2;
-using Vector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace WebAnnotation.View
 {
+    /// <summary>
+    /// Closed curve on the viewed section. The curve itself is built in the constructor; the expensive
+    /// <see cref="LabelLayout"/> runs on a background task only when the label would be large enough to read, and
+    /// <see cref="IsLabelVisible"/> stays false until that work finishes so the overlay never draws a half-ready label.
+    /// </summary>
     internal class LocationClosedCurveView : LocationCurveView, ILabelView, ICanvasViewContainer, Viking.Common.IHelp, IOverlappedLinkHost
     {
+        private const int LabelLayoutNotStarted = 0;
+        private const int LabelLayoutInFlight = 1;
+        private const int LabelLayoutReady = 2;
+        private const int LabelLayoutFailed = 3;
+
         public CurveView curveView;
 
         public StructureLabelsBase? curveLabels;
@@ -29,8 +41,11 @@ namespace WebAnnotation.View
         /// <summary>Guards the label layout inputs and the views built from them; links are set on the UI thread.</summary>
         private readonly object labelSync = new();
 
-        /// <summary>Inscribed circle and runs of the rendered curve's polygon; null until the constructor makes it.</summary>
+        /// <summary>Inscribed circle and runs of the rendered curve's polygon; null until a visible layout task builds it.</summary>
         private LabelLayout? labelLayout;
+
+        /// <summary>0 not started, 1 in flight, 2 ready, 3 failed (invalid ring); see the LabelLayout* constants.</summary>
+        private int labelLayoutState = LabelLayoutNotStarted;
 
         private ICollection<long> overlappedLinks = [];
 
@@ -61,7 +76,8 @@ namespace WebAnnotation.View
 
         /// <summary>
         /// A closed curve on the viewed section: the owner's control points, drawn and hit-tested as the owner's smoothed
-        /// <see cref="Viking.VolumeModel.LocationVolumeGeometry.Shape"/>.
+        /// <see cref="Viking.VolumeModel.LocationVolumeGeometry.Shape"/>. Label layout is deferred until
+        /// <see cref="IsLabelVisible"/> sees a readable size.
         /// </summary>
         public LocationClosedCurveView(LocationObj obj, Viking.VolumeModel.LocationVolumeGeometry geometry) : base(obj, geometry)
         {
@@ -72,41 +88,18 @@ namespace WebAnnotation.View
             float opacity = Global.AnnotationSettings.GetOpacityForAnnotationType(obj.TypeCode, hasParent);
             Color color = obj.Parent is null ? Color.Gray.SetAlpha(opacity) : ColorForStructure(obj.Parent, opacity);
             curveView = new CurveView(VolumeControlPoints, color, true, lineWidth: VolumeControlPoints.MinDistanceBetweenAnyPoints(), controlPointRadius: ControlPointRadius, lineStyle: LineStyle.HalfTube, numInterpolations: geometry.InterpolationPoints);
-
-            long layoutStart = System.Diagnostics.Stopwatch.GetTimestamp();
-            Polygon rendered;
-            try
-            {
-                rendered = VolumeShapeAsRendered.ToPolygon();
-            }
-            catch (ArgumentException e)
-            {
-                // The curve through the control points is not a valid ring; draw it without labels or link markers
-                System.Diagnostics.Trace.WriteLine($"Closed curve {ID} has no label layout: {e.Message}");
-                return;
-            }
-
-            LabelLayout layout = new(rendered);
-            LabelPlacementKind labelKind;
-            lock (labelSync)
-            {
-                labelLayout = layout;
-                labelKind = CreateLabelObjects();
-            }
-
-            PolygonViewTimingLog.RecordLabelLayout(null, ID, System.Diagnostics.Stopwatch.GetTimestamp() - layoutStart,
-                rendered.TotalUniqueVertices, labelKind.ToString());
         }
 
         /// <summary>
-        /// Maximum inscribed circle of the rendered curve's polygon, or a control-point-sized circle at the curve's centre
-        /// when the curve is not a valid ring.
+        /// Maximum inscribed circle of the rendered curve's polygon once labels are laid out, or a control-point-sized
+        /// circle at the curve's centre before then (and when the ring is invalid).
         /// </summary>
         protected Circle InscribedCircle => labelLayout?.InscribedCircle ?? new Circle(BoundingBox.Center, ControlPointRadius);
 
         /// <summary>
         /// Rebuilds the labels and overlapped-link markers together, since the fit depends on the link counts. Eases the
-        /// text from the labels it replaces to the new placement.
+        /// text from the labels it replaces to the new placement. No-op until a layout task has built
+        /// <see cref="labelLayout"/>; the slider relayout path skips curves that have not been laid out yet.
         /// </summary>
         /// <returns>Where the label went, Circle if nothing was built.</returns>
         public LabelPlacementKind CreateLabelObjects()
@@ -127,6 +120,85 @@ namespace WebAnnotation.View
                 curveLabels = labels.Labels;
                 OverlappedLinkView = labels.LinkView;
                 return labels.Kind;
+            }
+        }
+
+        /// <summary>
+        /// False until the background label layout has finished; then the same readability check as other structure labels.
+        /// While false, starts a layout task when the annotation is on screen and an estimated circle font would be readable.
+        /// Called by <see cref="AnnotationOverlay"/> before each label pass.
+        /// </summary>
+        public override bool IsLabelVisible(Scene scene)
+        {
+            RequestLabelLayoutIfNeeded(scene);
+
+            StructureLabelsBase? labels = curveLabels;
+            return labels is not null && labels.IsLabelVisible(scene);
+        }
+
+        /// <summary>
+        /// Starts a single background <see cref="LabelLayout"/> when the curve is on screen and an estimated ID font
+        /// (circle font for a bbox-inscribed radius) would be readable. Safe to call every frame; only one task runs.
+        /// </summary>
+        internal void RequestLabelLayoutIfNeeded(Scene scene)
+        {
+            if (Volatile.Read(ref labelLayoutState) != LabelLayoutNotStarted)
+                return;
+
+            if (!LocationCanvasView.IsPolygonVisible(BoundingBox, scene))
+                return;
+
+            // Circle font is R/2; for a circle filling the bbox, R = min(w,h)/2 so font ≈ min/4. Thin processes
+            // overestimate, which only starts work early; unreadably small cells still skip.
+            double estimatedFont = Math.Min(BoundingBox.Width, BoundingBox.Height) / 4.0;
+            if (!LabelView.IsVolumeFontReadable(estimatedFont, BoundingBox.Center, scene))
+                return;
+
+            if (Interlocked.CompareExchange(ref labelLayoutState, LabelLayoutInFlight, LabelLayoutNotStarted) != LabelLayoutNotStarted)
+                return;
+
+            _ = Task.Run(BuildLabelLayout);
+        }
+
+        /// <summary>
+        /// Pool-thread body for <see cref="RequestLabelLayoutIfNeeded"/>: polygonise the outline, build
+        /// <see cref="LabelLayout"/> and fit labels, then invalidate the overlay. Marks the view failed when the ring is
+        /// invalid so the request is not retried every frame.
+        /// </summary>
+        private void BuildLabelLayout()
+        {
+            long layoutStart = Stopwatch.GetTimestamp();
+            try
+            {
+                Polygon rendered;
+                try
+                {
+                    rendered = VolumeShapeAsRendered.ToPolygon();
+                }
+                catch (ArgumentException e)
+                {
+                    Trace.WriteLine($"Closed curve {ID} has no label layout: {e.Message}");
+                    Volatile.Write(ref labelLayoutState, LabelLayoutFailed);
+                    return;
+                }
+
+                LabelLayout layout = new(rendered);
+                LabelPlacementKind labelKind;
+                lock (labelSync)
+                {
+                    labelLayout = layout;
+                    labelKind = CreateLabelObjects();
+                }
+
+                Volatile.Write(ref labelLayoutState, LabelLayoutReady);
+                PolygonViewTimingLog.RecordLabelLayout(null, ID, Stopwatch.GetTimestamp() - layoutStart,
+                    rendered.TotalUniqueVertices, labelKind.ToString());
+                AnnotationOverlay.CurrentOverlay?.InvalidateParent();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"Closed curve {ID} label layout failed: {ex.Message}");
+                Volatile.Write(ref labelLayoutState, LabelLayoutFailed);
             }
         }
 
@@ -152,12 +224,6 @@ namespace WebAnnotation.View
                 }
 
                 return _BoundingBox.Value;
-                /*
-                if (_RenderedVolumeShapeEnvelope is null)
-                    _RenderedVolumeShapeEnvelope = this.VolumeShapeAsRendered.STBuffer(this.lineWidth / 2.0);
-
-                return _RenderedVolumeShapeEnvelope.Envelope();
-                */
             }
         }
 
@@ -289,9 +355,6 @@ namespace WebAnnotation.View
 
         internal override void OnObjPropertyChanged(object o, PropertyChangedEventArgs args)
         {
-            //ClearOverlappingLinkedLocationCache();
-
-            //CreateViewObjects();
             if (IsLocationPropertyAffectingLabels(args.PropertyName))
             {
                 CreateLabelObjects();

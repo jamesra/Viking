@@ -668,6 +668,31 @@ namespace VikingXNAGraphics
 
         private static bool IsLabelTooSmallToSee(double fontSizeInScreenFraction) => fontSizeInScreenFraction < (1.0 / 200.0); //Don't show if label is < 5% of screen's height
 
+        /// <summary>
+        /// True when a label of <paramref name="volumeFontSize"/> at <paramref name="position"/> would be large enough to
+        /// read in <paramref name="scene"/>, using the same screen-fraction rule as <see cref="IsVisible"/>. Callers that
+        /// have not built a <see cref="LabelView"/> yet (for example deferred closed-curve layout) use this to decide
+        /// whether layout work is worth starting.
+        /// </summary>
+        public static bool IsVolumeFontReadable(double volumeFontSize, Geometry.Vector2 position, VikingXNA.Scene scene)
+        {
+            if (scene.Viewport.Height <= 0)
+                return false;
+
+            double fontSizeInScreenPixels = ScreenPixelsForVolumeFont(volumeFontSize, position, scene);
+            return !IsLabelTooSmallToSee(fontSizeInScreenPixels / scene.Viewport.Height);
+        }
+
+        /// <summary>Screen-pixel height of a volume-space font at <paramref name="position"/>, matching <see cref="ScaleForMagnification"/>.</summary>
+        private static double ScreenPixelsForVolumeFont(double volumeFontSize, Geometry.Vector2 position, VikingXNA.Scene scene)
+        {
+            Vector3 center = scene.Viewport.Project(position.ToXNAVector3(0), scene.Projection, scene.View, scene.World);
+            Vector3 topedge = scene.Viewport.Project(
+                position.ToXNAVector3(0) - new Vector3(0, (float)volumeFontSize / 2, 0),
+                scene.Projection, scene.View, scene.World);
+            return (topedge.Y - center.Y) * 2;
+        }
+
         public bool IsVisible(VikingXNA.Scene scene)
         {
             if (font is null) //The first time draw is called font is initialized.  So allow us to draw if we haven't initialized font yet.

@@ -451,6 +451,86 @@ namespace WebAnnotationModel
 
         protected override StructureObj OnMissingParent() => Store.Structures.GetObjectByID(ParentID.Value, true);
 
+        /// <summary>
+        /// Merges a server/store <see cref="Structure"/> into this object and raises named change events only for
+        /// fields that differ. Does not call <see cref="WCFObjBase{T}.Update"/> (that used to fire an empty property
+        /// name and force every label to rebuild). Called by the structure store's <c>InternalUpdate</c>.
+        /// </summary>
+        internal override void Update(Structure newdata)
+        {
+            Debug.Assert(Data.ID == newdata.ID);
+            Data.DBAction = AnnotationService.Types.DBACTION.NONE;
+
+            if (Data.ParentID != newdata.ParentID)
+            {
+                OnPropertyChanging("ParentID");
+                ClearCachedParent();
+                Data.ParentID = newdata.ParentID;
+                OnPropertyChanged("ParentID");
+            }
+
+            if (Data.TypeID != newdata.TypeID)
+            {
+                OnPropertyChanging("Type");
+                Data.TypeID = newdata.TypeID;
+                _Type = null;
+                OnPropertyChanged("Type");
+            }
+
+            if (!string.Equals(Data.Notes, newdata.Notes, StringComparison.Ordinal))
+            {
+                OnPropertyChanging("Notes");
+                Data.Notes = newdata.Notes;
+                OnPropertyChanged("Notes");
+            }
+
+            if (Data.Verified != newdata.Verified)
+            {
+                OnPropertyChanging("Verified");
+                Data.Verified = newdata.Verified;
+                OnPropertyChanged("Verified");
+            }
+
+            if (Data.Confidence != newdata.Confidence)
+            {
+                OnPropertyChanging("Confidence");
+                Data.Confidence = newdata.Confidence;
+                OnPropertyChanged("Confidence");
+            }
+
+            if (!string.Equals(Data.AttributesXml, newdata.AttributesXml, StringComparison.Ordinal))
+            {
+                OnPropertyChanging("Attributes");
+                Data.AttributesXml = newdata.AttributesXml;
+                _AttributesCache = null;
+                OnPropertyChanged("Attributes");
+            }
+
+            if (!string.Equals(Data.Label, newdata.Label, StringComparison.Ordinal))
+            {
+                OnPropertyChanging("Label");
+                Data.Label = newdata.Label;
+                OnPropertyChanged("Label");
+            }
+
+            Data.Username = newdata.Username;
+            Data.ChildIDs = newdata.ChildIDs;
+
+            // Links are refreshed from the structure-link store; replace the cached payload and drop the lazy collection
+            // so the next Links get rebuilds from Data.Links.
+            if (!ReferenceEquals(Data.Links, newdata.Links))
+            {
+                lock (LinksLock)
+                {
+                    if (_Links != null)
+                        _Links.CollectionChanged -= OnLinksChanged;
+                    _Links = null;
+                }
+
+                Data.Links = newdata.Links;
+            }
+        }
+
         protected static event EventHandler OnCreate;
         protected void CallOnCreate() =>
             //TODO, create notification

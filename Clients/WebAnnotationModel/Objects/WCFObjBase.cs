@@ -29,24 +29,14 @@ namespace WebAnnotationModel.Objects
         }
 
         /// <summary>
-        /// Called when the database is queried and the results might have new values for our object
+        /// Replaces the underlying WCF data blob. Subclasses that care about UI refresh must override and raise
+        /// named <see cref="PropertyChanged"/> events for fields that actually changed; this base method does not
+        /// fire a blank property name (that used to make every listener treat the update as "everything changed").
         /// </summary>
-        /// <param name="newdata"></param>
+        /// <param name="newdata">Server or store payload for this object's ID.</param>
         internal virtual void Update(T newdata)
         {
-            bool ChangeEvent = false;
-            if (this.Data != newdata)
-            {
-                ChangeEvent = true;
-            }
-
-            if (ChangeEvent)
-                OnPropertyChanging("");
-
             this.Data = newdata;
-
-            if (ChangeEvent)
-                OnPropertyChanged("");
         }
 
 
