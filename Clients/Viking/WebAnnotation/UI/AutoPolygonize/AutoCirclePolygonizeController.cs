@@ -665,6 +665,22 @@ namespace WebAnnotation.UI.AutoPolygonize
             TryFindProposal(worldPosition, p => !hiddenProposals.IsHidden(p), out proposal, out distance);
 
         /// <summary>
+        /// The proposal shown for <paramref name="locationId"/>, so the location's own context menu can accept it without the
+        /// user having to hit the ring. A ring Del hid is not offered.
+        /// </summary>
+        public bool TryGetVisibleProposal(long locationId, out AutoPolygonizeProposal proposal)
+        {
+            lock (proposalLock)
+            {
+                if (proposals.TryGetValue(locationId, out proposal) && proposal is not null && !hiddenProposals.IsHidden(proposal))
+                    return true;
+            }
+
+            proposal = null!;
+            return false;
+        }
+
+        /// <summary>
         /// Del: hides the ring nearest <paramref name="worldPosition"/> (within the hit radius) for <paramref name="duration"/>.
         /// </summary>
         /// <returns>False when no visible ring is under the mouse.</returns>

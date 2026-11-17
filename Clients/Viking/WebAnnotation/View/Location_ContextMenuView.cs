@@ -42,6 +42,9 @@ namespace WebAnnotation.View
                 _AddRandomColorMenu(menu);
                 _AddDeleteMenu(menu);
 
+                // First, so a proposed segmentation can be accepted from the annotation without finding the thin ring.
+                AnnotationOverlay.CurrentOverlay?.AddAcceptSegmentationMenu(menu, ID);
+
                 return menu;
             }
         }

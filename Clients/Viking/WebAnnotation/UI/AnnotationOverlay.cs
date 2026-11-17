@@ -143,6 +143,23 @@ namespace WebAnnotation
             => autoPolygonizeController?.IsHoveredSourceLocation(locationId) == true;
 
         /// <summary>
+        /// Adds "Accept segmentation" to the top of a location's context menu when a proposed segmentation is shown for it,
+        /// so the user can accept it from the annotation instead of having to right double-click the thin proposal ring. It
+        /// does what the ring menu's "Accept polygonalization" does.
+        /// </summary>
+        internal void AddAcceptSegmentationMenu(System.Windows.Forms.ContextMenuStrip menu, long locationId)
+        {
+            AutoCirclePolygonizeController? controller = autoPolygonizeController;
+            if (controller is null || !controller.TryGetVisibleProposal(locationId, out AutoPolygonizeProposal proposal))
+                return;
+
+            System.Windows.Forms.ToolStripMenuItem accept = new("Accept segmentation");
+            accept.Click += (_, _) => controller.Accept(proposal);
+            menu.Items.Insert(0, accept);
+            menu.Items.Insert(1, new System.Windows.Forms.ToolStripSeparator());
+        }
+
+        /// <summary>
         /// Per-section cancellation for annotation loads. When section changes we only cancel loads for sections outside the keep set (current ± radius from Global.NumSectionsInMemory).
         /// </summary>
         private readonly Dictionary<int, CancellationTokenSource> _sectionAnnotationLoadBySection = new();

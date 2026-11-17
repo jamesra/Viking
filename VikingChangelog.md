@@ -30,6 +30,8 @@ Documentation/source/Client/versionhistory.rst.
 
 ## 1.2.149 — 2026-11-16 (Viking Test, unsigned)
 
+* **Accept segmentation from the annotation's menu.** When a proposed segmentation (the outline auto-polygonize draws over a circle) is shown for an annotation, the annotation's own right-click menu now starts with **Accept segmentation**, so you no longer have to hit the thin proposal outline to accept it.
+<!-- Not in the 1.2.149 build: added after it was packed; move it to the next version's section when packing. AnnotationOverlay.AddAcceptSegmentationMenu (via Location_CanvasContextMenuView) uses AutoCirclePolygonizeController.TryGetVisibleProposal; a ring hidden with Del is not offered. Same action as the ring menu's Accept polygonalization. -->
 * **Active command named.** In the help window (**F1**) the **Active command** heading now says what the command is for, for example **Active command: Pen gesture** or **Active command: Create structure**.
 <!-- Command.Purpose, shown by HelpWindow.HeadingOf; 18 commands override it, the rest are named from the class (Command.PurposeFromTypeName). -->
 
