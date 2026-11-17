@@ -73,8 +73,11 @@ hostname and proxy upstream if it is reached through the proxy.
    or failing: check ``docker compose --project-name <project> logs grpc-annotation-service``), and
    ``stopped`` when it is not running. It only reads. ``-Database <database> -Remove`` runs ``down``
    (volumes are kept).
-5. Production needs ``-Environment Production -Confirm``; without ``-Confirm`` the script refuses
-   (and PowerShell then asks before each step). ``-Environment`` defaults to ``Test``.
+5. Production needs ``-Environment Production -ConfirmProduction``; without it the script refuses.
+   ``-ConfirmProduction`` is a plain switch, so a Production run works under ``pwsh -NonInteractive``
+   (``-Confirm`` would make every step prompt). ``-Environment`` defaults to ``Test``.
+   The script also loads ``Run\_host\host.env`` under the Docker root (as ``stack.ps1`` does) and, when
+   compose would still lack a token issuer, stops with one message naming it.
 
 ``-Port`` is the h2c port and HTTPS is ``-Port`` + 1, as in the Ports table. Omitted, a running
 project keeps the pair it publishes, and a new one gets the first free pair from 5010 up (5020 is

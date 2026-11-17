@@ -19,7 +19,7 @@ A single script, `Servers/GrpcAnnotationService/scripts/Deploy-AnnotationGrpc.ps
 3. **First run** creates the env file from the template and stops with a message listing what to fill in. **Later runs** are idempotent: build if the image is stale, start, wait for healthy.
 4. **Verify** after start: gRPC health check, a metadata call, and a connection check against the named database. Print the endpoint a Viking client should use.
 5. `-Remove` stops and removes the project; `-Status` lists deployed databases with endpoint and health.
-6. **Safety:** refuse a production database unless `-Environment Production` and `-Confirm` are both given; never print or log secrets; never run schema changes against an existing database (schema is applied only to the throwaway test database).
+6. **Safety:** refuse a production database unless `-Environment Production` and `-ConfirmProduction` are both given; never print or log secrets; never run schema changes against an existing database (schema is applied only to the throwaway test database).
 7. Mixing a production Identity token with DevTest Identity is a 401, so identity settings come from `-Environment` only.
 
 The script, the compose files, and the READMEs stay consistent: a change to one updates the others in the same commit.

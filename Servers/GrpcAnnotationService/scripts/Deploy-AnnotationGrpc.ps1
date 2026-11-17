@@ -15,7 +15,9 @@
         config-template/build/docker-env-template.txt (outside the repo, by default under
         D:\Docker\Builds\GrpcAnnotationService\), fills in the database name and, when given,
         the SQL server, then stops and lists the keys that still need real values.
-      - Later runs: checks that no placeholder is left, prints the deployment plan and the
+      - Later runs: checks that no placeholder is left, loads the host-wide values compose needs
+        (Run\_host\host.env under the Docker root, as stack.ps1 does; a value already set in the
+        process wins), stops with one message naming anything compose still lacks, prints the deployment plan and the
         GRPC_ANNOTATION_* compose variables for the project (named in the "One deployment
         per annotation database" section of Documentation/source/deployment/annotation_grpc.rst), then checks the configuration with the read-only
         `docker compose config --quiet`, then starts the project with
@@ -30,7 +32,9 @@
       - -Remove stops and removes one project's containers and network (volumes are kept).
 
     Safety contract:
-      - -Environment Production is refused unless -Confirm is given explicitly.
+      - -Environment Production is refused unless -ConfirmProduction is given. It is a plain switch,
+        not -Confirm: -Confirm would also make every ShouldProcess step prompt, which throws under
+        pwsh -NonInteractive.
       - The env file must live outside the repo, and its values are never printed: only
         key names are shown.
       - Identity settings are left exactly as the template has them; this script does not
@@ -51,7 +55,11 @@
     Default: the first free pair at or above 5010, skipping 5020 (Identity DevTest).
 
 .PARAMETER Environment
-    Test (default) or Production. Production also requires -Confirm.
+    Test (default) or Production. Production also requires -ConfirmProduction.
+
+.PARAMETER ConfirmProduction
+    Acknowledges a Production deployment or removal. Separate from -Confirm so it works
+    non-interactively: -Confirm would also make every ShouldProcess step prompt.
 
 .PARAMETER EnvFile
     Per-database env file. Default: D:\Docker\Builds\GrpcAnnotationService\<Database>.env.
@@ -102,6 +110,10 @@ param(
     [Parameter(ParameterSetName = 'Remove')]
     [ValidateSet('Test', 'Production')]
     [string] $Environment = 'Test',
+
+    [Parameter(ParameterSetName = 'Deploy')]
+    [Parameter(ParameterSetName = 'Remove')]
+    [switch] $ConfirmProduction,
 
     [Parameter(ParameterSetName = 'Deploy')]
     [string] $EnvFile,
@@ -195,6 +207,65 @@ function Get-ComposeVariables([int] $HttpPort, [string] $EnvFilePath) {
         GRPC_ANNOTATION_HTTPS_PORT = [string]($HttpPort + 1)
         GRPC_ANNOTATION_ENV_FILE   = $EnvFilePath.Replace('\', '/')
     }
+}
+
+<#
+.SYNOPSIS
+    Returns the uncommented KEY=VALUE pairs of an env file as an ordered dictionary (empty when the file is missing).
+.DESCRIPTION
+    Values lose one pair of surrounding quotes; a value still holding REPLACE_WITH_ is skipped.
+    Used for host.env and for the per-database env file; values are never printed by callers.
+#>
+function Read-EnvFileValues([string] $Path) {
+    $result = [ordered]@{}
+    if (-not (Test-Path -LiteralPath $Path)) { return $result }
+    foreach ($line in Get-Content -LiteralPath $Path) {
+        if ($line -match '^\s*#' -or $line -notmatch '^\s*(?:export\s+)?([^=\s]+)\s*=(.*)$') { continue }
+        $key = $Matches[1]
+        $value = $Matches[2].Trim()
+        if ($value -match '^"(.*)"$' -or $value -match "^'(.*)'$") { $value = $Matches[1] }
+        if ($value -and $value -notmatch 'REPLACE_WITH_') { $result[$key] = $value }
+    }
+    return $result
+}
+
+<#
+.SYNOPSIS
+    Returns the host-wide compose variables to set for the call: host.env values, then the env file's Identity issuer.
+.DESCRIPTION
+    Pure apart from reading the two files. A name already set in the process environment is
+    left alone (it wins, as with stack.ps1). IdentityServer__Endpoint falls back to the
+    per-database env file's own value when neither the process nor host.env supplies an issuer.
+#>
+function Get-HostComposeVariables([string] $HostEnvPath, [string] $EnvFilePath) {
+    $vars = [ordered]@{}
+    foreach ($pair in (Read-EnvFileValues $HostEnvPath).GetEnumerator()) {
+        if (-not [Environment]::GetEnvironmentVariable($pair.Key)) { $vars[$pair.Key] = $pair.Value }
+    }
+    $issuerNames = 'IdentityServer__Endpoint', 'VIKING_IDENTITY_URL', 'VIKING_HOSTNAME_IDENTITY'
+    $haveIssuer = $issuerNames | Where-Object { $vars.Contains($_) -or [Environment]::GetEnvironmentVariable($_) }
+    if (-not $haveIssuer) {
+        $fromEnvFile = (Read-EnvFileValues $EnvFilePath)['IdentityServer__Endpoint']
+        if ($fromEnvFile) { $vars['IdentityServer__Endpoint'] = $fromEnvFile }
+    }
+    return $vars
+}
+
+<#
+.SYNOPSIS
+    Returns a description of each compose input that is still missing, so one message can list them all.
+.DESCRIPTION
+    Compose needs a token issuer (IdentityServer__Endpoint, VIKING_IDENTITY_URL or
+    VIKING_HOSTNAME_IDENTITY). The Docker root and certificate folder are defaulted by
+    Invoke-ComposeService, so they are never missing. Variables are those about to be set.
+#>
+function Get-MissingComposeInputs([System.Collections.IDictionary] $Variables) {
+    $missing = @()
+    $issuerNames = 'IdentityServer__Endpoint', 'VIKING_IDENTITY_URL', 'VIKING_HOSTNAME_IDENTITY'
+    if (-not ($issuerNames | Where-Object { $Variables.Contains($_) -or [Environment]::GetEnvironmentVariable($_) })) {
+        $missing += 'Identity issuer: set one of IdentityServer__Endpoint, VIKING_IDENTITY_URL or VIKING_HOSTNAME_IDENTITY (host.env, the environment, or IdentityServer__Endpoint in the env file)'
+    }
+    return $missing
 }
 
 <#
@@ -356,11 +427,8 @@ function Assert-Docker {
     }
 }
 
-if ($Environment -eq 'Production') {
-    $confirmGiven = $PSBoundParameters.ContainsKey('Confirm') -and [bool]$PSBoundParameters['Confirm']
-    if (-not $confirmGiven) {
-        throw 'Refusing a Production deployment without -Confirm. Re-run with -Environment Production -Confirm.'
-    }
+if ($Environment -eq 'Production' -and -not $ConfirmProduction) {
+    throw 'Refusing a Production deployment without -ConfirmProduction. Re-run with -Environment Production -ConfirmProduction.'
 }
 
 if ($Status) {
@@ -469,6 +537,16 @@ if ($unfilled.Count -gt 0) {
 $composeVars = Get-ComposeVariables $Port $envFull
 Write-Host 'Compose variables:'
 $composeVars.GetEnumerator() | ForEach-Object { Write-Host "  $($_.Key)=$($_.Value)" }
+
+$dockerRoot = if ($env:NORNIR_DOCKER_USER_ROOT) { $env:NORNIR_DOCKER_USER_ROOT } else { 'D:\Docker' }
+$hostEnvPath = Join-Path $dockerRoot 'Run\_host\host.env'
+$hostVars = Get-HostComposeVariables $hostEnvPath $envFull
+foreach ($pair in $hostVars.GetEnumerator()) { $composeVars[$pair.Key] = $pair.Value }
+if ($hostVars.Count -gt 0) { Write-Host "From host settings ($hostEnvPath or the env file): $($hostVars.Keys -join ', ')" }
+$missingInputs = Get-MissingComposeInputs $composeVars
+if ($missingInputs.Count -gt 0) {
+    throw ("Compose is missing:`n  " + ($missingInputs -join "`n  "))
+}
 
 Assert-Docker
 Invoke-ComposeService $project $composeVars @('config', '--quiet', $serviceName)

@@ -16,9 +16,9 @@
     must print each project's endpoint and health line and call nothing but `compose ls` and `ps`.
 
     The Production guard is tested in a child PowerShell process, with arguments that stop the
-    script before docker: -Environment Production without -Confirm (or with -Confirm:$false, or
-    with -Remove) must be refused with a non-zero exit, and Test, the default, and Production
-    with -Confirm must not be.
+    script before docker: -Environment Production without -ConfirmProduction (or with -Remove)
+    must be refused with a non-zero exit, and Test, the default, and Production with
+    -ConfirmProduction must not be.
 
     Written for Pester 3.4 (the version shipped with Windows PowerShell); the same syntax runs on
     PowerShell 7 with that module.
@@ -38,7 +38,8 @@ if ($errors.Count -gt 0) { throw "Cannot parse ${scriptPath}: $($errors[0].Messa
 
 $helperNames = 'Get-ProjectName', 'Find-FreePortPair', 'Get-UnfilledKeys', 'Get-ComposeVariables',
                'Invoke-ComposeService', 'Get-PublishedPort', 'Get-ServicePorts', 'Test-TlsHandshake',
-               'Wait-ServiceReady', 'Start-ComposeProject', 'Get-StatusLine'
+               'Wait-ServiceReady', 'Start-ComposeProject', 'Get-StatusLine',
+               'Read-EnvFileValues', 'Get-HostComposeVariables', 'Get-MissingComposeInputs'
 $helperSource = $ast.FindAll({
         param($node)
         $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $helperNames -contains $node.Name
@@ -102,8 +103,8 @@ function Stop-LoopbackTlsServer($Server) {
 }
 
 Describe 'Deploy-AnnotationGrpc helper loading' {
-    It 'finds all eleven helpers and all four settings in the script' {
-        @($helperSource).Count | Should Be 11
+    It 'finds all fourteen helpers and all four settings in the script' {
+        @($helperSource).Count | Should Be 14
         @($settingSource).Count | Should Be 4
     }
 }
@@ -469,7 +470,7 @@ Describe 'Deploy-AnnotationGrpc start step (docker faked)' {
         if ($a -contains 'up') { $global:LASTEXITCODE = 1 }
     }
     $envPath = Join-Path $TestDrive 'Pester.env'
-    Set-Content -LiteralPath $envPath -Value 'ConnectionStrings__AnnotationConnection=Server=s;Database=Pester;Password=x'
+    Set-Content -LiteralPath $envPath -Value @('ConnectionStrings__AnnotationConnection=Server=s;Database=Pester;Password=x', 'IdentityServer__Endpoint=https://identity.example/')
     $composeCalls = { @($calls | Where-Object { $_.args[0] -eq 'compose' } | ForEach-Object { $_.args[5..($_.args.Count - 1)] -join ' ' }) }
 
     It '-WhatIf checks the configuration and skips up' {
@@ -597,7 +598,7 @@ Describe 'Deploy-AnnotationGrpc -Status (docker faked)' {
 .DESCRIPTION
     A child process is the only way to see what an operator sees when the script throws before doing
     anything: parameter binding, the Production guard and the exit code are all real. Callers pass
-    arguments that make the script stop before it reaches docker (a Production run without -Confirm,
+    arguments that make the script stop before it reaches docker (a Production run without -ConfirmProduction,
     or an -EnvFile inside the repo), so no docker command can run.
 #>
 function Invoke-DeployScriptChild([string] $ArgumentText) {
@@ -608,32 +609,27 @@ function Invoke-DeployScriptChild([string] $ArgumentText) {
 }
 
 Describe 'Deploy-AnnotationGrpc Production guard (child process)' {
-    $refusal = 'Refusing a Production deployment without -Confirm'
+    $refusal = 'Refusing a Production deployment without -ConfirmProduction'
     # Inside the repo, so a run that passes the guard stops at the EnvFile check before reaching docker.
     $repoEnv = Join-Path (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path 'pester-child.env'
 
-    It 'refuses -Environment Production without -Confirm, with a non-zero exit' {
+    It 'refuses -Environment Production without -ConfirmProduction, with a non-zero exit' {
         $r = Invoke-DeployScriptChild "-Database Pester -Environment Production -EnvFile '$repoEnv'"
         $r.ExitCode | Should Not Be 0
         $r.Output | Should Match $refusal
     }
-    It 'refuses -Environment Production when -Confirm is explicitly false' {
-        $r = Invoke-DeployScriptChild "-Database Pester -Environment Production -Confirm:`$false -EnvFile '$repoEnv'"
-        $r.ExitCode | Should Not Be 0
-        $r.Output | Should Match $refusal
-    }
-    It 'refuses removing a Production project without -Confirm' {
+    It 'refuses removing a Production project without -ConfirmProduction' {
         $r = Invoke-DeployScriptChild "-Database Pester -Environment Production -Remove"
         $r.ExitCode | Should Not Be 0
         $r.Output | Should Match $refusal
     }
-    It 'passes the guard for -Environment Production -Confirm and stops later, at the EnvFile check' {
-        $r = Invoke-DeployScriptChild "-Database Pester -Environment Production -Confirm -EnvFile '$repoEnv'"
+    It 'passes the guard for -Environment Production -ConfirmProduction and stops later, at the EnvFile check' {
+        $r = Invoke-DeployScriptChild "-Database Pester -Environment Production -ConfirmProduction -EnvFile '$repoEnv'"
         $r.ExitCode | Should Not Be 0
         $r.Output | Should Not Match $refusal
         $r.Output | Should Match 'EnvFile must be outside the repo'
     }
-    It 'does not apply the guard to -Environment Test, which needs no -Confirm' {
+    It 'does not apply the guard to -Environment Test, which needs no -ConfirmProduction' {
         $r = Invoke-DeployScriptChild "-Database Pester -Environment Test -EnvFile '$repoEnv'"
         $r.Output | Should Not Match $refusal
         $r.Output | Should Match 'EnvFile must be outside the repo'
@@ -643,4 +639,46 @@ Describe 'Deploy-AnnotationGrpc Production guard (child process)' {
         $r.Output | Should Not Match $refusal
         $r.Output | Should Match 'EnvFile must be outside the repo'
     }
+}
+
+Describe 'Deploy-AnnotationGrpc host settings' {
+    . ([scriptblock]::Create(($settingSource -join "`n")))
+    . ([scriptblock]::Create(($helperSource -join "`n")))
+    $dir = Join-Path ([System.IO.Path]::GetTempPath()) ('pester-host-' + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $dir | Out-Null
+    $hostEnv = Join-Path $dir 'host.env'
+    $dbEnv = Join-Path $dir 'db.env'
+    Set-Content -LiteralPath $hostEnv -Value @('# comment', 'VIKING_DOMAIN="example.org"', 'VIKING_HOSTNAME_IDENTITY=id.example.org', 'EMPTY=REPLACE_WITH_X')
+    Set-Content -LiteralPath $dbEnv -Value @('IdentityServer__Endpoint=https://db-issuer/')
+
+    It 'reads keys, strips quotes and skips comments and placeholders' {
+        $v = Read-EnvFileValues $hostEnv
+        $v['VIKING_DOMAIN'] | Should Be 'example.org'
+        $v['VIKING_HOSTNAME_IDENTITY'] | Should Be 'id.example.org'
+        $v.Contains('EMPTY') | Should Be $false
+    }
+    It 'returns nothing for a missing file' {
+        (Read-EnvFileValues (Join-Path $dir 'none.env')).Count | Should Be 0
+    }
+    It 'takes host.env values and does not need the env file issuer when host.env has one' {
+        $v = Get-HostComposeVariables $hostEnv $dbEnv
+        $v['VIKING_HOSTNAME_IDENTITY'] | Should Be 'id.example.org'
+        $v.Contains('IdentityServer__Endpoint') | Should Be $false
+    }
+    It 'falls back to the env file issuer when host.env has none' {
+        $v = Get-HostComposeVariables (Join-Path $dir 'none.env') $dbEnv
+        $v['IdentityServer__Endpoint'] | Should Be 'https://db-issuer/'
+    }
+    It 'reports a missing issuer and accepts one given in the variables' {
+        $saved = @{}
+        foreach ($n in 'IdentityServer__Endpoint', 'VIKING_IDENTITY_URL', 'VIKING_HOSTNAME_IDENTITY') {
+            $saved[$n] = [Environment]::GetEnvironmentVariable($n); [Environment]::SetEnvironmentVariable($n, $null)
+        }
+        try {
+            @(Get-MissingComposeInputs ([ordered]@{})).Count | Should Be 1
+            @(Get-MissingComposeInputs ([ordered]@{ VIKING_IDENTITY_URL = 'https://x/' })).Count | Should Be 0
+        }
+        finally { foreach ($n in $saved.Keys) { [Environment]::SetEnvironmentVariable($n, $saved[$n]) } }
+    }
+    Remove-Item -LiteralPath $dir -Recurse -Force
 }
