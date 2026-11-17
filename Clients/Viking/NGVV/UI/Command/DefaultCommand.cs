@@ -14,6 +14,9 @@ namespace Viking.UI.Commands
     [Viking.Common.CommandAttribute()]
     public class DefaultCommand : Command, Viking.Common.IHelp, Viking.Common.IObservableHelp
     {
+        /// <summary>Shown after "Active command" in the help window.</summary>
+        public override string Purpose => "Viewing and selecting";
+
         public DefaultCommand(Viking.UI.Controls.SectionViewerControl parent)
             : base(parent)
         {

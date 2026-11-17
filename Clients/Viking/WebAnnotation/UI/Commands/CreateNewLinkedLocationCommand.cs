@@ -14,6 +14,9 @@ namespace WebAnnotation.UI.Commands
                                            LocationObj existingLoc,
                                            LocationObj newLoc) : Viking.UI.Commands.Command(parent)
     {
+        /// <summary>Shown after "Active command" in the help window.</summary>
+        public override string Purpose => "Create linked location";
+
         private readonly LocationObj NewLoc = newLoc;
         private readonly LocationObj ExistingLoc = existingLoc;
 

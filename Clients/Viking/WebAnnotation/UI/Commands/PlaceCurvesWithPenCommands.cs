@@ -188,6 +188,9 @@ namespace WebAnnotation.UI.Commands
     /// </summary>
     internal abstract class PlaceGeometryWithPenCommandBase : LineGeometryCommandBase, Viking.Common.IHelp, Viking.Common.IObservableHelp
     {
+        /// <summary>Shown after "Active command" in the help window.</summary>
+        public override string Purpose => "Pen gesture";
+
         public abstract uint NumCurveInterpolations
         {
             get;

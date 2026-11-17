@@ -19,6 +19,9 @@ namespace WebAnnotation.UI.Commands
     /// </summary>
     internal class LinkStructureToParentCommand : AnnotationCommandBase, Viking.Common.IObservableHelp, Viking.Common.IHelp
     {
+        /// <summary>Shown after "Active command" in the help window.</summary>
+        public override string Purpose => "Set parent structure";
+
         /// <summary>
         /// New Locations position in world space
         /// </summary>

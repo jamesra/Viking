@@ -20,6 +20,9 @@ namespace WebAnnotation.UI.Commands
 {
     internal class RetraceAndReplacePathCommand : PlaceGeometryWithPenCommandBase, IHelp, IObservableHelp
     {
+        /// <summary>Shown after "Active command" in the help window.</summary>
+        public override string Purpose => "Retrace outline";
+
         //Original Polygons
         private readonly Polygon OriginalMosaicPolygon;
         private readonly Polygon OriginalVolumePolygon;

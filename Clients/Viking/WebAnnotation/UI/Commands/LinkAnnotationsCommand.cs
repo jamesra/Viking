@@ -23,6 +23,9 @@ namespace WebAnnotation.UI.Commands
     internal class LinkAnnotationsCommand(Viking.UI.Controls.SectionViewerControl parent,
                                            LocationObj existingLoc) : AnnotationCommandBase(parent), Viking.Common.IHelp, Viking.Common.IObservableHelp
     {
+        /// <summary>Shown after "Active command" in the help window.</summary>
+        public override string Purpose => "Link annotations";
+
         private readonly LocationObj OriginObj = existingLoc;
 
         /// <summary>

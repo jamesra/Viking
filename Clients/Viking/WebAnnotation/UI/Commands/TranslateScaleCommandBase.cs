@@ -13,6 +13,9 @@ namespace WebAnnotation.UI.Commands
 {
     internal abstract class TranslateScaleCommandBase : AnnotationCommandBase
     {
+        /// <summary>Shown after "Active command" in the help window.</summary>
+        public override string Purpose => "Move annotation";
+
         /// <summary>The mouse actions every move-and-resize command shares: drag to move, release to place, wheel to resize.</summary>
         protected static readonly HelpEntry[] TranslateScaleHelp =
         [

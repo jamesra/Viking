@@ -11,6 +11,9 @@ namespace WebAnnotation.UI.Commands
                                            StructureObj structure,
                                            LocationObj location) : AnnotationCommandBase(parent)
     {
+        /// <summary>Shown after "Active command" in the help window.</summary>
+        public override string Purpose => "Create structure";
+
         private readonly StructureObj newStruct = structure;
         private readonly LocationObj newLoc = location;
 

@@ -110,6 +110,28 @@ namespace Viking.UI.WPF
             HelpSection.StatusBar,
         ];
 
+        private string? _commandPurpose;
+
+        /// <summary>What the active command is for ("Pen gesture"), shown after the Active command heading; null for none.</summary>
+        public string? CommandPurpose
+        {
+            get => _commandPurpose;
+            set
+            {
+                if (_commandPurpose == value)
+                    return;
+
+                _commandPurpose = value;
+                Layout(force: true);
+            }
+        }
+
+        /// <summary>The heading of a section, with the active command's purpose after "Active command" when there is one.</summary>
+        public static string HeadingOf(HelpSection section, string? commandPurpose) =>
+            section == HelpSection.Command && !string.IsNullOrWhiteSpace(commandPurpose)
+                ? $"{TitleOf(section)}: {commandPurpose}"
+                : TitleOf(section);
+
         /// <summary>The heading of a section.</summary>
         public static string TitleOf(HelpSection section) => section switch
         {
@@ -249,7 +271,7 @@ namespace Viking.UI.WPF
             _columnsShown = columns;
             Sections.Children.Clear();
             foreach ((HelpSection section, IReadOnlyList<HelpEntry> rows) in _sections)
-                Sections.Children.Add(SectionView(section, rows, width));
+                Sections.Children.Add(SectionView(section, HeadingOf(section, _commandPurpose), rows, width));
         }
 
         /// <summary>
@@ -269,7 +291,7 @@ namespace Viking.UI.WPF
         /// collapsible heading of its own. Only keyed rows are split into columns, so a divider never lands inside a column as
         /// a stray bar.
         /// </summary>
-        private static FrameworkElement SectionView(HelpSection section, IReadOnlyList<HelpEntry> rows, double width)
+        private static FrameworkElement SectionView(HelpSection section, string heading, IReadOnlyList<HelpEntry> rows, double width)
         {
             (IReadOnlyList<HelpEntry> text, IReadOnlyList<HelpEntry> keyed) = SplitAtDivider(rows);
             // Indented under the section heading, as a group's rows are under the group's heading.
@@ -307,7 +329,7 @@ namespace Viking.UI.WPF
 
             Expander expander = new()
             {
-                Header = new TextBlock { Text = TitleOf(section), FontWeight = FontWeights.SemiBold },
+                Header = new TextBlock { Text = heading, FontWeight = FontWeights.SemiBold },
                 IsExpanded = !Collapsed.Contains(section),
                 Content = body,
                 Margin = new Thickness(0, 0, 0, 6),

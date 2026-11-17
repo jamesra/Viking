@@ -23,6 +23,9 @@ namespace WebAnnotation.UI.Commands
     /// </summary> bb bb                                                                                                                                                                                                                                           
     public class ShapeConfirmationCommand : Viking.UI.Commands.Command, IHelp
     {
+        /// <summary>Shown after "Active command" in the help window.</summary>
+        public override string Purpose => "Confirm shape";
+
         /// <summary>Click or touch a button to choose it, or the cancel button; then the keys.</summary>
         public HelpEntry[] Help =>
         [

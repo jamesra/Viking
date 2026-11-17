@@ -9,6 +9,9 @@ namespace WebAnnotation.UI.Commands
 {
     internal class ResizeCircleCommand : Viking.UI.Commands.Command, IHelp, IObservableHelp
     {
+        /// <summary>Shown after "Active command" in the help window.</summary>
+        public override string Purpose => "Resize circle";
+
         /// <summary>The mouse handling below (<see cref="OnMouseMove"/>, <see cref="OnMouseUp"/>); change them together.</summary>
         private static readonly HelpEntry[] MouseHelp =
         [

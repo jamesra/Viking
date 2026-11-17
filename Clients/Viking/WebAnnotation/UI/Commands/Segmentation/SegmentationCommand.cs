@@ -40,6 +40,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// </summary>
     internal class SegmentationCommand : AnnotationCommandBase, IHelp, IObservableHelp
     {
+        /// <summary>Shown after "Active command" in the help window.</summary>
+        public override string Purpose => "Segment";
+
         #region Constants
         private const int DEFAULT_DEBOUNCE_MS = 500;
 

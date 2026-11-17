@@ -14,6 +14,9 @@ namespace MeasurementExtension
     [Viking.Common.CommandAttribute()]
     public class MeasureCommand : Viking.UI.Commands.Command, Viking.Common.IHelp, Viking.Common.IObservableHelp
     {
+        /// <summary>Shown after "Active command" in the help window.</summary>
+        public override string Purpose => "Measure";
+
         Geometry.Vector2 Origin;
         private readonly LengthMeasurement PixelSize;
 

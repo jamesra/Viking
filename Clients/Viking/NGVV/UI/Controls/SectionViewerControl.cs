@@ -92,6 +92,7 @@ namespace Viking.UI.Controls
 
             if (_helpWindow is not null)
             {
+                _helpWindow.CommandPurpose = (command ?? _idleHelp as Viking.UI.Commands.Command)?.Purpose;
                 _helpWindow.AlwaysActive = HelpForEveryCommand();
                 _helpWindow.Entries = entries;
             }

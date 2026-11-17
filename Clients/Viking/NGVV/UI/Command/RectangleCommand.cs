@@ -12,6 +12,9 @@ namespace Viking.UI.Commands
 {
     public class RectangleCommand(Viking.UI.Controls.SectionViewerControl parent) : DefaultCommand(parent), Viking.Common.IHelp, Viking.Common.IObservableHelp
     {
+        /// <summary>Shown after "Active command" in the help window.</summary>
+        public override string Purpose => "Select a rectangle";
+
         protected Geometry.Vector2 Origin;
         protected Geometry.Rectangle MyRect;
         protected Microsoft.Xna.Framework.Color Color;

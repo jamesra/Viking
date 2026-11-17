@@ -254,6 +254,44 @@ namespace Viking.UI.Commands
         public IEnumerable<HelpEntry> KeyHelp => KeyBindings.Help(KeyTable);
 
         /// <summary>
+        /// What the command is for, in a few words ("Pen gesture", "Create structure"), shown after "Active command" in the
+        /// help window. Commands override it with a friendly name; otherwise it is made from the class name
+        /// (<see cref="PurposeFromTypeName"/>).
+        /// </summary>
+        public virtual string Purpose => PurposeFromTypeName(GetType().Name);
+
+        /// <summary>
+        /// A class name as words: without a trailing "Command" or "CommandBase", split at capitals, only the first word
+        /// capitalized ("AdjustCurveControlPointCommand" is "Adjust curve control point"). Runs of capitals stay together.
+        /// </summary>
+        public static string PurposeFromTypeName(string typeName)
+        {
+            string name = typeName;
+            int generic = name.IndexOf('`');
+            if (generic >= 0)
+                name = name.Substring(0, generic);
+
+            foreach (string suffix in new[] { "CommandBase", "Command" })
+            {
+                if (name.EndsWith(suffix, StringComparison.Ordinal) && name.Length > suffix.Length)
+                {
+                    name = name.Substring(0, name.Length - suffix.Length);
+                    break;
+                }
+            }
+
+            string[] words = System.Text.RegularExpressions.Regex.Split(name, @"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])");
+            for (int i = 1; i < words.Length; i++)
+            {
+                bool acronym = words[i].Length > 1 && words[i].All(char.IsUpper);
+                if (!acronym)
+                    words[i] = words[i].ToLowerInvariant();
+            }
+
+            return string.Join(" ", words);
+        }
+
+        /// <summary>
         /// If the base Command class' OnMouseMove is called this variable contains the mouse position at the last mouse move
         /// </summary>
         protected Geometry.Vector2 oldWorldPosition = new(0, 0);

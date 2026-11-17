@@ -33,6 +33,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// </remarks>
     internal sealed class SegmentationMaskEditCommand : Command, IHelp, IObservableHelp
     {
+        /// <summary>Shown after "Active command" in the help window.</summary>
+        public override string Purpose => "Edit segmentation mask";
+
         private const double DefaultStepNanometers = 20;
 
         private readonly RasterMask input;

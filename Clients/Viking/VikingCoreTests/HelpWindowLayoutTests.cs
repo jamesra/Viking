@@ -93,6 +93,23 @@ namespace VikingCoreTests
         }
 
         [TestMethod]
+        public void TheActiveCommandHeadingSaysWhatTheCommandIsFor()
+        {
+            Assert.AreEqual("Active command: Pen gesture", HelpWindow.HeadingOf(Viking.Common.HelpSection.Command, "Pen gesture"));
+            Assert.AreEqual("Active command", HelpWindow.HeadingOf(Viking.Common.HelpSection.Command, null));
+            Assert.AreEqual("Always active", HelpWindow.HeadingOf(Viking.Common.HelpSection.AlwaysActive, "Pen gesture"), "only the command's heading");
+        }
+
+        [TestMethod]
+        public void ACommandWithoutAFriendlyNameIsNamedFromItsClass()
+        {
+            Assert.AreEqual("Adjust curve control point", Viking.UI.Commands.Command.PurposeFromTypeName("AdjustCurveControlPointCommand"));
+            Assert.AreEqual("Translate scale", Viking.UI.Commands.Command.PurposeFromTypeName("TranslateScaleCommandBase"));
+            Assert.AreEqual("Place ID marker", Viking.UI.Commands.Command.PurposeFromTypeName("PlaceIDMarkerCommand"), "acronyms stay capitals");
+            Assert.AreEqual("Command", Viking.UI.Commands.Command.PurposeFromTypeName("Command"));
+        }
+
+        [TestMethod]
         public void TheStatusBarSectionComesLast()
         {
             Viking.Common.HelpEntry status = Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Turn Pen Mode on or off", where: "on Pen On/Off").In(Viking.Common.HelpSection.StatusBar);

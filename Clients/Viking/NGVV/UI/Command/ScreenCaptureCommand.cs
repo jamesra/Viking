@@ -7,6 +7,9 @@ namespace Viking.UI.Commands
 {
     public class ScreenCaptureCommand : RectangleCommand
     {
+        /// <summary>Shown after "Active command" in the help window.</summary>
+        public override string Purpose => "Capture screen";
+
         public ScreenCaptureCommand(Viking.UI.Controls.SectionViewerControl parent)
             : base(parent)
         {

@@ -10,6 +10,9 @@ namespace WebAnnotation.UI.Commands
 {
     internal class CutHoleWithPenCommand : PlaceClosedCurveWithPenCommand
     {
+        /// <summary>Shown after "Active command" in the help window.</summary>
+        public override string Purpose => "Cut a hole";
+
         private readonly Polygon OriginalMosaicPolygon;
         private readonly Polygon OriginalVolumePolygon;
         private readonly List<LineSegment>? ExteriorSegments;

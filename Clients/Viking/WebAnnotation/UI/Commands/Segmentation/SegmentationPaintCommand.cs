@@ -34,6 +34,9 @@ namespace WebAnnotation.UI.Commands.Segmentation
     /// </remarks>
     internal sealed class SegmentationPaintCommand : SegmentationCommand, IHelp, IObservableHelp
     {
+        /// <summary>Shown after "Active command" in the help window.</summary>
+        public override string Purpose => "Paint segmentation";
+
         /// <summary>Quiet time after the last button release before the masks are sent.</summary>
         public const int SubmitPauseMilliseconds = 350;
 
