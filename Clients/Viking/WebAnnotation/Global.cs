@@ -1058,6 +1058,120 @@ namespace WebAnnotation
                 }
             }
 
+            /// <summary>Starting <see cref="AutoPolygonizeButtonsEnabled"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
+            public const bool DEFAULT_AUTOPOLYGONIZE_BUTTONS_ENABLED = true;
+
+            /// <summary>Smallest accepted <see cref="AutoPolygonizeButtonMaxPixels"/>.</summary>
+            public const int MIN_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS = 16;
+
+            /// <summary>Largest accepted <see cref="AutoPolygonizeButtonMaxPixels"/>.</summary>
+            public const int MAX_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS = 64;
+
+            /// <summary>Starting <see cref="AutoPolygonizeButtonMaxPixels"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
+            public const int DEFAULT_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS = 28;
+
+            /// <summary>Smallest accepted <see cref="AutoPolygonizeButtonMinPixels"/>.</summary>
+            public const int MIN_AUTOPOLYGONIZE_BUTTON_MIN_PIXELS = 6;
+
+            /// <summary>Largest accepted <see cref="AutoPolygonizeButtonMinPixels"/>.</summary>
+            public const int MAX_AUTOPOLYGONIZE_BUTTON_MIN_PIXELS = 32;
+
+            /// <summary>Starting <see cref="AutoPolygonizeButtonMinPixels"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
+            public const int DEFAULT_AUTOPOLYGONIZE_BUTTON_MIN_PIXELS = 12;
+
+            /// <summary>Smallest accepted <see cref="AutoPolygonizeButtonOpacity"/>.</summary>
+            public const double MIN_AUTOPOLYGONIZE_BUTTON_OPACITY = 0.3;
+
+            /// <summary>Largest accepted <see cref="AutoPolygonizeButtonOpacity"/>.</summary>
+            public const double MAX_AUTOPOLYGONIZE_BUTTON_OPACITY = 1.0;
+
+            /// <summary>Starting <see cref="AutoPolygonizeButtonOpacity"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
+            public const double DEFAULT_AUTOPOLYGONIZE_BUTTON_OPACITY = 0.8;
+
+            /// <summary>Shortest accepted <see cref="AutoPolygonizeButtonConfirmDelayMs"/>.</summary>
+            public const int MIN_AUTOPOLYGONIZE_BUTTON_CONFIRM_DELAY_MS = 100;
+
+            /// <summary>Longest accepted <see cref="AutoPolygonizeButtonConfirmDelayMs"/>.</summary>
+            public const int MAX_AUTOPOLYGONIZE_BUTTON_CONFIRM_DELAY_MS = 2000;
+
+            /// <summary>Starting <see cref="AutoPolygonizeButtonConfirmDelayMs"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
+            public const int DEFAULT_AUTOPOLYGONIZE_BUTTON_CONFIRM_DELAY_MS = 500;
+
+            /// <summary>Shortest accepted <see cref="AutoPolygonizeButtonConfirmTimeoutSeconds"/>.</summary>
+            public const double MIN_AUTOPOLYGONIZE_BUTTON_CONFIRM_TIMEOUT_SECONDS = 1;
+
+            /// <summary>Longest accepted <see cref="AutoPolygonizeButtonConfirmTimeoutSeconds"/>.</summary>
+            public const double MAX_AUTOPOLYGONIZE_BUTTON_CONFIRM_TIMEOUT_SECONDS = 15;
+
+            /// <summary>Starting <see cref="AutoPolygonizeButtonConfirmTimeoutSeconds"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
+            public const double DEFAULT_AUTOPOLYGONIZE_BUTTON_CONFIRM_TIMEOUT_SECONDS = 4;
+
+            /// <summary>Whether auto-segmentation proposals show their accept and hide buttons.</summary>
+            public static bool AutoPolygonizeButtonsEnabled
+            {
+                get => Properties.Settings.Default.AutoPolygonizeButtonsEnabled;
+                set
+                {
+                    Properties.Settings.Default.AutoPolygonizeButtonsEnabled = value;
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>Largest proposal button diameter in screen pixels, clamped to the MIN/MAX_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS range.</summary>
+            public static int AutoPolygonizeButtonMaxPixels
+            {
+                get => MathUtils.Clamp(Properties.Settings.Default.AutoPolygonizeButtonMaxPixels, MIN_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS, MAX_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS);
+                set
+                {
+                    Properties.Settings.Default.AutoPolygonizeButtonMaxPixels = MathUtils.Clamp(value, MIN_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS, MAX_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>Smallest clickable proposal button diameter in screen pixels, clamped to the MIN/MAX_AUTOPOLYGONIZE_BUTTON_MIN_PIXELS range.</summary>
+            public static int AutoPolygonizeButtonMinPixels
+            {
+                get => MathUtils.Clamp(Properties.Settings.Default.AutoPolygonizeButtonMinPixels, MIN_AUTOPOLYGONIZE_BUTTON_MIN_PIXELS, MAX_AUTOPOLYGONIZE_BUTTON_MIN_PIXELS);
+                set
+                {
+                    Properties.Settings.Default.AutoPolygonizeButtonMinPixels = MathUtils.Clamp(value, MIN_AUTOPOLYGONIZE_BUTTON_MIN_PIXELS, MAX_AUTOPOLYGONIZE_BUTTON_MIN_PIXELS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>Opacity of the proposal buttons, clamped to the MIN/MAX_AUTOPOLYGONIZE_BUTTON_OPACITY range.</summary>
+            public static double AutoPolygonizeButtonOpacity
+            {
+                get => MathUtils.Clamp(Properties.Settings.Default.AutoPolygonizeButtonOpacity, MIN_AUTOPOLYGONIZE_BUTTON_OPACITY, MAX_AUTOPOLYGONIZE_BUTTON_OPACITY);
+                set
+                {
+                    Properties.Settings.Default.AutoPolygonizeButtonOpacity = MathUtils.Clamp(value, MIN_AUTOPOLYGONIZE_BUTTON_OPACITY, MAX_AUTOPOLYGONIZE_BUTTON_OPACITY);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>Milliseconds before a clicked proposal button shows "?", clamped to the MIN/MAX_AUTOPOLYGONIZE_BUTTON_CONFIRM_DELAY_MS range.</summary>
+            public static int AutoPolygonizeButtonConfirmDelayMs
+            {
+                get => MathUtils.Clamp(Properties.Settings.Default.AutoPolygonizeButtonConfirmDelayMs, MIN_AUTOPOLYGONIZE_BUTTON_CONFIRM_DELAY_MS, MAX_AUTOPOLYGONIZE_BUTTON_CONFIRM_DELAY_MS);
+                set
+                {
+                    Properties.Settings.Default.AutoPolygonizeButtonConfirmDelayMs = MathUtils.Clamp(value, MIN_AUTOPOLYGONIZE_BUTTON_CONFIRM_DELAY_MS, MAX_AUTOPOLYGONIZE_BUTTON_CONFIRM_DELAY_MS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
+            /// <summary>Seconds a clicked proposal button waits for its second click, clamped to the MIN/MAX_AUTOPOLYGONIZE_BUTTON_CONFIRM_TIMEOUT_SECONDS range.</summary>
+            public static double AutoPolygonizeButtonConfirmTimeoutSeconds
+            {
+                get => MathUtils.Clamp(Properties.Settings.Default.AutoPolygonizeButtonConfirmTimeoutSeconds, MIN_AUTOPOLYGONIZE_BUTTON_CONFIRM_TIMEOUT_SECONDS, MAX_AUTOPOLYGONIZE_BUTTON_CONFIRM_TIMEOUT_SECONDS);
+                set
+                {
+                    Properties.Settings.Default.AutoPolygonizeButtonConfirmTimeoutSeconds = MathUtils.Clamp(value, MIN_AUTOPOLYGONIZE_BUTTON_CONFIRM_TIMEOUT_SECONDS, MAX_AUTOPOLYGONIZE_BUTTON_CONFIRM_TIMEOUT_SECONDS);
+                    Properties.Settings.Default.Save();
+                }
+            }
+
             /// <summary>Maps a stored integer to a defined shimmer style, falling back to the default for unknown values.</summary>
             internal static WebAnnotation.WPF.Forms.AutoPolygonizeShimmerStyle ValidAutoPolygonizeShimmerStyle(int storedValue) =>
                 Enum.IsDefined(typeof(WebAnnotation.WPF.Forms.AutoPolygonizeShimmerStyle), storedValue)
@@ -1258,6 +1372,12 @@ namespace WebAnnotation
                 Properties.Settings.Default.AutoPolygonizeShimmerBrightness = DEFAULT_AUTOPOLYGONIZE_SHIMMER_BRIGHTNESS;
                 Properties.Settings.Default.AutoPolygonizeShimmerDurationMs = DEFAULT_AUTOPOLYGONIZE_SHIMMER_DURATION_MS;
                 Properties.Settings.Default.AutoPolygonizeShimmerStyle = (int)DEFAULT_AUTOPOLYGONIZE_SHIMMER_STYLE;
+                Properties.Settings.Default.AutoPolygonizeButtonsEnabled = DEFAULT_AUTOPOLYGONIZE_BUTTONS_ENABLED;
+                Properties.Settings.Default.AutoPolygonizeButtonMaxPixels = DEFAULT_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS;
+                Properties.Settings.Default.AutoPolygonizeButtonMinPixels = DEFAULT_AUTOPOLYGONIZE_BUTTON_MIN_PIXELS;
+                Properties.Settings.Default.AutoPolygonizeButtonOpacity = DEFAULT_AUTOPOLYGONIZE_BUTTON_OPACITY;
+                Properties.Settings.Default.AutoPolygonizeButtonConfirmDelayMs = DEFAULT_AUTOPOLYGONIZE_BUTTON_CONFIRM_DELAY_MS;
+                Properties.Settings.Default.AutoPolygonizeButtonConfirmTimeoutSeconds = DEFAULT_AUTOPOLYGONIZE_BUTTON_CONFIRM_TIMEOUT_SECONDS;
                 Properties.Settings.Default.AutoPolygonizeOverlayMasks = false;
                 Properties.Settings.Default.AutoPolygonizeOverlayMasksUserSet = false;
                 Properties.Settings.Default.AutoPolygonizeOverlayPrompts = false;

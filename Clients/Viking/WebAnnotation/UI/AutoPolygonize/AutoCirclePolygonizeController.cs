@@ -204,6 +204,233 @@ namespace WebAnnotation.UI.AutoPolygonize
             hiddenProposals = hidden ?? throw new ArgumentNullException(nameof(hidden));
             this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
             this.requestAnnotationLoad = requestAnnotationLoad ?? throw new ArgumentNullException(nameof(requestAnnotationLoad));
+            buttonsView = new ProposalButtonsView(parent);
+        }
+
+        /// <summary>The two-click confirm of the accept and hide buttons inside proposals. UI thread only.</summary>
+        private readonly ProposalButtonState buttonState = new();
+
+        private readonly ProposalButtonsView buttonsView;
+
+        /// <summary>The proposal button under the cursor and its proposal, or null. UI thread only.</summary>
+        private ProposalButtonKind? hoveredButton;
+        private AutoPolygonizeProposal? hoveredButtonProposal;
+
+        /// <summary>When the pending redraw for a button's "?" or timeout is due (<see cref="Stopwatch"/> ticks), or 0.</summary>
+        private long buttonRedrawDueTimestamp;
+
+        /// <summary>Button layouts by proposal, reused until the polygon, seed circle, zoom step or size preferences change.</summary>
+        private readonly System.Runtime.CompilerServices.ConditionalWeakTable<AutoPolygonizeProposal, ButtonPlacementCache> buttonPlacements = new();
+
+        /// <summary>Zoom steps that share one button layout: 5% apart, so zooming re-solves the layout only now and then.</summary>
+        private const double ButtonLayoutZoomStep = 1.05;
+
+        private sealed class ButtonPlacementCache
+        {
+            public Polygon? Polygon;
+            public Circle? Seed;
+            public long ZoomBucket;
+            public ProposalButtonOptions Options;
+            public ProposalButtonPlacement? Placement;
+        }
+
+        private static bool ButtonsEnabled => Global.AnnotationSettings.AutoPolygonizeButtonsEnabled;
+
+        private static ProposalButtonOptions ButtonOptions => new(
+            Global.AnnotationSettings.AutoPolygonizeButtonMaxPixels,
+            Global.AnnotationSettings.AutoPolygonizeButtonMinPixels);
+
+        /// <summary>
+        /// Where <paramref name="proposal"/>'s buttons go at <paramref name="downsample"/>, or null when it has none. The
+        /// layout is cached; its fade is worked out for the exact downsample every call.
+        /// </summary>
+        private ProposalButtonPlacement? ButtonPlacementFor(AutoPolygonizeProposal proposal, double downsample)
+        {
+            if (downsample <= 0)
+                return null;
+
+            ProposalButtonOptions options = ButtonOptions;
+            Circle? seed = SeedCircle(proposal);
+            long bucket = (long)Math.Round(Math.Log(downsample) / Math.Log(ButtonLayoutZoomStep));
+            ButtonPlacementCache entry = buttonPlacements.GetOrCreateValue(proposal);
+            if (!ReferenceEquals(entry.Polygon, proposal.Polygon) || !Nullable.Equals(entry.Seed, seed) ||
+                entry.ZoomBucket != bucket || entry.Options != options)
+            {
+                entry.Polygon = proposal.Polygon;
+                entry.Seed = seed;
+                entry.ZoomBucket = bucket;
+                entry.Options = options;
+                entry.Placement = ProposalButtonLayout.Place(proposal.Polygon, seed, downsample, options);
+            }
+
+            return entry.Placement is null
+                ? null
+                : entry.Placement with { Fade = ProposalButtonLayout.FadeFor(entry.Placement.Radius, downsample, options) };
+        }
+
+        /// <summary>
+        /// The circle a proposal grew from, in volume space as it is drawn: the largest circle among its locations (a merged
+        /// proposal stands for several). Null when none of them is a circle that maps.
+        /// </summary>
+        private static Circle? SeedCircle(AutoPolygonizeProposal proposal)
+        {
+            Circle? best = null;
+            foreach (long id in proposal.LocationIds)
+            {
+                LocationObj? loc = Store.Locations.GetObjectByID(id, false);
+                if (loc is null || loc.TypeCode != LocationType.CIRCLE)
+                    continue;
+
+                if (loc.VolumeGeometry()?.Circle is Circle circle && (best is null || circle.Radius > best.Value.Radius))
+                    best = circle;
+            }
+
+            return best;
+        }
+
+        /// <summary>
+        /// The proposal button under <paramref name="worldPosition"/> on the current section, among visible proposals whose
+        /// buttons are large enough to click.
+        /// </summary>
+        public bool TryHitButton(Vector2 worldPosition, out AutoPolygonizeProposal proposal, out ProposalButtonKind kind)
+        {
+            proposal = null!;
+            kind = default;
+            if (!enabled || !ButtonsEnabled || !ShouldShowProposals || parent.Section is null || parent.Camera is null)
+                return false;
+
+            double downsample = parent.Camera.Downsample;
+            int sectionNumber = parent.Section.Number;
+            lock (proposalLock)
+            {
+                foreach (AutoPolygonizeProposal candidate in DistinctProposalsUnlocked())
+                {
+                    if (candidate.SectionNumber != sectionNumber || hiddenProposals.IsHidden(candidate))
+                        continue;
+
+                    if (ButtonPlacementFor(candidate, downsample)?.HitTest(worldPosition) is ProposalButtonKind hit)
+                    {
+                        proposal = candidate;
+                        kind = hit;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>True when <paramref name="worldPosition"/> is on a proposal button, so other gestures leave it alone.</summary>
+        public bool IsOnButton(Vector2 worldPosition) => TryHitButton(worldPosition, out _, out _);
+
+        /// <summary>
+        /// A left click or pen tap at <paramref name="worldPosition"/>. On a button it presses it, or carries it out when it
+        /// shows "?". Anywhere else it cancels a button waiting for its second click.
+        /// </summary>
+        /// <returns>True when the click was on a button and nothing else should handle it.</returns>
+        public bool PressButtonAt(Vector2 worldPosition)
+        {
+            if (!TryHitButton(worldPosition, out AutoPolygonizeProposal proposal, out ProposalButtonKind kind))
+            {
+                CancelButtons();
+                return false;
+            }
+
+            ProposalButtonClick click = buttonState.Press(
+                proposal,
+                kind,
+                TimeSpan.FromMilliseconds(Global.AnnotationSettings.AutoPolygonizeButtonConfirmDelayMs),
+                TimeSpan.FromSeconds(Global.AnnotationSettings.AutoPolygonizeButtonConfirmTimeoutSeconds));
+
+            if (click == ProposalButtonClick.Execute)
+            {
+                hoveredButton = null;
+                hoveredButtonProposal = null;
+                if (kind == ProposalButtonKind.Accept)
+                    Accept(proposal);
+                else
+                    Dismiss(proposal);
+            }
+
+            parent.Invalidate();
+            return true;
+        }
+
+        /// <summary>The mouse button or pen was lifted: a pressed proposal button starts its confirm delay.</summary>
+        public void ReleaseButton()
+        {
+            if (!buttonState.Release())
+                return;
+
+            parent.Invalidate();
+            ScheduleButtonRedraw();
+        }
+
+        /// <summary>True while a proposal button is pressed or waits for its second click.</summary>
+        public bool HasWaitingButton => buttonState.Target is not null;
+
+        /// <summary>Esc, or a click away from the buttons: a pressed or "?" button goes back to its check or X.</summary>
+        /// <returns>True when a button was waiting.</returns>
+        public bool CancelButtons()
+        {
+            if (!buttonState.Reset())
+                return false;
+
+            parent.Invalidate();
+            return true;
+        }
+
+        /// <summary>
+        /// Asks for a redraw when a button's look changes by itself ("?" appearing, or the timeout), since no input would.
+        /// One redraw is pending at a time; a later due time waits for the earlier one, which schedules the next.
+        /// </summary>
+        private void ScheduleButtonRedraw()
+        {
+            if (buttonState.NextChange() is not TimeSpan wait)
+                return;
+
+            long due = Stopwatch.GetTimestamp() + (long)(wait.TotalSeconds * Stopwatch.Frequency);
+            long pending = buttonRedrawDueTimestamp;
+            if (pending != 0 && pending <= due)
+                return;
+
+            buttonRedrawDueTimestamp = due;
+            _ = Task.Delay(wait + TimeSpan.FromMilliseconds(15)).ContinueWith(_ =>
+            {
+                if (parent.IsDisposed || !parent.IsHandleCreated)
+                    return;
+
+                try
+                {
+                    parent.BeginInvoke(new Action(() =>
+                    {
+                        if (buttonRedrawDueTimestamp == due)
+                            buttonRedrawDueTimestamp = 0;
+
+                        parent.Invalidate();
+                        ScheduleButtonRedraw();
+                    }));
+                }
+                catch (InvalidOperationException)
+                {
+                    // The viewer closed between the check and the call.
+                }
+            }, TaskScheduler.Default);
+        }
+
+        /// <summary>Draws the buttons of <paramref name="proposal"/>, faded with its ring. Caller holds <see cref="proposalLock"/>.</summary>
+        private void DrawButtons(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, AutoPolygonizeProposal proposal)
+        {
+            if (!ButtonsEnabled)
+                return;
+
+            ProposalButtonPlacement? placement = ButtonPlacementFor(proposal, scene.Camera.Downsample);
+            if (placement is null || placement.Fade <= 0)
+                return;
+
+            float alpha = (float)(Global.AnnotationSettings.AutoPolygonizeButtonOpacity * placement.Fade * proposal.FadeIn);
+            ProposalButtonKind? hovered = ReferenceEquals(hoveredButtonProposal, proposal) ? hoveredButton : null;
+            buttonsView.Draw(graphicsDevice, scene, placement, kind => buttonState.PhaseOf(proposal, kind), hovered, alpha);
         }
 
         public bool IsEnabled => enabled;
@@ -634,10 +861,15 @@ namespace WebAnnotation.UI.AutoPolygonize
             RemoveProposalsThatAreNoLongerCircles();
             int sectionNumber = parent.Section.Number;
             bool shimmering = false;
+            bool buttonTargetShown = false;
+            object? buttonTarget = buttonState.Target;
             lock (proposalLock)
             {
                 foreach (AutoPolygonizeProposal proposal in DistinctProposalsUnlocked())
                 {
+                    if (ReferenceEquals(proposal, buttonTarget))
+                        buttonTargetShown = true;
+
                     if (proposal.SectionNumber != sectionNumber)
                         continue;
 
@@ -646,9 +878,14 @@ namespace WebAnnotation.UI.AutoPolygonize
                         continue;
 
                     proposal.Draw(graphicsDevice, scene);
+                    DrawButtons(graphicsDevice, scene, proposal);
                     shimmering |= proposal.IsShimmering;
                 }
             }
+
+            // A proposal that was accepted, replaced or removed takes its waiting button with it.
+            if (buttonTarget is not null && !buttonTargetShown)
+                buttonState.Reset();
 
             // The shimmer animates by time, not by input, so ask for the next frame until it finishes.
             if (shimmering)
@@ -686,8 +923,21 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <returns>False when no visible ring is under the mouse.</returns>
         public bool TryHideProposalAt(Vector2 worldPosition, TimeSpan duration)
         {
-            if (!TryHit(worldPosition, out AutoPolygonizeProposal proposal, out _))
+            // Del over either button hides its proposal, buttons and all, as Del on the ring does.
+            if (!TryHitButton(worldPosition, out AutoPolygonizeProposal proposal, out _) &&
+                !TryHit(worldPosition, out proposal, out _))
+            {
                 return false;
+            }
+
+            if (ReferenceEquals(buttonState.Target, proposal))
+                buttonState.Reset();
+
+            if (ReferenceEquals(hoveredButtonProposal, proposal))
+            {
+                hoveredButton = null;
+                hoveredButtonProposal = null;
+            }
 
             hiddenProposals.Hide(proposal, duration);
             if (ReferenceEquals(hoveredProposal, proposal))
@@ -753,7 +1003,28 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// </summary>
         public void UpdateHover(Vector2 worldPosition)
         {
-            TryHit(worldPosition, out AutoPolygonizeProposal nextProposal, out _);
+            // A button highlights itself and its proposal's ring.
+            AutoPolygonizeProposal? nextButtonProposal = null;
+            ProposalButtonKind? nextButton = null;
+            AutoPolygonizeProposal nextProposal;
+            if (TryHitButton(worldPosition, out AutoPolygonizeProposal buttonProposal, out ProposalButtonKind kind))
+            {
+                nextButtonProposal = buttonProposal;
+                nextButton = kind;
+                nextProposal = buttonProposal;
+            }
+            else
+            {
+                TryHit(worldPosition, out nextProposal, out _);
+            }
+
+            if (!ReferenceEquals(hoveredButtonProposal, nextButtonProposal) || hoveredButton != nextButton)
+            {
+                hoveredButtonProposal = nextButtonProposal;
+                hoveredButton = nextButton;
+                parent.Invalidate();
+            }
+
             if (ReferenceEquals(hoveredProposal, nextProposal))
                 return;
 

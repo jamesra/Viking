@@ -228,7 +228,13 @@ namespace WebAnnotation
                 Viking.UI.BarrelButtonBinding.Format(Global.AnnotationSettings.BarrelButton),
                 Global.AnnotationSettings.LocationLinkVisibilityPercent,
                 Global.AnnotationSettings.LocationLinkLabels,
-                Global.AnnotationSettings.LabelRotation
+                Global.AnnotationSettings.LabelRotation,
+                Global.AnnotationSettings.AutoPolygonizeButtonsEnabled,
+                Global.AnnotationSettings.AutoPolygonizeButtonMaxPixels,
+                Global.AnnotationSettings.AutoPolygonizeButtonMinPixels,
+                Global.AnnotationSettings.AutoPolygonizeButtonOpacity,
+                Global.AnnotationSettings.AutoPolygonizeButtonConfirmDelayMs,
+                Global.AnnotationSettings.AutoPolygonizeButtonConfirmTimeoutSeconds
             );
 
             VikingXNA.Scene? scene = AnnotationOverlay.CurrentOverlay?.Parent?.Scene;
@@ -403,6 +409,23 @@ namespace WebAnnotation
                 Global.AnnotationSettings.AutoPolygonizeShimmerDurationMs = viewModel.AutoPolygonizeShimmerDurationMs;
             if (Changed(nameof(viewModel.AutoPolygonizeShimmerStyle)))
                 Global.AnnotationSettings.AutoPolygonizeShimmerStyle = viewModel.AutoPolygonizeShimmerStyle;
+
+            // Read on every draw and click, so the buttons on screen change at once.
+            if (Changed(nameof(viewModel.AutoPolygonizeButtonsEnabled)))
+                Global.AnnotationSettings.AutoPolygonizeButtonsEnabled = viewModel.AutoPolygonizeButtonsEnabled;
+            if (Changed(nameof(viewModel.AutoPolygonizeButtonMaxPixels)))
+                Global.AnnotationSettings.AutoPolygonizeButtonMaxPixels = viewModel.AutoPolygonizeButtonMaxPixels;
+            if (Changed(nameof(viewModel.AutoPolygonizeButtonMinPixels)))
+                Global.AnnotationSettings.AutoPolygonizeButtonMinPixels = viewModel.AutoPolygonizeButtonMinPixels;
+            if (Changed(nameof(viewModel.AutoPolygonizeButtonOpacity)))
+                Global.AnnotationSettings.AutoPolygonizeButtonOpacity = viewModel.AutoPolygonizeButtonOpacity;
+            if (Changed(nameof(viewModel.AutoPolygonizeButtonConfirmDelayMs)))
+                Global.AnnotationSettings.AutoPolygonizeButtonConfirmDelayMs = viewModel.AutoPolygonizeButtonConfirmDelayMs;
+            if (Changed(nameof(viewModel.AutoPolygonizeButtonConfirmTimeoutSeconds)))
+                Global.AnnotationSettings.AutoPolygonizeButtonConfirmTimeoutSeconds = viewModel.AutoPolygonizeButtonConfirmTimeoutSeconds;
+            if (Changed(nameof(viewModel.AutoPolygonizeButtonsEnabled)) || Changed(nameof(viewModel.AutoPolygonizeButtonMaxPixels)) ||
+                Changed(nameof(viewModel.AutoPolygonizeButtonMinPixels)) || Changed(nameof(viewModel.AutoPolygonizeButtonOpacity)))
+                Viking.UI.State.ViewerControl?.Invalidate();
 
             // The setters copy these into the shim settings the viewer reads; refresh it as Apply does.
             bool shimChanged = false;
@@ -721,6 +744,12 @@ namespace WebAnnotation
             Global.AnnotationSettings.AutoPolygonizeShimmerBrightness = viewModel.AutoPolygonizeShimmerBrightness;
             Global.AnnotationSettings.AutoPolygonizeShimmerDurationMs = viewModel.AutoPolygonizeShimmerDurationMs;
             Global.AnnotationSettings.AutoPolygonizeShimmerStyle = viewModel.AutoPolygonizeShimmerStyle;
+            Global.AnnotationSettings.AutoPolygonizeButtonsEnabled = viewModel.AutoPolygonizeButtonsEnabled;
+            Global.AnnotationSettings.AutoPolygonizeButtonMaxPixels = viewModel.AutoPolygonizeButtonMaxPixels;
+            Global.AnnotationSettings.AutoPolygonizeButtonMinPixels = viewModel.AutoPolygonizeButtonMinPixels;
+            Global.AnnotationSettings.AutoPolygonizeButtonOpacity = viewModel.AutoPolygonizeButtonOpacity;
+            Global.AnnotationSettings.AutoPolygonizeButtonConfirmDelayMs = viewModel.AutoPolygonizeButtonConfirmDelayMs;
+            Global.AnnotationSettings.AutoPolygonizeButtonConfirmTimeoutSeconds = viewModel.AutoPolygonizeButtonConfirmTimeoutSeconds;
             Global.AnnotationSettings.CorrectionShimEnabled = viewModel.CorrectionShimEnabled;
             Global.AnnotationSettings.CorrectionShimFadeStartDownsample = viewModel.CorrectionShimFadeStartDownsample;
             Global.AnnotationSettings.CorrectionShimFadeEndDownsample = viewModel.CorrectionShimFadeEndDownsample;

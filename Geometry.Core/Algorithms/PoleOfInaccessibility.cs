@@ -36,6 +36,34 @@ namespace Geometry
             return new Circle(center, Math.Max(best, 0));
         }
 
+        /// <summary>
+        /// The largest circle inside <paramref name="polygon"/>, clear of its holes and of the extra obstacles that
+        /// <paramref name="obstacleClearance"/> describes (for example a circle the result must stay outside of).
+        /// </summary>
+        /// <param name="obstacleClearance">
+        /// Distance from a point to the nearest extra obstacle, negative inside one. It must change by no more than the
+        /// distance moved (any true distance function does), or the search can miss the best point.
+        /// </param>
+        /// <param name="tolerance">As for <see cref="MaximumInscribedCircle"/>.</param>
+        /// <returns>The circle; its radius is 0 when no point is inside the polygon and clear of the obstacles.</returns>
+        public static Circle MaximumClearCircle(this Polygon polygon, Func<Vector2, double> obstacleClearance, double tolerance = 0)
+        {
+            if (polygon is null)
+                throw new ArgumentNullException(nameof(polygon));
+            if (obstacleClearance is null)
+                throw new ArgumentNullException(nameof(obstacleClearance));
+
+            RingSegmentSet rings = new(polygon);
+            Rectangle bounds = polygon.BoundingBox;
+            if (tolerance <= 0)
+                tolerance = DefaultTolerance(bounds);
+
+            double Clearance(double x, double y) => Math.Min(rings.SignedDistance(x, y), obstacleClearance(new Vector2(x, y)));
+
+            Vector2 center = Maximize(bounds, Clearance, tolerance, polygon.Centroid, out double best);
+            return new Circle(center, Math.Max(best, 0));
+        }
+
         internal static double DefaultTolerance(Rectangle bounds) =>
             Math.Max(Math.Sqrt((bounds.Width * bounds.Width) + (bounds.Height * bounds.Height)) / 1000.0, 1e-9);
 

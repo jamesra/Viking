@@ -534,6 +534,8 @@ namespace WebAnnotation
                 {
                     help.Add(HelpEntry.For(HelpInput.LeftDoubleClick, "Accept auto polygonalization", where: "on result polyline"));
                     help.Add(HelpEntry.For(HelpInput.RightDoubleClick, "Accept / Reject menu", where: "on result polyline"));
+                    if (Global.AnnotationSettings.AutoPolygonizeButtonsEnabled)
+                        help.AddRange(AutoPolygonizeProposal.ButtonHelp);
                 }
 
                 help.Add(HelpEntry.Text("Checkbox \"Auto polygonize circles in view\" turns idle segmentation off"));
@@ -666,6 +668,10 @@ namespace WebAnnotation
         {
             if (!IsCommandDefault())
                 return false;
+
+            // The buttons count their own clicks; a double-click on one must not also accept, open a menu or edit the circle.
+            if (autoPolygonizeController?.IsOnButton(worldPosition) == true)
+                return true;
 
             // A right double-click on a shaded overlap gives the area to one of the two cells; Shift opens the cell's own menu instead.
             if ((button == MouseButtons.Right || button == MouseButtons.Middle) &&
@@ -1284,6 +1290,13 @@ namespace WebAnnotation
             //after location actions (fill-bucket, etc.) have had a chance to start.
             // Proposal rings do not swallow this path; ObjectAtPosition prefers annotations
             // so translate/scale still start under a ring. Double-click accept/dismiss is separate.
+            // An auto-segmentation button takes a left click before the circle under it can start a move or resize.
+            // Any other click cancels a button waiting for its second click.
+            if (e.Button != MouseButtons.Left)
+                autoPolygonizeController?.CancelButtons();
+            else if (autoPolygonizeController?.PressButtonAt(WorldPosition) == true)
+                return;
+
             if (e.Button == MouseButtons.Left)
             {
                 if (TryStartLocationActionCommand(WorldPosition, penContact: false))
@@ -1349,6 +1362,10 @@ namespace WebAnnotation
 
             Geometry.Vector2 WorldPosition = _Parent.ScreenToWorld(e.X, e.Y);
 
+            // An auto-segmentation button takes the tap before the circle under it can start a move or a stroke can begin.
+            if (PenPath == null && autoPolygonizeController?.PressButtonAt(WorldPosition) == true)
+                return;
+
             if (PenPath == null)
             {
                 if (TryStartLocationActionCommand(WorldPosition, penContact: true))
@@ -1376,8 +1393,10 @@ namespace WebAnnotation
             */
         }
 
+        /// <summary>Lifting the pen after tapping an auto-segmentation button starts its confirm delay.</summary>
         protected void OnPenLeaveContact(object sender, Viking.UI.PenEventArgs e)
         {
+            autoPolygonizeController?.ReleaseButton();
         }
 
         protected void OnPenMove(object sender, Viking.UI.PenEventArgs e)
@@ -1593,8 +1612,10 @@ namespace WebAnnotation
             }
         }
 
+        /// <summary>Lifting the button after pressing an auto-segmentation button starts its confirm delay.</summary>
         protected void OnMouseUp(object sender, MouseEventArgs e)
         {
+            autoPolygonizeController?.ReleaseButton();
         }
 
         protected void OnPenPathChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -1976,6 +1997,10 @@ break;
                     _ => overlay?.HideAnnotationUnderMouse()),
                 KeyBinding.Do(HelpEntry.For(HelpInput.Insert, "Bring back the hidden ring, annotation or link under the mouse now"),
                     _ => overlay?.RestoreAnnotationUnderMouse()),
+                // Only while an auto-segmentation button waits for its second click, so Esc otherwise goes on to the command.
+                new KeyBinding(HelpEntry.For(HelpInput.Escape, "Cancel the auto-segmentation button waiting for its second click"),
+                    _ => overlay?.autoPolygonizeController?.CancelButtons() == true,
+                    When: () => overlay?.autoPolygonizeController?.HasWaitingButton == true),
                 // Another command (a drag, a pen stroke, the paint command's own Ctrl+Z) keeps Ctrl+Z while it runs.
                 new KeyBinding(HelpEntry.For(HelpInput.Z, "Undo the last annotation edit", HelpModifiers.Ctrl),
                     _ => overlay is not null && overlay.UndoLastEditIfIdle()),

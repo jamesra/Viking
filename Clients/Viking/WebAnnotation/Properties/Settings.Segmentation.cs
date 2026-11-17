@@ -230,6 +230,86 @@ namespace WebAnnotation.Properties
         }
 
         /// <summary>
+        /// True shows the accept and hide buttons inside each auto-segmentation proposal. Keep the default in step with
+        /// <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_AUTOPOLYGONIZE_BUTTONS_ENABLED"/>.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool AutoPolygonizeButtonsEnabled
+        {
+            get => (bool)this[nameof(AutoPolygonizeButtonsEnabled)];
+            set => this[nameof(AutoPolygonizeButtonsEnabled)] = value;
+        }
+
+        /// <summary>
+        /// Largest proposal button diameter, in screen pixels. Keep the default in step with
+        /// <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS"/>.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("28")]
+        public int AutoPolygonizeButtonMaxPixels
+        {
+            get => (int)this[nameof(AutoPolygonizeButtonMaxPixels)];
+            set => this[nameof(AutoPolygonizeButtonMaxPixels)] = value;
+        }
+
+        /// <summary>
+        /// Smallest proposal button diameter, in screen pixels, that can be clicked; smaller buttons fade out. Keep the
+        /// default in step with <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_AUTOPOLYGONIZE_BUTTON_MIN_PIXELS"/>.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("12")]
+        public int AutoPolygonizeButtonMinPixels
+        {
+            get => (int)this[nameof(AutoPolygonizeButtonMinPixels)];
+            set => this[nameof(AutoPolygonizeButtonMinPixels)] = value;
+        }
+
+        /// <summary>
+        /// Opacity of the proposal buttons, 0.3 to 1. Keep the default in step with
+        /// <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_AUTOPOLYGONIZE_BUTTON_OPACITY"/>.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.8")]
+        public double AutoPolygonizeButtonOpacity
+        {
+            get => (double)this[nameof(AutoPolygonizeButtonOpacity)];
+            set => this[nameof(AutoPolygonizeButtonOpacity)] = value;
+        }
+
+        /// <summary>
+        /// Milliseconds after the first click is released before a proposal button shows "?" and takes the second click.
+        /// Keep the default in step with
+        /// <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_AUTOPOLYGONIZE_BUTTON_CONFIRM_DELAY_MS"/>.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("500")]
+        public int AutoPolygonizeButtonConfirmDelayMs
+        {
+            get => (int)this[nameof(AutoPolygonizeButtonConfirmDelayMs)];
+            set => this[nameof(AutoPolygonizeButtonConfirmDelayMs)] = value;
+        }
+
+        /// <summary>
+        /// Seconds a clicked proposal button waits for its second click before it returns to its check or X. Keep the
+        /// default in step with
+        /// <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_AUTOPOLYGONIZE_BUTTON_CONFIRM_TIMEOUT_SECONDS"/>.
+        /// </summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("4")]
+        public double AutoPolygonizeButtonConfirmTimeoutSeconds
+        {
+            get => (double)this[nameof(AutoPolygonizeButtonConfirmTimeoutSeconds)];
+            set => this[nameof(AutoPolygonizeButtonConfirmTimeoutSeconds)] = value;
+        }
+
+        /// <summary>
         /// Stored mask-overlay choice. Debug builds ignore this until
         /// <see cref="AutoPolygonizeOverlayMasksUserSet"/> is true.
         /// </summary>

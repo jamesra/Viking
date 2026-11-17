@@ -53,6 +53,12 @@ namespace WebAnnotation.WPF.Forms
         private double _originalAutoPolygonizeShimmerBrightness;
         private int _originalAutoPolygonizeShimmerDurationMs;
         private AutoPolygonizeShimmerStyle _originalAutoPolygonizeShimmerStyle;
+        private bool _originalAutoPolygonizeButtonsEnabled;
+        private int _originalAutoPolygonizeButtonMaxPixels;
+        private int _originalAutoPolygonizeButtonMinPixels;
+        private double _originalAutoPolygonizeButtonOpacity;
+        private int _originalAutoPolygonizeButtonConfirmDelayMs;
+        private double _originalAutoPolygonizeButtonConfirmTimeoutSeconds;
         private bool _originalCorrectionShimEnabled;
         private bool _originalCorrectionShimShowOffset;
         private double _originalCorrectionShimFadeStartDownsample;
@@ -781,6 +787,152 @@ namespace WebAnnotation.WPF.Forms
             }
         }
 
+        private bool _autoPolygonizeButtonsEnabled = true;
+
+        /// <summary>Draws the accept (green circle) and hide (red square) buttons inside each auto-segmentation proposal.</summary>
+        public bool AutoPolygonizeButtonsEnabled
+        {
+            get => _autoPolygonizeButtonsEnabled;
+            set
+            {
+                if (_autoPolygonizeButtonsEnabled != value)
+                {
+                    _autoPolygonizeButtonsEnabled = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>Starting <see cref="AutoPolygonizeButtonMaxPixels"/>; matches WebAnnotation's stored default.</summary>
+        public const int DefaultAutoPolygonizeButtonMaxPixels = 28;
+
+        /// <summary>Smallest allowed <see cref="AutoPolygonizeButtonMaxPixels"/>.</summary>
+        public const int MinAutoPolygonizeButtonMaxPixels = 16;
+
+        /// <summary>Largest allowed <see cref="AutoPolygonizeButtonMaxPixels"/>.</summary>
+        public const int MaxAutoPolygonizeButtonMaxPixels = 64;
+
+        private int _autoPolygonizeButtonMaxPixels = DefaultAutoPolygonizeButtonMaxPixels;
+
+        /// <summary>Largest proposal button, in screen pixels across; smaller when the proposal has less room.</summary>
+        public int AutoPolygonizeButtonMaxPixels
+        {
+            get => _autoPolygonizeButtonMaxPixels;
+            set
+            {
+                int clampedValue = MathUtils.Clamp(value, MinAutoPolygonizeButtonMaxPixels, MaxAutoPolygonizeButtonMaxPixels);
+                if (_autoPolygonizeButtonMaxPixels != clampedValue)
+                {
+                    _autoPolygonizeButtonMaxPixels = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>Starting <see cref="AutoPolygonizeButtonMinPixels"/>; matches WebAnnotation's stored default.</summary>
+        public const int DefaultAutoPolygonizeButtonMinPixels = 12;
+
+        /// <summary>Smallest allowed <see cref="AutoPolygonizeButtonMinPixels"/>.</summary>
+        public const int MinAutoPolygonizeButtonMinPixels = 6;
+
+        /// <summary>Largest allowed <see cref="AutoPolygonizeButtonMinPixels"/>.</summary>
+        public const int MaxAutoPolygonizeButtonMinPixels = 32;
+
+        private int _autoPolygonizeButtonMinPixels = DefaultAutoPolygonizeButtonMinPixels;
+
+        /// <summary>Smallest proposal button that can be clicked, in screen pixels across; smaller buttons fade out.</summary>
+        public int AutoPolygonizeButtonMinPixels
+        {
+            get => _autoPolygonizeButtonMinPixels;
+            set
+            {
+                int clampedValue = MathUtils.Clamp(value, MinAutoPolygonizeButtonMinPixels, MaxAutoPolygonizeButtonMinPixels);
+                if (_autoPolygonizeButtonMinPixels != clampedValue)
+                {
+                    _autoPolygonizeButtonMinPixels = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>Starting <see cref="AutoPolygonizeButtonOpacity"/>; matches WebAnnotation's stored default.</summary>
+        public const double DefaultAutoPolygonizeButtonOpacity = 0.8;
+
+        /// <summary>Faintest allowed <see cref="AutoPolygonizeButtonOpacity"/>.</summary>
+        public const double MinAutoPolygonizeButtonOpacity = 0.3;
+
+        /// <summary>Most opaque allowed <see cref="AutoPolygonizeButtonOpacity"/>.</summary>
+        public const double MaxAutoPolygonizeButtonOpacity = 1.0;
+
+        private double _autoPolygonizeButtonOpacity = DefaultAutoPolygonizeButtonOpacity;
+
+        /// <summary>Opacity of the proposal buttons at full size.</summary>
+        public double AutoPolygonizeButtonOpacity
+        {
+            get => _autoPolygonizeButtonOpacity;
+            set
+            {
+                double clampedValue = MathUtils.Clamp(value, MinAutoPolygonizeButtonOpacity, MaxAutoPolygonizeButtonOpacity);
+                if (Math.Abs(_autoPolygonizeButtonOpacity - clampedValue) > 0.0001)
+                {
+                    _autoPolygonizeButtonOpacity = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>Starting <see cref="AutoPolygonizeButtonConfirmDelayMs"/>; matches WebAnnotation's stored default.</summary>
+        public const int DefaultAutoPolygonizeButtonConfirmDelayMs = 500;
+
+        /// <summary>Shortest allowed <see cref="AutoPolygonizeButtonConfirmDelayMs"/>.</summary>
+        public const int MinAutoPolygonizeButtonConfirmDelayMs = 100;
+
+        /// <summary>Longest allowed <see cref="AutoPolygonizeButtonConfirmDelayMs"/>.</summary>
+        public const int MaxAutoPolygonizeButtonConfirmDelayMs = 2000;
+
+        private int _autoPolygonizeButtonConfirmDelayMs = DefaultAutoPolygonizeButtonConfirmDelayMs;
+
+        /// <summary>Milliseconds after the first click is released before the button shows "?" and takes the second click.</summary>
+        public int AutoPolygonizeButtonConfirmDelayMs
+        {
+            get => _autoPolygonizeButtonConfirmDelayMs;
+            set
+            {
+                int clampedValue = MathUtils.Clamp(value, MinAutoPolygonizeButtonConfirmDelayMs, MaxAutoPolygonizeButtonConfirmDelayMs);
+                if (_autoPolygonizeButtonConfirmDelayMs != clampedValue)
+                {
+                    _autoPolygonizeButtonConfirmDelayMs = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>Starting <see cref="AutoPolygonizeButtonConfirmTimeoutSeconds"/>; matches WebAnnotation's stored default.</summary>
+        public const double DefaultAutoPolygonizeButtonConfirmTimeoutSeconds = 4;
+
+        /// <summary>Shortest allowed <see cref="AutoPolygonizeButtonConfirmTimeoutSeconds"/>.</summary>
+        public const double MinAutoPolygonizeButtonConfirmTimeoutSeconds = 1;
+
+        /// <summary>Longest allowed <see cref="AutoPolygonizeButtonConfirmTimeoutSeconds"/>.</summary>
+        public const double MaxAutoPolygonizeButtonConfirmTimeoutSeconds = 15;
+
+        private double _autoPolygonizeButtonConfirmTimeoutSeconds = DefaultAutoPolygonizeButtonConfirmTimeoutSeconds;
+
+        /// <summary>Seconds a button shows "?" before it gives up waiting for the second click.</summary>
+        public double AutoPolygonizeButtonConfirmTimeoutSeconds
+        {
+            get => _autoPolygonizeButtonConfirmTimeoutSeconds;
+            set
+            {
+                double clampedValue = MathUtils.Clamp(value, MinAutoPolygonizeButtonConfirmTimeoutSeconds, MaxAutoPolygonizeButtonConfirmTimeoutSeconds);
+                if (Math.Abs(_autoPolygonizeButtonConfirmTimeoutSeconds - clampedValue) > 0.0001)
+                {
+                    _autoPolygonizeButtonConfirmTimeoutSeconds = clampedValue;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         /// <summary>
         /// Green foreground and red background clicks on auto-polygonize proposals.
         /// Debug builds reset this to on; release builds reset it to off. Independent of the mask overlay.
@@ -1126,7 +1278,13 @@ namespace WebAnnotation.WPF.Forms
             string barrelButton = DefaultBarrelButton,
             int locationLinkVisibilityPercent = DefaultLocationLinkVisibilityPercent,
             bool locationLinkLabels = true,
-            double labelRotation = DefaultLabelRotation)
+            double labelRotation = DefaultLabelRotation,
+            bool autoPolygonizeButtonsEnabled = true,
+            int autoPolygonizeButtonMaxPixels = DefaultAutoPolygonizeButtonMaxPixels,
+            int autoPolygonizeButtonMinPixels = DefaultAutoPolygonizeButtonMinPixels,
+            double autoPolygonizeButtonOpacity = DefaultAutoPolygonizeButtonOpacity,
+            int autoPolygonizeButtonConfirmDelayMs = DefaultAutoPolygonizeButtonConfirmDelayMs,
+            double autoPolygonizeButtonConfirmTimeoutSeconds = DefaultAutoPolygonizeButtonConfirmTimeoutSeconds)
         {
             _barrelButton = _originalBarrelButton = string.IsNullOrEmpty(barrelButton) ? DefaultBarrelButton : barrelButton;
             _polygonPointOpacity = _originalPolygonPointOpacity = polygonPointOpacity;
@@ -1246,6 +1404,18 @@ namespace WebAnnotation.WPF.Forms
             AutoPolygonizeShimmerBrightness = autoPolygonizeShimmerBrightness;
             AutoPolygonizeShimmerDurationMs = autoPolygonizeShimmerDurationMs;
             AutoPolygonizeShimmerStyle = autoPolygonizeShimmerStyle;
+            AutoPolygonizeButtonsEnabled = autoPolygonizeButtonsEnabled;
+            AutoPolygonizeButtonMaxPixels = autoPolygonizeButtonMaxPixels;
+            AutoPolygonizeButtonMinPixels = autoPolygonizeButtonMinPixels;
+            AutoPolygonizeButtonOpacity = autoPolygonizeButtonOpacity;
+            AutoPolygonizeButtonConfirmDelayMs = autoPolygonizeButtonConfirmDelayMs;
+            AutoPolygonizeButtonConfirmTimeoutSeconds = autoPolygonizeButtonConfirmTimeoutSeconds;
+            _originalAutoPolygonizeButtonsEnabled = _autoPolygonizeButtonsEnabled;
+            _originalAutoPolygonizeButtonMaxPixels = _autoPolygonizeButtonMaxPixels;
+            _originalAutoPolygonizeButtonMinPixels = _autoPolygonizeButtonMinPixels;
+            _originalAutoPolygonizeButtonOpacity = _autoPolygonizeButtonOpacity;
+            _originalAutoPolygonizeButtonConfirmDelayMs = _autoPolygonizeButtonConfirmDelayMs;
+            _originalAutoPolygonizeButtonConfirmTimeoutSeconds = _autoPolygonizeButtonConfirmTimeoutSeconds;
             LocationLinkWaistPixels = locationLinkWaistPixels;
             LocationLinkDrawUnderMarkers = locationLinkDrawUnderMarkers;
             LocationLinkVisibilityPercent = locationLinkVisibilityPercent;
@@ -1310,6 +1480,12 @@ namespace WebAnnotation.WPF.Forms
             _originalAutoPolygonizeShimmerBrightness = _autoPolygonizeShimmerBrightness;
             _originalAutoPolygonizeShimmerDurationMs = _autoPolygonizeShimmerDurationMs;
             _originalAutoPolygonizeShimmerStyle = _autoPolygonizeShimmerStyle;
+            _originalAutoPolygonizeButtonsEnabled = _autoPolygonizeButtonsEnabled;
+            _originalAutoPolygonizeButtonMaxPixels = _autoPolygonizeButtonMaxPixels;
+            _originalAutoPolygonizeButtonMinPixels = _autoPolygonizeButtonMinPixels;
+            _originalAutoPolygonizeButtonOpacity = _autoPolygonizeButtonOpacity;
+            _originalAutoPolygonizeButtonConfirmDelayMs = _autoPolygonizeButtonConfirmDelayMs;
+            _originalAutoPolygonizeButtonConfirmTimeoutSeconds = _autoPolygonizeButtonConfirmTimeoutSeconds;
             _originalCorrectionShimEnabled = _correctionShimEnabled;
             _originalCorrectionShimShowOffset = _correctionShimShowOffset;
             _originalCorrectionShimFadeStartDownsample = _correctionShimFadeStartDownsample;
@@ -1364,6 +1540,12 @@ namespace WebAnnotation.WPF.Forms
             _autoPolygonizeShimmerBrightness = _originalAutoPolygonizeShimmerBrightness;
             _autoPolygonizeShimmerDurationMs = _originalAutoPolygonizeShimmerDurationMs;
             _autoPolygonizeShimmerStyle = _originalAutoPolygonizeShimmerStyle;
+            _autoPolygonizeButtonsEnabled = _originalAutoPolygonizeButtonsEnabled;
+            _autoPolygonizeButtonMaxPixels = _originalAutoPolygonizeButtonMaxPixels;
+            _autoPolygonizeButtonMinPixels = _originalAutoPolygonizeButtonMinPixels;
+            _autoPolygonizeButtonOpacity = _originalAutoPolygonizeButtonOpacity;
+            _autoPolygonizeButtonConfirmDelayMs = _originalAutoPolygonizeButtonConfirmDelayMs;
+            _autoPolygonizeButtonConfirmTimeoutSeconds = _originalAutoPolygonizeButtonConfirmTimeoutSeconds;
             _correctionShimEnabled = _originalCorrectionShimEnabled;
             _correctionShimShowOffset = _originalCorrectionShimShowOffset;
             _correctionShimFadeStartDownsample = _originalCorrectionShimFadeStartDownsample;
@@ -1425,6 +1607,12 @@ namespace WebAnnotation.WPF.Forms
             _autoPolygonizeShimmerBrightness = DefaultAutoPolygonizeShimmerBrightness;
             _autoPolygonizeShimmerDurationMs = DefaultAutoPolygonizeShimmerDurationMs;
             _autoPolygonizeShimmerStyle = DefaultAutoPolygonizeShimmerStyle;
+            _autoPolygonizeButtonsEnabled = true;
+            _autoPolygonizeButtonMaxPixels = DefaultAutoPolygonizeButtonMaxPixels;
+            _autoPolygonizeButtonMinPixels = DefaultAutoPolygonizeButtonMinPixels;
+            _autoPolygonizeButtonOpacity = DefaultAutoPolygonizeButtonOpacity;
+            _autoPolygonizeButtonConfirmDelayMs = DefaultAutoPolygonizeButtonConfirmDelayMs;
+            _autoPolygonizeButtonConfirmTimeoutSeconds = DefaultAutoPolygonizeButtonConfirmTimeoutSeconds;
             _correctionShimEnabled = true;
             _correctionShimShowOffset = false;
             _correctionShimFadeStartDownsample = 8;

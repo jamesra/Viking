@@ -694,7 +694,19 @@ namespace WebAnnotation.UI.AutoPolygonize
         public HelpEntry[] Help =>
         [
             HelpEntry.For(HelpInput.LeftDoubleClick, "Accept polygonalization"),
-            HelpEntry.For(HelpInput.RightDoubleClick, "Proposal menu (Accept / Paint mask / Reject)")
+            HelpEntry.For(HelpInput.RightDoubleClick, "Proposal menu (Accept / Paint mask / Reject)"),
+            .. (Global.AnnotationSettings.AutoPolygonizeButtonsEnabled ? ButtonHelp : Array.Empty<HelpEntry>()),
+        ];
+
+        /// <summary>
+        /// The accept and hide buttons inside a proposal, handled by <see cref="AutoCirclePolygonizeController.PressButtonAt"/>
+        /// from the overlay's mouse-down and pen-contact handlers. Esc is in the overlay's key table.
+        /// </summary>
+        internal static readonly HelpEntry[] ButtonHelp =
+        [
+            HelpEntry.For(HelpInput.LeftClick, "Accept: click, then click the ? that appears", where: "on the green circle"),
+            HelpEntry.For(HelpInput.LeftClick, "Hide until the circle changes: click, then click the ?", where: "on the red square"),
+            HelpEntry.For(HelpInput.PenContact, "Tap a proposal's button, then tap its ? to accept or hide it"),
         ];
 
         /// <summary>
