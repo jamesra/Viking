@@ -12,6 +12,9 @@
     <UserControl.Resources>
         <local:HelpRowConverter x:Key="HelpRow" />
     </UserControl.Resources>
+    <Grid>
+    <!-- The combo box draws the strip and drops down the whole list; it never keeps a selection, because the strip's
+         entries are drawn by the page grid laid over it (HelpBar.ShowPage), as many side by side as fit. -->
     <ComboBox Name="comboHelp" IsEditable="False" FontSize="14" IsTabStop="False" Focusable="False">
         <!-- One shared-size scope for the dropdown, so every row's keys end at the same right edge (HelpRowConverter.KeysColumn).
              Not virtualized: an unrealized row would not take part in the shared width. -->
@@ -36,4 +39,7 @@
             </Style>
         </ComboBox.ItemContainerStyle>
     </ComboBox>
+    <Grid Name="page" IsHitTestVisible="False" ClipToBounds="True" Margin="6,0,24,0" VerticalAlignment="Center"
+          TextElement.FontSize="14" />
+    </Grid>
 </UserControl>

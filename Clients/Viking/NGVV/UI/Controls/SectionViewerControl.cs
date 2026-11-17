@@ -800,7 +800,8 @@ namespace Viking.UI.Controls
                 Trace.WriteLine("Could not create command help text control: " + ex.Message, "UI");
             }
 
-            commandHelpTextScrollerHost.Height /= 2;
+            // One row high: the height the bar needs to draw a row (keycaps and mouse icons) in this control's pixels.
+            commandHelpTextScrollerHost.Height = (int)Math.Ceiling(Viking.UI.WPF.HelpBar.OneRowHeight() * DeviceDpi / 96.0);
         }
         /*
         public override bool PreProcessMessage(ref Message msg)

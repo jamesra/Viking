@@ -83,6 +83,16 @@ namespace VikingCoreTests
         }
 
         [TestMethod]
+        public void TheHelpStripShowsAsManyEntriesSideBySideAsFit()
+        {
+            Assert.AreEqual(1, HelpBar.ColumnCount(HelpBar.ColumnWidth - 1, 10));
+            Assert.AreEqual(2, HelpBar.ColumnCount(700, 10));
+            Assert.AreEqual(4, HelpBar.ColumnCount(1250, 10));
+            Assert.AreEqual(3, HelpBar.ColumnCount(5000, 3), "never more columns than entries");
+            Assert.AreEqual(1, HelpBar.ColumnCount(0, 10), "not laid out yet");
+        }
+
+        [TestMethod]
         public void TheStatusBarSectionComesLast()
         {
             Viking.Common.HelpEntry status = Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Turn Pen Mode on or off", where: "on Pen On/Off").In(Viking.Common.HelpSection.StatusBar);

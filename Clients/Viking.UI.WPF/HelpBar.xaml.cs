@@ -16,9 +16,10 @@ using Viking.Common;
 namespace Viking.UI.WPF
 {
     /// <summary>
-    /// The command help bar under the viewer. It shows one help entry at a time (the viewer advances it on a timer) and drops
-    /// down the whole list (F1). Entries are arranged by <see cref="HelpEntry.Arrange"/>: plain-text lines first in their order,
-    /// a divider, then keyed lines sorted by key and modifiers. Keys are drawn as keycaps, mouse actions as mouse icons.
+    /// The command help strip under the viewer, one row high. It shows as many help entries side by side as fit, one per
+    /// <see cref="ColumnWidth"/> (the viewer moves on to the next ones on a timer), and drops down the whole list when clicked.
+    /// Entries are arranged by <see cref="HelpEntry.Arrange"/>: plain-text lines first in their order, a divider, then keyed
+    /// lines sorted by key and modifiers. Keys are drawn as keycaps, mouse actions as mouse icons.
     /// </summary>
     public partial class HelpBar : UserControl
     {
@@ -28,11 +29,92 @@ namespace Viking.UI.WPF
 
         private static readonly Random Random = new();
 
+        private static readonly HelpRowConverter RowConverter = new();
+
+        /// <summary>Width in device-independent pixels each entry on the strip gets; the strip shows as many as fit.</summary>
+        public const double ColumnWidth = 300;
+
         private IReadOnlyList<HelpEntry> _arranged = [];
+
+        /// <summary>The entries the strip pages through: the arranged list without the divider.</summary>
+        private IReadOnlyList<HelpEntry> _shown = [];
+
+        /// <summary>Index in <see cref="_shown"/> of the first entry on the strip.</summary>
+        private int _start;
+
+        private int _columnsShown;
 
         public HelpBar()
         {
             InitializeComponent();
+            page.SizeChanged += (_, e) =>
+            {
+                if (e.WidthChanged && ColumnCount(page.ActualWidth, _shown.Count) != _columnsShown)
+                    ShowPage();
+            };
+            comboHelp.SelectionChanged += OnPicked;
+        }
+
+        /// <summary>
+        /// How many entries a strip <paramref name="width"/> wide shows side by side: one per <see cref="ColumnWidth"/>, at
+        /// least one, and never more than there are entries.
+        /// </summary>
+        public static int ColumnCount(double width, int entryCount)
+        {
+            if (entryCount <= 1 || double.IsNaN(width) || width <= 0)
+                return 1;
+
+            return Math.Max(1, Math.Min((int)Math.Floor(width / ColumnWidth), entryCount));
+        }
+
+        /// <summary>The strip pages from where an entry picked in the dropdown is; the combo box keeps no selection.</summary>
+        private void OnPicked(object sender, SelectionChangedEventArgs e)
+        {
+            if (comboHelp.SelectedItem is not HelpEntry picked)
+                return;
+
+            int index = IndexOf(picked);
+            if (index >= 0)
+                _start = index;
+
+            comboHelp.SelectedIndex = -1;
+            ShowPage();
+        }
+
+        private int IndexOf(HelpEntry entry)
+        {
+            for (int i = 0; i < _shown.Count; i++)
+            {
+                if (_shown[i].Equals(entry))
+                    return i;
+            }
+
+            return -1;
+        }
+
+        /// <summary>Draws the entries from <see cref="_start"/> on, one per column, each clipped to its column.</summary>
+        private void ShowPage()
+        {
+            page.Children.Clear();
+            page.ColumnDefinitions.Clear();
+            _columnsShown = ColumnCount(page.ActualWidth, _shown.Count);
+            if (_shown.Count == 0)
+                return;
+
+            for (int c = 0; c < _columnsShown; c++)
+            {
+                page.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+                // An indent places a list item under the line that introduces it; on the strip each entry stands alone.
+                HelpEntry entry = _shown[(_start + c) % _shown.Count] with { Indent = 0 };
+                if (RowConverter.Convert(entry, typeof(object), null!, CultureInfo.CurrentCulture) is not FrameworkElement row)
+                    continue;
+
+                row.HorizontalAlignment = HorizontalAlignment.Left;
+                Border cell = new() { Child = row, ClipToBounds = true, Margin = new Thickness(c == 0 ? 0 : 12, 0, 0, 0) };
+                Grid.SetColumn(cell, c);
+                page.Children.Add(cell);
+            }
         }
 
         /// <summary>The command's help. The bar rebuilds its list whenever the collection changes.</summary>
@@ -48,22 +130,28 @@ namespace Viking.UI.WPF
             set => comboHelp.IsDropDownOpen = value;
         }
 
-        /// <summary>Shows the next entry, skipping the divider; called by the viewer's timer.</summary>
+        /// <summary>
+        /// The height in device-independent pixels the bar needs to show one row: measured on a bar showing a row with a
+        /// keycap and a mouse icon, the tallest things a row draws. The viewer sizes the bar's host to it, so the strip under
+        /// the viewer is one row high whatever the font.
+        /// </summary>
+        public static double OneRowHeight()
+        {
+            HelpBar probe = new() { Entries = [HelpEntry.For(HelpInput.LeftClick, "Row", HelpModifiers.Ctrl)] };
+            probe.comboHelp.SelectionChanged -= probe.OnPicked;
+            probe.comboHelp.SelectedIndex = 0;
+            probe.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            return probe.DesiredSize.Height;
+        }
+
+        /// <summary>Shows the entries after the ones on the strip, wrapping to the start; called by the viewer's timer.</summary>
         public void ShowNext()
         {
-            if (_arranged.Count == 0)
+            if (_shown.Count <= _columnsShown)
                 return;
 
-            int index = comboHelp.SelectedIndex;
-            for (int step = 0; step < _arranged.Count; step++)
-            {
-                index = (index + 1) % _arranged.Count;
-                if (!_arranged[index].IsDivider)
-                {
-                    comboHelp.SelectedIndex = index;
-                    return;
-                }
-            }
+            _start = (_start + _columnsShown) % _shown.Count;
+            ShowPage();
         }
 
         private static void OnEntriesChanged(DependencyObject o, DependencyPropertyChangedEventArgs e)
@@ -86,10 +174,12 @@ namespace Viking.UI.WPF
         private void Rebuild()
         {
             _arranged = Entries is { } entries ? HelpEntry.Arrange(entries) : [];
+            _shown = [.. _arranged.Where(e => !e.IsDivider)];
             comboHelp.ItemsSource = _arranged;
+            comboHelp.SelectedIndex = -1;
 
-            int[] choices = Enumerable.Range(0, _arranged.Count).Where(i => !_arranged[i].IsDivider).ToArray();
-            comboHelp.SelectedIndex = choices.Length > 0 ? choices[Random.Next(choices.Length)] : -1;
+            _start = _shown.Count > 0 ? Random.Next(_shown.Count) : 0;
+            ShowPage();
         }
     }
 
