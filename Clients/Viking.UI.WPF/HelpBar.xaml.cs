@@ -94,9 +94,9 @@ namespace Viking.UI.WPF
     }
 
     /// <summary>
-    /// Draws one help entry as a row: modifier keycaps, the input keycaps or mouse icons ("/" between alternatives), the
-    /// <see cref="HelpEntry.Where"/> text, then the description. A new row is made on every call, because the closed bar and
-    /// the dropdown each need their own.
+    /// Draws one help entry as a row: modifier keycaps and the input keycaps or mouse icons ("/" between alternatives),
+    /// right-aligned in a shared column, then the description, the <see cref="HelpEntry.Where"/> text and ⇌ for a toggle. A
+    /// new row is made on every call, because the closed bar and the dropdown each need their own.
     /// </summary>
     public sealed class HelpRowConverter : IValueConverter
     {
@@ -113,32 +113,79 @@ namespace Viking.UI.WPF
                 return value;
 
             if (entry.IsDivider)
-                return new Rectangle { Height = 1, Fill = KeycapBorder, Margin = new Thickness(0, 4, 0, 4), MinWidth = 200 };
+                return new Rectangle { Height = 1, Fill = KeycapBorder, Margin = new Thickness(0, 3, 0, 3), MinWidth = 200 };
 
-            StackPanel row = new() { Orientation = Orientation.Horizontal };
+            StackPanel description = DescriptionOf(entry);
             if (!entry.IsKeyed)
             {
-                row.Children.Add(Text(entry.Description));
-                return row;
+                description.Margin = new Thickness(IndentWidth * entry.Indent, 0, 0, 0);
+                return description;
             }
 
+            StackPanel keys = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
             foreach (HelpModifiers modifier in entry.ModifierKeys())
-                row.Children.Add(Keycap(HelpEntry.LabelFor(modifier)));
+                keys.Children.Add(Keycap(HelpEntry.LabelFor(modifier)));
 
             HelpInput[] inputs = entry.Inputs ?? [];
             for (int i = 0; i < inputs.Length; i++)
             {
                 if (i > 0)
-                    row.Children.Add(Text("/", new Thickness(0, 0, 4, 0)));
+                    keys.Children.Add(Text("/", new Thickness(0, 0, 4, 0)));
 
-                row.Children.Add(Input(inputs[i], entry.Label));
+                keys.Children.Add(Input(inputs[i], entry.Label));
             }
 
-            if (!string.IsNullOrEmpty(entry.Where))
-                row.Children.Add(Text(entry.Where!, new Thickness(0, 0, 4, 0)));
+            // Keys right-aligned in a column every row of the list shares (KeysColumn), then ⇌ for a toggle in a column of its
+            // own (ToggleColumn, no width when no row is a toggle), then the description left-aligned.
+            Grid row = new();
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, SharedSizeGroup = KeysColumn });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, SharedSizeGroup = ToggleColumn });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.Children.Add(keys);
+            if (entry.IsToggle)
+            {
+                TextBlock mark = new()
+                {
+                    Text = HelpEntry.ToggleMark,
+                    FontWeight = FontWeights.Bold,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(6, 0, 0, 0),
+                    ToolTip = "Switches on or off",
+                };
+                Grid.SetColumn(mark, 1);
+                row.Children.Add(mark);
+            }
 
-            row.Children.Add(Text(entry.Description, new Thickness(6, 0, 0, 0)));
+            description.Margin = new Thickness(6 + (IndentWidth * entry.Indent), 0, 0, 0);
+            Grid.SetColumn(description, 2);
+            row.Children.Add(description);
             return row;
+        }
+
+        /// <summary>
+        /// The <see cref="Grid.SharedSizeGroup"/> of the keys column. A list that sets <see cref="Grid.IsSharedSizeScopeProperty"/>
+        /// lines its rows' keys up at one right edge.
+        /// </summary>
+        public const string KeysColumn = "HelpKeys";
+
+        /// <summary>How far each <see cref="HelpEntry.Indent"/> level moves a row's description right, in device-independent pixels.</summary>
+        public const double IndentWidth = 16;
+
+        /// <summary>The <see cref="Grid.SharedSizeGroup"/> of the column ⇌ is drawn in, between the keys and the description.</summary>
+        public const string ToggleColumn = "HelpToggle";
+
+        /// <summary>
+        /// The description, then the <see cref="HelpEntry.Where"/> text in grey ("on a control point"). A toggle's ⇌ is drawn
+        /// before it, in the keyed row's toggle column.
+        /// </summary>
+        private static StackPanel DescriptionOf(HelpEntry entry)
+        {
+            StackPanel panel = new() { Orientation = Orientation.Horizontal };
+            panel.Children.Add(Text(entry.Description));
+            if (!string.IsNullOrEmpty(entry.Where))
+                panel.Children.Add(new TextBlock { Text = entry.Where!, Foreground = Brushes.Gray, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(5, 0, 0, 0) });
+
+            return panel;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
@@ -162,16 +209,16 @@ namespace Viking.UI.WPF
             Background = KeycapFill,
             BorderBrush = KeycapBorder,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(5),
-            Padding = new Thickness(6, 0, 6, 1),
-            Margin = new Thickness(0, 1, 4, 1),
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(5, 0, 5, 0),
+            Margin = new Thickness(0, 0, 3, 0),
             VerticalAlignment = VerticalAlignment.Center,
             Child = new TextBlock
             {
                 Text = label,
                 Foreground = KeycapText,
                 FontWeight = FontWeights.SemiBold,
-                FontSize = 13,
+                FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center,
             },
         };
@@ -186,13 +233,13 @@ namespace Viking.UI.WPF
         }
 
         /// <summary>
-        /// A 12 x 18 mouse: a rounded body split into left and right buttons with a wheel between them. The pressed part is
+        /// A 12 x 18 mouse (scaled to 15 px tall to fit a keycap row): a rounded body split into left and right buttons with a wheel between them. The pressed part is
         /// filled: a button for clicks and drags, the wheel for the wheel, the wheel with side ticks for the tilt wheel, and two
         /// marks on the left side for the back and forward buttons.
         /// </summary>
         internal static FrameworkElement MouseIcon(HelpInput input)
         {
-            Canvas canvas = new() { Width = 14, Height = 18, VerticalAlignment = VerticalAlignment.Center, SnapsToDevicePixels = true };
+            Canvas canvas = new() { Width = 14, Height = 18, VerticalAlignment = VerticalAlignment.Center, SnapsToDevicePixels = true, LayoutTransform = new ScaleTransform(15.0 / 18.0, 15.0 / 18.0) };
             RectangleGeometry body = new(new Rect(1, 0.5, 12, 17), 6, 6);
             System.Windows.Media.Geometry left = new CombinedGeometry(GeometryCombineMode.Intersect, body, new RectangleGeometry(new Rect(1, 0.5, 6, 7.5)));
             System.Windows.Media.Geometry right = new CombinedGeometry(GeometryCombineMode.Intersect, body, new RectangleGeometry(new Rect(7, 0.5, 6, 7.5)));
@@ -229,6 +276,44 @@ namespace Viking.UI.WPF
                 canvas.Children.Add(new Path { Data = new RectangleGeometry(new Rect(0, 12.5, 2, 2.5)), Fill = IconPressed });
             }
 
+            return canvas;
+        }
+
+        private static readonly Brush TagFill = Frozen(new SolidColorBrush(Color.FromRgb(0xfd, 0xe6, 0x8a)));
+
+        /// <summary>
+        /// A 28 x 14 luggage tag (drawn 15 px tall to fit a keycap row): pointed at the left with a punched hole, rounded at
+        /// the right, manila filled, with "tag" printed small on it so the shape is not read as an arrow or a label.
+        /// Not drawn anywhere yet: it was tried after tag hotkeys' descriptions (2026-11-16) and left off, but kept for later.
+        /// Its proportions and colour need another look before it is used.
+        /// </summary>
+        internal static FrameworkElement TagIcon()
+        {
+            Canvas canvas = new() { Width = 28, Height = 14, VerticalAlignment = VerticalAlignment.Center, SnapsToDevicePixels = true, LayoutTransform = new ScaleTransform(15.0 / 14.0, 15.0 / 14.0) };
+            canvas.Children.Add(new Path
+            {
+                Data = System.Windows.Media.Geometry.Parse("M 0.5,7 L 6.5,0.5 L 25.5,0.5 Q 27.5,0.5 27.5,2.5 L 27.5,11.5 Q 27.5,13.5 25.5,13.5 L 6.5,13.5 Z"),
+                Fill = TagFill,
+                Stroke = IconInk,
+                StrokeThickness = 1,
+                StrokeLineJoin = PenLineJoin.Round,
+            });
+            canvas.Children.Add(new Path { Data = new EllipseGeometry(new Point(5.5, 7), 1.6, 1.6), Fill = Brushes.White, Stroke = IconInk, StrokeThickness = 0.8 });
+
+            TextBlock word = new()
+            {
+                Text = "tag",
+                FontSize = 8,
+                FontWeight = FontWeights.Bold,
+                Foreground = IconInk,
+                Width = 18,
+                TextAlignment = TextAlignment.Center,
+                LineHeight = 8,
+                LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
+            };
+            Canvas.SetLeft(word, 8.5);
+            Canvas.SetTop(word, 2.5);
+            canvas.Children.Add(word);
             return canvas;
         }
 

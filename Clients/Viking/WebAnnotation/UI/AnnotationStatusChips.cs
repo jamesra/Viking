@@ -202,9 +202,9 @@ namespace WebAnnotation.UI
         /// </summary>
         internal static readonly Viking.Common.HelpEntry[] Help =
         [
-            Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Turn Pen Mode on or off", where: "on Pen On/Off")
+            Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Pen Mode", where: "on Pen On/Off").AsToggle()
                 .In(Viking.Common.HelpSection.StatusBar),
-            Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Turn idle auto-polygonize of circles in view on or off (Zoom: paused, zoomed out too far)", where: "on AutoPoly")
+            Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Idle auto-polygonize of circles in view (Zoom: paused, zoomed out too far)", where: "on AutoPoly").AsToggle()
                 .In(Viking.Common.HelpSection.StatusBar),
             Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Choose, change or clear the segmentation service", where: "on Seg")
                 .In(Viking.Common.HelpSection.StatusBar),

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Command Help" Width="460" Height="560" MinWidth="240" MinHeight="160"
         ShowInTaskbar="False" UseLayoutRounding="True" WindowStartupLocation="Manual"
-        ResizeMode="CanResize" FontSize="16">
+        ResizeMode="CanResize" FontSize="14">
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="10,8,10,8">
         <!-- One collapsible section per HelpSection that has entries; HelpWindow.Layout fills it. -->
         <StackPanel x:Name="Sections" />

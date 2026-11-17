@@ -104,6 +104,39 @@ namespace Viking.Common
         /// <summary>This entry, listed in <paramref name="section"/> of the help window.</summary>
         public HelpEntry In(HelpSection section) => this with { Section = section };
 
+        /// <summary>
+        /// The heading the help window lists the entry under inside its <see cref="Section"/> ("Annotate", "Structure tags"),
+        /// or null to list it above the groups. The description need not repeat it.
+        /// </summary>
+        public string? Group { get; init; }
+
+        /// <summary>This entry, listed under the heading <paramref name="group"/> in its section of the help window.</summary>
+        public HelpEntry InGroup(string group) => this with { Group = group };
+
+        /// <summary>
+        /// How many levels the help indents the entry: 1 for an item of a list that the plain-text line above it introduces
+        /// (a pen choice under "Click a button to choose").
+        /// </summary>
+        public int Indent { get; init; }
+
+        /// <summary>This entry, indented one level more than it is.</summary>
+        public HelpEntry Indented() => this with { Indent = Indent + 1 };
+
+        /// <summary>
+        /// The mark drawn between the keys and the description of an entry that switches something on or off: ⇌ (U+21CC),
+        /// the reversible-reaction sign, which the scientists who use Viking read as "goes both ways".
+        /// </summary>
+        public const string ToggleMark = "⇌";
+
+        /// <summary>
+        /// True when the input switches something on or off (<see cref="ToggleMark"/> is drawn before the description, so
+        /// the description names the thing switched, e.g. "Pen Mode", not "Toggle Pen Mode").
+        /// </summary>
+        public bool IsToggle { get; init; }
+
+        /// <summary>This entry, marked as switching something on or off.</summary>
+        public HelpEntry AsToggle() => this with { IsToggle = true };
+
         /// <summary>A plain-text entry.</summary>
         public static HelpEntry Text(string line) => new(line);
 
@@ -199,14 +232,18 @@ namespace Viking.Common
                 yield return HelpModifiers.Alt;
         }
 
-        /// <summary>The entry as one line of text, e.g. "Ctrl+⇧ Shift+Z: Undo", for traces, tests and screen readers.</summary>
+        /// <summary>
+        /// The entry as one line of text, e.g. "Ctrl+⇧ Shift+Z: Undo" or "Num *: ⇌ Pen Mode", for traces, tests and screen
+        /// readers.
+        /// </summary>
         public override string ToString()
         {
             if (IsDivider)
                 return "—";
 
+            string description = IsToggle ? $"{ToggleMark} {Description}" : Description;
             if (!IsKeyed)
-                return Description;
+                return description;
 
             string label = Label ?? "";
             IEnumerable<string> keys = ModifierKeys().Select(m => LabelFor(m));
@@ -214,7 +251,7 @@ namespace Viking.Common
                 keys = keys.Concat([string.Join("/", inputs.Select(i => LabelFor(i, label)))]);
 
             string chord = string.Join("+", keys);
-            return string.IsNullOrEmpty(Where) ? $"{chord}: {Description}" : $"{chord} {Where}: {Description}";
+            return string.IsNullOrEmpty(Where) ? $"{chord}: {description}" : $"{chord} {Where}: {description}";
         }
     }
 

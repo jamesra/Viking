@@ -178,7 +178,8 @@ namespace WebAnnotation.UI.Commands
         }
 
         /// <summary>
-        /// Fills the F1 bar from the choice captions. Newlines in a button label become spaces so the combo stays one line per choice.
+        /// Fills the F1 bar from the choice captions, indented under the line that introduces them. Newlines in a button label
+        /// become spaces so the combo stays one line per choice.
         /// Always lists Cancel and the keys (Escape cancels) so hidden action buttons do not hide how to leave the command.
         /// A stroke that splits a hole adds a line saying what a click on the hole and on the polygon fills.
         /// </summary>
@@ -193,7 +194,7 @@ namespace WebAnnotation.UI.Commands
             foreach (IAction action in actions)
             {
                 string line = LabelFor(action).Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
-                _choiceHelp.Add(HelpEntry.Text(line));
+                _choiceHelp.Add(HelpEntry.Text(line).Indented());
             }
 
             _choiceHelp.Add(new HelpEntry("Choose", HelpModifiers.None, [HelpInput.LeftClick, HelpInput.PenContact],

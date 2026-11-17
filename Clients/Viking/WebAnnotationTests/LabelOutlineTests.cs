@@ -137,17 +137,18 @@ namespace WebAnnotationTests
         }
 
         [TestMethod]
-        public void OnAKnownFillTheTextContrastsWithTheFillAtEverySizeAndTheOutlineIsTheOther()
+        public void OnAKnownFillTheTextIsBlackUnlessTheFillIsNearlyBlackAndTheOutlineIsTheOther()
         {
-            Color yellow = new(255, 255, 0);
-            Color navy = new(20, 20, 120);
             Color black = new((byte)0, (byte)0, (byte)0, (byte)192);
             Color white = new((byte)255, (byte)255, (byte)255, (byte)192);
 
             foreach (LabelOutlineStyle style in new[] { LabelOutlineStyle.BlackTextWhiteOutline, LabelOutlineStyle.WhiteTextBlackOutline })
             {
-                Assert.AreEqual((black, white), LabelView.AnnotationLabelColors(DefaultLabelBlack, yellow, style), $"light fill, {style}");
-                Assert.AreEqual((white, black), LabelView.AnnotationLabelColors(DefaultLabelBlack, navy, style), $"dark fill, {style}");
+                // Cells of every ordinary type color get the same black numbers (2026-11-16: blue cells had white ones).
+                foreach (Color fill in new[] { new Color(255, 255, 0), new Color(0, 0, 255), new Color(20, 20, 120), new Color(128, 0, 128), new Color(139, 0, 0) })
+                    Assert.AreEqual((black, white), LabelView.AnnotationLabelColors(DefaultLabelBlack, fill, style), $"fill {fill}, {style}");
+
+                Assert.AreEqual((white, black), LabelView.AnnotationLabelColors(DefaultLabelBlack, new Color(15, 15, 20), style), $"nearly black fill, {style}");
             }
         }
 

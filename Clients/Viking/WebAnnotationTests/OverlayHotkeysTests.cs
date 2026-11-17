@@ -159,5 +159,48 @@ namespace WebAnnotationTests
             Assert.AreEqual(settings.Shortcuts.Hotkey.Count, help.Length);
             Assert.AreEqual(0, reported.Count, string.Join("\n", reported));
         }
+
+        [TestMethod]
+        public void HotkeysAreGroupedByActionKindWithoutTheWordsTheirHeadingSays()
+        {
+            Dictionary<string, AnnotationOverlay.HotkeyActionKind> kinds = new()
+            {
+                ["Toggle Soma Tag"] = AnnotationOverlay.HotkeyActionKind.StructureTag,
+                ["Toggle No Axon"] = AnnotationOverlay.HotkeyActionKind.StructureTag,
+                ["Toggle Terminal Tag"] = AnnotationOverlay.HotkeyActionKind.LocationTag,
+                ["Annotate Gap Junction"] = AnnotationOverlay.HotkeyActionKind.Annotate,
+                ["Convert Annotation To Circle"] = AnnotationOverlay.HotkeyActionKind.ConvertAnnotation,
+            };
+            HelpEntry[] help = AnnotationOverlay.BuildUserHotkeyHelp(
+                [NewHotkey("S", "Toggle Soma Tag", shift: true), NewHotkey("N", "Toggle No Axon"), NewHotkey("X", "Toggle Terminal Tag"),
+                 NewHotkey("G", "Annotate Gap Junction"), NewHotkey("D1", "Convert Annotation To Circle"), NewHotkey("C", "Circle")],
+                null, null, kinds);
+
+            Assert.IsTrue(help[0].IsToggle);
+            Assert.AreEqual(("Soma", "Structure tags"), (help[0].Description, help[0].Group));
+            Assert.AreEqual("No Axon", help[1].Description, "a name without the word Tag keeps all its words");
+            Assert.AreEqual(("Terminal", "Location tags"), (help[2].Description, help[2].Group));
+            Assert.IsTrue(help[2].IsToggle);
+            Assert.AreEqual(("Gap Junction", "Annotate"), (help[3].Description, help[3].Group));
+            Assert.IsFalse(help[3].IsToggle);
+            Assert.AreEqual(("To Circle", "Convert annotation"), (help[4].Description, help[4].Group));
+            Assert.AreEqual(("Circle", (string?)null), (help[5].Description, help[5].Group), "an action the settings do not define is listed as named");
+        }
+
+        [TestMethod]
+        public void RepoToggleActionsAreFoundByName()
+        {
+            UserSettings settings = UserSettings.Load(FindRepoUserSettings());
+            Dictionary<string, AnnotationOverlay.HotkeyActionKind> kinds = AnnotationOverlay.HotkeyActionKinds(settings);
+            Assert.AreEqual(AnnotationOverlay.HotkeyActionKind.StructureTag, kinds["Toggle Soma Tag"]);
+            Assert.AreEqual(AnnotationOverlay.HotkeyActionKind.LocationTag, kinds["Toggle Questionable Tag"]);
+            Assert.AreEqual(AnnotationOverlay.HotkeyActionKind.Annotate, kinds["Annotate Gap Junction"]);
+            Assert.AreEqual(AnnotationOverlay.HotkeyActionKind.ConvertAnnotation, kinds["Convert Annotation To Circle"]);
+
+            HelpEntry[] help = AnnotationOverlay.BuildUserHotkeyHelp(settings.Shortcuts.Hotkey, null, null, kinds);
+            Assert.IsFalse(help.Any(e => e.Group is null), "every shipped hotkey runs a defined action, so each has a heading");
+            Assert.IsFalse(help.Any(e => e.IsToggle && e.Description.StartsWith("Toggle ", System.StringComparison.Ordinal)),
+                "every shipped tag is named Toggle …, so the help can drop the word");
+        }
     }
 }

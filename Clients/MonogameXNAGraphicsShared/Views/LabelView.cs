@@ -175,6 +175,13 @@ namespace VikingXNAGraphics
         private const float DarkOutlineSaturation = 0.6f;
         private const float DarkOutlineValue = 0.3f;
 
+        /// <summary>
+        /// Fill brightness below which a cell's label text is white instead of black (<see cref="AnnotationLabelColors"/>). Cell
+        /// labels are black so they read the same everywhere; only a nearly black fill makes them white. A cutoff of 0.5 split
+        /// the cells by their type color, so neighbouring blue and yellow cells had white and black numbers (2026-11-16).
+        /// </summary>
+        public const float WhiteTextFillBrightness = 0.1f;
+
         /// <summary>Perceived brightness of <paramref name="color"/>, 0 to 1.</summary>
         private static float Brightness(Color color) => ((0.3f * color.R) + (0.59f * color.G) + (0.11f * color.B)) / 255f;
 
@@ -221,8 +228,9 @@ namespace VikingXNAGraphics
         /// <summary>
         /// The colors of an outlined annotation label:
         /// <list type="bullet">
-        /// <item>Black or white text on a known <paramref name="fill"/> (a cell's rows) is black on a light fill and white on a
-        /// dark one at every size, so it never changes color as the label grows, outlined in the other of the two.</item>
+        /// <item>Black or white text on a known <paramref name="fill"/> (a cell's rows) is black, or white on a nearly black fill
+        /// (<see cref="WhiteTextFillBrightness"/>), at every size, so it never changes color as the label grows, outlined in
+        /// the other of the two.</item>
         /// <item>Text in another color (a flagged annotation's orange, a parent ID's red) keeps its color, which carries
         /// meaning, outlined in its own hue at another brightness: a deep shade of it when it is light and a pale tint when it
         /// is dark (<see cref="OutlineInHue"/>).</item>
@@ -239,7 +247,7 @@ namespace VikingXNAGraphics
             if (fill is not Color background)
                 return OutlineColors(text, style);
 
-            byte value = Brightness(background) > 0.5f ? (byte)0 : (byte)255;
+            byte value = Brightness(background) >= WhiteTextFillBrightness ? (byte)0 : (byte)255;
             byte other = (byte)(255 - value);
             return (new Color(value, value, value, text.A), new Color(other, other, other, text.A));
         }

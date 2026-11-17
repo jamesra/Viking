@@ -1634,7 +1634,7 @@ break;
             if (!ReferenceEquals(settings, _userHotkeyHelpSettings))
             {
                 _userHotkeyHelp = BuildUserHotkeyHelp(settings.Shortcuts.Hotkey, _Parent?.KeyTable,
-                    message => Trace.WriteLine(message, "Hotkeys"));
+                    message => Trace.WriteLine(message, "Hotkeys"), HotkeyActionKinds(settings));
                 _userHotkeyHelpSettings = settings;
             }
 
@@ -1652,7 +1652,11 @@ break;
         /// has it, is still listed, with why appended, and reported once to <paramref name="report"/>.
         /// </summary>
         /// <param name="viewerTable">The viewer's keys; null when there is no viewer (tests).</param>
-        internal static HelpEntry[] BuildUserHotkeyHelp(IEnumerable<Hotkey> hotkeys, IReadOnlyList<KeyBinding>? viewerTable, System.Action<string>? report)
+        /// <param name="actionKinds">What kind of action each action name is (<see cref="HotkeyActionKinds"/>). A hotkey for a
+        /// known kind is listed under that kind's heading (<see cref="GroupOf"/>), without the words the heading or its marks
+        /// say (<see cref="PhraseFor"/>): "Toggle Soma Tag" is "⇌ Soma" under "Structure tags".</param>
+        internal static HelpEntry[] BuildUserHotkeyHelp(IEnumerable<Hotkey> hotkeys, IReadOnlyList<KeyBinding>? viewerTable, System.Action<string>? report,
+            IReadOnlyDictionary<string, HotkeyActionKind>? actionKinds = null)
         {
             List<HelpEntry> help = [];
             Dictionary<Keys, Hotkey> firstByChord = [];
@@ -1664,7 +1668,8 @@ break;
                 if (!firstByChord.ContainsKey(chord))
                     firstByChord.Add(chord, hotkey);
 
-                string description = hotkey.Action;
+                HotkeyActionKind kind = actionKinds is not null && actionKinds.TryGetValue(hotkey.Action, out HotkeyActionKind k) ? k : HotkeyActionKind.Other;
+                string description = PhraseFor(kind, hotkey.Action);
                 if (usedBy is not null)
                 {
                     description += $" (not available: used by {usedBy})";
@@ -1678,10 +1683,99 @@ break;
                 HelpModifiers modifiers = (hotkey.Shift ? HelpModifiers.Shift : HelpModifiers.None) |
                                           (hotkey.Ctrl ? HelpModifiers.Ctrl : HelpModifiers.None) |
                                           (hotkey.Alt ? HelpModifiers.Alt : HelpModifiers.None);
-                help.Add(new HelpEntry(description, modifiers, [input], Label: label).In(HelpSection.AnnotationShortcuts));
+                HelpEntry entry = new HelpEntry(description, modifiers, [input], Label: label).In(HelpSection.AnnotationShortcuts);
+                if (kind is HotkeyActionKind.StructureTag or HotkeyActionKind.LocationTag)
+                    entry = entry.AsToggle();
+                if (GroupOf(kind) is { } group)
+                    entry = entry.InGroup(group);
+
+                help.Add(entry);
             }
 
             return [.. help];
+        }
+
+        /// <summary>The kinds of action a user settings hotkey can run, each listed under its own heading in the help.</summary>
+        internal enum HotkeyActionKind
+        {
+            /// <summary>Not one of the kinds below (an action the settings do not define); listed above the groups as named.</summary>
+            Other,
+
+            /// <summary><c>CreateStructureCommandAction</c>: starts a new structure of a type.</summary>
+            Annotate,
+
+            /// <summary><c>ToggleStructureTagCommandAction</c>: sets or clears a tag on the structure.</summary>
+            StructureTag,
+
+            /// <summary><c>ToggleLocationTagCommandAction</c> or <c>ToggleLocationTerminalCommandAction</c>: sets or clears a
+            /// tag on the location.</summary>
+            LocationTag,
+
+            /// <summary><c>ChangeLocationAnnotationTypeAction</c>: changes the shape type of the location.</summary>
+            ConvertAnnotation,
+        }
+
+        /// <summary>The help window heading of a kind of hotkey action; null for <see cref="HotkeyActionKind.Other"/>.</summary>
+        internal static string? GroupOf(HotkeyActionKind kind) => kind switch
+        {
+            HotkeyActionKind.Annotate => "Annotate",
+            HotkeyActionKind.StructureTag => "Structure tags",
+            HotkeyActionKind.LocationTag => "Location tags",
+            HotkeyActionKind.ConvertAnnotation => "Convert annotation",
+            _ => null,
+        };
+
+        /// <summary>
+        /// An action's name without the words its heading or ⇌ already say: "Annotate Gap Junction" is "Gap Junction",
+        /// "Toggle Soma Tag" is "Soma", "Convert Annotation To Circle" is "To Circle". A name without those words is kept.
+        /// </summary>
+        internal static string PhraseFor(HotkeyActionKind kind, string action)
+        {
+            string name = action;
+            switch (kind)
+            {
+                case HotkeyActionKind.Annotate:
+                    name = WithoutPrefix(name, "Annotate ");
+                    break;
+                case HotkeyActionKind.StructureTag or HotkeyActionKind.LocationTag:
+                    name = WithoutPrefix(name, "Toggle ");
+                    if (name.EndsWith(" Tag", StringComparison.OrdinalIgnoreCase) && name.Length > " Tag".Length)
+                        name = name.Substring(0, name.Length - " Tag".Length);
+                    break;
+                case HotkeyActionKind.ConvertAnnotation:
+                    name = WithoutPrefix(name, "Convert Annotation ");
+                    break;
+            }
+
+            return name;
+
+            static string WithoutPrefix(string text, string prefix) =>
+                text.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && text.Length > prefix.Length ? text.Substring(prefix.Length) : text;
+        }
+
+        /// <summary>The kind of each action the settings define, by action name.</summary>
+        internal static Dictionary<string, HotkeyActionKind> HotkeyActionKinds(UserSettings settings)
+        {
+            Dictionary<string, HotkeyActionKind> kinds = new(StringComparer.Ordinal);
+            UserSettings.ActionsLocalType? actions = settings.Actions;
+            if (actions is null)
+                return kinds;
+
+            Add(actions.CreateStructureCommandAction.Select(a => a.Name), HotkeyActionKind.Annotate);
+            Add(actions.ToggleStructureTagCommandAction.Select(a => a.Name), HotkeyActionKind.StructureTag);
+            Add(actions.ToggleLocationTagCommandAction.Select(a => a.Name), HotkeyActionKind.LocationTag);
+            Add(actions.ToggleLocationTerminalCommandAction.Select(a => a.Name), HotkeyActionKind.LocationTag);
+            Add(actions.ChangeLocationAnnotationTypeAction.Select(a => a.Name), HotkeyActionKind.ConvertAnnotation);
+            return kinds;
+
+            void Add(IEnumerable<string> names, HotkeyActionKind kind)
+            {
+                foreach (string name in names.Where(n => !string.IsNullOrEmpty(n)))
+                {
+                    if (!kinds.ContainsKey(name))
+                        kinds.Add(name, kind);
+                }
+            }
         }
 
         /// <summary>What owns <paramref name="chord"/> before the hotkeys see it: the overlay's or the viewer's binding, else null.</summary>
@@ -1868,8 +1962,8 @@ break;
                 // Another command (a drag, a pen stroke, the paint command's own Ctrl+Z) keeps Ctrl+Z while it runs.
                 new KeyBinding(HelpEntry.For(HelpInput.Z, "Undo the last annotation edit", HelpModifiers.Ctrl),
                     _ => overlay is not null && overlay.UndoLastEditIfIdle()),
-                KeyBinding.Do(HelpEntry.For(HelpInput.NumStar, "Toggle Pen Mode"), _ => { if (overlay is not null) AnnotationMenu.OnPenMode(overlay, EventArgs.Empty); }, anyModifiers: true),
-                KeyBinding.Do(HelpEntry.For(HelpInput.D8, "Toggle Pen Mode", HelpModifiers.Shift), _ => { if (overlay is not null) AnnotationMenu.OnPenMode(overlay, EventArgs.Empty); }),
+                KeyBinding.Do(HelpEntry.For(HelpInput.NumStar, "Pen Mode").AsToggle(), _ => { if (overlay is not null) AnnotationMenu.OnPenMode(overlay, EventArgs.Empty); }, anyModifiers: true),
+                KeyBinding.Do(HelpEntry.For(HelpInput.D8, "Pen Mode", HelpModifiers.Shift).AsToggle(), _ => { if (overlay is not null) AnnotationMenu.OnPenMode(overlay, EventArgs.Empty); }),
             }, HelpSection.AlwaysActive);
 
             /// <summary>A row that runs <paramref name="run"/> and leaves the key unhandled.</summary>

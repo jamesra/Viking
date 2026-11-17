@@ -99,6 +99,30 @@ namespace CommonTests
         }
 
         [TestMethod]
+        public void AToggleIsMarkedBeforeItsDescription()
+        {
+            HelpEntry toggle = HelpEntry.For(HelpInput.NumStar, "Pen Mode").AsToggle();
+            Assert.IsTrue(toggle.IsToggle);
+            Assert.AreEqual("Num *: ⇌ Pen Mode", toggle.ToString());
+            Assert.AreEqual(2, HelpEntry.Arrange([toggle, HelpEntry.For(HelpInput.NumStar, "Pen Mode")]).Count,
+                "a toggle and a plain entry with the same text are different lines");
+        }
+
+        [TestMethod]
+        public void IndentedListItemsKeepTheirPlaceAfterTheLineThatIntroducesThem()
+        {
+            HelpEntry intro = HelpEntry.Text("Click a button to choose");
+            HelpEntry first = HelpEntry.Text("Cut").Indented();
+            HelpEntry second = HelpEntry.Text("Merge").Indented();
+            Assert.AreEqual(1, first.Indent);
+            Assert.AreEqual(2, first.Indented().Indent);
+
+            var arranged = HelpEntry.Arrange([HelpEntry.For(HelpInput.Escape, "Cancel"), intro, first, second]);
+            CollectionAssert.AreEqual(new[] { 0, 1, 1 }, arranged.Take(3).Select(e => e.Indent).ToArray());
+            CollectionAssert.AreEqual(new[] { "Click a button to choose", "Cut", "Merge" }, arranged.Take(3).Select(e => e.Description).ToArray());
+        }
+
+        [TestMethod]
         public void MouseAndPenInputsAreNotKeys()
         {
             Assert.AreEqual(HelpInputKind.Mouse, HelpEntry.KindOf(HelpInput.LeftDrag));

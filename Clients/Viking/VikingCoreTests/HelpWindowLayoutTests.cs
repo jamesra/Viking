@@ -63,6 +63,24 @@ namespace VikingCoreTests
         }
 
         [TestMethod]
+        public void InASectionUngroupedRowsComeFirstThenEachGroupSortedInTheOrderItFirstAppears()
+        {
+            Viking.Common.HelpSection shortcuts = Viking.Common.HelpSection.AnnotationShortcuts;
+            Viking.Common.HelpEntry tagB = Viking.Common.HelpEntry.For(Viking.Common.HelpInput.B, "Bipolar").In(shortcuts).InGroup("Structure tags");
+            Viking.Common.HelpEntry tagA = Viking.Common.HelpEntry.For(Viking.Common.HelpInput.A, "Triad").In(shortcuts).InGroup("Structure tags");
+            Viking.Common.HelpEntry annotate = Viking.Common.HelpEntry.For(Viking.Common.HelpInput.Z, "Gap Junction").In(shortcuts).InGroup("Annotate");
+            Viking.Common.HelpEntry loose = Viking.Common.HelpEntry.For(Viking.Common.HelpInput.Y, "Something else").In(shortcuts);
+
+            var rows = HelpWindow.GroupIntoSections([tagB, annotate, tagA, loose]).Single().Rows;
+            CollectionAssert.AreEqual(new[] { "Something else", "Triad", "Bipolar", "Gap Junction" }, rows.Select(r => r.Description).ToArray());
+
+            var groups = HelpWindow.SplitIntoGroups(rows);
+            CollectionAssert.AreEqual(new[] { null, "Structure tags", "Annotate" }, groups.Select(g => g.Group).ToArray());
+            CollectionAssert.AreEqual(new[] { 1, 2, 1 }, groups.Select(g => g.Rows.Count).ToArray());
+            Assert.AreEqual(0, HelpWindow.SplitIntoGroups([]).Count);
+        }
+
+        [TestMethod]
         public void TheStatusBarSectionComesLast()
         {
             Viking.Common.HelpEntry status = Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftClick, "Turn Pen Mode on or off", where: "on Pen On/Off").In(Viking.Common.HelpSection.StatusBar);
