@@ -17,7 +17,7 @@ namespace Viking.UI.WPF
     /// The command help in a window of its own (F1, or Help > Command Help Window), which the user can move and resize.
     /// The viewer sets <see cref="Entries"/> to each command's help as the command starts, and <see cref="AlwaysActive"/> to
     /// the keys that work whatever command runs. Entries are grouped by <see cref="HelpEntry.Section"/> into collapsible
-    /// sections (annotation shortcuts, the current command, mouse over, always active, status bar; empty ones are left out). Within a section rows
+    /// sections (the current command first, in a faint box, then annotation shortcuts, mouse over, always active, status bar; empty ones are left out). Within a section rows
     /// are drawn as on the help bar (<see cref="HelpRowConverter"/>), arranged by <see cref="HelpEntry.Arrange"/>, and flow
     /// down as many columns as fit the window's width (<see cref="ColumnCount"/>); plain-text lines span the full width above them.
     /// </summary>
@@ -25,6 +25,15 @@ namespace Viking.UI.WPF
     {
         /// <summary>Width in device-independent pixels each column needs before the window adds another.</summary>
         public const double ColumnWidth = 420;
+
+        /// <summary>The faint outline drawn around the active command's section.</summary>
+        private static readonly System.Windows.Media.Brush ActiveCommandBorder = Frozen(new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x55, 0x4b, 0x55, 0x63)));
+
+        private static System.Windows.Media.Brush Frozen(System.Windows.Media.Brush brush)
+        {
+            brush.Freeze();
+            return brush;
+        }
 
         /// <summary>How far a section's or group's rows sit right of its heading's arrow, so they read as under the heading.</summary>
         public const double SectionIndent = 20;
@@ -88,11 +97,14 @@ namespace Viking.UI.WPF
             }
         }
 
-        /// <summary>The order the sections are shown in, top to bottom.</summary>
+        /// <summary>
+        /// The order the sections are shown in, top to bottom. The active command is always first, and drawn in a faint box
+        /// (<see cref="ActiveCommandBorder"/>), because it is what the user is doing now.
+        /// </summary>
         public static readonly HelpSection[] SectionOrder =
         [
-            HelpSection.AnnotationShortcuts,
             HelpSection.Command,
+            HelpSection.AnnotationShortcuts,
             HelpSection.MouseOver,
             HelpSection.AlwaysActive,
             HelpSection.StatusBar,
@@ -257,7 +269,7 @@ namespace Viking.UI.WPF
         /// collapsible heading of its own. Only keyed rows are split into columns, so a divider never lands inside a column as
         /// a stray bar.
         /// </summary>
-        private static Expander SectionView(HelpSection section, IReadOnlyList<HelpEntry> rows, double width)
+        private static FrameworkElement SectionView(HelpSection section, IReadOnlyList<HelpEntry> rows, double width)
         {
             (IReadOnlyList<HelpEntry> text, IReadOnlyList<HelpEntry> keyed) = SplitAtDivider(rows);
             // Indented under the section heading, as a group's rows are under the group's heading.
@@ -302,7 +314,20 @@ namespace Viking.UI.WPF
             };
             expander.Expanded += (_, _) => Collapsed.Remove(section);
             expander.Collapsed += (_, _) => Collapsed.Add(section);
-            return expander;
+            if (section != HelpSection.Command)
+                return expander;
+
+            // The active command stands out from the reference sections below it.
+            expander.Margin = new Thickness(0);
+            return new Border
+            {
+                BorderBrush = ActiveCommandBorder,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(4, 3, 4, 4),
+                Margin = new Thickness(0, 0, 0, 8),
+                Child = expander,
+            };
         }
 
         /// <summary>Keyed rows flowing down as many columns as fit <paramref name="width"/>, each column's keys lined up at one right edge.</summary>

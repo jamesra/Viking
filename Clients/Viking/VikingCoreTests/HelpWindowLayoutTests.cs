@@ -47,8 +47,10 @@ namespace VikingCoreTests
 
             var sections = HelpWindow.GroupIntoSections([always, command, shortcut, always]);
             CollectionAssert.AreEqual(
-                new[] { Viking.Common.HelpSection.AnnotationShortcuts, Viking.Common.HelpSection.Command, Viking.Common.HelpSection.AlwaysActive },
-                sections.Select(s => s.Section).ToArray());
+                new[] { Viking.Common.HelpSection.Command, Viking.Common.HelpSection.AnnotationShortcuts, Viking.Common.HelpSection.AlwaysActive },
+                sections.Select(s => s.Section).ToArray(),
+                "the active command is always first");
+            Assert.AreEqual(Viking.Common.HelpSection.Command, HelpWindow.SectionOrder[0]);
             Assert.AreEqual(1, sections[2].Rows.Count, "a repeated entry is listed once");
 
             Viking.Common.HelpEntry hover = Viking.Common.HelpEntry.For(Viking.Common.HelpInput.LeftDrag, "Move the annotation").In(Viking.Common.HelpSection.MouseOver);
