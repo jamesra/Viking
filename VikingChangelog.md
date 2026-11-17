@@ -11,7 +11,7 @@ Notes for whoever updates this file. Comments like this one are not shown in Vik
   changes, rename the unreleased heading to the new version; when a version ships, replace "not yet released" with the date
   and channel, for example "2026-10-26 (Viking Test, unsigned)".
 
-Committed application version: 1.2.147.0.
+Committed application version: 1.2.148.0.
 1.2.70, 1.2.75 and 1.2.143 were intermediate bumps and have no section of their own (1.2.143's change is listed under 1.2.144). Neither do the builds between 1.2.78 and 1.2.109;
 their changes are listed under 1.2.109. Builds 1.2.128 and 1.2.129 are listed under 1.2.129 (it went out as Viking Test
 and as a signed release on 2026-10-27). Viking Test builds 1.2.130 to 1.2.136 were folded into the 1.2.136 release on
@@ -27,7 +27,7 @@ version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. 
 Documentation/source/Client/versionhistory.rst.
 -->
 
-## 1.2.148 — not yet released
+## 1.2.148 — 2026-11-16 (Viking Test, unsigned)
 
 * **Help lists line up in two columns.** In the help bar's full list and the help window, the keys and mouse actions are right-aligned in one column and what they do is left-aligned beside it, so the list no longer reads as a wall of text. Rows and key caps are a little smaller. Words that say where to click (such as "on a control point") now follow the description in grey. In the help window **Active command** now comes first, in a faint box, with what the command is for after it (for example **Active command: Pen gesture** or **Active command: Create structure**), each section's rows are indented under its heading, and the pen choices are indented under "Click a button to choose".
 * **Help strip one row high, several entries across.** The help strip under the viewer is now one row high and shows as many entries side by side as fit its width, moving on to the next ones every few seconds. Click it for the full list; picking a line there shows it first on the strip.
