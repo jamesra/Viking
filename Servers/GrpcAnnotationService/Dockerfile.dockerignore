@@ -11,6 +11,13 @@
 !Servers/ConnectomeDataModelCore/**
 !gRPCAnnotationServiceTypes/
 !gRPCAnnotationServiceTypes/**
+!gRPCGeometryTypes/
+!gRPCGeometryTypes/**
+!gRPC_Protos/
+!gRPC_Protos/Annotation/
+!gRPC_Protos/Annotation/**
+!gRPC_Protos/Common/
+!gRPC_Protos/Common/**
 !Geometry.Core/
 !Geometry.Core/**
 !GeometrySqlTypeMapper/

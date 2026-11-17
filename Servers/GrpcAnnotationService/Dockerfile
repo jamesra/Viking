@@ -16,6 +16,7 @@ COPY Servers/GrpcAnnotationService/nuget.docker.config Servers/GrpcAnnotationSer
 COPY Servers/GrpcAnnotationService/GrpcAnnotationService.csproj Servers/GrpcAnnotationService/
 COPY Servers/ConnectomeDataModelCore/ConnectomeDataModelCore.csproj Servers/ConnectomeDataModelCore/
 COPY gRPCAnnotationServiceTypes/AnnotationServiceTypes.gRPC.csproj gRPCAnnotationServiceTypes/
+COPY gRPCGeometryTypes/GeometryTypes.gRPC.csproj gRPCGeometryTypes/
 COPY GeometrySqlTypeMapper/GeometryOGCMapper.csproj GeometrySqlTypeMapper/
 COPY AnnotationInterfaces/AnnotationInterfaces.csproj AnnotationInterfaces/
 COPY Geometry.Core/Geometry.Core.csproj Geometry.Core/
@@ -36,6 +37,10 @@ WORKDIR /src
 COPY Servers/GrpcAnnotationService/ Servers/GrpcAnnotationService/
 COPY Servers/ConnectomeDataModelCore/ Servers/ConnectomeDataModelCore/
 COPY gRPCAnnotationServiceTypes/ gRPCAnnotationServiceTypes/
+COPY gRPCGeometryTypes/ gRPCGeometryTypes/
+# The annotation and geometry type projects compile their protos from the gRPC_Protos submodule.
+COPY gRPC_Protos/Annotation/ gRPC_Protos/Annotation/
+COPY gRPC_Protos/Common/ gRPC_Protos/Common/
 COPY GeometrySqlTypeMapper/ GeometrySqlTypeMapper/
 COPY AnnotationInterfaces/ AnnotationInterfaces/
 COPY Geometry.Core/ Geometry.Core/
