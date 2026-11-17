@@ -11,7 +11,7 @@ Notes for whoever updates this file. Comments like this one are not shown in Vik
   changes, rename the unreleased heading to the new version; when a version ships, replace "not yet released" with the date
   and channel, for example "2026-10-26 (Viking Test, unsigned)".
 
-Committed application version: 1.2.146.0.
+Committed application version: 1.2.147.0.
 1.2.70, 1.2.75 and 1.2.143 were intermediate bumps and have no section of their own (1.2.143's change is listed under 1.2.144). Neither do the builds between 1.2.78 and 1.2.109;
 their changes are listed under 1.2.109. Builds 1.2.128 and 1.2.129 are listed under 1.2.129 (it went out as Viking Test
 and as a signed release on 2026-10-27). Viking Test builds 1.2.130 to 1.2.136 were folded into the 1.2.136 release on
@@ -23,10 +23,13 @@ version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. 
 Documentation/source/Client/versionhistory.rst.
 -->
 
-## 1.2.146 — 2026-11-15 (Viking Test, unsigned)
+## 1.2.147 — 2026-11-16 (Viking Test, unsigned)
 
 * **Closed-curve labels load when readable.** Labels on closed curves (smooth outlines) are built in the background only when they are large enough to read on screen, so flipping through dense sections stays responsive. A label that should be visible may appear a moment after you stop panning or zooming in.
 <!-- LocationClosedCurveView: LabelLayout deferred to Task.Run from IsLabelVisible; ctor no longer layouts under ViewIndex lock. -->
+
+## 1.2.146 — 2026-11-15 (Viking Test, unsigned)
+
 * **Location links have no border.** The thin black or white line along the edge of a location link (the hourglass between two linked locations on different sections) is gone. The contrasting shadow around a link's ends stays.
 <!-- LocationLinkView.BorderPixels 1.5 -> 0 at user request; RoundLineManager.DrawPinched and the pinched line shader still draw a border at any width above 0. -->
 * **Help window.** **F1**, or **Help > Command Help Window**, opens the command help in a window of its own that you can move and resize. It has five sections, each of which you can collapse by clicking its heading: **Annotation shortcuts** (your hotkeys, while no other command runs), **Active command** (what you are doing now; it changes as each command starts), **Mouse over** (what you can do with the annotation under the mouse, while no other command runs), **Always active** (keys and mouse actions that work in every command) and **Status bar** (what clicking the status bar's Corrections, Pen, AutoPoly, Seg or Cancel items does). While you resize a circle, or run another command with no help of its own, the help no longer shows the gestures of the annotation you started from. Made wide enough, it lists each section's keys and mouse actions in several columns; a section's plain-text notes run across the full width above them. While it is open the help bar under the viewer is hidden; close the window (or press **F1** again) to bring the bar back. Click the help bar to see its full list, which F1 used to open.
