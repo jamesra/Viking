@@ -11,7 +11,7 @@ Notes for whoever updates this file. Comments like this one are not shown in Vik
   changes, rename the unreleased heading to the new version; when a version ships, replace "not yet released" with the date
   and channel, for example "2026-10-26 (Viking Test, unsigned)".
 
-Committed application version: 1.2.148.0.
+Committed application version: 1.2.149.0.
 1.2.70, 1.2.75 and 1.2.143 were intermediate bumps and have no section of their own (1.2.143's change is listed under 1.2.144). Neither do the builds between 1.2.78 and 1.2.109;
 their changes are listed under 1.2.109. Builds 1.2.128 and 1.2.129 are listed under 1.2.129 (it went out as Viking Test
 and as a signed release on 2026-10-27). Viking Test builds 1.2.130 to 1.2.136 were folded into the 1.2.136 release on
@@ -19,6 +19,7 @@ and as a signed release on 2026-10-27). Viking Test builds 1.2.130 to 1.2.136 we
 change. The pen and link fixes of builds 1.2.123 to 1.2.126 are listed under 1.2.127.
 Viking Test builds 1.2.145 to 1.2.147 were folded into the 1.2.147 release on 2026-11-16. Their crushed TEM and section
 number wheel fixes stay in it: those bugs came from test builds 1.2.138 and 1.2.142 but were in the signed 1.2.144.
+1.2.148 went out as a signed release on 2026-11-16 with no Viking Test build before it.
 1.2.143 and 1.2.144 also went out as signed releases on 2026-11-12 without a folded section; the 1.2.137 to 1.2.144
 sections are kept as the test builds wrote them.
 
@@ -27,9 +28,14 @@ version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. 
 Documentation/source/Client/versionhistory.rst.
 -->
 
-## 1.2.148 — 2026-11-16 (Viking Test, unsigned)
+## 1.2.149 — 2026-11-16 (Viking Test, unsigned)
 
-* **Help lists line up in two columns.** In the help bar's full list and the help window, the keys and mouse actions are right-aligned in one column and what they do is left-aligned beside it, so the list no longer reads as a wall of text. Rows and key caps are a little smaller. Words that say where to click (such as "on a control point") now follow the description in grey. In the help window **Active command** now comes first, in a faint box, with what the command is for after it (for example **Active command: Pen gesture** or **Active command: Create structure**), each section's rows are indented under its heading, and the pen choices are indented under "Click a button to choose".
+* **Active command named.** In the help window (**F1**) the **Active command** heading now says what the command is for, for example **Active command: Pen gesture** or **Active command: Create structure**.
+<!-- Command.Purpose, shown by HelpWindow.HeadingOf; 18 commands override it, the rest are named from the class (Command.PurposeFromTypeName). -->
+
+## 1.2.148 — 2026-11-16 (release)
+
+* **Help lists line up in two columns.** In the help bar's full list and the help window, the keys and mouse actions are right-aligned in one column and what they do is left-aligned beside it, so the list no longer reads as a wall of text. Rows and key caps are a little smaller. Words that say where to click (such as "on a control point") now follow the description in grey. In the help window **Active command** now comes first, in a faint box, each section's rows are indented under its heading, and the pen choices are indented under "Click a button to choose".
 * **Help strip one row high, several entries across.** The help strip under the viewer is now one row high and shows as many entries side by side as fit its width, moving on to the next ones every few seconds. Click it for the full list; picking a line there shows it first on the strip.
 <!-- HelpBar: page Grid over a combo box that keeps no selection; ColumnCount = floor(width / HelpBar.ColumnWidth 300), ShowNext advances by the columns shown. SectionViewerControl sizes the ElementHost to HelpBar.OneRowHeight() (measured, about 25 DIP at font 14) times DeviceDpi / 96; it was the default 100 px halved. -->
 * **Switches are marked ⇌.** Keys and status bar items that turn something on or off, such as **Pen Mode** and your tag hotkeys, show ⇌ between the keys and the description instead of the word "Toggle".
