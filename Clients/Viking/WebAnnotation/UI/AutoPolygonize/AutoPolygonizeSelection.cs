@@ -428,14 +428,11 @@ namespace WebAnnotation.UI.AutoPolygonize
         }
 
         /// <summary>
-        /// MosaicShape, VolumeShape, Position, Radius, or an empty name from a bulk update.
+        /// True when a location property change is geometry for auto-polygonize, matching
+        /// <see cref="LocationObj.IsGeometryProperty"/> so section views and this cache cannot diverge.
         /// </summary>
-        public static bool IsGeometryProperty(string? propertyName)
-        {
-            return string.IsNullOrEmpty(propertyName) ||
-                   propertyName is nameof(LocationObj.MosaicShape) or nameof(LocationObj.VolumeShape)
-                       or nameof(LocationObj.Position) or nameof(LocationObj.Radius);
-        }
+        public static bool IsGeometryProperty(string? propertyName) =>
+            LocationObj.IsGeometryProperty(propertyName);
 
         /// <summary>
         /// Same-cell, same-section proposals that nested-contain or cross <paramref name="seed"/>,

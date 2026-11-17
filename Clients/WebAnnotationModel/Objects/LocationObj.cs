@@ -92,16 +92,14 @@ namespace WebAnnotationModel.Objects
 
         public override long ID => _ID;
 
-        /// <summary>True when the change affects MosaicShape / Radius / Width (not just centroid).</summary>
+        /// <summary>
+        /// True when <paramref name="propertyName"/> is a shape field that requires tearing down and rebuilding the
+        /// canvas view. Store merges raise named events only; an empty name is not treated as geometry.
+        /// </summary>
         public static bool IsGeometryProperty(string propertyName)
         {
-            if (string.IsNullOrEmpty(propertyName))
-                return true;
-
             switch (propertyName)
             {
-                //case "VolumeShape":
-                //  return true;
                 case nameof(MosaicShape):
                     return true;
                 // Radius is derived from the shape and always changes together with MosaicShape, which already
