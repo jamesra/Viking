@@ -204,7 +204,7 @@ namespace WebAnnotation.UI.AutoPolygonize
             hiddenProposals = hidden ?? throw new ArgumentNullException(nameof(hidden));
             this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
             this.requestAnnotationLoad = requestAnnotationLoad ?? throw new ArgumentNullException(nameof(requestAnnotationLoad));
-            buttonsView = new ProposalButtonsView(parent);
+            buttonsView = new ProposalButtonsView();
         }
 
         /// <summary>The two-click confirm of the accept and hide buttons inside proposals. UI thread only.</summary>
@@ -418,8 +418,11 @@ namespace WebAnnotation.UI.AutoPolygonize
             }, TaskScheduler.Default);
         }
 
-        /// <summary>Draws the buttons of <paramref name="proposal"/>, faded with its ring. Caller holds <see cref="proposalLock"/>.</summary>
-        private void DrawButtons(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, AutoPolygonizeProposal proposal)
+        /// <summary>
+        /// Queues the buttons of <paramref name="proposal"/>, faded with its ring; <see cref="Draw"/> draws all queued buttons
+        /// at once after the rings. Caller holds <see cref="proposalLock"/>.
+        /// </summary>
+        private void QueueButtons(VikingXNA.Scene scene, AutoPolygonizeProposal proposal)
         {
             if (!ButtonsEnabled)
                 return;
@@ -430,7 +433,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             float alpha = (float)(Global.AnnotationSettings.AutoPolygonizeButtonOpacity * placement.Fade * proposal.FadeIn);
             ProposalButtonKind? hovered = ReferenceEquals(hoveredButtonProposal, proposal) ? hoveredButton : null;
-            buttonsView.Draw(graphicsDevice, scene, placement, kind => buttonState.PhaseOf(proposal, kind), hovered, alpha);
+            buttonsView.Add(placement, kind => buttonState.PhaseOf(proposal, kind), hovered, alpha);
         }
 
         public bool IsEnabled => enabled;
@@ -878,10 +881,12 @@ namespace WebAnnotation.UI.AutoPolygonize
                         continue;
 
                     proposal.Draw(graphicsDevice, scene);
-                    DrawButtons(graphicsDevice, scene, proposal);
+                    QueueButtons(scene, proposal);
                     shimmering |= proposal.IsShimmering;
                 }
             }
+
+            buttonsView.Flush(graphicsDevice, scene);
 
             // A proposal that was accepted, replaced or removed takes its waiting button with it.
             if (buttonTarget is not null && !buttonTargetShown)

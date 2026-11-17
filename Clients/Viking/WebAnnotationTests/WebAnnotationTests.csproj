@@ -148,6 +148,7 @@
     <Compile Include="Properties\AutoPolygonizeMinRadiusSettingsTests.cs" />
     <Compile Include="Commands\ProposalButtonLayoutTests.cs" />
     <Compile Include="Commands\ProposalButtonStateTests.cs" />
+    <Compile Include="Commands\ProposalButtonAtlasTests.cs" />
     <Compile Include="AnnotationPreferencesProposalButtonsTests.cs" />
     <Compile Include="Commands\AnnotationStatusChipsTests.cs" />
     <Compile Include="Commands\VolumeToSectionFallbackTests.cs" />
