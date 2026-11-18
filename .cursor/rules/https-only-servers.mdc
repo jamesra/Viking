@@ -1,0 +1,27 @@
+---
+description: Servers that can write data (gRPC annotation, section correction, Identity, any web server with a write path) are reachable only over HTTPS; no plain HTTP or h2c port is published
+globs: "**/docker-compose*.yml,**/Dockerfile*,Servers/**/Program.cs,Servers/**/Startup.cs,Servers/**/appsettings*.json,Servers/**/scripts/**,deploy/**"
+alwaysApply: false
+---
+
+# Servers that can write are HTTPS only
+
+Any server that can change data is reachable only over HTTPS: the gRPC annotation service, the section-correction
+service, Identity, and any other web server or gRPC service with a write path. Bearer tokens and annotation data must
+never cross the network in plain text.
+
+- **No plain listener on the host.** Compose files publish only the TLS port (`443` in the container). Do not publish
+  an `h2c` / HTTP port (e.g. annotation `5010:80`, section correction `41080:80`), not even "for tests" or bound to
+  `0.0.0.0`.
+- **Test stacks and local runs use TLS too.** With no real certificate the container uses its self-signed
+  `localhost` certificate; tests and clients call `https://localhost:<port>` and trust that certificate explicitly.
+  Do not fall back to `http://` because a certificate is missing.
+- **Production uses a real certificate** from the single viking-certs renewer (`docker-letsencrypt-sidecar` skill),
+  normally behind the viking-proxy on 443.
+- **Read-only, non-data endpoints** (a static demo page, ACME HTTP-01 challenges on the certificate renewer) may use
+  HTTP only when they cannot write anything and carry no token; say why in a comment next to the port.
+- **Clients** build `https://` endpoints. Do not add code that rewrites an `https` endpoint to `http`, or that accepts
+  any certificate.
+
+Existing plain ports (annotation `5010`, section correction `41080`, and the h2c test stack that uses them) predate
+this rule and are to be removed, not copied.
