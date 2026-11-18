@@ -9,7 +9,7 @@ using Microsoft.Extensions.Hosting;
 namespace Viking.GrpcSectionCorrectionService
 {
     /// <summary>
-    /// Kestrel host. Docker binds h2c :80 and HTTPS :443 separately — gRPC clients do not follow redirects.
+    /// Kestrel host. Docker binds HTTPS :443 and a loopback-only :80 for the in-container correction-menu.
     /// <c>menu</c> as the first argument runs <see cref="CorrectionMenu"/> instead.
     /// </summary>
     public class Program
@@ -36,14 +36,16 @@ namespace Viking.GrpcSectionCorrectionService
                     {
                         if (context.Configuration.GetValue("Kestrel:UseDockerPorts", false))
                         {
-                            options.ListenAnyIP(80, listen => listen.Protocols = HttpProtocols.Http2);
+                            // Loopback only: reachable by a process in the container (correction-menu), never
+                            // from the host or the network, even if a port were published.
+                            options.ListenLocalhost(80, listen => listen.Protocols = HttpProtocols.Http2);
                             X509Certificate2 certificate = DockerTlsCertificate.TryLoad(
                                 context.Configuration["SSL_CERT_PATH"],
                                 context.Configuration["SSL_KEY_PATH"]);
                             if (certificate is null)
                             {
                                 Console.WriteLine(
-                                    "SSL certificate files not found; serving cleartext on port 80 until certbot enrolls.");
+                                    "SSL certificate files not found; not serving until certbot enrolls (loopback port 80 only).");
                                 return;
                             }
 

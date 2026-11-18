@@ -89,7 +89,7 @@
             Example      = 'deploy/examples/example.viking-annotation.run.env'
             Secrets      = @()
             HealthUrl    = 'https://{VIKING_HOSTNAME_ANNOTATION}/'
-            Ports        = @(5010, 5011)
+            Ports        = @(5011)
             Os           = @('linux', 'windows')
             Description  = 'gRPC annotation service (Viking annotation API) with optional local SQL (profile local-sql)'
         }
@@ -106,7 +106,7 @@
             Example      = 'deploy/examples/example.viking-corrections.run.env'
             Secrets      = @()
             HealthUrl    = 'https://{VIKING_HOSTNAME_CORRECTIONS}/'
-            Ports        = @(41080, 41443)
+            Ports        = @(41443)
             Os           = @('linux', 'windows')
             Description  = 'gRPC section-correction service (builds and serves residual correction maps)'
         }

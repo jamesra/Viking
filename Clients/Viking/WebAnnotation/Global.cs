@@ -1695,7 +1695,7 @@ namespace WebAnnotation
                 channelOpts =>
                 {
                     // Grpc.Net.Client on .NET Framework requires WinHttpHandler, which
-                    // only supports gRPC over TLS (https://localhost:5011, not h2c :5010).
+                    // only supports gRPC over TLS (https://localhost:5011).
                     channelOpts.HttpHandler = CreateWinHttpHandler();
                 });
         }

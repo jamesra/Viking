@@ -12,8 +12,7 @@ Ports
 =================  ===========  ============================================================
 Container          Host         Use
 =================  ===========  ============================================================
-80 (h2c)           5010         Tests and modern .NET clients (``GRPC_ANNOTATION_HTTP_PORT``)
-443 (TLS)          5011         Viking; the proxy's ``VIKING_UPSTREAM_ANNOTATION``
+443 (TLS)          5011         Viking, the tests and the proxy's ``VIKING_UPSTREAM_ANNOTATION``
                                 (``GRPC_ANNOTATION_HTTPS_PORT``)
 1433 (local-sql)   1433         ``ANNOTATION_SQL_HOST_PORT``
 =================  ===========  ============================================================
@@ -79,9 +78,9 @@ hostname and proxy upstream if it is reached through the proxy.
    The script also loads ``Run\_host\host.env`` under the Docker root (as ``stack.ps1`` does) and, when
    compose would still lack a token issuer, stops with one message naming it.
 
-``-Port`` is the h2c port and HTTPS is ``-Port`` + 1, as in the Ports table. Omitted, a running
-project keeps the pair it publishes, and a new one gets the first free pair from 5010 up (5020 is
-skipped). A ``-Port`` that is already in use is refused. ``-SqlServer`` (a connection-string server such
+``-Port`` is the host HTTPS port, as in the Ports table; the service has no plain HTTP/h2c port.
+Omitted, a running project keeps the port it publishes, and a new one gets the first free port from
+5011 up (5020 is skipped). A ``-Port`` that is already in use is refused. ``-SqlServer`` (a connection-string server such
 as ``host,1433``) is used only when the env file is created; to change it later, edit the env file.
 The script never changes the database schema or connects to the database.
 

@@ -9,7 +9,7 @@ The Docker setup has been updated to map `appsettings.json` files from the proje
 ## Services
 
 ### 1. GrpcAnnotationService
-- **Ports**: HTTP/h2c (5010) — mapped from container 80. HTTPS is not enabled (no cert in the image).
+- **Ports**: HTTPS only (5011), mapped from container 443, with the container's self-signed certificate unless a real one is mounted. No plain HTTP/h2c port.
 - **Configuration**: `Servers/GrpcAnnotationService/appsettings.json`
 - **Development Config**: `Servers/GrpcAnnotationService/appsettings.Development.json`
 
@@ -51,11 +51,11 @@ run-with-config.cmd
 #### GrpcAnnotationService
 ```bash
 docker build -t grpc-annotation-service -f Servers/GrpcAnnotationService/Dockerfile .
-docker run -it -p 5010:80 \
+docker run -it -p 5011:443 \
   -v "$(pwd)/Servers/GrpcAnnotationService/appsettings.json:/app/appsettings.json:ro" \
   -v "$(pwd)/Servers/GrpcAnnotationService/appsettings.Development.json:/app/appsettings.Development.json:ro" \
   -e ASPNETCORE_ENVIRONMENT=Development \
-  -e ASPNETCORE_URLS=http://+:80 \
+  -e ASPNETCORE_URLS=https://+:443 \
   --name grpc-annotation-service \
   grpc-annotation-service
 ```
@@ -90,7 +90,7 @@ docker run -it -p 5010:80 \
 Once containers are running, access the services at:
 
 - **GrpcAnnotationService**: 
-  - HTTP (h2c): http://localhost:5010
+  - HTTPS: https://localhost:5011
 - **SegmentationServer**: 
   - Web: http://localhost:8080
   - gRPC: localhost:40080

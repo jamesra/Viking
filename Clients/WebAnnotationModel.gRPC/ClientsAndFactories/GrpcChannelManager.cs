@@ -70,7 +70,7 @@ namespace WebAnnotationModel.gRPC
 
         /// <summary>
         /// WinHttpHandler can only speak gRPC over TLS. VikingXML often keeps http://
-        /// after changing the Docker port; rewrite to https and map local :5010 → :5011.
+        /// after the server moved to HTTPS only; rewrite to https, keeping the port.
         /// </summary>
         internal static Uri NormalizeEndpointForHandler(Uri endpoint, HttpMessageHandler handler)
         {
@@ -78,9 +78,6 @@ namespace WebAnnotationModel.gRPC
                 return endpoint;
 
             var builder = new UriBuilder(endpoint) { Scheme = Uri.UriSchemeHttps };
-            if (IsLoopback(builder.Host) && builder.Port == 5010)
-                builder.Port = 5011;
-
             var rewritten = builder.Uri;
             Trace.WriteLine($"[gRPC] WinHttpHandler requires TLS; using {rewritten} instead of {endpoint}");
             return rewritten;
@@ -113,15 +110,6 @@ namespace WebAnnotationModel.gRPC
 
         private static bool IsHttps(Uri endpoint)
             => string.Equals(endpoint.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
-
-        /// <summary>
-        /// True for "localhost" or a loopback IP literal. <see cref="UriBuilder.Host"/> keeps the
-        /// brackets of an IPv6 literal ("[::1]"), so they are trimmed before parsing.
-        /// </summary>
-        static bool IsLoopback(string host)
-            => string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
-               || (System.Net.IPAddress.TryParse(host.Trim('[', ']'), out var address)
-                   && System.Net.IPAddress.IsLoopback(address));
 
         static bool IsOrWrapsWinHttpHandler(HttpMessageHandler handler)
         {

@@ -9,7 +9,7 @@ using Microsoft.Extensions.Hosting;
 namespace gRPCAnnotationService
 {
     /// <summary>
-    /// Kestrel host. Docker binds h2c :80 and HTTPS :443 separately — gRPC clients do not follow redirects.
+    /// Kestrel host. Docker binds only HTTPS :443; there is no plain HTTP/h2c listener (https-only-servers rule).
     /// </summary>
     public class Program
     {
@@ -31,9 +31,7 @@ namespace gRPCAnnotationService
                         // UseDockerPorts is set in the container. Local launch uses launchSettings endpoints.
                         if (context.Configuration.GetValue("Kestrel:UseDockerPorts", false))
                         {
-                            // :80 stays h2c-only for gRPC. :443 serves gRPC over HTTPS.
-                            options.ListenAnyIP(80, listen => listen.Protocols = HttpProtocols.Http2);
-
+                            // Only :443, over TLS. No plain listener, not even for tests.
                             // The shared certificate from viking-certs when mounted, else the image's
                             // self-signed dev certificate (Kestrel's default certificate settings).
                             X509Certificate2 certificate = DockerTlsCertificate.TryLoad(

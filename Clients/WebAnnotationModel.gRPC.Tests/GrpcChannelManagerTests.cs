@@ -50,7 +50,7 @@ namespace WebAnnotationModel.gRPC.Tests
         [Test]
         public void HttpsEndpointIsUnchangedForWinHttpHandler()
         {
-            var uri = new Uri("https://localhost:5010/");
+            var uri = new Uri("https://localhost:5011/");
             Assert.That(GrpcChannelManager.NormalizeEndpointForHandler(uri, new WinHttpHandler()), Is.SameAs(uri));
         }
 
@@ -58,17 +58,24 @@ namespace WebAnnotationModel.gRPC.Tests
         [TestCase("LOCALHOST")]
         [TestCase("127.0.0.1")]
         [TestCase("[::1]")]
-        public void LoopbackPort5010MapsToHttps5011(string host)
+        public void LoopbackHostUpgradesToHttpsKeepingItsPort(string host)
         {
-            var result = Normalize($"http://{host}:5010/", new WinHttpHandler());
+            var result = Normalize($"http://{host}:5011/", new WinHttpHandler());
             Assert.That(result.Scheme, Is.EqualTo("https"));
             Assert.That(result.Port, Is.EqualTo(5011));
         }
 
         [Test]
+        public void LoopbackPort5010IsNoLongerRemapped()
+        {
+            var result = Normalize("http://localhost:5010/", new WinHttpHandler());
+            Assert.That(result, Is.EqualTo(new Uri("https://localhost:5010/")));
+        }
+
+        [Test]
         public void WinHttpHandlerWrappedInDelegatingHandlersIsRecognized()
         {
-            var result = Normalize("http://localhost:5010/", new Wrapper(new Wrapper(new WinHttpHandler())));
+            var result = Normalize("http://localhost:5011/", new Wrapper(new Wrapper(new WinHttpHandler())));
             Assert.That(result, Is.EqualTo(new Uri("https://localhost:5011/")));
         }
 
@@ -80,7 +87,7 @@ namespace WebAnnotationModel.gRPC.Tests
         }
 
         [Test]
-        public void NonLoopbackHostKeepsPort5010()
+        public void NonLoopbackHostKeepsItsPort()
         {
             var result = Normalize("http://server.example.org:5010/path", new WinHttpHandler());
             Assert.That(result, Is.EqualTo(new Uri("https://server.example.org:5010/path")));
@@ -93,8 +100,8 @@ namespace WebAnnotationModel.gRPC.Tests
         public void GetOrCreateReusesChannelForSameEndpoint()
         {
             var manager = NewManager();
-            var first = manager.GetOrCreate(new Uri("http://localhost:5010/"));
-            var second = manager.GetOrCreate(new Uri("http://localhost:5010/"));
+            var first = manager.GetOrCreate(new Uri("http://localhost:5011/"));
+            var second = manager.GetOrCreate(new Uri("http://localhost:5011/"));
             Assert.That(second, Is.SameAs(first));
         }
 
@@ -102,7 +109,7 @@ namespace WebAnnotationModel.gRPC.Tests
         public void GetOrCreateReturnsDistinctChannelsForDifferentEndpoints()
         {
             var manager = NewManager();
-            var a = manager.GetOrCreate(new Uri("http://localhost:5010/"));
+            var a = manager.GetOrCreate(new Uri("http://localhost:5011/"));
             var b = manager.GetOrCreate(new Uri("http://localhost:5020/"));
             Assert.That(b, Is.Not.SameAs(a));
         }
@@ -112,7 +119,7 @@ namespace WebAnnotationModel.gRPC.Tests
         {
             var options = new GrpcChannelOptions { HttpHandler = new WinHttpHandler() };
             var manager = new GrpcChannelManager(Options.Create(options));
-            var http = manager.GetOrCreate(new Uri("http://localhost:5010/"));
+            var http = manager.GetOrCreate(new Uri("http://localhost:5011/"));
             var https = manager.GetOrCreate(new Uri("https://localhost:5011/"));
             Assert.That(https, Is.SameAs(http));
         }

@@ -9,10 +9,12 @@ it in Identity and serves them over gRPC at ``VIKING_HOSTNAME_CORRECTIONS``.
 =============  ======  ============================================================================
 Container      Host    Use
 =============  ======  ============================================================================
-80 (h2c)       41080   In-container ``correction-menu`` and local clients
 443 (TLS)      41443   ``VIKING_UPSTREAM_CORRECTIONS``. Bound only once the certificate files exist;
-                       until then the service serves cleartext only and logs it.
+                       until then the service serves nothing on the network and logs it.
 =============  ======  ============================================================================
+
+No plain HTTP/h2c port is published. Inside the container the service also listens on loopback port 80 for
+``docker exec -it <container> correction-menu``; nothing outside the container can reach it.
 
 Data (defaults under ``<root>/Data/viking-corrections``): ``corrections/`` is the published output,
 also mounted read-only by ``viking-annotation`` (keep both stacks on one host, or point

@@ -186,8 +186,8 @@ namespace gRPCAnnotationService
             if (env.IsDevelopment())
                 app.UseDeveloperExceptionPage();
 
-            // gRPC clients do not follow HTTP redirects. Serve h2c (:80) and HTTPS (:443)
-            // as separate listeners; never redirect between them.
+            // gRPC clients do not follow HTTP redirects, so nothing here redirects to HTTPS: the service
+            // is served only over HTTPS.
 
             app.UseRouting();
             app.UseAuthentication();

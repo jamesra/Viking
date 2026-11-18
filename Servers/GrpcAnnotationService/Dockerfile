@@ -1,7 +1,6 @@
 # syntax=docker/dockerfile:1
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
-EXPOSE 80
 EXPOSE 443
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
@@ -66,11 +65,11 @@ COPY --from=build /app/publish .
 # declare VOLUME on those files — Docker treats VOLUME as a directory and
 # fails to start when the image already contains the files.
 
-ENV ASPNETCORE_URLS=http://+:80;https://+:443
+ENV ASPNETCORE_URLS=https://+:443
 
 # HTTPS fallback when /certs/${TLS_CERT_NAME}/ (SSL_CERT_PATH/SSL_KEY_PATH, see Program.cs) is not
-# mounted, so Viking (.NET Framework / WinHttpHandler) can still call gRPC over TLS; h2c on :80
-# remains for tests and modern .NET clients. The self-signed localhost certificate is made when the
+# mounted, so Viking (.NET Framework / WinHttpHandler) and the tests can still call gRPC over TLS; there is
+# no plain HTTP/h2c port. The self-signed localhost certificate is made when the
 # container starts: a key generated at build time would ship in the published image.
 COPY --chmod=755 <<'EOF' /usr/local/bin/annotation-entrypoint.sh
 #!/bin/sh

@@ -141,6 +141,18 @@ if (-not $healthy) {
 }
 Write-Host "annotation-sql is healthy."
 
+# The service is HTTPS only. Save the container's self-signed certificate where the tests pin it
+# (WebAnnotationModel.gRPC.Tests TestServerTls); the container makes it at start, so retry briefly.
+$testCertPath = Join-Path ([System.IO.Path]::GetTempPath()) 'viking-annotation-test-stack.pem'
+$certSaved = $false
+for ($i = 0; $i -lt 30 -and -not $certSaved; $i++) {
+    docker compose -p viking-annotation -f $composeFile cp 'grpc-annotation-service:/tmp/https/cert.pem' $testCertPath 2>$null
+    $certSaved = ($LASTEXITCODE -eq 0) -and (Test-Path $testCertPath)
+    if (-not $certSaved) { Start-Sleep -Seconds 2 }
+}
+if ($certSaved) { Write-Host "Saved the service's self-signed certificate to $testCertPath" }
+else { Write-Warning "Could not copy the service certificate to $testCertPath; the tests will fail the TLS handshake unless a real certificate is mounted." }
+
 if ($ApplySchema) {
     & $applySchemaScript -EnvFile $AnnotationSqlEnv
 }
@@ -149,8 +161,7 @@ Write-Host @"
 
 Stack is up:
   Identity         : IdentityServer__Endpoint in the gRPC env file (DevTest :5020 is not started)
-  gRPC (HTTP/h2c)  : http://localhost:5010
-  gRPC (HTTPS)     : https://localhost:5011  (Viking .NET 4.8)
+  gRPC (HTTPS only): https://localhost:5011  (self-signed certificate, saved to $testCertPath for the tests)
   Annotation SQL   : localhost,1433  (database AnnotationTest)
 
 Run tests:

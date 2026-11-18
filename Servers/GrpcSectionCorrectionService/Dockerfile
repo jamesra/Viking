@@ -1,7 +1,6 @@
 # syntax=docker/dockerfile:1
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
-EXPOSE 80
 EXPOSE 443
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
@@ -66,7 +65,7 @@ FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 
-ENV ASPNETCORE_URLS=http://+:80
+ENV ASPNETCORE_URLS=https://+:443
 
 # `docker exec -it <container> correction-menu` opens the status / refresh-volume console.
 RUN printf '#!/bin/sh\nexec dotnet /app/GrpcSectionCorrectionService.dll menu "$@"\n' > /usr/local/bin/correction-menu \

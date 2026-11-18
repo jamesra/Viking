@@ -13,8 +13,8 @@ web        80, 443                viking-proxy          Internet (443 SNI passth
 web        5001, 4001, 6001       viking-identity       Proxy only (issuer, management, WebApi behind
            (5000/4000/6000 h)                           ``https://<identity host>/``, ``/manage/``, ``/webapi/``)
 web        4024                   viking-identity       Loopback only (remote debugger)
-web        5011 (5010 h2c)        viking-annotation     Proxy (5011); 5010 local tests
-web        41443 (41080 h2c)      viking-corrections    Proxy (41443); 41080 local
+web        5011                   viking-annotation     Proxy, tests (self-signed certificate)
+web        41443                  viking-corrections    Proxy
 web        1433                   viking-annotation     Local only (profile ``local-sql``)
 web        8442                   sam2-gallery          Proxy (gallery-router, outside this repo)
 compute    40443                  viking-segmentation   Web host (proxy)

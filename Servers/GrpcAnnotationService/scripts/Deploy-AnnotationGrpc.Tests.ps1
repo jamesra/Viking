@@ -36,7 +36,7 @@ $errors = $null
 $ast = [System.Management.Automation.Language.Parser]::ParseFile($scriptPath, [ref]$tokens, [ref]$errors)
 if ($errors.Count -gt 0) { throw "Cannot parse ${scriptPath}: $($errors[0].Message)" }
 
-$helperNames = 'Get-ProjectName', 'Find-FreePortPair', 'Get-UnfilledKeys', 'Get-ComposeVariables',
+$helperNames = 'Get-ProjectName', 'Find-FreePort', 'Get-UnfilledKeys', 'Get-ComposeVariables',
                'Invoke-ComposeService', 'Get-PublishedPort', 'Get-ServicePorts', 'Test-TlsHandshake',
                'Wait-ServiceReady', 'Start-ComposeProject', 'Get-StatusLine',
                'Read-EnvFileValues', 'Get-HostComposeVariables', 'Get-MissingComposeInputs'
@@ -130,34 +130,30 @@ Describe 'Deploy-AnnotationGrpc helpers' {
         }
     }
 
-    Context 'Find-FreePortPair' {
-        It 'starts at the first port when nothing is in use' {
-            Find-FreePortPair @() | Should Be 5010
+    Context 'Find-FreePort' {
+        It 'starts at the HTTPS port 5011 when nothing is in use' {
+            Find-FreePort @() | Should Be 5011
         }
-        It 'skips a pair whose HTTP port is in use' {
-            Find-FreePortPair @(5010) | Should Be 5012
+        It 'never returns the old h2c port 5010' {
+            Find-FreePort @(5010) | Should Be 5011
         }
-        It 'skips a pair whose HTTPS port (port + 1) is in use' {
-            Find-FreePortPair @(5011) | Should Be 5012
+        It 'skips a busy port, one at a time' {
+            Find-FreePort @(5011) | Should Be 5012
+            Find-FreePort @(5011, 5012, 5014) | Should Be 5013
         }
-        It 'moves past consecutive busy pairs' {
-            Find-FreePortPair @(5010, 5013, 5014) | Should Be 5016
+        It 'skips the reserved Identity DevTest port 5020' {
+            Find-FreePort @(5011..5019) | Should Be 5021
         }
-        It 'skips the reserved Identity DevTest port 5020 as the HTTP port' {
-            Find-FreePortPair @(5010..5019) | Should Be 5022
-        }
-        It 'always returns a pair that is free and not reserved' {
-            foreach ($busy in @(@(), @(5010), @(5011, 5013), @(5010..5030), @(5019, 5020, 5021))) {
-                $p = Find-FreePortPair $busy
+        It 'always returns a port that is free, not reserved and at least the first port' {
+            foreach ($busy in @(@(), @(5011), @(5011, 5013), @(5011..5030), @(5019, 5020, 5021))) {
+                $p = Find-FreePort $busy
                 ($busy -contains $p) | Should Be $false
-                ($busy -contains ($p + 1)) | Should Be $false
                 ($reservedPorts -contains $p) | Should Be $false
-                ($reservedPorts -contains ($p + 1)) | Should Be $false
                 ($p -ge $firstPort) | Should Be $true
             }
         }
-        It 'throws when every pair is taken' {
-            { Find-FreePortPair @($firstPort..65535) } | Should Throw 'No free port pair found.'
+        It 'throws when every port is taken' {
+            { Find-FreePort @($firstPort..65535) } | Should Throw 'No free port found.'
         }
     }
 
@@ -193,19 +189,19 @@ Describe 'Deploy-AnnotationGrpc helpers' {
     }
 
     Context 'Get-ComposeVariables' {
-        It 'maps the port pair and env file to the GRPC_ANNOTATION_* variables' {
-            $v = Get-ComposeVariables 5010 'D:\Docker\Builds\GrpcAnnotationService\RC3.env'
-            $v['GRPC_ANNOTATION_HTTP_PORT'] | Should BeExactly '5010'
+        It 'maps the HTTPS port and env file to the GRPC_ANNOTATION_* variables' {
+            $v = Get-ComposeVariables 5011 'D:\Docker\Builds\GrpcAnnotationService\RC3.env'
+            $v.Contains('GRPC_ANNOTATION_HTTP_PORT') | Should Be $false
             $v['GRPC_ANNOTATION_HTTPS_PORT'] | Should BeExactly '5011'
             $v['GRPC_ANNOTATION_ENV_FILE'] | Should BeExactly 'D:/Docker/Builds/GrpcAnnotationService/RC3.env'
         }
-        It 'sets exactly those three variables, in order, as strings' {
+        It 'sets exactly those two variables, in order, as strings' {
             $v = Get-ComposeVariables 5100 'C:\x.env'
-            @($v.Keys) -join ',' | Should BeExactly 'GRPC_ANNOTATION_HTTP_PORT,GRPC_ANNOTATION_HTTPS_PORT,GRPC_ANNOTATION_ENV_FILE'
+            @($v.Keys) -join ',' | Should BeExactly 'GRPC_ANNOTATION_HTTPS_PORT,GRPC_ANNOTATION_ENV_FILE'
             foreach ($value in $v.Values) { $value.GetType().Name | Should Be 'String' }
         }
         It 'leaves GRPC_ANNOTATION_CORRECTIONS_PATH and ANNOTATION_SQL_* unset' {
-            $v = Get-ComposeVariables 5010 'C:\x.env'
+            $v = Get-ComposeVariables 5011 'C:\x.env'
             $v.Contains('GRPC_ANNOTATION_CORRECTIONS_PATH') | Should Be $false
             @($v.Keys | Where-Object { $_ -like 'ANNOTATION_SQL_*' }).Count | Should Be 0
         }
@@ -213,7 +209,7 @@ Describe 'Deploy-AnnotationGrpc helpers' {
 
     Context 'Get-PublishedPort' {
         $ports = '0.0.0.0:5011->443/tcp, [::]:5011->443/tcp, 0.0.0.0:5010->80/tcp, [::]:5010->80/tcp'
-        It 'returns the host port mapped to 80/tcp' {
+        It 'returns the host port mapped to 80/tcp, as for a project deployed before the service was HTTPS only' {
             Get-PublishedPort $ports 80 | Should Be 5010
         }
         It 'returns the host port mapped to 443/tcp, once, despite the IPv4 and IPv6 rows' {
@@ -271,7 +267,7 @@ Describe 'Deploy-AnnotationGrpc helpers' {
         }
         It 'reports the endpoint and ready when the HTTPS port completes a TLS handshake' {
             Mock Test-TlsHandshake { $true }
-            Get-StatusLine @('0.0.0.0:5010->80/tcp, [::]:5010->80/tcp, 0.0.0.0:5011->443/tcp, [::]:5011->443/tcp') 2000 |
+            Get-StatusLine @('0.0.0.0:5011->443/tcp, [::]:5011->443/tcp') 2000 |
                 Should BeExactly '  Endpoint: https://localhost:5011/  Health: ready'
             Assert-MockCalled Test-TlsHandshake -Exactly 1 -Scope It -ParameterFilter { $Port -eq 5011 -and $TimeoutMilliseconds -eq 2000 }
         }
@@ -398,7 +394,7 @@ Describe 'Deploy-AnnotationGrpc helpers' {
         $repoRoot = 'C:\repo'
         $calls = New-Object System.Collections.ArrayList
         $fake = @{ exit = 0 }
-        function docker { [void]$calls.Add(@{ args = @($args); port = $env:GRPC_ANNOTATION_HTTP_PORT }); $global:LASTEXITCODE = $fake.exit }
+        function docker { [void]$calls.Add(@{ args = @($args); port = $env:GRPC_ANNOTATION_HTTPS_PORT }); $global:LASTEXITCODE = $fake.exit }
 
         It 'runs docker compose for the project and stack file with the arguments in order' {
             $calls.Clear(); $fake.exit = 0
@@ -408,25 +404,25 @@ Describe 'Deploy-AnnotationGrpc helpers' {
         }
         It 'sets the variables only for the call and restores the previous values' {
             $calls.Clear(); $fake.exit = 0
-            $old = $env:GRPC_ANNOTATION_HTTP_PORT
-            $env:GRPC_ANNOTATION_HTTP_PORT = 'before'
+            $old = $env:GRPC_ANNOTATION_HTTPS_PORT
+            $env:GRPC_ANNOTATION_HTTPS_PORT = 'before'
             try {
-                Invoke-ComposeService 'p' @{ GRPC_ANNOTATION_HTTP_PORT = '6010' } @('config', '--quiet')
+                Invoke-ComposeService 'p' @{ GRPC_ANNOTATION_HTTPS_PORT = '6010' } @('config', '--quiet')
                 $calls[0].port | Should BeExactly '6010'
-                $env:GRPC_ANNOTATION_HTTP_PORT | Should BeExactly 'before'
+                $env:GRPC_ANNOTATION_HTTPS_PORT | Should BeExactly 'before'
             }
-            finally { $env:GRPC_ANNOTATION_HTTP_PORT = $old }
+            finally { $env:GRPC_ANNOTATION_HTTPS_PORT = $old }
         }
         It 'throws naming the subcommand on a non-zero exit, and still restores the variables' {
             $calls.Clear(); $fake.exit = 3
-            $old = $env:GRPC_ANNOTATION_HTTP_PORT
-            $env:GRPC_ANNOTATION_HTTP_PORT = 'before'
+            $old = $env:GRPC_ANNOTATION_HTTPS_PORT
+            $env:GRPC_ANNOTATION_HTTPS_PORT = 'before'
             try {
-                { Invoke-ComposeService 'p' @{ GRPC_ANNOTATION_HTTP_PORT = '6010' } @('up', '-d') } |
+                { Invoke-ComposeService 'p' @{ GRPC_ANNOTATION_HTTPS_PORT = '6010' } @('up', '-d') } |
                     Should Throw 'docker compose up failed for p (exit 3).'
-                $env:GRPC_ANNOTATION_HTTP_PORT | Should BeExactly 'before'
+                $env:GRPC_ANNOTATION_HTTPS_PORT | Should BeExactly 'before'
             }
-            finally { $env:GRPC_ANNOTATION_HTTP_PORT = $old; $global:LASTEXITCODE = 0 }
+            finally { $env:GRPC_ANNOTATION_HTTPS_PORT = $old; $global:LASTEXITCODE = 0 }
         }
     }
 
@@ -434,10 +430,10 @@ Describe 'Deploy-AnnotationGrpc helpers' {
         $order = New-Object System.Collections.ArrayList
         Mock Invoke-ComposeService { [void]$order.Add('compose ' + ($Arguments -join ' ')) }
 
-        It 'runs up -d --build, then waits on the HTTPS port (HTTP port + 1) and prints that endpoint' {
+        It 'runs up -d --build, then waits on the HTTPS port and prints that endpoint' {
             $order.Clear()
             Mock Wait-ServiceReady { [void]$order.Add('wait'); $true }
-            $out = Start-ComposeProject 'viking-annotation-rc3' @{ A = '1' } 5010 30 6>&1 | Out-String
+            $out = Start-ComposeProject 'viking-annotation-rc3' @{ A = '1' } 5011 30 6>&1 | Out-String
             @($order) -join ';' | Should BeExactly 'compose up -d --build grpc-annotation-service;wait'
             Assert-MockCalled Invoke-ComposeService -Exactly 1 -Scope It -ParameterFilter { $ProjectName -eq 'viking-annotation-rc3' -and $Variables['A'] -eq '1' }
             Assert-MockCalled Wait-ServiceReady -Exactly 1 -Scope It -ParameterFilter { $Port -eq 5011 -and $TimeoutSeconds -eq 30 }
@@ -445,13 +441,13 @@ Describe 'Deploy-AnnotationGrpc helpers' {
         }
         It 'throws with the endpoint and a logs hint when the port does not answer in time' {
             Mock Wait-ServiceReady { $false }
-            { Start-ComposeProject 'viking-annotation-rc3' @{} 5010 30 6>$null } |
+            { Start-ComposeProject 'viking-annotation-rc3' @{} 5011 30 6>$null } |
                 Should Throw 'viking-annotation-rc3 did not answer on https://localhost:5011/ within 30 s. Check: docker compose --project-name viking-annotation-rc3 logs grpc-annotation-service'
         }
         It 'does not wait when up fails' {
             Mock Invoke-ComposeService { throw 'docker compose up failed' }
             Mock Wait-ServiceReady { $true }
-            { Start-ComposeProject 'p' @{} 5010 30 6>$null } | Should Throw 'docker compose up failed'
+            { Start-ComposeProject 'p' @{} 5011 30 6>$null } | Should Throw 'docker compose up failed'
             Assert-MockCalled Wait-ServiceReady -Exactly 0 -Scope It
         }
     }
@@ -464,7 +460,7 @@ Describe 'Deploy-AnnotationGrpc start step (docker faked)' {
     # `up` always fails, so a run that reaches it stops before waiting on a port.
     function docker {
         $a = @($args)
-        [void]$calls.Add(@{ args = $a; port = $env:GRPC_ANNOTATION_HTTP_PORT })
+        [void]$calls.Add(@{ args = $a; port = $env:GRPC_ANNOTATION_HTTPS_PORT })
         $global:LASTEXITCODE = 0
         if ($a[0] -eq 'ps') { return $fake.ps }
         if ($a -contains 'up') { $global:LASTEXITCODE = 1 }
@@ -491,28 +487,27 @@ Describe 'Deploy-AnnotationGrpc start step (docker faked)' {
         $c[1] | Should BeExactly 'up -d --build grpc-annotation-service'
         $global:LASTEXITCODE = 0
     }
-    It 'a running project keeps the port pair it publishes' {
-        $calls.Clear(); $fake.ps = '0.0.0.0:6010->80/tcp, 0.0.0.0:6011->443/tcp'
+    It 'a running project keeps the HTTPS port it publishes' {
+        $calls.Clear(); $fake.ps = '0.0.0.0:6011->443/tcp'
         & $scriptPath -Database Pester -EnvFile $envPath -WhatIf 6>$null
         $ps = @($calls | Where-Object { $_.args[0] -eq 'ps' })
         $ps.Count | Should Be 1
         ($ps[0].args -join ' ') | Should Match 'label=com\.docker\.compose\.project=viking-annotation-pester'
-        @($calls | Where-Object { $_.args[0] -eq 'compose' })[0].port | Should BeExactly '6010'
+        @($calls | Where-Object { $_.args[0] -eq 'compose' })[0].port | Should BeExactly '6011'
     }
-    It '-Port may name the pair the running project already listens on' {
-        # Two loopback listeners on a consecutive pair stand in for the running project's ports.
+    It '-Port may name the port the running project already listens on' {
+        # A loopback listener stands in for the running project's HTTPS port.
         $listeners = $null
-        for ($p = 42010; $p -lt 42100 -and -not $listeners; $p += 2) {
+        for ($p = 42010; $p -lt 42100 -and -not $listeners; $p++) {
             try {
                 $a = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $p); $a.Start()
-                try { $b = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $p + 1); $b.Start(); $listeners = @($a, $b) }
-                catch { $a.Stop() }
+                $listeners = @($a)
             }
             catch { }
         }
         $port = $listeners[0].LocalEndpoint.Port
         try {
-            $calls.Clear(); $fake.ps = "0.0.0.0:$port->80/tcp"
+            $calls.Clear(); $fake.ps = "0.0.0.0:$port->443/tcp"
             & $scriptPath -Database Pester -EnvFile $envPath -Port $port -WhatIf 6>$null
             @($calls | Where-Object { $_.args[0] -eq 'compose' })[0].port | Should BeExactly ([string]$port)
             $fake.ps = ''

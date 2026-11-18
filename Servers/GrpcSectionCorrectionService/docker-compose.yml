@@ -2,9 +2,10 @@
 #
 # section-correction-service: builds residual section-correction maps per annotation volume and
 # serves them over gRPC at VIKING_HOSTNAME_CORRECTIONS.
-#   container 80  -> host 41080  h2c (and the in-container correction-menu)
-#   container 443 -> host 41443  TLS (VIKING_UPSTREAM_CORRECTIONS). Bound only once
-#                                /certs/${TLS_CERT_NAME}/ exists; viking-certs restarts it then.
+#   container 443 -> host 41443  TLS only (.claude/rules/https-only-servers.md; VIKING_UPSTREAM_CORRECTIONS).
+#                                Bound only once /certs/${TLS_CERT_NAME}/ exists; viking-certs restarts it then.
+#   No plain port is published. Inside the container, port 80 listens on loopback only, for the
+#   in-container `correction-menu` (docker exec); nothing outside the container can reach it.
 #
 #   stack.ps1 up viking-corrections
 #   docker compose -p viking-corrections --env-file <host.env> --env-file <run.env> \
@@ -26,7 +27,6 @@ services:
     env_file:
       - ${SECTION_CORRECTION_ENV_FILE:-${STACK_RUN_DIR:?STACK_RUN_DIR must be set (stack.ps1 exports it)}/${STACK_NAME:-viking-corrections}.run.env}
     ports:
-      - "${SECTION_CORRECTION_HTTP_PORT:-41080}:80"
       - "${SECTION_CORRECTION_HTTPS_PORT:-41443}:443"
     cap_add:
       - NET_BIND_SERVICE

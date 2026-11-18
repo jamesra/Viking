@@ -9,8 +9,8 @@
     databases run side by side without name clashes.
 
     What it does:
-      - Validates the inputs and derives the compose project name and host ports. A project
-        that is already running keeps the port pair it publishes, so a re-run does not move it.
+      - Validates the inputs and derives the compose project name and the host HTTPS port. A project
+        that is already running keeps the port it publishes, so a re-run does not move it.
       - First run: creates the per-database env file from
         config-template/build/docker-env-template.txt (outside the repo, by default under
         D:\Docker\Builds\GrpcAnnotationService\), fills in the database name and, when given,
@@ -51,8 +51,10 @@
     when omitted, the template's server (the local annotation-sql container) is kept.
 
 .PARAMETER Port
-    Host port for HTTP/2 cleartext. HTTPS (used by Viking on .NET 4.8) is Port + 1.
-    Default: the first free pair at or above 5010, skipping 5020 (Identity DevTest).
+    Host HTTPS port of the service (the endpoint Viking uses). The service is HTTPS only: no plain
+    HTTP or h2c port is published (.cursor/rules/https-only-servers.mdc).
+    Default: the port the running project already publishes, else the first free port at or
+    above 5011, skipping 5020 (Identity DevTest).
 
 .PARAMETER Environment
     Test (default) or Production. Production also requires -ConfirmProduction.
@@ -131,7 +133,7 @@ $projectPrefix = 'viking-annotation-'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $templatePath = Join-Path $repoRoot 'Servers\GrpcAnnotationService\config-template\build\docker-env-template.txt'
 $defaultEnvDir = 'D:\Docker\Builds\GrpcAnnotationService'
-$firstPort = 5010
+$firstPort = 5011
 # 5020 was the DevTest Identity port (identity-devtest, since removed); still skipped so old test setups keep working.
 $reservedPorts = @(5020)
 # Seconds to wait after `up` for the HTTPS port to answer.
@@ -164,17 +166,17 @@ function Get-ListeningPorts {
 
 <#
 .SYNOPSIS
-    Returns the first HTTP port at or above $firstPort where Port and Port + 1 are both free.
+    Returns the first HTTPS port at or above $firstPort that is free and not reserved.
 .DESCRIPTION
-    Ports are taken in pairs (h2c, HTTPS) to match the 5010/5011 convention of Servers/GrpcAnnotationService/docker-compose.yml.
+    The default is 5011, the HTTPS port of Servers/GrpcAnnotationService/docker-compose.yml. There is no plain
+    HTTP/h2c companion port, so ports are taken one at a time.
 #>
-function Find-FreePortPair([int[]] $InUse) {
-    for ($p = $firstPort; $p -lt 65534; $p += 2) {
-        if ($InUse -contains $p -or $InUse -contains ($p + 1)) { continue }
-        if ($reservedPorts -contains $p -or $reservedPorts -contains ($p + 1)) { continue }
+function Find-FreePort([int[]] $InUse) {
+    for ($p = $firstPort; $p -lt 65535; $p++) {
+        if ($InUse -contains $p -or $reservedPorts -contains $p) { continue }
         return $p
     }
-    throw 'No free port pair found.'
+    throw 'No free port found.'
 }
 
 <#
@@ -193,18 +195,16 @@ function Get-UnfilledKeys([string[]] $Lines) {
 .SYNOPSIS
     Returns the compose variables Servers/GrpcAnnotationService/docker-compose.yml reads for one per-database project.
 .DESCRIPTION
-    Pure: maps the host port pair and env file to GRPC_ANNOTATION_HTTP_PORT (Port),
-    GRPC_ANNOTATION_HTTPS_PORT (Port + 1) and GRPC_ANNOTATION_ENV_FILE (forward slashes,
+    Pure: maps the host HTTPS port and env file to GRPC_ANNOTATION_HTTPS_PORT and GRPC_ANNOTATION_ENV_FILE (forward slashes,
     as compose files write paths). GRPC_ANNOTATION_CORRECTIONS_PATH is left unset so every
     project mounts the shared corrections folder. The ANNOTATION_SQL_* variables are not
     set: they belong to the local-sql profile (annotation-sql), the local test SQL, which
     a per-database deployment does not use; its database is named in the env file's
     connection string.
 #>
-function Get-ComposeVariables([int] $HttpPort, [string] $EnvFilePath) {
+function Get-ComposeVariables([int] $HttpsPort, [string] $EnvFilePath) {
     return [ordered]@{
-        GRPC_ANNOTATION_HTTP_PORT  = [string]$HttpPort
-        GRPC_ANNOTATION_HTTPS_PORT = [string]($HttpPort + 1)
+        GRPC_ANNOTATION_HTTPS_PORT = [string]$HttpsPort
         GRPC_ANNOTATION_ENV_FILE   = $EnvFilePath.Replace('\', '/')
     }
 }
@@ -311,7 +311,7 @@ function Invoke-ComposeService([string] $ProjectName, [System.Collections.IDicti
 .DESCRIPTION
     Pure. Reads text such as "0.0.0.0:5010->80/tcp, [::]:5010->80/tcp, 0.0.0.0:5011->443/tcp".
     The IPv4 and IPv6 rows of one mapping name the same host port, so the first match is taken.
-    Used with 80 for the h2c port a running project keeps and with 443 for its Viking endpoint.
+    Used with 443 for the HTTPS port a running project keeps, which is also its Viking endpoint.
 #>
 function Get-PublishedPort([string] $Ports, [int] $ContainerPort) {
     if ($Ports -match ":(\d+)->$ContainerPort/tcp") { return [int]$Matches[1] }
@@ -382,14 +382,14 @@ function Wait-ServiceReady([int] $Port, [int] $TimeoutSeconds, [int] $IntervalSe
 
 <#
 .SYNOPSIS
-    Builds and starts grpc-annotation-service for the project, waits for its HTTPS port (HttpPort + 1) and prints the endpoint.
+    Builds and starts grpc-annotation-service for the project, waits for its HTTPS port and prints the endpoint.
 .DESCRIPTION
     Runs `docker compose up -d --build grpc-annotation-service` through Invoke-ComposeService,
     then Wait-ServiceReady. Throws when compose fails or the port does not answer within
     TimeoutSeconds; the containers are left running for `docker compose logs`.
 #>
-function Start-ComposeProject([string] $ProjectName, [System.Collections.IDictionary] $Variables, [int] $HttpPort, [int] $TimeoutSeconds) {
-    $httpsPort = $HttpPort + 1
+function Start-ComposeProject([string] $ProjectName, [System.Collections.IDictionary] $Variables, [int] $HttpsPort, [int] $TimeoutSeconds) {
+    $httpsPort = $HttpsPort
     $endpoint = "https://localhost:$httpsPort/"
     Invoke-ComposeService $ProjectName $Variables @('up', '-d', '--build', $serviceName)
     Write-Host "Waiting up to $TimeoutSeconds s for $endpoint ..."
@@ -474,28 +474,28 @@ if ($envFull.StartsWith($repoRoot.TrimEnd('\') + '\', [System.StringComparison]:
     throw "EnvFile must be outside the repo ($repoRoot): it holds credentials."
 }
 
-# A running project keeps its ports: its own listeners would otherwise make a re-run fail or move it.
+# A running project keeps its port: its own listener would otherwise make a re-run fail or move it.
 $published = $null
 if (Get-Command docker -ErrorAction SilentlyContinue) {
-    $published = Get-PublishedPort ((Get-ServicePorts $project) -join ', ') 80
+    $published = Get-PublishedPort ((Get-ServicePorts $project) -join ', ') 443
 }
 $inUse = Get-ListeningPorts
 if ($PSBoundParameters.ContainsKey('Port')) {
-    if ($Port -ne $published -and ($inUse -contains $Port -or $inUse -contains ($Port + 1))) {
-        throw "Port $Port or $($Port + 1) is already in use on this host."
+    if ($Port -ne $published -and $inUse -contains $Port) {
+        throw "Port $Port is already in use on this host."
     }
 }
 elseif ($published) {
     $Port = $published
 }
 else {
-    $Port = Find-FreePortPair $inUse
+    $Port = Find-FreePort $inUse
 }
 
 Write-Host "Database     : $Database"
 Write-Host "Environment  : $Environment"
 Write-Host "Project      : $project"
-Write-Host "Host ports   : $Port (h2c), $($Port + 1) (HTTPS, Viking endpoint https://localhost:$($Port + 1))"
+Write-Host "Host port    : $Port (HTTPS only, Viking endpoint https://localhost:$Port)"
 Write-Host "Env file     : $envFull"
 
 if (-not (Test-Path -LiteralPath $envFull)) {

@@ -17,7 +17,7 @@ namespace WebAnnotationModel.gRPC.Tests
 {
     /// <summary>
     /// Headless DI host mirroring Viking/VikingAU composition: ConfigureAnnotationModel
-    /// + bearer auth against the Docker test stack (identity :5020, gRPC :5010).
+    /// + bearer auth against the Docker test stack (identity :5020, gRPC https :5011 with the container's self-signed certificate).
     /// </summary>
     internal sealed class AnnotationStoresTestHost : IDisposable
     {
@@ -66,28 +66,16 @@ namespace WebAnnotationModel.gRPC.Tests
             var accessToken = await RequestAccessTokenAsync(identityUrl, identityClient, userIdentity)
                 .ConfigureAwait(false);
 
-            AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-
             var services = new ServiceCollection();
-            // Auth via HTTP handler (works with Insecure credentials). Do not register
-            // IAnnotationAccessTokenProvider — CallCredentials cannot compose with Insecure.
+            // Auth via the HTTP handler; the channel is TLS only, trusting the test stack's pinned certificate.
             services.ConfigureAnnotationModel(
                 opts => opts.Endpoint = new Uri(grpcUrl),
                 channelOpts =>
                 {
-                    var socketsHandler = new SocketsHttpHandler
-                    {
-                        EnableMultipleHttp2Connections = true,
-                        SslOptions =
-                        {
-                            RemoteCertificateValidationCallback = static (_, _, _, _) => true
-                        }
-                    };
                     channelOpts.HttpHandler = new BearerTokenHandler(accessToken)
                     {
-                        InnerHandler = socketsHandler
+                        InnerHandler = TestServerTls.CreateHandler(config)
                     };
-                    channelOpts.Credentials = ChannelCredentials.Insecure;
                 });
 
             var sp = services.BuildServiceProvider();

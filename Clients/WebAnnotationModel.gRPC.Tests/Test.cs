@@ -35,7 +35,7 @@ namespace WebAnnotationModel.gRPC.Tests
     }
 
     /// <summary>
-    /// Integration tests against identity-devtest (:5020) + grpc-annotation-service (:5010)
+    /// Integration tests against identity-devtest (:5020) + grpc-annotation-service (https :5011)
     /// + AnnotationTest SQL. Start with:
     ///   Servers/GrpcAnnotationService/scripts/Start-AnnotationTestStack.ps1 -ApplySchema -Build
     /// Credentials match Servers/IdentityServer/DevTest/Config.cs (testuser / Testing123! / ro.viking).
@@ -44,6 +44,7 @@ namespace WebAnnotationModel.gRPC.Tests
     {
         private string _identityServerUrl;
         private string _grpcServerUrl;
+        private IConfiguration _config;
         private IdentityClientSettings _identityClient;
         private UserIdentity _userIdentity;
 
@@ -55,6 +56,7 @@ namespace WebAnnotationModel.gRPC.Tests
                 .AddJsonFile("appsettings.json", optional: false)
                 .AddEnvironmentVariables()
                 .Build();
+            _config = config;
 
             _identityServerUrl = config["IdentityServer:Endpoint"];
             _grpcServerUrl = config["GrpcServer:Endpoint"];
@@ -3880,26 +3882,13 @@ namespace WebAnnotationModel.gRPC.Tests
 
         private GrpcChannel CreateAuthenticatedChannel(string accessToken)
         {
-            // Test stack serves h2c on :5010 (no TLS cert in the container).
-            AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-
-            var socketsHandler = new SocketsHttpHandler
-            {
-                EnableMultipleHttp2Connections = true,
-                SslOptions =
-                {
-                    RemoteCertificateValidationCallback = static (_, _, _, _) => true
-                }
-            };
-
-            // Inject Bearer on the HTTP layer so auth works with InsecureCredentials
-            // (CallCredentials cannot be composed with InsecureCredentials on older Grpc.Net.Client).
-            var handler = new BearerTokenHandler(accessToken) { InnerHandler = socketsHandler };
+            // The test stack serves gRPC only over HTTPS with the container's self-signed certificate,
+            // which the tests trust explicitly (TestServerTls).
+            var handler = new BearerTokenHandler(accessToken) { InnerHandler = TestServerTls.CreateHandler(_config) };
 
             return GrpcChannel.ForAddress(_grpcServerUrl, new GrpcChannelOptions
             {
-                HttpHandler = handler,
-                Credentials = ChannelCredentials.Insecure
+                HttpHandler = handler
             });
         }
 
