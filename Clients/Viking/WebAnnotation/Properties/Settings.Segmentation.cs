@@ -274,7 +274,7 @@ namespace WebAnnotation.Properties
         /// </summary>
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0.8")]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.75")]
         public double AutoPolygonizeButtonOpacity
         {
             get => (double)this[nameof(AutoPolygonizeButtonOpacity)];
@@ -288,7 +288,7 @@ namespace WebAnnotation.Properties
         /// </summary>
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("500")]
+        [global::System.Configuration.DefaultSettingValueAttribute("300")]
         public int AutoPolygonizeButtonConfirmDelayMs
         {
             get => (int)this[nameof(AutoPolygonizeButtonConfirmDelayMs)];
@@ -302,7 +302,7 @@ namespace WebAnnotation.Properties
         /// </summary>
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("4")]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
         public double AutoPolygonizeButtonConfirmTimeoutSeconds
         {
             get => (double)this[nameof(AutoPolygonizeButtonConfirmTimeoutSeconds)];

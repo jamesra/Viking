@@ -856,7 +856,7 @@ namespace WebAnnotation.WPF.Forms
         }
 
         /// <summary>Starting <see cref="AutoPolygonizeButtonOpacity"/>; matches WebAnnotation's stored default.</summary>
-        public const double DefaultAutoPolygonizeButtonOpacity = 0.8;
+        public const double DefaultAutoPolygonizeButtonOpacity = 0.75;
 
         /// <summary>Faintest allowed <see cref="AutoPolygonizeButtonOpacity"/>.</summary>
         public const double MinAutoPolygonizeButtonOpacity = 0.3;
@@ -882,7 +882,7 @@ namespace WebAnnotation.WPF.Forms
         }
 
         /// <summary>Starting <see cref="AutoPolygonizeButtonConfirmDelayMs"/>; matches WebAnnotation's stored default.</summary>
-        public const int DefaultAutoPolygonizeButtonConfirmDelayMs = 500;
+        public const int DefaultAutoPolygonizeButtonConfirmDelayMs = 300;
 
         /// <summary>Shortest allowed <see cref="AutoPolygonizeButtonConfirmDelayMs"/>.</summary>
         public const int MinAutoPolygonizeButtonConfirmDelayMs = 100;
@@ -908,7 +908,7 @@ namespace WebAnnotation.WPF.Forms
         }
 
         /// <summary>Starting <see cref="AutoPolygonizeButtonConfirmTimeoutSeconds"/>; matches WebAnnotation's stored default.</summary>
-        public const double DefaultAutoPolygonizeButtonConfirmTimeoutSeconds = 4;
+        public const double DefaultAutoPolygonizeButtonConfirmTimeoutSeconds = 2;
 
         /// <summary>Shortest allowed <see cref="AutoPolygonizeButtonConfirmTimeoutSeconds"/>.</summary>
         public const double MinAutoPolygonizeButtonConfirmTimeoutSeconds = 1;

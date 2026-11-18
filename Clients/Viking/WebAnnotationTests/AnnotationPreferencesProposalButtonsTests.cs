@@ -5,7 +5,7 @@ using AnnotationSettings = WebAnnotation.Global.AnnotationSettings;
 namespace WebAnnotationTests
 {
     /// <summary>
-    /// The Proposal buttons preferences: the dialog clamps to the same ranges the stored settings do, and Cancel and
+    /// The Auto-Segmentation Buttons preferences: the dialog clamps to the same ranges the stored settings do, and Cancel and
     /// Reset to Defaults cover them.
     /// </summary>
     [TestClass]

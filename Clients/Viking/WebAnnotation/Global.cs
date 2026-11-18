@@ -1086,7 +1086,7 @@ namespace WebAnnotation
             public const double MAX_AUTOPOLYGONIZE_BUTTON_OPACITY = 1.0;
 
             /// <summary>Starting <see cref="AutoPolygonizeButtonOpacity"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
-            public const double DEFAULT_AUTOPOLYGONIZE_BUTTON_OPACITY = 0.8;
+            public const double DEFAULT_AUTOPOLYGONIZE_BUTTON_OPACITY = 0.75;
 
             /// <summary>Shortest accepted <see cref="AutoPolygonizeButtonConfirmDelayMs"/>.</summary>
             public const int MIN_AUTOPOLYGONIZE_BUTTON_CONFIRM_DELAY_MS = 100;
@@ -1095,7 +1095,7 @@ namespace WebAnnotation
             public const int MAX_AUTOPOLYGONIZE_BUTTON_CONFIRM_DELAY_MS = 2000;
 
             /// <summary>Starting <see cref="AutoPolygonizeButtonConfirmDelayMs"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
-            public const int DEFAULT_AUTOPOLYGONIZE_BUTTON_CONFIRM_DELAY_MS = 500;
+            public const int DEFAULT_AUTOPOLYGONIZE_BUTTON_CONFIRM_DELAY_MS = 300;
 
             /// <summary>Shortest accepted <see cref="AutoPolygonizeButtonConfirmTimeoutSeconds"/>.</summary>
             public const double MIN_AUTOPOLYGONIZE_BUTTON_CONFIRM_TIMEOUT_SECONDS = 1;
@@ -1104,7 +1104,7 @@ namespace WebAnnotation
             public const double MAX_AUTOPOLYGONIZE_BUTTON_CONFIRM_TIMEOUT_SECONDS = 15;
 
             /// <summary>Starting <see cref="AutoPolygonizeButtonConfirmTimeoutSeconds"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
-            public const double DEFAULT_AUTOPOLYGONIZE_BUTTON_CONFIRM_TIMEOUT_SECONDS = 4;
+            public const double DEFAULT_AUTOPOLYGONIZE_BUTTON_CONFIRM_TIMEOUT_SECONDS = 2;
 
             /// <summary>Whether auto-segmentation proposals show their accept and hide buttons.</summary>
             public static bool AutoPolygonizeButtonsEnabled
