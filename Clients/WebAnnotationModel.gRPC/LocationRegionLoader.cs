@@ -43,7 +43,8 @@ namespace WebAnnotationModel.gRPC
         /// Loads the locations in the region through the region cells. Without <see cref="QueryTargets.Server"/> in
         /// <paramref name="queryTargets"/> it only reads the cells and changes no section state. With it, the section is marked
         /// in use and, when the section already has a watermark, one incremental location-link sync fetches deleted links
-        /// (a failure is traced and the locations still returned; cancellation is rethrown). A section without a watermark
+        /// (a failure is reported to <see cref="ServerLoadErrors"/> and the locations still returned; cancellation is rethrown).
+        /// A failed region load is reported there too and rethrown. A section without a watermark
         /// instead has it seeded from the oldest cell query time. <paramref name="foundObjectsCallback"/> is passed to the cell loader.
         /// </summary>
         /// <returns>The locations found in the region.</returns>
@@ -64,9 +65,19 @@ namespace WebAnnotationModel.gRPC
 
             bool hadWatermark = _locations.TryGetSectionQueryTime(sectionNumber, out DateTime lastQueryUtc);
 
-            var result = await _cells.GetObjectsInRegionAsync(
-                VolumeBounds, screenPixelSizeInVolume, sectionNumber, queryTargets, token, foundObjectsCallback)
-                .ConfigureAwait(false);
+            List<LocationObj> result;
+            try
+            {
+                result = await _cells.GetObjectsInRegionAsync(
+                    VolumeBounds, screenPixelSizeInVolume, sectionNumber, queryTargets, token, foundObjectsCallback)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception e) when (!(e is OperationCanceledException))
+            {
+                // Tell the viewer why the section is empty; the caller still sees the failure.
+                ServerLoadErrors.Report("annotations", sectionNumber, e);
+                throw;
+            }
             _locations.MarkSectionUsed(sectionNumber);
 
             if (hadWatermark)
@@ -82,9 +93,7 @@ namespace WebAnnotationModel.gRPC
                 }
                 catch (Exception e)
                 {
-                    Trace.WriteLine(
-                        $"GetLocationLinksForSection failed for section {sectionNumber}: {e.Message}",
-                        "WebAnnotation");
+                    ServerLoadErrors.Report("location links", sectionNumber, e);
                     return result;
                 }
             }

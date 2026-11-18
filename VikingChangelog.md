@@ -19,6 +19,7 @@ gained from about 2026-10-20 on. Earlier changes are not listed.
 
 ## 1.2.111 — not yet released
 
+* **The status bar says why annotations did not load.** When a section's annotations cannot load (a server error, a timeout, or an unreachable server), the status bar shows the reason, with the server's message, instead of leaving the section empty without explanation.
 * **Closed-curve labels load when readable.** Labels on closed curves (smooth outlines) are built in the background only when they are large enough to read on screen, so flipping through dense sections stays responsive. A label that should be visible may appear a moment after you stop panning or zooming in.
 <!-- LocationClosedCurveView: LabelLayout deferred to Task.Run from IsLabelVisible; ctor no longer layouts under ViewIndex lock. Mirrored from Viking-Net4.8. -->
 * **Fix: pen stroke right after changing section.** A pen stroke started before the new section's annotations had finished loading could raise an error instead of drawing. The stroke is now treated as over empty space until they load.

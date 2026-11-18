@@ -204,9 +204,7 @@ namespace WebAnnotationModel.gRPC
             }
             catch (Exception e)
             {
-                Trace.WriteLine(
-                    $"{nameof(RefreshSectionLocationsAsync)} failed for section {SectionNumber}: {e.Message}",
-                    nameof(WebAnnotationModel));
+                ServerLoadErrors.Report("annotations", SectionNumber, e);
             }
             finally
             {
