@@ -36,9 +36,8 @@
     Viking checkout with the built binaries. Default $env:VIKING_REPO_ROOT_HOST, else this script's repo.
 
 .PARAMETER Net48RepoRoot
-    Viking-Net4.8 checkout, where the WCF AnnotationService is built. Default $env:VIKING_NET48_REPO_ROOT, else the old
-    $env:VIKING_LEGACY_REPO_ROOT (from before the checkout was renamed), else Viking-Net4.8 beside RepoRoot.
-    The old name -LegacyRepoRoot still works.
+    Viking-Net4.8 checkout, where the WCF AnnotationService is built. Default $env:VIKING_NET48_REPO_ROOT, else
+    Viking-Net4.8 beside RepoRoot.
 
 .PARAMETER AnnotationSourceBin
     Built WCF AnnotationService bin folder. Default <Net48RepoRoot>\Servers\AnnotationService\AnnotationService\bin.
@@ -91,7 +90,6 @@ param(
     [string[]]$Action = @('Annotation'),
     [string]$DeployRoot = $env:VIKING_IIS_DEPLOY_ROOT,
     [string]$RepoRoot = $env:VIKING_REPO_ROOT_HOST,
-    [Alias('LegacyRepoRoot')]
     [string]$Net48RepoRoot = $env:VIKING_NET48_REPO_ROOT,
     [string]$AnnotationSourceBin,
     [string[]]$Volume,
@@ -107,7 +105,6 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if (-not $RepoRoot) { $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path }
-if (-not $Net48RepoRoot) { $Net48RepoRoot = $env:VIKING_LEGACY_REPO_ROOT }
 if (-not $Net48RepoRoot) { $Net48RepoRoot = Join-Path (Split-Path $RepoRoot -Parent) 'Viking-Net4.8' }
 if (-not $AnnotationSourceBin) { $AnnotationSourceBin = Join-Path $Net48RepoRoot 'Servers\AnnotationService\AnnotationService\bin' }
 if (-not $Volume -and $env:VIKING_IIS_VOLUMES) {
