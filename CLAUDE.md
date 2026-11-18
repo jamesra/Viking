@@ -40,6 +40,7 @@ same way.
 | `.cursor/rules/geometry-placement.mdc` | `MorphologyMesh/**`, `Clients/MonogameTestbed/**`, `ColladaIO/**` |
 | `.cursor/rules/graphics-library-choice.mdc` | MonogameTestbed, Clients/Viking, MonogameXNAGraphicsShared (XNA/Monogame) |
 | `.cursor/rules/grpc-protos-folder.mdc` | `*.proto` (must live in gRPC_Protos) |
+| `.cursor/rules/https-only-servers.mdc` | Servers that can write (gRPC annotation, section correction, Identity, any write path) publish only HTTPS; no plain or h2c port, test stacks included (`docker-compose*.yml`, `Dockerfile*`, server `Program.cs`/`Startup.cs`, `deploy/**`) |
 | `.cursor/rules/https-only-servers.mdc` | Servers that can write (annotation, section correction, Identity, ...) are HTTPS only: compose files publish only the TLS port, test stacks use the container's self-signed certificate and clients trust it explicitly (`docker-compose*.yml`, `Dockerfile*`, `Servers/**/Program.cs`, `Servers/**/scripts`, `deploy/**`) |
 | `.cursor/rules/odata-conventions.mdc` | `*OData*`, `*OpenData*` projects |
 | `.cursor/rules/sam2-pin.mdc` | `Servers/SegmentationServer/Dockerfile` |
