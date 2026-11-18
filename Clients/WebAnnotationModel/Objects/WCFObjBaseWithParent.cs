@@ -1,6 +1,5 @@
 ﻿using AnnotationService.Types;
 using System;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
@@ -49,7 +48,7 @@ namespace WebAnnotationModel.Objects
                         return;
 
                     //When replacing a new object created in the database we can have deleted ourselves from the parent but need to add ourselves again.
-                    if (_Parent.Children.Contains(this) == false)
+                    if (!_Parent.HasChild(this as THISTYPE))
                     {
                         _Parent.AddChild(this as THISTYPE);
 
@@ -100,52 +99,87 @@ namespace WebAnnotationModel.Objects
             }
         }
 
-        readonly ObservableCollection<THISTYPE> _Children = [];
+        /// <summary>
+        /// The loaded children. Region queries complete on WCF callback threads and set <see cref="Parent"/> concurrently,
+        /// so every read and write holds <see cref="childrenLock"/>; a plain list raced there and threw from
+        /// <c>Contains</c>. Change events are raised after the lock is released, since handlers update UI (tree nodes).
+        /// </summary>
+        private readonly System.Collections.Generic.List<THISTYPE> _Children = [];
+
+        private readonly object childrenLock = new();
+
+        private NotifyCollectionChangedEventHandler childrenChanged;
 
         /// <summary>
         /// A snapshot of the children that are loaded in memory. Never null and never contains null; children that
         /// exist only on the server are not listed, and reading this never contacts the server.
         /// </summary>
-        /// <remarks>
-        /// <see cref="_Children"/> is not locked, and the store can remove a child on another thread while the UI
-        /// copies the list. The copy is sized before it is filled, so a concurrent removal leaves null slots at the end;
-        /// those are dropped here so callers can use every element.
-        /// </remarks>
-        public THISTYPE[] Children => Array.FindAll(_Children.ToArray(), child => child is not null);
+        public THISTYPE[] Children
+        {
+            get
+            {
+                lock (childrenLock)
+                    return _Children.ToArray();
+            }
+        }
+
+        internal bool HasChild(THISTYPE child)
+        {
+            lock (childrenLock)
+                return _Children.Contains(child);
+        }
 
         protected void AddChild(THISTYPE child)
         {
-            Debug.Assert(_Children.Contains(child) == false);
-            if (_Children.Contains(child) == false)
-                _Children.Add(child);
-            else
+            NotifyCollectionChangedEventArgs args;
+            lock (childrenLock)
             {
-                //Update the array with the new child?
                 int iChild = _Children.IndexOf(child);
-                _Children[iChild] = child;
-            }//            SetDBActionForChange(); Don't do this, the database doesn't care if the child changes, tables only carry a parent field
+                if (iChild < 0)
+                {
+                    _Children.Add(child);
+                    args = new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, child, _Children.Count - 1);
+                }
+                else
+                {
+                    //Update the array with the new child
+                    THISTYPE old = _Children[iChild];
+                    _Children[iChild] = child;
+                    args = new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, child, old, iChild);
+                }
+            }
+
+            // SetDBActionForChange(); Don't do this, the database doesn't care if the child changes, tables only carry a parent field
+            childrenChanged?.Invoke(this, args);
         }
 
         //Used by store to remove a child without changing the childs parentID.  This can be important after creating a temporary ID and then updating the ID after writing to the database.
         internal void RemoveChild(THISTYPE child)
         {
-            Debug.Assert(_Children.Contains(child));
-            if (_Children.Contains(child))
-                _Children.Remove(child);
-            //            SetDBActionForChange(); Don't do this, the database doesn't care if the child changes, tables only carry a parent field
+            NotifyCollectionChangedEventArgs args;
+            lock (childrenLock)
+            {
+                int iChild = _Children.IndexOf(child);
+                if (iChild < 0)
+                    return;
+
+                _Children.RemoveAt(iChild);
+                args = new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, child, iChild);
+            }
+
+            childrenChanged?.Invoke(this, args);
         }
 
         public event System.Collections.Specialized.NotifyCollectionChangedEventHandler ChildChanged
         {
-            add => _Children.CollectionChanged += value;
-            remove => _Children.CollectionChanged -= value;
+            add => childrenChanged += value;
+            remove => childrenChanged -= value;
         }
 
         public event NotifyCollectionChangedEventHandler CollectionChanged
         {
-            add => ((INotifyCollectionChanged)_Children).CollectionChanged += value;
-
-            remove => ((INotifyCollectionChanged)_Children).CollectionChanged -= value;
+            add => childrenChanged += value;
+            remove => childrenChanged -= value;
         }
 
         /// <summary>
