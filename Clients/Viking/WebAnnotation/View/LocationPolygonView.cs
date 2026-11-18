@@ -172,17 +172,18 @@ namespace WebAnnotation.View
         }
 
         /// <summary>
-        /// Rebuilds the control point circles when <c>PolygonPointOpacity</c> changed since they were last built.
-        /// Called from <see cref="Draw"/> on the render thread each frame, like the radius sync.
+        /// Recolours the control point circles when <c>PolygonPointOpacity</c> changed since they were last drawn.
+        /// Called from <see cref="Draw"/> on the render thread each frame, like the radius sync. Both sides are rounded to
+        /// hundredths: the stored alpha is a byte, so an unrounded setting such as 0.7 never compares equal and the circles
+        /// were rebuilt every frame.
         /// </summary>
         private void SyncControlPointOpacity()
         {
-            float opacity = (float)Global.AnnotationSettings.PolygonPointOpacity;
-            if (Math.Abs(ControlPointView.Alpha - opacity) < 1f / 512f)
+            double opacity = Math.Round(Global.AnnotationSettings.PolygonPointOpacity, 2);
+            if (Math.Round(ControlPointView.Alpha, 2) == opacity)
                 return;
 
-            ControlPointView.Alpha = opacity;
-            ControlPointView.UpdateViews();
+            ControlPointView.Alpha = (float)opacity;
         }
 
         private double _ControlPointRadius;
@@ -198,7 +199,6 @@ namespace WebAnnotation.View
                     if (Initialized && ControlPointView != null)
                     {
                         ControlPointView.PointRadius = value;
-                        ControlPointView.UpdateViews();
                     }
                 }
             }

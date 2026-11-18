@@ -13,7 +13,8 @@ namespace VikingXNAGraphics
 {
     /// <summary>
     /// A vertex array and an index array (<see cref="Edges"/>) with a model matrix, drawn as <see cref="Primitive"/>.
-    /// GPU buffers are built lazily and rebuilt after <see cref="Verticies"/> or <see cref="Edges"/> is replaced.
+    /// GPU buffers are built lazily. A buffer is created again only when its element count or device changes; otherwise new
+    /// vertex or index data (a colour or alpha change, a replaced array of the same length) is uploaded into the one it has.
     /// </summary>
     /// <typeparam name="VERTEXTYPE">Vertex layout; normal and color support are read from its declaration.</typeparam>
     public class MeshModel<VERTEXTYPE> : IViewPosition3D
@@ -30,19 +31,20 @@ namespace VikingXNAGraphics
         public VERTEXTYPE[] Verticies
         {
             get => _verticies;
-            set { _verticies = value; _bufferDirty = true; }
+            set { _verticies = value; _verticesDirty = true; }
         }
 
         private int[] _edges;
         public int[] Edges
         {
             get => _edges;
-            set { _edges = value; _bufferDirty = true; }
+            set { _edges = value; _indicesDirty = true; }
         }
 
         private VertexBuffer _vertexBuffer;
         private IndexBuffer _indexBuffer;
-        private bool _bufferDirty = true;
+        private bool _verticesDirty = true;
+        private bool _indicesDirty = true;
 
         /// <summary>
         /// Vertex buffer for drawing. Valid after EnsureBuffers(device) returns true.
@@ -85,11 +87,12 @@ namespace VikingXNAGraphics
         public bool HasColor => _HasColor;
 
         /// <summary>
-        /// Marks the cached vertex/index buffers as invalid (e.g. after in-place vertex changes). Subclasses may call this.
+        /// Marks the vertex data as changed in place (a colour or alpha change); the next <see cref="EnsureBuffers"/> uploads it
+        /// into the existing vertex buffer. Subclasses may call this.
         /// </summary>
         protected void InvalidateBuffers()
         {
-            _bufferDirty = true;
+            _verticesDirty = true;
         }
 
         /// <summary>
@@ -101,20 +104,32 @@ namespace VikingXNAGraphics
             if (device == null || _verticies == null || _verticies.Length == 0 || _edges == null || _edges.Length == 0)
                 return false;
 
-            if (!_bufferDirty && _vertexBuffer != null && !_vertexBuffer.IsDisposed && _indexBuffer != null && !_indexBuffer.IsDisposed)
-                return true;
+            if (_vertexBuffer is null || _vertexBuffer.IsDisposed || _vertexBuffer.GraphicsDevice != device || _vertexBuffer.VertexCount != _verticies.Length)
+            {
+                _vertexBuffer?.Dispose();
+                _vertexBuffer = new VertexBuffer(device, _verticies[0].VertexDeclaration, _verticies.Length, BufferUsage.None);
+                _verticesDirty = true;
+            }
 
-            _vertexBuffer?.Dispose();
-            _indexBuffer?.Dispose();
+            if (_verticesDirty)
+            {
+                _vertexBuffer.SetData(_verticies, 0, _verticies.Length);
+                _verticesDirty = false;
+            }
 
-            VERTEXTYPE v = _verticies[0];
-            _vertexBuffer = new VertexBuffer(device, v.VertexDeclaration, _verticies.Length, BufferUsage.None);
-            _vertexBuffer.SetData(_verticies, 0, _verticies.Length);
+            if (_indexBuffer is null || _indexBuffer.IsDisposed || _indexBuffer.GraphicsDevice != device || _indexBuffer.IndexCount != _edges.Length)
+            {
+                _indexBuffer?.Dispose();
+                _indexBuffer = new IndexBuffer(device, IndexElementSize.ThirtyTwoBits, _edges.Length, BufferUsage.None);
+                _indicesDirty = true;
+            }
 
-            _indexBuffer = new IndexBuffer(device, IndexElementSize.ThirtyTwoBits, _edges.Length, BufferUsage.None);
-            _indexBuffer.SetData(_edges, 0, _edges.Length);
+            if (_indicesDirty)
+            {
+                _indexBuffer.SetData(_edges, 0, _edges.Length);
+                _indicesDirty = false;
+            }
 
-            _bufferDirty = false;
             return true;
         }
 

@@ -258,7 +258,12 @@ namespace VikingXNAGraphics
             }
         }
 
-        public EffectTechnique CurrentTechnique => this.effect.CurrentTechnique;
+        /// <summary>The technique in use; settable so a draw that switches technique can put the caller's back.</summary>
+        public EffectTechnique CurrentTechnique
+        {
+            get => this.effect.CurrentTechnique;
+            set => this.effect.CurrentTechnique = value;
+        }
 
         /// <summary>
         /// Radius fraction (0 = center, 1 = rim) where the fully opaque band of <see cref="Techniques.CircleRingOverlayEffect"/>

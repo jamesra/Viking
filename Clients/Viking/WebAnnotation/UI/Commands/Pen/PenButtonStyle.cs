@@ -4,7 +4,9 @@ using System;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using VikingXNAGraphics;
+using Viking.UI.Controls;
 using GeometryCircle = Geometry.Circle;
+using GeometryVector2 = Geometry.Vector2;
 
 namespace WebAnnotation.UI.Commands
 {
@@ -14,6 +16,18 @@ namespace WebAnnotation.UI.Commands
     /// </summary>
     internal static class PenButtonStyle
     {
+        /// <summary>
+        /// Where the viewer's screen sits in the world: the world positions of the top-left pixel and of one pixel right of
+        /// and below it. Buttons pinned to the screen rebuild their views only when this, the viewer size or the docked
+        /// chrome changes (a pan, zoom, rotation or resize), not on every frame.
+        /// </summary>
+        internal readonly record struct ScreenFrame(GeometryVector2 Origin, GeometryVector2 OnePixelRight, GeometryVector2 OnePixelDown, int ClientWidth, System.Windows.Forms.Padding Insets)
+        {
+            public static ScreenFrame Of(SectionViewerControl parent) => new(
+                parent.ScreenToWorld(0, 0), parent.ScreenToWorld(1, 0), parent.ScreenToWorld(0, 1),
+                parent.ClientSize.Width, parent.DockedChromeInsets);
+        }
+
         /// <summary>The ring is drawn at the disc's own radius, so its band is the outermost slice of the button.</summary>
         internal const double RingScale = 1.0;
 

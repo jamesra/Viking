@@ -45,7 +45,7 @@ namespace VikingXNAGraphics
             set
             {
                 _Color = value;
-                UpdateViews();
+                OnColorChanged();
             }
         }
 
@@ -56,11 +56,17 @@ namespace VikingXNAGraphics
             set
             {
                 _Color = _Color.SetAlpha(value);
-                UpdateViews();
+                OnColorChanged();
             }
         }
 
         public abstract void UpdateViews();
+
+        /// <summary>
+        /// <see cref="Color"/> or <see cref="Alpha"/> changed. Rebuilds the views unless a subclass can recolour the ones it
+        /// has: an animated alpha (the segmentation prompt pulse) sets it every frame.
+        /// </summary>
+        protected virtual void OnColorChanged() => UpdateViews();
 
         internal virtual void OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e) => UpdateViews();
 

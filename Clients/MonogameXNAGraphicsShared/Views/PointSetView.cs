@@ -100,6 +100,19 @@ namespace VikingXNAGraphics
             _PointRadius = defaultRadius;
         }
 
+        /// <summary>Recolours the existing point circles; rebuilds only when they no longer match the points.</summary>
+        protected override void OnColorChanged()
+        {
+            if (Points is null || PointViews is null || PointViews.Length == 0 || PointViews.Length != Points.Count)
+            {
+                UpdateViews();
+                return;
+            }
+
+            foreach (CircleView view in PointViews)
+                view.Color = Color;
+        }
+
         public override void UpdateViews()
         {
             if (Points is null)

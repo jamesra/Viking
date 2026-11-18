@@ -253,7 +253,8 @@ namespace VikingXNAGraphics
         public static void Draw(GraphicsDevice device,
                           VikingXNA.IScene scene,
                           OverlayShaderEffect overlayEffect,
-                          TextureCircleView[] listToDraw)
+                          TextureCircleView[] listToDraw,
+                          bool opacityAsIfDrawnTwice = false)
         {
             if (listToDraw.Length == 0)
                 return;
@@ -305,7 +306,7 @@ namespace VikingXNAGraphics
                         }
                     }
 
-                    overlayEffect.AnnotationColorHSL = cv.HSLColor;
+                    overlayEffect.AnnotationColorHSL = opacityAsIfDrawnTwice ? WithOpacityAsIfDrawnTwice(cv.HSLColor) : cv.HSLColor;
                     overlayEffect.WorldViewProjMatrix = (cv.ModelMatrix * scene.World) * scene.ViewProj;
                     overlayEffect.InputLumaAlphaValue = 0f;
                     /*
@@ -334,6 +335,18 @@ namespace VikingXNAGraphics
             }
 
             TextureCircleView.RestoreGraphicsDevice(device, overlayEffect);
+        }
+
+        /// <summary>
+        /// <paramref name="color"/> with the opacity two overlapping draws of it give, 1 - (1 - a)^2. The markers drawn
+        /// through <see cref="CircleView.Draw(GraphicsDevice, IScene, OverlayStyle, IRenderable[])"/> (adjacent-section
+        /// arrows, overlapped-link markers, pen action buttons) had their look tuned when that path drew them twice.
+        /// </summary>
+        internal static Color WithOpacityAsIfDrawnTwice(Color color)
+        {
+            float a = color.A / 255f;
+            color.A = (byte)Math.Round(255f * a * (2f - a));
+            return color;
         }
 
         public override void Draw(GraphicsDevice device, IScene scene, OverlayStyle Overlay)
@@ -792,19 +805,24 @@ namespace VikingXNAGraphics
             device.Indices = GlobalPrimitives.GetUnitCircleIndexBuffer(device);
             device.SetVertexBuffer(GlobalPrimitives.GetUnitCircleVertexBuffer(device));
 
-            //Draw textured circles in the array
-            TextureCircleView[] arrayTextureCircles = [.. listToDraw.Select(c => c as TextureCircleView).Where(c => c as TextureCircleView != null)];
-            TextureCircleView.Draw(device, scene, overlayEffect, arrayTextureCircles);
+            //Draw textured circles in the array. They switch the technique, so the caller's is put back for the solid circles.
+            TextureCircleView[] arrayTextureCircles = [.. listToDraw.OfType<TextureCircleView>()];
+            if (arrayTextureCircles.Length > 0)
+            {
+                EffectTechnique solidTechnique = overlayEffect.CurrentTechnique;
+                TextureCircleView.Draw(device, scene, overlayEffect, arrayTextureCircles);
+                overlayEffect.CurrentTechnique = solidTechnique;
+                device.Indices = GlobalPrimitives.GetUnitCircleIndexBuffer(device);
+                device.SetVertexBuffer(GlobalPrimitives.GetUnitCircleVertexBuffer(device));
+            }
 
             //Draw untextured circles in the array
-            listToDraw = [.. listToDraw.Where(c => c as TextureCircleView is null)];
-            if (listToDraw.Length == 0)
+            CircleView[] arraySolidCircles = arrayTextureCircles.Length == 0 ? listToDraw : [.. listToDraw.Where(c => c is not TextureCircleView)];
+            if (arraySolidCircles.Length == 0)
             {
                 RingCircleView.Draw(device, scene, overlayEffect, arrayRingCircles);
                 return;
             }
-
-            CircleView[] arraySolidCircles = [.. listToDraw.Where(c => c as TextureCircleView is null)];
 
             //CircleView.SetupGraphicsDevice(device, overlayEffect);
             //overlayEffect.Technique = OverlayShaderEffect.Techniques.CircleSingleColorAlphaOverlayEffect;
@@ -861,8 +879,18 @@ namespace VikingXNAGraphics
             OverlayShaderEffect overlayEffect = VikingXNAGraphics.DeviceEffectsStore<OverlayShaderEffect>.TryGet(device);
             overlayEffect.Technique = GetTechnique(Overlay);
 
-            CircleView.Draw(device, scene, overlayEffect, [.. items.Select(i => i as CircleView).Where(i => i != null)]);
-            TextureCircleView.Draw(device, scene, overlayEffect, [.. items.Select(i => i as TextureCircleView).Where(i => i != null)]);
+            CircleView[] circles = [.. items.OfType<CircleView>()];
+            TextureCircleView[] textured = [.. circles.OfType<TextureCircleView>()];
+            if (textured.Length > 0)
+            {
+                device.Indices = GlobalPrimitives.GetUnitCircleIndexBuffer(device);
+                device.SetVertexBuffer(GlobalPrimitives.GetUnitCircleVertexBuffer(device));
+                TextureCircleView.Draw(device, scene, overlayEffect, textured, opacityAsIfDrawnTwice: true);
+                overlayEffect.Technique = GetTechnique(Overlay);
+                circles = [.. circles.Where(c => c is not TextureCircleView)];
+            }
+
+            CircleView.Draw(device, scene, overlayEffect, circles);
         }
 
         public virtual void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items) => CircleView.Draw(device, scene, Overlay, items);

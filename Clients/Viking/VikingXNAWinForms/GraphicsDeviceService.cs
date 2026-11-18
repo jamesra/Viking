@@ -223,6 +223,7 @@ namespace VikingXNAWinForms
 
             GlobalPrimitives.ClearDeviceDependentCaches();
             CircleView.ClearDeviceDependentCaches();
+            DeviceStateManager.ClearDeviceDependentCaches();
 
             // Clear font store
             DeviceFontStore.ClearAll();

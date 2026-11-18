@@ -51,6 +51,11 @@ namespace WebAnnotation.UI.Commands
 
         private LabelView? caption;
 
+        /// <summary>The views drawn for <see cref="cachedFrame"/>; rebuilt only when the screen frame changes.</summary>
+        private PenButtonStyle.ScreenFrame? cachedFrame;
+        private CircleView[] discViews = [];
+        private PolyLineView[] glyphViews = [];
+
         private readonly SectionViewerControl parent = parent ?? throw new ArgumentNullException(nameof(parent));
 
         /// <summary>
@@ -76,32 +81,38 @@ namespace WebAnnotation.UI.Commands
         /// <summary>Draws the button over the scene. Depth testing should already be off.</summary>
         internal void Draw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene)
         {
-            double downsample = parent.Downsample;
-            (double cx, double cy) = CenterOf(parent.ClientSize.Width, parent.DockedChromeInsets);
-            GeometryVector2 centerWorld = parent.ScreenToWorld(cx, cy);
-            GeometryCircle disc = new(centerWorld, RadiusPixels * downsample);
+            PenButtonStyle.ScreenFrame frame = PenButtonStyle.ScreenFrame.Of(parent);
+            if (cachedFrame != frame)
+                Rebuild(frame);
 
             // 50% black backing so the red X and white caption read on any tissue, then the red ring.
-            CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha,
-                [new CircleView(disc, Color.Black) { Alpha = PenButtonStyle.DiscAlpha }, PenButtonStyle.RingFor(disc, RedColor)]);
-
-            foreach (GeometryVector2[] stroke in Glyph())
-            {
-                PolyLineView line = new(
-                    stroke.Select(offset => parent.ScreenToWorld(cx + offset.X, cy + offset.Y)),
-                    RedColor,
-                    null,
-                    GlyphLineWidthPixels * downsample);
+            CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, discViews);
+            foreach (PolyLineView line in glyphViews)
                 line.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
-            }
 
-            if (parent.spriteBatch is null || parent.fontArial is null)
+            if (parent.spriteBatch is null || parent.fontArial is null || caption is null)
                 return;
+
+            LabelView.Draw(parent.spriteBatch, parent.fontArial, scene, [caption]);
+        }
+
+        private void Rebuild(PenButtonStyle.ScreenFrame frame)
+        {
+            double downsample = parent.Downsample;
+            (double cx, double cy) = CenterOf(frame.ClientWidth, frame.Insets);
+            GeometryCircle disc = new(parent.ScreenToWorld(cx, cy), RadiusPixels * downsample);
+
+            discViews = [new CircleView(disc, Color.Black) { Alpha = PenButtonStyle.DiscAlpha }, PenButtonStyle.RingFor(disc, RedColor)];
+            glyphViews = [.. Glyph().Select(stroke => new PolyLineView(
+                stroke.Select(offset => parent.ScreenToWorld(cx + offset.X, cy + offset.Y)),
+                RedColor,
+                null,
+                GlyphLineWidthPixels * downsample))];
 
             caption ??= new LabelView("Cancel", GeometryVector2.Zero, Color.White, Alignment.CenterCenter, Anchor.CenterCenter, scaleFontWithScene: true);
             caption.Position = parent.ScreenToWorld(cx, cy + CaptionDropPixels);
             caption.FontSize = CaptionFontPixels * downsample;
-            LabelView.Draw(parent.spriteBatch, parent.fontArial, scene, [caption]);
+            cachedFrame = frame;
         }
 
         /// <summary>The strokes of the X as pixel offsets from the centre (x right, y down).</summary>

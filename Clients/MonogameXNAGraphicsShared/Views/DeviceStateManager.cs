@@ -14,18 +14,94 @@ namespace VikingXNAGraphics
         static RasterizerState OriginalRasterState;
         static DepthStencilState OriginalDepthState;
 
-        static BlendState ShapeRendererBlendState = null;
-        static ColorWriteChannels ShapeRendererColorWriteChannels;
         static RasterizerState ShapeRendererRasterizerState = null;
 
         static BlendState BackgroundRendererBlendState = null;
         static RasterizerState BackgroundRendererRasterizerState = null;
 
-        static DepthStencilState depthstencilState;
-        static CompareFunction? CachedDepthFunction;
-        static int? CachedStencilReference;
-        static CompareFunction? CachedStencilFunction;
-        static bool? CachedStencilEnable;
+        /// <summary>
+        /// Every depth-stencil and shape blend state handed out so far, one per device and full set of settings. The
+        /// annotation passes switch stencil reference, compare function and colour writes back and forth many times a
+        /// frame; each combination is created once and reused. They are never disposed here: a caller may have saved one
+        /// as its "original" to restore later, and the set of combinations in use is small.
+        /// </summary>
+        private static readonly Dictionary<(GraphicsDevice Device, DepthStencilDescription Description), DepthStencilState> DepthStencilStates = [];
+        private static readonly Dictionary<(GraphicsDevice Device, ColorWriteChannels Channels), BlendState> ShapeBlendStates = [];
+        private static readonly object StateCacheLock = new();
+
+        /// <summary>The settings of a fresh <see cref="DepthStencilState"/>, which the setters below start from.</summary>
+        private static readonly DepthStencilDescription FreshDepthStencil = DepthStencilDescription.Of(new DepthStencilState());
+
+        /// <summary>All settings of a <see cref="DepthStencilState"/>, as a dictionary key.</summary>
+        private record struct DepthStencilDescription(
+            bool DepthBufferEnable,
+            bool DepthBufferWriteEnable,
+            CompareFunction DepthBufferFunction,
+            bool StencilEnable,
+            CompareFunction StencilFunction,
+            StencilOperation StencilPass,
+            StencilOperation StencilFail,
+            StencilOperation StencilDepthBufferFail,
+            int StencilMask,
+            int StencilWriteMask,
+            bool TwoSidedStencilMode,
+            int ReferenceStencil,
+            CompareFunction CounterClockwiseStencilFunction,
+            StencilOperation CounterClockwiseStencilPass,
+            StencilOperation CounterClockwiseStencilFail,
+            StencilOperation CounterClockwiseStencilDepthBufferFail)
+        {
+            public static DepthStencilDescription Of(DepthStencilState state) => new(
+                state.DepthBufferEnable, state.DepthBufferWriteEnable, state.DepthBufferFunction,
+                state.StencilEnable, state.StencilFunction, state.StencilPass, state.StencilFail, state.StencilDepthBufferFail,
+                state.StencilMask, state.StencilWriteMask, state.TwoSidedStencilMode, state.ReferenceStencil,
+                state.CounterClockwiseStencilFunction, state.CounterClockwiseStencilPass,
+                state.CounterClockwiseStencilFail, state.CounterClockwiseStencilDepthBufferFail);
+
+            public DepthStencilState Create() => new()
+            {
+                DepthBufferEnable = DepthBufferEnable,
+                DepthBufferWriteEnable = DepthBufferWriteEnable,
+                DepthBufferFunction = DepthBufferFunction,
+                StencilEnable = StencilEnable,
+                StencilFunction = StencilFunction,
+                StencilPass = StencilPass,
+                StencilFail = StencilFail,
+                StencilDepthBufferFail = StencilDepthBufferFail,
+                StencilMask = StencilMask,
+                StencilWriteMask = StencilWriteMask,
+                TwoSidedStencilMode = TwoSidedStencilMode,
+                ReferenceStencil = ReferenceStencil,
+                CounterClockwiseStencilFunction = CounterClockwiseStencilFunction,
+                CounterClockwiseStencilPass = CounterClockwiseStencilPass,
+                CounterClockwiseStencilFail = CounterClockwiseStencilFail,
+                CounterClockwiseStencilDepthBufferFail = CounterClockwiseStencilDepthBufferFail,
+            };
+        }
+
+        /// <summary>The shared state with <paramref name="description"/>'s settings on <paramref name="device"/>.</summary>
+        private static DepthStencilState DepthStencilStateFor(GraphicsDevice device, DepthStencilDescription description)
+        {
+            lock (StateCacheLock)
+            {
+                if (DepthStencilStates.TryGetValue((device, description), out DepthStencilState state) && !state.IsDisposed)
+                    return state;
+
+                state = description.Create();
+                DepthStencilStates[(device, description)] = state;
+                return state;
+            }
+        }
+
+        /// <summary>Drops the cached states after a device reset. Called from GraphicsDeviceService.ClearDeviceDependentCaches.</summary>
+        public static void ClearDeviceDependentCaches()
+        {
+            lock (StateCacheLock)
+            {
+                DepthStencilStates.Clear();
+                ShapeBlendStates.Clear();
+            }
+        }
 
         public static void SaveDeviceState(GraphicsDevice graphicsDevice)
         {
@@ -48,32 +124,27 @@ namespace VikingXNAGraphics
 
         public static void SetRenderStateForShapes(GraphicsDevice graphicsDevice, ColorWriteChannels colorWriteChannels = ColorWriteChannels.All)
         {
-            // BlendState cannot be mutated after use. DrawBackgrounds does a Z-only pass (None) then a
-            // color pass (All). Caching a single state left ColorWriteChannels stuck at whichever was
-            // requested first — often None once annotations load early enough to hit DrawBackgrounds
-            // before any All caller, which shows labels (SpriteBatch) without shape graphics.
-            if (ShapeRendererBlendState is null || ShapeRendererBlendState.IsDisposed
-                || ShapeRendererColorWriteChannels != colorWriteChannels)
+            // BlendState cannot be mutated after use. DrawBackgrounds does a Z-only pass (None) then a colour pass (All),
+            // so there is one shared state per ColorWriteChannels value.
+            BlendState state;
+            lock (StateCacheLock)
             {
-                BlendState previous = ShapeRendererBlendState;
-                ShapeRendererBlendState = new BlendState
+                if (!ShapeBlendStates.TryGetValue((graphicsDevice, colorWriteChannels), out state) || state.IsDisposed)
                 {
-                    AlphaSourceBlend = Blend.SourceAlpha,
-                    AlphaDestinationBlend = Blend.InverseSourceAlpha,
-                    ColorSourceBlend = Blend.SourceAlpha,
-                    ColorDestinationBlend = Blend.InverseSourceAlpha,
-                    Name = "BlendShapes",
-                    ColorWriteChannels = colorWriteChannels
-                };
-                ShapeRendererColorWriteChannels = colorWriteChannels;
-                graphicsDevice.BlendState = ShapeRendererBlendState;
-                if (previous is not null && !previous.IsDisposed)
-                    previous.Dispose();
+                    state = new BlendState
+                    {
+                        AlphaSourceBlend = Blend.SourceAlpha,
+                        AlphaDestinationBlend = Blend.InverseSourceAlpha,
+                        ColorSourceBlend = Blend.SourceAlpha,
+                        ColorDestinationBlend = Blend.InverseSourceAlpha,
+                        Name = "BlendShapes",
+                        ColorWriteChannels = colorWriteChannels
+                    };
+                    ShapeBlendStates[(graphicsDevice, colorWriteChannels)] = state;
+                }
             }
-            else
-            {
-                graphicsDevice.BlendState = ShapeRendererBlendState;
-            }
+
+            graphicsDevice.BlendState = state;
         }
 
         public static void SetRasterizerStateForShapes(GraphicsDevice graphicsDevice)
@@ -125,95 +196,59 @@ namespace VikingXNAGraphics
         }
 
 
+        /// <summary>Depth testing with <paramref name="depthFunction"/> and depth writes on; the stencil settings in use are kept.</summary>
         public static void SetDepthBuffer(GraphicsDevice device, CompareFunction depthFunction = CompareFunction.LessEqual)
         {
-            if (depthstencilState is null || depthstencilState.IsDisposed || CachedDepthFunction != depthFunction)
+            DepthStencilState current = device.DepthStencilState;
+            DepthStencilDescription description = current is null
+                ? FreshDepthStencil
+                : FreshDepthStencil with
+                {
+                    StencilDepthBufferFail = current.StencilDepthBufferFail,
+                    StencilEnable = current.StencilEnable,
+                    StencilFail = current.StencilFail,
+                    StencilFunction = current.StencilFunction,
+                    StencilMask = current.StencilMask,
+                    StencilPass = current.StencilPass,
+                    StencilWriteMask = current.StencilWriteMask,
+                    TwoSidedStencilMode = current.TwoSidedStencilMode,
+                    ReferenceStencil = current.ReferenceStencil,
+                };
+
+            device.DepthStencilState = DepthStencilStateFor(device, description with
             {
-                DepthStencilState previous = depthstencilState;
-                depthstencilState = new DepthStencilState();
-                CopyStencilSettings(depthstencilState, device.DepthStencilState);
-                depthstencilState.DepthBufferEnable = true;
-                depthstencilState.DepthBufferWriteEnable = true;
-                depthstencilState.DepthBufferFunction = depthFunction;
-                CachedDepthFunction = depthFunction;
-                // Stencil fields were copied from the previous device state; refresh cache to match.
-                CachedStencilReference = depthstencilState.ReferenceStencil;
-                CachedStencilFunction = depthstencilState.StencilFunction;
-                CachedStencilEnable = depthstencilState.StencilEnable;
-                device.DepthStencilState = depthstencilState;
-                if (previous is not null && !previous.IsDisposed)
-                    previous.Dispose();
-            }
-            else
-            {
-                device.DepthStencilState = depthstencilState;
-            }
+                DepthBufferEnable = true,
+                DepthBufferWriteEnable = true,
+                DepthBufferFunction = depthFunction,
+            });
         }
 
-
+        /// <summary>Stencil test against <paramref name="StencilValue"/>, replacing on pass; the depth settings in use are kept.</summary>
         public static void SetDepthStencilValue(GraphicsDevice device, int StencilValue, CompareFunction stencilFunction = CompareFunction.GreaterEqual, bool stencilEnable = true)
         {
-            if (depthstencilState is null || depthstencilState.IsDisposed
-                || CachedStencilReference != StencilValue
-                || CachedStencilFunction != stencilFunction
-                || CachedStencilEnable != stencilEnable)
+            DepthStencilState current = device.DepthStencilState;
+            DepthStencilDescription description = current is null
+                ? FreshDepthStencil with { DepthBufferEnable = true, DepthBufferWriteEnable = true, DepthBufferFunction = CompareFunction.LessEqual }
+                : FreshDepthStencil with
+                {
+                    CounterClockwiseStencilDepthBufferFail = current.CounterClockwiseStencilDepthBufferFail,
+                    CounterClockwiseStencilFail = current.CounterClockwiseStencilFail,
+                    CounterClockwiseStencilFunction = current.CounterClockwiseStencilFunction,
+                    CounterClockwiseStencilPass = current.CounterClockwiseStencilPass,
+                    DepthBufferEnable = current.DepthBufferEnable,
+                    DepthBufferFunction = current.DepthBufferFunction,
+                    DepthBufferWriteEnable = current.DepthBufferWriteEnable,
+                };
+
+            device.DepthStencilState = DepthStencilStateFor(device, description with
             {
-                DepthStencilState previous = depthstencilState;
-                depthstencilState = new DepthStencilState();
-                CopyDepthSettings(depthstencilState, device.DepthStencilState);
-                depthstencilState.StencilEnable = stencilEnable;
-                depthstencilState.StencilFunction = stencilFunction;
-                depthstencilState.ReferenceStencil = StencilValue;
-                depthstencilState.StencilPass = StencilOperation.Replace;
-                CachedStencilReference = StencilValue;
-                CachedStencilFunction = stencilFunction;
-                CachedStencilEnable = stencilEnable;
-                CachedDepthFunction = depthstencilState.DepthBufferFunction;
-                device.DepthStencilState = depthstencilState;
-                if (previous is not null && !previous.IsDisposed)
-                    previous.Dispose();
-            }
-            else
-            {
-                device.DepthStencilState = depthstencilState;
-            }
+                StencilEnable = stencilEnable,
+                StencilFunction = stencilFunction,
+                ReferenceStencil = StencilValue,
+                StencilPass = StencilOperation.Replace,
+            });
         }
 
         public static int GetDepthStencilValue(GraphicsDevice device) => device.DepthStencilState.ReferenceStencil;
-
-        private static void CopyDepthSettings(DepthStencilState DestState, DepthStencilState SrcState)
-        {
-            if (SrcState is null)
-            {
-                DestState.DepthBufferEnable = true;
-                DestState.DepthBufferWriteEnable = true;
-                DestState.DepthBufferFunction = CompareFunction.LessEqual;
-                return;
-            }
-
-            DestState.CounterClockwiseStencilDepthBufferFail = SrcState.CounterClockwiseStencilDepthBufferFail;
-            DestState.CounterClockwiseStencilFail = SrcState.CounterClockwiseStencilFail;
-            DestState.CounterClockwiseStencilFunction = SrcState.CounterClockwiseStencilFunction;
-            DestState.CounterClockwiseStencilPass = SrcState.CounterClockwiseStencilPass;
-            DestState.DepthBufferEnable = SrcState.DepthBufferEnable;
-            DestState.DepthBufferFunction = SrcState.DepthBufferFunction;
-            DestState.DepthBufferWriteEnable = SrcState.DepthBufferWriteEnable;
-        }
-
-        private static void CopyStencilSettings(DepthStencilState DestState, DepthStencilState SrcState)
-        {
-            if (SrcState is null)
-                return;
-
-            DestState.StencilDepthBufferFail = SrcState.StencilDepthBufferFail;
-            DestState.StencilEnable = SrcState.StencilEnable;
-            DestState.StencilFail = SrcState.StencilFail;
-            DestState.StencilFunction = SrcState.StencilFunction;
-            DestState.StencilMask = SrcState.StencilMask;
-            DestState.StencilPass = SrcState.StencilPass;
-            DestState.StencilWriteMask = SrcState.StencilWriteMask;
-            DestState.TwoSidedStencilMode = SrcState.TwoSidedStencilMode;
-            DestState.ReferenceStencil = SrcState.ReferenceStencil;
-        }
     }
 }

@@ -50,6 +50,11 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
         private readonly SectionViewerControl parent = parent ?? throw new ArgumentNullException(nameof(parent));
 
+        /// <summary>The views drawn for <see cref="cachedKey"/>; rebuilt only when the screen frame or the button set changes.</summary>
+        private (PenButtonStyle.ScreenFrame Frame, bool IncludeSkip, bool IncludePaintActions)? cachedKey;
+        private CircleView[] discViews = [];
+        private PolyLineView[] glyphViews = [];
+
         /// <summary>
         /// The buttons shown, top to bottom. Skip is offered only when there is a dragged polygon to fall back to;
         /// resubmit and clear only by the paint command (<paramref name="includePaintActions"/>).
@@ -96,31 +101,43 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// <summary>Draws the buttons over the scene. Depth testing should already be off.</summary>
         internal void Draw(GraphicsDevice graphicsDevice, VikingXNA.Scene scene, bool includeSkip, bool includePaintActions = false)
         {
+            var key = (PenButtonStyle.ScreenFrame.Of(parent), includeSkip, includePaintActions);
+            if (cachedKey != key)
+                Rebuild(key.Item1, includeSkip, includePaintActions);
+
+            CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, discViews);
+            foreach (PolyLineView line in glyphViews)
+                line.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+        }
+
+        private void Rebuild(PenButtonStyle.ScreenFrame frame, bool includeSkip, bool includePaintActions)
+        {
             IReadOnlyList<SegmentationPenButton> buttons = Layout(includeSkip, includePaintActions);
             double downsample = parent.Downsample;
-            int width = parent.ClientSize.Width;
-            Padding insets = parent.DockedChromeInsets;
+            List<CircleView> discs = new(buttons.Count * 2);
+            List<PolyLineView> glyphs = [];
 
             for (int i = 0; i < buttons.Count; i++)
             {
-                (double cx, double cy) = CenterOf(i, width, insets);
-                GeometryVector2 centerWorld = parent.ScreenToWorld(cx, cy);
-
-                GeometryCircle circle = new(centerWorld, RadiusPixels * downsample);
+                (double cx, double cy) = CenterOf(i, frame.ClientWidth, frame.Insets);
+                GeometryCircle circle = new(parent.ScreenToWorld(cx, cy), RadiusPixels * downsample);
                 Color color = DiscColor(buttons[i]);
-                CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha,
-                    [new CircleView(circle, color) { Alpha = PenButtonStyle.DiscAlpha }, PenButtonStyle.RingFor(circle, color)]);
+                discs.Add(new CircleView(circle, color) { Alpha = PenButtonStyle.DiscAlpha });
+                discs.Add(PenButtonStyle.RingFor(circle, color));
 
                 foreach (GeometryVector2[] stroke in Glyph(buttons[i]))
                 {
-                    PolyLineView line = new(
+                    glyphs.Add(new PolyLineView(
                         stroke.Select(offset => parent.ScreenToWorld(cx + offset.X, cy + offset.Y)),
                         Color.White,
                         null,
-                        GlyphLineWidthPixels * downsample);
-                    line.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+                        GlyphLineWidthPixels * downsample));
                 }
             }
+
+            discViews = [.. discs];
+            glyphViews = [.. glyphs];
+            cachedKey = (frame, includeSkip, includePaintActions);
         }
 
         private static Color DiscColor(SegmentationPenButton button) => button switch
