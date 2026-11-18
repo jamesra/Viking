@@ -49,6 +49,36 @@ namespace GeometryTests
             Locator(TranslatedMosaic((1, 0, 0), (2, 900 + shiftTile2X, shiftTile2Y)));
 
         [TestMethod]
+        public void APointOnNoTileMovesWithTheNearestTile()
+        {
+            MosaicTileLocator oldMosaic = TwoTiles();
+            MosaicTileLocator newMosaic = TwoTiles(shiftTile2X: 30, shiftTile2Y: -20);
+
+            // 200 px past tile 2's right edge: on no tile, nearest to tile 2's right edge midpoint (1900, 500).
+            Vector2 pastTile2 = new(2100, 500);
+            Assert.AreEqual(TileMappingStatus.NoTile, oldMosaic.Locate(pastTile2).Status);
+            Assert.IsTrue(oldMosaic.TryEstimateShift(pastTile2, newMosaic, out TileShiftEstimate estimate));
+            Assert.AreEqual(2, estimate.TileNumber);
+            Assert.AreEqual(30, estimate.Shift.X, 1e-9);
+            Assert.AreEqual(-20, estimate.Shift.Y, 1e-9);
+            Assert.AreEqual(200, estimate.Distance, 1e-9);
+
+            // Past tile 1, which did not move.
+            Assert.IsTrue(oldMosaic.TryEstimateShift(new Vector2(-150, 500), newMosaic, out estimate));
+            Assert.AreEqual(1, estimate.TileNumber);
+            Assert.AreEqual(0, estimate.Shift.X, 1e-9);
+            Assert.AreEqual(0, estimate.Shift.Y, 1e-9);
+        }
+
+        [TestMethod]
+        public void NoShiftEstimateWhenTheNewMosaicSharesNoTile()
+        {
+            MosaicTileLocator oldMosaic = TwoTiles();
+            MosaicTileLocator newMosaic = Locator(TranslatedMosaic((7, 0, 0)));
+            Assert.IsFalse(oldMosaic.TryEstimateShift(new Vector2(2100, 500), newMosaic, out _));
+        }
+
+        [TestMethod]
         public void ParsesTileNumbersFromFileNames()
         {
             MosaicTileLocator mosaic = Locator(TranslatedMosaic((17, 0, 0), (123, 2000, 0)));

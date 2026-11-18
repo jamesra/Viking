@@ -22,6 +22,33 @@ namespace Geometry.Transforms
     }
 
     /// <summary>A mosaic point as a position on one tile image: the tile's number and the pixel on it.</summary>
+    /// <summary>
+    /// A best-guess move for a mosaic point that lies on no tile (<see cref="MosaicTileLocator.TryEstimateShift"/>): how far
+    /// the new mosaic moved the old mosaic's nearest tile reference point.
+    /// </summary>
+    public readonly struct TileShiftEstimate
+    {
+        public TileShiftEstimate(int tileNumber, Vector2 reference, Vector2 shift, double distance)
+        {
+            TileNumber = tileNumber;
+            Reference = reference;
+            Shift = shift;
+            Distance = distance;
+        }
+
+        /// <summary>The tile whose reference point was used.</summary>
+        public int TileNumber { get; }
+
+        /// <summary>The reference point (an image corner, edge midpoint or centre) in the OLD mosaic.</summary>
+        public Vector2 Reference { get; }
+
+        /// <summary>New mosaic position of the reference point minus its old position.</summary>
+        public Vector2 Shift { get; }
+
+        /// <summary>Distance in old mosaic pixels from the point to the reference point.</summary>
+        public double Distance { get; }
+    }
+
     public readonly struct TilePoint
     {
         public TilePoint(int tileNumber, Vector2 pixel, TileMappingStatus status)
@@ -168,6 +195,37 @@ namespace Geometry.Transforms
             return tile.Transform.TryTransform(pixel, out mosaicPoint);
         }
 
+        /// <summary>
+        /// Best guess for a point that lies on no tile, such as an annotation drawn just past the edge of the imaged area:
+        /// the shift the new mosaic gives this mosaic's nearest tile reference point (the nine image corners, edge midpoints
+        /// and centre of every tile that both mosaics hold). A translation only; it ignores any rotation of that tile.
+        /// </summary>
+        /// <returns>False when no tile of this mosaic is in <paramref name="newMosaic"/>.</returns>
+        public bool TryEstimateShift(Vector2 mosaicPoint, MosaicTileLocator newMosaic, out TileShiftEstimate estimate)
+        {
+            estimate = default;
+            double best = double.MaxValue;
+            bool found = false;
+            foreach (Tile tile in _Tiles)
+            {
+                if (!newMosaic.ContainsTile(tile.Number))
+                    continue;
+
+                foreach ((Vector2 pixel, Vector2 placed) in tile.ReferencePoints)
+                {
+                    double distance = Vector2.Distance(placed, mosaicPoint);
+                    if (distance >= best || !newMosaic.TryMapFromTile(tile.Number, pixel, out Vector2 moved))
+                        continue;
+
+                    best = distance;
+                    found = true;
+                    estimate = new TileShiftEstimate(tile.Number, placed, new Vector2(moved.X - placed.X, moved.Y - placed.Y), distance);
+                }
+            }
+
+            return found;
+        }
+
         /// <summary>Tiles whose outline box holds the point, nearest centre first (ties by tile number, so the order is stable).</summary>
         private List<int> Candidates(Vector2 p)
         {
@@ -196,6 +254,9 @@ namespace Geometry.Transforms
             /// <summary>The image centre mapped to mosaic space.</summary>
             public readonly Vector2 Center;
 
+            /// <summary>The image's corners, edge midpoints and centre that the transform maps: tile pixel and mosaic position.</summary>
+            public readonly (Vector2 Pixel, Vector2 Mosaic)[] ReferencePoints;
+
             public Tile(ITransform transform, TileTransformInfo info)
             {
                 Transform = transform;
@@ -215,6 +276,7 @@ namespace Geometry.Transforms
                 if (placed.Length == 0)
                     throw new ArgumentException($"Tile {info.TileFileName}: its transform maps none of its image's corners");
 
+                ReferencePoints = [.. probe.Select((pixel, i) => (pixel, mapped[i])).Where((_, i) => ok[i])];
                 Outline = placed.BoundingBox();
                 Center = ok[4] ? mapped[4] : Outline.Center;
             }

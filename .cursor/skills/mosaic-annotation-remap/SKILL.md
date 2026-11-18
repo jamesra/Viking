@@ -28,9 +28,13 @@ cross-checks before any annotation export): nornir `nornir_imageregistration/mos
   possible (1240: tiles 947/973 at 2333.0 vs 2333.1 px); either is a valid answer.
 - **Status per vertex:** Mapped; Extrapolated (inside a tile's outline, off its image: warp edge, still mapped);
   NoTile (no old tile covers it).
-- **Whole locations only.** A location with any NoTile vertex, a tile missing from the new mosaic, an edit after
-  the export, or a rebuilt shape that is invalid is **left unchanged** and listed under "Skipped". Nothing is
-  saved half-moved.
+- **Whole locations only.** A location with a tile missing from the new mosaic, an edit after the export, or a
+  rebuilt shape that is invalid is **left unchanged** and listed under "Skipped". Nothing is saved half-moved.
+- **NoTile locations are estimated.** A location step 1 found on no tile (drawn past the edge of the imaged area;
+  RC1 section 4 had 16 edge circles) is moved as one piece by the shift of the old mosaic's nearest tile reference
+  point (image corner, edge midpoint or centre; `MosaicTileLocator.TryEstimateShift`), measured from its X,Y. It is
+  a translation only and needs the old `.mosaic` named in `tiles.json`, unchanged (sha256 checked); otherwise the
+  location is skipped as before. Listed under "Estimated locations" with the tile and distance used.
 - **Circles map their centre and keep their radius.** Old and new mosaic are both mosaic space at tile-pixel
   scale, so the five-point scale rule (`.cursor/rules/circle-mapping-scale.mdc`) does not apply. Never reintroduce
   rim samples: on 1240 they landed on neighbouring tiles moved 40-54k px and gave radii of 10,000+ px.
@@ -96,6 +100,8 @@ in place of `VikingAU` below). Keep every output file in a dated folder with the
      the two tiles' versions far apart (the old mosaic was misregistered there, or the overlap straddles the
      tear). The chosen tile is the one the annotator saw, so the move is right; list these for the annotators.
    - *New overlaps between different cells*: to fix after the run.
+   - *Estimated*: on no tile in step 1, moved with the nearest tile. Check the ones far from that tile
+     (distance in the list) or involved in a new overlap.
    - *Skipped*: each needs a person (redraw, or move by hand).
    - Optional cross-check before the first real run on a volume: map the same vertices with nornir
      `MosaicPointRemapper` (CPU: set `NORNIR_COMPUTATIONAL_LIBRARY=numpy`; venv

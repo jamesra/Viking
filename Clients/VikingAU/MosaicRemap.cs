@@ -3,6 +3,7 @@ using Geometry;
 using Geometry.Transforms;
 using Microsoft.SqlServer.Types;
 using Newtonsoft.Json;
+using SqlGeometryUtils;
 using Path = System.IO.Path;
 using System;
 using System.Collections.Generic;
@@ -104,7 +105,9 @@ namespace Viking.AU
     /// rescue-damaged-section step 7): <c>remap-to-tiles</c> writes each vertex as a tile pixel through the old mosaic,
     /// <c>remap-from-tiles</c> maps those pixels through the new mosaic and saves the location (mosaic shape, then the volume
     /// cache under the default transform, <see cref="LocationObjExtensions"/>). A location with any vertex that cannot be
-    /// mapped is left unchanged and reported.
+    /// mapped is left unchanged and reported, except one that step 1 found on no tile at all (drawn past the edge of the
+    /// imaged area): it is moved as one piece by the shift of the old mosaic's nearest tile reference point
+    /// (<see cref="MosaicTileLocator.TryEstimateShift"/>) and listed in the report as an estimate.
     /// </summary>
     static class MosaicRemap
     {
@@ -206,10 +209,60 @@ namespace Viking.AU
 
             Dictionary<long, LocationObj> current = (await LoadSectionAsync(options.Section, token)).ToDictionary(l => l.ID);
 
-            List<(long Id, string Reason)> skipped = [.. file.Skipped.Select(s => (s.Id, "step 1: " + s.Reason))];
+            List<(long Id, string Reason)> skipped = [];
             List<double> shifts = [];
             List<double> disagreements = [];
             List<(LocationObj Location, SqlGeometry Before, SqlGeometry After)> changed = [];
+            List<string> estimated = [];
+
+            MosaicTileLocator oldMosaic = OldMosaicForEstimates(file, out string noEstimateReason);
+            foreach (SkippedLocation s in file.Skipped)
+            {
+                if (oldMosaic is null || s.Reason != "NoTile")
+                {
+                    skipped.Add((s.Id, "step 1: " + s.Reason + (s.Reason == "NoTile" ? $" (no estimate: {noEstimateReason})" : string.Empty)));
+                    continue;
+                }
+
+                if (!current.TryGetValue(s.Id, out LocationObj loc) || loc.MosaicShape is null)
+                {
+                    skipped.Add((s.Id, "step 1: NoTile; deleted or without a mosaic shape since export"));
+                    continue;
+                }
+
+                Vector2 anchor = loc.MosaicShape is Circle anchorCircle ? anchorCircle.Center : loc.Position;
+                if (!oldMosaic.TryEstimateShift(anchor, newMosaic, out TileShiftEstimate estimate))
+                {
+                    skipped.Add((s.Id, "step 1: NoTile; the new mosaic holds none of the old mosaic's tiles"));
+                    continue;
+                }
+
+                SqlGeometry before = LocationVolumeGeometry.ToSqlGeometry(loc.MosaicShape);
+                Circle? movedCircle = loc.MosaicShape is Circle c
+                    ? new Circle(new Vector2(c.Center.X + estimate.Shift.X, c.Center.Y + estimate.Shift.Y), c.Radius)
+                    : null;
+                SqlGeometry after = movedCircle.HasValue ? LocationVolumeGeometry.ToSqlGeometry(movedCircle.Value) : before.Translate(estimate.Shift);
+                try
+                {
+                    if (!options.DryRun)
+                    {
+                        if (movedCircle.HasValue)
+                            loc.SetShapeFromCircleInSection(mapper, movedCircle.Value);
+                        else
+                            loc.SetShapeFromGeometryInSection(mapper, after);
+                    }
+                }
+                catch (ArgumentException e)
+                {
+                    skipped.Add((s.Id, "step 1: NoTile; estimate not saved: " + e.Message));
+                    continue;
+                }
+
+                changed.Add((loc, before, after));
+                estimated.Add(string.Format(CultureInfo.InvariantCulture,
+                    "{0}: moved ({1:F1}, {2:F1}) px, the shift of tile {3}'s nearest reference point, {4:F0} px from the location",
+                    s.Id, estimate.Shift.X, estimate.Shift.Y, estimate.TileNumber, estimate.Distance));
+            }
 
             foreach (TileRemapLocation entry in file.Locations)
             {
@@ -261,12 +314,34 @@ namespace Viking.AU
             if (!options.DryRun && changed.Count > 0)
                 saved = await Store.Locations.Save();
 
-            string report = BuildReport(options, file, newMosaic, changed.Count, skipped, shifts, disagreements, overlaps, saved);
+            string report = BuildReport(options, file, newMosaic, changed.Count, skipped, estimated, shifts, disagreements, overlaps, saved);
             string reportPath = options.ReportFile ?? options.InputFile + ".report.txt";
             File.WriteAllText(reportPath, report);
             Console.WriteLine(report);
             Console.WriteLine($"Wrote {reportPath}");
             return saved ? 0 : 1;
+        }
+
+        /// <summary>
+        /// The old mosaic named in the tile-coordinate file, for estimating locations step 1 found on no tile; null (with the
+        /// reason) when that file is missing or no longer the one step 1 read.
+        /// </summary>
+        private static MosaicTileLocator OldMosaicForEstimates(TileRemapFile file, out string reason)
+        {
+            reason = null;
+            if (string.IsNullOrEmpty(file.OldMosaic) || !File.Exists(file.OldMosaic))
+            {
+                reason = $"old mosaic {file.OldMosaic} not found";
+                return null;
+            }
+
+            if (!string.Equals(Sha256(file.OldMosaic), file.OldMosaicSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                reason = $"old mosaic {file.OldMosaic} changed since step 1";
+                return null;
+            }
+
+            return MosaicTileLocator.Load(file.OldMosaic);
         }
 
         /// <summary>
@@ -338,7 +413,7 @@ namespace Viking.AU
         }
 
         private static string BuildReport(RemapFromTilesOptions options, TileRemapFile file, MosaicTileLocator newMosaic, int changedCount,
-                                          List<(long Id, string Reason)> skipped, List<double> shifts, List<double> disagreements,
+                                          List<(long Id, string Reason)> skipped, List<string> estimated, List<double> shifts, List<double> disagreements,
                                           List<string> overlaps, bool saved)
         {
             static string F(double v) => v.ToString("F2", CultureInfo.InvariantCulture);
@@ -355,8 +430,9 @@ namespace Viking.AU
             r.AppendLine($"Run: {DateTime.UtcNow:o}");
             r.AppendLine();
             r.AppendLine($"Locations remapped: {changedCount}{(options.DryRun ? " (would be saved)" : saved ? " (saved)" : " (SAVE FAILED)")}");
+            r.AppendLine($"  of which estimated from the nearest tile (on no tile in step 1): {estimated.Count}");
             r.AppendLine($"Locations skipped (unchanged): {skipped.Count}");
-            r.AppendLine($"Vertex shift px: median {F(Percentile(sortedShifts, 0.5))}, p95 {F(Percentile(sortedShifts, 0.95))}, max {F(sortedShifts.Count == 0 ? double.NaN : sortedShifts[sortedShifts.Count - 1])} over {sortedShifts.Count} vertices (a circle counts its centre)");
+            r.AppendLine($"Vertex shift px (tile-mapped locations): median {F(Percentile(sortedShifts, 0.5))}, p95 {F(Percentile(sortedShifts, 0.95))}, max {F(sortedShifts.Count == 0 ? double.NaN : sortedShifts[sortedShifts.Count - 1])} over {sortedShifts.Count} vertices (a circle counts its centre)");
             r.AppendLine($"Vertices in a tile overlap: {disagreements.Count}; overlapping tiles disagree by > {DisagreementReportPixels} px at {disagreements.Count(d => d > DisagreementReportPixels)}");
             r.AppendLine($"New overlaps between different cells: {overlaps.Count}");
 
@@ -366,6 +442,14 @@ namespace Viking.AU
                 r.AppendLine("Skipped locations (look at these by hand):");
                 foreach (var (id, reason) in skipped.OrderBy(s => s.Id))
                     r.AppendLine($"  {id}: {reason}");
+            }
+
+            if (estimated.Count > 0)
+            {
+                r.AppendLine();
+                r.AppendLine("Estimated locations (on no tile in step 1; moved with the nearest tile, review):");
+                foreach (string e in estimated)
+                    r.AppendLine("  " + e);
             }
 
             if (overlaps.Count > 0)
