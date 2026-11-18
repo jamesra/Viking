@@ -1061,14 +1061,14 @@ namespace WebAnnotation
             /// <summary>Starting <see cref="AutoPolygonizeButtonsEnabled"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
             public const bool DEFAULT_AUTOPOLYGONIZE_BUTTONS_ENABLED = true;
 
-            /// <summary>Smallest accepted <see cref="AutoPolygonizeButtonMaxPixels"/>.</summary>
-            public const int MIN_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS = 16;
+            /// <summary>Smallest accepted <see cref="AutoPolygonizeButtonSizePixels"/>.</summary>
+            public const int MIN_AUTOPOLYGONIZE_BUTTON_SIZE_PIXELS = 16;
 
-            /// <summary>Largest accepted <see cref="AutoPolygonizeButtonMaxPixels"/>.</summary>
-            public const int MAX_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS = 64;
+            /// <summary>Largest accepted <see cref="AutoPolygonizeButtonSizePixels"/>.</summary>
+            public const int MAX_AUTOPOLYGONIZE_BUTTON_SIZE_PIXELS = 128;
 
-            /// <summary>Starting <see cref="AutoPolygonizeButtonMaxPixels"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
-            public const int DEFAULT_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS = 28;
+            /// <summary>Starting <see cref="AutoPolygonizeButtonSizePixels"/>. Must match the DefaultSettingValue in Settings.Segmentation.cs.</summary>
+            public const int DEFAULT_AUTOPOLYGONIZE_BUTTON_SIZE_PIXELS = 56;
 
             /// <summary>Smallest accepted <see cref="AutoPolygonizeButtonMinPixels"/>.</summary>
             public const int MIN_AUTOPOLYGONIZE_BUTTON_MIN_PIXELS = 6;
@@ -1117,13 +1117,16 @@ namespace WebAnnotation
                 }
             }
 
-            /// <summary>Largest proposal button diameter in screen pixels, clamped to the MIN/MAX_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS range.</summary>
-            public static int AutoPolygonizeButtonMaxPixels
+            /// <summary>
+            /// Proposal button diameter in screen pixels at 1x (volume units); the buttons keep this size in the image and so
+            /// scale with the zoom. Clamped to the MIN/MAX_AUTOPOLYGONIZE_BUTTON_SIZE_PIXELS range.
+            /// </summary>
+            public static int AutoPolygonizeButtonSizePixels
             {
-                get => MathUtils.Clamp(Properties.Settings.Default.AutoPolygonizeButtonMaxPixels, MIN_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS, MAX_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS);
+                get => MathUtils.Clamp(Properties.Settings.Default.AutoPolygonizeButtonSizePixels, MIN_AUTOPOLYGONIZE_BUTTON_SIZE_PIXELS, MAX_AUTOPOLYGONIZE_BUTTON_SIZE_PIXELS);
                 set
                 {
-                    Properties.Settings.Default.AutoPolygonizeButtonMaxPixels = MathUtils.Clamp(value, MIN_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS, MAX_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS);
+                    Properties.Settings.Default.AutoPolygonizeButtonSizePixels = MathUtils.Clamp(value, MIN_AUTOPOLYGONIZE_BUTTON_SIZE_PIXELS, MAX_AUTOPOLYGONIZE_BUTTON_SIZE_PIXELS);
                     Properties.Settings.Default.Save();
                 }
             }
@@ -1373,7 +1376,7 @@ namespace WebAnnotation
                 Properties.Settings.Default.AutoPolygonizeShimmerDurationMs = DEFAULT_AUTOPOLYGONIZE_SHIMMER_DURATION_MS;
                 Properties.Settings.Default.AutoPolygonizeShimmerStyle = (int)DEFAULT_AUTOPOLYGONIZE_SHIMMER_STYLE;
                 Properties.Settings.Default.AutoPolygonizeButtonsEnabled = DEFAULT_AUTOPOLYGONIZE_BUTTONS_ENABLED;
-                Properties.Settings.Default.AutoPolygonizeButtonMaxPixels = DEFAULT_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS;
+                Properties.Settings.Default.AutoPolygonizeButtonSizePixels = DEFAULT_AUTOPOLYGONIZE_BUTTON_SIZE_PIXELS;
                 Properties.Settings.Default.AutoPolygonizeButtonMinPixels = DEFAULT_AUTOPOLYGONIZE_BUTTON_MIN_PIXELS;
                 Properties.Settings.Default.AutoPolygonizeButtonOpacity = DEFAULT_AUTOPOLYGONIZE_BUTTON_OPACITY;
                 Properties.Settings.Default.AutoPolygonizeButtonConfirmDelayMs = DEFAULT_AUTOPOLYGONIZE_BUTTON_CONFIRM_DELAY_MS;

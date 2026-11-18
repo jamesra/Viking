@@ -230,7 +230,7 @@ namespace WebAnnotation
                 Global.AnnotationSettings.LocationLinkLabels,
                 Global.AnnotationSettings.LabelRotation,
                 Global.AnnotationSettings.AutoPolygonizeButtonsEnabled,
-                Global.AnnotationSettings.AutoPolygonizeButtonMaxPixels,
+                Global.AnnotationSettings.AutoPolygonizeButtonSizePixels,
                 Global.AnnotationSettings.AutoPolygonizeButtonMinPixels,
                 Global.AnnotationSettings.AutoPolygonizeButtonOpacity,
                 Global.AnnotationSettings.AutoPolygonizeButtonConfirmDelayMs,
@@ -413,8 +413,8 @@ namespace WebAnnotation
             // Read on every draw and click, so the buttons on screen change at once.
             if (Changed(nameof(viewModel.AutoPolygonizeButtonsEnabled)))
                 Global.AnnotationSettings.AutoPolygonizeButtonsEnabled = viewModel.AutoPolygonizeButtonsEnabled;
-            if (Changed(nameof(viewModel.AutoPolygonizeButtonMaxPixels)))
-                Global.AnnotationSettings.AutoPolygonizeButtonMaxPixels = viewModel.AutoPolygonizeButtonMaxPixels;
+            if (Changed(nameof(viewModel.AutoPolygonizeButtonSizePixels)))
+                Global.AnnotationSettings.AutoPolygonizeButtonSizePixels = viewModel.AutoPolygonizeButtonSizePixels;
             if (Changed(nameof(viewModel.AutoPolygonizeButtonMinPixels)))
                 Global.AnnotationSettings.AutoPolygonizeButtonMinPixels = viewModel.AutoPolygonizeButtonMinPixels;
             if (Changed(nameof(viewModel.AutoPolygonizeButtonOpacity)))
@@ -423,7 +423,7 @@ namespace WebAnnotation
                 Global.AnnotationSettings.AutoPolygonizeButtonConfirmDelayMs = viewModel.AutoPolygonizeButtonConfirmDelayMs;
             if (Changed(nameof(viewModel.AutoPolygonizeButtonConfirmTimeoutSeconds)))
                 Global.AnnotationSettings.AutoPolygonizeButtonConfirmTimeoutSeconds = viewModel.AutoPolygonizeButtonConfirmTimeoutSeconds;
-            if (Changed(nameof(viewModel.AutoPolygonizeButtonsEnabled)) || Changed(nameof(viewModel.AutoPolygonizeButtonMaxPixels)) ||
+            if (Changed(nameof(viewModel.AutoPolygonizeButtonsEnabled)) || Changed(nameof(viewModel.AutoPolygonizeButtonSizePixels)) ||
                 Changed(nameof(viewModel.AutoPolygonizeButtonMinPixels)) || Changed(nameof(viewModel.AutoPolygonizeButtonOpacity)))
                 Viking.UI.State.ViewerControl?.Invalidate();
 
@@ -745,7 +745,7 @@ namespace WebAnnotation
             Global.AnnotationSettings.AutoPolygonizeShimmerDurationMs = viewModel.AutoPolygonizeShimmerDurationMs;
             Global.AnnotationSettings.AutoPolygonizeShimmerStyle = viewModel.AutoPolygonizeShimmerStyle;
             Global.AnnotationSettings.AutoPolygonizeButtonsEnabled = viewModel.AutoPolygonizeButtonsEnabled;
-            Global.AnnotationSettings.AutoPolygonizeButtonMaxPixels = viewModel.AutoPolygonizeButtonMaxPixels;
+            Global.AnnotationSettings.AutoPolygonizeButtonSizePixels = viewModel.AutoPolygonizeButtonSizePixels;
             Global.AnnotationSettings.AutoPolygonizeButtonMinPixels = viewModel.AutoPolygonizeButtonMinPixels;
             Global.AnnotationSettings.AutoPolygonizeButtonOpacity = viewModel.AutoPolygonizeButtonOpacity;
             Global.AnnotationSettings.AutoPolygonizeButtonConfirmDelayMs = viewModel.AutoPolygonizeButtonConfirmDelayMs;

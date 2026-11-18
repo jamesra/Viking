@@ -6,33 +6,47 @@ using WebAnnotation.UI.AutoPolygonize;
 namespace WebAnnotationTests.Commands
 {
     /// <summary>
-    /// <see cref="ProposalButtonLayout"/>: the accept and hide buttons sit inside the proposal and outside its circle when
-    /// they fit there, inside the circle's lower right otherwise, capped at the largest size, and fade out below the
-    /// smallest clickable size.
+    /// <see cref="ProposalButtonLayout"/>: the accept and hide buttons share one rectangle inside the proposal and outside
+    /// its circle, side by side when that fits and stacked (accept on top) when it does not, inside the circle's lower right
+    /// otherwise. The size is in the image (at 1x) and the layout does not change with the zoom; only the fade does.
     /// </summary>
     [TestClass]
     public class ProposalButtonLayoutTests
     {
-        private static readonly ProposalButtonOptions Options = new(MaxDiameterPixels: 28, MinDiameterPixels: 12);
+        private static readonly ProposalButtonOptions Options = new(SizePixels: 56, MinDiameterPixels: 12);
 
-        private static Polygon Square(double cx, double cy, double half) => new(new[]
+        private static Polygon Rectangle(double cx, double cy, double halfX, double halfY) => new(new[]
         {
-            new Vector2(cx - half, cy - half), new Vector2(cx + half, cy - half), new Vector2(cx + half, cy + half),
-            new Vector2(cx - half, cy + half), new Vector2(cx - half, cy - half),
+            new Vector2(cx - halfX, cy - halfY), new Vector2(cx + halfX, cy - halfY), new Vector2(cx + halfX, cy + halfY),
+            new Vector2(cx - halfX, cy + halfY), new Vector2(cx - halfX, cy - halfY),
         });
 
-        private static void AssertInsidePolygonAndOutsideSeed(ProposalButtonPlacement placement, Polygon polygon, Circle seed)
+        private static Polygon Square(double cx, double cy, double half) => Rectangle(cx, cy, half, half);
+
+        /// <summary>The pair's rectangle lies inside the polygon and clear of the seed circle.</summary>
+        private static void AssertRectangleFits(ProposalButtonPlacement placement, Polygon polygon, Circle? seed)
         {
-            foreach (Vector2 center in new[] { placement.Accept, placement.Hide })
+            (double halfX, double halfY) = ProposalButtonLayout.HalfSize(placement.Arrangement);
+            Vector2 middle = new((placement.Accept.X + placement.Hide.X) / 2, (placement.Accept.Y + placement.Hide.Y) / 2);
+            double hx = halfX * placement.Radius, hy = halfY * placement.Radius;
+            foreach (Vector2 corner in new[]
             {
-                Assert.IsTrue(polygon.Contains(center), $"button at {center} is inside the proposal");
-                Assert.IsTrue(Vector2.Distance(center, seed.Center) >= seed.Radius + placement.Radius,
-                    $"button at {center} is clear of the circle");
+                new Vector2(middle.X - hx, middle.Y - hy), new Vector2(middle.X + hx, middle.Y - hy),
+                new Vector2(middle.X + hx, middle.Y + hy), new Vector2(middle.X - hx, middle.Y + hy),
+            })
+            {
+                Assert.IsTrue(polygon.Contains(corner), $"rectangle corner {corner} is inside the proposal");
+            }
+
+            if (seed is Circle c)
+            {
+                double dx = Math.Max(Math.Abs(c.Center.X - middle.X) - hx, 0), dy = Math.Max(Math.Abs(c.Center.Y - middle.Y) - hy, 0);
+                Assert.IsTrue(Math.Sqrt(dx * dx + dy * dy) >= c.Radius - 1e-6, "the rectangle is clear of the circle");
             }
         }
 
         [TestMethod]
-        public void RoomOutsideTheCircle_ButtonsGoThere()
+        public void RoomOutsideTheCircle_SideBySide_AcceptOnTheLeft()
         {
             Polygon polygon = Square(0, 0, 200);
             Circle seed = new(new Vector2(-100, 0), 60);
@@ -41,23 +55,56 @@ namespace WebAnnotationTests.Commands
 
             Assert.IsNotNull(placement);
             Assert.IsFalse(placement.InsideCircle);
-            AssertInsidePolygonAndOutsideSeed(placement, polygon, seed);
-            Assert.AreEqual(14, placement.Radius, 1e-9, "capped at half the largest size");
-            Assert.AreEqual(1, placement.Fade);
-            Assert.IsTrue(Vector2.Distance(placement.Accept, placement.Hide) >= 2 * placement.Radius, "the buttons do not overlap");
-            Assert.IsTrue(Vector2.Distance(placement.Accept, placement.Hide) <= placement.Radius * ProposalButtonLayout.MaxPairSpacingRadii + 1,
-                "the buttons stay together");
+            Assert.AreEqual(ProposalButtonArrangement.LeftToRight, placement.Arrangement);
+            Assert.IsTrue(placement.Accept.X < placement.Hide.X, "accept on the left");
+            Assert.AreEqual(placement.Accept.Y, placement.Hide.Y, 1e-9, "on one line");
+            Assert.AreEqual(28, placement.Radius, 1e-9, "the full size, half of 56");
+            Assert.AreEqual(2 * 28 * (1 + ProposalButtonLayout.GapFraction / 2), Vector2.Distance(placement.Accept, placement.Hide), 1e-9);
+            AssertRectangleFits(placement, polygon, seed);
         }
 
         [TestMethod]
-        public void SizeFollowsTheZoom()
+        public void ZoomChangesOnlyTheFade()
         {
-            Polygon polygon = Square(0, 0, 2000);
-            Circle seed = new(new Vector2(-1000, 0), 600);
+            Polygon polygon = Square(0, 0, 200);
+            Circle seed = new(new Vector2(-100, 0), 60);
 
-            ProposalButtonPlacement placement = ProposalButtonLayout.Place(polygon, seed, downsample: 4, Options);
+            ProposalButtonPlacement atOne = ProposalButtonLayout.Place(polygon, seed, downsample: 1, Options);
+            ProposalButtonPlacement zoomedOut = ProposalButtonLayout.Place(polygon, seed, downsample: 4.5, Options);
 
-            Assert.AreEqual(14 * 4, placement.Radius, 1e-9, "28 screen pixels across at downsample 4");
+            Assert.AreEqual(atOne.Accept, zoomedOut.Accept, "the buttons do not move");
+            Assert.AreEqual(atOne.Hide, zoomedOut.Hide);
+            Assert.AreEqual(atOne.Radius, zoomedOut.Radius, "nor change size in the image");
+            Assert.AreEqual(1, atOne.Fade);
+            Assert.IsTrue(zoomedOut.Fade < 1, "56 / 4.5 = 12.4 px across on screen: fading");
+        }
+
+        [TestMethod]
+        public void NarrowRoom_StacksWithAcceptOnTop()
+        {
+            // 20 wide: side by side the buttons would be under 12 px across; stacked they are 16.
+            Polygon polygon = Rectangle(0, 0, 10, 200);
+
+            ProposalButtonPlacement placement = ProposalButtonLayout.Place(polygon, seed: null, downsample: 1, Options);
+
+            Assert.IsNotNull(placement);
+            Assert.AreEqual(ProposalButtonArrangement.TopToBottom, placement.Arrangement);
+            Assert.AreEqual(placement.Accept.X, placement.Hide.X, 1e-9, "one above the other");
+            Assert.IsTrue(placement.Accept.Y > placement.Hide.Y, "accept on top (world y is up)");
+            Assert.IsTrue(placement.Radius >= Options.MinDiameterPixels / 2);
+            AssertRectangleFits(placement, polygon, null);
+        }
+
+        [TestMethod]
+        public void SideBySideWhenItFits_EvenIfStackingWouldBeLarger()
+        {
+            // 60 wide: stacked would be larger, but side by side is clickable, so it wins.
+            Polygon polygon = Rectangle(0, 0, 30, 200);
+
+            ProposalButtonPlacement placement = ProposalButtonLayout.Place(polygon, seed: null, downsample: 1, Options);
+
+            Assert.AreEqual(ProposalButtonArrangement.LeftToRight, placement.Arrangement);
+            AssertRectangleFits(placement, polygon, null);
         }
 
         [TestMethod]
@@ -78,6 +125,7 @@ namespace WebAnnotationTests.Commands
 
             Assert.IsNotNull(placement);
             Assert.IsTrue(placement.InsideCircle);
+            Assert.AreEqual(ProposalButtonArrangement.LeftToRight, placement.Arrangement);
             Assert.IsTrue(placement.Accept.X < placement.Hide.X, "accept on the left, hide on the right");
             Assert.AreEqual(placement.Accept.Y, placement.Hide.Y, 1e-9);
             Assert.IsTrue(placement.Accept.Y < seed.Center.Y, "below the centre (world y is up)");
@@ -95,7 +143,7 @@ namespace WebAnnotationTests.Commands
 
             Assert.IsNotNull(placement);
             Assert.IsFalse(placement.InsideCircle);
-            Assert.IsTrue(polygon.Contains(placement.Accept) && polygon.Contains(placement.Hide));
+            AssertRectangleFits(placement, polygon, null);
         }
 
         [TestMethod]
@@ -108,7 +156,17 @@ namespace WebAnnotationTests.Commands
 
             ProposalButtonPlacement placement = ProposalButtonLayout.Place(polygon, seed, downsample: 1, Options);
 
-            AssertInsidePolygonAndOutsideSeed(placement, polygon, seed);
+            AssertRectangleFits(placement, polygon, seed);
+        }
+
+        [TestMethod]
+        public void RectangleNormDistance_MeasuresInRectangleUnits()
+        {
+            // A rectangle 2.15 wide per unit high reaches a wall 4.3 to the right at scale 2, a floor 3 below at scale 3.
+            Assert.AreEqual(2, ProposalButtonLayout.RectangleNormDistance(Vector2.Zero, new Vector2(4.3, -10), new Vector2(4.3, 10), 2.15, 1), 1e-9);
+            Assert.AreEqual(3, ProposalButtonLayout.RectangleNormDistance(Vector2.Zero, new Vector2(-10, -3), new Vector2(10, -3), 2.15, 1), 1e-9);
+            // A diagonal segment is first met at a rectangle corner.
+            Assert.AreEqual(1, ProposalButtonLayout.RectangleNormDistance(Vector2.Zero, new Vector2(4.3, 0), new Vector2(0, 2), 2.15, 1), 1e-9);
         }
 
         [TestMethod]

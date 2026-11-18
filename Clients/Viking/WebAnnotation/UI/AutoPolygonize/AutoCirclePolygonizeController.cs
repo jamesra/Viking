@@ -219,17 +219,16 @@ namespace WebAnnotation.UI.AutoPolygonize
         /// <summary>When the pending redraw for a button's "?" or timeout is due (<see cref="Stopwatch"/> ticks), or 0.</summary>
         private long buttonRedrawDueTimestamp;
 
-        /// <summary>Button layouts by proposal, reused until the polygon, seed circle, zoom step or size preferences change.</summary>
+        /// <summary>
+        /// Button layouts by proposal, laid out once and reused until the polygon, seed circle or size preferences change.
+        /// The layout does not depend on the zoom, so the buttons never move while the user zooms.
+        /// </summary>
         private readonly System.Runtime.CompilerServices.ConditionalWeakTable<AutoPolygonizeProposal, ButtonPlacementCache> buttonPlacements = new();
-
-        /// <summary>Zoom steps that share one button layout: 5% apart, so zooming re-solves the layout only now and then.</summary>
-        private const double ButtonLayoutZoomStep = 1.05;
 
         private sealed class ButtonPlacementCache
         {
             public Polygon? Polygon;
             public Circle? Seed;
-            public long ZoomBucket;
             public ProposalButtonOptions Options;
             public ProposalButtonPlacement? Placement;
         }
@@ -237,7 +236,7 @@ namespace WebAnnotation.UI.AutoPolygonize
         private static bool ButtonsEnabled => Global.AnnotationSettings.AutoPolygonizeButtonsEnabled;
 
         private static ProposalButtonOptions ButtonOptions => new(
-            Global.AnnotationSettings.AutoPolygonizeButtonMaxPixels,
+            Global.AnnotationSettings.AutoPolygonizeButtonSizePixels,
             Global.AnnotationSettings.AutoPolygonizeButtonMinPixels);
 
         /// <summary>
@@ -251,16 +250,13 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             ProposalButtonOptions options = ButtonOptions;
             Circle? seed = SeedCircle(proposal);
-            long bucket = (long)Math.Round(Math.Log(downsample) / Math.Log(ButtonLayoutZoomStep));
             ButtonPlacementCache entry = buttonPlacements.GetOrCreateValue(proposal);
-            if (!ReferenceEquals(entry.Polygon, proposal.Polygon) || !Nullable.Equals(entry.Seed, seed) ||
-                entry.ZoomBucket != bucket || entry.Options != options)
+            if (!ReferenceEquals(entry.Polygon, proposal.Polygon) || !Nullable.Equals(entry.Seed, seed) || entry.Options != options)
             {
                 entry.Polygon = proposal.Polygon;
                 entry.Seed = seed;
-                entry.ZoomBucket = bucket;
                 entry.Options = options;
-                entry.Placement = ProposalButtonLayout.Place(proposal.Polygon, seed, downsample, options);
+                entry.Placement = ProposalButtonLayout.Place(proposal.Polygon, seed, downsample: 1, options);
             }
 
             return entry.Placement is null

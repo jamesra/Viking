@@ -1076,17 +1076,17 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <Label Grid.Row="0" Grid.Column="0" Content="Largest button (px):"
-                                   ToolTip="Buttons grow with the room inside the proposal up to this size across."/>
+                            <Label Grid.Row="0" Grid.Column="0" Content="Button size at 1x (px):"
+                                   ToolTip="Buttons are this size across at 1x and keep their size in the image, so they grow and shrink with the zoom. A proposal with less room gets smaller buttons."/>
                             <vc:SliderWithValueBox
                                 Grid.Row="0"
                                 Grid.Column="1" Grid.ColumnSpan="3"
                                 Minimum="16"
-                                Maximum="64"
-                                TickFrequency="2"
+                                Maximum="128"
+                                TickFrequency="4"
                                 IsSnapToTickEnabled="True"
                                 ValueFormat="F0"
-                                Value="{Binding AutoPolygonizeButtonMaxPixels, Mode=TwoWay}"/>
+                                Value="{Binding AutoPolygonizeButtonSizePixels, Mode=TwoWay}"/>
 
                             <Label Grid.Row="1" Grid.Column="0" Content="Smallest clickable button (px):"
                                    ToolTip="Buttons smaller than this across fade out and stop taking clicks; zoom in to bring them back."/>

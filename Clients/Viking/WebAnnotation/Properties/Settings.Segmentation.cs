@@ -243,16 +243,16 @@ namespace WebAnnotation.Properties
         }
 
         /// <summary>
-        /// Largest proposal button diameter, in screen pixels. Keep the default in step with
-        /// <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS"/>.
+        /// Proposal button diameter in screen pixels at 1x; the buttons keep this size in the image. Keep the default in step with
+        /// <see cref="WebAnnotation.Global.AnnotationSettings.DEFAULT_AUTOPOLYGONIZE_BUTTON_SIZE_PIXELS"/>.
         /// </summary>
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("28")]
-        public int AutoPolygonizeButtonMaxPixels
+        [global::System.Configuration.DefaultSettingValueAttribute("56")]
+        public int AutoPolygonizeButtonSizePixels
         {
-            get => (int)this[nameof(AutoPolygonizeButtonMaxPixels)];
-            set => this[nameof(AutoPolygonizeButtonMaxPixels)] = value;
+            get => (int)this[nameof(AutoPolygonizeButtonSizePixels)];
+            set => this[nameof(AutoPolygonizeButtonSizePixels)] = value;
         }
 
         /// <summary>

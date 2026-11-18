@@ -14,8 +14,8 @@ namespace WebAnnotationTests
         [TestMethod]
         public void RangesMatchTheStoredSettings()
         {
-            Assert.AreEqual(AnnotationSettings.MIN_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS, AnnotationPreferencesDialogViewModel.MinAutoPolygonizeButtonMaxPixels);
-            Assert.AreEqual(AnnotationSettings.MAX_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS, AnnotationPreferencesDialogViewModel.MaxAutoPolygonizeButtonMaxPixels);
+            Assert.AreEqual(AnnotationSettings.MIN_AUTOPOLYGONIZE_BUTTON_SIZE_PIXELS, AnnotationPreferencesDialogViewModel.MinAutoPolygonizeButtonSizePixels);
+            Assert.AreEqual(AnnotationSettings.MAX_AUTOPOLYGONIZE_BUTTON_SIZE_PIXELS, AnnotationPreferencesDialogViewModel.MaxAutoPolygonizeButtonSizePixels);
             Assert.AreEqual(AnnotationSettings.MIN_AUTOPOLYGONIZE_BUTTON_MIN_PIXELS, AnnotationPreferencesDialogViewModel.MinAutoPolygonizeButtonMinPixels);
             Assert.AreEqual(AnnotationSettings.MAX_AUTOPOLYGONIZE_BUTTON_MIN_PIXELS, AnnotationPreferencesDialogViewModel.MaxAutoPolygonizeButtonMinPixels);
             Assert.AreEqual(AnnotationSettings.MIN_AUTOPOLYGONIZE_BUTTON_OPACITY, AnnotationPreferencesDialogViewModel.MinAutoPolygonizeButtonOpacity);
@@ -31,14 +31,14 @@ namespace WebAnnotationTests
         {
             var vm = new AnnotationPreferencesDialogViewModel
             {
-                AutoPolygonizeButtonMaxPixels = 1000,
+                AutoPolygonizeButtonSizePixels = 1000,
                 AutoPolygonizeButtonMinPixels = 0,
                 AutoPolygonizeButtonOpacity = 0,
                 AutoPolygonizeButtonConfirmDelayMs = 99999,
                 AutoPolygonizeButtonConfirmTimeoutSeconds = -1,
             };
 
-            Assert.AreEqual(64, vm.AutoPolygonizeButtonMaxPixels);
+            Assert.AreEqual(128, vm.AutoPolygonizeButtonSizePixels);
             Assert.AreEqual(6, vm.AutoPolygonizeButtonMinPixels);
             Assert.AreEqual(0.3, vm.AutoPolygonizeButtonOpacity, 1e-9);
             Assert.AreEqual(2000, vm.AutoPolygonizeButtonConfirmDelayMs);
@@ -62,12 +62,12 @@ namespace WebAnnotationTests
         [TestMethod]
         public void ResetToDefaults_RestoresTheShippedValues()
         {
-            var vm = new AnnotationPreferencesDialogViewModel { AutoPolygonizeButtonsEnabled = false, AutoPolygonizeButtonMaxPixels = 40 };
+            var vm = new AnnotationPreferencesDialogViewModel { AutoPolygonizeButtonsEnabled = false, AutoPolygonizeButtonSizePixels = 40 };
 
             vm.ResetToDefaults();
 
             Assert.IsTrue(vm.AutoPolygonizeButtonsEnabled);
-            Assert.AreEqual(AnnotationSettings.DEFAULT_AUTOPOLYGONIZE_BUTTON_MAX_PIXELS, vm.AutoPolygonizeButtonMaxPixels);
+            Assert.AreEqual(AnnotationSettings.DEFAULT_AUTOPOLYGONIZE_BUTTON_SIZE_PIXELS, vm.AutoPolygonizeButtonSizePixels);
             Assert.AreEqual(AnnotationSettings.DEFAULT_AUTOPOLYGONIZE_BUTTON_CONFIRM_DELAY_MS, vm.AutoPolygonizeButtonConfirmDelayMs);
             Assert.AreEqual(AnnotationSettings.DEFAULT_AUTOPOLYGONIZE_BUTTON_CONFIRM_TIMEOUT_SECONDS, vm.AutoPolygonizeButtonConfirmTimeoutSeconds, 1e-9);
         }
