@@ -9,9 +9,14 @@
     AnnotationTest schema. The stack variables stack.ps1 normally exports (NORNIR_DOCKER_USER_ROOT,
     STACK_*, DOCKER_CERTS_DIR) are filled with defaults under -DockerRoot when unset.
 
-    The DevTest Identity server (identity-devtest, :5020) is no longer started: its compose service
-    referenced a Dockerfile that does not exist. Point IdentityServer__* in the gRPC env file at a
-    real Identity instance, or start a DevTest Identity yourself.
+    Also starts identity-devtest (Servers/IdentityServer/DevTest/docker-compose.yml): an HTTPS-only
+    in-memory Identity server on https://host.docker.internal:5020 with the tests' user and clients.
+    Both containers make self-signed certificates; this script saves them to
+    %TEMP%iking-annotation-test-stack.pem and %TEMP%iking-identity-test-stack.pem, which the gRPC tests
+    pin, and the annotation container mounts the identity certificate to trust it
+    (docker-compose.test-identity.yml). The gRPC env file's IdentityServer__Endpoint must be
+    https://host.docker.internal:5020/ (the .env.Docker template says so); a real Identity instance
+    can be used instead by pointing it elsewhere and skipping the override.
 
 .PARAMETER ApplySchema
     Apply Servers/AnnotationDatabase/scripts/Apply-MinimalSchema.ps1 after SQL is healthy.
@@ -98,10 +103,22 @@ if (-not (Test-Path $AnnotationSqlEnv)) {
     Write-Host "Created $AnnotationSqlEnv from template. Edit MSSQL_SA_PASSWORD if desired, then re-run."
 }
 
+# identity-devtest first: it creates the certificate volume the annotation container mounts.
+$identityCompose = Join-Path $RepoRoot "Servers\IdentityServer\DevTest\docker-compose.yml"
+$testIdentityOverride = Join-Path $RepoRoot "Servers\GrpcAnnotationService\docker-compose.test-identity.yml"
+$identityArgs = @("-f", $identityCompose, "up", "-d")
+if ($Build) { $identityArgs += "--build" }
+Write-Host "Starting identity-devtest ..."
+docker compose @identityArgs
+if ($LASTEXITCODE -ne 0) {
+    throw "docker compose up of identity-devtest failed (exit $LASTEXITCODE)."
+}
+
 $composeArgs = @(
     "-p", "viking-annotation",
     "--env-file", $AnnotationSqlEnv,
     "-f", $composeFile,
+    "-f", $testIdentityOverride,
     "--profile", "local-sql",
     "up", "-d"
 )
@@ -153,6 +170,17 @@ for ($i = 0; $i -lt 30 -and -not $certSaved; $i++) {
 if ($certSaved) { Write-Host "Saved the service's self-signed certificate to $testCertPath" }
 else { Write-Warning "Could not copy the service certificate to $testCertPath; the tests will fail the TLS handshake unless a real certificate is mounted." }
 
+# The identity server's certificate, for the tests (TestServerTls.LoadPinnedIdentityCertificate).
+$identityCertPath = Join-Path ([System.IO.Path]::GetTempPath()) 'viking-identity-test-stack.pem'
+$identityCertSaved = $false
+for ($i = 0; $i -lt 30 -and -not $identityCertSaved; $i++) {
+    docker cp 'identity-devtest:/https/cert.pem' $identityCertPath 2>$null
+    $identityCertSaved = ($LASTEXITCODE -eq 0) -and (Test-Path $identityCertPath)
+    if (-not $identityCertSaved) { Start-Sleep -Seconds 2 }
+}
+if ($identityCertSaved) { Write-Host "Saved the identity server's self-signed certificate to $identityCertPath" }
+else { Write-Warning "Could not copy the identity certificate to $identityCertPath; the sign-in tests will fail the TLS handshake." }
+
 if ($ApplySchema) {
     & $applySchemaScript -EnvFile $AnnotationSqlEnv
 }
@@ -160,7 +188,7 @@ if ($ApplySchema) {
 Write-Host @"
 
 Stack is up:
-  Identity         : IdentityServer__Endpoint in the gRPC env file (DevTest :5020 is not started)
+  Identity (DevTest): https://host.docker.internal:5020  (self-signed certificate, saved to $identityCertPath for the tests)
   gRPC (HTTPS only): https://localhost:5011  (self-signed certificate, saved to $testCertPath for the tests)
   Annotation SQL   : localhost,1433  (database AnnotationTest)
 

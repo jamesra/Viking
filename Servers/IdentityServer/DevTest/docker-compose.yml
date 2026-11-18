@@ -1,0 +1,28 @@
+# Stack: identity-devtest, for the annotation test stack (Servers/GrpcAnnotationService/scripts/Start-AnnotationTestStack.ps1).
+#
+# An in-memory Duende identity server with the test user (testuser) and the ro.viking and grpc-annotation clients
+# of Config.cs. HTTPS only (.cursor/rules/https-only-servers.mdc): container 443 -> host 5020 with a self-signed
+# certificate made at start and kept in the identity-devtest-certs volume. The script copies it to
+# %TEMP%\viking-identity-test-stack.pem, which the gRPC tests pin, and the annotation test stack mounts the volume
+# (docker-compose.test-identity.yml) to trust it. Never use this server outside a test box.
+name: viking-annotation
+services:
+  identity-devtest:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: identity-devtest:latest
+    container_name: identity-devtest
+    restart: unless-stopped
+    ports:
+      - "${IDENTITY_DEVTEST_HTTPS_PORT:-5020}:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      # The issuer name tokens carry; the tests and the annotation container both reach this host by this name.
+      - DEVTEST_ISSUER_URI=${DEVTEST_ISSUER_URI:-https://host.docker.internal:5020}
+    volumes:
+      - identity-devtest-certs:/https
+
+volumes:
+  identity-devtest-certs:
+    name: identity-devtest-certs

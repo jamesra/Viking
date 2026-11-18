@@ -31,8 +31,7 @@ namespace DevTestAPI
             services.AddAuthentication("Bearer")
                 .AddIdentityServerAuthentication(options =>
                 {
-                    options.Authority = "http://localhost:5000";
-                    options.RequireHttpsMetadata = false;
+                    options.Authority = "https://localhost:5020";
                     options.ApiName = "api1";
                 });
                 */
@@ -48,8 +47,7 @@ namespace DevTestAPI
                 .AddOpenIdConnect("oidc", options =>
                 {
                     options.SignInScheme = "Cookies";
-                    options.Authority = "http://localhost:5000";
-                    options.RequireHttpsMetadata = false;
+                    options.Authority = "https://localhost:5020";
                     options.ClientId = "mvc";
                     options.SaveTokens = true;
                 });

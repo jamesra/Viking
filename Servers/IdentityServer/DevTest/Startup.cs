@@ -20,8 +20,16 @@ namespace DevTest
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddIdentityServer()
+            services.AddIdentityServer(options =>
+                {
+                    // Tokens carry the name clients reach this server by (host.docker.internal in the test stack).
+                    string issuer = Environment.GetEnvironmentVariable("DEVTEST_ISSUER_URI");
+                    if (!string.IsNullOrWhiteSpace(issuer))
+                        options.IssuerUri = issuer;
+                })
                 .AddDeveloperSigningCredential()
+                .AddInMemoryIdentityResources(Config.GetIdentityResources())
+                .AddTestUsers(Config.GetTestUsers())
                 .AddInMemoryApiScopes(Config.GetApiScopes())
                 .AddInMemoryApiResources(Config.GetApiResources())
                 .AddInMemoryClients(Config.GetClients());

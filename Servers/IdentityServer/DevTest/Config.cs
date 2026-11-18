@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using Duende.IdentityServer;
 using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Test;
 
 namespace DevTest
 {
@@ -17,6 +18,15 @@ namespace DevTest
             {
                 new IdentityResources.OpenId(),
                 new IdentityResources.Profile(),
+            };
+        }
+
+        // The user the gRPC tests sign in as (Clients/WebAnnotationModel.gRPC.Tests/appsettings.json, TestIdentity).
+        public static List<TestUser> GetTestUsers()
+        {
+            return new List<TestUser>
+            {
+                new TestUser { SubjectId = "1", Username = "testuser", Password = "Testing123!" }
             };
         }
 
@@ -69,11 +79,12 @@ namespace DevTest
                     ClientId = "ro.viking",
                     AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
 
+                    // The tests' IdentityClient:ClientSecret (appsettings.json).
                     ClientSecrets =
                     {
-                        new Secret("secret".Sha256())
+                        new Secret("CorrectHorseBatteryStaple".Sha256())
                     },
-                    AllowedScopes = { "api1", "Viking.Annotation" }
+                    AllowedScopes = { "openid", "api1", "Viking.Annotation" }
                 },
 
                 // Introspection client of the gRPC annotation service (IdentityServer__ClientId/ClientSecret
@@ -104,8 +115,8 @@ namespace DevTest
                         new Secret("secret".Sha256())
                     },
 
-                    RedirectUris = { "http://localhost:5002/signin-oidc" },
-                    PostLogoutRedirectUris = { "http://localhost:5002/signout-callback-oidc" },
+                    RedirectUris = { "https://localhost:5002/signin-oidc" },
+                    PostLogoutRedirectUris = { "https://localhost:5002/signout-callback-oidc" },
 
                     AllowedScopes =
                     {
