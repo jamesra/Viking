@@ -193,7 +193,8 @@ namespace Viking.AU
             await parse_result.WithParsedAsync<CommandLineOptions>(RunAsync);
             await parse_result.WithParsedAsync<RemapToTilesOptions>(async o =>
             {
-                await ConnectAsync(o);
+                // Mosaic to tiles only: no section-to-volume transform is needed.
+                await ConnectAsync(o, loadSectionsAndTransforms: false);
                 exitCode = await MosaicRemap.RemapToTilesAsync(o, CancellationToken.None);
             });
             await parse_result.WithParsedAsync<RemapFromTilesOptions>(async o =>
@@ -258,7 +259,12 @@ namespace Viking.AU
         /// Signs in (review rights), loads the volume and its mappings, and binds the gRPC annotation stores: what every verb
         /// needs before it reads or writes locations.
         /// </summary>
-        static async Task ConnectAsync(VolumeOptions options)
+        /// <param name="loadSectionsAndTransforms">
+        /// Also load the sections and .stos transforms (<see cref="Volume.Initialize"/>). <see cref="Volume.CreateAsync"/>
+        /// reads only the VikingXML, so without this <c>Volume.Sections</c> is empty and no section maps to the volume.
+        /// Every verb that writes the volume cache needs it; mosaic-only verbs can skip the download.
+        /// </param>
+        static async Task ConnectAsync(VolumeOptions options, bool loadSectionsAndTransforms = true)
         {
 #if NETFRAMEWORK
             System.Data.Entity.SqlServer.SqlProviderServices.SqlServerTypesAssemblyName = "Microsoft.SqlServer.Types, Version=16.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91";
@@ -303,6 +309,13 @@ namespace Viking.AU
             progress.ProgressChanged += progressReporter.OnReport;
 
             State.Volume = await Volume.CreateAsync(options.VolumeURL, State.CachePath, progress, CancellationToken.None);
+            if (loadSectionsAndTransforms)
+            {
+                Console.WriteLine();
+                Console.WriteLine("Loading sections and transforms...");
+                await State.Volume.Initialize(CancellationToken.None, progress);
+                Console.WriteLine($"Loaded {State.Volume.Sections.Count} sections.");
+            }
 
             State.MappingsManager = new MappingManager(State.Volume);
 
