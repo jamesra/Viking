@@ -5,17 +5,17 @@ namespace Viking.Common
 {
     /// <summary>
     /// VikingXML IdentityApi/Authentication often copies the public Identity host (port 443 or :5001).
-    /// Permissions live on WebApi (:6001 HTTPS / :6000 HTTP), not IdentityServerStandalone.
+    /// Permissions live on WebApi (:6001), not IdentityServerStandalone. Identity is HTTPS only: an http:// identity URL
+    /// is upgraded to https.
     /// Called by login after reading VolumeToEndpoint, and by volume/segmentation pickers.
     /// </summary>
     public static class IdentityEndpoints
     {
-        public const int PermissionsApiHttpPort = 6000;
         public const int PermissionsApiHttpsPort = 6001;
 
         /// <summary>
         /// Returns the WebApi base URL for /Permissions.
-        /// Same host as IdentityServer on any other port is rewritten to 6001/6000.
+        /// Same host as IdentityServer on any other port, or over http, is rewritten to https :6001.
         /// A different host is left unchanged (dedicated API proxy).
         /// </summary>
         public static Uri ResolvePermissionsApiUrl(Uri identityApiFromXml, Uri identityServerUrl)
@@ -37,10 +37,11 @@ namespace Viking.Common
             if (identityServerUrl == null)
                 throw new ArgumentNullException(nameof(identityServerUrl));
 
-            var https = string.Equals(identityServerUrl.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+            // Identity is HTTPS only (no plain HTTP listener since Viking dev 42484593): an http:// issuer URL is upgraded.
             return new UriBuilder(identityServerUrl)
             {
-                Port = https ? PermissionsApiHttpsPort : PermissionsApiHttpPort,
+                Scheme = Uri.UriSchemeHttps,
+                Port = PermissionsApiHttpsPort,
                 Path = "/",
                 Query = string.Empty,
                 Fragment = string.Empty
@@ -52,11 +53,14 @@ namespace Viking.Common
             if (!string.Equals(identityApi.Host, identityServer.Host, StringComparison.OrdinalIgnoreCase))
                 return false;
 
+            if (string.Equals(identityApi.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase))
+                return true;
+
             return !IsPermissionsApiPort(identityApi.Port);
         }
 
         static bool IsPermissionsApiPort(int port)
-            => port == PermissionsApiHttpPort || port == PermissionsApiHttpsPort;
+            => port == PermissionsApiHttpsPort;
 
         /// <summary>
         /// OAuth scope resource key for Read/Annotate/Review: Identity <c>AnnotationServerName</c> when set,
