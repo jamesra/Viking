@@ -229,20 +229,21 @@ namespace VikingXNAGraphics
 
                 if (vertexCount > 0 && indexCount > 0)
                 {
-                    using (VertexBuffer vb = new VertexBuffer(device, typeof(VertexPositionColorTexture), vertexCount, BufferUsage.None))
-                    using (IndexBuffer ib = new IndexBuffer(device, IndexElementSize.ThirtyTwoBits, indexCount, BufferUsage.None))
+                    // The shared, growing circle buffers: no GPU buffers are created per call.
+                    GetOrCreateCircleBuffers(device, vertexCount, indexCount, out VertexBuffer vb, out IndexBuffer ib);
+                    if (vb is null || ib is null)
+                        continue;
+
+                    vb.SetData(VertArray, 0, vertexCount);
+                    ib.SetData(indicies, 0, indexCount);
+
+                    foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
                     {
-                        vb.SetData(VertArray, 0, vertexCount);
-                        ib.SetData(indicies, 0, indexCount);
+                        pass.Apply();
 
-                        foreach (EffectPass pass in basicEffect.CurrentTechnique.Passes)
-                        {
-                            pass.Apply();
-
-                            device.SetVertexBuffer(vb);
-                            device.Indices = ib;
-                            device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, indexCount / 3);
-                        }
+                        device.SetVertexBuffer(vb);
+                        device.Indices = ib;
+                        device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, indexCount / 3);
                     }
                 }
             }
@@ -472,7 +473,7 @@ namespace VikingXNAGraphics
             }
         }
 
-        private static void GetOrCreateCircleBuffers(GraphicsDevice device, int vertexCount, int indexCount,
+        protected static void GetOrCreateCircleBuffers(GraphicsDevice device, int vertexCount, int indexCount,
             out VertexBuffer vb, out IndexBuffer ib)
         {
             vb = null;
@@ -798,15 +799,24 @@ namespace VikingXNAGraphics
             if (listToDraw.Length == 0)
                 return;
 
-            // Rings switch the effect technique, so they are drawn last.
-            RingCircleView[] arrayRingCircles = [.. listToDraw.OfType<RingCircleView>()];
-            listToDraw = [.. listToDraw.Where(c => c is not RingCircleView)];
+            // Rings switch the effect technique, so they are drawn last. Most lists have none: skip the copies then.
+            bool anyRings = false;
+            foreach (CircleView c in listToDraw)
+                anyRings |= c is RingCircleView;
+
+            RingCircleView[] arrayRingCircles = anyRings ? [.. listToDraw.OfType<RingCircleView>()] : [];
+            if (anyRings)
+                listToDraw = [.. listToDraw.Where(c => c is not RingCircleView)];
 
             device.Indices = GlobalPrimitives.GetUnitCircleIndexBuffer(device);
             device.SetVertexBuffer(GlobalPrimitives.GetUnitCircleVertexBuffer(device));
 
             //Draw textured circles in the array. They switch the technique, so the caller's is put back for the solid circles.
-            TextureCircleView[] arrayTextureCircles = [.. listToDraw.OfType<TextureCircleView>()];
+            bool anyTextured = false;
+            foreach (CircleView c in listToDraw)
+                anyTextured |= c is TextureCircleView;
+
+            TextureCircleView[] arrayTextureCircles = anyTextured ? [.. listToDraw.OfType<TextureCircleView>()] : [];
             if (arrayTextureCircles.Length > 0)
             {
                 EffectTechnique solidTechnique = overlayEffect.CurrentTechnique;
@@ -820,7 +830,8 @@ namespace VikingXNAGraphics
             CircleView[] arraySolidCircles = arrayTextureCircles.Length == 0 ? listToDraw : [.. listToDraw.Where(c => c is not TextureCircleView)];
             if (arraySolidCircles.Length == 0)
             {
-                RingCircleView.Draw(device, scene, overlayEffect, arrayRingCircles);
+                if (arrayRingCircles.Length > 0)
+                    RingCircleView.Draw(device, scene, overlayEffect, arrayRingCircles);
                 return;
             }
 
@@ -858,7 +869,8 @@ namespace VikingXNAGraphics
                 }
             }
 
-            RingCircleView.Draw(device, scene, overlayEffect, arrayRingCircles);
+            if (arrayRingCircles.Length > 0)
+                RingCircleView.Draw(device, scene, overlayEffect, arrayRingCircles);
             //CircleView.RestoreGraphicsDevice(device, overlayEffect);
         }
 

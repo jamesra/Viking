@@ -53,7 +53,11 @@ namespace VikingXNAGraphics
 
     public static class LineManagerExtensions
     {
-        public static string ToString(this LineStyle style)
+        /// <summary>
+        /// The style's name, which is also its shader technique, without allocating. (Named Name, not ToString: an
+        /// extension named ToString is never called, because the enum's own ToString wins and builds a new string.)
+        /// </summary>
+        public static string Name(this LineStyle style)
         {
             return style switch
             {

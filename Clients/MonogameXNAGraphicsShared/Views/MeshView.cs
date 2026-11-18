@@ -221,14 +221,17 @@ namespace VikingXNAGraphics
 
             Matrix worldOriginal = effect.World;
             Matrix sceneWorld = scene.World;
-            var modelGroups = meshmodels.Where(m => m != null &&
-                                                m.Edges != null &&
-                                                m.Verticies != null &&
-                                                m.Edges.Length != 0)
-                                    .GroupBy(m => new { m.HasNormal, m.HasColor });
-
-            foreach (var group in modelGroups)
+            // HasNormal and HasColor come from the vertex type, so every model in this call shares them: one group.
+            List<MeshModel<VERTEXTYPE>> drawable = [];
+            foreach (MeshModel<VERTEXTYPE> m in meshmodels)
             {
+                if (m != null && m.Edges != null && m.Verticies != null && m.Edges.Length != 0)
+                    drawable.Add(m);
+            }
+
+            if (drawable.Count > 0)
+            {
+                var group = (Key: (drawable[0].HasNormal, drawable[0].HasColor), Models: drawable);
                 if (group.Key.HasNormal)
                 {
                     effect.EnableDefaultLighting();
@@ -240,7 +243,7 @@ namespace VikingXNAGraphics
 
                 effect.VertexColorEnabled = group.Key.HasColor;
 
-                foreach (MeshModel<VERTEXTYPE> model in group)
+                foreach (MeshModel<VERTEXTYPE> model in group.Models)
                 {
                     if (!model.EnsureBuffers(device))
                         continue;

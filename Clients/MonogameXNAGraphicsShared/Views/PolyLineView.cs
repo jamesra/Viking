@@ -321,6 +321,27 @@ namespace VikingXNAGraphics
             RoundLineCode.RoundLineManager lineManager = Overlay.GetLineManager(device);
             bool UseHSLColor = lineManager.UseHSLColor;
 
+            if (listToDraw.Length == 1)
+            {
+                // One view, one group: no grouping or LINQ needed.
+                PolyLineView only = listToDraw[0];
+                if (only.LineViews != null)
+                {
+                    if (only.DashLength.HasValue)
+                        lineManager.DashLength = only.DashLength.Value;
+
+                    lineManager.Draw(LinesOf(only.LineViews),
+                                 (float)(only.LineWidth / 2.0),
+                                 UseHSLColor ? only._HSLColor : only.Color,
+                                 scene.ViewProj,
+                                 (float)(System.DateTime.UtcNow.Millisecond / 1000.0),
+                                 only.Style.Name());
+                }
+
+                DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue, originalStencilFunction);
+                return;
+            }
+
             var renderGroups = listToDraw.Where(pl => pl.LineViews != null).GroupBy(pl => new { color = UseHSLColor ? pl._HSLColor : pl.Color, style = pl.Style, width = pl.LineWidth, dashLength = pl.DashLength });
 
             foreach (var renderGroup in renderGroups)
@@ -336,7 +357,7 @@ namespace VikingXNAGraphics
                              renderGroup.Key.color,
                              scene.ViewProj,
                              (float)(System.DateTime.UtcNow.Millisecond / 1000.0),
-                             renderGroup.Key.style.ToString());
+                             renderGroup.Key.style.Name());
             }
 
             DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue, originalStencilFunction);
@@ -357,10 +378,26 @@ namespace VikingXNAGraphics
 
             DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue + 1);
 
-            IEnumerable<CircleView> controlPointViews = listToDraw.Where(cv => cv.ShowControlPoints && cv.ControlPointViews != null).SelectMany(cv => cv.ControlPointViews);
-            CircleView.Draw(device, scene, Overlay, [.. controlPointViews]);
+            bool anyControlPoints = false;
+            foreach (PolyLineView view in listToDraw)
+                anyControlPoints |= view.ShowControlPoints && view.ControlPointViews is { Length: > 0 };
+
+            if (anyControlPoints)
+            {
+                IEnumerable<CircleView> controlPointViews = listToDraw.Where(cv => cv.ShowControlPoints && cv.ControlPointViews != null).SelectMany(cv => cv.ControlPointViews);
+                CircleView.Draw(device, scene, Overlay, [.. controlPointViews]);
+            }
 
             DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue, originalStencilFunction);
+        }
+
+        /// <summary>The round lines of <paramref name="views"/>, without a LINQ iterator.</summary>
+        private static RoundLineCode.RoundLine[] LinesOf(LineView[] views)
+        {
+            RoundLineCode.RoundLine[] lines = new RoundLineCode.RoundLine[views.Length];
+            for (int i = 0; i < views.Length; i++)
+                lines[i] = views[i].line;
+            return lines;
         }
 
         public void DrawBatch(GraphicsDevice device, IScene scene, OverlayStyle Overlay, IRenderable[] items) => PolyLineView.Draw(device, scene, Overlay, [.. items.Select(i => i as PolyLineView).Where(i => i != null)]);

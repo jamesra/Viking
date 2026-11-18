@@ -115,7 +115,7 @@ namespace VikingXNAGraphics
                                  renderGroup.Key.color,
                                  scene.ViewProj,
                                  (float)(DateTime.UtcNow.Millisecond / 1000.0),
-                                 renderGroup.Key.style.ToString());
+                                 renderGroup.Key.style.Name());
             }
         }
 
@@ -140,7 +140,7 @@ namespace VikingXNAGraphics
                                  renderGroup.Key.color,
                                  scene.ViewProj,
                                  (float)(DateTime.UtcNow.Millisecond / 1000.0),
-                                 renderGroup.Key.style.ToString());
+                                 renderGroup.Key.style.Name());
             }
         }
 
@@ -161,7 +161,7 @@ namespace VikingXNAGraphics
                               color,
                               scene.ViewProj,
                               (float)(DateTime.UtcNow.Millisecond / 1000.0),
-                              this.Style.ToString());
+                              this.Style.Name());
         }
     }
 }

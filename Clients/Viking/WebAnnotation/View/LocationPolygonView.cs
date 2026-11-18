@@ -480,7 +480,8 @@ namespace WebAnnotation.View
                     if (lpv.ControlPointView is null)
                         continue;
 
-                    if (Math.Abs(lpv.ControlPointRadius - expected_radius) > 0.001)
+                    // Only past a 1% change: the radius follows the zoom here, and each change rebuilds the vertex circles.
+                    if (Math.Abs(lpv.ControlPointRadius - expected_radius) > 0.01 * expected_radius)
                         lpv.ControlPointRadius = expected_radius;
 
                     lpv.SyncControlPointOpacity();

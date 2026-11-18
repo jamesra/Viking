@@ -1977,11 +1977,13 @@ namespace Viking.UI.Controls
             graphicsDevice.Textures[5] = null;
             graphicsDevice.Textures[6] = null;
             graphicsDevice.Textures[7] = null;
-            //The single channel path draws into the control's cached render target, which lives until the next resize
-            if (!ReferenceEquals(backgroundSectionTexture, _sectionRenderTarget))
+            //The single channel path draws into the control's cached render target, which lives until the next resize; the
+            //multi-channel path draws into pooled targets, reused next frame
+            if (!ReferenceEquals(backgroundSectionTexture, _sectionRenderTarget) && !channelRenderTargets.Owns(backgroundSectionTexture))
                 backgroundSectionTexture?.Dispose();
             backgroundSectionTexture = null;
-            ChannelOverlay?.Dispose();
+            if (!channelRenderTargets.Owns(ChannelOverlay))
+                ChannelOverlay?.Dispose();
             ChannelOverlay = null;
 
             graphicsDevice.BlendState = OriginalBlendState;
@@ -2316,12 +2318,76 @@ namespace Viking.UI.Controls
         }
 
         /// <summary>
-        /// Disposes the cached section render target. It is recreated by the next single channel draw.
+        /// Disposes the cached section render target and the channel targets. They are recreated by the next draw.
         /// </summary>
         private void ReleaseSectionRenderTarget()
         {
             _sectionRenderTarget?.Dispose();
             _sectionRenderTarget = null;
+            channelRenderTargets.Clear();
+        }
+
+        /// <summary>
+        /// Viewport-sized render targets for the multi-channel path: one per channel plus the two the merge alternates
+        /// between. They were created and disposed every frame; now <see cref="DrawSectionsWithChannels"/> hands the
+        /// previous frame's back at its start and rents them again. UI thread only.
+        /// </summary>
+        private readonly RenderTargetPool channelRenderTargets = new();
+
+        /// <summary>Render targets rented for one frame and reused by later frames of the same size, device and format.</summary>
+        private sealed class RenderTargetPool
+        {
+            private readonly List<RenderTarget2D> free = [];
+            private readonly List<RenderTarget2D> rented = [];
+
+            /// <summary>A target of this shape: a free one if there is one, otherwise a new one. Its contents are undefined.</summary>
+            public RenderTarget2D Rent(GraphicsDevice device, int width, int height, DepthFormat depth, RenderTargetUsage usage)
+            {
+                for (int i = 0; i < free.Count; i++)
+                {
+                    RenderTarget2D candidate = free[i];
+                    if (!candidate.IsDisposed && candidate.Width == width && candidate.Height == height &&
+                        ReferenceEquals(candidate.GraphicsDevice, device) && candidate.DepthStencilFormat == depth &&
+                        candidate.RenderTargetUsage == usage)
+                    {
+                        free.RemoveAt(i);
+                        rented.Add(candidate);
+                        return candidate;
+                    }
+                }
+
+                // Free targets of another size or device are left from before a resize or reset and will not fit again.
+                foreach (RenderTarget2D stale in free.FindAll(t => t.IsDisposed || t.Width != width || t.Height != height || !ReferenceEquals(t.GraphicsDevice, device)))
+                {
+                    stale.Dispose();
+                    free.Remove(stale);
+                }
+
+                RenderTarget2D target = new(device, width, height, false, SurfaceFormat.Color, depth, 0, usage);
+                rented.Add(target);
+                return target;
+            }
+
+            /// <summary>True when <paramref name="texture"/> belongs to this pool, so its user must not dispose it.</summary>
+            public bool Owns(Texture? texture) => texture is RenderTarget2D target && (rented.Contains(target) || free.Contains(target));
+
+            /// <summary>Makes every rented target free again; call when nothing from the previous frame is in use.</summary>
+            public void ReturnAll()
+            {
+                free.AddRange(rented);
+                rented.Clear();
+            }
+
+            /// <summary>Disposes every target.</summary>
+            public void Clear()
+            {
+                foreach (RenderTarget2D target in free)
+                    target.Dispose();
+                foreach (RenderTarget2D target in rented)
+                    target.Dispose();
+                free.Clear();
+                rented.Clear();
+            }
         }
 
         protected override void OnDeviceResetting(object sender, EventArgs e)
@@ -2426,20 +2492,17 @@ namespace Viking.UI.Controls
 
             RenderTarget2D renderTarget = reuseRenderTarget
                 ? AcquireSectionRenderTarget(graphicsDevice, scene.Viewport.Width, scene.Viewport.Height)
-                : new(graphicsDevice,
-                      scene.Viewport.Width,
-                      scene.Viewport.Height, false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8);
+                : channelRenderTargets.Rent(graphicsDevice, scene.Viewport.Width, scene.Viewport.Height,
+                                            DepthFormat.Depth24Stencil8, RenderTargetUsage.DiscardContents);
 
             //        Debug.Assert(graphicsDevice.Viewport.Width == ClientRectangle.Width); 
 
             graphicsDevice.SetRenderTarget(renderTarget);
             //       graphicsDevice.SetRenderTarget(null);
 
-            //Clear the stencil buffer before we begin.  A reused target still holds the last frame, a new one is empty.
-            if (reuseRenderTarget)
-                graphicsDevice.Clear(ClearOptions.Target | ClearOptions.Stencil, Microsoft.Xna.Framework.Color.Transparent, 1f, 0);
-            else
-                graphicsDevice.Clear(ClearOptions.Stencil, Microsoft.Xna.Framework.Color.Black, 1f, 0);
+            //Clear the target and stencil before we begin: a reused or pooled target still holds an earlier frame, and a
+            //new one starts transparent, so clearing to transparent matches both.
+            graphicsDevice.Clear(ClearOptions.Target | ClearOptions.Stencil, Microsoft.Xna.Framework.Color.Transparent, 1f, 0);
             DepthStencilState originalDepthState = graphicsDevice.DepthStencilState;
 
             for (int iLevel = 0; iLevel < DownsamplesToRender.Length; iLevel++)
@@ -2643,6 +2706,9 @@ namespace Viking.UI.Controls
             //            List<float> renderedBetas = new List<float>(Channelset.Length - 1);
             List<Vector4> renderedChannelColors = new(Channelset.Length - 1);
             ChannelOverlay = null;
+
+            // The previous frame finished with its channel targets when its Draw returned.
+            channelRenderTargets.ReturnAll();
             try
             {
                 //            int DisplayWidth = graphicsDevice.Viewport.Width;
@@ -2748,14 +2814,10 @@ namespace Viking.UI.Controls
 
             finally
             {
-                foreach (RenderTarget2D renderedSection in renderedSections.Cast<RenderTarget2D>())
-                {
-                    renderedSection.Dispose();
-                }
-
+                // The channel targets belong to channelRenderTargets and are reused next frame.
                 renderedSections.Clear();
                 renderedSections = null;
-            }            //Free the textures from the channels
+            }
 
             /*
             graphicsDevice.BlendState = OriginalBlendState;
@@ -2820,14 +2882,11 @@ namespace Viking.UI.Controls
 
                 try
                 {
-                    activeRenderTarget = new RenderTarget2D(graphicsDevice,
-                                                             graphicsDevice.Viewport.Width,
-                                                             graphicsDevice.Viewport.Height, false, SurfaceFormat.Color, DepthFormat.None, 0,
-                                                             RenderTargetUsage.PreserveContents);
-                    inactiveRenderTarget = new RenderTarget2D(graphicsDevice,
-                                                            graphicsDevice.Viewport.Width,
-                                                            graphicsDevice.Viewport.Height, false, SurfaceFormat.Color, DepthFormat.None, 0,
-                                                            RenderTargetUsage.PreserveContents);
+                    // Every merge pass draws a full-screen quad with One/Zero blending, so a pooled target's old contents never show.
+                    activeRenderTarget = channelRenderTargets.Rent(graphicsDevice, graphicsDevice.Viewport.Width, graphicsDevice.Viewport.Height,
+                                                                   DepthFormat.None, RenderTargetUsage.PreserveContents);
+                    inactiveRenderTarget = channelRenderTargets.Rent(graphicsDevice, graphicsDevice.Viewport.Width, graphicsDevice.Viewport.Height,
+                                                                     DepthFormat.None, RenderTargetUsage.PreserveContents);
                 }
                 catch (InvalidOperationException)
                 {
@@ -2910,7 +2969,6 @@ namespace Viking.UI.Controls
             {
                 graphicsDevice.BlendState = oldBlendState;
                 graphicsDevice.SetRenderTargets(null);
-                inactiveRenderTarget?.Dispose();
             }
 
             //       SaveTexture(renderOverlayTarget, "D:\\Temp\\MergeRGB.png");

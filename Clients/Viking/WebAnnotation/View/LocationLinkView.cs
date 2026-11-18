@@ -1087,8 +1087,16 @@ namespace WebAnnotation.ViewModel
 
             if (!lineManager.SupportsPinched)
             {
-                LineView[] lineViews = [.. links.Select(l => new LineView(l.A.Center, l.B.Center, l.LineWidth, DrawnColor(l), LineStyle.Standard))];
-                LineView.Draw(device, scene, lineManager, lineViews);
+                float fallbackTime = (float)(DateTime.UtcNow.Millisecond / 1000.0);
+                foreach (IGrouping<(Color Color, double Width), LocationLinkView> group in links.GroupBy(l =>
+                    (lineManager.UseHSLColor ? DrawnColor(l).ConvertToHCL() : DrawnColor(l), l.LineWidth)))
+                {
+                    RoundLineCode.RoundLine[] fallbackLines = [.. group.Select(l => new RoundLineCode.RoundLine(
+                        new Vector2((float)l.A.Center.X, (float)l.A.Center.Y),
+                        new Vector2((float)l.B.Center.X, (float)l.B.Center.Y)))];
+                    lineManager.Draw(fallbackLines, (float)(group.Key.Width / 2.0), group.Key.Color, scene.ViewProj, fallbackTime, LineStyle.Standard.Name());
+                }
+
                 return;
             }
 

@@ -221,8 +221,8 @@ namespace VikingXNAGraphics
                           float time,
                           CurveView[] listToDraw)
         {
-            IEnumerable<CircleView> controlPointViews = listToDraw.Where(cv => cv.ShowControlPoints).SelectMany(cv => cv.ControlPointViews);
-            CircleView.Draw(device, scene, OverlayStyle.Luma, [.. controlPointViews]);
+            if (Array.Exists(listToDraw, cv => cv.ShowControlPoints && cv.ControlPointViews is { Length: > 0 }))
+                CircleView.Draw(device, scene, OverlayStyle.Luma, [.. listToDraw.Where(cv => cv.ShowControlPoints).SelectMany(cv => cv.ControlPointViews)]);
 
             int OriginalStencilValue = DeviceStateManager.GetDepthStencilValue(device);
             CompareFunction originalStencilFunction = device.DepthStencilState.StencilFunction;
@@ -239,7 +239,7 @@ namespace VikingXNAGraphics
                                   renderGroup.Key.color,
                                   ViewProj,
                                   time,
-                                  renderGroup.Key.style.ToString());
+                                  renderGroup.Key.style.Name());
             }
 
             DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue, originalStencilFunction);
@@ -252,8 +252,8 @@ namespace VikingXNAGraphics
                           float time,
                           CurveView[] listToDraw)
         {
-            IEnumerable<CircleView> controlPointViews = listToDraw.Where(cv => cv.ShowControlPoints).SelectMany(cv => cv.ControlPointViews);
-            CircleView.Draw(device, scene, overlayStyle, [.. controlPointViews]);
+            if (Array.Exists(listToDraw, cv => cv.ShowControlPoints && cv.ControlPointViews is { Length: > 0 }))
+                CircleView.Draw(device, scene, overlayStyle, [.. listToDraw.Where(cv => cv.ShowControlPoints).SelectMany(cv => cv.ControlPointViews)]);
 
             int OriginalStencilValue = DeviceStateManager.GetDepthStencilValue(device);
             CompareFunction originalStencilFunction = device.DepthStencilState.StencilFunction;
@@ -272,7 +272,7 @@ namespace VikingXNAGraphics
                                   renderGroup.Key.color,
                                   ViewProj,
                                   time,
-                                  renderGroup.Key.style.ToString());
+                                  renderGroup.Key.style.Name());
             }
 
             DeviceStateManager.SetDepthStencilValue(device, OriginalStencilValue, originalStencilFunction);

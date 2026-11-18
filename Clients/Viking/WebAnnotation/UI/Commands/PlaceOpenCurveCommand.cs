@@ -463,14 +463,14 @@ namespace WebAnnotation.UI.Commands
                 if (vert_stack.Count > 2)
                 {
                     CurveView curveView = new([.. vert_stack], LineColor, !IsOpen, Global.NumCurveInterpolationPoints(!IsOpen), lineWidth: LineWidth, lineStyle: Style, controlPointRadius: ControlPointRadius);
-                    curveView.Color.SetAlpha(ShapeIsValid() ? 1 : 0.25f);
+                    curveView.Alpha = ShapeIsValid() ? 1 : 0.25f;
                     CurveView.Draw(graphicsDevice, scene, OverlayStyle.Luma, 0, [curveView]);
                     //GlobalPrimitives.DrawPolyline(Parent.LineManager, basicEffect, DrawnLineVerticies, this.LineWidth, this.LineColor);
                 }
                 else
                 {
                     LineView lineView = new(new LineSegment(vert_stack.First(), vert_stack.Last()), Global.NumCurveInterpolationPoints(!IsOpen), LineColor, lineStyle: Style);
-                    lineView.Color.SetAlpha(ShapeIsValid() ? 1 : 0.25f);
+                    lineView.Alpha = ShapeIsValid() ? 1 : 0.25f;
                     LineView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, [lineView]);
                 }
 
@@ -486,13 +486,13 @@ namespace WebAnnotation.UI.Commands
                 if (Verticies.Length > 2)
                 {
                     CurveView curveView = new([.. Verticies], LineColor, !IsOpen, Global.NumCurveInterpolationPoints(!IsOpen), lineWidth: LineWidth, lineStyle: Style, controlPointRadius: ControlPointRadius);
-                    curveView.Color.SetAlpha(ShapeIsValid() ? 1 : 0.25f);
+                    curveView.Alpha = ShapeIsValid() ? 1 : 0.25f;
                     CurveView.Draw(graphicsDevice, scene, Parent.LumaOverlayCurveManager, basicEffect, Parent.AnnotationOverlayEffect, 0, [curveView]);
                 }
                 if (Verticies.Length == 2)
                 {
                     LineView lineView = new(new LineSegment(vert_stack.First(), vert_stack.Last()), Global.NumCurveInterpolationPoints(!IsOpen), LineColor, lineStyle: Style);
-                    lineView.Color.SetAlpha(ShapeIsValid() ? 1 : 0.25f);
+                    lineView.Alpha = ShapeIsValid() ? 1 : 0.25f;
                     LineView.Draw(graphicsDevice, scene, Parent.LumaOverlayLineManager, [lineView]);
                 }
                 else

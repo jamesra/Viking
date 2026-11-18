@@ -506,27 +506,37 @@ namespace WebAnnotation.View
                           OverlayShaderEffect overlayEffect,
                           LocationCircleView[] listToDraw)
         {
-            float[] originalAlpha = [.. listToDraw.Select(loc => loc.Alpha)];
-            float[] fadeFactor = [.. listToDraw.Select(loc => loc.GetAlphaFadeScalarForScene(scene))];
             var overlay = AnnotationOverlay.CurrentOverlay;
+            float[] originalAlpha = new float[listToDraw.Length];
+            CircleView[] backgroundCircles = new CircleView[listToDraw.Length];
+            List<OverlappedLinkCircleView> overlappedLocations = [];
 
-            listToDraw.ForEach((view, i) =>
-                {
-                    float alpha = originalAlpha[i] * fadeFactor[i];
-                    if (overlay?.IsAutoPolygonizeHoverSource(view.ID) == true)
-                        alpha *= ProposalHoverAlphaScale;
-                    if (alpha != originalAlpha[i])
-                        view.Alpha = alpha;
-                });
+            for (int i = 0; i < listToDraw.Length; i++)
+            {
+                LocationCircleView view = listToDraw[i];
+                originalAlpha[i] = view.Alpha;
+                float alpha = originalAlpha[i] * view.GetAlphaFadeScalarForScene(scene);
+                if (overlay?.IsAutoPolygonizeHoverSource(view.ID) == true)
+                    alpha *= ProposalHoverAlphaScale;
+                if (alpha != originalAlpha[i])
+                    view.Alpha = alpha;
 
-            OverlappedLinkCircleView[] overlappedLocations = [.. listToDraw.Select(l => l.OverlappedLinkView).Where(l => l != null && l.IsVisible(scene))];
-            OverlappedLinkCircleView.Draw(device, scene, basicEffect, overlayEffect, overlappedLocations);
+                backgroundCircles[i] = view.circleView;
+                if (view.OverlappedLinkView is OverlappedLinkCircleView overlapped && overlapped.IsVisible(scene))
+                    overlappedLocations.Add(overlapped);
+            }
 
-            CircleView[] backgroundCircles = [.. listToDraw.Select(l => l.circleView)];
+            if (overlappedLocations.Count > 0)
+                OverlappedLinkCircleView.Draw(device, scene, basicEffect, overlayEffect, [.. overlappedLocations]);
+
             overlayEffect.InputLumaAlphaValue = 0.5f;
             CircleView.Draw(device, scene, OverlayStyle.Luma, backgroundCircles);
 
-            listToDraw.ForEach((view, i) => view.Alpha = originalAlpha[i]);
+            for (int i = 0; i < listToDraw.Length; i++)
+            {
+                if (listToDraw[i].Alpha != originalAlpha[i])
+                    listToDraw[i].Alpha = originalAlpha[i];
+            }
         }
 
         /// <summary>

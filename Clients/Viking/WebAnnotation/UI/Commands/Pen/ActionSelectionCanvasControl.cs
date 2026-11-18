@@ -450,21 +450,40 @@ namespace WebAnnotation.UI.Commands
         private void DrawButtonsAndLabels(GraphicsDevice graphicsDevice, Scene scene)
         {
             if (Buttons.Length > 0)
-            {
-                // Discs first, then the polygon-vertex rings framing them (CircleView.Draw draws rings last).
-                IRenderable[] views =
-                [
-                    .. Buttons.Select(b => b.circleView),
-                    .. Buttons.Select(b => PenButtonStyle.RingFor(b.Circle, b.Color)),
-                ];
-                CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, views);
-            }
+                CircleView.Draw(graphicsDevice, scene, OverlayStyle.Alpha, ButtonViews());
 
             // LabelView.Draw owns SpriteBatch.Begin/End; nesting Begin here leaves the batch open if the inner Begin throws.
             if (_buttonLabels.Length > 0 && Parent.fontArial != null && Parent.spriteBatch != null)
                 LabelView.Draw(Parent.spriteBatch, Parent.fontArial, scene, _buttonLabels);
 
             (cancelButton ??= new PenCancelButton(Parent)).Draw(graphicsDevice, scene);
+        }
+
+        /// <summary>The button discs and rings drawn for <see cref="buttonViewsKey"/>; rebuilt only when a button's circle or colour changes.</summary>
+        private IRenderable[] buttonViews = [];
+        private (Circle Circle, Color Color)[] buttonViewsKey = [];
+
+        /// <summary>Discs first, then the polygon-vertex rings framing them (CircleView.Draw draws rings last).</summary>
+        private IRenderable[] ButtonViews()
+        {
+            CircularButton[] buttons = Buttons;
+            bool same = buttonViewsKey.Length == buttons.Length;
+            for (int i = 0; same && i < buttons.Length; i++)
+                same = buttonViewsKey[i].Circle.Equals(buttons[i].Circle) && buttonViewsKey[i].Color == buttons[i].Color;
+
+            if (!same)
+            {
+                buttonViewsKey = [.. buttons.Select(b => (b.Circle, b.Color))];
+                buttonViews = [.. buttons.Select(b => b.circleView), .. buttons.Select(b => PenButtonStyle.RingFor(b.Circle, b.Color))];
+            }
+            else
+            {
+                // The discs are the buttons' own views; keep them current if a button swapped its view.
+                for (int i = 0; i < buttons.Length; i++)
+                    buttonViews[i] = buttons[i].circleView;
+            }
+
+            return buttonViews;
         }
 
         private static void DrawView(GraphicsDevice graphicsDevice, Scene scene, object action, bool UseActive)
