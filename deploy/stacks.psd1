@@ -30,7 +30,9 @@
             # models.d: host name -> upstream lines other stacks write (segmentation.map).
             DataDirs     = @('models.d')
             Profiles     = @()
-            Required     = @('VIKING_DOMAIN', 'VIKING_COMPUTE_HOST', 'VIKING_IIS_HOST')
+            # VIKING_COMPUTE_HOST / VIKING_IIS_HOST only supply default upstreams; a host without them (HypV1) sets the
+            # VIKING_UPSTREAM_* keys instead (example.viking-proxy.run.env).
+            Required     = @('VIKING_DOMAIN')
             Example      = 'deploy/examples/example.viking-proxy.run.env'
             Secrets      = @()
             HealthUrl    = 'http://127.0.0.1/healthz'
