@@ -189,7 +189,7 @@ def test_a_self_signed_certificate_is_the_fallback_trust_root(monkeypatch, tmp_p
 
 def _blob(torch, **overrides):
     payload = {
-        "format_version": torch.tensor([1], dtype=torch.int64),
+        "format_version": torch.tensor([2], dtype=torch.int64),
         "image_embed": torch.zeros(1, 4, 8, 8),
         "orig_hw": torch.tensor([64, 64], dtype=torch.int64),
         "n_high": torch.tensor([2], dtype=torch.int64),

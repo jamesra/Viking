@@ -12,7 +12,7 @@ OLDER = "cc5695e81dbee78f"
 
 
 def _write_blob(root: Path, stamp: str, mode: str, size: int) -> Path:
-    path = root / stamp / mode / "ab" / ("ab" + "0" * 62 + ".pt")
+    path = root / stamp / mode / "ab" / ("ab" + "0" * 62 + ".emb")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(b"x" * size)
     return path

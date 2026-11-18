@@ -24,7 +24,10 @@ from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
-# About 40–85 MiB per 1024 cell. 32 GiB covers a tracing working set, not a whole volume.
+# Embedding files are embedding_codec blobs (format 2 onward); the older torch.save ".pt" files are not read.
+EMBEDDING_SUFFIX = ".emb"
+# About 5.8 MiB per 1024 cell (hiera_l, compressed): 32 GiB keeps about 5,600 cells, a tracing working set,
+# not a whole volume.
 DEFAULT_MAX_BYTES = 32 * 1024**3
 _DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
 _MODE_RE = re.compile(r"^[a-z0-9_-]{1,32}$")
@@ -184,7 +187,7 @@ class EmbeddingStore:
     keep its own files under this root (the tile store keeps ``.png`` tiles here).
     """
 
-    def __init__(self, root: str, stamp: str, max_bytes: Optional[int], suffix: str = ".pt") -> None:
+    def __init__(self, root: str, stamp: str, max_bytes: Optional[int], suffix: str = EMBEDDING_SUFFIX) -> None:
         self._root = Path(root)
         self._stamp = stamp
         self._max_bytes = max_bytes

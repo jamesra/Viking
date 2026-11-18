@@ -5,7 +5,6 @@ from __future__ import annotations
 import functools
 import gc
 import hashlib
-import io
 import logging
 import os
 import threading
@@ -29,6 +28,7 @@ from segmentation_server.compile_config import (
     env_box_multimask_enabled,
     hydra_overrides_for_image_encoder,
 )
+from segmentation_server import embedding_codec
 from segmentation_server.embedding_store import EmbeddingRamCache, EmbeddingStore, open_embedding_ram_cache, open_embedding_store
 from segmentation_server.cuda_errors import raise_if_cuda_lost
 from segmentation_server.encoder_parity import EncoderParityError, compare_feature_maps
@@ -59,10 +59,10 @@ _MASK_INPUT_LIMIT = 20.0
 # Radius in image pixels of the disc around each positive point that is forced to foreground in the
 # chosen mask, so the pixel the user clicked is never reported as background.
 _POSITIVE_POINT_RADIUS = 2
-# Layout of a disk embedding blob. It touches private SAM2 predictor state (_features, _orig_hw),
-# so a blob carries this number and one with another value is discarded instead of installed.
-# Bump it when the payload or the SAM2 pin changes what those fields mean.
-DISK_BLOB_FORMAT = 1
+# Layout of a disk embedding blob (embedding_codec.FORMAT). It touches private SAM2 predictor state
+# (_features, _orig_hw), so a blob carries this number and one with another value is discarded instead of
+# installed. Bump embedding_codec.FORMAT when the payload, the codec or the SAM2 pin changes what it means.
+DISK_BLOB_FORMAT = embedding_codec.FORMAT
 # Sanity bounds for a blob read back from disk. SAM2 keeps two high-resolution levels and the
 # largest image the server accepts is far below 65536 pixels on a side; anything outside these
 # is a corrupt or foreign file and is discarded instead of installed on the predictor.
@@ -466,7 +466,7 @@ class SegmentationModel:
         if blob is None:
             return False
         try:
-            payload = torch.load(io.BytesIO(blob), map_location="cpu", weights_only=True)
+            payload = embedding_codec.decode(blob)
             self._install_disk_features(predictor, payload)
         except Exception:
             logger.warning("Embedding disk blob unreadable sha=%s mode=%s", digest[:12], mode)
@@ -587,9 +587,7 @@ class SegmentationModel:
     @staticmethod
     def _serialize_payload(payload: dict) -> bytes:
         """A tensor dict from :meth:`_export_payload` as the bytes the disk store keeps."""
-        buffer = io.BytesIO()
-        torch.save(payload, buffer)
-        return buffer.getvalue()
+        return embedding_codec.encode(payload)
 
     @staticmethod
     def _install_disk_features(predictor: SAM2ImagePredictor, payload: dict) -> None:

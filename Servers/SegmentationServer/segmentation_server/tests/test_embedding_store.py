@@ -171,5 +171,5 @@ def test_touch_and_eviction_do_not_corrupt_the_index_when_they_race(tmp_path) ->
         thread.join(30)
 
     assert errors == []
-    on_disk = sum(path.stat().st_size for path in tmp_path.rglob("*.pt"))
+    on_disk = sum(path.stat().st_size for path in tmp_path.rglob("*.emb"))
     assert store.total_bytes == on_disk <= 300
