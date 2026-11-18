@@ -13,6 +13,8 @@ namespace WebAnnotationModel
 {
     public class LocationLinkStore : StoreBaseWithKey<AnnotateLocationsClient, IAnnotateLocations, LocationLinkKey, LocationLinkObj, LocationLink>
     {
+        protected override string LoadNoun => "location links";
+
         readonly ConcurrentDictionary<long, ConcurrentDictionary<LocationLinkKey, LocationLinkObj>> SectionToLocationLinks = new();
 
         public LocationLinkStore()

@@ -28,6 +28,11 @@ version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. 
 Documentation/source/Client/versionhistory.rst.
 -->
 
+## 1.2.151 — not yet released
+
+* **Says why a section has no annotations.** When the annotation server fails to send a section's annotations, the status bar under the viewer now says so, with the server's reason when it gives one (for example a server error, no answer in time, or the server could not be reached), instead of just showing an empty view.
+<!-- WebAnnotationModel.ServerLoadErrors: StoreBase.ReportLoadFailure from the section and region load catches in LocationStore and StoreBaseWithKey (FaultException message, ExceptionDetail, HTTP status, timeout, endpoint not found; cancellations ignored; same line at most once per 15 s). AnnotationOverlay shows it with SectionViewerControl.ShowTransientStatus for 12 s. Prompted by the NeitzCPED SQLCLR fault (2026-11-17), which left the view empty with no message. Dev port: the gRPC client (Viking dev, Clients/WebAnnotationModel.gRPC) should report failed region and section loads the same way, with the RpcException status and detail; not ported yet. -->
+
 ## 1.2.150 — 2026-11-17 (Viking Test, unsigned)
 
 * **Accept segmentation from the annotation's menu.** When a proposed segmentation (the outline auto-polygonize draws over a circle) is shown for an annotation, the annotation's own right-click menu now starts with **Accept segmentation**, so you no longer have to hit the thin proposal outline to accept it.

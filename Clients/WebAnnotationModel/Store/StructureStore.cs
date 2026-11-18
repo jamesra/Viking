@@ -26,6 +26,8 @@ namespace WebAnnotationModel
 
     public class StructureStore : StoreBaseWithIndexKeyAndParent<AnnotateStructuresClient, IAnnotateStructures, long, LongIndexGenerator, StructureObj, Structure>, IRegionQuery<long, StructureObj>
     {
+        protected override string LoadNoun => "structures";
+
         public StructureStore()
         {
             channelFactory =

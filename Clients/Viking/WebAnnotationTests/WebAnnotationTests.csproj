@@ -34,6 +34,7 @@
         <Compile Include="LocationShapeUpdateTests.cs" />
         <Compile Include="RTreeRectangleEqualsTests.cs" />
         <Compile Include="WebAnnotationModelExtensionsTests.cs" />
+        <Compile Include="ServerLoadErrorsTests.cs" />
         <Compile Include="Actions\ChangeContourActionTests.cs" />
         <Compile Include="Actions\PolygonCutTests.cs" />
         <Compile Include="Actions\HoleSplitChoiceTests.cs" />

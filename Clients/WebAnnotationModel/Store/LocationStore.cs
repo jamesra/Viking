@@ -512,13 +512,9 @@ namespace WebAnnotationModel
                         MinRadius,
                         LastQueryUtc.HasValue ? LastQueryUtc.Value.Ticks : 0);
                 }
-                catch (EndpointNotFoundException e)
-                {
-                    Trace.WriteLine("Could not connect to annotation database: " + e.ToString());
-                }
                 catch (Exception e)
                 {
-                    ShowStandardExceptionMessage(e);
+                    ReportLoadFailure(SectionNumber, e);
                 }
             }
 
@@ -600,13 +596,9 @@ namespace WebAnnotationModel
                 requestStarted = true;
             }
 
-            catch (EndpointNotFoundException e)
-            {
-                Trace.WriteLine("Could not connect to annotation database: " + e.ToString());
-            }
             catch (Exception e)
             {
-                ShowStandardExceptionMessage(e);
+                ReportLoadFailure(SectionNumber, e);
             }
             finally
             {
@@ -658,21 +650,9 @@ namespace WebAnnotationModel
                     ReleaseAsyncProxy(proxy, completedNormally: true);
                     proxy = null;
                 }
-                catch (TimeoutException)
-                {
-                    Debug.Write("Timeout waiting for server results");
-                    state.OnLoadCompletedCallBack?.Invoke(null);
-                    return;
-                }
-                catch (EndpointNotFoundException)
-                {
-                    Debug.Write("GetLocationChangesCallback - Endpoint not found exception");
-                    state.OnLoadCompletedCallBack?.Invoke(null);
-                    return;
-                }
                 catch (Exception e)
                 {
-                    ShowStandardExceptionMessage(e);
+                    ReportLoadFailure(state.SectionNumber, e);
                     state.OnLoadCompletedCallBack?.Invoke(null);
                     return;
                 }

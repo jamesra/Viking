@@ -485,6 +485,15 @@ namespace WebAnnotationModel
 
         #endregion
 
+        /// <summary>What this store loads, for <see cref="ServerLoadErrors"/> messages ("annotations", "links").</summary>
+        protected virtual string LoadNoun => "annotations";
+
+        /// <summary>
+        /// A section or region load failed: tell the viewer through <see cref="ServerLoadErrors"/>, so the user sees why the
+        /// section is empty, and trace it.
+        /// </summary>
+        protected void ReportLoadFailure(long sectionNumber, Exception e) => ServerLoadErrors.Report(LoadNoun, sectionNumber, e);
+
         protected void ShowStandardExceptionMessage(Exception e)
         {
             Trace.WriteLine(e.ToString());

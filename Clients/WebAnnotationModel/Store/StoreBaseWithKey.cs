@@ -571,13 +571,9 @@ namespace WebAnnotationModel
                                                         out deleted_objects);
                 }
             }
-            catch (EndpointNotFoundException e)
-            {
-                Trace.WriteLine("Could not connect to annotation database: " + e.ToString());
-            }
             catch (Exception e)
             {
-                ShowStandardExceptionMessage(e);
+                ReportLoadFailure(SectionNumber, e);
             }
 
             DateTime TraceQueryEnd = DateTime.UtcNow;
@@ -638,13 +634,9 @@ namespace WebAnnotationModel
                 }
             }
 
-            catch (EndpointNotFoundException e)
-            {
-                Trace.WriteLine("Could not connect to annotation database: " + e.ToString());
-            }
             catch (Exception e)
             {
-                ShowStandardExceptionMessage(e);
+                ReportLoadFailure(SectionNumber, e);
             }
             finally
             {
@@ -736,19 +728,9 @@ namespace WebAnnotationModel
                 objs = ProxyGetBySectionCallback(out TicksAtQueryExecute, out DeletedLocations, state, result);
                 completedNormally = true;
             }
-            catch (TimeoutException)
-            {
-                Debug.Write("Timeout waiting for server results");
-                return;
-            }
-            catch (EndpointNotFoundException)
-            {
-                Debug.Write("GetLocationChangesCallback - Endpoint not found exception");
-                return;
-            }
             catch (Exception e)
             {
-                ShowStandardExceptionMessage(e);
+                ReportLoadFailure(state.SectionNumber, e);
                 return;
             }
             finally

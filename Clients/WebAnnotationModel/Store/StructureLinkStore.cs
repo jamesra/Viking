@@ -10,6 +10,8 @@ namespace WebAnnotationModel
 
     public class StructureLinkStore : StoreBaseWithKey<AnnotateStructuresClient, IAnnotateStructures, StructureLinkKey, StructureLinkObj, StructureLink>
     {
+        protected override string LoadNoun => "structure links";
+
         public StructureLinkStore()
         {
             channelFactory =

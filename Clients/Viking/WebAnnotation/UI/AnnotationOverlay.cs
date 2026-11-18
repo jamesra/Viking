@@ -831,6 +831,10 @@ namespace WebAnnotation
 
             AnnotationStatusChips.Attach(_Parent);
 
+            // A failed section or region load would otherwise only leave the view empty.
+            WebAnnotationModel.ServerLoadErrors.Failed -= OnServerLoadFailed;
+            WebAnnotationModel.ServerLoadErrors.Failed += OnServerLoadFailed;
+
             _Parent.Disposed += OnParentDisposed;
 
             _currentSectionNumber = _Parent.Section?.Number ?? 0;
@@ -939,8 +943,12 @@ namespace WebAnnotation
 
         private void OnParentDisposed(object sender, EventArgs e)
         {
+            WebAnnotationModel.ServerLoadErrors.Failed -= OnServerLoadFailed;
             Shutdown();
         }
+
+        /// <summary>Shows why annotations did not load on the status bar. Raised from store threads; the status bar marshals.</summary>
+        private void OnServerLoadFailed(string message) => _Parent?.ShowTransientStatus(message, 12000);
 
         /// <summary>
         /// Stops auto-polygonize timers, the section location poller, and the annotation-load worker when the viewer is disposed.
