@@ -4,7 +4,9 @@
 #   443  TLS passthrough routed by SNI: VIKING_HOSTNAME_<SERVICE> -> VIKING_UPSTREAM_<SERVICE> (host:port);
 #        every service presents the shared certificate from /certs itself. Exception: the Identity
 #        hostname is terminated here (templates/identity.conf.template) and routed by path so the
-#        issuer, management site and WebApi all share https://<identity host>/ on 443:
+#        issuer, management site and WebApi all share https://<identity host>/ on 443, and the bare
+#        domain (VIKING_HOSTNAME_LANDING) is terminated here for a static landing page.
+#        Identity paths:
 #          /manage/ -> VIKING_UPSTREAM_IDENTITY_MANAGEMENT   /webapi/ -> VIKING_UPSTREAM_IDENTITY_WEBAPI
 #          everything else -> VIKING_UPSTREAM_IDENTITY (issuer)
 #   80   /.well-known/acme-challenge/ from the viking-certs webroot (HTTP-01), /healthz, and a
@@ -30,6 +32,8 @@ x-viking-hostnames: &viking-hostnames
   VIKING_HOSTNAME_GALLERY: ${VIKING_HOSTNAME_GALLERY:-gallery.${VIKING_DOMAIN}}
   VIKING_HOSTNAME_TEM_GALLERY: ${VIKING_HOSTNAME_TEM_GALLERY:-gallery-tem.${VIKING_DOMAIN}}
   VIKING_HOSTNAME_SEM_GALLERY: ${VIKING_HOSTNAME_SEM_GALLERY:-gallery-sem.${VIKING_DOMAIN}}
+  # The bare domain: a static landing page TLS-terminated by the proxy (templates/landing.conf.template).
+  VIKING_HOSTNAME_LANDING: ${VIKING_HOSTNAME_LANDING:-${VIKING_DOMAIN}}
 
 services:
   viking-proxy:

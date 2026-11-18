@@ -14,6 +14,9 @@ resolver_timeout 5s;
 map $ssl_preread_server_name $viking_backend {
     # Identity is TLS-terminated by this proxy (identity.conf) and routed by path.
     ${VIKING_HOSTNAME_IDENTITY}          127.0.0.1:8443;
+    # Landing page for the bare domain, TLS-terminated here too (landing.conf). Must differ from the
+    # Identity name: a duplicate map key stops nginx from starting.
+    ${VIKING_HOSTNAME_LANDING}           127.0.0.1:8444;
     ${VIKING_HOSTNAME_WEBSVC}            ${VIKING_UPSTREAM_WEBSVC};
     ${VIKING_HOSTNAME_ANNOTATION}        ${VIKING_UPSTREAM_ANNOTATION};
     ${VIKING_HOSTNAME_CORRECTIONS}       ${VIKING_UPSTREAM_CORRECTIONS};
