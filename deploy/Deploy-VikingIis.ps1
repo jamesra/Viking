@@ -8,7 +8,7 @@
     viking-iis run env (deploy/examples/example.viking-iis.run.env) instead of the hard-coded
     \\OPR-MARC-WEBSV2 and C:\ paths:
 
-      Annotation    VikingLegacy's Servers/AnnotationService/DeployProduction.cmd copies the WCF
+      Annotation    Viking-Net4.8's Servers/AnnotationService/DeployProduction.cmd copies the WCF
                     AnnotationService bin folder to <DeployRoot>\Release\AnnotationService\bin (web.config kept).
                     Runs on the build machine; DeployRoot may be a UNC path to the IIS host.
       Export        Scripts/Deploy-ExportApplication.ps1 once per volume (RC1, RC2, ...).
@@ -35,11 +35,13 @@
 .PARAMETER RepoRoot
     Viking checkout with the built binaries. Default $env:VIKING_REPO_ROOT_HOST, else this script's repo.
 
-.PARAMETER LegacyRepoRoot
-    VikingLegacy checkout, where the WCF AnnotationService is built. Default $env:VIKING_LEGACY_REPO_ROOT, else VikingLegacy beside RepoRoot.
+.PARAMETER Net48RepoRoot
+    Viking-Net4.8 checkout, where the WCF AnnotationService is built. Default $env:VIKING_NET48_REPO_ROOT, else the old
+    $env:VIKING_LEGACY_REPO_ROOT (from before the checkout was renamed), else Viking-Net4.8 beside RepoRoot.
+    The old name -LegacyRepoRoot still works.
 
 .PARAMETER AnnotationSourceBin
-    Built WCF AnnotationService bin folder. Default <LegacyRepoRoot>\Servers\AnnotationService\AnnotationService\bin.
+    Built WCF AnnotationService bin folder. Default <Net48RepoRoot>\Servers\AnnotationService\AnnotationService\bin.
 
 .PARAMETER Volume
     Volume folder names (relative to SiteRoot) for -Action Export. Default $env:VIKING_IIS_VOLUMES
@@ -89,7 +91,8 @@ param(
     [string[]]$Action = @('Annotation'),
     [string]$DeployRoot = $env:VIKING_IIS_DEPLOY_ROOT,
     [string]$RepoRoot = $env:VIKING_REPO_ROOT_HOST,
-    [string]$LegacyRepoRoot = $env:VIKING_LEGACY_REPO_ROOT,
+    [Alias('LegacyRepoRoot')]
+    [string]$Net48RepoRoot = $env:VIKING_NET48_REPO_ROOT,
     [string]$AnnotationSourceBin,
     [string[]]$Volume,
     [string]$SiteRoot = $env:VIKING_IIS_SITE_ROOT,
@@ -104,8 +107,9 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if (-not $RepoRoot) { $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path }
-if (-not $LegacyRepoRoot) { $LegacyRepoRoot = Join-Path (Split-Path $RepoRoot -Parent) 'VikingLegacy' }
-if (-not $AnnotationSourceBin) { $AnnotationSourceBin = Join-Path $LegacyRepoRoot 'Servers\AnnotationService\AnnotationService\bin' }
+if (-not $Net48RepoRoot) { $Net48RepoRoot = $env:VIKING_LEGACY_REPO_ROOT }
+if (-not $Net48RepoRoot) { $Net48RepoRoot = Join-Path (Split-Path $RepoRoot -Parent) 'Viking-Net4.8' }
+if (-not $AnnotationSourceBin) { $AnnotationSourceBin = Join-Path $Net48RepoRoot 'Servers\AnnotationService\AnnotationService\bin' }
 if (-not $Volume -and $env:VIKING_IIS_VOLUMES) {
     $Volume = @($env:VIKING_IIS_VOLUMES -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 }
@@ -133,7 +137,7 @@ foreach ($a in $Action) {
         'Status' {
             [pscustomobject]@{
                 RepoRoot            = $repo
-                LegacyRepoRoot      = $LegacyRepoRoot
+                Net48RepoRoot       = $Net48RepoRoot
                 DeployRoot          = $DeployRoot
                 AnnotationSourceBin = $AnnotationSourceBin
                 AnnotationTarget    = if ($DeployRoot) { Join-Path $DeployRoot 'Release\AnnotationService\bin' } else { '' }
@@ -150,7 +154,7 @@ foreach ($a in $Action) {
         'Annotation' {
             Assert-Setting 'DeployRoot' $DeployRoot 'VIKING_IIS_DEPLOY_ROOT'
             $target = Join-Path $DeployRoot 'Release\AnnotationService\bin'
-            $cmd = Join-Path $LegacyRepoRoot 'Servers\AnnotationService\DeployProduction.cmd'
+            $cmd = Join-Path $Net48RepoRoot 'Servers\AnnotationService\DeployProduction.cmd'
             if (-not (Test-Path -LiteralPath $AnnotationSourceBin)) { throw "Build output not found: $AnnotationSourceBin" }
             if ($PSCmdlet.ShouldProcess($target, "robocopy AnnotationService bin from $AnnotationSourceBin")) {
                 & cmd.exe /d /c "`"$cmd`" `"$AnnotationSourceBin`" `"$target`""
