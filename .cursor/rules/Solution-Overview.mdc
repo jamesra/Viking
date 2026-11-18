@@ -5,7 +5,7 @@ alwaysApply: true
 
 **Project:** Image viewing, annotation, and analysis suite — Viking client plus servers that serve images and annotations from SQL. Client projects live under `Clients/`, server projects under `Servers/`.
 
-**Where to edit:** Server and container work, `gRPC_Protos` and the gRPC clients (gRPC Viking, Jotunn) belong in this repo. WCF client work belongs in VikingLegacy, mirrored into this repo's `Clients/` tree where the code matches. See the repo-roles rule.
+**Where to edit:** Server and container work, `gRPC_Protos` and the gRPC clients (gRPC Viking, Jotunn) belong in this repo. WCF client work belongs in Viking-Net4.8, mirrored into this repo's `Clients/` tree where the code matches. See the repo-roles rule.
 
 **Clients**
 - **Viking** (`Clients/Viking/`) — current production WinForms client. Keep working until Jotunn covers daily tracing.
@@ -14,7 +14,7 @@ alwaysApply: true
 - **Jotunn** (`Clients/Jotunn/`) — Active WPF client and intended Viking successor. Shares `Viking.Scene` / `WebAnnotation` / MonoGame `SectionSceneRenderer` with Viking; do not add a second annotation renderer.
 
 **Servers**
-- **Annotation** — the gRPC annotation service (`Servers/GrpcAnnotationService`, protos in gRPC_Protos). The retired WCF AnnotationService, still in production for the WCF clients, lives in VikingLegacy (`Servers/AnnotationService`).
+- **Annotation** — the gRPC annotation service (`Servers/GrpcAnnotationService`, protos in gRPC_Protos). The retired WCF AnnotationService, still in production for the WCF clients, lives in Viking-Net4.8 (`Servers/AnnotationService`).
 - **Export** — Converts annotations to common file formats.
 - **OData** — Exposes annotations as OData. Proto definitions live in gRPC_Protos (see grpc-protos-folder rule).
 - **Segmentation Server** — Python-based gRPC segmentation service; separate repo/solution (e.g. SAM2-Docker).

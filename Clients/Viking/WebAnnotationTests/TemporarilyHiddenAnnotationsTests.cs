@@ -21,7 +21,7 @@ namespace WebAnnotationTests
     /// <summary>
     /// Del hides what a click under the mouse would pick for a while and Insert brings it back, so an annotation beneath
     /// a large one can be picked. Pins the timing, which view each key picks, the keys every kind of view is hidden under,
-    /// and the keys on the keyboard. Ported from VikingLegacy.
+    /// and the keys on the keyboard. Ported from Viking-Net4.8.
     /// </summary>
     [TestClass]
     public class TemporarilyHiddenAnnotationsTests

@@ -1,8 +1,8 @@
 # Publication notes: Viking
 
 Annotation software for connectomes: the Viking and Jotunn clients, their servers (annotation, section correction,
-SAM2 segmentation) and the gRPC protocols. VikingLegacy (the `Net4.8` branch, formerly `Legacy`) keeps its own notes from 2026-10-26
-(`D:\src\git\VikingLegacy\docs\publication_notes.md`); older WCF client entries stay here. Material for future
+SAM2 segmentation) and the gRPC protocols. Viking-Net4.8 (the `Net4.8` branch, formerly `Legacy`) keeps its own notes from 2026-10-26
+(`D:\src\git\Viking-Net4.8\docs\publication_notes.md`); older WCF client entries stay here. Material for future
 papers: citations, formulas, algorithmic decisions and the reasoning behind them. Index of all projects:
 `~/.cursor/publication-notes.md`. Format and rules: the `publication-notes` skill.
 
@@ -34,7 +34,7 @@ papers: citations, formulas, algorithmic decisions and the reasoning behind them
   on a 1-Lipschitz clearance function.
 
 - **Curves through chosen control points** (`Geometry/CurveFitting/CatmullRom.cs` `RefineControlPoints`,
-  `Geometry/CurveFitting/ControlRingCurve.cs`; ported from VikingLegacy 1c91fc81 without its client pen-splice and
+  `Geometry/CurveFitting/ControlRingCurve.cs`; ported from Viking-Net4.8 1c91fc81 without its client pen-splice and
   region-cut code): an outline is stored as the control points of a centripetal Catmull-Rom curve. Control points are
   chosen by insertion only: starting from a fixed set, the reference vertex that best closes the largest gap between
   curve and reference is inserted until every span is within the tolerance both ways, and spans are re-checked until a
@@ -105,7 +105,7 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   the crossing of segment $cp$ with the outline farthest from $c$, $d = (p - E)/\lVert p - E \rVert$, entry $N$ = the
   nearest crossing behind $E$ along $-d$, the end circle has radius
   $r = \min(\operatorname{dist}(\tfrac{N + E}{2}, \partial P), \sqrt{A/\pi})$ and centre $E - r\,d$.
-- **Inverse of an annotation edit** (`LocationVolumeGeometry.ToMosaic`, since 2026-10-30, port of VikingLegacy c5115e30):
+- **Inverse of an annotation edit** (`LocationVolumeGeometry.ToMosaic`, since 2026-10-30, port of Viking-Net4.8 c5115e30):
   with section-to-volume map $T$ and the forward five-point mean scale
   $s_T(c, r) = \tfrac14 \sum_{k=1}^{4} \lVert T(c + r e_k) - T(c) \rVert / r$ ($e_k$ the east, north, west and south unit
   vectors), a circle edited in volume space as $(c_v, r_v)$ is saved as $c_m = T^{-1}(c_v)$ and the fixed point
@@ -188,7 +188,7 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   Encrypt YR2, Root YR). Rejected: asking clients to install the intermediate (every machine, every renewal).
   Where: `Servers/GrpcSectionCorrectionService/DockerTlsCertificate.cs` (`ServerCertificateChain`), commit `4c26dc38`.
 - **2026-10-29 Link markers stay inside the polygon: a staggered second row, then smaller markers, before free space**
-  (ported from VikingLegacy 124f3ec8, same day). Why: James's RC2 screenshots of cell C 45733 (location 386775,
+  (ported from Viking-Net4.8 124f3ec8, same day). Why: James's RC2 screenshots of cell C 45733 (location 386775,
   section 645, two links down to 643 and three up to 646). Level, the run's ends held only four markers: five in one
   row left $F_5 = 109.8$ against $0.6\,s_0 = 112.8$ (reproduced from the location's control points smoothed as the
   viewer does, with Arial row widths), so the fifth went to the deepest free spot, the bulb at the cell's far end over
@@ -216,7 +216,7 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   `GeometryTests/LabelLayoutTests.cs` (stagger, shrink, circle halves, the screenshot cell) and
   `GeometryTests/FSCheck/PolygonSpec.cs` (`MarkersStayInsideAndClearOfHoles`).
 
-- **2026-10-29 Polygon labels switch placement smoothly: an eased move and 5° run angles** (ported from VikingLegacy
+- **2026-10-29 Polygon labels switch placement smoothly: an eased move and 5° run angles** (ported from Viking-Net4.8
   bc1643cd and 3caf531e, same day). Why: the user found the live Label rotation relayout rough, with labels jumping
   between level and tilted. (1) A 150 ms cubic ease-out of each text row's centre, angle (the short way modulo 180°,
   consistent with `LabelView.DrawRotated`'s upside-down flip) and font (formula above), from where the old labels are
@@ -245,7 +245,7 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   `AnnotationScene.cs`; tests `GeometryTests/LabelLayoutTests.cs`, `GeometryTests/LabelEasingTests.cs`,
   `GeometryTests/FSCheck/PolygonSpec.cs`.
 
-- **2026-10-29 Label tilt costs a gain that grows with the angle; one preference sets it** (ported from VikingLegacy
+- **2026-10-29 Label tilt costs a gain that grows with the angle; one preference sets it** (ported from Viking-Net4.8
   9629e4dd, same day). Why: a user disliked rotated polygon labels. The flat 0.9 tilt score (2026-10-26 entry) let a 30°
   run beat level text for an 11% larger font, the same price as 90°, and charged a principal axis 0.3° off level the
   full 10%. A run at $\theta$ now scores $F / (1 + G\lvert\sin\theta\rvert)$: at the default $G = 0.5$ it must beat
@@ -269,7 +269,7 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   (`OnAnnotationPreferences`); tests `GeometryTests/LabelLayoutTests.cs`, `GeometryTests/FSCheck/PolygonSpec.cs`,
   `Clients/Viking/WebAnnotationTests/LabelRotationTests.cs`.
 
-- **2026-10-28 Control point refinement checks both directions and re-checks neighbours** (ported from VikingLegacy
+- **2026-10-28 Control point refinement checks both directions and re-checks neighbours** (ported from Viking-Net4.8
   1c91fc81, 2026-10-27).
   - **Why:** the old greedy pass in `IdentifyControlPoints` checked each span once, measured only from the reference to
     the curve, and an insertion in the next span changed the accepted span's end tangent unchecked (measured on Legacy:
@@ -283,7 +283,7 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   - **Not ported:** Legacy's pen splice into the stored control ring, the 2 volume px pen tolerance cap and the
     multi-crossing region cut. They are client code (`ControlPointCut`, `PenRegionCut`, `PenInputHelper`).
 
-- **2026-10-28 Correction lattices are sampled by one shared function** (ported from VikingLegacy cdaf80de).
+- **2026-10-28 Correction lattices are sampled by one shared function** (ported from Viking-Net4.8 cdaf80de).
   - **Why:** the client's `SectionLatticeField` was an older port of the service's sampler. Where a cell had only some
     corners, it went straight to inverse-distance weighting, and it placed fallback nodes at cell centres,
     (g + ½)·pitch. The service (`SectionVectorField`, `NeighborResidualField`) interpolates over the present corners
@@ -365,7 +365,7 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
     the fade ends, so the user sees it return before it can take a click.
   - **One store:** hidden items are kept in one store keyed by what a view shows (location ID, link key,
     structure-link key, ring key), so every view of one item hides together.
-  - Ported from VikingLegacy 57dd42bd, 7ccd32e7, 38bb08dd, 5a460603 and f946d5b0 (dev 372b4f35). Where:
+  - Ported from Viking-Net4.8 57dd42bd, 7ccd32e7, 38bb08dd, 5a460603 and f946d5b0 (dev 372b4f35). Where:
     `Clients/Viking/WebAnnotation/UI/TemporarilyHiddenAnnotations.cs`.
 
 - **2026-10-27 Section correction drops CurveFit: answers are the published field only.** CurveFit moved each
@@ -422,8 +422,8 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   the link fill colour (`FillColorFor`). Rejected: restoring the raw colours (the user chose the original hue, softer).
   Where: `LocationLinkView.Soften`, `FillColorFor`, `OverlappedLocationLinkView`.
 
-- **2026-10-26 Location link rendering mirrored from Legacy** (VikingLegacy `a892564c`, `5291eb09`, `31b45d9c`,
-  `4101c96a`, `d455fb72`, `4cffd674`, `1ef4e036`; their entries follow, from VikingLegacy's notes). Left out because
+- **2026-10-26 Location link rendering mirrored from Legacy** (Viking-Net4.8 `a892564c`, `5291eb09`, `31b45d9c`,
+  `4101c96a`, `d455fb72`, `4cffd674`, `1ef4e036`; their entries follow, from Viking-Net4.8's notes). Left out because
   the gRPC client lacks the features they hook into: Del/Insert hiding of links (no `TemporarilyHiddenAnnotations`)
   and the label outline preference, so link end labels are always black text with a white outline, Legacy's
   default. Where: `Clients/Viking/WebAnnotation/View/LocationLinkView.cs`.
@@ -563,7 +563,7 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   re-encodes every tile) and mask quality under lossy input is unmeasured.
 - **2026-10-24 Tile renders cancel only themselves.** Each render cancelled the previous one, so overlapping requests
   cancelled each other's captures ("Capture failed" on first renders).
-- **2026-10-30 Annotation edits are saved by one inverse owner, solved against the forward rule** (port of VikingLegacy
+- **2026-10-30 Annotation edits are saved by one inverse owner, solved against the forward rule** (port of Viking-Net4.8
   c5115e30 to the gRPC client). Why: mosaic is the truth and every view draws the forward owner's mapping
   (`LocationVolumeGeometry`), so an edit made on screen must save the mosaic geometry whose forward mapping is what the
   user saw. The one-step inverse five-point mean is not the inverse of the forward one under shear or unequal axis
@@ -574,7 +574,7 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   width scale at the position and radius dev's `LocationObj` computes (they differ from Legacy's WCF object), measured by
   the non-linear warp round-trip test, which failed by 0.003 units until they matched. Where:
   `SqlGeometryAnnotationExtensions/LocationVolumeGeometry.Inverse.cs`, `LocationObjExtensions.TryApply`.
-- **2026-10-30 The stored volume cache always holds the volume's default transform** (port of VikingLegacy be9753f6..e9be69cf
+- **2026-10-30 The stored volume cache always holds the volume's default transform** (port of Viking-Net4.8 be9753f6..e9be69cf
   to the gRPC client). Decision (James, approved design): mosaic is the truth and is what is saved; `VolumeShape` (and the
   `VolumeX`/`VolumeY` the server computes from it) is a cache, written by every save and by the refresh after a `.stos`
   change (Update Volume Positions, VikingAU) as the forward owner's geometry under the volume's *default*
@@ -609,7 +609,7 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   outweighs a wrong cache that Update Volume Positions or VikingAU can refresh).
   Later the same day WCF was retired on dev: gRPC now refuses a point without a volume shape too (its volume position is
   no longer used; the only caller, the gRPC client, always sends the shape), and the WCF service, with its fallback, lives
-  in VikingLegacy.
+  in Viking-Net4.8.
 - **2026-11-13 Moving annotations to a rebuilt mosaic through tile coordinates** (VikingAU `remap-to-tiles` /
   `remap-from-tiles`; `Geometry/Transforms/MosaicTileLocator.cs`, `TileRemap.cs`). When a section's mosaic is rebuilt
   (nornir rescue-damaged-section) the tile images are unchanged and only their placement moves, so a mosaic vertex $p$
@@ -656,7 +656,7 @@ trust for $\rho \le 0.5$, a cosine fall to 0 at $\rho = 0.95$ (`circle_diameter_
   result exceeds the click-only object by 81,665 px: paint past a cell's edge stays in the answer, and the model cannot
   correct over-painting. So a user's "segmentation stops at my paint" was not the encoding. The causes were on the
   client, where paint beyond the canvas (the starting view plus half of it on each side) was dropped without being sent
-  (fixed in VikingLegacy `f8b7f6c1`), and in latency: the deployed image made the client re-upload 3-5 tiles the server
+  (fixed in Viking-Net4.8 `f8b7f6c1`), and in latency: the deployed image made the client re-upload 3-5 tiles the server
   already held on every request (1.3 of 3.4 s), which `fc19a525` removes. Limits: one object on one section, no ground truth, and the probe script was not
   kept in the repo.
 - **GPU sharing between training and serving.** With a training run on the same GPU, a tile embedding took 20-30 s

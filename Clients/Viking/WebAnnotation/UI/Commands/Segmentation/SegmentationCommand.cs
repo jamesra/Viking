@@ -705,7 +705,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
         }
 
         /// <summary>
-        /// Uploads any missing grid cells and requests segmentation. Matches VikingLegacy:
+        /// Uploads any missing grid cells and requests segmentation. Matches Viking-Net4.8:
         /// SegmentAsync owns tile upload, so clicks do not wait on a separate UploadImage phase.
         /// </summary>
         private void UploadImageAndRequestSegmentation()

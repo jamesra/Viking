@@ -13,7 +13,7 @@
 #   - /dataexport - Network and morphology export endpoints
 #
 # The WCF AnnotationService is no longer part of this image: it is retired on
-# dev and built and deployed from VikingLegacy. Annotation reads and writes use
+# dev and built and deployed from Viking-Net4.8. Annotation reads and writes use
 # the gRPC annotation service (Servers/GrpcAnnotationService).
 #
 # Build from solution root:

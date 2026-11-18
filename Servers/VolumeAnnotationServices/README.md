@@ -3,7 +3,7 @@
 This directory contains the Dockerfile and configuration for building a unified Docker container that hosts **two services for connectome data access**: OData and DataExport.
 
 The WCF AnnotationService used to be a third service in this image. WCF is retired on dev: the WCF server is built and
-deployed from VikingLegacy (`Servers/AnnotationService`), and annotation reads and writes go through the gRPC annotation
+deployed from Viking-Net4.8 (`Servers/AnnotationService`), and annotation reads and writes go through the gRPC annotation
 service (`Servers/GrpcAnnotationService`).
 
 ## Services Included

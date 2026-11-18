@@ -8,7 +8,7 @@
     Used by the VolumeAnnotationServices Windows container and by deploy/Deploy-VikingIis.ps1
     -Action ConfigureIIS. The defaults reproduce the original hard-coded paths.
 
-    The WCF AnnotationService is retired on dev and built and deployed from VikingLegacy; this
+    The WCF AnnotationService is retired on dev and built and deployed from Viking-Net4.8; this
     script does not create, remove or change its pool or application.
 
 .PARAMETER WebRoot

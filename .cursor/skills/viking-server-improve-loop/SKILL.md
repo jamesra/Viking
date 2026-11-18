@@ -14,7 +14,7 @@ disable-model-invocation: true
 
 # Viking server improvement loop
 
-The server half of the former `viking-improve-loop`. The WCF client and the Viking Test publish moved to `viking-client-improve-loop` in `d:\src\git\VikingLegacy`; the two loops run independently, each with its own ledger and steering file. When this skill is launched by the user, start the loop. Do not start it because this file was opened for another task. If the ledger's `nextWakeAt` is in the future and a wake is already scheduled in this session, do not start a second copy.
+The server half of the former `viking-improve-loop`. The WCF client and the Viking Test publish moved to `viking-client-improve-loop` in `d:\src\git\Viking-Net4.8`; the two loops run independently, each with its own ledger and steering file. When this skill is launched by the user, start the loop. Do not start it because this file was opened for another task. If the ledger's `nextWakeAt` is in the future and a wake is already scheduled in this session, do not start a second copy.
 
 The loop covers three things: the **gRPC client** (migration target), the **Server** (gRPC services), and **SQL** (annotation database). Three cross-cutting goals run beside them: **parity** (gRPC client matches the WCF client in features and speed), **deploy** (one command deploys the gRPC server per annotation database), and **docs** (consistent code docs and solid, short user docs).
 
@@ -52,7 +52,7 @@ Keep the parent transcript thin:
 
 ## Scope
 
-One repo, one branch: `d:\src\git\Viking` on `dev`, edited through the tracks in [scope.md](scope.md). Parity reads the WCF client in `d:\src\git\VikingLegacy` (`Net4.8`) and never edits it. The scout picks the track as well as the category, rotating so no track starves; `STEERING.md` `focus:` wins.
+One repo, one branch: `d:\src\git\Viking` on `dev`, edited through the tracks in [scope.md](scope.md). Parity reads the WCF client in `d:\src\git\Viking-Net4.8` (`Net4.8`) and never edits it. The scout picks the track as well as the category, rotating so no track starves; `STEERING.md` `focus:` wins.
 
 Priority when several tracks have candidates: a bug likely in real use, then a parity gap (`missing` before `partial` before a performance row over the line), then deploy and docs mismatches, then the rest.
 
@@ -60,7 +60,7 @@ Priority when several tracks have candidates: a bug likely in real use, then a p
 
 **Launch** runs Sync once in the main session. On **later wakes**, the **scout** runs Sync first (not main), so fetch/merge output stays out of the long-lived chat context.
 
-- `d:\src\git\Viking` (`dev`): `git fetch origin`, then `git merge --ff-only @{u}`. Sync never edits. Parity also needs `d:\src\git\VikingLegacy` current; fetch it, but leave merging it to the client loop or the user.
+- `d:\src\git\Viking` (`dev`): `git fetch origin`, then `git merge --ff-only @{u}`. Sync never edits. Parity also needs `d:\src\git\Viking-Net4.8` current; fetch it, but leave merging it to the client loop or the user.
 - Fast-forward only. If a repo cannot fast-forward (diverged history, or uncommitted local edits the incoming commits touch), leave it as it is, work from the current tree, and record `{repo, reason, date}` in `syncSkips`, keeping one entry per repo and reason (update its date instead of appending a duplicate; divergence normally persists until the user reconciles it by hand). Never stash, reset, rebase, force, or discard anything to make a pull succeed, and never push.
 - If the pull touches the `candidate`'s files, the scout re-checks the candidate before the implementer runs. If it breaks a build or a green test, do not fix it as part of the sync; it shows up at the next baseline run.
 
@@ -111,7 +111,7 @@ The main session only launches the subagents, talks to the user when needed, and
 
 ## Mirror to the WCF client
 
-Fixes in code the WCF client in `d:\src\git\VikingLegacy` also has (shared libraries such as Geometry, AnnotationVizLib and the WebAnnotation views, or the same logic in its WCF stores) belong in Net4.8 too, but this loop never edits Net4.8. After such a commit, append `{ sha, summary, legacyPaths }` to `mirrorPending` in the ledger, list it in every report until it is gone, and tell the user once so the client loop or a client session can port it. Remove an entry when its port lands on Net4.8 (search Net4.8's log for the sha).
+Fixes in code the WCF client in `d:\src\git\Viking-Net4.8` also has (shared libraries such as Geometry, AnnotationVizLib and the WebAnnotation views, or the same logic in its WCF stores) belong in Net4.8 too, but this loop never edits Net4.8. After such a commit, append `{ sha, summary, legacyPaths }` to `mirrorPending` in the ledger, list it in every report until it is gone, and tell the user once so the client loop or a client session can port it. Remove an entry when its port lands on Net4.8 (search Net4.8's log for the sha).
 
 ## Steering
 

@@ -34,7 +34,7 @@ Libraries shared by Viking and Jotunn
 Servers
 -------
 
-Servers are built from the *Connectome Project.sln* solution.  The retired WebVisualization (ConnectomeViz) site lives in VikingLegacy.
+Servers are built from the *Connectome Project.sln* solution.  The retired WebVisualization (ConnectomeViz) site lives in Viking-Net4.8.
 
 **Annotation Service:** Windows Communication Foundation service which is used to provide authenticated read/writes to an annotation database
 

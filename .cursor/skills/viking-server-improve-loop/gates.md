@@ -123,4 +123,4 @@ Commit only when green. Stage only the files this wake changed, by path; never `
 
 ## Publish
 
-Count only commits this loop creates, per program. Nothing on this loop's tracks has a test feed: on the 6th commit for a program (gRPC client, a server, SQL), tell the user once and reset that count. Server and SQL commits are never deployed by the loop; the user deploys them with the script in [deploy.md](deploy.md). The Viking client is published to Viking Test only by `viking-client-improve-loop` in `d:\src\git\VikingLegacy`.
+Count only commits this loop creates, per program. Nothing on this loop's tracks has a test feed: on the 6th commit for a program (gRPC client, a server, SQL), tell the user once and reset that count. Server and SQL commits are never deployed by the loop; the user deploys them with the script in [deploy.md](deploy.md). The Viking client is published to Viking Test only by `viking-client-improve-loop` in `d:\src\git\Viking-Net4.8`.
