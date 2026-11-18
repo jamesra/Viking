@@ -65,7 +65,7 @@ Same `SKILL.md` format as Claude skills. Read the SKILL.md when the task matches
 
 The two loop skills set `disable-model-invocation: true`, so they are not in the model's skill list: the user launches
 them by typing `/viking-server-ai-watch` or `/viking-server-improve-loop` in a session started in this repo. Their
-client counterparts (`viking-client-ai-loop`, `viking-client-improve-loop`) live in `d:\src\git\VikingLegacy`.
+client counterparts (`viking-client-ai-loop`, `viking-client-improve-loop`) live in `d:\src\git\Viking-Net4.8`.
 
 `viking-server-ai-watch` is written for Cursor. In Claude Code: a `Task` worker is an Agent tool subagent
 (`general-purpose`), and resuming it by `agentId` is `SendMessage` to that agent; the loop skill's monitored-shell
