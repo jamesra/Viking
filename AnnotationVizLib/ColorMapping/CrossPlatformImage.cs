@@ -3,20 +3,19 @@ using System.Drawing;
 using System.IO;
 
 #if NET9_0
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+using SkiaSharp;
 #endif
 
 namespace AnnotationVizLib
 {
     /// <summary>
     /// Cross-platform image wrapper that provides a unified interface for image operations
-    /// across .NET Framework (System.Drawing) and .NET 9.0 (ImageSharp)
+    /// across .NET Framework (System.Drawing) and .NET 9.0 (SkiaSharp)
     /// </summary>
     public class CrossPlatformImage : IDisposable
     {
 #if NET9_0
-        private readonly Image<Rgba32> _imageSharpImage;
+        private readonly SKBitmap _skiaImage;
         private readonly int _width;
         private readonly int _height;
 #else
@@ -42,9 +41,9 @@ namespace AnnotationVizLib
         public CrossPlatformImage(Stream imageStream)
         {
 #if NET9_0
-            _imageSharpImage = SixLabors.ImageSharp.Image.Load<Rgba32>(imageStream);
-            _width = _imageSharpImage.Width;
-            _height = _imageSharpImage.Height;
+            _skiaImage = SKBitmap.Decode(imageStream) ?? throw new ArgumentException("The stream is not an image SkiaSharp can decode.", nameof(imageStream));
+            _width = _skiaImage.Width;
+            _height = _skiaImage.Height;
 #else
             _systemDrawingImage = new Bitmap(imageStream);
 #endif
@@ -53,8 +52,8 @@ namespace AnnotationVizLib
         public System.Drawing.Color GetPixel(int x, int y)
         {
 #if NET9_0
-            var pixel = _imageSharpImage[x, y];
-            return System.Drawing.Color.FromArgb(pixel.A, pixel.R, pixel.G, pixel.B);
+            SKColor pixel = _skiaImage.GetPixel(x, y);
+            return System.Drawing.Color.FromArgb(pixel.Alpha, pixel.Red, pixel.Green, pixel.Blue);
 #else
             return _systemDrawingImage.GetPixel(x, y);
 #endif
@@ -62,7 +61,7 @@ namespace AnnotationVizLib
 
         public void Dispose() =>
 #if NET9_0
-            _imageSharpImage?.Dispose();
+            _skiaImage?.Dispose();
 #else
             _systemDrawingImage?.Dispose();
 #endif
