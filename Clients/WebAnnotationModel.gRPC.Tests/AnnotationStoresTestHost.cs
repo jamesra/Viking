@@ -17,7 +17,7 @@ namespace WebAnnotationModel.gRPC.Tests
 {
     /// <summary>
     /// Headless DI host mirroring Viking/VikingAU composition: ConfigureAnnotationModel
-    /// + bearer auth against the Docker test stack (identity :5020, gRPC https :5011 with the container's self-signed certificate).
+    /// + bearer auth against the Docker test stack (identity https :5020, gRPC https :5011 with the container's self-signed certificate).
     /// </summary>
     internal sealed class AnnotationStoresTestHost : IDisposable
     {
@@ -63,7 +63,7 @@ namespace WebAnnotationModel.gRPC.Tests
             Assert.That(identityClient, Is.Not.Null);
             Assert.That(userIdentity, Is.Not.Null);
 
-            var accessToken = await RequestAccessTokenAsync(identityUrl, identityClient, userIdentity)
+            var accessToken = await RequestAccessTokenAsync(identityUrl, identityClient, userIdentity, config)
                 .ConfigureAwait(false);
 
             var services = new ServiceCollection();
@@ -92,15 +92,16 @@ namespace WebAnnotationModel.gRPC.Tests
         private static async Task<string> RequestAccessTokenAsync(
             string identityServerUrl,
             IdentityClientSettings identityClient,
-            UserIdentity userIdentity)
+            UserIdentity userIdentity,
+            IConfiguration config)
         {
-            using var http = new HttpClient { BaseAddress = new Uri(identityServerUrl) };
+            using var http = new HttpClient(TestServerTls.CreateHandler(TestServerTls.LoadPinnedIdentityCertificate(config))) { BaseAddress = new Uri(identityServerUrl) };
             var disco = await http.GetDiscoveryDocumentAsync(new DiscoveryDocumentRequest
             {
                 Address = identityServerUrl,
                 Policy =
                 {
-                    RequireHttps = false,
+                    RequireHttps = true,
                     ValidateIssuerName = false
                 }
             }).ConfigureAwait(false);

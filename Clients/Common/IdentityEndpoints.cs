@@ -8,7 +8,7 @@ namespace Viking.Common
     /// VikingXML IdentityApi/Authentication often copies the public Identity host.
     /// Permissions live on the WebApi, not IdentityServerStandalone. Two layouts are supported:
     /// <list type="bullet">
-    /// <item>Port-per-app (legacy, e.g. identity.codepharm.net): issuer :5001, WebApi :6001 HTTPS / :6000 HTTP.</item>
+    /// <item>Port-per-app (legacy, e.g. identity.codepharm.net): issuer :5001, WebApi :6001, both HTTPS only (an http:// identity URL is upgraded to https).</item>
     /// <item>Path-per-app behind viking-proxy on 443 (e.g. identity.connectomes.pitt.edu): issuer at /,
     /// WebApi at /webapi/, management at /manage/.</item>
     /// </list>
@@ -16,7 +16,6 @@ namespace Viking.Common
     /// </summary>
     public static class IdentityEndpoints
     {
-        public const int PermissionsApiHttpPort = 6000;
         public const int PermissionsApiHttpsPort = 6001;
 
         /// <summary>WebApi path prefix when Identity is served on the default port through viking-proxy.</summary>
@@ -26,7 +25,7 @@ namespace Viking.Common
         /// Returns the WebApi base URL for /Permissions.
         /// Called by login and VikingAU after reading VolumeToEndpoint, and by token helpers
         /// that already know the IdentityServer authority.
-        /// Same host as IdentityServer is rewritten to the WebApi location (port 6001/6000, or
+        /// Same host as IdentityServer is rewritten to the WebApi location (port 6001, or
         /// /webapi/ when the issuer is on the default port) unless it already points there.
         /// A different host is left unchanged (dedicated API proxy).
         /// </summary>
@@ -60,10 +59,11 @@ namespace Viking.Common
                 }.Uri;
             }
 
-            var https = string.Equals(identityServerUrl.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+            // Identity is HTTPS only (.cursor/rules/https-only-servers.mdc): an http:// issuer URL is upgraded.
             return new UriBuilder(identityServerUrl)
             {
-                Port = https ? PermissionsApiHttpsPort : PermissionsApiHttpPort,
+                Scheme = Uri.UriSchemeHttps,
+                Port = PermissionsApiHttpsPort,
                 Path = "/",
                 Query = string.Empty,
                 Fragment = string.Empty
@@ -75,6 +75,9 @@ namespace Viking.Common
             if (!string.Equals(identityApi.Host, identityServer.Host, StringComparison.OrdinalIgnoreCase))
                 return false;
 
+            if (string.Equals(identityApi.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase))
+                return true;
+
             if (IsPermissionsApiPort(identityApi.Port))
                 return false;
 
@@ -82,7 +85,7 @@ namespace Viking.Common
         }
 
         static bool IsPermissionsApiPort(int port)
-            => port == PermissionsApiHttpPort || port == PermissionsApiHttpsPort;
+            => port == PermissionsApiHttpsPort;
 
         static bool IsPermissionsApiPath(Uri uri)
             => uri.AbsolutePath.StartsWith(PermissionsApiPathBase.TrimEnd('/'), StringComparison.OrdinalIgnoreCase);

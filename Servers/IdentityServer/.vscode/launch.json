@@ -161,7 +161,7 @@
             },
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "ASPNETCORE_URLS": "https://localhost:6001;http://localhost:6000"
+                "ASPNETCORE_URLS": "https://localhost:6001"
             }
         },
         {
@@ -181,7 +181,7 @@
             },
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Production",
-                "ASPNETCORE_URLS": "https://localhost:6001;http://localhost:6000"
+                "ASPNETCORE_URLS": "https://localhost:6001"
             }
         },
         {
@@ -201,7 +201,7 @@
             },
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "${input:buildConfiguration}",
-                "ASPNETCORE_URLS": "https://localhost:6001;http://localhost:6000"
+                "ASPNETCORE_URLS": "https://localhost:6001"
             }
         }
     ],

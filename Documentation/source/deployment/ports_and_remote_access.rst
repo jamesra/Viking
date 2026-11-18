@@ -11,7 +11,7 @@ Host       Port                   Stack                 Reached from
 web        80, 443                viking-proxy          Internet (443 SNI passthrough + Identity paths,
                                                         80 ACME + redirect)
 web        5001, 4001, 6001       viking-identity       Proxy only (issuer, management, WebApi behind
-           (5000/4000/6000 h)                           ``https://<identity host>/``, ``/manage/``, ``/webapi/``)
+                                                        ``https://<identity host>/``, ``/manage/``, ``/webapi/``)
 web        4024                   viking-identity       Loopback only (remote debugger)
 web        5011                   viking-annotation     Proxy, tests (self-signed certificate)
 web        41443                  viking-corrections    Proxy
@@ -26,7 +26,8 @@ iis        443 (80)               viking-iis            Web host (proxy); 80 onl
 external   1433                   SQL Server            Web host and IIS host
 =========  =====================  ====================  ===================================================
 
-"h" marks a plain-HTTP or h2c companion port that does not need to leave the host.
+Servers that can write (Identity, annotation, corrections) publish HTTPS ports only; see
+``.cursor/rules/https-only-servers.mdc``.
 
 Only the proxy's 80 and 443 need to be open to the Internet; Identity is reached on 443 like
 everything else. Restrict the compute and IIS ports to the web host's address.

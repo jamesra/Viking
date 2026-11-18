@@ -105,10 +105,11 @@ namespace CommonTests
         }
 
         [TestMethod]
-        public void ResolvePermissionsApiUrl_SameHostHttpWebApiPort_Unchanged()
+        public void ResolvePermissionsApiUrl_SameHostHttpWebApiPort_UpgradedToHttps()
         {
             var xml = new Uri("http://identity.codepharm.net:6000/");
-            Assert.AreSame(xml, IdentityEndpoints.ResolvePermissionsApiUrl(xml, IdentityServer));
+            Assert.AreEqual(new Uri("https://identity.codepharm.net:6001/"),
+                IdentityEndpoints.ResolvePermissionsApiUrl(xml, IdentityServer));
         }
 
         [TestMethod]
@@ -119,11 +120,11 @@ namespace CommonTests
         }
 
         [TestMethod]
-        public void ResolvePermissionsApiUrl_RewriteUsesIdentityServerScheme()
+        public void ResolvePermissionsApiUrl_RewriteUpgradesHttpIdentityToHttps()
         {
             var httpIdentity = new Uri("http://identity.codepharm.net:5000/");
             var xml = new Uri("https://identity.codepharm.net/");
-            Assert.AreEqual(new Uri("http://identity.codepharm.net:6000/"),
+            Assert.AreEqual(new Uri("https://identity.codepharm.net:6001/"),
                 IdentityEndpoints.ResolvePermissionsApiUrl(xml, httpIdentity));
         }
 

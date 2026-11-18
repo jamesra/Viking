@@ -196,7 +196,6 @@ The application uses these main configuration sections:
 ## Accessing the Application
 
 Once running, you can access:
-- **HTTP**: `http://localhost:6000`
 - **HTTPS**: `https://localhost:6001`
 
 ## Docker Compose Example

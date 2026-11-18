@@ -40,7 +40,7 @@ docker-compose -f docker-compose-all.yml down
 docker build -t identity-all-services .
 
 # Run the container
-docker run -p 4000:4000 -p 4001:4001 -p 5000:5000 -p 5001:5001 -p 6000:6000 -p 6001:6001 identity-all-services
+docker run -p 4001:4001 -p 5001:5001 -p 6001:6001 identity-all-services
 ```
 
 ## Service Endpoints
@@ -48,17 +48,14 @@ docker run -p 4000:4000 -p 4001:4001 -p 5000:5000 -p 5001:5001 -p 6000:6000 -p 6
 Once running, the services will be available at:
 
 - **IdentityServerStandalone**: 
-  - HTTP: http://localhost:5000
   - HTTPS: https://localhost:5001
   - Discovery: https://localhost:5001/.well-known/openid-configuration
 
 - **WebApi**: 
-  - HTTP: http://localhost:6000
   - HTTPS: https://localhost:6001
   - Health: https://localhost:6001/health
 
 - **IdentityServer (Management)**: 
-  - HTTP: http://localhost:4000
   - HTTPS: https://localhost:4001
 
 ## Configuration
@@ -88,11 +85,8 @@ DUENDE_KEY_PATH=/path/to/Duende_License.key
 You can customize the ports by setting these environment variables:
 
 ```bash
-IDENTITY_STANDALONE_HTTP_PORT=5000
 IDENTITY_STANDALONE_HTTPS_PORT=5001
-IDENTITY_WEBAPI_HTTP_PORT=6000
 IDENTITY_WEBAPI_HTTPS_PORT=6001
-IDENTITY_SERVER_HTTP_PORT=4000
 IDENTITY_SERVER_HTTPS_PORT=4001
 ```
 

@@ -442,25 +442,19 @@ The ``docker-compose-all.yml`` file provides a complete all-in-one deployment co
           context: ..
           dockerfile: IdentityServer\Dockerfile
           args:
-            IDENTITY_STANDALONE_HTTP_PORT: ${IDENTITY_STANDALONE_HTTP_PORT:-5000}
             IDENTITY_STANDALONE_HTTPS_PORT: ${IDENTITY_STANDALONE_HTTPS_PORT:-5001}
-            IDENTITY_WEBAPI_HTTP_PORT: ${IDENTITY_WEBAPI_HTTP_PORT:-6000}
             IDENTITY_WEBAPI_HTTPS_PORT: ${IDENTITY_WEBAPI_HTTPS_PORT:-6001}
-            IDENTITY_MANAGEMENT_HTTP_PORT: ${IDENTITY_MANAGEMENT_HTTP_PORT:-4000}
             IDENTITY_MANAGEMENT_HTTPS_PORT: ${IDENTITY_MANAGEMENT_HTTPS_PORT:-4001}
         ports:
           # IdentityServerStandalone ports
-          - "${IDENTITY_STANDALONE_HTTP_PORT:-5000}:${IDENTITY_STANDALONE_CONTAINER_HTTP_PORT:-5000}"
           - "${IDENTITY_STANDALONE_HTTPS_PORT:-5001}:${IDENTITY_STANDALONE_CONTAINER_HTTPS_PORT:-5001}"
           # WebApi ports  
-          - "${IDENTITY_WEBAPI_HTTP_PORT:-6000}:${IDENTITY_WEBAPI_CONTAINER_HTTP_PORT:-6000}"
           - "${IDENTITY_WEBAPI_HTTPS_PORT:-6001}:${IDENTITY_WEBAPI_CONTAINER_HTTPS_PORT:-6001}"
           # IdentityServer (Management) ports
-          - "${IDENTITY_MANAGEMENT_HTTP_PORT:-4000}:${IDENTITY_MANAGEMENT_CONTAINER_HTTP_PORT:-4000}"
           - "${IDENTITY_MANAGEMENT_HTTPS_PORT:-4001}:${IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT:-4001}"
         environment:
           - ASPNETCORE_ENVIRONMENT=Docker
-          - ASPNETCORE_URLS=https://+:4001;https://+:5001;https://+:6001;http://+:4000;http://+:5000;http://+:6000;
+          - ASPNETCORE_URLS=https://+:4001;https://+:5001;https://+:6001
           # Database connections
           - ConnectionStrings__IdentityConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=${SQL_SERVER_IDENTITY_DB};...
           - ConnectionStrings__ConfigConnection=Server=${SQL_SERVER_HOST},${SQL_SERVER_PORT};Database=${SQL_SERVER_CONFIG_DB};...
@@ -523,18 +517,15 @@ Service Endpoints
 Once running:
 
 **IdentityServerStandalone** (Authentication Server)
-    - HTTP: http://localhost:6000
     - HTTPS: https://localhost:6001
     - Discovery: https://localhost:6001/.well-known/openid-configuration
 
 **Viking.Identity.Server.WebApi** (REST API)
-    - HTTP: http://localhost:5000
     - HTTPS: https://localhost:5001
     - Swagger: https://localhost:5001/swagger (Development only)
     - Health: https://localhost:5001/health
 
 **IdentityServer** (Management Website)
-    - HTTP: http://localhost:4000
     - HTTPS: https://localhost:4001
 
 Building Individual Services
@@ -593,21 +584,15 @@ The system uses environment files to configure Docker deployments. Create these 
 .. code-block:: bash
 
     # IdentityServerStandalone (Core Authentication)
-    IDENTITY_STANDALONE_HTTP_PORT=5000
     IDENTITY_STANDALONE_HTTPS_PORT=5001
-    IDENTITY_STANDALONE_CONTAINER_HTTP_PORT=5000
     IDENTITY_STANDALONE_CONTAINER_HTTPS_PORT=5001
 
     # Viking.Identity.Server.WebApi (REST API)
-    IDENTITY_WEBAPI_HTTP_PORT=6000
     IDENTITY_WEBAPI_HTTPS_PORT=6001
-    IDENTITY_WEBAPI_CONTAINER_HTTP_PORT=6000
     IDENTITY_WEBAPI_CONTAINER_HTTPS_PORT=6001
 
     # IdentityServer (Management Website)
-    IDENTITY_MANAGEMENT_HTTP_PORT=4000
     IDENTITY_MANAGEMENT_HTTPS_PORT=4001
-    IDENTITY_MANAGEMENT_CONTAINER_HTTP_PORT=4000
     IDENTITY_MANAGEMENT_CONTAINER_HTTPS_PORT=4001
 
 **Create .env.All.Docker file (Docker-specific overrides):**
@@ -645,7 +630,6 @@ For running services separately, use ``docker-compose.yml`` which defines indivi
           context: ..
           dockerfile: IdentityServer/IdentityServerStandalone/Dockerfile
         ports:
-          - "${IDENTITY_STANDALONE_HTTP_PORT}:80"
           - "${IDENTITY_STANDALONE_HTTPS_PORT}:443"
         image: identity-standalone
         secrets:
@@ -668,7 +652,6 @@ For running services separately, use ``docker-compose.yml`` which defines indivi
           context: ..
           dockerfile: IdentityServer/Viking.Identity.Server.WebApi/Dockerfile
         ports:
-          - "${IDENTITY_WEBAPI_HTTP_PORT}:80"
           - "${IDENTITY_WEBAPI_HTTPS_PORT}:443"
         depends_on:
           - identity-standalone

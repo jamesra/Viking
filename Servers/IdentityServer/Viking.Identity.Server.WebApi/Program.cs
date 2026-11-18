@@ -87,21 +87,16 @@ public class Program
             var sslCert = Certs.LoadSSLCertificate(sslOptions);
              
 
-            var http_port = builder.Configuration.GetValue<int>("IDENTITY_WEBAPI_CONTAINER_HTTP_PORT");
             var https_port = builder.Configuration.GetValue<int>("IDENTITY_WEBAPI_CONTAINER_HTTPS_PORT");
             
-            Log.Information("DEBUG: http_port = {HttpPort}, https_port = {HttpsPort}", http_port, https_port);
-            Log.Information("DEBUG: Environment variables - IDENTITY_WEBAPI_HTTP_PORT = {HttpPortEnv}, IDENTITY_WEBAPI_HTTPS_PORT = {HttpsPortEnv}", 
-                Environment.GetEnvironmentVariable("IDENTITY_WEBAPI_HTTP_PORT"), 
-                Environment.GetEnvironmentVariable("IDENTITY_WEBAPI_HTTPS_PORT"));
+            Log.Information("Listening on HTTPS port {HttpsPort} only", https_port);
 
 
             // Configure Kestrel with SSL
             builder.WebHost.ConfigureKestrel(options =>
             {
                 
-                // Configure HTTP and HTTPS endpoints
-                options.ListenAnyIP(http_port); // HTTP port
+                // HTTPS only (.cursor/rules/https-only-servers.mdc): no plain HTTP listener.
                 options.ListenAnyIP(https_port, listenOptions => // HTTPS port
                 {
                     if (sslCert != null)

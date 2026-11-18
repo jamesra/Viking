@@ -19,7 +19,7 @@ Tests without a server (stores, converters, `GrpcChannelManager`):
 dotnet test Clients\WebAnnotationModel.gRPC.Tests\WebAnnotationModel.gRPC.Tests.csproj --filter "FullyQualifiedName!~Tests.Tests.&FullyQualifiedName!~AnnotationStoresSmokeTests"
 ```
 
-The remaining tests (`Test.cs`, `AnnotationStoresSmokeTests`) call a live service and sign in to identity. They read `appsettings.json` in the test project: gRPC at `https://localhost:5011` (the container's self-signed certificate, which `Start-AnnotationTestStack.ps1` saves to `%TEMP%iking-annotation-test-stack.pem` and the tests trust by pinning it; `GrpcServer:CertificatePath` overrides the path), identity at `http://host.docker.internal:5020`. Start the test stack first, from the repo root, as described in the service README:
+The remaining tests (`Test.cs`, `AnnotationStoresSmokeTests`) call a live service and sign in to identity. They read `appsettings.json` in the test project: gRPC at `https://localhost:5011` (the container's self-signed certificate, which `Start-AnnotationTestStack.ps1` saves to `%TEMP%iking-annotation-test-stack.pem` and the tests trust by pinning it; `GrpcServer:CertificatePath` overrides the path), identity at `https://host.docker.internal:5020` (its certificate pinned from `%TEMP%iking-identity-test-stack.pem`, or `IdentityServer:CertificatePath`). Start the test stack first, from the repo root, as described in the service README:
 
 ```powershell
 .\Servers\GrpcAnnotationService\scripts\Start-AnnotationTestStack.ps1 -ApplySchema -Build
@@ -31,7 +31,7 @@ Then run `dotnet test` on the project without the filter. These tests run only a
 
 | Symptom | Cause and fix |
 |---|---|
-| `Error connecting to http://host.docker.internal:5020/.well-known/openid-configuration` | The identity DevTest container is not running. Start the test stack (above). |
+| `Error connecting to https://host.docker.internal:5020/.well-known/openid-configuration` | The identity DevTest container is not running. Start the test stack (above). |
 | gRPC calls return HTTP 401 | The token's issuer does not match the service's identity server, for example a token from identity.codepharm.net sent to the DevTest stack. See the identity overlay note in the service README. |
 | Viking cannot connect to `http://localhost:5011` | `WinHttpHandler` needs TLS. Set the VikingXML `Endpoint` to `https://localhost:5011`. |
 | Tests fail the TLS handshake (`RemoteCertificateValidationFailed`) | The pinned test-stack certificate is missing or from an older container. Re-run `Start-AnnotationTestStack.ps1`, which saves it again. |

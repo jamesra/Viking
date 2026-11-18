@@ -81,10 +81,10 @@ namespace VikingTests
         }
 
         [TestMethod]
-        public void FromIdentityServer_Http_UsesPort6000()
+        public void FromIdentityServer_Http_UpgradesToHttpsPort6001()
         {
             var resolved = IdentityEndpoints.FromIdentityServer(new Uri("http://localhost:5000/"));
-            Assert.AreEqual("http://localhost:6000/", resolved.ToString());
+            Assert.AreEqual("https://localhost:6001/", resolved.ToString());
         }
 
         [TestMethod]

@@ -10,14 +10,13 @@ services:
         IMAGE_VERSION: ${IMAGE_VERSION:-latest}
       
     ports:
-       - "${IDENTITY_STANDALONE_HTTP_PORT}:80"
        - "${IDENTITY_STANDALONE_HTTPS_PORT}:443"
     image: ${IMAGE_REGISTRY:-}identity-standalone:${IMAGE_VERSION:-latest}
     secrets:
       - ssl_cert
       - ssl_key
     environment:
-      - ASPNETCORE_URLS=http://+:80;https://+:443
+      - ASPNETCORE_URLS=https://+:443
       - SSL_CERT_PATH=/run/secrets/ssl_cert
       - SSL_KEY_PATH=/run/secrets/ssl_key
       - ASPNETCORE_ENVIRONMENT=Docker   
@@ -44,7 +43,6 @@ services:
       args:
         IMAGE_VERSION: ${IMAGE_VERSION:-latest}
     ports:
-       - "${IDENTITY_WEBAPI_HTTP_PORT}:80"
        - "${IDENTITY_WEBAPI_HTTPS_PORT}:443"
     depends_on:
       - identity-standalone
@@ -53,7 +51,7 @@ services:
       - ssl_cert 
       - ssl_key
     environment:
-      - ASPNETCORE_URLS=http://+:80;https://+:443
+      - ASPNETCORE_URLS=https://+:443
       - SSL_CERT_PATH=/run/secrets/ssl_cert
       - SSL_KEY_PATH=/run/secrets/ssl_key
       - ASPNETCORE_ENVIRONMENT=Docker 

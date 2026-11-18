@@ -44,8 +44,23 @@ namespace WebAnnotationModel.gRPC.Tests
 
         /// <summary>A handler for the test stack: HTTP/2 with several connections, trusting only the pinned certificate.</summary>
         public static SocketsHttpHandler CreateHandler(IConfiguration config)
+            => CreateHandler(LoadPinnedCertificate(config));
+
+        /// <summary>
+        /// The identity server's certificate, from <c>IdentityServer:CertificatePath</c> (or the default path); null when
+        /// none exists, in which case identity must present a certificate that validates normally.
+        /// </summary>
+        public static X509Certificate2 LoadPinnedIdentityCertificate(IConfiguration config)
         {
-            X509Certificate2 pinned = LoadPinnedCertificate(config);
+            string path = config["IdentityServer:CertificatePath"];
+            if (string.IsNullOrWhiteSpace(path))
+                path = Path.Combine(Path.GetTempPath(), "viking-identity-test-stack.pem");
+            return File.Exists(path) ? new X509Certificate2(path) : null;
+        }
+
+        /// <summary>A handler trusting only <paramref name="pinned"/> (plus certificates that validate normally).</summary>
+        public static SocketsHttpHandler CreateHandler(X509Certificate2 pinned)
+        {
             return new SocketsHttpHandler
             {
                 EnableMultipleHttp2Connections = true,

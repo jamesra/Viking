@@ -2,4 +2,4 @@
 description: Docker & Deployment
 alwaysApply: false
 ---
-Never hardcode ports - use environment variables like ${IDENTITY_STANDALONE_HTTP_PORT} and configure them in .env files.
+Never hardcode ports - use environment variables like ${IDENTITY_STANDALONE_HTTPS_PORT} and configure them in .env files. Identity is HTTPS only: there is no HTTP port variable (.cursor/rules/https-only-servers.mdc).

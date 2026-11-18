@@ -110,11 +110,9 @@ namespace Viking.Identity.Server.Standalone
             {  
                 var sslOptions = configuration.GetSection("SSL").Get<SSLOptions>();
 
-                var http_port = configuration.GetValue<int>("IDENTITY_STANDALONE_CONTAINER_HTTP_PORT");
                 var https_port = configuration.GetValue<int>("IDENTITY_STANDALONE_CONTAINER_HTTPS_PORT");
 
-                // Configure HTTP and HTTPS endpoints
-                options.ListenAnyIP(http_port); // HTTP port
+                // HTTPS only (.cursor/rules/https-only-servers.mdc): no plain HTTP listener.
                 options.ListenAnyIP(https_port, listenOptions => // HTTPS port
                 {
                     // Configure HTTPS with custom certificate 

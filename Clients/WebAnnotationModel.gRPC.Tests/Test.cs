@@ -35,7 +35,7 @@ namespace WebAnnotationModel.gRPC.Tests
     }
 
     /// <summary>
-    /// Integration tests against identity-devtest (:5020) + grpc-annotation-service (https :5011)
+    /// Integration tests against identity (https :5020) + grpc-annotation-service (https :5011)
     /// + AnnotationTest SQL. Start with:
     ///   Servers/GrpcAnnotationService/scripts/Start-AnnotationTestStack.ps1 -ApplySchema -Build
     /// Credentials match Servers/IdentityServer/DevTest/Config.cs (testuser / Testing123! / ro.viking).
@@ -3852,13 +3852,13 @@ namespace WebAnnotationModel.gRPC.Tests
 
         private async Task<string> RequestAccessTokenAsync()
         {
-            using var http = new HttpClient { BaseAddress = new Uri(_identityServerUrl) };
+            using var http = new HttpClient(TestServerTls.CreateHandler(TestServerTls.LoadPinnedIdentityCertificate(_config))) { BaseAddress = new Uri(_identityServerUrl) };
             var disco = await http.GetDiscoveryDocumentAsync(new DiscoveryDocumentRequest
             {
                 Address = _identityServerUrl,
                 Policy =
                 {
-                    RequireHttps = false,
+                    RequireHttps = true,
                     // DevTest IssuerUri is host.docker.internal; allow localhost aliases in CI.
                     ValidateIssuerName = false
                 }
