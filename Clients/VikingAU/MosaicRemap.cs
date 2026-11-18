@@ -108,9 +108,6 @@ namespace Viking.AU
     /// </summary>
     static class MosaicRemap
     {
-        // Bounds large enough to request every location on a section.
-        private static readonly Geometry.Rectangle WholeVolumeBounds = new(-1e9, 1e9, -1e9, 1e9);
-
         /// <summary>Overlap disagreement above this many pixels is counted in the report.</summary>
         private const double DisagreementReportPixels = 5.0;
 
@@ -122,7 +119,7 @@ namespace Viking.AU
         };
 
         private static Task<List<LocationObj>> LoadSectionAsync(int section, CancellationToken token) =>
-            Store.LocationsByRegion.GetObjectsInRegionAsync(WholeVolumeBounds, 0, section, QueryTargets.Server, token, null);
+            Program.LoadWholeSectionAsync(section, token);
 
         public static async Task<int> RemapToTilesAsync(RemapToTilesOptions options, CancellationToken token)
         {

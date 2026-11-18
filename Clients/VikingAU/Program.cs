@@ -440,16 +440,25 @@ namespace Viking.AU
             return output;
         }
 
-        // Bounds large enough to cover any real volume's coordinate space when requesting every
-        // location on a section.  QueryTargets.Server always contacts the server for a full refresh.
-        private static readonly Geometry.Rectangle WholeVolumeBounds = new(-1e9, 1e9, -1e9, 1e9);
+        /// <summary>
+        /// Every location on a section, read from the server in one request (GetLocationChanges with no watermark the
+        /// first time, then the changes since) and returned from the store's section cache.
+        /// </summary>
+        /// <remarks>
+        /// Not a region query over huge bounds: the region loader splits a region into grid cells with no outer limit,
+        /// so whole-volume bounds (±1e9) asked for billions of cells and ran out of memory before any request was sent.
+        /// </remarks>
+        internal static async Task<List<LocationObj>> LoadWholeSectionAsync(long sectionNumber, CancellationToken token)
+        {
+            await Store.Locations.RefreshSectionLocationsAsync(sectionNumber, null, token);
+            return Store.Locations.GetLocalObjectsForSection(sectionNumber).Values.ToList();
+        }
 
         static async Task<string> UpdateSectionPositions(long SectionNumber, CancellationToken token)
         {
             int NumUpdated = 0;
 
-            List<LocationObj> LocDict = await Store.LocationsByRegion.GetObjectsInRegionAsync(
-                WholeVolumeBounds, 0, (int)SectionNumber, QueryTargets.Server, token, null);
+            List<LocationObj> LocDict = await LoadWholeSectionAsync(SectionNumber, token);
 
             string feedback = null;
             if (LocDict.Count >= 0)
