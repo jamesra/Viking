@@ -15,6 +15,9 @@ namespace Geometry.Transforms
     /// </remarks>
     internal static class UnmappedEdgeResolver
     {
+        /// <summary>How far past either end of the edge a hull crossing may fall from rounding before it is a bug.</summary>
+        private const double FractionTolerance = 1e-6;
+
         /// <summary>
         /// Adds a point to <paramref name="output"/> for every edge from <paramref name="iPoint"/> (a point the fixed
         /// transform could not map) to a mappable neighbour that crosses the fixed transform's convex hull.
@@ -70,7 +73,9 @@ namespace Geometry.Transforms
                     double CtrlLineDistance = Vector2.Distance(in ctrlLine.A, in intersect);
                     double fraction = CtrlLineDistance / ctrlLine.Length;
 
-                    Debug.Assert(fraction <= 1.0 && fraction >= 0.0);
+                    //The intersection lies on ctrlLine, so only rounding takes the fraction past 0 or 1 (e.g. when the
+                    //neighbour sits on the fixed transform's hull); the clamp below handles that.
+                    Debug.Assert(fraction <= 1.0 + FractionTolerance && fraction >= -FractionTolerance, $"Hull crossing {fraction} along the edge, not on it");
                     if (fraction > 1f)
                         fraction = 1f;
                     else if (fraction < 0f)
