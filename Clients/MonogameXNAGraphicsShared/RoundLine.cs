@@ -391,6 +391,7 @@ namespace RoundLineCode
             timeParameter.SetValue(time);
 
             effect.CurrentTechnique = techniqueName is null ? effect.Techniques["Standard"] : effect.Techniques[techniqueName];
+            VikingXNAGraphics.FrameRequests.RequestIfAnimated(techniqueName);
 
             VikingXNAGraphics.DeviceStateManager.SaveDeviceState(this.device);
 
@@ -412,6 +413,7 @@ namespace RoundLineCode
             timeParameter.SetValue(time);
 
             effect.CurrentTechnique = techniqueName is null ? effect.Techniques["Standard"] : effect.Techniques[techniqueName];
+            VikingXNAGraphics.FrameRequests.RequestIfAnimated(techniqueName);
 
             VikingXNAGraphics.DeviceStateManager.SaveDeviceState(this.device);
 
@@ -477,6 +479,7 @@ namespace RoundLineCode
             blurThresholdParameter.SetValue(DefaultBlurThreshold);
 
             effect.CurrentTechnique = techniqueName is null ? effect.Techniques["Standard"] : effect.Techniques[techniqueName];
+            VikingXNAGraphics.FrameRequests.RequestIfAnimated(techniqueName);
 
             int iData = 0;
             int numInstancesThisDraw = 0;

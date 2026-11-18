@@ -394,6 +394,7 @@ namespace VikingXNAGraphics
                 {
                     double position = SampleTrajectory(elapsedSeconds);
                     AnimationController.SetPosition(position);
+                    VikingXNAGraphics.FrameRequests.Request("section number wheel");
                 }
             }
 

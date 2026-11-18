@@ -330,6 +330,8 @@ namespace WebAnnotation.View
                 double fontSize = pose.FontSize;
                 if (row.Kind == LabelRowKind.ID && OscillateSize)
                 {
+                    // The last edited annotation's ID pulses for as long as it is shown.
+                    VikingXNAGraphics.FrameRequests.Request("last edited label pulse");
                     double Scalar = GetOscillationFactor;
                     fontSize *= Scalar;
                     lineWidth *= Scalar > 1 ? Scalar : 1.0;

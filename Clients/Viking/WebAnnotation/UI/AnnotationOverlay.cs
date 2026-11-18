@@ -398,14 +398,8 @@ namespace WebAnnotation
             return false;
         }
 
-        public void InvalidateParent()
-        {
-            //Invalidate can always be called from any thread
-            if (Parent.IsHandleCreated)
-            {
-                Parent.BeginInvoke(new System.Action(() => Parent.Invalidate()));
-            }
-        }
+        /// <summary>Draw the viewer again because something changed. Safe from any thread; repeated calls post one redraw.</summary>
+        public void InvalidateParent() => Parent.RequestRedraw();
 
         string Viking.Common.ISectionOverlayExtension.Name() => Global.EndpointName;
 
@@ -1083,6 +1077,7 @@ namespace WebAnnotation
                     return;
                 // Objects already in the store do not raise CollectionChanged; AddLocations is how they enter the canvas.
                 view.AddLocations(locations);
+                InvalidateParent();
                 // Poll returns the whole incremental section set; only rows newer than the Review seed floor
                 // (or lookback) enter the change feed so a section dump cannot bury the newest-N list.
                 ReviewChangeFeedIngress.PushUpsertsFromPoll(locations);
@@ -3044,6 +3039,7 @@ break;
         /// <param name="e"></param>
         protected void OnLocationLinksCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
+            InvalidateParent();
             SortedSet<int> changedSections = ChangedSectionsInLocationLinkCollection(e);
             foreach (int section in changedSections)
             {
@@ -3429,7 +3425,7 @@ break;
 
             // A link fading between its hovered and resting looks needs the following frames too.
             if (linksToDraw.Any(l => l.IsHoverFading))
-                _Parent.Invalidate();
+                VikingXNAGraphics.FrameRequests.Request("link hover fade");
 
             DrawLocationLabels(listLocationsToDraw, scene);
 
@@ -3437,7 +3433,7 @@ break;
 
             // A label easing to a new placement needs the following frames until it lands; then the viewer goes idle.
             if (StructureLabelsBase.TakeAnimatingFrame())
-                _Parent.Invalidate();
+                VikingXNAGraphics.FrameRequests.Request("label easing");
 
             // Where two cells' outlines overlap (they should not), checkered in both cells' colors.
             cellOverlap ??= new WebAnnotation.UI.CellOverlap.CellOverlapOverlay();
@@ -3450,7 +3446,7 @@ break;
 
             // Time-based like the shimmer: ask for the next frame until the animation ends.
             if (flagFeedback.Draw(_Parent.spriteBatch, scene))
-                _Parent.Invalidate();
+                VikingXNAGraphics.FrameRequests.Request("flag feedback");
 
             if (OriginalRasterState != null && !OriginalRasterState.IsDisposed)
             {

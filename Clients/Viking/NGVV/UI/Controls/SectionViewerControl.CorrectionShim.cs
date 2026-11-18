@@ -418,6 +418,9 @@ namespace Viking.UI.Controls
         {
             base.OnSceneChanged(sender, e);
 
+            // The camera or viewport moved (a command, a go-to, a link): draw the new view.
+            RequestRedraw();
+
             // Camera.Shim is excluded: applying the shim raises it, and it must not trigger another report.
             if (e.PropertyName == "Camera.LookAt" || e.PropertyName == "Camera.Downsample" || e.PropertyName == "Viewport")
                 UpdateCorrectionShimSnapped();

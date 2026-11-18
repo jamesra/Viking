@@ -19,7 +19,8 @@ namespace Viking.UI
 
         public static Viking.UI.Forms.SectionViewerForm ViewerForm;
 
-        public static void InvalidateViewerControl() => ViewerControl?.Invalidate();
+        /// <summary>Draw the viewer again because something changed. Safe from any thread; see <see cref="Controls.SectionViewerControl.RequestRedraw"/>.</summary>
+        public static void InvalidateViewerControl() => ViewerControl?.RequestRedraw();
 
         /// <summary>
         /// The section viewer control for creating commands

@@ -890,7 +890,7 @@ namespace WebAnnotation.UI.AutoPolygonize
 
             // The shimmer animates by time, not by input, so ask for the next frame until it finishes.
             if (shimmering)
-                parent.Invalidate();
+                VikingXNAGraphics.FrameRequests.Request("proposal shimmer");
         }
 
         /// <summary>

@@ -355,6 +355,12 @@ namespace VikingXNAWinForms
         /// </summary>
         protected override void OnPaint(PaintEventArgs e)
         {
+            LastPaintTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+
+            // Until a draw finishes and says otherwise, assume another frame is wanted: a paint that failed or threw
+            // (device lost, reset failed, "Viking is thinking") is retried at the animation rate, as before.
+            LastFrameRequestedAnother = true;
+
             string? beginDrawError = BeginDraw();
 
             if (PaintCallRefCount > 0 && string.IsNullOrEmpty(beginDrawError))
@@ -368,7 +374,9 @@ namespace VikingXNAWinForms
 #endif
                     PaintCallRefCount++;
                     // Draw the control using the GraphicsDevice.
+                    VikingXNAGraphics.FrameRequests.BeginFrame();
                     Draw();
+                    LastFrameRequestedAnother = VikingXNAGraphics.FrameRequests.EndFrame();
                     EndDraw();
 #if !DEBUG
                 }
@@ -397,6 +405,15 @@ namespace VikingXNAWinForms
             }
         }
 
+
+        /// <summary>
+        /// True when the last paint drew a frame that asked for another (<see cref="VikingXNAGraphics.FrameRequests"/>), or
+        /// failed and should be retried. False after a complete frame with nothing animating.
+        /// </summary>
+        public bool LastFrameRequestedAnother { get; private set; } = true;
+
+        /// <summary>The <see cref="System.Diagnostics.Stopwatch"/> timestamp of the last paint, finished or not.</summary>
+        public long LastPaintTimestamp { get; private set; }
 
         /// <summary>
         /// Attempts to begin drawing the control. Returns an error message string

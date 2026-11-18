@@ -102,6 +102,8 @@ namespace LocalBookmarks
             {
                 Alpha = (float)(DateTime.UtcNow.Second % 6) / 6f
             };
+            // The star blinks with the clock while the command runs.
+            VikingXNAGraphics.FrameRequests.Request("bookmark star blink");
 
             if (circleView != null)
             {

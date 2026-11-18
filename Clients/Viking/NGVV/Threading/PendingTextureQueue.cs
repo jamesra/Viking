@@ -139,6 +139,12 @@ namespace Viking
         public static event Action? QueueBecameEmpty;
 
         /// <summary>
+        /// Fired on the main thread after a pump pass created at least one texture, so the viewer redraws to show the tiles
+        /// as they arrive during a long stream of loads (the queue may not empty for seconds).
+        /// </summary>
+        public static event Action? TexturesArrived;
+
+        /// <summary>
         /// True if this TileView has a pending item in the pipeline (enqueued or dequeued but not yet completed).
         /// Used by TileView to avoid starting a duplicate load.
         /// </summary>
@@ -360,6 +366,9 @@ namespace Viking
                         EndLoadingFile(item.FileKey);
                 }
             }
+
+            if (texturesLoaded > 0)
+                TexturesArrived?.Invoke();
 
             bool empty;
             _pendingLock.EnterReadLock();

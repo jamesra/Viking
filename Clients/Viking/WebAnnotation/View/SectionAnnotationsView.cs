@@ -47,7 +47,7 @@ namespace WebAnnotation.ViewModel
 
             // Server callback must not be null: objects already in the store do not raise CollectionChanged,
             // so this is how they enter the canvas view after a region refresh.
-            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, SectionNumber, AddLocationsInLocalCache, AddLocationsInLocalCache, token);
+            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, SectionNumber, AddLocationsFromRegionLoad, AddLocationsFromRegionLoad, token);
         }
 
         protected abstract void AddLocationsInLocalCache(IEnumerable<LocationObj> locations);
@@ -76,7 +76,34 @@ namespace WebAnnotation.ViewModel
 
         protected bool UnsubscribeToStructureChangeEvents(LocationObj loc) => SubscribedStructures.ReleaseRef(loc.ParentID.Value, (StructureID) => loc.Parent.UnsubscribeToPropertyChangeEvents(this));
 
-        public abstract bool ReceiveWeakEvent(Type managerType, object sender, EventArgs e);
+        /// <summary>
+        /// Every store and property event this view hears can change what is drawn, so each one asks for a redraw once it
+        /// has been handled (on whatever thread it arrived; the requests merge into one paint).
+        /// </summary>
+        public bool ReceiveWeakEvent(Type managerType, object sender, EventArgs e)
+        {
+            try
+            {
+                return HandleWeakEvent(managerType, sender, e);
+            }
+            finally
+            {
+                RequestRedraw();
+            }
+        }
+
+        /// <summary>Handles one store or property event; see <see cref="ReceiveWeakEvent"/>.</summary>
+        protected abstract bool HandleWeakEvent(Type managerType, object sender, EventArgs e);
+
+        /// <summary>Draw the viewer again because this section's views changed. Safe from any thread.</summary>
+        protected static void RequestRedraw() => Viking.UI.State.InvalidateViewerControl();
+
+        /// <summary>A region load's callback: adds what it brought, then asks for a redraw to show it.</summary>
+        protected void AddLocationsFromRegionLoad(IEnumerable<LocationObj> locations)
+        {
+            AddLocationsInLocalCache(locations);
+            RequestRedraw();
+        }
     }
 
     /// <summary>
@@ -119,7 +146,7 @@ namespace WebAnnotation.ViewModel
             ConcurrentDictionary<long, LocationObj> local = Store.Locations.GetLocalObjectsForSection(SectionNumber);
             if (local.Count > 0)
             {
-                Task.Run(() => AddLocations(local.Values));
+                Task.Run(() => AddLocations(local.Values)).ContinueWith(_ => RequestRedraw(), TaskScheduler.Default);
             }
         }
 
@@ -356,7 +383,7 @@ namespace WebAnnotation.ViewModel
             }
         }
 
-        public override bool ReceiveWeakEvent(Type managerType, object sender, EventArgs e)
+        protected override bool HandleWeakEvent(Type managerType, object sender, EventArgs e)
         {
             if (e is PropertyChangedEventArgs PropertyChangedArgs)
             {
@@ -451,8 +478,16 @@ namespace WebAnnotation.ViewModel
                     loc.UnsubscribeToPropertyChangeEvents(this);
                     UnsubscribeToStructureChangeEvents(loc);
                 },
-                onAdded: (loc, view) => AddLocationsForStructure(loc.ParentID.Value, view),
-                onRemoved: (loc, view) => RemoveLocationsForStructure(loc.ParentID.Value, loc.ID));
+                onAdded: (loc, view) =>
+                {
+                    AddLocationsForStructure(loc.ParentID.Value, view);
+                    RequestRedraw();
+                },
+                onRemoved: (loc, view) =>
+                {
+                    RemoveLocationsForStructure(loc.ParentID.Value, loc.ID);
+                    RequestRedraw();
+                });
 
             SectionLocationLinks = new SectionLocationLinkAnnotationsViewModel(section);
             SectionStructureLinks = new SectionStructureLinkAnnotationsViewModel(this);
@@ -478,7 +513,7 @@ namespace WebAnnotation.ViewModel
             ConcurrentDictionary<long, LocationObj> local = Store.Locations.GetLocalObjectsForSection(SectionNumber);
             if (local.Count > 0)
             {
-                Task.Run(() => AddLocationBatch(local.Values));
+                Task.Run(() => AddLocationBatch(local.Values)).ContinueWith(_ => RequestRedraw(), TaskScheduler.Default);
             }
         }
 
@@ -1206,7 +1241,7 @@ namespace WebAnnotation.ViewModel
 
             // Server callback must not be null: objects already in the store do not raise CollectionChanged,
             // so this is how they enter the canvas view after a region refresh.
-            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, SectionNumber, AddLocationsInLocalCache, AddLocationsInLocalCache, token);
+            Store.LocationsByRegion.LoadSectionAnnotationsInRegion(VisibleMosaicBounds, scene.ScreenPixelSizeInVolume, SectionNumber, AddLocationsFromRegionLoad, AddLocationsFromRegionLoad, token);
 
 
             SectionAbove?.LoadAnnotationsInRegion(scene, token);
@@ -1230,7 +1265,7 @@ namespace WebAnnotation.ViewModel
 
         private void AddLocationsInRegionCallback(IEnumerable<LocationObj> locationObjs) => AddLocationBatch(locationObjs);
 
-        public override bool ReceiveWeakEvent(Type managerType, object sender, EventArgs e)
+        protected override bool HandleWeakEvent(Type managerType, object sender, EventArgs e)
         {
             if (e is System.Collections.Specialized.NotifyCollectionChangedEventArgs CollectionChangeArgs)
             {

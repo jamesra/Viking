@@ -49,9 +49,13 @@ namespace WebAnnotation.View
                 case LocationType.POLYGON:
                     {
                         LocationPolygonView polyview = new(obj, geometry);
-                        Task.Run(() => polyview.Initialize()).ContinueWith(
+                        Task initialize = Task.Run(() => polyview.Initialize());
+                        initialize.ContinueWith(
                             t => polyview.ReportInitializeFailure(t.Exception.GetBaseException()),
                             TaskContinuationOptions.OnlyOnFaulted);
+                        // The polygon is not drawn until it is initialized, so draw again when it is.
+                        initialize.ContinueWith(_ => Viking.UI.State.InvalidateViewerControl(),
+                            TaskContinuationOptions.OnlyOnRanToCompletion);
                         return polyview;
                     }
                 case LocationType.CLOSEDCURVE:

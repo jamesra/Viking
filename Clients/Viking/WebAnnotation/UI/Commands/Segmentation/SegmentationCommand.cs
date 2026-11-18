@@ -1526,6 +1526,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             graphicsDevice.DepthStencilState = DepthStencilState.None;
 
             // Animate point opacity with pulsing effect for visibility
+            if (backgroundPointsView is not null || foregroundPointsView is not null)
+                VikingXNAGraphics.FrameRequests.Request("segmentation prompt pulse");
             const float FLASH_RATE_SECONDS = 3.0f; // Time for one complete pulse cycle
             DateTime now = DateTime.UtcNow;
             float elapsedSeconds = (now.Second * 1000 + now.Millisecond) / 1000f;

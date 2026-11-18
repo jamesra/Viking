@@ -457,8 +457,7 @@ namespace Viking.UI.Controls
                     }
                 }
 
-                if(!HavePaintInQueue())
-                    this.Invalidate();
+                this.Invalidate();
 
                 // Update the section number overlay with the new section
                 UpdateSectionNumberOverlay();
@@ -647,6 +646,7 @@ namespace Viking.UI.Controls
             CommandQueue.OnCommandInjected += this.OnCommandInjected;
             CommandQueue.OnQueueChanged += this.OnCommandQueueChanged;
             PendingTextureQueue.QueueBecameEmpty += this.OnPendingTextureQueueBecameEmpty;
+            PendingTextureQueue.TexturesArrived += this.OnPendingTextureQueueBecameEmpty;
 
             this.Disposed += (_, _) =>
             {
@@ -665,6 +665,7 @@ namespace Viking.UI.Controls
         {
             State.ItemSelected -= ObjectSelectedHandler;
             PendingTextureQueue.QueueBecameEmpty -= this.OnPendingTextureQueueBecameEmpty;
+            PendingTextureQueue.TexturesArrived -= this.OnPendingTextureQueueBecameEmpty;
             UnsubscribeSection(_Section);
         }
 
@@ -820,6 +821,9 @@ namespace Viking.UI.Controls
 
         protected override void WndProc(ref Message msg)
         {
+            if (IsUserInputMessage(msg.Msg))
+                Invalidate();
+
             /*
             switch (msg.Msg)
             {
@@ -1073,6 +1077,8 @@ namespace Viking.UI.Controls
 
                 var token = GetOrCreateSectionMappingInitToken(sectionNumber);
                 Task task = Task.Run(() => mapping.Initialize(token), token);
+                // The section draws nothing until its mapping is ready, so draw again when it is.
+                task.ContinueWith(_ => RequestRedraw(), CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
                 _sectionMappingInitTasks[sectionNumber] = task;
                 Interlocked.Exchange(ref _lastInitSectionNumber, sectionNumber);
                 Interlocked.Exchange(ref _lastInitTask, task);
@@ -1189,7 +1195,8 @@ namespace Viking.UI.Controls
         }
 
         /// <summary>
-        /// Activates when the user adds a command to the command queue
+        /// Textures arrived (<see cref="PendingTextureQueue.TexturesArrived"/>) or the queue emptied: draw them, and let the
+        /// draw request any visible tile that is still missing.
         /// </summary>
         private void OnPendingTextureQueueBecameEmpty()
         {
@@ -1988,8 +1995,6 @@ namespace Viking.UI.Controls
 
             graphicsDevice.BlendState = OriginalBlendState;
             DrawCallSinceTileCacheCheckpoint = true;
-
-            timer.Interval = 25;
         }
 
         private void UpdateLumaTextureForOverlayEffects(Texture BackgroundLuma)
@@ -2989,11 +2994,18 @@ namespace Viking.UI.Controls
         }
 
 
-        [DllImport("user32.dll")]
-        private static extern uint GetQueueStatus(uint flags);
+        /// <summary>
+        /// While idle (nothing animating, no change reported), the viewer still draws this often, so a change whose code
+        /// forgot to invalidate shows late instead of never. See <see cref="VikingXNAGraphics.FrameRequests"/>.
+        /// </summary>
+        private const double IdleBackstopSeconds = 1.0;
 
-        private const uint QS_PAINT = 0x0020;
-
+        /// <summary>
+        /// The animation clock. Ticks every 25 ms and invalidates only when the last frame asked for another (an animation
+        /// is running, or the paint failed and is retried), or when nothing has been drawn for
+        /// <see cref="IdleBackstopSeconds"/>. Changes (input, store updates, tiles arriving) invalidate on their own, at once.
+        /// Repeated invalidates merge into one paint, so no queue check is needed.
+        /// </summary>
         private void timer_Tick(object sender, EventArgs e)
         {
             Form? form = _hostForm ?? FindForm();
@@ -3003,11 +3015,57 @@ namespace Viking.UI.Controls
                 return;
             }
 
-            if (!HavePaintInQueue())
+            double sinceLastPaint = (Stopwatch.GetTimestamp() - LastPaintTimestamp) / (double)Stopwatch.Frequency;
+            if (LastFrameRequestedAnother || sinceLastPaint >= IdleBackstopSeconds)
                 this.Invalidate();
         }
 
-        private bool HavePaintInQueue() => (GetQueueStatus(QS_PAINT) & QS_PAINT) != 0;
+        private int redrawPosted;
+
+        /// <summary>
+        /// Draw again because something changed. Safe from any thread: off the UI thread it posts one invalidate, however
+        /// many calls arrive before it runs. Animations use <see cref="VikingXNAGraphics.FrameRequests.Request"/> instead.
+        /// </summary>
+        public void RequestRedraw()
+        {
+            if (IsDisposed)
+                return;
+
+            if (!InvokeRequired)
+            {
+                Invalidate();
+                return;
+            }
+
+            if (Interlocked.Exchange(ref redrawPosted, 1) == 1)
+                return;
+
+            try
+            {
+                BeginInvoke(new Action(() =>
+                {
+                    Interlocked.Exchange(ref redrawPosted, 0);
+                    Invalidate();
+                }));
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException)
+            {
+                // No handle yet or any more: the first paint after it is created draws everything anyway.
+                Interlocked.Exchange(ref redrawPosted, 0);
+            }
+        }
+
+        /// <summary>
+        /// Window messages from the keyboard, mouse, pen, touch and gestures. Any of them can change what is drawn (hover,
+        /// a command's preview, the camera), so each one invalidates; the paint follows once the input is handled.
+        /// </summary>
+        private static bool IsUserInputMessage(int msg) =>
+            (msg >= 0x0100 && msg <= 0x0109) ||   // WM_KEYDOWN .. WM_UNICHAR
+            (msg >= 0x0200 && msg <= 0x020E) ||   // WM_MOUSEMOVE .. WM_MOUSEHWHEEL
+            msg == 0x02A3 ||                      // WM_MOUSELEAVE
+            msg == 0x0119 ||                      // WM_GESTURE
+            msg == 0x0240 ||                      // WM_TOUCH
+            (msg >= 0x0241 && msg <= 0x0251);     // WM_POINTER* (update, down, up, enter, leave, wheel, ...)
 
         protected void SetOverlayVisiblity(bool ControlDown, bool SpaceDown)
         {
