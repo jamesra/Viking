@@ -13,7 +13,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
 from pathlib import Path
-from typing import Any, Callable, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
@@ -155,6 +155,9 @@ class SegmentationModel:
             model_cfg if self.weights_dtype == "fp32" else f"{model_cfg}|weights={self.weights_dtype}",
         )
         self._ram_embeddings: Optional[EmbeddingRamCache] = open_embedding_ram_cache()
+        # How each embedding lookup was answered since start, for GetServerStatus: the cache's hit rate is
+        # (ram + disk) / (ram + disk + computed). Plain ints: incremented from the inference threads, read for status.
+        self.embedding_counts: Dict[str, int] = {"ram_hits": 0, "disk_hits": 0, "computed": 0}
 
         if hydra_overrides_for_image_encoder(compile_image_encoder, self.device.type):
             self.compile_status = COMPILE_WARMING
@@ -356,11 +359,17 @@ class SegmentationModel:
             return nullcontext()
         return torch.autocast("cuda", dtype=_cuda_autocast_dtype())
 
+    def _count_embedding(self, outcome: str) -> None:
+        """Count how one embedding lookup was answered (the counters GetServerStatus reports)."""
+        counts = self.__dict__.setdefault("embedding_counts", {"ram_hits": 0, "disk_hits": 0, "computed": 0})
+        counts[outcome] = counts.get(outcome, 0) + 1
+
     def _encode_image(self, predictor: SAM2ImagePredictor, image_np: NDArray) -> None:
         """``set_image()`` under the GPU lock, turning a dead CUDA context into its own error."""
         try:
             with self._gpu_lock, torch.inference_mode(), self._autocast():
                 predictor.set_image(image_np)
+            self._count_embedding("computed")
         except Exception as e:
             raise_if_cuda_lost(e)
             raise
@@ -448,6 +457,7 @@ class SegmentationModel:
             else:
                 if store is not None:
                     store.touch(digest, mode)
+                self._count_embedding("ram_hits")
                 logger.info("Embedding RAM hit sha=%s mode=%s", digest[:12], mode)
                 return True
         if store is None:
@@ -464,6 +474,7 @@ class SegmentationModel:
             return False
         if remember and ram is not None:
             ram.put(digest, mode, payload)
+        self._count_embedding("disk_hits")
         logger.info("Embedding disk hit sha=%s mode=%s bytes=%s", digest[:12], mode, len(blob))
         return True
 

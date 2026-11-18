@@ -97,3 +97,23 @@ async def test_a_clock_that_goes_backwards_rebuilds_the_answer() -> None:
     second = await _status(servicer)
 
     assert second is not first
+
+
+def test_cache_counters_text_reports_hit_rate_and_evictions() -> None:
+    """The status message carries the embedding hit rate and the tile counters since start."""
+    from segmentation_server.server import _cache_counters_text
+
+    text = _cache_counters_text(
+        {"tile_hits": 3, "uploads": 10, "expired": 2, "evictions": {"host memory cap": 4, "memory cap": 1}},
+        {"ram_hits": 5, "disk_hits": 3, "computed": 2},
+    )
+    assert "embeddings ram_hits=5 disk_hits=3 computed=2 hit_rate=80%" in text
+    assert "tiles hits=3 uploads=10 expired=2 evicted=5 (host memory cap=4, memory cap=1)" in text
+
+
+def test_cache_counters_text_without_lookups_has_no_rate() -> None:
+    """A model with no counters, or none yet, does not divide by zero."""
+    from segmentation_server.server import _cache_counters_text
+
+    assert "hit_rate=n/a" in _cache_counters_text({}, {"ram_hits": 0, "disk_hits": 0, "computed": 0})
+    assert "embeddings" not in _cache_counters_text({}, None)

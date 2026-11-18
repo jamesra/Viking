@@ -189,6 +189,12 @@ class ImageCache:
         self._host_embedding_bytes: int = 0
         self._pull_times: "collections.deque[float]" = collections.deque()
         self._pulls_total = 0
+        # Since start, for GetServerStatus: tile lookups answered by an entry already cached, uploads that added one,
+        # evictions by reason (the cap that was hit) and idle expiries.
+        self._tile_hits = 0
+        self._uploads_total = 0
+        self._evictions: Dict[str, int] = {}
+        self._expired_total = 0
         self._offloads_total = 0
         self._last_thrash_warning = 0.0
 
@@ -293,6 +299,7 @@ class ImageCache:
                 shared_tile=shared_tile,
             )
             self._current_memory_bytes += size_bytes
+            self._uploads_total += 1
             logger.info(
                 "Image uploaded: ID=%s, size=%s bytes, total_cache=%s bytes (%.2f MB), count=%s",
                 image_id,
@@ -416,6 +423,7 @@ class ImageCache:
             cached = self._cache.get(existing_id) if existing_id is not None else None
             if cached is not None:
                 cached.last_access_time = self._time_fn()
+                self._tile_hits += 1
                 if cached.image_data == image_data:
                     logger.info("Tile cache hit (bytes unchanged): key=%s id=%s", tile_key, existing_id)
                 else:
@@ -860,6 +868,7 @@ class ImageCache:
             return False
         oldest_id = min(pool, key=lambda item: item[1].last_access_time)[0]
         await self._delete_image_internal(oldest_id)
+        self._evictions[reason] = self._evictions.get(reason, 0) + 1
         logger.info(
             "Image evicted (%s): ID=%s, total_cache=%s bytes (%.2f MB), count=%s",
             reason,
@@ -888,6 +897,7 @@ class ImageCache:
             cached_image = self._cache.get(image_id)
             age = current_time - cached_image.last_access_time if cached_image else 0
             await self._delete_image_internal(image_id)
+            self._expired_total += 1
             logger.info("Image expired (idle): ID=%s, idle %.1fs", image_id, age)
         if expired_ids:
             logger.info(
@@ -926,5 +936,9 @@ class ImageCache:
                 "host_resident_images": sum(1 for c in self._cache.values() if c.offloaded),
                 "embedding_pulls": self._pulls_total,
                 "embedding_moves": self._offloads_total,
+                "tile_hits": self._tile_hits,
+                "uploads": self._uploads_total,
+                "evictions": dict(self._evictions),
+                "expired": self._expired_total,
                 "tile_idle_seconds": self._tile_idle_seconds,
             }

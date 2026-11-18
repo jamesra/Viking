@@ -574,6 +574,26 @@ class RequestLoadTracker:
             return self._in_flight, self._recent_latency_ms
 
 
+def _cache_counters_text(cache_stats: Dict[str, Any], embedding_counts: Optional[Dict[str, int]]) -> str:
+    """The cache counters since start, as the tail of the GetServerStatus message, so whoever reads status can tell
+    whether the caches are earning their space (the counters are the only way: hits are not otherwise reported)."""
+    parts: List[str] = []
+    if embedding_counts:
+        ram = int(embedding_counts.get("ram_hits", 0))
+        disk = int(embedding_counts.get("disk_hits", 0))
+        computed = int(embedding_counts.get("computed", 0))
+        lookups = ram + disk + computed
+        rate = f"{100.0 * (ram + disk) / lookups:.0f}%" if lookups else "n/a"
+        parts.append(f"embeddings ram_hits={ram} disk_hits={disk} computed={computed} hit_rate={rate}")
+    evictions = cache_stats.get("evictions") or {}
+    parts.append(
+        f"tiles hits={cache_stats.get('tile_hits', 0)} uploads={cache_stats.get('uploads', 0)} "
+        f"expired={cache_stats.get('expired', 0)} evicted={sum(int(v) for v in evictions.values())}"
+        + (" (" + ", ".join(f"{k}={v}" for k, v in sorted(evictions.items())) + ")" if evictions else "")
+    )
+    return "; ".join(parts)
+
+
 def _server_version() -> str:
     """This server's package version, as GetServerStatus reports it and the result cache keys on it."""
     try:
@@ -945,7 +965,8 @@ class SegmentationServicer(SegmentationServiceServicer):
                 f"{cache_stats['total_memory_mb']:.1f} MiB host, "
                 f"{cache_stats.get('gpu_embedding_bytes', 0) / 1024**2:.1f}"
                 f"/{cache_stats.get('gpu_max_bytes', 0) / 1024**2:.0f} MiB GPU embeddings; "
-                f"pulls from host={cache_stats.get('embedding_pulls', 0)}"
+                f"pulls from host={cache_stats.get('embedding_pulls', 0)}; "
+                f"{_cache_counters_text(cache_stats, getattr(self.model, 'embedding_counts', None))}"
             ),
             in_flight_requests=in_flight,
             cached_images=int(cache_stats["total_images"]),
