@@ -18,27 +18,24 @@ namespace MorphologyMeshTest
     [TestClass]
     public class ProcessRegistrationDiagnostic
     {
-        private static readonly Uri Endpoint = Viking.Common.ODataEndpointCatalog.EndpointMap[Viking.Common.Endpoint.RC1];
+        // The case this harness was written for (locations 201496, 201500 and 201501) was lost in the 2026-11-17 RC1 bulk
+        // edit: 201496 was deleted. It now runs on the process through 201500 and 201501, saved from RC1 on 2026-11-19
+        // as the locations within Structure410Hops links of them (Rc1Structure410FixtureCapture re-captures it).
+        internal const string Structure410FixtureName = "rc1-structure-410-process-chain.json";
+        internal static readonly ulong[] Structure410Targets = [201500, 201501];
+        internal const int Structure410Hops = 8;
 
         [TestMethod]
-        [TestCategory("LiveData")]
         [Timeout(600000)]
-        public async Task DiagnoseStructure410Locations201496To201501()
+        public async Task DiagnoseStructure410Locations201500To201501()
         {
-            ulong structureId = 410;
-            ulong[] targetLocations = [201496, 201500, 201501];
-
-            await RunDiagnostic(structureId, targetLocations);
+            MorphologyGraph cell = MorphologyFixture.Load(MorphologyFixture.OutputPath(Structure410FixtureName));
+            await RunDiagnostic(cell, Structure410Targets);
         }
 
-        internal static async Task RunDiagnostic(ulong structureId, ulong[] targetLocations)
+        internal static async Task RunDiagnostic(MorphologyGraph cell, ulong[] targetLocations)
         {
-            MorphologyGraph root = await AnnotationVizLib.OData.ODataMorphologyFactory.FromODataAsync(
-                [(long)structureId], false, Endpoint);
-
-            if (!root.Subgraphs.TryGetValue(structureId, out MorphologyGraph cell))
-                Assert.Fail($"Structure {structureId} not found in OData response.");
-
+            ulong structureId = cell.StructureID;
             Vector2 origin = cell.NodesBoundingBox.CenterPoint.XY();
             Console.WriteLine($"Structure {structureId}: {cell.Nodes.Count} nodes, origin ({origin.X:F0}, {origin.Y:F0})");
 

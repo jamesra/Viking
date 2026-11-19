@@ -10,24 +10,25 @@ using System.Threading.Tasks;
 namespace MorphologyMeshTest
 {
     /// <summary>
-    /// LiveData harness for the RC1 410 ChordGeneration / OTV long pole (locs 200625…).
+    /// Harness for the RC1 410 ChordGeneration / OTV long pole (locs 200625…).
     /// Prints <see cref="ChordGenStats"/> for H1–H6; asserts a complete surface. Does not assert wall clock.
     /// </summary>
     [TestClass]
     public class ChordGenLongPoleHarnessTests
     {
-        private const int LoadHops = 3;
-        static readonly ulong[] LongPoleLocations = [200625, 200626, 201467, 1420185];
+        // The original long pole also held location 201467, deleted in the 2026-11-17 RC1 bulk edit, so that case is
+        // gone. The harness now runs on the slice through the three locations still there, saved from RC1 on 2026-11-19
+        // (Rc1Structure410FixtureCapture re-captures it).
+        internal const string FixtureName = "rc1-structure-410-long-pole.json";
+        internal const int LoadHops = 3;
+        internal static readonly ulong[] LongPoleLocations = [200625, 200626, 1420185];
 
         [TestMethod]
-        [TestCategory("LiveData")]
         [TestCategory("ChordGenHarness")]
         [Timeout(600000)]
         public async Task Rc1_410_LongPole_ChordGenStatsAndManifold()
         {
-            Uri endpoint = Viking.Common.ODataEndpointCatalog.EndpointMap[Viking.Common.Endpoint.RC1];
-            MorphologyGraph morph = await AnnotationVizLib.OData.ODataMorphologyFactory.FromODataLocationIDsAsync(
-                [.. LongPoleLocations.Select(id => (long)id)], endpoint, LoadHops);
+            MorphologyGraph morph = MorphologyFixture.Load(MorphologyFixture.OutputPath(FixtureName));
 
             SliceGraph slices = await SliceGraph.Create(morph, ContourSimplifyOptions.Default);
             Slice target = slices.Nodes.Values.FirstOrDefault(s => LongPoleLocations.All(id => s.AllNodes.Contains(id)));
@@ -66,14 +67,11 @@ namespace MorphologyMeshTest
         }
 
         [TestMethod]
-        [TestCategory("LiveData")]
         [TestCategory("ChordGenHarness")]
         [Timeout(600000)]
         public async Task Rc1_410_LongPole_ChordSetFingerprint()
         {
-            Uri endpoint = Viking.Common.ODataEndpointCatalog.EndpointMap[Viking.Common.Endpoint.RC1];
-            MorphologyGraph morph = await AnnotationVizLib.OData.ODataMorphologyFactory.FromODataLocationIDsAsync(
-                [.. LongPoleLocations.Select(id => (long)id)], endpoint, LoadHops);
+            MorphologyGraph morph = MorphologyFixture.Load(MorphologyFixture.OutputPath(FixtureName));
 
             SliceGraph slices = await SliceGraph.Create(morph, ContourSimplifyOptions.Default);
             Slice target = slices.Nodes.Values.FirstOrDefault(s => LongPoleLocations.All(id => s.AllNodes.Contains(id)));
