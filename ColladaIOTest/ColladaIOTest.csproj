@@ -9,6 +9,9 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Resources\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Clients\Common\Common.csproj" />
     <ProjectReference Include="..\ColladaIO\ColladaIO.csproj" />
     <ProjectReference Include="..\MorphologyMesh\MorphologyMesh.csproj" />
