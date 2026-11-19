@@ -15,6 +15,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
+    <!-- Tests tagged IntegrationTest call live services; dotnet test skips them unless a filter is given
+         (run them with: dotnet test, filter TestCategory=IntegrationTest). -->
+    <VSTestTestCaseFilter Condition="'$(VSTestTestCaseFilter)' == ''">TestCategory!=IntegrationTest</VSTestTestCaseFilter>
   </PropertyGroup>
   <ItemGroup>
     <!-- Modern testing packages -->

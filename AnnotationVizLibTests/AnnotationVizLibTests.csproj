@@ -6,6 +6,9 @@
 		<AssemblyName>AnnotationVizLibTests</AssemblyName>
 		<OutputType>Library</OutputType>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<!-- Tests tagged IntegrationTest call live services; dotnet test skips them unless a filter is given
+		     (run them with: dotnet test, filter TestCategory=IntegrationTest). -->
+		<VSTestTestCaseFilter Condition="'$(VSTestTestCaseFilter)' == ''">TestCategory!=IntegrationTest</VSTestTestCaseFilter>
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Microsoft.OData.Client" Version="8.1.0" />

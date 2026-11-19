@@ -4,6 +4,7 @@ using Microsoft.Extensions.Primitives;
 namespace DataExport.Tests;
 
 [TestClass]
+[TestCategory("IntegrationTest")] // every test calls the live OData service; skipped by default (see README.md)
 public class NetworkControllerTest
 {
     private static Mock<IWebHostEnvironment> CreateMockEnvironment()

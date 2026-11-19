@@ -25,7 +25,11 @@ dotnet test Clients/Viking/VikingTests/VikingTests.csproj
 dotnet test GeometryTests/GeometryTests.csproj
 ```
 
-`GeometryTests` takes a minute or two per target framework. `Clients/MonogameTestbed` (a net9.0 graphics test harness) is mid-migration and does not currently build.
+`GeometryTests` takes a minute or two per target framework.
+
+Tests that call live services (the WCF and OData graph tests in `AnnotationVizLibTests`, the controller tests in
+`Servers/DataExport.Tests`) carry `[TestCategory("IntegrationTest")]`, and those projects skip that category by
+default. Run them with `dotnet test <project> --filter TestCategory=IntegrationTest`. `Clients/MonogameTestbed` (a net9.0 graphics test harness) is mid-migration and does not currently build.
 
 ## Where things are
 

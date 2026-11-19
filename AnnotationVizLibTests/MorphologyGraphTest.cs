@@ -144,6 +144,7 @@ namespace AnnotationVizLibTests
     /// Tests higher level operations on Morphology graphs
     /// </summary>
     [TestClass]
+    [TestCategory("IntegrationTest")] // reads the live WCF/OData services; skipped by default (see README.md)
     public class MorphologyGraphTest
     {
         public MorphologyGraphTest()
@@ -339,6 +340,7 @@ namespace AnnotationVizLibTests
     /// Summary description for MotifGraphTest
     /// </summary>
     [TestClass]
+    [TestCategory("IntegrationTest")] // reads the live WCF/OData services; skipped by default (see README.md)
     public class ODataMorphologyGraphTest
     {
         public ODataMorphologyGraphTest()
@@ -462,6 +464,7 @@ namespace AnnotationVizLibTests
     /// Summary description for MotifGraphTest
     /// </summary>
     [TestClass]
+    [TestCategory("IntegrationTest")] // reads the live WCF/OData services; skipped by default (see README.md)
     public class SimpleODataMorphologyGraphTest
     {
         public SimpleODataMorphologyGraphTest()
@@ -646,6 +649,7 @@ namespace AnnotationVizLibTests
     /// Summary description for MotifGraphTest
     /// </summary>
     [TestClass]
+    [TestCategory("IntegrationTest")] // reads the live WCF/OData services; skipped by default (see README.md)
     public class WCFMorphologyGraphTest
     {
         public WCFMorphologyGraphTest()

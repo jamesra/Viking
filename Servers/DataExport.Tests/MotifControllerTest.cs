@@ -3,6 +3,7 @@ using DataExport.Controllers;
 namespace DataExport.Tests;
 
 [TestClass]
+[TestCategory("IntegrationTest")] // every test calls the live OData service; skipped by default (see README.md)
 public class MotifControllerTest
 {
     private static Mock<IWebHostEnvironment> CreateMockEnvironment()

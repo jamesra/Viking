@@ -67,7 +67,7 @@ The test project includes an `appsettings.json` file with the following required
 
 ### Running Unit Tests Only
 
-By default, running all tests will execute only the unit tests (integration tests are ignored):
+By default `dotnet test` runs only the unit tests: the project sets `VSTestTestCaseFilter` to `TestCategory!=IntegrationTest`, and the Morphology, Motif and Network controller test classes are tagged `IntegrationTest` because every test in them calls the live OData service.
 
 ```bash
 dotnet test
@@ -112,7 +112,7 @@ To enable integration tests, ensure your `appsettings.json` contains a valid ODa
 
 #### Running Tests
 
-Run all tests (unit + configured integration tests):
+Run unit tests only (the default):
 ```bash
 dotnet test
 ```
@@ -122,9 +122,9 @@ Run only integration tests:
 dotnet test --filter TestCategory=IntegrationTest
 ```
 
-Run only unit tests (exclude integration):
+Run everything, unit and integration:
 ```bash
-dotnet test --filter TestCategory!=IntegrationTest
+dotnet test --filter "TestCategory=IntegrationTest|TestCategory!=IntegrationTest"
 ```
 
 ## Test Data

@@ -5,6 +5,7 @@ using System;
 namespace AnnotationVizLibTests
 {
     [TestClass]
+    [TestCategory("IntegrationTest")] // reads the live WCF/OData services; skipped by default (see README.md)
     public class NeuronGraphTest
     {
         public static string WCFEndpoint = "https://webdev.connectomes.utah.edu/RC1Test/Annotation/Annotate.svc";

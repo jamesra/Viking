@@ -7,6 +7,7 @@ namespace AnnotationUtilsTests
     /// Summary description for MotifGraphTest
     /// </summary>
     [TestClass]
+    [TestCategory("IntegrationTest")] // reads the live WCF/OData services; skipped by default (see README.md)
     public class MotifGraphTest
     {
         //public string Endpoint = "https://connectomes.utah.edu/Services/RabbitBinary/Annotate.svc";
