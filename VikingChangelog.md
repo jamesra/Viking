@@ -11,7 +11,7 @@ Notes for whoever updates this file. Comments like this one are not shown in Vik
   changes, rename the unreleased heading to the new version; when a version ships, replace "not yet released" with the date
   and channel, for example "2026-10-26 (Viking Test, unsigned)".
 
-Committed application version: 1.2.151.0.
+Committed application version: 1.2.152.0.
 1.2.70, 1.2.75 and 1.2.143 were intermediate bumps and have no section of their own (1.2.143's change is listed under 1.2.144). Neither do the builds between 1.2.78 and 1.2.109;
 their changes are listed under 1.2.109. Builds 1.2.128 and 1.2.129 are listed under 1.2.129 (it went out as Viking Test
 and as a signed release on 2026-10-27). Viking Test builds 1.2.130 to 1.2.136 were folded into the 1.2.136 release on
@@ -30,13 +30,17 @@ version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. 
 Documentation/source/Client/versionhistory.rst.
 -->
 
+## 1.2.152 — 2026-11-19 (release)
+
+* **Change log corrected.** The notes for 1.2.151 now show under one heading for that release, instead of as unreleased test builds.
+<!-- 1.2.151 shipped with its heading reading "2026-11-18 (Viking Test, unsigned)" and the 1.2.149 and 1.2.150 test sections separate (fixed in 7d3c8cba after it was packed). 1.2.152 has no other changes. -->
+
 ## 1.2.151 — 2026-11-19 (release)
 
 * **Says why a section has no annotations.** When the annotation server fails to send a section's annotations, the status bar under the viewer now says so, with the server's reason when it gives one (for example a server error, no answer in time, or the server could not be reached), instead of just showing an empty view.
 <!-- WebAnnotationModel.ServerLoadErrors: StoreBase.ReportLoadFailure from the section and region load catches in LocationStore and StoreBaseWithKey (FaultException message, ExceptionDetail, HTTP status, timeout, endpoint not found; cancellations ignored; same line at most once per 15 s). AnnotationOverlay shows it with SectionViewerControl.ShowTransientStatus for 12 s. Prompted by the NeitzCPED SQLCLR fault (2026-11-17), which left the view empty with no message. Dev port: the gRPC client (Viking dev, Clients/WebAnnotationModel.gRPC) should report failed region and section loads the same way, with the RpcException status and detail; not ported yet. -->
 * **Clearer Resegment mask.** **Resegment** on a polygon shows the mask you grow or shrink with the wheel (and drag to move) in teal with a solid edge, no longer in the yellow of an annotation being moved, and the polygon's old outline as a dashed line. A label beside the mask shows how far the wheel has grown or shrunk it (for example +40 nm or -20 nm) and what to do next, and a green check and a red X beside it accept or cancel with one click; double-click, **Enter** and **Esc** work as before. Nothing is sent for segmentation until you accept. While the server works, the accepted mask stays on screen, dimmed, with the dashed outline, and the status bar's **Seg** chip shows **Seg Busy**; a failure is reported on the status bar.
 <!-- SegmentationMaskEditCommand: MaskEditOverlay (fill, opaque edge pixels by SegmentationMaskEdit.IsEdge, dashed original rings = the forward owner's ControlPolygon rings Resegment rasterized), label (SegmentationMaskEdit.LabelText, ASCII only: the sprite font is 32-126) and one-click buttons in the ProposalButtonsView atlas look, laid out in screen pixels by MaskEditChromeLayout and hit-tested before a drag starts. After accept, SegmentationPaintCommand draws a ResegmentPendingView in place of its seed paint until SegmentationCommand.OnRequestSettled (answer shown or failure reported), a stroke or clear, or deactivation. Replaces the status-bar hint drafted for #ai-requests 1795009946.777939 (Resegment looked stalled: yellow, movable, nothing said what to do). Dev port: the gRPC client on Viking dev (Clients/, ContextMenu_ResegmentPolygon and its mask edit and paint commands) needs the same change; not ported yet. -->
-
 * **Accept segmentation from the annotation's menu.** When a proposed segmentation (the outline auto-polygonize draws over a circle) is shown for an annotation, the annotation's own right-click menu now starts with **Accept segmentation**, so you no longer have to hit the thin proposal outline to accept it.
 <!-- AnnotationOverlay.AddAcceptSegmentationMenu (via Location_CanvasContextMenuView) uses AutoCirclePolygonizeController.TryGetVisibleProposal; a ring hidden with Del is not offered. Same action as the ring menu's Accept polygonalization. -->
 * **Accept and hide buttons on proposed segmentations.** Each proposed segmentation now has two buttons inside it, outside the circle when there is room: a green circle with a check accepts it, and a red square with an X hides it until the circle is changed (as **Reject proposal** does). Each needs two clicks: the first shows the button pressed, and after a short pause a **?** appears; click the **?** to go ahead. **Esc**, a click anywhere else, or a few seconds without the second click cancels. **Del** over a button hides the proposal for a while, as it does over the outline. The two buttons sit side by side, or one above the other when the proposal is too narrow, with the check first. They stay where they are and keep their size in the image as you zoom, are smaller only when the proposal has little room, and fade out when zoomed out too far to click. Their size, opacity and timing are in **Annotation Preferences > Segmentation > Auto-Segmentation Buttons**.
@@ -49,7 +53,6 @@ Documentation/source/Client/versionhistory.rst.
 <!-- PlaceOpenCurveCommand set Color.SetAlpha(...) and discarded the result; now sets curveView.Alpha / lineView.Alpha (0.25 when invalid). -->
 * **Smoother drawing with many annotations.** Circles, polygon corners, pen buttons, links and multi-channel sections no longer rebuild their shapes and graphics buffers on every frame, so panning and zooming over busy sections takes less work.
 <!-- 99c54e51, 9a656801: CircleView single draw, DeviceStateManager state caches, MeshModel buffer reuse, pen button view caches, LocationPolygonView radius rounding, channel render-target pool, LINQ removed from hot draw loops, LineStyle.Name(). -->
-
 * **Active command named.** In the help window (**F1**) the **Active command** heading now says what the command is for, for example **Active command: Pen gesture** or **Active command: Create structure**.
 <!-- Command.Purpose, shown by HelpWindow.HeadingOf; 18 commands override it, the rest are named from the class (Command.PurposeFromTypeName). -->
 
