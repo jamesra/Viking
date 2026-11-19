@@ -77,6 +77,30 @@ namespace AnnotationVizLibTests
         }
 
         /// <summary>
+        /// Config colour scalars are multipliers from 0 to 1: 0.5 halves a channel and 1 keeps it, read with a '.'
+        /// whatever the machine's culture.
+        /// </summary>
+        [TestMethod]
+        public void TestColorMappingConfigFractionalScalars()
+        {
+            System.Globalization.CultureInfo culture = System.Globalization.CultureInfo.CurrentCulture;
+            try
+            {
+                System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("de-DE");
+
+                // Columns: Section XOffset YOffset XScale YScale Alpha Red Green Blue Filename
+                ColorMapWithImages mapping = ColorMapWithImages.Create("1	0	0	1	1	1	0.5	1	0	ColorMap3x2.png", "Resources");
+
+                Assert.IsTrue(ColorsMatch(mapping.GetColor(0, 1, 1), Color.FromArgb(255, 127, 255, 0)), "white: red halved, green kept, blue dropped");
+                Assert.IsTrue(ColorsMatch(mapping.GetColor(2, 1, 1), Color.FromArgb(255, 64, 128, 0)), "gray 128 is scaled, not saturated");
+            }
+            finally
+            {
+                System.Globalization.CultureInfo.CurrentCulture = culture;
+            }
+        }
+
+        /// <summary>
         /// Check that we can load a set of images and average them correctly.
         /// </summary>
         [TestMethod]

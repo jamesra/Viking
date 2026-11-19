@@ -206,10 +206,11 @@ namespace AnnotationVizLib
 
             Scale scale = new(X_Scale, Y_Scale, Z_Scale);
 
-            ColorScalars scalars = new(ConfigStringHelper.NormalizedStringToByte(parts[5]),
-                ConfigStringHelper.NormalizedStringToByte(parts[6]),
-                ConfigStringHelper.NormalizedStringToByte(parts[7]),
-                ConfigStringHelper.NormalizedStringToByte(parts[8]));
+            // Multipliers from 0 to 1, not bytes: as 0-255 values any channel scaled by more than 0 saturated.
+            ColorScalars scalars = new(ConfigStringHelper.NormalizedStringToScalar(parts[5]),
+                ConfigStringHelper.NormalizedStringToScalar(parts[6]),
+                ConfigStringHelper.NormalizedStringToScalar(parts[7]),
+                ConfigStringHelper.NormalizedStringToScalar(parts[8]));
 
             string Filename = parts[9];
             if (ImageDir != null)
