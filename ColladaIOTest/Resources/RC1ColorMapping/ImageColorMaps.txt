@@ -1,8 +1,0 @@
-%Section XOffset YOffset XScale	YScale	Alpha	Red	Green	Blue	Filename	
-1	0	0	128	128	1	1	1	1	0001_5604_CMPv2.png
-30	0	0	32	32	1	0	1	0	0030_Glycine_32.png
-61	0	0	32	32	1	1	0	0	0061_GABA_32.png
-90	0	0	32	32	1	0	0	1	0090_AGB_32.png
-184	0	0	32	32	1	1	0	0	0184_GABA_32.png
-277	0	0	32	32	1	0	1	0	0277_Glycine_32.png
-371	0	0	32	32	1	1	1	1	0371_PCAImage.png

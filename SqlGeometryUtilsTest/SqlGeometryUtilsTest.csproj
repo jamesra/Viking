@@ -15,7 +15,7 @@
     <ProjectReference Include="..\SqlServerTypesLoader\SqlServerTypesLoader.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Clients\MonogameTestbed\SqlServerTypes\x64\*.dll" Link="LoaderFixture\SqlServerTypes\x64\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\Clients\MonogameTestbed\SqlServerTypes\x86\*.dll" Link="LoaderFixture\SqlServerTypes\x86\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Clients\WebAnnotationModelTest\SqlServerTypes\x64\*.dll" Link="LoaderFixture\SqlServerTypes\x64\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Clients\WebAnnotationModelTest\SqlServerTypes\x86\*.dll" Link="LoaderFixture\SqlServerTypes\x86\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

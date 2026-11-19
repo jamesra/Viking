@@ -3,7 +3,7 @@
 Runs each command line program with bad arguments to show its parse-error output.
 
 .DESCRIPTION
-Runs the Debug builds of Neo4JGenerator, VikingAU and MonogameTestbed (all net9.0) from the
+Runs the Debug builds of Neo4JGenerator and VikingAU (both net9.0) from the
 repository root. A program whose exe is missing is reported and skipped. MeasureDistance is not
 run: it does not currently build (see CommandLineErrorHandling.md). Each program should print the
 parse errors, then the usage text, and exit with code 1.
@@ -16,8 +16,7 @@ $root = $PSScriptRoot
 $tests = @(
     @{ Name = 'Neo4JGenerator (missing required --Neo4JDatabase)'; Exe = 'Servers\Neo4JGenerator\bin\Debug\net9.0\Neo4JGenerator.exe'; Args = @() },
     @{ Name = 'Neo4JGenerator (unknown option)';                    Exe = 'Servers\Neo4JGenerator\bin\Debug\net9.0\Neo4JGenerator.exe'; Args = @('--invalid-option') },
-    @{ Name = 'VikingAU (unknown option)';                          Exe = 'Clients\VikingAU\bin\Debug\net9.0\VikingAU.exe';             Args = @('--invalid-option') },
-    @{ Name = 'MonogameTestbed (unknown option)';                   Exe = 'Clients\MonogameTestbed\bin\Debug\net9.0-windows\MonogameTestbed.exe'; Args = @('--invalid-option') }
+    @{ Name = 'VikingAU (unknown option)';                          Exe = 'Clients\VikingAU\bin\Debug\net9.0\VikingAU.exe';             Args = @('--invalid-option') }
 )
 
 Write-Host "Testing Command Line Error Handling" -ForegroundColor Green
@@ -29,7 +28,7 @@ foreach ($t in $tests) {
         Write-Host "Not built, skipping: $exe" -ForegroundColor Red
         continue
     }
-    # Start-Process -Wait because MonogameTestbed is a WinExe that allocates its own console.
+    # Start-Process -Wait so a WinExe that allocates its own console is waited for too.
     $spArgs = @{ FilePath = $exe; Wait = $true; PassThru = $true; NoNewWindow = $true }
     if ($t.Args.Count -gt 0) { $spArgs.ArgumentList = $t.Args }
     $p = Start-Process @spArgs
