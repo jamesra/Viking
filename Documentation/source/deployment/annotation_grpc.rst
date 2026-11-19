@@ -100,5 +100,11 @@ call and fail with a "Refusing to run" message when it is missing or names a dat
 ``GrpcServer:TestDatabases`` (``AnnotationTest``, ``Test``), so a test run cannot write to a volume. Never set
 ``TestStack__Enabled`` on a volume.
 
+The env file in ``D:\Docker\Builds\GrpcAnnotationService\.env.Docker`` points the test stack at the ``Test`` database on
+the annotation SQL server (192.168.0.110), a throwaway clone of RC1 that the tests may write to. When a clean or known
+state is needed, drop ``Test`` and recreate it from the ``Empty`` database, which exists for this purpose (for
+example, back up ``Empty`` and restore it as ``Test``). Touch no other database there: never RC1, RC2 or ``Empty``
+itself.
+
 The old root ``docker-compose.annotation-db.yml`` overlay is replaced by the ``local-sql`` profile; the
 root ``docker-compose.yml`` now only includes the per-stack files.
