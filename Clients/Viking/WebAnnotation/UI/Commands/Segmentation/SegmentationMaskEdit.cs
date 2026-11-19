@@ -115,5 +115,70 @@ namespace WebAnnotation.UI.Commands.Segmentation
             double stepPixels = Math.Max(stepWorld / worldPerPixel, 1.0);
             return notches * stepPixels * (fine ? 0.25 : 1.0);
         }
+
+        /// <summary>
+        /// True when the pixel at (<paramref name="x"/>, <paramref name="y"/>) is inside the mask and at least one of its four
+        /// neighbours is outside it. A neighbour off the raster counts as outside, so a mask that reaches the raster's border still
+        /// has a closed edge. The edit command draws these pixels opaque as the mask's outline.
+        /// </summary>
+        /// <param name="pixels">Row-major mask, value at or above <see cref="Inside"/> is inside.</param>
+        public static bool IsEdge(byte[] pixels, int width, int height, int x, int y)
+        {
+            int index = y * width + x;
+            if (pixels[index] < Inside)
+                return false;
+
+            return x == 0 || pixels[index - 1] < Inside ||
+                   x == width - 1 || pixels[index + 1] < Inside ||
+                   y == 0 || pixels[index - width] < Inside ||
+                   y == height - 1 || pixels[index + width] < Inside;
+        }
+
+        /// <summary>
+        /// Writes one value per pixel into <paramref name="destination"/>: <paramref name="edge"/> on the mask's edge pixels
+        /// (<see cref="IsEdge"/>), <paramref name="fill"/> on the other inside pixels and <paramref name="outside"/> elsewhere.
+        /// Generic so it can be tested without a graphics device; the views pass texture colours.
+        /// </summary>
+        public static void Colorize<T>(byte[] pixels, int width, int height, T fill, T edge, T outside, T[] destination)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                int row = y * width;
+                for (int x = 0; x < width; x++)
+                {
+                    int index = row + x;
+                    destination[index] = pixels[index] < Inside
+                        ? outside
+                        : IsEdge(pixels, width, height, x, y) ? edge : fill;
+                }
+            }
+        }
+
+        /// <summary>
+        /// The edit as a distance in nanometres: <paramref name="radiusPixels"/> raster pixels of <paramref name="worldPerPixel"/>
+        /// volume units, each <paramref name="nanometersPerWorld"/> nm. Positive when the mask grew.
+        /// </summary>
+        public static double ChangeNanometers(double radiusPixels, double worldPerPixel, double nanometersPerWorld) =>
+            radiusPixels * worldPerPixel * nanometersPerWorld;
+
+        /// <summary>
+        /// The signed edit for the on-canvas label, to the whole nanometre: "+40 nm", "-20 nm", or "0 nm" when it rounds to nothing.
+        /// The minus is the ASCII hyphen because the viewer's sprite font holds only printable ASCII (32 to 126); any other
+        /// character would make the label fail to draw.
+        /// </summary>
+        public static string ChangeLabel(double nanometers)
+        {
+            long rounded = (long)Math.Round(nanometers, MidpointRounding.AwayFromZero);
+            if (rounded == 0)
+                return "0 nm";
+
+            return (rounded > 0 ? "+" : "-") + Math.Abs(rounded).ToString(System.Globalization.CultureInfo.InvariantCulture) + " nm";
+        }
+
+        /// <summary>What to do next, after the change in the on-canvas label. Printable ASCII only (see <see cref="ChangeLabel"/>).</summary>
+        public const string LabelInstructions = "double-click or check to segment  |  Esc cancels";
+
+        /// <summary>The whole on-canvas label: the signed change, then <see cref="LabelInstructions"/>.</summary>
+        public static string LabelText(double nanometers) => ChangeLabel(nanometers) + "  |  " + LabelInstructions;
     }
 }

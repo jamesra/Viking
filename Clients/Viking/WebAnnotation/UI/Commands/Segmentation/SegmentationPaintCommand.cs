@@ -100,23 +100,49 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// An existing mask to start from as a raster in volume space (an edited bitmap, which polygon rings cannot describe). It is painted
         /// as foreground and segmented at once, like <paramref name="seedRings"/>; both may be given. Null starts empty.
         /// </param>
+        /// <param name="pendingPreview">
+        /// Resegment's accepted mask, dimmed, with the outline it came from. The command takes it over: it is drawn in place of the
+        /// foreground paint until the first answer for the seed arrives, the request fails, the user paints or clears, or the
+        /// command ends, and then removed. Null shows the paint from the start.
+        /// </param>
         public SegmentationPaintCommand(
             SectionViewerControl parent,
             OnCommandSuccess? success_callback = null,
             IGrpcChannelManager? grpcChannelManager = null,
             System.Collections.Generic.IReadOnlyList<GVector2[]>? seedRings = null,
             Action? onAbandoned = null,
-            RasterMask? seedMask = null)
+            RasterMask? seedMask = null,
+            ResegmentPendingView? pendingPreview = null)
             : base(parent, success_callback, grpcChannelManager, onAbandoned: onAbandoned)
         {
             paintCancelButton = new PenCancelButton(parent);
             ShowPenButtons = Global.ShowPenActionButtons;
             this.seedRings = seedRings;
             this.seedMask = seedMask;
+            this.pendingPreview = pendingPreview;
         }
 
         private readonly System.Collections.Generic.IReadOnlyList<GVector2[]>? seedRings;
         private readonly RasterMask? seedMask;
+
+        /// <summary>See the constructor's <c>pendingPreview</c>; null once there is none to show.</summary>
+        private ResegmentPendingView? pendingPreview;
+
+        /// <summary>
+        /// Removes <see cref="pendingPreview"/> for <paramref name="reason"/> and redraws, so the paint and any result show
+        /// instead. UI thread.
+        /// </summary>
+        private void EndPendingPreview(string reason)
+        {
+            ResegmentPendingView? pending = pendingPreview;
+            pendingPreview = null;
+            if (pending?.End(reason) == true)
+                Parent.RequestRedraw();
+        }
+
+        /// <summary>The first outcome of a request (normally the seed's) ends the pending preview, whether answer or failure.</summary>
+        protected override void OnRequestSettled(bool answered) =>
+            EndPendingPreview(answered ? "the server's outline arrived" : "the request failed");
 
         /// <inheritdoc />
         protected override bool PlacesPoints => false;
@@ -198,11 +224,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
 
             if (seeded > 0)
                 SubmitPaint();
+            else
+                EndPendingPreview("nothing to send");
         }
 
         /// <inheritdoc />
         protected override void OnDeactivate()
         {
+            EndPendingPreview("the command ended");
             StopTilePrefetch();
             submitDebouncer?.Dispose();
             submitDebouncer = null;
@@ -228,6 +257,8 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (canvas is null || IsFinished)
                 return;
 
+            // The new paint must show, and it supersedes the request the pending mask stood for.
+            EndPendingPreview("the user painted");
             EnsureCanvasCovers(world, world);
             mode = PaintBrush.ChooseMode(canvas, world, RadiusWorld, alternate);
             strokeStartCanvas = canvas;
@@ -340,6 +371,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             SegmentationSeed? seed = foreground is null ? null : SegmentationSeed.FromMask(foreground);
             if (seed is null || foreground is null)
             {
+                EndPendingPreview("no foreground to send");
                 lastForegroundClicks = [];
                 SetPromptMasks(null, null);
                 RequestSegmentationFromPrompts();
@@ -356,6 +388,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     Parent,
                     SegmentationSkipKind.Error,
                     $"The painted object is too large for the segmentation server (at most {SegmentationMaskTiles.MaxForegroundTiles} tiles). Zoom out and paint a smaller area.");
+                EndPendingPreview("the mask is too large to send");
                 return;
             }
 
@@ -420,6 +453,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (canvas is null || IsFinished)
                 return;
 
+            EndPendingPreview("the paint was cleared");
             painting = false;
             paintedSinceSubmit = false;
             byte[] beforeClear = PaintUndoHistory.Snapshot(canvas);
@@ -712,7 +746,12 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 return;
 
             UploadChangedPaint(graphicsDevice);
-            overlayView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
+
+            // While the server works on Resegment's accepted mask, that mask is shown dimmed instead of the same mask as paint.
+            if (pendingPreview is { IsShown: true } pending)
+                pending.Draw(graphicsDevice, scene, Parent.Downsample);
+            else
+                overlayView?.Draw(graphicsDevice, scene, OverlayStyle.Alpha);
             base.OnDraw(graphicsDevice, scene, basicEffect);
 
             DepthStencilState previousDepth = graphicsDevice.DepthStencilState;

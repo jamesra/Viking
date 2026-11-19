@@ -677,7 +677,9 @@ namespace WebAnnotation.ViewModel
 
         /// <summary>
         /// Resegment: rasterizes this polygon and starts <see cref="SegmentationMaskEditCommand"/> on it so the starting mask can
-        /// be grown and shrunk with the wheel. When the user accepts the edited mask (unchanged is fine) it is sent to the
+        /// be grown and shrunk with the wheel; the polygon's outline is drawn dashed beside it, and a label and buttons on the
+        /// canvas say how to go on (nothing is sent to the server until the mask is accepted, which a tester took for a stalled
+        /// request, #ai-requests 2026-11-18). When the user accepts the edited mask (unchanged is fine) it is sent to the
         /// segmentation server as the starting mask by a new <see cref="SegmentationPaintCommand"/>, where it can be painted
         /// further; only an accepted result changes this location. Cancelling the edit changes nothing.
         /// </summary>
@@ -741,8 +743,8 @@ namespace WebAnnotation.ViewModel
                     Trace.WriteLine($"Mask edit accepted at downsample {edited.Downsample}: {edited.Pixels.Count(p => p != 0)} pixels");
 
                     // The edit command finishes itself right after this callback returns, so start the next one afterwards.
-                    parent.BeginInvoke(() => SubmitEditedMask(parent, edited));
-                });
+                    parent.BeginInvoke(() => SubmitEditedMask(parent, edited, volumeRings));
+                }, originalOutline: volumeRings);
             }
             catch (Exception ex)
             {
@@ -754,10 +756,13 @@ namespace WebAnnotation.ViewModel
 
         /// <summary>
         /// Starts a <see cref="SegmentationPaintCommand"/> seeded with <paramref name="edited"/>, which sends it to the
-        /// segmentation server as the starting mask. The user accepts or declines the resulting segmentation; accepting
-        /// replaces this location's shape, declining leaves it as it was.
+        /// segmentation server as the starting mask. Until the server's outline arrives (or the request fails or is cancelled)
+        /// that command shows the accepted mask dimmed with <paramref name="originalRings"/> dashed, a
+        /// <see cref="ResegmentPendingView"/> it owns, while the status bar's Seg chip shows the request busy. The user accepts or
+        /// declines the resulting segmentation; accepting replaces this location's shape, declining leaves it as it was.
         /// </summary>
-        private void SubmitEditedMask(Viking.UI.Controls.SectionViewerControl parent, RasterMask edited)
+        /// <param name="originalRings">The polygon Resegment started from, volume space, as the forward owner gave it.</param>
+        private void SubmitEditedMask(Viking.UI.Controls.SectionViewerControl parent, RasterMask edited, IReadOnlyList<Geometry.Vector2[]> originalRings)
         {
             try
             {
@@ -787,7 +792,8 @@ namespace WebAnnotation.ViewModel
                 // The bitmap itself is the foreground mask, painted onto the canvas and segmented at once.
                 var channelManager = ServiceLocator.GetRequiredService<IGrpcChannelManager>();
                 parent.CurrentCommand = new SegmentationPaintCommand(
-                    parent, UpdateLocationShapeFromVolumePolygon, channelManager, seedMask: edited);
+                    parent, UpdateLocationShapeFromVolumePolygon, channelManager, seedMask: edited,
+                    pendingPreview: new ResegmentPendingView(edited, originalRings));
             }
             catch (Exception ex)
             {

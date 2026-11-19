@@ -270,6 +270,30 @@ namespace WebAnnotation.UI.Commands.Segmentation
         /// </summary>
         internal bool IsProcessingResults => Volatile.Read(ref processingResponses) > 0;
 
+        /// <summary>
+        /// Called on the UI thread when a request has an outcome the user sees: <paramref name="answered"/> true once the answer's
+        /// outlines are shown, false once a failure (an error, a timeout, an empty mask, no service) has been reported on the status
+        /// bar. Not called for a request superseded or cancelled by newer prompts, nor after the command ended. Resegment's paint
+        /// command uses it to remove the pending mask (<see cref="ResegmentPendingView"/>). Does nothing here.
+        /// </summary>
+        protected virtual void OnRequestSettled(bool answered)
+        {
+        }
+
+        /// <summary>
+        /// Reports a failed or empty request on the status bar (<see cref="SegmentationUserFeedback.NotifySkip"/>), then posts
+        /// <see cref="OnRequestSettled"/>(false) to the UI thread. Safe from any thread.
+        /// </summary>
+        private void NotifyRequestFailed(SegmentationSkipKind kind, string? detail = null)
+        {
+            SegmentationUserFeedback.NotifySkip(Parent, kind, detail);
+            Viking.UI.State.MainThreadDispatcher?.BeginInvoke(new Action(() =>
+            {
+                if (!IsFinished)
+                    OnRequestSettled(false);
+            }));
+        }
+
         #region Constructor
         public SegmentationCommand(SectionViewerControl parent,
             OnCommandSuccess? success_callback = null,
@@ -1043,7 +1067,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (!viewportSession.HasClient)
             {
                 SegmentationDiag.Log("RequestSegmentation skip: no gRPC client");
-                SegmentationUserFeedback.NotifySkip(Parent, SegmentationSkipKind.NoClient);
+                NotifyRequestFailed(SegmentationSkipKind.NoClient);
                 return;
             }
 
@@ -1121,7 +1145,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                 {
                     SegmentationSkipKind kind = SegmentationUserFeedback.KindForMissingResponse(
                         viewportSession.ConsumeLastSkip(out string? detail));
-                    SegmentationUserFeedback.NotifySkip(Parent, kind, detail);
+                    NotifyRequestFailed(kind, detail);
                 }
             }
             catch (Exception ex)
@@ -1133,7 +1157,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
                     SegmentationSkipKind kind = viewportSession.ConsumeLastSkip(out string? detail);
                     if (kind == SegmentationSkipKind.None || kind == SegmentationSkipKind.Cancelled)
                         kind = SegmentationSkipKind.Error;
-                    SegmentationUserFeedback.NotifySkip(Parent, kind, detail ?? ex.Message);
+                    NotifyRequestFailed(kind, detail ?? ex.Message);
                 }
             }
             finally
@@ -1224,7 +1248,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
             if (response.Segments.Count == 0)
             {
                 Debug.WriteLine("No segments returned");
-                SegmentationUserFeedback.NotifySkip(Parent, SegmentationSkipKind.EmptyMask);
+                NotifyRequestFailed(SegmentationSkipKind.EmptyMask);
                 return;
             }
 
@@ -1247,14 +1271,14 @@ namespace WebAnnotation.UI.Commands.Segmentation
             catch (Exception ex)
             {
                 Debug.WriteLine($"Segmentation process generation={generation} failed: {ex}");
-                SegmentationUserFeedback.NotifySkip(Parent, SegmentationSkipKind.Error, ex.Message);
+                NotifyRequestFailed(SegmentationSkipKind.Error, ex.Message);
                 return;
             }
 
             if (polygons is null || polygons.Count == 0)
             {
                 Debug.WriteLine($"Segmentation process generation={generation} produced no polygons");
-                SegmentationUserFeedback.NotifySkip(Parent, SegmentationSkipKind.EmptyMask);
+                NotifyRequestFailed(SegmentationSkipKind.EmptyMask);
                 return;
             }
 
@@ -1279,6 +1303,7 @@ namespace WebAnnotation.UI.Commands.Segmentation
 #if DEBUG
                 CreateDebugMaskOverlay(response);
 #endif
+                OnRequestSettled(true);
                 Parent.Invalidate();
             }).Task.ConfigureAwait(false);
         }

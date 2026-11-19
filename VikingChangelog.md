@@ -11,7 +11,7 @@ Notes for whoever updates this file. Comments like this one are not shown in Vik
   changes, rename the unreleased heading to the new version; when a version ships, replace "not yet released" with the date
   and channel, for example "2026-10-26 (Viking Test, unsigned)".
 
-Committed application version: 1.2.150.0.
+Committed application version: 1.2.151.0.
 1.2.70, 1.2.75 and 1.2.143 were intermediate bumps and have no section of their own (1.2.143's change is listed under 1.2.144). Neither do the builds between 1.2.78 and 1.2.109;
 their changes are listed under 1.2.109. Builds 1.2.128 and 1.2.129 are listed under 1.2.129 (it went out as Viking Test
 and as a signed release on 2026-10-27). Viking Test builds 1.2.130 to 1.2.136 were folded into the 1.2.136 release on
@@ -32,6 +32,8 @@ Documentation/source/Client/versionhistory.rst.
 
 * **Says why a section has no annotations.** When the annotation server fails to send a section's annotations, the status bar under the viewer now says so, with the server's reason when it gives one (for example a server error, no answer in time, or the server could not be reached), instead of just showing an empty view.
 <!-- WebAnnotationModel.ServerLoadErrors: StoreBase.ReportLoadFailure from the section and region load catches in LocationStore and StoreBaseWithKey (FaultException message, ExceptionDetail, HTTP status, timeout, endpoint not found; cancellations ignored; same line at most once per 15 s). AnnotationOverlay shows it with SectionViewerControl.ShowTransientStatus for 12 s. Prompted by the NeitzCPED SQLCLR fault (2026-11-17), which left the view empty with no message. Dev port: the gRPC client (Viking dev, Clients/WebAnnotationModel.gRPC) should report failed region and section loads the same way, with the RpcException status and detail; not ported yet. -->
+* **Clearer Resegment mask.** **Resegment** on a polygon shows the mask you grow or shrink with the wheel (and drag to move) in teal with a solid edge, no longer in the yellow of an annotation being moved, and the polygon's old outline as a dashed line. A label beside the mask shows how far the wheel has grown or shrunk it (for example +40 nm or -20 nm) and what to do next, and a green check and a red X beside it accept or cancel with one click; double-click, **Enter** and **Esc** work as before. Nothing is sent for segmentation until you accept. While the server works, the accepted mask stays on screen, dimmed, with the dashed outline, and the status bar's **Seg** chip shows **Seg Busy**; a failure is reported on the status bar.
+<!-- SegmentationMaskEditCommand: MaskEditOverlay (fill, opaque edge pixels by SegmentationMaskEdit.IsEdge, dashed original rings = the forward owner's ControlPolygon rings Resegment rasterized), label (SegmentationMaskEdit.LabelText, ASCII only: the sprite font is 32-126) and one-click buttons in the ProposalButtonsView atlas look, laid out in screen pixels by MaskEditChromeLayout and hit-tested before a drag starts. After accept, SegmentationPaintCommand draws a ResegmentPendingView in place of its seed paint until SegmentationCommand.OnRequestSettled (answer shown or failure reported), a stroke or clear, or deactivation. Replaces the status-bar hint drafted for #ai-requests 1795009946.777939 (Resegment looked stalled: yellow, movable, nothing said what to do). Dev port: the gRPC client on Viking dev (Clients/, ContextMenu_ResegmentPolygon and its mask edit and paint commands) needs the same change; not ported yet. -->
 
 ## 1.2.150 — 2026-11-17 (Viking Test, unsigned)
 

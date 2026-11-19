@@ -247,5 +247,251 @@ namespace WebAnnotationTests.Commands
             Assert.AreEqual(mask.WorldBounds.Bottom - 4 * 4, moved.WorldBounds.Bottom, 1e-9);
             Assert.AreEqual(mask.WorldBounds.Width, moved.WorldBounds.Width, 1e-9);
         }
+
+        /// <summary>
+        /// The on-canvas label tells the user how to go on, so it must name only gestures the command really binds: a
+        /// double-click on the mask and a click on the check accept, Escape cancels.
+        /// </summary>
+        [TestMethod]
+        public void Label_NamesTheAcceptAndCancelGesturesTheMaskEditBinds()
+        {
+            string text = SegmentationMaskEdit.LabelText(40);
+
+            Assert.IsTrue(text.StartsWith("+40 nm", StringComparison.Ordinal), text);
+            StringAssert.Contains(text, "double-click");
+            StringAssert.Contains(text, "check");
+            StringAssert.Contains(text, "segment");
+            StringAssert.Contains(text, "Esc cancels");
+            Assert.IsTrue(SegmentationMaskEditCommand.MouseHelp.Any(e =>
+                e.Inputs is { Length: 1 } inputs && inputs[0] == Viking.Common.HelpInput.LeftDoubleClick &&
+                e.Description.StartsWith("Accept", StringComparison.Ordinal)));
+            Assert.IsTrue(SegmentationMaskEditCommand.MouseHelp.Any(e =>
+                e.Inputs is { Length: 1 } inputs && inputs[0] == Viking.Common.HelpInput.LeftClick &&
+                e.Description.Contains("green check") && e.Description.Contains("red X")));
+        }
+
+        /// <summary>The viewer's sprite font holds printable ASCII only; any other character would stop the label drawing.</summary>
+        [TestMethod]
+        public void Label_IsPrintableAscii()
+        {
+            foreach (double nm in new[] { -1234.0, -20, 0, 20, 98765 })
+            {
+                string text = SegmentationMaskEdit.LabelText(nm);
+                Assert.IsTrue(text.All(c => c >= ' ' && c <= '~'), text);
+            }
+        }
+
+        [TestMethod]
+        public void ChangeLabel_IsSignedWholeNanometres()
+        {
+            Assert.AreEqual("+40 nm", SegmentationMaskEdit.ChangeLabel(40));
+            Assert.AreEqual("-20 nm", SegmentationMaskEdit.ChangeLabel(-20));
+            Assert.AreEqual("0 nm", SegmentationMaskEdit.ChangeLabel(0));
+            Assert.AreEqual("0 nm", SegmentationMaskEdit.ChangeLabel(-0.4), "a change that rounds to nothing has no sign");
+            Assert.AreEqual("+20 nm", SegmentationMaskEdit.ChangeLabel(19.5));
+            Assert.AreEqual("-5 nm", SegmentationMaskEdit.ChangeLabel(-4.5));
+        }
+
+        [TestMethod]
+        public void ChangeNanometers_IsRadiusTimesPixelSizeTimesScale()
+        {
+            // Two raster pixels of a scale-2 raster at downsample 4 is 16 volume units; at 2.18 nm per unit that is 34.88 nm.
+            Assert.AreEqual(34.88, SegmentationMaskEdit.ChangeNanometers(2, worldPerPixel: 8, nanometersPerWorld: 2.18), 1e-9);
+            Assert.AreEqual(-34.88, SegmentationMaskEdit.ChangeNanometers(-2, worldPerPixel: 8, nanometersPerWorld: 2.18), 1e-9);
+        }
+
+        /// <summary>A small hand-drawn mask: rows of 0/1 characters, '1' inside.</summary>
+        private static byte[] Rows(params string[] rows)
+        {
+            byte[] pixels = new byte[rows.Length * rows[0].Length];
+            for (int y = 0; y < rows.Length; y++)
+                for (int x = 0; x < rows[y].Length; x++)
+                    pixels[y * rows[0].Length + x] = rows[y][x] == '1' ? (byte)255 : (byte)0;
+            return pixels;
+        }
+
+        /// <summary>An inside pixel is an edge pixel exactly when one of its four neighbours is outside; diagonals do not count.</summary>
+        [TestMethod]
+        public void IsEdge_InsidePixelsWithAnOutsideFourNeighbour()
+        {
+            byte[] pixels = Rows(
+                "000000",
+                "011110",
+                "011110",
+                "011110",
+                "000000");
+
+            Assert.IsTrue(SegmentationMaskEdit.IsEdge(pixels, 6, 5, 1, 1), "corner");
+            Assert.IsTrue(SegmentationMaskEdit.IsEdge(pixels, 6, 5, 2, 1), "top side");
+            Assert.IsTrue(SegmentationMaskEdit.IsEdge(pixels, 6, 5, 4, 2), "right side");
+            Assert.IsFalse(SegmentationMaskEdit.IsEdge(pixels, 6, 5, 2, 2), "interior");
+            Assert.IsFalse(SegmentationMaskEdit.IsEdge(pixels, 6, 5, 3, 2), "interior");
+            Assert.IsFalse(SegmentationMaskEdit.IsEdge(pixels, 6, 5, 0, 0), "outside is never an edge");
+
+            // Only a diagonal neighbour outside: (2, 2) here touches the hole at (3, 3) diagonally, so it is not an edge.
+            byte[] notched = Rows(
+                "11111",
+                "11111",
+                "11111",
+                "11101",
+                "11111");
+            Assert.IsFalse(SegmentationMaskEdit.IsEdge(notched, 5, 5, 2, 2));
+            Assert.IsTrue(SegmentationMaskEdit.IsEdge(notched, 5, 5, 3, 2));
+        }
+
+        [TestMethod]
+        public void IsEdge_TheRasterBorderCountsAsOutside()
+        {
+            byte[] full = Rows("111", "111", "111");
+
+            Assert.IsTrue(SegmentationMaskEdit.IsEdge(full, 3, 3, 0, 1));
+            Assert.IsTrue(SegmentationMaskEdit.IsEdge(full, 3, 3, 2, 2));
+            Assert.IsFalse(SegmentationMaskEdit.IsEdge(full, 3, 3, 1, 1));
+        }
+
+        [TestMethod]
+        public void Colorize_SplitsEdgeFillAndOutside()
+        {
+            byte[] pixels = Rows(
+                "000000",
+                "011110",
+                "011110",
+                "011110",
+                "000000");
+            char[] colors = new char[pixels.Length];
+
+            SegmentationMaskEdit.Colorize(pixels, 6, 5, 'f', 'e', '.', colors);
+
+            Assert.AreEqual(
+                "......" + ".eeee." + ".effe." + ".eeee." + "......",
+                new string(colors));
+        }
+
+        private const int ViewWidth = 1200, ViewHeight = 800;
+
+        private static MaskEditChrome Place(ScreenBox mask, double labelWidth = 300) =>
+            MaskEditChromeLayout.Place(mask, ViewWidth, ViewHeight, default, labelWidth);
+
+        /// <summary>The buttons, label and mask must not cover each other.</summary>
+        private static void AssertClear(ScreenBox mask, MaskEditChrome chrome, double labelWidth = 300)
+        {
+            ScreenBox accept = ScreenBox.AroundCircle(chrome.Accept, chrome.ButtonRadius);
+            ScreenBox cancel = ScreenBox.AroundCircle(chrome.Cancel, chrome.ButtonRadius);
+            double h = MaskEditChromeLayout.LabelFontPixels;
+            ScreenBox label = new(chrome.LabelCenter.X - labelWidth / 2, chrome.LabelCenter.Y - h / 2, chrome.LabelCenter.X + labelWidth / 2, chrome.LabelCenter.Y + h / 2);
+
+            Assert.IsFalse(accept.Overlaps(mask), "accept covers the mask");
+            Assert.IsFalse(cancel.Overlaps(mask), "cancel covers the mask");
+            Assert.IsFalse(accept.Overlaps(cancel), "the buttons overlap");
+            Assert.IsFalse(label.Overlaps(mask), "the label covers the mask");
+            Assert.IsFalse(label.Overlaps(accept) || label.Overlaps(cancel), "the label covers a button");
+        }
+
+        [TestMethod]
+        public void Chrome_ButtonsStandRightOfTheMaskAcceptOnTopAndTheLabelBelow()
+        {
+            ScreenBox mask = new(400, 300, 600, 500);
+
+            MaskEditChrome chrome = Place(mask);
+
+            Assert.IsTrue(chrome.ButtonsRight);
+            Assert.IsTrue(chrome.LabelBelow);
+            Assert.IsTrue(chrome.Accept.X - chrome.ButtonRadius > mask.Right, "the buttons are right of the mask");
+            Assert.AreEqual(chrome.Accept.X, chrome.Cancel.X, 1e-9);
+            Assert.IsTrue(chrome.Accept.Y < chrome.Cancel.Y, "accept above cancel");
+            Assert.AreEqual(mask.Center.Y, (chrome.Accept.Y + chrome.Cancel.Y) / 2, 1e-9, "centred on the mask's height");
+            Assert.AreEqual(mask.Center.X, chrome.LabelCenter.X, 1e-9);
+            Assert.IsTrue(chrome.LabelCenter.Y > mask.Bottom);
+            Assert.AreEqual(MaskEditChromeLayout.ButtonRadiusPixels, chrome.ButtonRadius, "a fixed screen size");
+            AssertClear(mask, chrome);
+        }
+
+        [TestMethod]
+        public void Chrome_GoesLeftWhenTheRightIsTakenAndKeepsClearOfTheCornerButtons()
+        {
+            // The mask's right edge is in the corner pen buttons' column.
+            ScreenBox mask = new(800, 300, ViewWidth - 60, 500);
+
+            MaskEditChrome chrome = Place(mask);
+
+            Assert.IsFalse(chrome.ButtonsRight);
+            Assert.IsTrue(chrome.Accept.X + chrome.ButtonRadius < mask.Left);
+            AssertClear(mask, chrome);
+            Assert.IsTrue(chrome.LabelCenter.X + 150 <= ViewWidth - MaskEditChromeLayout.CornerColumnPixels, "the label stays out of the corner column");
+        }
+
+        [TestMethod]
+        public void Chrome_LabelGoesAboveWhenBelowIsOffTheView()
+        {
+            ScreenBox mask = new(400, 500, 600, ViewHeight - 4);
+
+            MaskEditChrome chrome = Place(mask);
+
+            Assert.IsFalse(chrome.LabelBelow);
+            Assert.IsTrue(chrome.LabelCenter.Y < mask.Top);
+            Assert.IsTrue(chrome.Cancel.Y + chrome.ButtonRadius <= ViewHeight, "the buttons stay on the view");
+            AssertClear(mask, chrome);
+        }
+
+        [TestMethod]
+        public void Chrome_LabelMovesPastTheButtonsBesideAShortMask()
+        {
+            // A wide, short mask: the button pair reaches below it, where a wide label would go.
+            ScreenBox mask = new(300, 400, 700, 410);
+
+            MaskEditChrome chrome = Place(mask, labelWidth: 600);
+
+            AssertClear(mask, chrome, labelWidth: 600);
+        }
+
+        [TestMethod]
+        public void Chrome_StaysOnTheViewWhenTheMaskIsLargerThanIt()
+        {
+            ScreenBox mask = new(-500, -500, ViewWidth + 500, ViewHeight + 500);
+
+            MaskEditChrome chrome = Place(mask);
+
+            Assert.IsTrue(chrome.Accept.X - chrome.ButtonRadius >= 0 && chrome.Accept.X + chrome.ButtonRadius <= ViewWidth - MaskEditChromeLayout.CornerColumnPixels);
+            Assert.IsTrue(chrome.Accept.Y - chrome.ButtonRadius >= 0 && chrome.Cancel.Y + chrome.ButtonRadius <= ViewHeight);
+            Assert.IsTrue(chrome.LabelCenter.Y >= 0 && chrome.LabelCenter.Y <= ViewHeight);
+        }
+
+        [TestMethod]
+        public void Chrome_HitTestFindsEachButtonAndNothingBetween()
+        {
+            MaskEditChrome chrome = Place(new ScreenBox(400, 300, 600, 500));
+
+            Assert.AreEqual(WebAnnotation.UI.AutoPolygonize.ProposalButtonKind.Accept, chrome.HitTest(chrome.Accept.X, chrome.Accept.Y));
+            Assert.AreEqual(WebAnnotation.UI.AutoPolygonize.ProposalButtonKind.Hide, chrome.HitTest(chrome.Cancel.X + 5, chrome.Cancel.Y - 5));
+            Assert.IsNull(chrome.HitTest(chrome.Accept.X, (chrome.Accept.Y + chrome.Cancel.Y) / 2), "the gap between them");
+            Assert.IsNull(chrome.HitTest(500, 400), "the mask itself");
+        }
+
+        /// <summary>The pending mask ends once, whichever of answer, failure or the command ending comes first.</summary>
+        [TestMethod]
+        public void PendingView_EndsOnceAndStaysEnded()
+        {
+            RasterMask mask = new(downsample: 1, xMin: 0, yMax: 7, width: 8, height: 8, pixels: Square8());
+            Vector2[] ring = [new(1, 1), new(6, 1), new(6, 6), new(1, 6), new(1, 1)];
+            ResegmentPendingView pending = new(mask, [ring]);
+
+            Assert.IsTrue(pending.IsShown);
+            Assert.IsNull(pending.EndReason);
+
+            Assert.IsTrue(pending.End("the server's outline arrived"));
+            Assert.IsFalse(pending.IsShown);
+            Assert.IsFalse(pending.End("the request failed"), "a later outcome changes nothing");
+            pending.Dispose();
+            Assert.AreEqual("the server's outline arrived", pending.EndReason);
+        }
+
+        private static byte[] Square8()
+        {
+            byte[] pixels = new byte[64];
+            for (int y = 2; y < 6; y++)
+                for (int x = 2; x < 6; x++)
+                    pixels[y * 8 + x] = 255;
+            return pixels;
+        }
     }
 }
