@@ -898,6 +898,10 @@ namespace SqlGeometryUtils
                 c = points.Average();
             }
 
+            // Points with no area (a straight polyline) give a NaN polygon centroid in floating point instead of throwing.
+            if (double.IsNaN(c.X) || double.IsNaN(c.Y) || double.IsInfinity(c.X) || double.IsInfinity(c.Y))
+                c = points.Average();
+
             return new Vector2(System.Math.Round(c.X, RoundingDigits), System.Math.Round(c.Y, RoundingDigits));
         }
 
