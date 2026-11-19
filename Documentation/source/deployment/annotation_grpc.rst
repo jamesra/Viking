@@ -97,14 +97,17 @@ The test stack's gRPC service listens on its own port, https://localhost:5019, w
 ``GET /test-stack`` with ``{"testStack": true, "database": "<name>"}``; a production service maps no such route.
 The integration tests (``Clients/WebAnnotationModel.gRPC.Tests``, ``gRPC_Tests``) read that marker before their first
 call and fail with a "Refusing to run" message when it is missing or names a database outside
-``GrpcServer:TestDatabases`` (``AnnotationTest``, ``Test``), so a test run cannot write to a volume. Never set
+``GrpcServer:TestDatabases`` (``AnnotationTest``, ``Empty``, ``Test``), so a test run cannot write to a volume. Never set
 ``TestStack__Enabled`` on a volume.
 
-The env file in ``D:\Docker\Builds\GrpcAnnotationService\.env.Docker`` points the test stack at the ``Test`` database on
-the annotation SQL server (192.168.0.110), a throwaway clone of RC1 that the tests may write to. When a clean or known
-state is needed, drop ``Test`` and recreate it from the ``Empty`` database, which exists for this purpose (for
-example, back up ``Empty`` and restore it as ``Test``). Touch no other database there: never RC1, RC2 or ``Empty``
-itself.
+Two databases on the annotation SQL server (192.168.0.110) are for tests:
+
+- ``Empty``: an empty database that can be used, dropped and recreated. Use it when a test needs a clean or known state.
+- ``Test``: a full clone of RC1, refreshed rarely by James. Tests may read and write it, but agents never drop, wipe or
+  recreate it.
+
+``D:\Docker\Builds\GrpcAnnotationService\.env.Docker`` currently points the test stack at ``Test``. Touch no other
+database there, never RC1 or RC2.
 
 The old root ``docker-compose.annotation-db.yml`` overlay is replaced by the ``local-sql`` profile; the
 root ``docker-compose.yml`` now only includes the per-stack files.

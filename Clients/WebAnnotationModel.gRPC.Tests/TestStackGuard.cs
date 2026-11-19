@@ -20,7 +20,7 @@ namespace WebAnnotationModel.gRPC.Tests
     /// </remarks>
     internal static class TestStackGuard
     {
-        private static readonly string[] DefaultTestDatabases = ["AnnotationTest", "Test"];
+        private static readonly string[] DefaultTestDatabases = ["AnnotationTest", "Empty", "Test"];
 
         private static readonly ConcurrentDictionary<string, string> Failures = new(StringComparer.OrdinalIgnoreCase);
 
