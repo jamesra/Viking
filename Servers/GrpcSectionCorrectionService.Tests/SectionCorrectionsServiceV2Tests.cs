@@ -169,21 +169,20 @@ namespace GrpcSectionCorrectionService.Tests
         }
 
         /// <summary>
-        /// The zero value is Neighbor, so an unset mode gets the published field without a presence flag. 1.5.2 restores
-        /// the CurveFit pass: 2 and 3 stay the field (production clients still send them) and 4 is the field then CurveFit
-        /// (a raw integer, since the proto reserves 2 and 3); any other value is refused.
+        /// The zero value is Neighbor, so an unset mode gets the published field without a presence flag. 4 is the field
+        /// then CurveFit (a raw integer, since the proto reserves 2 and 3). The retired 2 and 3, and any other value, are
+        /// refused (1.8.0 ended the stopgap that answered 2 and 3 with the field).
         /// </summary>
         [TestMethod]
-        public void CorrectionMode_ZeroIsNeighbor_OnlyFourRunsCurveFit_UnknownIsRefused()
+        public void CorrectionMode_ZeroIsNeighbor_OnlyFourRunsCurveFit_RetiredAndUnknownAreRefused()
         {
             Assert.AreEqual(CorrectionMode.Neighbor, new CorrectStructuresRequest().Correction);
             Assert.AreEqual(FitMode.Neighbor, SectionCorrectionsServiceV2.ToFitMode(CorrectionMode.Neighbor));
             Assert.AreEqual(FitMode.None, SectionCorrectionsServiceV2.ToFitMode(CorrectionMode.None));
-            Assert.AreEqual(FitMode.Neighbor, SectionCorrectionsServiceV2.ToFitMode((CorrectionMode)2));
-            Assert.AreEqual(FitMode.Neighbor, SectionCorrectionsServiceV2.ToFitMode((CorrectionMode)3));
             Assert.AreEqual(FitMode.All, SectionCorrectionsServiceV2.ToFitMode((CorrectionMode)4));
-            Assert.AreEqual(StatusCode.InvalidArgument,
-                Assert.ThrowsExactly<RpcException>(() => SectionCorrectionsServiceV2.ToFitMode((CorrectionMode)9)).StatusCode);
+            foreach (int refused in new[] { 2, 3, 9 })
+                Assert.AreEqual(StatusCode.InvalidArgument,
+                    Assert.ThrowsExactly<RpcException>(() => SectionCorrectionsServiceV2.ToFitMode((CorrectionMode)refused)).StatusCode);
         }
 
         [TestMethod]

@@ -158,16 +158,14 @@ namespace Viking.GrpcSectionCorrectionService
         /// <summary>
         /// V2's zero value is Neighbor (the published field), so the mode needs no presence flag.
         /// <para>
-        /// 1.5.2 (2026-10-27): the CurveFit pass is back, at James Anderson's request, so the damaged-section
-        /// measurements can be run against it. The proto (gRPC_Protos 5560e47) reserves 2 and 3. Production SBFSEM-tools
-        /// still sends 2 and 3 and has been given the field since 1.5.1, so both stay the field: no client moves to
-        /// fit-only at the cutover. The fit is reached only by 4, a raw integer not in the proto: field, then CurveFit
-        /// (what 0 meant before 1.5.0). 0 and 1 are unchanged. Any other value is refused.
+        /// 1.8.0 (2026-11-18): the retired values 2 and 3 are refused again. 1.5.1 had answered them with the field
+        /// as a stopgap for SBFSEM-tools, which has sent only 0 and 1 since its 2.42.0 (2026-10-28). 4 is a raw
+        /// integer not in the proto: the field, then CurveFit on every section. Any other value is refused.
         /// </para>
         /// </summary>
         public static FitMode ToFitMode(CorrectionMode mode) => (int)mode switch
         {
-            (int)CorrectionMode.Neighbor or 2 or 3 => FitMode.Neighbor,
+            (int)CorrectionMode.Neighbor => FitMode.Neighbor,
             (int)CorrectionMode.None => FitMode.None,
             4 => FitMode.All,
             _ => throw new RpcException(new Status(StatusCode.InvalidArgument, $"unknown correction mode {(int)mode}"))
