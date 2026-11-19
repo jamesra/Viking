@@ -86,8 +86,10 @@ namespace AnnotationVizLibTests
             string config = System.IO.File.ReadAllText("Resources\\ImageColorMaps.txt");
             ColorMapWithImages mapping = ColorMapWithImages.Create(config, "Resources");
 
-            //We expect the two identical images to be averaged using the color scalars in the text file
-            double ImageScale = 4;
+            //We expect the two identical images to be averaged using the color scalars in the text file.
+            //ColorMap12x8.png draws each of its 3x2 colour cells as 4x4 pixels and the config scales a pixel to 4 volume
+            //units, so one cell spans 16 volume units.
+            double ImageScale = 16;
 
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(0 * ImageScale, 1 * ImageScale, 1), Color.FromArgb(127, 255, 127)));
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(ColorsMatch(mapping.GetColor(0 * ImageScale, 0 * ImageScale, 1), Color.Black));
