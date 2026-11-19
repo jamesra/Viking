@@ -243,10 +243,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "gRPCGeometryTypes", "gRPCGe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeometryTypes.gRPC", "gRPCGeometryTypes\GeometryTypes.gRPC.csproj", "{3973C55C-1C2B-404A-A682-E70072C9EA1A}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "gRPCGeometryTypes", "gRPCGeometryTypes", "{4FF5DDF9-4F79-468C-F54E-9E8A052C719B}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeometryTypes.gRPC", "gRPCGeometryTypes\GeometryTypes.gRPC.csproj", "{15567708-6613-4BF6-9F40-5E04A5740DE2}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
