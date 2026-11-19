@@ -2,8 +2,8 @@
 # http {} by ../nginx.conf (after identity.conf, which defines the certificate maps used here).
 #
 # The bare domain on 443. stream.conf sends the VIKING_HOSTNAME_LANDING SNI name to this listener;
-# nginx terminates TLS with the shared certificate and serves a static landing page. Port 80 for the
-# name redirects here (http.conf default server), so the page is HTTPS only.
+# nginx terminates TLS with the shared certificate and serves a static landing page (landing-page.conf,
+# shared with port 80; see http.conf for when port 80 serves it instead of redirecting here).
 
 server {
     listen 127.0.0.1:8444 ssl;
@@ -15,20 +15,5 @@ server {
     ssl_protocols       TLSv1.2 TLSv1.3;
     ssl_session_cache   shared:viking_landing:1m;
 
-    add_header Strict-Transport-Security "max-age=31536000" always;
-    add_header X-Content-Type-Options nosniff always;
-
-    location = / {
-        default_type text/html;
-        return 200 '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connectomes</title><style>body{font-family:system-ui,sans-serif;max-width:40rem;margin:4rem auto;padding:0 1rem;line-height:1.5;color:#222;background:#fff}@media (prefers-color-scheme:dark){body{color:#ddd;background:#111}}</style></head><body><h1>${VIKING_HOSTNAME_LANDING}</h1><p>Connectomics services for the Viking client.</p></body></html>\n';
-    }
-
-    location = /robots.txt {
-        default_type text/plain;
-        return 200 "User-agent: *\nDisallow: /\n";
-    }
-
-    location / {
-        return 404;
-    }
+    include /etc/nginx/conf.d/landing-page.conf;
 }

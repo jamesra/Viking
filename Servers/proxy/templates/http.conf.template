@@ -6,6 +6,11 @@
 #   /healthz                       container health check
 #   everything else                301 to https://$host$request_uri, except a host listed in
 #                                  $viking_http_backend, which is proxied as plain HTTP.
+#
+# PROXY_HTTP_REDIRECT=off (default on) is for a host behind a load balancer that terminates HTTPS
+# and forwards plain HTTP to port 80 (HypV1 behind Pitt's): a 301 to https would loop there. Then
+# port 80 redirects nothing: the bare domain (VIKING_HOSTNAME_LANDING) gets the landing page and
+# every other name a 404, so no write-capable service is reached over plain HTTP (https-only-servers).
 
 resolver ${PROXY_RESOLVER} valid=30s ipv6=off;
 
@@ -30,6 +35,19 @@ map $host $viking_http_backend {
     ${VIKING_HOSTNAME_WEBSVC}     "${VIKING_HTTP_UPSTREAM_WEBSVC}";
 }
 
+# 1 = redirect plain HTTP to https (the default), 0 = PROXY_HTTP_REDIRECT=off.
+map "${PROXY_HTTP_REDIRECT}" $viking_http_redirect {
+    default 1;
+    off     0;
+}
+
+# What the default server does with a request outside acme-challenge and /healthz.
+map "$viking_http_redirect:$viking_http_backend" $viking_http_action {
+    "1:"    redirect;
+    "0:"    refuse;
+    default proxy;
+}
+
 # The SAM2 galleries must not be indexed (from the old custom/http.conf).
 server {
     listen 80;
@@ -46,8 +64,30 @@ server {
         return 200 "User-agent: *\nDisallow: /\n";
     }
     location / {
+        if ($viking_http_redirect = 0) {
+            return 404;
+        }
         return 301 https://$host$request_uri;
     }
+}
+
+# The bare domain. With PROXY_HTTP_REDIRECT=off it is the landing page itself (from the load balancer).
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${VIKING_HOSTNAME_LANDING};
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type text/plain;
+        try_files $uri =404;
+    }
+
+    if ($viking_http_redirect) {
+        return 301 https://$host$request_uri;
+    }
+
+    include /etc/nginx/conf.d/landing-page.conf;
 }
 
 server {
@@ -68,8 +108,11 @@ server {
     }
 
     location / {
-        if ($viking_http_backend = "") {
+        if ($viking_http_action = redirect) {
             return 301 https://$host$request_uri;
+        }
+        if ($viking_http_action = refuse) {
+            return 404;
         }
         proxy_pass http://$viking_http_backend;
         proxy_set_header Host $host;

@@ -10,7 +10,8 @@
 #          /manage/ -> VIKING_UPSTREAM_IDENTITY_MANAGEMENT   /webapi/ -> VIKING_UPSTREAM_IDENTITY_WEBAPI
 #          everything else -> VIKING_UPSTREAM_IDENTITY (issuer)
 #   80   /.well-known/acme-challenge/ from the viking-certs webroot (HTTP-01), /healthz, and a
-#        redirect to https for everything else.
+#        redirect to https for everything else; with PROXY_HTTP_REDIRECT=off (behind a load balancer
+#        that terminates HTTPS) no redirect: the landing page for the bare domain, 404 for other names.
 # Config is templates/*.template rendered by the nginx image's envsubst at container start, so a
 # changed hostname or upstream only needs `stack.ps1 restart viking-proxy`.
 #
@@ -70,6 +71,8 @@ services:
       VIKING_UPSTREAM_DEFAULT: ${VIKING_UPSTREAM_DEFAULT:-${VIKING_IIS_HOST:-host.docker.internal}:443}
       # host:port for plain HTTP to the IIS host (e.g. iis-host:80). Empty = websvc on :80 redirects to https.
       VIKING_HTTP_UPSTREAM_WEBSVC: ${VIKING_HTTP_UPSTREAM_WEBSVC:-}
+      # off: port 80 redirects nothing (a TLS-terminating load balancer forwards to it); see http.conf.template.
+      PROXY_HTTP_REDIRECT: ${PROXY_HTTP_REDIRECT:-on}
       # Docker's embedded DNS; resolves host.docker.internal, compose service names and public names.
       PROXY_RESOLVER: ${PROXY_RESOLVER:-127.0.0.11}
       # envsubst only these prefixes, so nginx's own $variables are never touched.

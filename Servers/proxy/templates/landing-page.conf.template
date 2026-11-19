@@ -1,0 +1,23 @@
+# Rendered by the nginx image's envsubst into /etc/nginx/conf.d/landing-page.conf. Not included by
+# nginx.conf itself: the bare-domain servers include it, landing.conf on 443 and http.conf on port 80
+# (when PROXY_HTTP_REDIRECT=off), so both serve the same page.
+#
+# HSTS is sent on port 80 too. A browser ignores it over plain HTTP; port 80 is only plain when a
+# TLS-terminating load balancer forwards to it, and then the browser receives it over HTTPS.
+
+add_header Strict-Transport-Security "max-age=31536000" always;
+add_header X-Content-Type-Options nosniff always;
+
+location = / {
+    default_type text/html;
+    return 200 '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connectomes</title><style>body{font-family:system-ui,sans-serif;max-width:40rem;margin:4rem auto;padding:0 1rem;line-height:1.5;color:#222;background:#fff}@media (prefers-color-scheme:dark){body{color:#ddd;background:#111}}</style></head><body><h1>${VIKING_HOSTNAME_LANDING}</h1><p>Connectomics services for the Viking client.</p></body></html>\n';
+}
+
+location = /robots.txt {
+    default_type text/plain;
+    return 200 "User-agent: *\nDisallow: /\n";
+}
+
+location / {
+    return 404;
+}
