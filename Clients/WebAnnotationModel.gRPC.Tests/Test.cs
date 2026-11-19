@@ -35,7 +35,7 @@ namespace WebAnnotationModel.gRPC.Tests
     }
 
     /// <summary>
-    /// Integration tests against identity (https :5020) + grpc-annotation-service (https :5011)
+    /// Integration tests against identity (https :5020) + grpc-annotation-service (https :5019)
     /// + AnnotationTest SQL. Start with:
     ///   Servers/GrpcAnnotationService/scripts/Start-AnnotationTestStack.ps1 -ApplySchema -Build
     /// Credentials match Servers/IdentityServer/DevTest/Config.cs (testuser / Testing123! / ro.viking).
@@ -3882,6 +3882,8 @@ namespace WebAnnotationModel.gRPC.Tests
 
         private GrpcChannel CreateAuthenticatedChannel(string accessToken)
         {
+            TestStackGuard.EnsureDevTestStack(_config, _grpcServerUrl);
+
             // The test stack serves gRPC only over HTTPS with the container's self-signed certificate,
             // which the tests trust explicitly (TestServerTls).
             var handler = new BearerTokenHandler(accessToken) { InnerHandler = TestServerTls.CreateHandler(_config) };

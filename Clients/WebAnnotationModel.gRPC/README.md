@@ -19,13 +19,13 @@ Tests without a server (stores, converters, `GrpcChannelManager`):
 dotnet test Clients\WebAnnotationModel.gRPC.Tests\WebAnnotationModel.gRPC.Tests.csproj --filter "FullyQualifiedName!~Tests.Tests.&FullyQualifiedName!~AnnotationStoresSmokeTests"
 ```
 
-The remaining tests (`Test.cs`, `AnnotationStoresSmokeTests`) call a live service and sign in to identity. They read `appsettings.json` in the test project: gRPC at `https://localhost:5011` (the container's self-signed certificate, which `Start-AnnotationTestStack.ps1` saves to `%TEMP%iking-annotation-test-stack.pem` and the tests trust by pinning it; `GrpcServer:CertificatePath` overrides the path), identity at `https://host.docker.internal:5020` (its certificate pinned from `%TEMP%iking-identity-test-stack.pem`, or `IdentityServer:CertificatePath`). Start the test stack first, from the repo root, as described in the service README:
+The remaining tests (`Test.cs`, `AnnotationStoresSmokeTests`) call a live service and sign in to identity. They read `appsettings.json` in the test project: gRPC at `https://localhost:5019`, the DevTest stack's own port (the container's self-signed certificate, which `Start-AnnotationTestStack.ps1` saves to `%TEMP%iking-annotation-test-stack.pem` and the tests trust by pinning it; `GrpcServer:CertificatePath` overrides the path), identity at `https://host.docker.internal:5020` (its certificate pinned from `%TEMP%iking-identity-test-stack.pem`, or `IdentityServer:CertificatePath`). Start the test stack first, from the repo root, as described in the service README:
 
 ```powershell
 .\Servers\GrpcAnnotationService\scripts\Start-AnnotationTestStack.ps1 -ApplySchema -Build
 ```
 
-Then run `dotnet test` on the project without the filter. These tests run only against the throwaway `AnnotationTest` database, never a real annotation database.
+Then run `dotnet test` on the project without the filter. These tests run only against the throwaway `AnnotationTest` database, never a real annotation database. Before the first call `TestStackGuard` reads `GET /test-stack`, which only the test stack answers, and stops the run ("Refusing to run ...") unless it names a database in `GrpcServer:TestDatabases`; production volumes (5011, 5013, ...) never answer it.
 
 ## Troubleshooting
 

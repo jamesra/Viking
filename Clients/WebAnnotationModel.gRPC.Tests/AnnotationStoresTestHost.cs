@@ -17,7 +17,7 @@ namespace WebAnnotationModel.gRPC.Tests
 {
     /// <summary>
     /// Headless DI host mirroring Viking/VikingAU composition: ConfigureAnnotationModel
-    /// + bearer auth against the Docker test stack (identity https :5020, gRPC https :5011 with the container's self-signed certificate).
+    /// + bearer auth against the Docker test stack (identity https :5020, gRPC https :5019 with the container's self-signed certificate).
     /// </summary>
     internal sealed class AnnotationStoresTestHost : IDisposable
     {
@@ -62,6 +62,7 @@ namespace WebAnnotationModel.gRPC.Tests
             Assert.That(grpcUrl, Is.Not.Null.And.Not.Empty);
             Assert.That(identityClient, Is.Not.Null);
             Assert.That(userIdentity, Is.Not.Null);
+            TestStackGuard.EnsureDevTestStack(config, grpcUrl);
 
             var accessToken = await RequestAccessTokenAsync(identityUrl, identityClient, userIdentity, config)
                 .ConfigureAwait(false);

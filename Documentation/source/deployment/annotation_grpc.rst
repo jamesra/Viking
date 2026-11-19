@@ -80,7 +80,7 @@ hostname and proxy upstream if it is reached through the proxy.
 
 ``-Port`` is the host HTTPS port, as in the Ports table; the service has no plain HTTP/h2c port.
 Omitted, a running project keeps the port it publishes, and a new one gets the first free port from
-5011 up (5020 is skipped). A ``-Port`` that is already in use is refused. ``-SqlServer`` (a connection-string server such
+5011 up (5019 and 5020, the test stack's ports, are skipped). A ``-Port`` that is already in use is refused. ``-SqlServer`` (a connection-string server such
 as ``host,1433``) is used only when the env file is created; to change it later, edit the env file.
 The script never changes the database schema or connects to the database.
 
@@ -89,8 +89,16 @@ Local test stack
 
 ``Servers/GrpcAnnotationService/scripts/Start-AnnotationTestStack.ps1 -ApplySchema -Build`` starts
 ``annotation-sql`` and the gRPC service (profile ``local-sql``), waits for SQL and applies the minimal
-schema (``Servers/AnnotationDatabase/config-template/README.md``). The DevTest Identity container
-(``identity-devtest``, port 5020) has been removed: its Dockerfile no longer existed.
+schema (``Servers/AnnotationDatabase/config-template/README.md``). It also starts the DevTest Identity container
+(``identity-devtest``, https://host.docker.internal:5020).
+
+The test stack's gRPC service listens on its own port, https://localhost:5019, which no volume is given. Its
+``docker-compose.test-identity.yml`` override sets ``TestStack__Enabled=true``, so the service answers
+``GET /test-stack`` with ``{"testStack": true, "database": "<name>"}``; a production service maps no such route.
+The integration tests (``Clients/WebAnnotationModel.gRPC.Tests``, ``gRPC_Tests``) read that marker before their first
+call and fail with a "Refusing to run" message when it is missing or names a database outside
+``GrpcServer:TestDatabases`` (``AnnotationTest``, ``Test``), so a test run cannot write to a volume. Never set
+``TestStack__Enabled`` on a volume.
 
 The old root ``docker-compose.annotation-db.yml`` overlay is replaced by the ``local-sql`` profile; the
 root ``docker-compose.yml`` now only includes the per-stack files.

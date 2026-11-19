@@ -134,8 +134,9 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $templatePath = Join-Path $repoRoot 'Servers\GrpcAnnotationService\config-template\build\docker-env-template.txt'
 $defaultEnvDir = 'D:\Docker\Builds\GrpcAnnotationService'
 $firstPort = 5011
-# 5020 was the DevTest Identity port (identity-devtest, since removed); still skipped so old test setups keep working.
-$reservedPorts = @(5020)
+# 5019 is the DevTest gRPC test stack (Start-AnnotationTestStack.ps1) and 5020 its DevTest Identity server; a volume
+# never takes either.
+$reservedPorts = @(5019, 5020)
 # Seconds to wait after `up` for the HTTPS port to answer.
 $startTimeoutSeconds = 120
 # Milliseconds -Status gives each running project's TLS probe.

@@ -144,6 +144,9 @@ Describe 'Deploy-AnnotationGrpc helpers' {
         It 'skips the reserved Identity DevTest port 5020' {
             Find-FreePort @(5011..5019) | Should Be 5021
         }
+        It 'never gives a volume the DevTest gRPC test stack port 5019' {
+            Find-FreePort @(5011..5018) | Should Be 5021
+        }
         It 'always returns a port that is free, not reserved and at least the first port' {
             foreach ($busy in @(@(), @(5011), @(5011, 5013), @(5011..5030), @(5019, 5020, 5021))) {
                 $p = Find-FreePort $busy

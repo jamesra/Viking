@@ -1,10 +1,13 @@
 # Test stack only: lets grpc-annotation-service trust the self-signed certificate of identity-devtest
 # (Servers/IdentityServer/DevTest/docker-compose.yml), whose volume holds it. SSL_CERT_FILE replaces the
 # container's CA bundle with that one certificate, so only the test identity server is trusted.
+# TestStack__Enabled makes the service answer GET /test-stack, the marker the gRPC integration tests require before
+# they run (WebAnnotationModel.gRPC.Tests TestStackGuard). Never set it on a production volume.
 services:
   grpc-annotation-service:
     environment:
       - SSL_CERT_FILE=/identity-devtest-certs/cert.pem
+      - TestStack__Enabled=true
     volumes:
       - identity-devtest-certs:/identity-devtest-certs:ro
 

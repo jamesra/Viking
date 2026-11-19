@@ -77,6 +77,10 @@ $stackDefaults = [ordered]@{
     STACK_LOGS_DIR          = Join-Path $DockerRoot "Logs\viking-annotation"
     DOCKER_CERTS_DIR        = Join-Path $DockerRoot "Certs"
 }
+# The test stack has its own port, never a volume's (Deploy-AnnotationGrpc.ps1 gives volumes 5011 and up and reserves
+# 5019). The tests in WebAnnotationModel.gRPC.Tests and gRPC_Tests aim at it, and run only when the server answers
+# the /test-stack marker that docker-compose.test-identity.yml turns on.
+$env:GRPC_ANNOTATION_HTTPS_PORT = "5019"
 foreach ($name in $stackDefaults.Keys) {
     if (-not [Environment]::GetEnvironmentVariable($name)) {
         [Environment]::SetEnvironmentVariable($name, $stackDefaults[$name], "Process")
@@ -189,7 +193,8 @@ Write-Host @"
 
 Stack is up:
   Identity (DevTest): https://host.docker.internal:5020  (self-signed certificate, saved to $identityCertPath for the tests)
-  gRPC (HTTPS only): https://localhost:5011  (self-signed certificate, saved to $testCertPath for the tests)
+  gRPC (HTTPS only): https://localhost:5019  (self-signed certificate, saved to $testCertPath for the tests;
+                     answers https://localhost:5019/test-stack, which the tests require)
   Annotation SQL   : localhost,1433  (database AnnotationTest)
 
 Run tests:

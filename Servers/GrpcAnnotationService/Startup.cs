@@ -202,6 +202,16 @@ namespace gRPCAnnotationService
                 endpoints.MapGrpcService<MetaDataService>().RequireAuthorization(ProtectedScopePolicy);
                 CorrectionsFileEndpoints.Map(endpoints, ProtectedScopePolicy);
 
+                // Only the DevTest stack (docker-compose.test-identity.yml) sets TestStack__Enabled. The integration
+                // tests read this before any call and refuse to run against a server that does not answer it, so a
+                // test run cannot write to a production volume.
+                if (Configuration.GetValue<bool>("TestStack:Enabled"))
+                {
+                    string database = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(
+                        Configuration.GetConnectionString("AnnotationConnection")).InitialCatalog;
+                    endpoints.MapGet("/test-stack", context => context.Response.WriteAsJsonAsync(new { testStack = true, database }));
+                }
+
                 endpoints.MapGet("/", async context =>
                 {
                     await context.Response.WriteAsync(
