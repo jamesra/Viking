@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -449,11 +450,18 @@ namespace VikingCoreTests
                 Box.SelectAll();
             }
 
-            /// <summary>Focuses <paramref name="from"/> and presses Tab once.</summary>
+            /// <summary>
+            /// Focuses <paramref name="from"/> and presses Tab once, then pumps until focus has left it (at most 2 s):
+            /// under a loaded machine WPF can move the focus later than <see cref="Pump"/>'s fixed 20 ms, which made
+            /// the next assertion fail now and then.
+            /// </summary>
             public void Tab(UIElement from)
             {
                 Focus(from);
                 Press(Key.Tab);
+                var waited = Stopwatch.StartNew();
+                while (from.IsKeyboardFocused && waited.ElapsedMilliseconds < 2000)
+                    Pump();
             }
 
             /// <summary>Presses each character's key in turn: digits, '.', ',' and '-'.</summary>
