@@ -30,6 +30,11 @@ version recorded in Clients/Viking/Viking/Viking.csproj when that work shipped. 
 Documentation/source/Client/versionhistory.rst.
 -->
 
+## 1.2.153 — not yet released
+
+* **Clear Image Cache no longer freezes Viking.** The image cache is now cleared in the background, so you can keep working while a large cache is deleted. The status bar says when clearing starts and when it is done; only a failure still opens a message box.
+<!-- SectionViewerControl.menuClearTextureCache_Click runs State.ClearTextureCache on Task.Run (menu item disabled meanwhile). The folder is renamed aside and recreated first so tiles loading meanwhile go into the new folder; leftovers named Textures.clearing-* are removed by the next clear. -->
+
 ## 1.2.152 — 2026-11-19 (release)
 
 * **Change log corrected.** The notes for 1.2.151 now show under one heading for that release, instead of as unreleased test builds.

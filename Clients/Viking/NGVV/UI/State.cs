@@ -69,13 +69,56 @@ namespace Viking.UI
 
         public static string TextureCachePath => System.IO.Path.Combine(State.VolumeCachePath, "Textures");
 
-        public static void ClearVolumeTextureCache()
+        /// <summary>Suffix of a texture cache folder renamed aside by <see cref="ClearTextureCache"/> and not yet deleted.</summary>
+        internal const string ClearingFolderSuffix = ".clearing-";
+
+        /// <summary>
+        /// Empties the texture cache folder <paramref name="textureCachePath"/>. The folder is first renamed aside and an empty
+        /// one created in its place, so tiles that load meanwhile are cached into the new folder rather than into the tree being
+        /// deleted. When the rename fails (a file in it is open), the folder is emptied in place. Folders left by an earlier
+        /// clear that did not finish are deleted too. Slow for a large cache: call it off the UI thread.
+        /// </summary>
+        /// <exception cref="System.IO.IOException">A file could not be deleted; the rest of the cache may remain.</exception>
+        public static void ClearTextureCache(string textureCachePath)
         {
-            if (System.IO.Directory.Exists(State.TextureCachePath))
+            string folder = textureCachePath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            string? parent = System.IO.Path.GetDirectoryName(folder);
+            string name = System.IO.Path.GetFileName(folder);
+
+            if (System.IO.Directory.Exists(folder))
             {
-                System.IO.Directory.Delete(State.TextureCachePath, true);
-                System.IO.Directory.CreateDirectory(State.TextureCachePath);
+                string aside = folder + ClearingFolderSuffix + Guid.NewGuid().ToString("N");
+                try
+                {
+                    System.IO.Directory.Move(folder, aside);
+                }
+                catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException)
+                {
+                    aside = folder; // something holds a file open; delete what can be deleted in place
+                }
+
+                System.IO.Directory.CreateDirectory(folder);
+                if (aside == folder)
+                    DeleteContents(folder);
             }
+            else
+            {
+                System.IO.Directory.CreateDirectory(folder);
+            }
+
+            if (parent is not null && System.IO.Directory.Exists(parent))
+            {
+                foreach (string leftover in System.IO.Directory.GetDirectories(parent, name + ClearingFolderSuffix + "*"))
+                    System.IO.Directory.Delete(leftover, true);
+            }
+        }
+
+        private static void DeleteContents(string folder)
+        {
+            foreach (string file in System.IO.Directory.GetFiles(folder))
+                System.IO.File.Delete(file);
+            foreach (string dir in System.IO.Directory.GetDirectories(folder))
+                System.IO.Directory.Delete(dir, true);
         }
 
         static State()

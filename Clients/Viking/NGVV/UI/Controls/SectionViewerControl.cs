@@ -3606,25 +3606,35 @@ namespace Viking.UI.Controls
 
         private void menuSectionShowTileMesh_Click(object sender, EventArgs e) => State.ShowTileMesh = !State.ShowTileMesh;
 
-        private void menuClearTextureCache_Click(object sender, EventArgs e)
+        /// <summary>
+        /// Clears the volume's image cache on a background task, so Viking stays usable while a large cache is deleted.
+        /// The menu item is disabled until it finishes; the status bar says when it starts and when it is done, and a failure
+        /// is shown in a message box.
+        /// </summary>
+        private async void menuClearTextureCache_Click(object sender, EventArgs e)
         {
-            Cursor originalCursor = this.Cursor;
-            this.Cursor = Cursors.WaitCursor;
+            string cachePath = State.TextureCachePath;
+            menuClearCache.Enabled = false;
+            ShowTransientStatus("Clearing image cache...", 600_000);
 
             try
             {
-                State.ClearVolumeTextureCache();
-                MessageBox.Show(this, "Texture cache was cleared at\n" + State.TextureCachePath, "Success", MessageBoxButtons.OK);
+                await Task.Run(() => State.ClearTextureCache(cachePath)).ConfigureAwait(true);
+                if (!IsDisposed)
+                    ShowTransientStatus("Image cache cleared.", 8000);
             }
             catch (Exception clearException)
             {
-                MessageBox.Show(this, "An exception occurred deleting the cache at\n" + State.TextureCachePath + "\nYou may continue to use Viking but cached files may remain intact.\n" + clearException.Message, "Exception clearing cache", MessageBoxButtons.OK);
+                if (IsDisposed)
+                    return;
+                ShowTransientStatus("Image cache could not be fully cleared.", 8000);
+                MessageBox.Show(this, "An exception occurred deleting the cache at\n" + cachePath + "\nYou may continue to use Viking but cached files may remain intact.\n" + clearException.Message, "Exception clearing cache", MessageBoxButtons.OK);
             }
             finally
             {
-                this.Cursor = originalCursor;
+                if (!IsDisposed)
+                    menuClearCache.Enabled = true;
             }
-
         }
 
         private void timerHelpTextChange_Tick(object sender, EventArgs e)
