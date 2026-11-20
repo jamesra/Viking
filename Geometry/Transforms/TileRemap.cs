@@ -112,7 +112,14 @@ namespace Geometry.Transforms
 
         /// <summary>Expresses a mosaic shape as tile runs through the old mosaic.</summary>
         /// <exception cref="NotSupportedException">The shape is not a point, circle, line segment, polyline or polygon.</exception>
-        public static ToTilesResult ToTiles(IShape2D mosaicShape, MosaicTileLocator oldMosaic)
+        public static ToTilesResult ToTiles(IShape2D mosaicShape, MosaicTileLocator oldMosaic) => ToTiles(mosaicShape, oldMosaic, null);
+
+        /// <summary>
+        /// <see cref="ToTiles(IShape2D, MosaicTileLocator)"/> using only the tiles <paramref name="allowTile"/> accepts (all when
+        /// null); the remap passes the tiles the new mosaic still places.
+        /// </summary>
+        /// <exception cref="NotSupportedException">The shape is not a point, circle, line segment, polyline or polygon.</exception>
+        public static ToTilesResult ToTiles(IShape2D mosaicShape, MosaicTileLocator oldMosaic, Func<int, bool>? allowTile)
         {
             if (mosaicShape is null)
                 throw new ArgumentNullException(nameof(mosaicShape));
@@ -132,7 +139,7 @@ namespace Geometry.Transforms
                 TileRun? run = null;
                 foreach (Vector2 v in vertices)
                 {
-                    TilePoint located = oldMosaic.Locate(v, out TilePoint? alternate);
+                    TilePoint located = oldMosaic.Locate(v, allowTile, out TilePoint? alternate);
                     if (located.Status == TileMappingStatus.NoTile)
                     {
                         result.Uncovered.Add(v);

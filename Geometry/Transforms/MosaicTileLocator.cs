@@ -22,33 +22,6 @@ namespace Geometry.Transforms
     }
 
     /// <summary>A mosaic point as a position on one tile image: the tile's number and the pixel on it.</summary>
-    /// <summary>
-    /// A best-guess move for a mosaic point that lies on no tile (<see cref="MosaicTileLocator.TryEstimateShift"/>): how far
-    /// the new mosaic moved the old mosaic's nearest tile reference point.
-    /// </summary>
-    public readonly struct TileShiftEstimate
-    {
-        public TileShiftEstimate(int tileNumber, Vector2 reference, Vector2 shift, double distance)
-        {
-            TileNumber = tileNumber;
-            Reference = reference;
-            Shift = shift;
-            Distance = distance;
-        }
-
-        /// <summary>The tile whose reference point was used.</summary>
-        public int TileNumber { get; }
-
-        /// <summary>The reference point (an image corner, edge midpoint or centre) in the OLD mosaic.</summary>
-        public Vector2 Reference { get; }
-
-        /// <summary>New mosaic position of the reference point minus its old position.</summary>
-        public Vector2 Shift { get; }
-
-        /// <summary>Distance in old mosaic pixels from the point to the reference point.</summary>
-        public double Distance { get; }
-    }
-
     public readonly struct TilePoint
     {
         public TilePoint(int tileNumber, Vector2 pixel, TileMappingStatus status)
@@ -148,10 +121,17 @@ namespace Geometry.Transforms
         /// </summary>
         /// <param name="alternate">Where a second tile's image also holds the point, its tile position; used to measure how
         /// far apart two overlapping tiles put the point after remapping. Null otherwise.</param>
-        public TilePoint Locate(Vector2 mosaicPoint, out TilePoint? alternate)
+        public TilePoint Locate(Vector2 mosaicPoint, out TilePoint? alternate) => Locate(mosaicPoint, null, out alternate);
+
+        /// <summary>
+        /// <see cref="Locate(Vector2, out TilePoint?)"/> among the tiles <paramref name="allowTile"/> accepts (all when null):
+        /// the remap passes the tiles the new mosaic still places, so a point in the overlap of a dropped tile and a kept one
+        /// follows the kept one.
+        /// </summary>
+        public TilePoint Locate(Vector2 mosaicPoint, Func<int, bool>? allowTile, out TilePoint? alternate)
         {
             alternate = null;
-            List<int> candidates = Candidates(mosaicPoint);
+            List<int> candidates = Candidates(mosaicPoint, allowTile);
             if (candidates.Count == 0)
                 return TilePoint.NoTile;
 
@@ -196,41 +176,53 @@ namespace Geometry.Transforms
         }
 
         /// <summary>
-        /// Best guess for a point that lies on no tile, such as an annotation drawn just past the edge of the imaged area:
-        /// the shift the new mosaic gives this mosaic's nearest tile reference point (the nine image corners, edge midpoints
-        /// and centre of every tile that both mosaics hold). A translation only; it ignores any rotation of that tile.
+        /// The outlines in mosaic space of the tiles <paramref name="allowTile"/> accepts whose outline box meets
+        /// <paramref name="box"/>: each tile image's border, <paramref name="samplesPerEdge"/> points per edge, through the
+        /// tile's transform (points it cannot map are left out). Closed rings, first point not repeated. The border is taken
+        /// <paramref name="inset"/> pixels inside the image, so a shape clipped to it has its cut vertices on the image, where
+        /// <see cref="Locate(Vector2)"/> finds them; on the edge itself rounding can put them a hair outside the transform.
         /// </summary>
-        /// <returns>False when no tile of this mosaic is in <paramref name="newMosaic"/>.</returns>
-        public bool TryEstimateShift(Vector2 mosaicPoint, MosaicTileLocator newMosaic, out TileShiftEstimate estimate)
+        public List<Vector2[]> Footprints(Rectangle box, Func<int, bool> allowTile, int samplesPerEdge = 16, double inset = 0.5)
         {
-            estimate = default;
-            double best = double.MaxValue;
-            bool found = false;
-            foreach (Tile tile in _Tiles)
+            if (allowTile is null)
+                throw new ArgumentNullException(nameof(allowTile));
+            if (samplesPerEdge < 1)
+                throw new ArgumentOutOfRangeException(nameof(samplesPerEdge));
+
+            List<Vector2[]> rings = [];
+            foreach (int i in _Index.Intersects(box.ToRTreeRect(0)).OrderBy(i => _Tiles[i].Number))
             {
-                if (!newMosaic.ContainsTile(tile.Number))
+                Tile tile = _Tiles[i];
+                if (!allowTile(tile.Number))
                     continue;
 
-                foreach ((Vector2 pixel, Vector2 placed) in tile.ReferencePoints)
+                List<Vector2> border = new(4 * samplesPerEdge);
+                double lo = inset, hiX = tile.Width - inset, hiY = tile.Height - inset;
+                Vector2[] corners = [new(lo, lo), new(hiX, lo), new(hiX, hiY), new(lo, hiY)];
+                for (int c = 0; c < 4; c++)
                 {
-                    double distance = Vector2.Distance(placed, mosaicPoint);
-                    if (distance >= best || !newMosaic.TryMapFromTile(tile.Number, pixel, out Vector2 moved))
-                        continue;
-
-                    best = distance;
-                    found = true;
-                    estimate = new TileShiftEstimate(tile.Number, placed, new Vector2(moved.X - placed.X, moved.Y - placed.Y), distance);
+                    Vector2 from = corners[c], to = corners[(c + 1) % 4];
+                    for (int k = 0; k < samplesPerEdge; k++)
+                    {
+                        double t = (double)k / samplesPerEdge;
+                        border.Add(new Vector2(from.X + (to.X - from.X) * t, from.Y + (to.Y - from.Y) * t));
+                    }
                 }
+
+                bool[] ok = tile.Transform.TryTransform([.. border], out Vector2[] mapped);
+                Vector2[] ring = [.. mapped.Where((_, k) => ok[k])];
+                if (ring.Length >= 3)
+                    rings.Add(ring);
             }
 
-            return found;
+            return rings;
         }
 
         /// <summary>Tiles whose outline box holds the point, nearest centre first (ties by tile number, so the order is stable).</summary>
-        private List<int> Candidates(Vector2 p)
+        private List<int> Candidates(Vector2 p, Func<int, bool>? allowTile)
         {
             List<int> hits = _Index.Intersects(p.ToRTreeRect(0))
-                                   .Where(i => _Tiles[i].OutlineHolds(p))
+                                   .Where(i => _Tiles[i].OutlineHolds(p) && (allowTile is null || allowTile(_Tiles[i].Number)))
                                    .ToList();
             hits.Sort((a, b) =>
             {
@@ -254,9 +246,6 @@ namespace Geometry.Transforms
             /// <summary>The image centre mapped to mosaic space.</summary>
             public readonly Vector2 Center;
 
-            /// <summary>The image's corners, edge midpoints and centre that the transform maps: tile pixel and mosaic position.</summary>
-            public readonly (Vector2 Pixel, Vector2 Mosaic)[] ReferencePoints;
-
             public Tile(ITransform transform, TileTransformInfo info)
             {
                 Transform = transform;
@@ -276,7 +265,6 @@ namespace Geometry.Transforms
                 if (placed.Length == 0)
                     throw new ArgumentException($"Tile {info.TileFileName}: its transform maps none of its image's corners");
 
-                ReferencePoints = [.. probe.Select((pixel, i) => (pixel, mapped[i])).Where((_, i) => ok[i])];
                 Outline = placed.BoundingBox();
                 Center = ok[4] ? mapped[4] : Outline.Center;
             }

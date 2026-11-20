@@ -90,6 +90,46 @@ namespace Viking.AU
         public List<long> Locations { get; set; } = [];
     }
 
+    /// <summary>
+    /// A location partly on tiles the new mosaic dropped (or partly off every old tile): the part on the kept tiles was
+    /// remapped and the rest removed. The original geometry and the removed part are kept so it can be recreated.
+    /// </summary>
+    sealed class ClippedLocationRecord
+    {
+        public long Id { get; set; }
+        public long? StructureId { get; set; }
+        public long Section { get; set; }
+        public string TypeCode { get; set; }
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double? Width { get; set; }
+        public DateTime LastModified { get; set; }
+
+        /// <summary>The full shape before the remap, OLD mosaic space.</summary>
+        public string OriginalMosaicShapeWkt { get; set; }
+
+        /// <summary>The volume cache before the remap.</summary>
+        public string OriginalVolumeShapeWkt { get; set; }
+
+        /// <summary>The part kept, OLD mosaic space.</summary>
+        public string KeptOldMosaicWkt { get; set; }
+
+        /// <summary>The part removed (off the kept tiles), OLD mosaic space.</summary>
+        public string RemovedOldMosaicWkt { get; set; }
+
+        /// <summary>The kept part as saved, NEW mosaic space.</summary>
+        public string NewMosaicShapeWkt { get; set; }
+
+        public double KeptSize { get; set; }
+        public double RemovedSize { get; set; }
+
+        /// <summary>Old tiles under the original shape that the new mosaic does not place.</summary>
+        public List<int> DroppedTiles { get; set; } = [];
+
+        /// <summary>planned (dry run), clipped, not clipped (with why).</summary>
+        public string Outcome { get; set; }
+    }
+
     /// <summary>The machine-readable record remap-from-tiles writes next to its report.</summary>
     sealed class DroppedLocationLog
     {
@@ -103,6 +143,7 @@ namespace Viking.AU
         public List<DroppedLocationRecord> Locations { get; set; } = [];
         public List<DroppedGroup> Groups { get; set; } = [];
         public List<EmptiedStructure> StructuresLeftWithoutLocations { get; set; } = [];
+        public List<ClippedLocationRecord> Clipped { get; set; } = [];
     }
 
     /// <summary>
@@ -110,8 +151,8 @@ namespace Viking.AU
     /// tiles should be removed and any links connected to each other ... It is important we account for all dropped
     /// annotation, logging them so they can be recreated if needed."). Each connected set of dropped locations is replaced by
     /// links between the locations it joined (<see cref="LinkBridging"/>), then deleted; every one is logged first. A
-    /// location only partly on dropped tiles is not deleted: remap-from-tiles skips and reports it. Structures left with no
-    /// location are reported, not deleted.
+    /// location only partly on dropped tiles is clipped to the kept tiles (<see cref="TileClip"/>) and logged with its
+    /// original geometry (<see cref="ClippedLocationRecord"/>). Structures left with no location are reported, not deleted.
     /// </summary>
     static class DroppedLocations
     {
@@ -277,6 +318,16 @@ namespace Viking.AU
         /// <summary>Report lines: the dropped locations, the links added, and the structures left with no location.</summary>
         public static IEnumerable<string> ReportLines(DroppedLocationLog log, string logPath)
         {
+            if (log.Clipped.Count > 0)
+            {
+                yield return string.Empty;
+                yield return $"Clipped locations (partly off the kept tiles; the rest {(log.DryRun ? "would be" : "was")} removed); full record: {Path.GetFullPath(logPath)}";
+                foreach (ClippedLocationRecord r in log.Clipped)
+                    yield return string.Format(CultureInfo.InvariantCulture, "  {0}: structure {1}, {2}, ({3:F1}, {4:F1}), dropped tiles {5}; kept {6:F0}, removed {7:F0} ({8}); {9}",
+                        r.Id, r.StructureId?.ToString() ?? "none", r.TypeCode, r.X, r.Y, r.DroppedTiles.Count == 0 ? "none (off the old image)" : string.Join(",", r.DroppedTiles),
+                        r.KeptSize, r.RemovedSize, r.TypeCode == "Polygon" || r.TypeCode == "Circle" ? "px^2" : "px", r.Outcome);
+            }
+
             if (log.Locations.Count == 0)
                 yield break;
 
@@ -307,6 +358,28 @@ namespace Viking.AU
             foreach (EmptiedStructure s in log.StructuresLeftWithoutLocations)
                 yield return $"  {s.StructureId} (type {s.StructureTypeId}{(string.IsNullOrEmpty(s.Label) ? string.Empty : ", " + s.Label)}): its locations {string.Join(", ", s.Locations)}";
         }
+
+        /// <summary>The log entry for a clipped location; call before its new shape is saved, so the originals are still on it.</summary>
+        public static ClippedLocationRecord ClippedRecord(LocationObj loc, RepairResult repair, bool dryRun) => new()
+        {
+            Id = loc.ID,
+            StructureId = loc.ParentID,
+            Section = loc.Section,
+            TypeCode = loc.TypeCode.ToString(),
+            X = loc.Position.X,
+            Y = loc.Position.Y,
+            Width = loc.Width,
+            LastModified = loc.LastModified,
+            OriginalMosaicShapeWkt = Wkt(loc.MosaicShape),
+            OriginalVolumeShapeWkt = Wkt(loc.VolumeShape),
+            KeptOldMosaicWkt = repair.KeptOld?.STAsText().ToSqlString().Value,
+            RemovedOldMosaicWkt = repair.RemovedOld?.STAsText().ToSqlString().Value,
+            NewMosaicShapeWkt = Wkt(repair.NewShape),
+            KeptSize = repair.KeptSize,
+            RemovedSize = repair.RemovedSize,
+            DroppedTiles = repair.DroppedTiles,
+            Outcome = dryRun ? "planned" : "pending",
+        };
 
         private static string Wkt(IShape2D shape) =>
             shape is null ? null : LocationVolumeGeometry.ToSqlGeometry(shape).STAsText().ToSqlString().Value;

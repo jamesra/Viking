@@ -49,33 +49,45 @@ namespace GeometryTests
             Locator(TranslatedMosaic((1, 0, 0), (2, 900 + shiftTile2X, shiftTile2Y)));
 
         [TestMethod]
-        public void APointOnNoTileMovesWithTheNearestTile()
+        public void AllowedTilesOnly_APointInAnOverlapFollowsTheKeptTile()
         {
-            MosaicTileLocator oldMosaic = TwoTiles();
-            MosaicTileLocator newMosaic = TwoTiles(shiftTile2X: 30, shiftTile2Y: -20);
+            MosaicTileLocator mosaic = TwoTiles();
 
-            // 200 px past tile 2's right edge: on no tile, nearest to tile 2's right edge midpoint (1900, 500).
-            Vector2 pastTile2 = new(2100, 500);
-            Assert.AreEqual(TileMappingStatus.NoTile, oldMosaic.Locate(pastTile2).Status);
-            Assert.IsTrue(oldMosaic.TryEstimateShift(pastTile2, newMosaic, out TileShiftEstimate estimate));
-            Assert.AreEqual(2, estimate.TileNumber);
-            Assert.AreEqual(30, estimate.Shift.X, 1e-9);
-            Assert.AreEqual(-20, estimate.Shift.Y, 1e-9);
-            Assert.AreEqual(200, estimate.Distance, 1e-9);
+            // x 950 is in the overlap; nearest centre is tile 1 (500) over tile 2 (1400).
+            Vector2 inOverlap = new(950, 500);
+            Assert.AreEqual(1, mosaic.Locate(inOverlap).TileNumber);
+            Assert.AreEqual(2, mosaic.Locate(inOverlap, t => t != 1, out _).TileNumber);
 
-            // Past tile 1, which did not move.
-            Assert.IsTrue(oldMosaic.TryEstimateShift(new Vector2(-150, 500), newMosaic, out estimate));
-            Assert.AreEqual(1, estimate.TileNumber);
-            Assert.AreEqual(0, estimate.Shift.X, 1e-9);
-            Assert.AreEqual(0, estimate.Shift.Y, 1e-9);
+            // Off the kept tile: no tile.
+            Assert.AreEqual(TileMappingStatus.NoTile, mosaic.Locate(new Vector2(100, 500), t => t != 1, out _).Status);
         }
 
         [TestMethod]
-        public void NoShiftEstimateWhenTheNewMosaicSharesNoTile()
+        public void ToTilesWithAllowedTiles_UsesOnlyThoseTiles()
         {
-            MosaicTileLocator oldMosaic = TwoTiles();
-            MosaicTileLocator newMosaic = Locator(TranslatedMosaic((7, 0, 0)));
-            Assert.IsFalse(oldMosaic.TryEstimateShift(new Vector2(2100, 500), newMosaic, out _));
+            MosaicTileLocator mosaic = TwoTiles();
+            Polyline line = new([new Vector2(910, 100), new Vector2(925, 500), new Vector2(940, 900)]);
+
+            Assert.IsTrue(TileRemap.ToTiles(line, mosaic).Shape!.Parts.SelectMany(p => p.Runs).All(r => r.Tile == 1));
+            ToTilesResult kept = TileRemap.ToTiles(line, mosaic, t => t == 2);
+            Assert.IsNotNull(kept.Shape);
+            Assert.IsTrue(kept.Shape.Parts.SelectMany(p => p.Runs).All(r => r.Tile == 2));
+        }
+
+        [TestMethod]
+        public void FootprintsAreTheTileBordersOfTheAllowedTilesNearTheBox()
+        {
+            MosaicTileLocator mosaic = TwoTiles();
+            List<Vector2[]> rings = mosaic.Footprints(new Rectangle(0, 2000, 0, 1000), t => t == 2, samplesPerEdge: 2, inset: 0);
+
+            Assert.AreEqual(1, rings.Count);
+            Assert.AreEqual(8, rings[0].Length);
+            Assert.AreEqual(900, rings[0].Min(p => p.X), 1e-9);
+            Assert.AreEqual(1900, rings[0].Max(p => p.X), 1e-9);
+            Assert.AreEqual(0, rings[0].Min(p => p.Y), 1e-9);
+            Assert.AreEqual(1000, rings[0].Max(p => p.Y), 1e-9);
+
+            Assert.AreEqual(0, mosaic.Footprints(new Rectangle(5000, 6000, 0, 1000), _ => true).Count);
         }
 
         [TestMethod]

@@ -28,10 +28,18 @@ cross-checks before any annotation export): nornir `nornir_imageregistration/mos
   possible (1240: tiles 947/973 at 2333.0 vs 2333.1 px); either is a valid answer.
 - **Status per vertex:** Mapped; Extrapolated (inside a tile's outline, off its image: warp edge, still mapped);
   NoTile (no old tile covers it).
-- **Whole locations only.** A location only partly on tiles missing from the new mosaic, an edit after the export,
-  or a rebuilt shape that is invalid is **left unchanged** and listed under "Skipped". Nothing is saved half-moved.
-- **Locations wholly on dropped tiles are deleted** (James Anderson, 2026-11-20). When every tile a location used
-  is gone from the new mosaic, the run first links its neighbours to each other in its place (149-150-151 with 150
+- **Kept tiles only.** A location that cannot move whole through the new mosaic (a vertex on an old tile the new
+  mosaic dropped, or on no old tile at all: drawn past the edge of the imaged area) is handled against the old tiles
+  the new mosaic still places (`TileClip`, James Anderson, 2026-11-20). It needs the old `.mosaic` named in
+  `tiles.json`, unchanged (sha256 checked); otherwise it is skipped.
+  - Wholly on kept tiles (step 1 chose a dropped tile where two overlapped): moved whole through the kept tile.
+  - **Partly on kept tiles: clipped.** The shape is cut, in the old mosaic, to the outlines of the kept tiles (each
+    tile image's border, 0.5 px inset, `MosaicTileLocator.Footprints`); the largest piece is remapped and the rest
+    removed. A circle or point goes by its centre. The original mosaic and volume WKT, the kept and removed parts
+    and the new shape go to `<report>.dropped.json` under `Clipped`.
+  - **On no kept tile: deleted** (below).
+  - An edit after the export or a rebuilt shape that is invalid is **left unchanged** and listed under "Skipped".
+- **Dropped locations are deleted.** When no part of a location is on a kept tile, the run first links its neighbours to each other in its place (149-150-151 with 150
   dropped becomes 149-151; a run of dropped locations is bridged end to end; a dropped branch point links every
   pair of its neighbours; only neighbours of one structure are linked), then deletes it. Every one is written,
   before anything changes, to `<report>.dropped.json` (`--dropped-log`): id, structure and type, section, X/Y,
@@ -39,11 +47,8 @@ cross-checks before any annotation export): nornir `nornir_imageregistration/mos
   The report lists them, the links added, and **structures left with no location, which are not deleted**. A
   group whose replacement link fails keeps its locations. The dry run writes the same file with outcome
   "planned".
-- **NoTile locations are estimated.** A location step 1 found on no tile (drawn past the edge of the imaged area;
-  RC1 section 4 had 16 edge circles) is moved as one piece by the shift of the old mosaic's nearest tile reference
-  point (image corner, edge midpoint or centre; `MosaicTileLocator.TryEstimateShift`), measured from its X,Y. It is
-  a translation only and needs the old `.mosaic` named in `tiles.json`, unchanged (sha256 checked); otherwise the
-  location is skipped as before. Listed under "Estimated locations" with the tile and distance used.
+- **No estimates.** Locations past the edge of every old tile (RC1 section 4 had 16 edge circles) are clipped to
+  the tiles or deleted like the rest; the nearest-tile shift estimate was removed (James Anderson, 2026-11-20).
 - **Circles map their centre and keep their radius.** Old and new mosaic are both mosaic space at tile-pixel
   scale, so the five-point scale rule (`.cursor/rules/circle-mapping-scale.mdc`) does not apply. Never reintroduce
   rim samples: on 1240 they landed on neighbouring tiles moved 40-54k px and gave radii of 10,000+ px.
@@ -109,8 +114,7 @@ in place of `VikingAU` below). Keep every output file in a dated folder with the
      the two tiles' versions far apart (the old mosaic was misregistered there, or the overlap straddles the
      tear). The chosen tile is the one the annotator saw, so the move is right; list these for the annotators.
    - *New overlaps between different cells*: to fix after the run.
-   - *Estimated*: on no tile in step 1, moved with the nearest tile. Check the ones far from that tile
-     (distance in the list) or involved in a new overlap.
+   - *Clipped locations*: the part kept and removed per location. Large removed parts deserve a look.
    - *Skipped*: each needs a person (redraw, or move by hand).
    - *Dropped locations*: deleted by the real run. Check the links added and the structures left with no
      location, and show both to the user with the report.
@@ -135,7 +139,8 @@ in place of `VikingAU` below). Keep every output file in a dated folder with the
 - **Undo:** the old tile file cannot be replayed (every location's LastModified changed, so all are skipped).
   Export again through the *new* mosaic (`remap-to-tiles --mosaic <new>`), then `remap-from-tiles --mosaic <old>`.
   Locations edited by people since the remap are skipped; those keep their edits. Deleted (dropped) locations do
-  not come back this way: recreate them from `<report>.dropped.json` and remove the links it lists as added.
+  not come back this way: recreate them from `<report>.dropped.json` and remove the links it lists as added; restore
+  clipped ones from the original WKT under `Clipped`.
 - **Do not** remap a section whose annotations were already moved by a rigid `update-positions --translate`, an
   earlier remap, or hand edits for the same rebuild, without first undoing that or exporting from the mosaic they
   now match.

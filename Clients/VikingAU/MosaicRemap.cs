@@ -107,12 +107,10 @@ namespace Viking.AU
     /// Moves a section's annotations from an old mosaic to a rebuilt one through the tiles both place (nornir's
     /// rescue-damaged-section step 7): <c>remap-to-tiles</c> writes each vertex as a tile pixel through the old mosaic,
     /// <c>remap-from-tiles</c> maps those pixels through the new mosaic and saves the location (mosaic shape, then the volume
-    /// cache under the default transform, <see cref="LocationObjExtensions"/>). A location with any vertex that cannot be
-    /// mapped is left unchanged and reported, except one that step 1 found on no tile at all (drawn past the edge of the
-    /// imaged area): it is moved as one piece by the shift of the old mosaic's nearest tile reference point
-    /// (<see cref="MosaicTileLocator.TryEstimateShift"/>) and listed in the report as an estimate. A location that lay wholly
-    /// on old tiles the new mosaic no longer places is deleted, after its neighbours are linked to each other in its place and
-    /// it is logged for recreation (<see cref="DroppedLocations"/>); one only partly on such tiles is skipped and reported.
+    /// cache under the default transform, <see cref="LocationObjExtensions"/>). A location partly or wholly off the old tiles
+    /// the new mosaic still places (on a dropped tile, or past the edge of every old tile) goes through <see cref="TileClip"/>:
+    /// wholly off, it is deleted after its neighbours are linked to each other in its place; partly off, it is clipped to the
+    /// part on the kept tiles. Both are logged for recreation (<see cref="DroppedLocations"/>).
     /// </summary>
     static class MosaicRemap
     {
@@ -218,15 +216,21 @@ namespace Viking.AU
             List<double> shifts = [];
             List<double> disagreements = [];
             List<(LocationObj Location, SqlGeometry Before, SqlGeometry After)> changed = [];
-            List<string> estimated = [];
             List<(LocationObj Location, IEnumerable<int> Tiles)> dropped = [];
+            List<ClippedLocationRecord> clipped = [];
+            int retiled = 0;
 
-            MosaicTileLocator oldMosaic = OldMosaicForEstimates(file, out string noEstimateReason);
+            // Locations that cannot move whole through the new mosaic: on no old tile in step 1 (drawn past the edge of the
+            // imaged area), or on an old tile the new mosaic dropped. TileClip drops, clips or re-tiles them (James Anderson,
+            // 2026-11-20); that needs the old mosaic.
+            List<(LocationObj Location, string Cause)> repairs = [];
+            MosaicTileLocator oldMosaic = OldMosaicFor(file, out string noOldMosaicReason);
+
             foreach (SkippedLocation s in file.Skipped)
             {
-                if (oldMosaic is null || s.Reason != "NoTile")
+                if (s.Reason != "NoTile")
                 {
-                    skipped.Add((s.Id, "step 1: " + s.Reason + (s.Reason == "NoTile" ? $" (no estimate: {noEstimateReason})" : string.Empty)));
+                    skipped.Add((s.Id, "step 1: " + s.Reason));
                     continue;
                 }
 
@@ -236,38 +240,13 @@ namespace Viking.AU
                     continue;
                 }
 
-                Vector2 anchor = loc.MosaicShape is Circle anchorCircle ? anchorCircle.Center : loc.Position;
-                if (!oldMosaic.TryEstimateShift(anchor, newMosaic, out TileShiftEstimate estimate))
+                if (loc.LastModified > file.Created)
                 {
-                    skipped.Add((s.Id, "step 1: NoTile; the new mosaic holds none of the old mosaic's tiles"));
+                    skipped.Add((s.Id, $"step 1: NoTile; changed since export ({loc.LastModified:o})"));
                     continue;
                 }
 
-                SqlGeometry before = LocationVolumeGeometry.ToSqlGeometry(loc.MosaicShape);
-                Circle? movedCircle = loc.MosaicShape is Circle c
-                    ? new Circle(new Vector2(c.Center.X + estimate.Shift.X, c.Center.Y + estimate.Shift.Y), c.Radius)
-                    : null;
-                SqlGeometry after = movedCircle.HasValue ? LocationVolumeGeometry.ToSqlGeometry(movedCircle.Value) : before.Translate(estimate.Shift);
-                try
-                {
-                    if (!options.DryRun)
-                    {
-                        if (movedCircle.HasValue)
-                            loc.SetShapeFromCircleInSection(mapper, movedCircle.Value);
-                        else
-                            loc.SetShapeFromGeometryInSection(mapper, after);
-                    }
-                }
-                catch (ArgumentException e)
-                {
-                    skipped.Add((s.Id, "step 1: NoTile; estimate not saved: " + e.Message));
-                    continue;
-                }
-
-                changed.Add((loc, before, after));
-                estimated.Add(string.Format(CultureInfo.InvariantCulture,
-                    "{0}: moved ({1:F1}, {2:F1}) px, the shift of tile {3}'s nearest reference point, {4:F0} px from the location",
-                    s.Id, estimate.Shift.X, estimate.Shift.Y, estimate.TileNumber, estimate.Distance));
+                repairs.Add((loc, "step 1: on no old tile"));
             }
 
             foreach (TileRemapLocation entry in file.Locations)
@@ -287,37 +266,71 @@ namespace Viking.AU
                 FromTilesResult result = TileRemap.FromTiles(entry.Shape, newMosaic);
                 if (!result.Succeeded)
                 {
-                    // Every tile it used is gone: the location is on no tile of the new mosaic and is deleted (DroppedLocations).
-                    // Only partly on dropped tiles: left as it is for review.
-                    bool wholly = result.MissingTiles.Count > 0 && result.NewVertices.Count == 0;
-                    if (wholly)
-                        dropped.Add((loc, result.MissingTiles));
+                    if (result.MissingTiles.Count > 0)
+                        repairs.Add((loc, result.Failure));
                     else
-                        skipped.Add((entry.Id, result.MissingTiles.Count > 0 ? result.Failure + "; partly on dropped tiles, not deleted (review)" : result.Failure));
+                        skipped.Add((entry.Id, result.Failure));
                     continue;
                 }
 
                 IShape2D oldShape = loc.MosaicShape;
-                SqlGeometry before = LocationVolumeGeometry.ToSqlGeometry(oldShape);
-                try
+                if (!TrySave(options, mapper, loc, result.Shape, skipped, out SqlGeometry before))
+                    continue;
+
+                shifts.AddRange(TileRemap.Vertices(oldShape).Zip(result.NewVertices, (x, y) => Vector2.Distance(x, y)));
+                disagreements.AddRange(result.OverlapDisagreements);
+                changed.Add((loc, before, LocationVolumeGeometry.ToSqlGeometry(result.Shape)));
+            }
+
+            foreach ((LocationObj loc, string cause) in repairs)
+            {
+                if (oldMosaic is null)
                 {
-                    if (!options.DryRun)
-                    {
-                        if (result.Shape is Circle circle)
-                            loc.SetShapeFromCircleInSection(mapper, circle);
-                        else
-                            loc.SetShapeFromGeometryInSection(mapper, LocationVolumeGeometry.ToSqlGeometry(result.Shape));
-                    }
-                }
-                catch (ArgumentException e)
-                {
-                    skipped.Add((entry.Id, "Not saved: " + e.Message));
+                    skipped.Add((loc.ID, $"{cause}; not repaired: {noOldMosaicReason}"));
                     continue;
                 }
 
-                shifts.AddRange(TileRemap.Vertices(oldShape).Zip(result.NewVertices, (a, b) => Vector2.Distance(a, b)));
-                disagreements.AddRange(result.OverlapDisagreements);
-                changed.Add((loc, before, LocationVolumeGeometry.ToSqlGeometry(result.Shape)));
+                IShape2D oldShape = loc.MosaicShape;
+                RepairResult repair;
+                try
+                {
+                    repair = TileClip.Repair(oldShape, oldMosaic, newMosaic);
+                }
+                catch (Exception e) when (e is NotSupportedException or ArgumentException)
+                {
+                    skipped.Add((loc.ID, $"{cause}; not repaired: {e.Message}"));
+                    continue;
+                }
+
+                switch (repair.Kind)
+                {
+                    case RepairKind.Dropped:
+                        dropped.Add((loc, repair.DroppedTiles));
+                        break;
+
+                    case RepairKind.Failed:
+                        skipped.Add((loc.ID, $"{cause}; not repaired: {repair.Failure}"));
+                        break;
+
+                    default:
+                        // The clip record must be taken before the save replaces the shapes it keeps.
+                        ClippedLocationRecord record = repair.Kind == RepairKind.Clipped ? DroppedLocations.ClippedRecord(loc, repair, options.DryRun) : null;
+                        if (!TrySave(options, mapper, loc, repair.NewShape, skipped, out SqlGeometry before))
+                            break;
+
+                        disagreements.AddRange(repair.Mapping.OverlapDisagreements);
+                        changed.Add((loc, before, LocationVolumeGeometry.ToSqlGeometry(repair.NewShape)));
+                        if (record is not null)
+                        {
+                            clipped.Add(record);
+                        }
+                        else
+                        {
+                            retiled++;
+                            shifts.AddRange(TileRemap.Vertices(oldShape).Zip(repair.Mapping.NewVertices, (x, y) => Vector2.Distance(x, y)));
+                        }
+                        break;
+                }
             }
 
             List<string> overlaps = NewCellOverlaps(changed, current.Values);
@@ -336,43 +349,83 @@ namespace Viking.AU
             };
             if (dropped.Count > 0)
                 await DroppedLocations.PlanAsync(droppedLog, dropped, current, token);
+            droppedLog.Clipped.AddRange(clipped.OrderBy(c => c.Id));
+
+            // Written before anything is saved, so every clipped or dropped location is on disk first.
+            bool logged = droppedLog.Locations.Count > 0 || droppedLog.Clipped.Count > 0;
+            if (logged)
+                DroppedLocations.Write(droppedLog, droppedLogPath);
 
             bool saved = true;
             if (!options.DryRun && changed.Count > 0)
                 saved = await Store.Locations.Save();
 
-            // Moved locations are saved first; the deletes follow only when that worked, so a failed save leaves nothing half done.
-            bool droppedOk = true;
-            if (droppedLog.Locations.Count > 0)
+            if (!options.DryRun)
             {
-                if (options.DryRun)
-                    DroppedLocations.Write(droppedLog, droppedLogPath);
-                else if (saved)
+                foreach (ClippedLocationRecord r in droppedLog.Clipped)
+                    r.Outcome = saved ? "clipped" : "not clipped: SAVE FAILED";
+            }
+
+            // Moved and clipped locations are saved first; the deletes follow only when that worked, so a failed save
+            // leaves nothing half done.
+            bool droppedOk = true;
+            if (droppedLog.Locations.Count > 0 && !options.DryRun)
+            {
+                if (saved)
                     droppedOk = await DroppedLocations.ApplyAsync(droppedLog, current, droppedLogPath);
                 else
                 {
                     foreach (DroppedLocationRecord r in droppedLog.Locations)
                         r.Outcome = "not deleted: the remap save failed";
-                    DroppedLocations.Write(droppedLog, droppedLogPath);
                 }
             }
 
-            string report = BuildReport(options, file, newMosaic, changed.Count, skipped, estimated, shifts, disagreements, overlaps, saved)
+            if (logged)
+                DroppedLocations.Write(droppedLog, droppedLogPath);
+
+            string report = BuildReport(options, file, newMosaic, changed.Count, retiled, droppedLog.Clipped.Count, skipped, shifts, disagreements, overlaps, saved)
                             + string.Join(Environment.NewLine, DroppedLocations.ReportLines(droppedLog, droppedLogPath))
-                            + (droppedLog.Locations.Count > 0 ? Environment.NewLine : string.Empty);
+                            + (logged ? Environment.NewLine : string.Empty);
             File.WriteAllText(reportPath, report);
             Console.WriteLine(report);
             Console.WriteLine($"Wrote {reportPath}");
-            if (droppedLog.Locations.Count > 0)
+            if (logged)
                 Console.WriteLine($"Wrote {droppedLogPath}");
             return saved && droppedOk ? 0 : 1;
         }
 
         /// <summary>
-        /// The old mosaic named in the tile-coordinate file, for estimating locations step 1 found on no tile; null (with the
-        /// reason) when that file is missing or no longer the one step 1 read.
+        /// Sets the location's mosaic shape (and the volume cache) unless this is a dry run. <paramref name="before"/> is its
+        /// mosaic geometry before. False, with the location added to <paramref name="skipped"/>, when the shape is refused.
         /// </summary>
-        private static MosaicTileLocator OldMosaicForEstimates(TileRemapFile file, out string reason)
+        private static bool TrySave(RemapFromTilesOptions options, MappingBase mapper, LocationObj loc, IShape2D newShape,
+                                    List<(long Id, string Reason)> skipped, out SqlGeometry before)
+        {
+            before = LocationVolumeGeometry.ToSqlGeometry(loc.MosaicShape);
+            try
+            {
+                if (!options.DryRun)
+                {
+                    if (newShape is Circle circle)
+                        loc.SetShapeFromCircleInSection(mapper, circle);
+                    else
+                        loc.SetShapeFromGeometryInSection(mapper, LocationVolumeGeometry.ToSqlGeometry(newShape));
+                }
+            }
+            catch (ArgumentException e)
+            {
+                skipped.Add((loc.ID, "Not saved: " + e.Message));
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// The old mosaic named in the tile-coordinate file, for the locations that cannot move whole; null (with the reason)
+        /// when that file is missing or no longer the one step 1 read.
+        /// </summary>
+        private static MosaicTileLocator OldMosaicFor(TileRemapFile file, out string reason)
         {
             reason = null;
             if (string.IsNullOrEmpty(file.OldMosaic) || !File.Exists(file.OldMosaic))
@@ -458,8 +511,8 @@ namespace Viking.AU
             return new Geometry.Rectangle(minX, maxX, minY, maxY);
         }
 
-        private static string BuildReport(RemapFromTilesOptions options, TileRemapFile file, MosaicTileLocator newMosaic, int changedCount,
-                                          List<(long Id, string Reason)> skipped, List<string> estimated, List<double> shifts, List<double> disagreements,
+        private static string BuildReport(RemapFromTilesOptions options, TileRemapFile file, MosaicTileLocator newMosaic, int changedCount, int retiled,
+                                          int clippedCount, List<(long Id, string Reason)> skipped, List<double> shifts, List<double> disagreements,
                                           List<string> overlaps, bool saved)
         {
             static string F(double v) => v.ToString("F2", CultureInfo.InvariantCulture);
@@ -476,9 +529,10 @@ namespace Viking.AU
             r.AppendLine($"Run: {DateTime.UtcNow:o}");
             r.AppendLine();
             r.AppendLine($"Locations remapped: {changedCount}{(options.DryRun ? " (would be saved)" : saved ? " (saved)" : " (SAVE FAILED)")}");
-            r.AppendLine($"  of which estimated from the nearest tile (on no tile in step 1): {estimated.Count}");
+            r.AppendLine($"  of which moved through a kept tile where step 1 chose a dropped one: {retiled}");
+            r.AppendLine($"  of which clipped to the kept tiles (the rest removed; listed below): {clippedCount}");
             r.AppendLine($"Locations skipped (unchanged): {skipped.Count}");
-            r.AppendLine($"Vertex shift px (tile-mapped locations): median {F(Percentile(sortedShifts, 0.5))}, p95 {F(Percentile(sortedShifts, 0.95))}, max {F(sortedShifts.Count == 0 ? double.NaN : sortedShifts[sortedShifts.Count - 1])} over {sortedShifts.Count} vertices (a circle counts its centre)");
+            r.AppendLine($"Vertex shift px (locations moved whole): median {F(Percentile(sortedShifts, 0.5))}, p95 {F(Percentile(sortedShifts, 0.95))}, max {F(sortedShifts.Count == 0 ? double.NaN : sortedShifts[sortedShifts.Count - 1])} over {sortedShifts.Count} vertices (a circle counts its centre)");
             r.AppendLine($"Vertices in a tile overlap: {disagreements.Count}; overlapping tiles disagree by > {DisagreementReportPixels} px at {disagreements.Count(d => d > DisagreementReportPixels)}");
             r.AppendLine($"New overlaps between different cells: {overlaps.Count}");
 
@@ -488,14 +542,6 @@ namespace Viking.AU
                 r.AppendLine("Skipped locations (look at these by hand):");
                 foreach (var (id, reason) in skipped.OrderBy(s => s.Id))
                     r.AppendLine($"  {id}: {reason}");
-            }
-
-            if (estimated.Count > 0)
-            {
-                r.AppendLine();
-                r.AppendLine("Estimated locations (on no tile in step 1; moved with the nearest tile, review):");
-                foreach (string e in estimated)
-                    r.AppendLine("  " + e);
             }
 
             if (overlaps.Count > 0)
