@@ -42,7 +42,7 @@ managed by nornir-docker's `stack.ps1` / `Initialize-DockerHost.ps1`:
 - `Run/_host`, `Data/`, `Certs/` and `Logs/` do not exist on `D:\Docker` yet; the stack layout is in use on the
   connectomes hosts.
 - `D:\Docker\Builds\<Service>` rebuild/restart scripts (AnnotationGallery, IdentityServer, ReverseProxy,
-  SectionCorrectionService, SegmentationServer, sam2-trainer, nornir) are live and build from the live checkouts. They
+  SectionCorrectionService, the segmentation server and sam2-trainer (both in the Sam2Trainer checkout), nornir) are live and build from the live checkouts. They
   are edited in place, with dated `.bak-*` copies.
 - `D:\Docker\mounted-configs` is still mounted by IdentityServer (`restart_omni*.cmd`, `.env.All.Docker`), ReverseProxy
   (`docker-compose.yml`), SectionCorrectionService (`docker-compose.legacy.yml`), sam2-trainer / sam2-trainer-sem

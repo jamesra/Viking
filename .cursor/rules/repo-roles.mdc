@@ -9,7 +9,8 @@ Two checkouts share this product. Put the change in the repo that owns that kind
 
 | Work | Repo | Path | Branch |
 |------|------|------|--------|
-| Servers, Docker, containers, identity, annotation, export, OData, segmentation, section correction, `gRPC_Protos`, and the gRPC clients (the gRPC Viking, Jotunn) | **Viking** | `d:\src\git\Viking` | `dev` |
+| Servers, Docker, containers, identity, annotation, export, OData, section correction, `gRPC_Protos`, and the gRPC clients (the gRPC Viking, Jotunn) | **Viking** | `d:\src\git\Viking` | `dev` |
+| The segmentation server (`SegmentationServer/`: code, the `viking-segmentation` deploy stack, the SAM2 pin); moved from Viking `Servers/SegmentationServer` on 2026-11-20 | **Sam2Trainer** | `d:\src\git\Sam2Trainer` | `master` |
 | WCF clients (Viking, VikingAU, MonogameTestbed, shared client libraries) and the production WCF annotation server (`Servers/AnnotationService`, built and deployed from here); Viking Test builds are packed from here | **Viking-Net4.8** | `d:\src\git\Viking-Net4.8` | `Net4.8` |
 
 This repo's `Net4.8` branch was called `Legacy` until 2026-11-01, and the checkout was `D:\src\git\VikingLegacy`; older commits, plans and reports use those names.
@@ -23,7 +24,7 @@ Viking has a `Clients/` tree too: the gRPC client was ported from Viking-Net4.8'
 - If a client fix is made in Viking and it affects the WCF client, back port it into Viking-Net4.8 the same way.
 - Do not let the two client trees drift when the mirror is practical in the same change.
 
-Server and container changes stay in Viking; the one exception is the WCF annotation server, which lives only in Viking-Net4.8.
+Server and container changes stay in Viking, with two exceptions: the WCF annotation server lives only in Viking-Net4.8, and the segmentation server lives in Sam2Trainer. How the clients call the segmentation server (`SegmentationServiceTypes.gRPC`, request capture) stays in the client trees.
 
 ```text
 WCF Viking annotation fix
