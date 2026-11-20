@@ -60,6 +60,9 @@ x-segmentation-env: &segmentation-env
   TORCHINDUCTOR_PERSISTENT_AUTOTUNE_DIR: /home/user/.cache/torch_inductor/autotune
   SSL_CERT_PATH: /tls/fullchain.pem
   SSL_KEY_PATH: /tls/privkey.pem
+  # Name the healthcheck verifies the certificate against. /tls is not a live/<domain> path, so without it the
+  # check expects "localhost" and the container shows unhealthy behind a real certificate.
+  SEGMENTATION_HEALTHCHECK_HOST: ${SEGMENTATION_HEALTHCHECK_HOST:-${VIKING_HOSTNAME_SEGMENTATION:-}}
   SEGMENTATION_TLS_WAIT_SECONDS: ${SEGMENTATION_TLS_WAIT_SECONDS:-120}
   # Tile embeddings (not weights). Survives eviction and container restart.
   SEGMENTATION_EMBEDDING_CACHE: /var/cache/segmentation-embeddings

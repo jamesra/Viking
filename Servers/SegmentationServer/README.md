@@ -372,7 +372,7 @@ The page is cautious by default because it has no login of its own:
 
 ### Container image
 
-The image has a `HEALTHCHECK` that runs `python -m segmentation_server.healthcheck`: it asks the running server for `GetServerStatus` over TLS on loopback (using the certificate's public host name for verification, from `SEGMENTATION_HEALTHCHECK_HOST` or the `live/<domain>` path of `SSL_CERT_PATH`) and exits non-zero if it does not answer. The start period is 10 minutes, to cover waiting for the certificate, loading the weights and the first CUDA start.
+The image has a `HEALTHCHECK` that runs `python -m segmentation_server.healthcheck`: it asks the running server for `GetServerStatus` over TLS on loopback (using the certificate's public host name for verification, from `SEGMENTATION_HEALTHCHECK_HOST`, which the compose file defaults to `VIKING_HOSTNAME_SEGMENTATION`, or the `live/<domain>` path of `SSL_CERT_PATH`) and exits non-zero if it does not answer. The start period is 10 minutes, to cover waiting for the certificate, loading the weights and the first CUDA start.
 
 `debugpy` and `pydevd-pycharm` open debug listeners, so the production image does not contain them. For a development image build with `--build-arg INSTALL_DEBUG_TOOLS=true` (then `VS_CODE_DEBUG` / `PYCHARM_DEBUG` work as before; without the tools the container says so and exits instead of failing later). Unknown values for on/off settings such as `SAM2_COMPILE_IMAGE_ENCODER` are logged and treated as **off**, not silently as the default.
 ### segmentation_server
