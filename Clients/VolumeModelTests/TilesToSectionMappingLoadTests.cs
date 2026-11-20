@@ -156,6 +156,7 @@ namespace VolumeModelTests
             CollectionAssert.AreEqual(new DateTimeOffset?[] { null }, server.IfModifiedSince);
             Assert.AreEqual(BuiltDate.UtcDateTime, TilesToSectionMapping.CachedServerLastModified(transforms));
             Assert.AreEqual(BuiltDate.UtcDateTime, mapping.LastModified);
+            WaitForCache(mapping, BuiltDate); // the background save must finish before the folder is deleted
         }
 
         [TestMethod]
