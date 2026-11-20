@@ -42,7 +42,7 @@ run-with-config.cmd
 
 #### SegmentationServer
 ```bash
-cd Servers/SegmentationServer
+cd <Sam2Trainer>/SegmentationServer   # moved out of Viking 2026-11-20
 run-with-config.cmd
 ```
 

@@ -7,7 +7,7 @@ Source: ``gRPC_Protos/Segmentation/SAM2/segmentation.proto`` (imports ``gRPC_Pro
 
 Package: ``segmentation``
 
-Host: the SAM2 segmentation server (``Servers/SegmentationServer``; its ``README.md`` describes the server side in full)
+Host: the SAM2 segmentation server (``SegmentationServer`` in the Sam2Trainer repository, moved from Viking 2026-11-20; its ``README.md`` describes the server side in full)
 
 Interactive tracing. The client names the 1024×1024 tiles under its prompt, sends what the object is (clicks, annotation shapes, a painted bitmap) and what it is not (the neighbouring annotations), uploads the tiles the server asks for, and gets SAM2's logits back, one result per island of the prompt. Viking contours the logits and draws the contour as a location.
 

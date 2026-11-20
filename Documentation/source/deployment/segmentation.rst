@@ -2,7 +2,7 @@
 Segmentation
 ############
 
-``viking-segmentation`` runs ``Servers/SegmentationServer/docker-compose.yml`` on the GPU compute
+``viking-segmentation`` runs ``SegmentationServer/docker-compose.yml`` from the Sam2Trainer checkout (``SAM2TRAINER_REPO_ROOT_HOST``; moved from Viking 2026-11-20) on the GPU compute
 host. Every container is the same image with a different model and listens only with TLS.
 
 =======================  ======================  ===============================================
@@ -26,7 +26,7 @@ other models is in the compose file, the proxy or ``host.env``: a row is the who
    stack.ps1 viking-segmentation model                            # every row
    stack.ps1 viking-segmentation model -Remove v3                 # delete the row and its container
 
-``model`` runs ``Servers/SegmentationServer/rebuild-and-start.ps1`` (``-h`` lists everything). It
+``model`` runs ``SegmentationServer/rebuild-and-start.ps1`` (Sam2Trainer) (``-h`` lists everything). It
 checks the weights file, updates ``models.json``, writes ``compose.generated.yaml`` next to it
 (merged by ``stack.ps1`` after ``docker-compose.yml``; each generated service extends the
 ``segmentation-model`` template there) and starts the selected servers. Image build or pull is
@@ -112,7 +112,7 @@ Weights and their ``<stem>.model.json`` manifests go in ``<root>/Data/viking-seg
 (``SEGMENTATION_MODEL_HOST``), mounted read-only at ``/models``. The default model's file is
 ``SAM2_CHECKPOINT``; every other model's file is the ``model`` of its row. Weights load only at
 process start: after replacing a file, ``stack.ps1 restart viking-segmentation`` (or ``model
-<prefix>`` for one server). Manifest format and model naming: ``Servers/SegmentationServer/README.md``.
+<prefix>`` for one server). Manifest format and model naming: Sam2Trainer ``SegmentationServer/README.md``.
 
 Caches
 ======

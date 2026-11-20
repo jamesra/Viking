@@ -16,4 +16,3 @@
 include:
   - Servers/GrpcAnnotationService/docker-compose.yml
   - Servers/GrpcSectionCorrectionService/docker-compose.yml
-  - Servers/SegmentationServer/docker-compose.yml

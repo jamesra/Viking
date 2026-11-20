@@ -42,7 +42,6 @@ same way.
 | `.cursor/rules/grpc-protos-folder.mdc` | `*.proto` (must live in gRPC_Protos) |
 | `.cursor/rules/https-only-servers.mdc` | Servers that can write (annotation, section correction, Identity, ...) are HTTPS only: compose files publish only the TLS port, test stacks use the container's self-signed certificate and clients trust it explicitly (`docker-compose*.yml`, `Dockerfile*`, `Servers/**/Program.cs`, `Servers/**/scripts`, `deploy/**`) |
 | `.cursor/rules/odata-conventions.mdc` | `*OData*`, `*OpenData*` projects |
-| `.cursor/rules/sam2-pin.mdc` | `Servers/SegmentationServer/Dockerfile` |
 
 ## Skills (`.cursor/skills/<name>/SKILL.md`)
 
@@ -55,7 +54,7 @@ Same `SKILL.md` format as Claude skills. Read the SKILL.md when the task matches
 | `bajajtest-cli` | Dumping/reviewing MonogameTestbed BAJAJTEST screenshots via CLI |
 | `contours-to-mesh` | Contour-to-3D-mesh work with MorphologyMesh |
 | `mesh-difficult-cases` | Maintaining and re-checking the DifficultCases regression list |
-| `sam2-grounding` | Planning/editing SAM2 integration in SegmentationServer |
+| `sam2-grounding` | Pointer: the segmentation server and its SAM2 skill moved to Sam2Trainer (`SegmentationServer/`) on 2026-11-20 |
 | `deploy-viking-test` | Publishing the VikingTest Velopack build and announcing in Slack #betatest |
 | `docker-letsencrypt-sidecar` | Adding HTTPS to a container from the single `viking-certs` renewer (`/certs`, `viking.tls-reload`) |
 | `mosaic-annotation-remap` | Moving a section's annotations to a rebuilt `.mosaic` through tile coordinates (VikingAU `remap-to-tiles` / `remap-from-tiles`): checks, dry runs, report, undo |

@@ -130,9 +130,6 @@ Servers/certbot/
 .idea/
 .github/
 
-# Allow SegmentationServer files (needed for segmentation Docker build)
-!Servers/SegmentationServer/
-!Servers/SegmentationServer/**
 
 # GrpcAnnotationService and its project-reference dependency graph
 # (ConnectomeDataModelCore, gRPCAnnotationServiceTypes, GeometryOGCMapper,

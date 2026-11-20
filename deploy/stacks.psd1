@@ -113,25 +113,8 @@
             Description  = 'gRPC section-correction service (builds and serves residual correction maps)'
         }
 
-        'viking-segmentation' = @{
-            Engine       = 'compose'
-            RepoRootVar  = 'VIKING_REPO_ROOT_HOST'
-            ComposeFiles = @('Servers/SegmentationServer/docker-compose.yml')
-            # The default model is the base service; every other model is a row of Run/viking-segmentation/models.json.
-            Profiles     = @()
-            # `stack.ps1 viking-segmentation model <prefix> <file.pt>` runs this script, which writes
-            # Run/viking-segmentation/compose.generated.yaml (merged after ComposeFiles) and starts the servers.
-            ModelScript  = 'Servers/SegmentationServer/rebuild-and-start.ps1'
-            ModelsExample = 'deploy/examples/example.viking-segmentation.models.json'
-            Required     = @('VIKING_HOSTNAME_SEGMENTATION', 'TLS_CERT_NAME')
-            Example      = 'deploy/examples/example.viking-segmentation.run.env'
-            Secrets      = @()
-            # gRPC only (and the optional demo page); no plain HTTP endpoint to probe.
-            HealthUrl    = ''
-            Ports        = @(40443, 40444)
-            Os           = @('linux', 'windows')
-            Description  = 'SAM2 segmentation gRPC servers (GPU): the default model, plus one server per row of models.json'
-        }
+        # 'viking-segmentation' moved to Sam2Trainer's deploy/stacks.psd1 (2026-11-20) with the server itself
+        # (Sam2Trainer/SegmentationServer). connectomes-deploy loads it through SAM2TRAINER_REPO_ROOT_HOST.
 
         'viking-iis' = @{
             Engine       = 'iis'
