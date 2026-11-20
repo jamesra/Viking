@@ -66,6 +66,9 @@ namespace Viking.AU
 
         [Option("dry-run", Required = false, HelpText = "Map and report without saving")]
         public bool DryRun { get; set; }
+
+        [Option("dropped-log", Required = false, HelpText = "JSON record of the locations deleted because they lie wholly on tiles the new mosaic dropped (default: the report path with .dropped.json)")]
+        public string DroppedLogFile { get; set; }
     }
 
     /// <summary>The file remap-to-tiles writes and remap-from-tiles reads.</summary>
@@ -107,7 +110,9 @@ namespace Viking.AU
     /// cache under the default transform, <see cref="LocationObjExtensions"/>). A location with any vertex that cannot be
     /// mapped is left unchanged and reported, except one that step 1 found on no tile at all (drawn past the edge of the
     /// imaged area): it is moved as one piece by the shift of the old mosaic's nearest tile reference point
-    /// (<see cref="MosaicTileLocator.TryEstimateShift"/>) and listed in the report as an estimate.
+    /// (<see cref="MosaicTileLocator.TryEstimateShift"/>) and listed in the report as an estimate. A location that lay wholly
+    /// on old tiles the new mosaic no longer places is deleted, after its neighbours are linked to each other in its place and
+    /// it is logged for recreation (<see cref="DroppedLocations"/>); one only partly on such tiles is skipped and reported.
     /// </summary>
     static class MosaicRemap
     {
@@ -214,6 +219,7 @@ namespace Viking.AU
             List<double> disagreements = [];
             List<(LocationObj Location, SqlGeometry Before, SqlGeometry After)> changed = [];
             List<string> estimated = [];
+            List<(LocationObj Location, IEnumerable<int> Tiles)> dropped = [];
 
             MosaicTileLocator oldMosaic = OldMosaicForEstimates(file, out string noEstimateReason);
             foreach (SkippedLocation s in file.Skipped)
@@ -281,7 +287,13 @@ namespace Viking.AU
                 FromTilesResult result = TileRemap.FromTiles(entry.Shape, newMosaic);
                 if (!result.Succeeded)
                 {
-                    skipped.Add((entry.Id, result.Failure));
+                    // Every tile it used is gone: the location is on no tile of the new mosaic and is deleted (DroppedLocations).
+                    // Only partly on dropped tiles: left as it is for review.
+                    bool wholly = result.MissingTiles.Count > 0 && result.NewVertices.Count == 0;
+                    if (wholly)
+                        dropped.Add((loc, result.MissingTiles));
+                    else
+                        skipped.Add((entry.Id, result.MissingTiles.Count > 0 ? result.Failure + "; partly on dropped tiles, not deleted (review)" : result.Failure));
                     continue;
                 }
 
@@ -310,16 +322,50 @@ namespace Viking.AU
 
             List<string> overlaps = NewCellOverlaps(changed, current.Values);
 
+            string reportPath = options.ReportFile ?? options.InputFile + ".report.txt";
+            string droppedLogPath = options.DroppedLogFile ?? Path.ChangeExtension(reportPath, ".dropped.json");
+            DroppedLocationLog droppedLog = new()
+            {
+                Volume = options.VolumeURL,
+                Section = file.Section,
+                OldMosaic = file.OldMosaic,
+                NewMosaic = Path.GetFullPath(options.MosaicFile),
+                TileCoordinates = Path.GetFullPath(options.InputFile),
+                Run = DateTime.UtcNow,
+                DryRun = options.DryRun,
+            };
+            if (dropped.Count > 0)
+                await DroppedLocations.PlanAsync(droppedLog, dropped, current, token);
+
             bool saved = true;
             if (!options.DryRun && changed.Count > 0)
                 saved = await Store.Locations.Save();
 
-            string report = BuildReport(options, file, newMosaic, changed.Count, skipped, estimated, shifts, disagreements, overlaps, saved);
-            string reportPath = options.ReportFile ?? options.InputFile + ".report.txt";
+            // Moved locations are saved first; the deletes follow only when that worked, so a failed save leaves nothing half done.
+            bool droppedOk = true;
+            if (droppedLog.Locations.Count > 0)
+            {
+                if (options.DryRun)
+                    DroppedLocations.Write(droppedLog, droppedLogPath);
+                else if (saved)
+                    droppedOk = await DroppedLocations.ApplyAsync(droppedLog, current, droppedLogPath);
+                else
+                {
+                    foreach (DroppedLocationRecord r in droppedLog.Locations)
+                        r.Outcome = "not deleted: the remap save failed";
+                    DroppedLocations.Write(droppedLog, droppedLogPath);
+                }
+            }
+
+            string report = BuildReport(options, file, newMosaic, changed.Count, skipped, estimated, shifts, disagreements, overlaps, saved)
+                            + string.Join(Environment.NewLine, DroppedLocations.ReportLines(droppedLog, droppedLogPath))
+                            + (droppedLog.Locations.Count > 0 ? Environment.NewLine : string.Empty);
             File.WriteAllText(reportPath, report);
             Console.WriteLine(report);
             Console.WriteLine($"Wrote {reportPath}");
-            return saved ? 0 : 1;
+            if (droppedLog.Locations.Count > 0)
+                Console.WriteLine($"Wrote {droppedLogPath}");
+            return saved && droppedOk ? 0 : 1;
         }
 
         /// <summary>
