@@ -377,6 +377,8 @@ namespace Viking.AU
                 {
                     foreach (DroppedLocationRecord r in droppedLog.Locations)
                         r.Outcome = "not deleted: the remap save failed";
+                    foreach (EmptiedStructure e in droppedLog.StructuresLeftWithoutLocations.Where(e => e.Delete))
+                        e.Outcome = "not deleted: the remap save failed";
                 }
             }
 

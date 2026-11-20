@@ -44,7 +44,10 @@ cross-checks before any annotation export): nornir `nornir_imageregistration/mos
   pair of its neighbours; only neighbours of one structure are linked), then deletes it. Every one is written,
   before anything changes, to `<report>.dropped.json` (`--dropped-log`): id, structure and type, section, X/Y,
   mosaic and volume WKT, radius, width, flags, attributes, links before, and the links added, with the outcome.
-  The report lists them, the links added, and **structures left with no location, which are not deleted**. A
+  The report lists them, the links added, and **structures left with no location**: such a structure is
+  deleted only when it has no child structures and no structure links, otherwise kept empty (James Anderson,
+  2026-11-20); each is listed with the reason and logged (type, parent, label, notes, attributes, children, links)
+  so it can be recreated. A
   group whose replacement link fails keeps its locations. The dry run writes the same file with outcome
   "planned".
 - **No estimates.** Locations past the edge of every old tile (RC1 section 4 had 16 edge circles) are clipped to

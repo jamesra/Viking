@@ -81,13 +81,34 @@ namespace Viking.AU
         public List<string> LinkFailures { get; set; } = [];
     }
 
-    /// <summary>A structure whose every location is dropped. The remap does not delete structures.</summary>
+    /// <summary>
+    /// A structure whose every location is dropped. It is deleted only when it has no child structures and no structure
+    /// links (James Anderson, 2026-11-20: "c, and list on report"); otherwise it is kept, empty. Either way it is listed,
+    /// with enough to recreate it.
+    /// </summary>
     sealed class EmptiedStructure
     {
         public long StructureId { get; set; }
         public long? StructureTypeId { get; set; }
+        public long? ParentId { get; set; }
         public string Label { get; set; }
+        public string Notes { get; set; }
+        public bool Verified { get; set; }
+        public double Confidence { get; set; }
+        public Dictionary<string, string> Attributes { get; set; } = [];
+        public string Username { get; set; }
+        public DateTime? Created { get; set; }
         public List<long> Locations { get; set; } = [];
+        public List<long> ChildStructures { get; set; } = [];
+
+        /// <summary>Its structure links, as "source -> target" or "source <-> target".</summary>
+        public List<string> StructureLinks { get; set; } = [];
+
+        /// <summary>True when it has no child structures and no structure links, so the run deletes it.</summary>
+        public bool Delete { get; set; }
+
+        /// <summary>planned delete, kept (why), deleted, not deleted (why).</summary>
+        public string Outcome { get; set; }
     }
 
     /// <summary>
@@ -152,7 +173,8 @@ namespace Viking.AU
     /// annotation, logging them so they can be recreated if needed."). Each connected set of dropped locations is replaced by
     /// links between the locations it joined (<see cref="LinkBridging"/>), then deleted; every one is logged first. A
     /// location only partly on dropped tiles is clipped to the kept tiles (<see cref="TileClip"/>) and logged with its
-    /// original geometry (<see cref="ClippedLocationRecord"/>). Structures left with no location are reported, not deleted.
+    /// original geometry (<see cref="ClippedLocationRecord"/>). A structure left with no location is deleted when it has no
+    /// child structures and no structure links, else kept; both are reported and logged (<see cref="EmptiedStructure"/>).
     /// </summary>
     static class DroppedLocations
     {
@@ -251,12 +273,31 @@ namespace Viking.AU
                     continue;
 
                 structures.TryGetValue(structureId, out StructureObj structure);
+                ICollection<StructureObj> children = await Store.Structures.GetChildStructures(structureId);
+                StructureLinkObj[] links = await Store.StructureLinks.GetLinks(structureId);
+                List<long> childIds = [.. (children ?? []).Select(c => c.ID).OrderBy(id => id)];
+                List<string> linkTexts = [.. (links ?? []).Select(LinkText).OrderBy(t => t)];
+                bool delete = structure is not null && childIds.Count == 0 && linkTexts.Count == 0;
+                string keepReason = structure is null ? "kept: structure could not be read"
+                    : $"kept: {childIds.Count} child structure(s), {linkTexts.Count} structure link(s)";
+
                 log.StructuresLeftWithoutLocations.Add(new EmptiedStructure
                 {
                     StructureId = structureId,
                     StructureTypeId = structure?.TypeID,
+                    ParentId = structure?.ParentID,
                     Label = structure?.Label,
+                    Notes = structure?.Notes,
+                    Verified = structure?.Verified ?? false,
+                    Confidence = structure?.Confidence ?? 0,
+                    Attributes = structure is null ? [] : structure.Attributes.GroupBy(a => a.Name).ToDictionary(a => a.Key, a => a.Last().Value),
+                    Username = structure?.Username,
+                    Created = structure?.Created,
                     Locations = [.. droppedIds.Where(id => all.Any(l => l.ID == id)).OrderBy(id => id)],
+                    ChildStructures = childIds,
+                    StructureLinks = linkTexts,
+                    Delete = delete,
+                    Outcome = delete ? (log.DryRun ? "planned delete" : "pending delete") : keepReason,
                 });
             }
 
@@ -308,8 +349,55 @@ namespace Viking.AU
             foreach (DroppedLocationRecord r in log.Locations.Where(r => toDelete.Contains(r.Id)))
                 r.Outcome = saved ? "deleted" : "not deleted: SAVE FAILED";
 
+            bool structuresOk = await DeleteEmptiedStructuresAsync(log, saved ? [.. toDelete] : []);
+
             Write(log, logPath);
-            return ok && saved;
+            return ok && saved && structuresOk;
+        }
+
+        /// <summary>
+        /// Deletes the emptied structures marked <see cref="EmptiedStructure.Delete"/> once every one of their locations was
+        /// deleted. Checks locations, children and links again first, in case they changed since the plan.
+        /// </summary>
+        private static async Task<bool> DeleteEmptiedStructuresAsync(DroppedLocationLog log, HashSet<long> deletedLocations)
+        {
+            List<long> removed = [];
+            foreach (EmptiedStructure s in log.StructuresLeftWithoutLocations.Where(s => s.Delete))
+            {
+                if (!s.Locations.All(deletedLocations.Contains))
+                {
+                    s.Outcome = "not deleted: its locations were not all deleted";
+                    continue;
+                }
+
+                ICollection<LocationObj> left = await Store.Locations.GetStructureLocations(s.StructureId, QueryTargets.Server);
+                ICollection<StructureObj> children = await Store.Structures.GetChildStructures(s.StructureId);
+                StructureLinkObj[] links = await Store.StructureLinks.GetLinks(s.StructureId);
+                int nLeft = left?.Count ?? 0, nChildren = children?.Count ?? 0, nLinks = links?.Length ?? 0;
+                if (nLeft + nChildren + nLinks > 0)
+                {
+                    s.Outcome = $"not deleted: now has {nLeft} location(s), {nChildren} child structure(s), {nLinks} link(s)";
+                    continue;
+                }
+
+                StructureObj structure = await Store.Structures.GetObjectByID(s.StructureId);
+                if (structure is null)
+                {
+                    s.Outcome = "not deleted: structure not found";
+                    continue;
+                }
+
+                await Store.Structures.Remove(structure);
+                removed.Add(s.StructureId);
+            }
+
+            if (removed.Count == 0)
+                return true;
+
+            bool saved = await Store.Structures.Save();
+            foreach (EmptiedStructure s in log.StructuresLeftWithoutLocations.Where(s => removed.Contains(s.StructureId)))
+                s.Outcome = saved ? "deleted" : "not deleted: SAVE FAILED";
+            return saved;
         }
 
         public static void Write(DroppedLocationLog log, string path) =>
@@ -354,9 +442,12 @@ namespace Viking.AU
             }
 
             yield return string.Empty;
-            yield return $"Structures left with no location: {log.StructuresLeftWithoutLocations.Count} (not deleted)";
+            yield return $"Structures left with no location: {log.StructuresLeftWithoutLocations.Count} (deleted only with no child structures and no structure links)";
             foreach (EmptiedStructure s in log.StructuresLeftWithoutLocations)
-                yield return $"  {s.StructureId} (type {s.StructureTypeId}{(string.IsNullOrEmpty(s.Label) ? string.Empty : ", " + s.Label)}): its locations {string.Join(", ", s.Locations)}";
+            {
+                string why = s.Delete ? "no children, no links" : $"children [{string.Join(", ", s.ChildStructures)}], links [{string.Join("; ", s.StructureLinks)}]";
+                yield return $"  {s.StructureId} (type {s.StructureTypeId}{(string.IsNullOrEmpty(s.Label) ? string.Empty : ", " + s.Label)}): its locations {string.Join(", ", s.Locations)}; {why}; {s.Outcome}";
+            }
         }
 
         /// <summary>The log entry for a clipped location; call before its new shape is saved, so the originals are still on it.</summary>
@@ -380,6 +471,9 @@ namespace Viking.AU
             DroppedTiles = repair.DroppedTiles,
             Outcome = dryRun ? "planned" : "pending",
         };
+
+        private static string LinkText(StructureLinkObj l) =>
+            l.Bidirectional ? $"{l.SourceID} <-> {l.TargetID}" : $"{l.SourceID} -> {l.TargetID}";
 
         private static string Wkt(IShape2D shape) =>
             shape is null ? null : LocationVolumeGeometry.ToSqlGeometry(shape).STAsText().ToSqlString().Value;
