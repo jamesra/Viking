@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import cv2
@@ -11,7 +13,9 @@ import numpy as np
 import pytest
 
 from segmentation_grpc import CoordinateSpace
+from segmentation_server import crush_display
 from segmentation_server.capture_encoder import encode_capture, stretch_range
+from segmentation_server.crush_display import display_lut
 from segmentation_server.identity_client import IdentityAssignments, IdentityOptions
 from segmentation_server.tile_ref import TileRef
 from segmentation_server.tile_source import VikingTilesetSource, is_plain_mosaic_cell
@@ -158,6 +162,58 @@ async def test_a_cell_is_stitched_from_its_tiles_with_its_first_row_at_high_mosa
     assert bottom_left < bottom_right < top_left
     assert sorted(requested[1:]) == sorted(_tile_url(ix, iy) for ix in range(2) for iy in range(2))
     source.close()
+
+
+# A quantized tileset: codes 0..48, most pixels low, so the Auto gamma is far from 1.
+CRUSH_HISTOGRAM = " ".join(str(n) for n in [500] + [4000] * 8 + [300] * 40)
+CRUSHED_XML = VIKING_XML.replace(
+    b'TileXDim="512" TileYDim="512">',
+    b'TileXDim="512" TileYDim="512" CrushVersion="1" CrushStep="16" CrushOffset="0" CrushBits="8"'
+    b' CrushDisplayMin="1" CrushDisplayMax="48">\n      <CodeHistogram>' + CRUSH_HISTOGRAM.encode() + b"</CodeHistogram>",
+)
+
+
+def test_the_parser_reads_a_crushed_tilesets_display_parameters() -> None:
+    crush = parse_viking_xml(CRUSHED_XML, XML_URL).sections[30].tilesets["mosaic"].crush
+
+    assert crush is not None and (crush.step, crush.bits) == (16, 8)
+    assert abs(crush.default_gamma() - 1.0) > 0.2
+    assert parse_viking_xml(VIKING_XML, XML_URL).sections[30].tilesets["mosaic"].crush is None
+
+
+@pytest.mark.asyncio
+async def test_a_crushed_cell_is_the_clients_capture_of_the_display_gray() -> None:
+    # The client captures what Viking shows (codes through the window and gamma), then stretches; the server must
+    # produce the same pixels, since both are stored under one cache key.
+    rng = np.random.default_rng(3)
+    codes = {(ix, iy): rng.integers(0, 49, (512, 512), dtype=np.uint8) for ix in range(2) for iy in range(2)}
+    tiles = {_tile_url(ix, iy): _png(image) for (ix, iy), image in codes.items()}
+
+    def get(url: str) -> Optional[bytes]:
+        return CRUSHED_XML if url == XML_URL else tiles.get(url)
+
+    source = VikingTilesetSource(_Assignments({5: XML_URL}), http_get=get)
+    data = await source.fetch(5, _coord())
+
+    crush = parse_viking_xml(CRUSHED_XML, XML_URL).sections[30].tilesets["mosaic"].crush
+    canvas = np.block([[codes[(0, 0)], codes[(1, 0)]], [codes[(0, 1)], codes[(1, 1)]]])
+    shown = display_lut(crush)[canvas]
+    expected = cv2.imdecode(np.frombuffer(encode_capture(np.flipud(shown).copy()), np.uint8), cv2.IMREAD_UNCHANGED)
+    assert np.array_equal(cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_UNCHANGED), expected)
+    source.close()
+
+
+def test_the_vendored_crush_display_is_the_trainers_file() -> None:
+    candidates = [os.environ.get("SAM2_TRAINER_REPO"), str(Path(__file__).resolve().parents[4].parent / "Sam2Trainer")]
+    theirs_path = next(
+        (Path(c) / "annotation_crops" / "crush_display.py" for c in candidates if c and (Path(c) / "annotation_crops" / "crush_display.py").is_file()),
+        None,
+    )
+    if theirs_path is None:
+        pytest.skip("the trainer repository is not next to this one (set SAM2_TRAINER_REPO)")
+    ours = Path(crush_display.__file__).read_bytes().replace(b"\r\n", b"\n")
+
+    assert ours == theirs_path.read_bytes().replace(b"\r\n", b"\n"), "crush_display.py must be a byte-for-byte copy of annotation_crops/crush_display.py"
 
 
 @pytest.mark.asyncio

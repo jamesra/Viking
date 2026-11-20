@@ -19,6 +19,8 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional
 from urllib.parse import urljoin
 
+from segmentation_server.crush_display import CrushInfo
+
 DEFAULT_COORD_FORMAT = "03d"
 
 
@@ -68,6 +70,9 @@ class Tileset:
     postfix: str
     coord_format: str
     levels: Dict[int, TilesetLevel]
+    # The Crush* attributes of a quantized tileset, whose tiles hold codes that are shown through a window and gamma;
+    # None for a tileset of plain intensities.
+    crush: Optional[CrushInfo] = None
 
     def tile_path(self, section_path: str, downsample: int, ix: int, iy: int) -> str:
         """The tile's path below the volume host."""
@@ -123,6 +128,7 @@ def _parse_tileset(element: ET.Element) -> Optional[Tileset]:
             postfix=_attr(element, "FilePostfix") or "",
             coord_format=_python_format(element.attrib.get("CoordFormat")),
             levels=levels,
+            crush=CrushInfo.from_element(element),
         )
     except (TypeError, ValueError):
         return None

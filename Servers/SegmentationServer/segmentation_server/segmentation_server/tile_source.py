@@ -7,13 +7,16 @@ Only what the server can draw exactly as the client would is read:
 * whose channel names a VikingXML tileset of the section at the cell's downsample.
 
 A cell is stitched from the tileset tiles it overlaps, flipped so its first row is its high mosaic Y (the capture's
-orientation), and encoded as the client encodes a capture (:mod:`capture_encoder`). Tiles outside the grid, or
-missing on storage, are black. Anything else returns None and the stream asks the client, as before.
+orientation), and encoded as the client encodes a capture (:mod:`capture_encoder`). A quantized ("crushed") tileset's
+codes are first mapped to the gray Viking displays (its section's Auto window and gamma, :mod:`crush_display`), because
+the client's capture starts from that display gray; without it the two would differ under one cache key. Tiles outside
+the grid, or missing on storage, are black. Anything else returns None and the stream asks the client, as before.
 """
 
 from __future__ import annotations
 
 import asyncio
+import functools
 import logging
 import time
 import urllib.error
@@ -27,6 +30,7 @@ from numpy.typing import NDArray
 
 from segmentation_grpc import CoordinateSpace
 from segmentation_server.capture_encoder import encode_capture
+from segmentation_server.crush_display import CrushInfo, display_lut
 from segmentation_server.tile_ref import TileRef
 from segmentation_server.identity_client import IdentityAssignments, IdentityOptions, LocalContext
 from segmentation_server.viking_volume import Tileset, TilesetLevel, VikingVolume, VolumeSection, parse_viking_xml
@@ -72,6 +76,20 @@ def is_plain_mosaic_cell(coord: TileRef) -> bool:
         and "[" not in coord.channel
         and coord.downsample > 0
     )
+
+
+@functools.lru_cache(maxsize=1024)
+def _crush_lut(crush: CrushInfo) -> NDArray[np.uint8]:
+    """The section's display table, kept because every cell of a section shares it."""
+    return display_lut(crush)
+
+
+def display_gray(canvas: NDArray[np.uint8], tileset: Tileset) -> NDArray[np.uint8]:
+    """The cell as Viking displays it: a crushed tileset's codes through its window and gamma; other tilesets as read."""
+    crush = tileset.crush
+    if crush is None or not crush.is_supported:
+        return canvas
+    return _crush_lut(crush)[canvas]
 
 
 def _luma(data: bytes) -> Optional[NDArray[np.uint8]]:
@@ -243,7 +261,7 @@ class VikingTilesetSource:
             canvas[rows, cols] = luma[rows.start - top : rows.stop - top, cols.start - left : cols.stop - left]
 
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(self._pool, encode_capture, np.ascontiguousarray(np.flipud(canvas)))
+        return await loop.run_in_executor(self._pool, encode_capture, np.ascontiguousarray(np.flipud(display_gray(canvas, tileset))))
 
 
 def open_tile_source() -> Optional[VikingTilesetSource]:
