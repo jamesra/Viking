@@ -265,71 +265,6 @@ class TextureReaderV2 : IDisposable
     }
 
     /// <summary>
-    /// After a disk show: compare server Last-Modified to the cache file. If stale, download and return a replacement texture
-    /// (applied to TileViewOwner via PendingTextureQueue). Returns null when fresh, cancelled, or unreachable.
-    /// </summary>
-    internal async Task<Texture2D?> RevalidateFromServerIfStaleAsync(CancellationToken token)
-    {
-        if (Aborted || IsDisposed || token.IsCancellationRequested || SectionLoadCancelled)
-            return null;
-
-        if (string.IsNullOrEmpty(CacheFilename) || Filename is null)
-            return null;
-
-        FileInfo cacheFileInfo = new(CacheFilename);
-        if (cacheFileInfo.Exists == false || cacheFileInfo.Length == 0)
-            return null;
-
-        try
-        {
-            HttpClient client = Global.HttpClient;
-            using CancellationTokenSource stopReadingFromServerToken = new();
-            using CancellationTokenSource linkedTokenSource =
-                CancellationTokenSource.CreateLinkedTokenSource(token, stopReadingFromServerToken.Token);
-
-            using var textureHeaders =
-                await client.GetAsync(Filename, HttpCompletionOption.ResponseHeadersRead, linkedTokenSource.Token)
-                    .ConfigureAwait(false);
-
-            if (token.IsCancellationRequested || SectionLoadCancelled)
-                return null;
-
-            var textureLastModifiedValue = textureHeaders.Content.Headers.LastModified;
-            if (textureLastModifiedValue.HasValue == false)
-            {
-                return await TryLoadingFromHttpClientResponse(textureHeaders, CacheFilename, token).ConfigureAwait(false);
-            }
-
-            var textureLastModifiedUtc = textureLastModifiedValue.Value.UtcDateTime;
-            // Compare to on-disk file time only. Do not use TextureCache.ContainsKey — files may exist on disk
-            // before they are indexed in memory; treating that as stale would re-download every warm tile.
-            bool isStale = textureLastModifiedUtc > cacheFileInfo.LastWriteTimeUtc;
-
-            if (!isStale)
-            {
-                stopReadingFromServerToken.Cancel();
-                return null;
-            }
-
-            return await TryLoadingFromHttpClientResponse(textureHeaders, CacheFilename, token).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            return null;
-        }
-        catch (HttpRequestException e)
-        {
-            Trace.WriteLine($"Revalidate failed for {Filename}: {e.Message}");
-            return null;
-        }
-        catch (Exception e)
-        {
-            Trace.WriteLine($"Revalidate failed for {Filename}: {e.Message}");
-            return null;
-        }
-    }
-
-    /// <summary>
     /// Downloads the texture, retrying up to five times on 503, 408 and 429 (429 honors Retry-After).
     /// Returns null on any other error status, setting <see cref="TextureNotFound"/> on 404.
     /// Every response is disposed before this returns or waits to retry.
@@ -425,7 +360,8 @@ class TextureReaderV2 : IDisposable
     }
 
     /// <summary>
-    /// Decodes a texture from a server response and, when decoding succeeds, writes the body to the disk cache.
+    /// Decodes a texture from a server response and, when decoding succeeds, writes the body to the disk cache with the
+    /// response's <c>Last-Modified</c> as the file's write time (the date <see cref="TileRevalidationQueue"/> sends back).
     /// Sets <see cref="TextureNotFound"/> on 404. Does not dispose <paramref name="response"/>; the caller owns it.
     /// </summary>
     private async Task<Texture2D> TryLoadingFromHttpClientResponse(HttpResponseMessage response, string CacheFilename, CancellationToken token)
@@ -450,7 +386,7 @@ class TextureReaderV2 : IDisposable
             if (CacheFilename != null && tex != null)
             {
                 memStream.Seek(0, SeekOrigin.Begin);
-                await Global.TextureCache.AddAsync(CacheFilename, memStream).ConfigureAwait(false);
+                await Global.TextureCache.AddAsync(CacheFilename, memStream, response.Content.Headers.LastModified).ConfigureAwait(false);
             }
 
             return tex;
@@ -520,6 +456,8 @@ class TextureReaderV2 : IDisposable
     /// Loads the tile: for http(s), the disk cache first, then the server when the cache yields nothing or its read
     /// throws (the bad cache file is deleted first). The server is asked at most once per call. Returns null when
     /// cancelled or nothing loaded; an exception from the fallback download propagates to the caller.
+    /// A tile drawn from the disk cache is also queued on <see cref="TileRevalidationQueue"/>, which checks it against
+    /// the server in the background and swaps in a newer image if there is one.
     /// </summary>
     /// <param name="allowNetwork">
     /// When false, only attempt a disk cache read (no HTTP). Used by the disk fast-path so network work can take MaxWorkers separately.
@@ -556,6 +494,12 @@ class TextureReaderV2 : IDisposable
                     {
                         serverTried = true;
                         texture = await TryLoadingFromServer(this.Filename, token).ConfigureAwait(false);
+                    }
+                    else if (texture is not null)
+                    {
+                        // Drawn from the disk cache: ask the server, in the background, whether the tile has changed.
+                        TileRevalidationQueue.Enqueue(new TileRevalidationQueue.Request(
+                            this.Filename, CacheFilename, TileViewOwner, UseMipMaps, _sectionToken ?? CancellationToken.None));
                     }
 
                     if (texture != null)

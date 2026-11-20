@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Viking.Common;
 
 namespace Viking.VolumeModel
 {
@@ -184,132 +185,94 @@ namespace Viking.VolumeModel
             }
         }
 
-        private static HttpClient CreateRequest()
-        {
-            //var request = new HttpClient();
-            var request = Viking.Common.SharedResources.HttpClient;
-
-            //if (uri.Scheme.ToLower() == "https")
-            //    request.Credentials = this.Section.volume.UserCredentials;
-
-            //request.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.Revalidate);
-            //request.Timeout = 300000;
-            //request.AutomaticDecompression = System.Net.DecompressionMethods.GZip; 
-            //request.
-
-            return request;
-        }
-
-        private static async Task<DateTime> ServerSideLastModifed(Uri uri, CancellationToken token)
-        {
-            // Do NOT use 'using' on the shared HttpClient - it must never be disposed by consumers.
-            var headerRequest = CreateRequest();
-
-            using var headerResponse =
-                await headerRequest.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
-
-            if (false == headerResponse.IsSuccessStatusCode)
-                return DateTime.MinValue;
-
-            var lastModified = headerResponse.Content.Headers.LastModified;
-            if (lastModified.HasValue)
-            {
-                return lastModified.Value.UtcDateTime;
-            }
-
-            return DateTime.MaxValue;
-            /*
-            using (HttpWebResponse headerResponse = await headerRequest.GetResponseAsync() as HttpWebResponse)
-            {
-                return headerResponse.LastModified.ToUniversalTime();
-            }
-            */
-        }
-
         /// <summary>
-        /// Loads the transform from the storage device
+        /// Loads the tile transforms with one GET of the .mosaic, sent with <c>If-Modified-Since</c> set to the server's
+        /// <c>Last-Modified</c> that the cached transforms were built from (<see cref="CachedServerLastModified"/>). A 304
+        /// returns the cache; a 200 parses that same response and replaces the cache. When the server cannot be reached
+        /// or answers with an error, the cache is used if there is one.
         /// </summary>
+        /// <exception cref="HttpRequestException">The server failed and there is no usable cache.</exception>
         public async Task<ITransform[]> LoadTransform(CancellationToken token)
         {
             Uri mosaicURI = new(VolumePath.Combine(this.RootPath, MosaicPath));
-            DateTime serverlastModified = DateTime.MaxValue;
-            serverlastModified = await TilesToSectionMapping.ServerSideLastModifed(mosaicURI, token).ConfigureAwait(false);
-            if (token.IsCancellationRequested)
-                return null;
+            string cacheFile = CachedTransformsFileName;
+            ITransform[] cached = TryLoadUsableCache(cacheFile);
+            DateTimeOffset? cachedVersion = cached is null ? null : ConditionalGet.ValidatorFor(CachedServerLastModified(cached));
 
-            bool CachedFileUseable;
+            using ConditionalGetResult result =
+                await ConditionalGet.SendAsync(HttpClient, mosaicURI, cachedVersion, token).ConfigureAwait(false);
 
-            //Do we need to delete a stale version of the cache file?
-            CachedFileUseable = Geometry.Global.IsCacheFileValid(CachedTransformsFileName,
-                [serverlastModified, Global.OldestValidCachedTransform]);
-
-            if (CachedFileUseable == false)
-            {
-                Trace.WriteLine($"Deleting stale cache file: {this.CachedTransformsFileName}");
-                Geometry.Global.TryDeleteCacheFile(CachedTransformsFileName);
-            }
-
-            if (CachedFileUseable)
+            if (result.Outcome == ConditionalGetOutcome.Modified)
             {
                 try
                 {
-                    var loadedTransforms = LoadFromCache();
-                    var loadedFromCache = loadedTransforms != null;
-                    if (loadedFromCache)
-                    {
-                        this._LastModified = System.IO.File.GetLastWriteTimeUtc(this.CachedTransformsFileName);
-                        return loadedTransforms;
-                    }
+                    // MaxValue (no Last-Modified) is stored as "unknown": the next load then sends no date and downloads again.
+                    DateTime serverLastModified = result.LastModified?.UtcDateTime ?? DateTime.MaxValue;
+                    string[] mosaicLines;
+                    using (Stream mosaicDataStream = await result.Response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                        mosaicLines = await mosaicDataStream.ToLinesAsync().ConfigureAwait(false);
+
+                    ITransform[] transforms = TransformFactory.LoadMosaic(RootPath, mosaicLines, serverLastModified);
+                    // SectionToVolumeMapping rebuilds its warped cache when it is older than this.
+                    this._LastModified = serverLastModified == DateTime.MaxValue ? DateTime.UtcNow : serverLastModified;
+                    _ = Task.Run(() => SaveToCache(cacheFile, transforms));
+                    return transforms;
                 }
-                catch (Exception)
+                catch (Exception e) when (cached is not null && e is HttpRequestException or IOException)
                 {
-                    //On any error, use the traditional path
-                    this._TileTransforms = null;
-                    Trace.WriteLine($"Could not load {CachedTransformsFileName} from cache even though file existed");
-                    Geometry.Global.TryDeleteCacheFile(CachedTransformsFileName);
+                    Trace.WriteLine($"Reading {mosaicURI} failed ({e.Message}); using the cached transforms.");
                 }
             }
 
-            //Not in the local cache
-            var transforms = await LoadTransforms(mosaicURI, RootPath, serverlastModified, token).ConfigureAwait(false);
-            bool loadedFromServer = transforms != null;
-            if (loadedFromServer)
+            if (cached is not null)
             {
-                _ = Task.Run(() => SaveToCache(this.CachedTransformsFileName, transforms));
-                return transforms;
+                if (result.Outcome is ConditionalGetOutcome.NotFound or ConditionalGetOutcome.Failed)
+                    Trace.WriteLine($"Using cached {cacheFile}: the server answered {DescribeStatus(result)} for {mosaicURI}");
+                this._LastModified = System.IO.File.GetLastWriteTimeUtc(cacheFile);
+                return cached;
             }
 
-            Trace.WriteLine($"Unable to load transform from server: {mosaicURI}");
-            return null;
+            throw new HttpRequestException($"Could not load {mosaicURI}: {DescribeStatus(result)}");
         }
 
-        private static async Task<ITransform[]> LoadTransforms(Uri mosaicURI, string RootPath, DateTime serverlastModified, CancellationToken token)
+        private static string DescribeStatus(ConditionalGetResult result) =>
+            result.StatusCode.HasValue ? ((int)result.StatusCode.Value).ToString() : "no response";
+
+        /// <summary>
+        /// The server's <c>Last-Modified</c> the cached transforms were built from (stored in each transform's info by
+        /// <see cref="TransformFactory.LoadMosaic"/>), or <see cref="DateTime.MinValue"/> when unknown.
+        /// </summary>
+        internal static DateTime CachedServerLastModified(ITransform[] cached) =>
+            cached is { Length: > 0 } && cached[0] is ITransformInfo { Info: not null } withInfo
+                ? withInfo.Info.LastModified
+                : DateTime.MinValue;
+
+        /// <summary>
+        /// Loads the cache file, or returns null when it is missing, written before <see cref="Global.OldestValidCachedTransform"/>
+        /// (an older format) or unreadable; the last two are deleted.
+        /// </summary>
+        private ITransform[] TryLoadUsableCache(string cacheFile)
         {
-            try
+            if (!System.IO.File.Exists(cacheFile))
+                return null;
+
+            if (!Geometry.Global.IsCacheFileValid(cacheFile, Global.OldestValidCachedTransform))
             {
-                var request = CreateRequest();
-                using var MosaicDataStream = await request.GetStreamAsync(mosaicURI).ConfigureAwait(false);
-                string[] MosaicLines = await MosaicDataStream.ToLinesAsync().ConfigureAwait(false);
-                return TransformFactory.LoadMosaic(RootPath, MosaicLines, serverlastModified);
-                /*
-                HttpWebRequest request = CreateRequest(mosaicURI);
-                using (WebResponse response = await request.GetResponseAsync())
-                {
-                    using (Stream MosaicDataStream = response.GetResponseStream())
-                    {
-                        string[] MosaicLines = await MosaicDataStream.ToLinesAsync(); 
-                        return TransformFactory.LoadMosaic(RootPath, MosaicLines, serverlastModified);
-                    }
-                }
-                */
-            }
-            catch (System.Net.WebException webException)
-            {
-                Trace.WriteLine("Could not load transform: " + mosaicURI);
-                Trace.WriteLine(webException.ToString());
+                Trace.WriteLine($"Deleting outdated cache file: {cacheFile}");
+                Geometry.Global.TryDeleteCacheFile(cacheFile);
+                return null;
             }
 
-            return null;
+            try
+            {
+                return LoadFromCache();
+            }
+            catch (Exception e)
+            {
+                Trace.WriteLine($"Could not load {cacheFile} from cache even though file existed: {e.Message}");
+                Geometry.Global.TryDeleteCacheFile(cacheFile);
+                return null;
+            }
         }
 
         public override TilePyramid VisibleTiles(Rectangle VisibleBounds, double DownSample) => base.VisibleTiles(VisibleBounds, null, DownSample);

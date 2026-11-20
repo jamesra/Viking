@@ -30,13 +30,20 @@ namespace Viking
             internal TaskCompletionSource<Texture2D> Tcs { get; }
             internal string? FileKey { get; }
 
-            internal PendingItem(TextureData data, bool useMipMaps, TaskCompletionSource<Texture2D> tcs, TileView? tileView = null, string? fileKey = null)
+            /// <summary>
+            /// True for a newer image of a tile that is already shown (<see cref="EnqueueReplacement"/>): it replaces the
+            /// tile's texture only if the tile still has one, and it is not part of the tile's load bookkeeping.
+            /// </summary>
+            internal bool ReplacesShownTexture { get; }
+
+            internal PendingItem(TextureData data, bool useMipMaps, TaskCompletionSource<Texture2D> tcs, TileView? tileView = null, string? fileKey = null, bool replacesShownTexture = false)
             {
                 TileView = tileView;
                 Data = data;
                 UseMipMaps = useMipMaps;
                 Tcs = tcs;
                 FileKey = fileKey;
+                ReplacesShownTexture = replacesShownTexture;
             }
 
             public override string ToString() => $"{TileView?.ToString()}";
@@ -185,6 +192,34 @@ namespace Viking
             }
 
             EnsurePumpScheduled();
+        }
+
+        /// <summary>
+        /// Enqueue a newer image for a tile that is already on screen, found by <see cref="TileRevalidationQueue"/>. On the
+        /// main thread it replaces <paramref name="tileView"/>'s texture (<see cref="TileView.TryReplaceTextureFromQueue"/>),
+        /// so the old image stays until the new one is ready. If the tile no longer shows a texture by then (section left,
+        /// tile freed or disposed), the new texture is disposed instead. It takes no file claim and does not mark the tile
+        /// pending, so it never disturbs a real load of the same tile.
+        /// </summary>
+        /// <returns>Completes with the texture shown, or null when it was not used.</returns>
+        public static Task<Texture2D> EnqueueReplacement(TextureData data, bool useMipMaps, TileView tileView)
+        {
+            if (tileView is null)
+                throw new ArgumentNullException(nameof(tileView));
+
+            var tcs = new TaskCompletionSource<Texture2D>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _pendingLock.EnterWriteLock();
+            try
+            {
+                _items.Add(new PendingItem(data, useMipMaps, tcs, tileView, fileKey: null, replacesShownTexture: true));
+            }
+            finally
+            {
+                _pendingLock.ExitWriteLock();
+            }
+
+            EnsurePumpScheduled();
+            return tcs.Task;
         }
 
         /// <summary>
@@ -345,8 +380,18 @@ namespace Viking
                         continue;
                     }
 
-                    if (texture != null && item.TileView != null)
+                    if (item.ReplacesShownTexture)
+                    {
+                        if (texture != null && !(item.TileView?.TryReplaceTextureFromQueue(texture, item.Data.crushGain) ?? false))
+                        {
+                            texture.Dispose();
+                            texture = null;
+                        }
+                    }
+                    else if (texture != null && item.TileView != null)
+                    {
                         item.TileView.SetTextureFromQueue(texture, item.Data.crushGain);
+                    }
                     item.Tcs.TrySetResult(texture);
                     texturesLoaded++;
                 }
@@ -355,7 +400,7 @@ namespace Viking
                     _pendingLock.EnterWriteLock();
                     try
                     {
-                        if (item.TileView != null)
+                        if (item.TileView != null && !item.ReplacesShownTexture)
                             PendingTileViews.Remove(item.TileView);
                     }
                     finally

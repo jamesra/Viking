@@ -281,5 +281,22 @@ namespace Viking
 
             return AddEntry(entry);
         }
+
+        /// <summary>
+        /// Writes the cache file <paramref name="key"/>, then sets its write time to the server's
+        /// <paramref name="serverLastModified"/> when known, so the next conditional request sends that exact date
+        /// (<see cref="Viking.Common.ConditionalGet"/>). Returns true when the file was written, including when it
+        /// replaced a file already in the cache; false when it could not be written.
+        /// </summary>
+        public async Task<bool> AddAsync(string key, Stream value, DateTimeOffset? serverLastModified)
+        {
+            var entry = await CreateEntryAsync(key, value);
+            if (entry is null)
+                return false;
+
+            Viking.Common.ConditionalGet.StampCacheFile(key, serverLastModified);
+            AddEntry(entry);
+            return true;
+        }
     }
 }

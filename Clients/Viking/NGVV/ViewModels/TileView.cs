@@ -136,6 +136,23 @@ namespace Viking.ViewModels
         }
 
         /// <summary>
+        /// Called from the main-thread texture queue pump with a newer image of a tile that is already shown
+        /// (<see cref="PendingTextureQueue.EnqueueReplacement"/>). Swaps it in, disposing the old texture, only while the
+        /// tile still shows a texture; returns false, leaving the tile and <paramref name="tex"/> alone, when it does not
+        /// (the tile was freed, disposed or found missing on the server meanwhile). The caller disposes a rejected texture.
+        /// Unlike <see cref="SetTextureFromQueue"/> it leaves any load in progress alone.
+        /// </summary>
+        internal bool TryReplaceTextureFromQueue(Texture2D tex, double? crushGain = null)
+        {
+            if (tex is null || ServerTextureNotFound || !IsTextureUsable)
+                return false;
+
+            _crushGain = crushGain;
+            texture = tex;
+            return true;
+        }
+
+        /// <summary>
         /// True if _texture is non-null and neither the texture nor its device are disposed.
         /// Thread-safe: captures the field once to avoid TOCTOU races.
         /// </summary>
