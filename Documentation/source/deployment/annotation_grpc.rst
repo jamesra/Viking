@@ -87,27 +87,36 @@ The script never changes the database schema or connects to the database.
 Local test stack
 ================
 
-``Servers/GrpcAnnotationService/scripts/Start-AnnotationTestStack.ps1 -ApplySchema -Build`` starts
-``annotation-sql`` and the gRPC service (profile ``local-sql``), waits for SQL and applies the minimal
-schema (``Servers/AnnotationDatabase/config-template/README.md``). It also starts the DevTest Identity container
-(``identity-devtest``, https://host.docker.internal:5020).
+``Servers/GrpcAnnotationService/scripts/Start-AnnotationTestStack.ps1 [-Build]`` starts the test stack on the dev box.
+Run it before each test run; every run starts from the same data:
+
+#. The DevTest Identity container (``identity-devtest``, https://host.docker.internal:5020).
+#. ``annotation-sql`` (profile ``local-sql``): the local SQL Server container ``viking-annotation-sql`` on port 1433,
+   sa password from ``D:\Docker\Builds\AnnotationSql\.env`` (created from
+   ``Servers/AnnotationDatabase/config-template/build/env-template.txt``).
+#. ``Servers/AnnotationDatabase/scripts/Reset-AnnotationTestDatabase.ps1``: drops ``AnnotationTest``, builds it with
+   ``Servers/SQL/DatabaseCreateUpdate/CreateUpdateDatabase.sql`` (the deploy script, so the tests see what deployed
+   databases have; it checks that ``DBVersion`` reached the script's last step), and inserts the seed rows of
+   ``test-seed.sql``: StructureType 1, Structure 1, and Location 1 on section 1 at mosaic (100, 200). It works only
+   through ``docker exec`` into the container.
+#. The gRPC service, image ``viking-annotation:test-stack`` (never ``:latest``, which the volumes run), recreated so it
+   holds no connection to the dropped database. Its env file is written to
+   ``%TEMP%\viking-annotation-test-stack.env``: ``Server=annotation-sql``, ``Database=AnnotationTest``, and the DevTest
+   introspection client. A ``-GrpcEnvFile`` of your own must name the same server and database, or the script refuses
+   to start.
 
 The test stack's gRPC service listens on its own port, https://localhost:5019, which no volume is given. Its
 ``docker-compose.test-identity.yml`` override sets ``TestStack__Enabled=true``, so the service answers
 ``GET /test-stack`` with ``{"testStack": true, "database": "<name>"}``; a production service maps no such route.
 The integration tests (``Clients/WebAnnotationModel.gRPC.Tests``, ``gRPC_Tests``) read that marker before their first
 call and fail with a "Refusing to run" message when it is missing or names a database outside
-``GrpcServer:TestDatabases`` (``AnnotationTest``, ``Empty``, ``Test``), so a test run cannot write to a volume. Never set
+``GrpcServer:TestDatabases`` (only ``AnnotationTest``), so a test run cannot write to a volume. Never set
 ``TestStack__Enabled`` on a volume.
 
-Two databases on the annotation SQL server (192.168.0.110) are for tests:
-
-- ``Empty``: an empty database that can be used, dropped and recreated. Use it when a test needs a clean or known state.
-- ``Test``: a full clone of RC1, refreshed rarely by James. Tests may read and write it, but agents never drop, wipe or
-  recreate it.
-
-``D:\Docker\Builds\GrpcAnnotationService\.env.Docker`` currently points the test stack at ``Test``. Touch no other
-database there, never RC1 or RC2.
+The test stack never uses the annotation SQL server (192.168.0.110). Its two test databases are for people, not the
+automated tests: ``Empty``, an empty database that can be dropped and recreated, and ``Test``, a full clone of RC1
+refreshed rarely by James, which agents may read and write but never drop, wipe or recreate. Touch no other database
+there, never RC1 or RC2.
 
 The old root ``docker-compose.annotation-db.yml`` overlay is replaced by the ``local-sql`` profile; the
 root ``docker-compose.yml`` now only includes the per-stack files.

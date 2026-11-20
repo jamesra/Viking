@@ -7,8 +7,8 @@
 # configuration-key convention. Do not commit the filled-in copy.
 #
 # Production: use deploy/examples/example.viking-annotation.run.env instead (stack viking-annotation).
-# Start-AnnotationTestStack.ps1 runs the stack with profile local-sql (annotation-sql). The
-# DevTest Identity container (identity-devtest) is gone; a production JWT will 401 against a DevTest issuer.
+# Start-AnnotationTestStack.ps1 does not use this file: it writes its own env file for the local AnnotationTest
+# database and the DevTest Identity server.
 
 # --- SQL Server (annotation database) ---
 # SQL auth (not Windows/Trusted_Connection) because the container is Linux-based.

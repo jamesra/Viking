@@ -1,25 +1,32 @@
 <#
 .SYNOPSIS
     Starts annotation-sql + grpc-annotation-service (viking-annotation stack, profile local-sql) for
-    local gRPC annotation integration tests.
+    local gRPC annotation integration tests, on a freshly reset AnnotationTest database.
 
 .DESCRIPTION
-    Runs Servers/GrpcAnnotationService/docker-compose.yml as compose project viking-annotation with
-    profile local-sql, waits for SQL to report healthy and optionally applies the minimal
-    AnnotationTest schema. The stack variables stack.ps1 normally exports (NORNIR_DOCKER_USER_ROOT,
-    STACK_*, DOCKER_CERTS_DIR) are filled with defaults under -DockerRoot when unset.
+    The gRPC integration tests create, edit and delete annotations, so they get a database of their own: AnnotationTest
+    in the local SQL Server container viking-annotation-sql (profile local-sql of
+    Servers/GrpcAnnotationService/docker-compose.yml). The script starts that container, waits for it to report
+    healthy, drops and recreates AnnotationTest with minimal-schema.sql and its seed rows
+    (Servers/AnnotationDatabase/scripts/Reset-AnnotationTestDatabase.ps1), and only then starts the gRPC service, so
+    every run starts from the same data and the service never holds a connection to the dropped database.
+
+    The gRPC service's container env is written to %TEMP%\viking-annotation-test-stack.env: the local database, and the
+    DevTest Identity server's introspection client. A -GrpcEnvFile of your own must also point at annotation-sql and
+    AnnotationTest; any other server is refused, so a test run cannot reach a real annotation database.
+
+    The service image is tagged viking-annotation:test-stack, never viking-annotation:latest, which the production
+    volumes on this host run.
 
     Also starts identity-devtest (Servers/IdentityServer/DevTest/docker-compose.yml): an HTTPS-only
     in-memory Identity server on https://host.docker.internal:5020 with the tests' user and clients.
     Both containers make self-signed certificates; this script saves them to
-    %TEMP%iking-annotation-test-stack.pem and %TEMP%iking-identity-test-stack.pem, which the gRPC tests
+    %TEMP%\viking-annotation-test-stack.pem and %TEMP%\viking-identity-test-stack.pem, which the gRPC tests
     pin, and the annotation container mounts the identity certificate to trust it
-    (docker-compose.test-identity.yml). The gRPC env file's IdentityServer__Endpoint must be
-    https://host.docker.internal:5020/ (the .env.Docker template says so); a real Identity instance
-    can be used instead by pointing it elsewhere and skipping the override.
+    (docker-compose.test-identity.yml).
 
-.PARAMETER ApplySchema
-    Apply Servers/AnnotationDatabase/scripts/Apply-MinimalSchema.ps1 after SQL is healthy.
+    The stack variables stack.ps1 normally exports (NORNIR_DOCKER_USER_ROOT, STACK_*, DOCKER_CERTS_DIR) are filled with
+    defaults under -DockerRoot when unset.
 
 .PARAMETER Build
     Rebuild the gRPC image.
@@ -28,8 +35,8 @@
     Env file with MSSQL_SA_PASSWORD (interpolation only). Created from the AnnotationDatabase template when missing.
 
 .PARAMETER GrpcEnvFile
-    Container env file for grpc-annotation-service (connection string, IdentityServer__*). Default
-    D:\Docker\Builds\GrpcAnnotationService\.env.Docker when it exists, else the stack run env.
+    Container env file for grpc-annotation-service. Default: written to %TEMP%\viking-annotation-test-stack.env.
+    Its connection string must name Server=annotation-sql and Database=AnnotationTest.
 
 .PARAMETER DockerRoot
     Root used for the default stack folders. Default $env:NORNIR_DOCKER_USER_ROOT, else D:\Docker.
@@ -38,11 +45,10 @@
     Viking repo root. Default: three folders above this script.
 
 .EXAMPLE
-    .\Servers\GrpcAnnotationService\scripts\Start-AnnotationTestStack.ps1 -ApplySchema -Build
+    .\Servers\GrpcAnnotationService\scripts\Start-AnnotationTestStack.ps1 -Build
 #>
 [CmdletBinding()]
 param(
-    [switch] $ApplySchema,
     [switch] $Build,
     [string] $AnnotationSqlEnv = "D:\Docker\Builds\AnnotationSql\.env",
     [string] $GrpcEnvFile = "",
@@ -61,7 +67,7 @@ if (-not $DockerRoot) {
 
 $templateEnv = Join-Path $RepoRoot "Servers\AnnotationDatabase\config-template\build\env-template.txt"
 $composeFile = Join-Path $RepoRoot "Servers\GrpcAnnotationService\docker-compose.yml"
-$applySchemaScript = Join-Path $RepoRoot "Servers\AnnotationDatabase\scripts\Apply-MinimalSchema.ps1"
+$resetScript = Join-Path $RepoRoot "Servers\AnnotationDatabase\scripts\Reset-AnnotationTestDatabase.ps1"
 
 if (-not (Test-Path $composeFile)) {
     throw "Compose file not found: $composeFile"
@@ -81,19 +87,15 @@ $stackDefaults = [ordered]@{
 # 5019). The tests in WebAnnotationModel.gRPC.Tests and gRPC_Tests aim at it, and run only when the server answers
 # the /test-stack marker that docker-compose.test-identity.yml turns on.
 $env:GRPC_ANNOTATION_HTTPS_PORT = "5019"
+# Its own image tag: a --build here must not replace viking-annotation:latest under the production volumes.
+$env:VIKING_ANNOTATION_IMAGE = "viking-annotation:test-stack"
+# The compose file's environment entry for the token issuer wins over the env file and has no host.env here.
+$env:IdentityServer__Endpoint = "https://host.docker.internal:5020/"
 foreach ($name in $stackDefaults.Keys) {
     if (-not [Environment]::GetEnvironmentVariable($name)) {
         [Environment]::SetEnvironmentVariable($name, $stackDefaults[$name], "Process")
     }
 }
-if (-not $GrpcEnvFile) {
-    $legacy = "D:\Docker\Builds\GrpcAnnotationService\.env.Docker"
-    $GrpcEnvFile = if (Test-Path $legacy) { $legacy } else { Join-Path $env:STACK_RUN_DIR "$($env:STACK_NAME).run.env" }
-}
-if (-not (Test-Path $GrpcEnvFile)) {
-    throw "gRPC env file not found: $GrpcEnvFile (template: deploy/examples/example.viking-annotation.run.env)"
-}
-$env:GRPC_ANNOTATION_ENV_FILE = $GrpcEnvFile.Replace('\', '/')
 
 if (-not (Test-Path $AnnotationSqlEnv)) {
     $dir = Split-Path $AnnotationSqlEnv -Parent
@@ -104,8 +106,40 @@ if (-not (Test-Path $AnnotationSqlEnv)) {
         throw "Missing template $templateEnv"
     }
     Copy-Item $templateEnv $AnnotationSqlEnv
-    Write-Host "Created $AnnotationSqlEnv from template. Edit MSSQL_SA_PASSWORD if desired, then re-run."
+    Write-Host "Created $AnnotationSqlEnv from template."
 }
+$saPassword = $null
+Get-Content $AnnotationSqlEnv | ForEach-Object {
+    if ($_ -match '^\s*MSSQL_SA_PASSWORD=(.+)\s*$') {
+        $saPassword = $Matches[1].Trim().Trim('"').Trim("'")
+    }
+}
+if ([string]::IsNullOrWhiteSpace($saPassword)) {
+    throw "MSSQL_SA_PASSWORD not found in $AnnotationSqlEnv"
+}
+
+if (-not $GrpcEnvFile) {
+    $GrpcEnvFile = Join-Path ([System.IO.Path]::GetTempPath()) 'viking-annotation-test-stack.env'
+    # annotation-sql is the compose service on the stack's network; the DevTest identity client is in
+    # Servers/IdentityServer/DevTest/Config.cs.
+    @(
+        "ConnectionStrings__AnnotationConnection=Server=annotation-sql,1433;Database=AnnotationTest;User ID=sa;Password=$saPassword;MultipleActiveResultSets=true;TrustServerCertificate=True"
+        "IdentityServer__Endpoint=https://host.docker.internal:5020/"
+        "IdentityServer__ClientId=grpc-annotation"
+        "IdentityServer__ClientSecret=DevTestIntrospectionSecret"
+        "IdentityServer__AllowHttpMetadata=false"
+        "Corrections__RootDirectory=/corrections"
+    ) | Set-Content -Path $GrpcEnvFile -Encoding ascii
+}
+if (-not (Test-Path $GrpcEnvFile)) {
+    throw "gRPC env file not found: $GrpcEnvFile"
+}
+$connection = Get-Content $GrpcEnvFile | Where-Object { $_ -match '^\s*ConnectionStrings__AnnotationConnection=' } | Select-Object -Last 1
+if ($connection -notmatch '(?i)(^|;|=)\s*(Server|Data Source)\s*=\s*(tcp:)?annotation-sql\s*(,\s*1433)?\s*;' -or
+    $connection -notmatch '(?i);\s*(Database|Initial Catalog)\s*=\s*AnnotationTest\s*(;|$)') {
+    throw "Refusing to start: $GrpcEnvFile must point ConnectionStrings__AnnotationConnection at Server=annotation-sql and Database=AnnotationTest, the local test container."
+}
+$env:GRPC_ANNOTATION_ENV_FILE = $GrpcEnvFile.Replace('\', '/')
 
 # identity-devtest first: it creates the certificate volume the annotation container mounts.
 $identityCompose = Join-Path $RepoRoot "Servers\IdentityServer\DevTest\docker-compose.yml"
@@ -118,49 +152,56 @@ if ($LASTEXITCODE -ne 0) {
     throw "docker compose up of identity-devtest failed (exit $LASTEXITCODE)."
 }
 
-$composeArgs = @(
+$composeBase = @(
     "-p", "viking-annotation",
     "--env-file", $AnnotationSqlEnv,
     "-f", $composeFile,
     "-f", $testIdentityOverride,
-    "--profile", "local-sql",
-    "up", "-d"
+    "--profile", "local-sql"
 )
-if ($Build) {
-    $composeArgs += "--build"
-}
-$composeArgs += @("annotation-sql", "grpc-annotation-service")
 
-Write-Host "Starting stack from $RepoRoot ..."
 Push-Location $RepoRoot
 try {
-    docker compose @composeArgs
+    Write-Host "Starting annotation-sql ..."
+    docker compose @composeBase up -d annotation-sql
     if ($LASTEXITCODE -ne 0) {
-        throw "docker compose up failed (exit $LASTEXITCODE)."
+        throw "docker compose up of annotation-sql failed (exit $LASTEXITCODE)."
+    }
+
+    Write-Host "Waiting for annotation-sql health..."
+    $deadline = (Get-Date).AddSeconds(180)
+    $healthy = $false
+    while ((Get-Date) -lt $deadline) {
+        $status = docker inspect -f '{{.State.Health.Status}}' viking-annotation-sql 2>$null
+        if ($status -eq "healthy") {
+            $healthy = $true
+            break
+        }
+        if ($status -eq "unhealthy") {
+            throw "annotation-sql reported unhealthy. Check: docker logs viking-annotation-sql"
+        }
+        Start-Sleep -Seconds 3
+    }
+    if (-not $healthy) {
+        throw "Timed out waiting for annotation-sql to become healthy."
+    }
+    Write-Host "annotation-sql is healthy."
+
+    # Before the service starts, so it never caches a connection to the database being dropped.
+    & $resetScript -EnvFile $AnnotationSqlEnv
+
+    # --force-recreate: a service still running from the previous run would hold pooled connections to the old database.
+    $grpcArgs = @("up", "-d", "--force-recreate", "--no-deps")
+    if ($Build) { $grpcArgs += "--build" }
+    Write-Host "Starting grpc-annotation-service ..."
+    docker compose @composeBase @grpcArgs grpc-annotation-service
+    if ($LASTEXITCODE -ne 0) {
+        throw "docker compose up of grpc-annotation-service failed (exit $LASTEXITCODE)."
     }
 }
 finally {
     Pop-Location
 }
-
-Write-Host "Waiting for annotation-sql health..."
-$deadline = (Get-Date).AddSeconds(180)
-$healthy = $false
-while ((Get-Date) -lt $deadline) {
-    $status = docker inspect -f '{{.State.Health.Status}}' viking-annotation-sql 2>$null
-    if ($status -eq "healthy") {
-        $healthy = $true
-        break
-    }
-    if ($status -eq "unhealthy") {
-        throw "annotation-sql reported unhealthy. Check: docker logs viking-annotation-sql"
-    }
-    Start-Sleep -Seconds 3
-}
-if (-not $healthy) {
-    throw "Timed out waiting for annotation-sql to become healthy."
-}
-Write-Host "annotation-sql is healthy."
 
 # The service is HTTPS only. Save the container's self-signed certificate where the tests pin it
 # (WebAnnotationModel.gRPC.Tests TestServerTls); the container makes it at start, so retry briefly.
@@ -185,19 +226,17 @@ for ($i = 0; $i -lt 30 -and -not $identityCertSaved; $i++) {
 if ($identityCertSaved) { Write-Host "Saved the identity server's self-signed certificate to $identityCertPath" }
 else { Write-Warning "Could not copy the identity certificate to $identityCertPath; the sign-in tests will fail the TLS handshake." }
 
-if ($ApplySchema) {
-    & $applySchemaScript -EnvFile $AnnotationSqlEnv
-}
-
 Write-Host @"
 
 Stack is up:
   Identity (DevTest): https://host.docker.internal:5020  (self-signed certificate, saved to $identityCertPath for the tests)
   gRPC (HTTPS only): https://localhost:5019  (self-signed certificate, saved to $testCertPath for the tests;
                      answers https://localhost:5019/test-stack, which the tests require)
-  Annotation SQL   : localhost,1433  (database AnnotationTest)
+  Annotation SQL   : localhost,1433  (database AnnotationTest, reset with the seed rows)
 
 Run tests:
   dotnet test Clients/WebAnnotationModel.gRPC.Tests/WebAnnotationModel.gRPC.Tests.csproj
+
+Re-run this script before each test run to reset AnnotationTest.
 
 "@

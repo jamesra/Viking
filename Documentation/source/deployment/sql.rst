@@ -32,7 +32,9 @@ Local SQL (``local-sql``)
 ``Start-AnnotationTestStack.ps1``) adds ``annotation-sql`` (SQL Server 2022 Developer, container
 ``viking-annotation-sql``, host port 1433, sa password ``MSSQL_SA_PASSWORD``) in a named Docker
 volume. Point ``ConnectionStrings__AnnotationConnection`` at ``Server=annotation-sql,1433``. It is for
-integration tests and development only. Schema: ``Servers/AnnotationDatabase/config-template/README.md``.
+integration tests and development only. ``Start-AnnotationTestStack.ps1`` rebuilds its ``AnnotationTest`` database
+from ``CreateUpdateDatabase.sql`` with seed rows before each run (``Reset-AnnotationTestDatabase.ps1``, see
+``annotation_grpc.rst``). Schema: ``Servers/AnnotationDatabase/config-template/README.md``.
 
 Backups
 =======

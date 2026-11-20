@@ -14,7 +14,7 @@ Production SQL is external (see `Documentation/source/deployment/sql.rst`); this
 3. Start the stack (preferred):
 
    ```powershell
-   .\Servers\GrpcAnnotationService\scripts\Start-AnnotationTestStack.ps1 -ApplySchema
+   .\Servers\GrpcAnnotationService\scripts\Start-AnnotationTestStack.ps1
    ```
 
    Or manually (the viking-annotation stack with profile `local-sql`; the script also sets the stack
@@ -26,11 +26,15 @@ Production SQL is external (see `Documentation/source/deployment/sql.rst`); this
      up --build -d annotation-sql grpc-annotation-service
    ```
 
-4. Apply the minimal test schema (if you did not pass `-ApplySchema`):
+4. Reset `AnnotationTest` (the script does this on every start): drop it, build it from
+   `Servers/SQL/DatabaseCreateUpdate/CreateUpdateDatabase.sql` and insert the seed rows of `scripts/test-seed.sql`:
 
    ```powershell
-   .\Servers\AnnotationDatabase\scripts\Apply-MinimalSchema.ps1
+   .\Servers\AnnotationDatabase\scripts\Reset-AnnotationTestDatabase.ps1
    ```
+
+   `Apply-MinimalSchema.ps1` (`minimal-schema.sql`, a smaller copy of the schema) is still there for the SQL unit
+   tests in `scripts/tests`.
 
 ## SA password requirements
 
@@ -78,11 +82,6 @@ a supported deploy path for this database.
 | `grpc-annotation-service` in compose | `annotation-sql,1433` | Set in the gRPC env file (below), not injected |
 | Other containers on the host network | `host.docker.internal,1433` | When SQL is only published on the host |
 
-`Start-AnnotationTestStack.ps1` does not set this for you; it picks whichever gRPC env file
-already has it. `-GrpcEnvFile` defaults to `D:\Docker\Builds\GrpcAnnotationService\.env.Docker`
-when that file exists (its template, `Servers/GrpcAnnotationService/config-template/build/.env.Docker`,
-already points `ConnectionStrings__AnnotationConnection` at `annotation-sql,1433`), otherwise the
-stack run env `Run\viking-annotation\viking-annotation.run.env` (copied from
-`deploy/examples/example.viking-annotation.run.env`), where the `annotation-sql,1433` line is
-commented out under the production connection string — uncomment it and fill in the SA password
-before starting the stack with that file.
+`Start-AnnotationTestStack.ps1` writes the gRPC env file itself (`%TEMP%\viking-annotation-test-stack.env`), with
+`Server=annotation-sql,1433;Database=AnnotationTest` and the SA password from the AnnotationSql `.env`. A `-GrpcEnvFile`
+of your own must name the same server and database; the script refuses any other.
