@@ -9372,5 +9372,57 @@ BEGIN TRANSACTION main
 		      N'MergeStructures refuses to merge a structure into itself or into one of its own descendants' ,getDate(),User_ID())
 	 COMMIT TRANSACTION ninetyfour
 	end
+
+	if(not(exists(select (1) from DBVersion where DBVersionID = 95)))
+	begin
+     print N'SplitStructureAtLocationLink returns the new structure''s ID'
+	 BEGIN TRANSACTION ninetyfive
+
+	 /*SplitStructureAtLocationLink (step 67) called SplitStructure without OUTPUT, so @SplitStructureID stayed 0 and
+	   callers (gRPC StructureService.SplitAtLocationLink) got no ID for the structure the split created, although
+	   the split itself happened. The body is its definition from step 67 with only OUTPUT added.*/
+	 EXEC('ALTER PROCEDURE [dbo].[SplitStructureAtLocationLink]
+				@LocationIDOfKeepStructure bigint,
+				@LocationIDOfSplitStructure bigint,
+				@SplitStructureID bigint OUTPUT
+			AS
+			BEGIN
+				-- SET NOCOUNT ON added to prevent extra result sets from
+				-- interfering with SELECT statements.
+				SET NOCOUNT ON;
+	
+				set @SplitStructureID = 0
+
+				--Ensure that the location IDs of the keep and split locations are a location link.  Remove the link and continue;
+				IF (0 = (select COUNT(A) from LocationLink where (A = @LocationIDOfKeepStructure AND B = @LocationIDOfSplitStructure) OR 
+														  (B = @LocationIDOfKeepStructure AND A = @LocationIDOfSplitStructure)))
+					THROW 50000, N''The Split and Keep Location IDs must be linked'', 1;
+
+				BEGIN TRANSACTION split
+
+					Delete LocationLink where (A = @LocationIDOfKeepStructure AND B = @LocationIDOfSplitStructure) OR 
+												   (B = @LocationIDOfKeepStructure AND A = @LocationIDOfSplitStructure)
+					Exec SplitStructure @LocationIDOfSplitStructure, @SplitStructureID OUTPUT
+
+					if(@@error <> 0)
+					 begin
+						ROLLBACK TRANSACTION 
+						RETURN
+					 end 
+
+				COMMIT TRANSACTION split
+
+			END ')
+
+	 if(@@error <> 0)
+		 begin
+		   ROLLBACK TRANSACTION
+		   RETURN
+		 end
+
+	INSERT INTO DBVersion values (95,
+		      N'SplitStructureAtLocationLink returns the new structure''s ID' ,getDate(),User_ID())
+	 COMMIT TRANSACTION ninetyfive
+	end
 		   
 COMMIT TRANSACTION main

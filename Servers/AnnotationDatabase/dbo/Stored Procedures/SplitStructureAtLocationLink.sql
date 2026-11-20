@@ -20,7 +20,7 @@
 
 					Delete LocationLink where (A = @LocationIDOfKeepStructure AND B = @LocationIDOfSplitStructure) OR 
 												   (B = @LocationIDOfKeepStructure AND A = @LocationIDOfSplitStructure)
-					Exec SplitStructure @LocationIDOfSplitStructure, @SplitStructureID
+					Exec SplitStructure @LocationIDOfSplitStructure, @SplitStructureID OUTPUT
 
 					if(@@error <> 0)
 					 begin
