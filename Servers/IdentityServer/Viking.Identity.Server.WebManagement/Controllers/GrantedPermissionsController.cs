@@ -51,7 +51,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
             ResourcePermissionsEditGridViewModel model = new ResourcePermissionsEditGridViewModel
             {
-                AvailablePermissions = applicationDbContext.AvailablePermissions.Select(p => p.PermissionId).ToList(),
+                AvailablePermissions = ListOrder.Permissions(applicationDbContext.ResourceTypeId, applicationDbContext.AvailablePermissions.Select(p => p.PermissionId)),
                 UserPermissions = _permissionsHelper.ResourcePermissionsByUser(applicationDbContext),
                 GroupPermissions = _permissionsHelper.ResourcePermissionsByGroup(applicationDbContext)
             };
@@ -110,8 +110,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             var viewData = new CreateGrantedResourcePermissionViewModel()
             {
                 Resource = resource,
-                Permissions = _context.Permissions.Where(p => p.ResourceTypeId == resource.ResourceTypeId).Select(p => new NamedItemSelectedViewModel<string>() { Id = p.PermissionId, Name = p.PermissionId, Selected = false }).ToList(),
-                Users = _context.Users.Select(u => new NamedItemSelectedViewModel<string>() { Id = u.Id, Name = u.UserName, Selected = false }).ToList(),
+                Permissions = ListOrder.Permissions(resource.ResourceTypeId, _context.Permissions.Where(p => p.ResourceTypeId == resource.ResourceTypeId).Select(p => p.PermissionId).ToList()).Select(id => new NamedItemSelectedViewModel<string>() { Id = id, Name = id, Selected = false }).ToList(),
+                Users = _context.Users.Select(u => new NamedItemSelectedViewModel<string>() { Id = u.Id, Name = u.UserName, Selected = false }).ToList().ByName(u => u.Name).ToList(),
                 //Groups = _context.Group.Select(g => new ItemSelectedViewModel<long>() { Id = g.Id, Name = g.Name, Selected = false }).ToList()
             };
 
@@ -196,7 +196,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return View("EditContext", await BuildContextPermissionsModel(applicationDbContext));
             }
 
-            var availablePerms = applicationDbContext.AvailablePermissions?.Select(p => p.PermissionId).ToList() ?? new List<string>();
+            var availablePerms = ListOrder.Permissions(applicationDbContext.ResourceTypeId, applicationDbContext.AvailablePermissions?.Select(p => p.PermissionId) ?? Enumerable.Empty<string>());
 
             ResourcePermissionsEditGridViewModel model = new ResourcePermissionsEditGridViewModel
             {
@@ -633,10 +633,10 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             }
 
             var firstResource = resources.First();
-            var commonPermissions = await _context.Permissions
+            var commonPermissions = ListOrder.Permissions(firstResource.ResourceTypeId, await _context.Permissions
                 .Where(p => p.ResourceTypeId == firstResource.ResourceTypeId)
                 .Select(p => p.PermissionId)
-                .ToListAsync();
+                .ToListAsync());
 
             var allUserPermissions = await _context.GrantedUserPermissions
                 .Include(gup => gup.PermittedUser)
@@ -656,7 +656,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 .Select(u => new { u.Id, u.UserName })
                 .ToListAsync();
 
-            var users = usersList.Select(u => new UserResourcePermissionsViewModel
+            var users = usersList.ByName(u => u.UserName).Select(u => new UserResourcePermissionsViewModel
             {
                 GranteeId = u.Id,
                 Name = u.UserName,
@@ -672,7 +672,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 .Select(g => new { g.Id, g.Name })
                 .ToListAsync();
 
-            var groups = groupsList.Select(g => new GroupResourcePermissionsViewModel
+            var groups = groupsList.ByName(g => g.Name).Select(g => new GroupResourcePermissionsViewModel
             {
                 GranteeId = g.Id,
                 Name = g.Name,
@@ -686,7 +686,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             var model = new BulkPermissionsEditViewModel
             {
                 SelectedResourceIds = resourceIds,
-                Resources = resources.Select(r => new BulkPermissionsEditViewModel.ResourceInfo
+                Resources = resources.ByOrganization().Select(r => new BulkPermissionsEditViewModel.ResourceInfo
                 {
                     Id = r.Id,
                     Name = r.Name,

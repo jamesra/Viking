@@ -4,7 +4,7 @@
 @{
     ViewData["Title"] = "Groups";
     Layout = "~/Views/Shared/_Layout.cshtml";
-    var groupsByParent = Model.GroupBy(g => g.Parent?.Name ?? "No Parent").OrderBy(g => g.Key);
+    var groupsByParent = Model.GroupedByOrganization();
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -39,7 +39,7 @@
         <div class="card card-modern mb-4">
             <div class="card-header bg-group text-white">
                 <h5 class="mb-0">
-                    @if (parentGroup.Key != "No Parent")
+                    @if (parentGroup.Key != ListOrder.NoOrganization)
                     {
                         <i class="bi bi-building"></i> @parentGroup.Key
                     }
@@ -52,7 +52,7 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    @foreach (var group in parentGroup.OrderBy(g => g.Name))
+                    @foreach (var group in parentGroup.ByName())
                     {
                         <div class="col-md-6 col-lg-4 mb-3">
                             <div class="card card-modern h-100">
@@ -114,7 +114,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var item in Model.OrderBy(g => g.Parent?.Name ?? "").ThenBy(g => g.Name))
+            @foreach (var item in Model.ByOrganization())
             {
                 <tr>
                     <td>

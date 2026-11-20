@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
+using Viking.Identity.Server.WebManagement.Helpers;
 using Viking.Identity.Server.Authorization;
 using Viking.Identity.Server.WebManagement.Models.UserViewModels;
 
@@ -78,7 +79,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return Forbid();
             }
 
-            ViewBag.AccessManagers = await _context.GetGroupAccessManagers(id.Value).Select(u => u.UserName).ToListAsync();
+            ViewBag.AccessManagers = (await _context.GetGroupAccessManagers(id.Value).Select(u => u.UserName).ToListAsync()).ByName(name => name).ToList();
 
             return View(organization);
         }
@@ -120,7 +121,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 groupModel.ParentId = parentOrgId.Value;
             }
 
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), groupModel.ParentId);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, groupModel.ParentId);
 
             return View(groupModel);
         }
@@ -153,7 +154,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 } 
             };
 
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), model.ParentId);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, model.ParentId);
 
             return View(nameof(Create), groupModel);
         }
@@ -191,7 +192,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), model.ParentId);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, model.ParentId);
 
             return View(group);
         }
@@ -270,7 +271,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     return Unauthorized();
             }
 
-            ViewBag.AvailableParents = _context.OrgUnit.Select(ou => new SelectListItem(ou.Name, ou.Id.ToString())).ToList();
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, groupEditDetails.Group.ParentID);
 
             return View(groupEditDetails);
         }
@@ -382,9 +383,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewBag.AvailableParents = await _context.OrgUnit
-                .Select(ou => new SelectListItem(ou.Name, ou.Id.ToString()))
-                .ToListAsync();
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, groupDetails.Group.ParentID);
             return View(groupDetails);
         }
 

@@ -81,7 +81,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
             var services = await _context.ServicesOfContextAsync(volume.Id);
             ViewBag.CorrectionService = (await _context.CorrectionOwnersAsync()).GetValueOrDefault(volume.Id);
-            ViewBag.SegmentationServices = services.OfType<SegmentationService>().ToList();
+            ViewBag.SegmentationServices = services.OfType<SegmentationService>().ByName().ToList();
 
             return View(volume);
         }

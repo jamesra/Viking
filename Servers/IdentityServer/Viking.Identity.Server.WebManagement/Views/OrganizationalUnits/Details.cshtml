@@ -152,7 +152,7 @@
         @if (segmentationServices.Any())
         {
             <div class="row">
-                @foreach (var service in segmentationServices.OrderBy(s => s.Name))
+                @foreach (var service in segmentationServices.ByName(s => s.Name))
                 {
                     <div class="col-md-6 col-lg-4 mb-3">
                         <div class="card card-modern card-segmentation h-100">
@@ -223,7 +223,7 @@
         @if (volumes.Any())
         {
             <div class="row">
-                @foreach (var volume in volumes.OrderBy(v => v.Name))
+                @foreach (var volume in volumes.ByName(v => v.Name))
                 {
                     var canManageVolume = (await AuthorizationService.IsParentOrgUnitAdminAsync(User, volume));
                     <div class="col-md-6 col-lg-4 mb-3">
@@ -318,7 +318,7 @@
         @if (childOrgs.Any())
         {
             <div class="row">
-                @foreach (var childOrg in childOrgs.OrderBy(o => o.Name))
+                @foreach (var childOrg in childOrgs.ByName(o => o.Name))
                 {
                     <div class="col-md-6 col-lg-4 mb-3">
                         <div class="card card-modern card-org h-100">
@@ -371,7 +371,7 @@
         @if (groups.Any())
         {
             <div class="row">
-                @foreach (var group in groups.OrderBy(g => g.Name))
+                @foreach (var group in groups.ByName(g => g.Name))
                 {
                     <div class="col-md-6 col-lg-4 mb-3">
                         <div class="card card-modern card-group h-100">

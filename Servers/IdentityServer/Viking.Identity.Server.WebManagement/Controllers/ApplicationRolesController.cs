@@ -22,7 +22,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // GET: ApplicationRoles
         public async Task<IActionResult> Index()
         {
-            return View(await _context.ApplicationRole.ToListAsync());
+            return View((await _context.ApplicationRole.ToListAsync()).ByName(r => r.Name).ToList());
         }
 
         // GET: ApplicationRoles/Details/5

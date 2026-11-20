@@ -49,7 +49,7 @@
                 </thead>
                 <tbody>
                     @{
-                        var rows = rtype.OrderBy(r => r.Name).ToList();
+                        var rows = rtype.ByName(r => r.Name).ToList();
                         @for (int i = 0; i < rows.Count(); i++)
                         {
                             <tr>

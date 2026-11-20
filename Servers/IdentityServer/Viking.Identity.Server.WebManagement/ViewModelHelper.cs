@@ -53,9 +53,7 @@ namespace Viking.Identity.Server.WebManagement
         {
             ResourcePermissionsEditGridViewModel model = new ResourcePermissionsEditGridViewModel
             {
-                AvailablePermissions = resource.AvailablePermissions
-                    .Select(p => p.PermissionId)
-                    .ToList(),
+                AvailablePermissions = ListOrder.Permissions(resource.ResourceTypeId, resource.AvailablePermissions.Select(p => p.PermissionId)),
                 UserPermissions = ResourcePermissionsByUser(resource),
                 GroupPermissions = ResourcePermissionsByGroup(resource)
             };
@@ -68,12 +66,12 @@ namespace Viking.Identity.Server.WebManagement
             //var users = resource.UsersWithPermissions;.GroupBy(uwp => uwp.UserId);
             var userNames = _context.Users.ToDictionary(g => g.Id, g => g.UserName);
 
-            var models = userNames.Select(u => new UserResourcePermissionsViewModel()
+            var models = userNames.OrderBy(u => u.Value, ListOrder.Names).Select(u => new UserResourcePermissionsViewModel()
             {
-                Permissions = resource.AvailablePermissions.Select(ap => new ItemSelectedViewModel<string>()
+                Permissions = ListOrder.Permissions(resource.ResourceTypeId, resource.AvailablePermissions.Select(p => p.PermissionId)).Select(permissionId => new ItemSelectedViewModel<string>()
                 {
-                    Id = ap.PermissionId,
-                    Selected = resource.UsersWithPermissions.Any(uwp => uwp.PermissionId == ap.PermissionId && uwp.UserId == u.Key && uwp.ResourceId == resource.Id)
+                    Id = permissionId,
+                    Selected = resource.UsersWithPermissions.Any(uwp => uwp.PermissionId == permissionId && uwp.UserId == u.Key && uwp.ResourceId == resource.Id)
                 }).ToList(),
                 GranteeId = u.Key,
                 Name = userNames[u.Key]
@@ -88,12 +86,12 @@ namespace Viking.Identity.Server.WebManagement
 
             var groupNames = _context.Group.ToDictionary(g => g.Id, g => g.Name);
 
-            var models = groupNames.Select(g => new GroupResourcePermissionsViewModel()
+            var models = groupNames.OrderBy(g => g.Value, ListOrder.Names).Select(g => new GroupResourcePermissionsViewModel()
             {
-                Permissions = resource.AvailablePermissions.Select(ap => new ItemSelectedViewModel<string>()
+                Permissions = ListOrder.Permissions(resource.ResourceTypeId, resource.AvailablePermissions.Select(p => p.PermissionId)).Select(permissionId => new ItemSelectedViewModel<string>()
                 {
-                    Id = ap.PermissionId,
-                    Selected = resource.GroupsWithPermissions.Any(uwp => uwp.PermissionId == ap.PermissionId &&
+                    Id = permissionId,
+                    Selected = resource.GroupsWithPermissions.Any(uwp => uwp.PermissionId == permissionId &&
                                                                          uwp.GroupId == g.Key &&
                                                                          uwp.ResourceId == resource.Id)
                 }).ToList(),
@@ -110,7 +108,7 @@ namespace Viking.Identity.Server.WebManagement
         {
             ResourcePermissionsEditGridViewModel model = new ResourcePermissionsEditGridViewModel
             {
-                AvailablePermissions = rt.Permissions.Select(p => p.PermissionId).ToList(),
+                AvailablePermissions = ListOrder.Permissions(rt.Id, rt.Permissions.Select(p => p.PermissionId)),
                 UserPermissions = UnpopulatedUserPermissions(rt),
                 GroupPermissions = UnpopulatedGroupPermissions(rt)
             };
@@ -122,11 +120,11 @@ namespace Viking.Identity.Server.WebManagement
         {
             var userNames = _context.Users.ToDictionary(g => g.Id, g => g.UserName);
 
-            var models = userNames.Select(u => new UserResourcePermissionsViewModel()
+            var models = userNames.OrderBy(u => u.Value, ListOrder.Names).Select(u => new UserResourcePermissionsViewModel()
             {
-                Permissions = rt.Permissions.Select(ap => new ItemSelectedViewModel<string>()
+                Permissions = ListOrder.Permissions(rt.Id, rt.Permissions.Select(p => p.PermissionId)).Select(permissionId => new ItemSelectedViewModel<string>()
                 {
-                    Id = ap.PermissionId,
+                    Id = permissionId,
                     Selected = false
                 }).ToList(),
                 GranteeId = u.Key,
@@ -140,11 +138,11 @@ namespace Viking.Identity.Server.WebManagement
         {
             var groupNames = _context.Group.ToDictionary(g => g.Id, g => g.Name);
 
-            var models = groupNames.Select(g => new GroupResourcePermissionsViewModel()
+            var models = groupNames.OrderBy(g => g.Value, ListOrder.Names).Select(g => new GroupResourcePermissionsViewModel()
             {
-                Permissions = rt.Permissions.Select(ap => new ItemSelectedViewModel<string>()
+                Permissions = ListOrder.Permissions(rt.Id, rt.Permissions.Select(p => p.PermissionId)).Select(permissionId => new ItemSelectedViewModel<string>()
                 {
-                    Id = ap.PermissionId,
+                    Id = permissionId,
                     Selected = false
                 }).ToList(),
                 GranteeId = g.Key,

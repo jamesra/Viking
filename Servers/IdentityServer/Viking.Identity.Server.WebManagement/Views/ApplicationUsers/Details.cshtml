@@ -185,7 +185,7 @@
                 </div>
                 <div class="card-body">
                     <div class="list-group">
-                        @foreach (var group in recursiveGroups.OrderBy(g => g.Name))
+                        @foreach (var group in recursiveGroups.ByName(g => g.Name))
                         {
                             <a asp-controller="Groups" asp-action="Details" asp-route-id="@group.Id" class="list-group-item list-group-item-action">
                                 <div class="d-flex w-100 justify-content-between">
@@ -225,7 +225,7 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        @foreach (var group in userGroups.OrderBy(g => g.Name))
+                        @foreach (var group in userGroups.ByName(g => g.Name))
                         {
                             <div class="col-md-6 mb-3">
                                 <div class="card card-modern card-group">
@@ -267,7 +267,7 @@
                 <div class="card-body">
                     <p class="text-muted">Volumes this user has been granted direct access to.</p>
                     <div class="row">
-                        @foreach (var volume in volumes.OrderBy(v => v.Name))
+                        @foreach (var volume in volumes.ByName(v => v.Name))
                         {
                             var userPermissions = volume.UsersWithPermissions?.Where(gup => gup.UserId == Model.Id).ToList() ?? new List<Viking.Identity.Models.GrantedUserPermission>();
                             

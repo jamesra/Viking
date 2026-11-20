@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
+using Viking.Identity.Server.WebManagement.Helpers;
 using Viking.Identity.Server.Authorization;
 using Viking.Identity.Server.WebManagement.Models.UserViewModels;
 
@@ -71,8 +72,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
 
             var owners = await _context.CorrectionOwnersAsync();
             var served = await _context.ServedAnnotationContextsAsync(correctionService.Id);
-            ViewBag.AssignedResources = await _context.AssignedResourcesAsync(correctionService.Id);
-            ViewBag.ServedContexts = served.Where(s => owners[s.Context.Id].Id == correctionService.Id).ToList();
+            ViewBag.AssignedResources = (await _context.AssignedResourcesAsync(correctionService.Id)).ByName().ToList();
+            ViewBag.ServedContexts = served.Where(s => owners[s.Context.Id].Id == correctionService.Id).ByName(s => s.Context.Name).ToList();
             ViewBag.Conflicts = served
                 .Where(s => owners[s.Context.Id].Id != correctionService.Id)
                 .Select(s => new CorrectionConflict(s.Context, owners[s.Context.Id]))
@@ -84,7 +85,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // GET: CorrectionServices/Create
         public IActionResult Create(long? parentOrgId = null)
         {
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), parentOrgId);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, parentOrgId);
             var viewModel = new CreateCorrectionServiceViewModel();
             if (parentOrgId.HasValue && parentOrgId.Value > 0)
             {
@@ -97,7 +98,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         public IActionResult CreateContinue([Bind("Id,Name,Description,ParentId")] CreateResourceViewModel model)
         {
             model.ResourceTypeId = nameof(CorrectionService);
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), model.ParentId);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, model.ParentId);
             return View(nameof(Create), new CreateCorrectionServiceViewModel(model));
         }
 
@@ -131,7 +132,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), model.ParentId);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, model.ParentId);
             return View(model);
         }
 
@@ -156,7 +157,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return Forbid();
             }
 
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), correctionService.ParentID);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, correctionService.ParentID);
             ViewBag.AssignedResourceList = await AssignedResourceChecklistAsync(correctionService.AssignedResources.Select(a => a.ResourceId).ToHashSet());
             return View(correctionService);
         }
@@ -234,7 +235,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), correctionService.ParentID);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, correctionService.ParentID);
             ViewBag.AssignedResourceList = await AssignedResourceChecklistAsync(chosen);
             return View(correctionService);
         }

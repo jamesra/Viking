@@ -170,7 +170,7 @@
                         @if (Model.Users.Any())
                         {
                             <div class="list-group">
-                                @foreach (var user in Model.Users.OrderBy(u => u.UserName))
+                                @foreach (var user in Model.Users.ByName(u => u.UserName))
                                 {
                                     <a asp-controller="ApplicationUsers" asp-action="Details" asp-route-id="@user.Id" class="list-group-item list-group-item-action">
                                         <div class="d-flex w-100 justify-content-between">
@@ -208,7 +208,7 @@
                         @if (Model.Groups.Any())
                         {
                             <div class="list-group">
-                                @foreach (var group in Model.Groups.OrderBy(g => g.Name))
+                                @foreach (var group in Model.Groups.ByName(g => g.Name))
                                 {
                                     <a asp-action="Details" asp-route-id="@group.Id" class="list-group-item list-group-item-action">
                                         <div class="d-flex w-100 justify-content-between">
@@ -245,7 +245,7 @@
                         @if (Model.MemberResources.Any())
                         {
                             <div class="list-group">
-                                @foreach (var resource in Model.MemberResources.Select(m => m.Resource).OrderBy(r => r.ResourceTypeId).ThenBy(r => r.Name))
+                                @foreach (var resource in Model.MemberResources.Select(m => m.Resource).OrderBy(r => r.ResourceTypeId).ThenBy(r => r.Name, ListOrder.Names))
                                 {
                                     <a asp-controller="@Viking.Identity.Server.WebManagement.Models.UserViewModels.ResourceSelectedViewModel.ControllerFor(resource.ResourceTypeId)"
                                        asp-action="Details" asp-route-id="@resource.Id" class="list-group-item list-group-item-action">
@@ -286,7 +286,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach (var perm in Model.GroupsWithPermissions.OrderBy(p => p.PermittedGroup.Name).ThenBy(p => p.PermissionId))
+                                        @foreach (var perm in Model.GroupsWithPermissions.ByName(p => p.PermittedGroup.Name).ThenBy(p => ListOrder.PermissionRank(Model.ResourceTypeId, p.PermissionId)))
                                         {
                                             <tr>
                                                 <td>
@@ -328,7 +328,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach (var perm in Model.UsersWithPermissions.OrderBy(p => p.PermittedUser.UserName).ThenBy(p => p.PermissionId))
+                                        @foreach (var perm in Model.UsersWithPermissions.ByName(p => p.PermittedUser.UserName).ThenBy(p => ListOrder.PermissionRank(Model.ResourceTypeId, p.PermissionId)))
                                         {
                                             <tr>
                                                 <td>
@@ -383,7 +383,7 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        @foreach (var subgroup in Model.Groups.OrderBy(g => g.Name))
+                        @foreach (var subgroup in Model.Groups.ByName(g => g.Name))
                         {
                             <div class="col-md-6 col-lg-4 mb-3">
                                 <div class="card card-modern card-group">

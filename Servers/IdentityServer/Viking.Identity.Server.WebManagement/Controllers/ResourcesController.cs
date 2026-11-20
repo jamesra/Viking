@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
+using Viking.Identity.Server.WebManagement.Helpers;
 using Viking.Identity.Server.Authorization;
 using Viking.Identity.Server.WebManagement.Models.UserViewModels;
 
@@ -56,7 +57,12 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         public async Task<IActionResult> Index()
         {
             var applicationDbContext = _context.Resource.Include(r => r.Parent).Include(r => r.ResourceType);
-            return View(await applicationDbContext.ToListAsync());
+            return View((await applicationDbContext.ToListAsync())
+                .ByName(r => r.ResourceTypeId)
+                .ThenBy(r => r.Parent == null)
+                .ThenBy(r => r.Parent?.Name, ListOrder.Names)
+                .ThenBy(r => r.Name, ListOrder.Names)
+                .ToList());
         }
          
         // GET: Resources/Details/5
@@ -90,7 +96,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 ResourceTypeId = null
             };
 
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name));
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context);
             ViewBag.AvailableResourceTypes = new SelectList(_context.ResourceTypes, nameof(ResourceType.Id), nameof(ResourceType.Id));
             return View(viewmodel);
         }
@@ -107,7 +113,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 ParentId = ParentId
             };
 
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), viewmodel.ParentId.Value);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, viewmodel.ParentId.Value);
             ViewBag.AvailableResourceTypes = new SelectList(_context.ResourceTypes, nameof(ResourceType.Id), nameof(ResourceType.Id));
             return View(nameof(Create), viewmodel);
         }
@@ -122,7 +128,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // GET: Resources/Create
         public IActionResult CreatePrevious([Bind("Id,Name,Description,ParentId,ResourceTypeId")] CreateResourceViewModel model)
         { 
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), model.ParentId);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, model.ParentId);
             ViewBag.AvailableResourceTypes = new SelectList(_context.ResourceTypes, nameof(ResourceType.Id), nameof(ResourceType.Id));
             return View(nameof(Create), model);
         }
@@ -153,7 +159,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return result;
             }
 
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), model.ParentId);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, model.ParentId);
             ViewBag.AvailableResourceTypes = new SelectList(_context.ResourceTypes, nameof(ResourceType.Id), nameof(ResourceType.Id));
 
             return View(model);

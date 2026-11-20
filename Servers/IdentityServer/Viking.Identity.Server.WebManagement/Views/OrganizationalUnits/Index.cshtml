@@ -36,7 +36,8 @@
         {
             <tr>
                 <td>
-                    <a asp-action="Details" asp-route-id="@item.Id">@Html.DisplayFor(modelItem => item.Name)</a>
+                    @{ var depth = (ViewBag.Depths as Dictionary<long, int>)?.GetValueOrDefault(item.Id) ?? 0; }
+                    <a style="padding-left: @(depth * 24)px" asp-action="Details" asp-route-id="@item.Id">@Html.DisplayFor(modelItem => item.Name)</a>
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.Description)
@@ -49,9 +50,9 @@
                 </td>
                 <td>
                     <ul class="no-bullets">
-                        @for (int i = 0; i < item.Children.Count(); i++)
+                        @foreach (var child in item.Children.ByName())
                         {
-                            <a asp-action="Details" asp-route-id="@item.Children[i].Id">@Html.DisplayFor(modelItem => item.Children[i].Name)</a>
+                            <li><a asp-action="Details" asp-route-id="@child.Id">@child.Name</a></li>
                         } 
                     </ul>
                 </td>

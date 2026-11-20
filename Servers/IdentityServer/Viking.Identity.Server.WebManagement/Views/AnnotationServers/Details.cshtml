@@ -121,7 +121,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var volume in Model.AnnotationContexts.OrderBy(v => v.Name))
+                            @foreach (var volume in Model.AnnotationContexts.ByName(v => v.Name))
                             {
                                 var mirrors = VolumeMetadata.MirrorsOf(volume.Volume);
                                 <tr>

@@ -21,7 +21,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // GET: ResourceTypes
         public async Task<IActionResult> Index()
         {
-            return View(await _context.ResourceTypes.ToListAsync());
+            return View((await _context.ResourceTypes.ToListAsync()).ByName(t => t.Id).ToList());
         }
 
         // GET: ResourceTypes/List 

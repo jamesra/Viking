@@ -23,7 +23,11 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         public async Task<IActionResult> Index()
         {
             var applicationDbContext = _context.Permissions.Include(r => r.ResourceType);
-            return View(await applicationDbContext.ToListAsync());
+            return View((await applicationDbContext.ToListAsync())
+                .ByName(p => p.ResourceTypeId)
+                .ThenBy(p => ListOrder.PermissionRank(p.ResourceTypeId, p.PermissionId))
+                .ThenBy(p => p.PermissionId, ListOrder.Names)
+                .ToList());
         }
 
         // GET: ResourceTypePermissions/Details/5

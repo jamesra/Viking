@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Viking.Identity.Data;
 using Viking.Identity.Models;
+using Viking.Identity.Server.WebManagement.Helpers;
 using Viking.Identity.Server.Authorization;
 using Viking.Identity.Server.WebManagement.Models.UserViewModels;
 
@@ -63,8 +64,8 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return Forbid();
             }
 
-            ViewBag.AssignedResources = await _context.AssignedResourcesAsync(segmentationService.Id);
-            ViewBag.ServedContexts = await _context.ServedAnnotationContextsAsync(segmentationService.Id);
+            ViewBag.AssignedResources = (await _context.AssignedResourcesAsync(segmentationService.Id)).ByName().ToList();
+            ViewBag.ServedContexts = (await _context.ServedAnnotationContextsAsync(segmentationService.Id)).ByName(s => s.Context.Name).ToList();
 
             return View(segmentationService);
         }
@@ -72,7 +73,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         // GET: SegmentationServices/Create
         public IActionResult Create(long? parentOrgId = null)
         {
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), parentOrgId);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, parentOrgId);
             var viewModel = new CreateSegmentationServiceViewModel();
             if (parentOrgId.HasValue && parentOrgId.Value > 0)
             {
@@ -85,7 +86,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         public IActionResult CreateContinue([Bind("Id,Name,Description,ParentId")] CreateResourceViewModel model)
         {
             model.ResourceTypeId = nameof(SegmentationService);
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), model.ParentId);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, model.ParentId);
             return View(nameof(Create), new CreateSegmentationServiceViewModel(model));
         }
 
@@ -119,7 +120,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), model.ParentId);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, model.ParentId);
             return View(model);
         }
 
@@ -144,7 +145,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return Forbid();
             }
 
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), segmentationService.ParentID);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, segmentationService.ParentID);
             ViewBag.AssignedResourceList = await AssignedResourceChecklistAsync(segmentationService.AssignedResources.Select(a => a.ResourceId).ToHashSet());
             return View(segmentationService);
         }
@@ -215,7 +216,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewBag.AvailableParents = new SelectList(_context.OrgUnit.Where(ou => ou.Id >= 0), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), segmentationService.ParentID);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.AvailableParents(_context, segmentationService.ParentID);
             ViewBag.AssignedResourceList = await AssignedResourceChecklistAsync(
                 (assignedResourceList ?? new List<ResourceSelectedViewModel>()).Where(r => r.Selected).Select(r => r.Id).ToHashSet());
             return View(segmentationService);

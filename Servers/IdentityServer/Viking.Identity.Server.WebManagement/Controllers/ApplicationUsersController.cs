@@ -39,7 +39,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         [Authorize(Roles = Special.Roles.Admin)]
         public async Task<IActionResult> Index()
         {
-            return View(await _context.ApplicationUser.Include("GroupAssignments").ToListAsync());
+            return View((await _context.ApplicationUser.Include("GroupAssignments").ToListAsync()).ByPerson().ToList());
         }
 
         public ActionResult ReturnChallengeOrForbidOnFailedAuthorization()
@@ -84,9 +84,9 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 .Include(v => v.UsersWithPermissions.Where(gup => gup.UserId == id))
                 .ToListAsync();
 
-            ViewBag.RecursiveGroups = recursiveGroups;
-            ViewBag.UserGroups = applicationUser.GroupAssignments?.Select(ga => ga.Group).ToList() ?? new List<Group>();
-            ViewBag.AnnotationContexts = volumes;
+            ViewBag.RecursiveGroups = recursiveGroups.Where(g => g != null).ByName().ToList();
+            ViewBag.UserGroups = applicationUser.GroupAssignments?.Select(ga => ga.Group).Where(g => g != null).ByName().ToList() ?? new List<Group>();
+            ViewBag.AnnotationContexts = volumes.ByOrganization().ToList();
 
             return View(applicationUser);
         }
@@ -245,7 +245,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
              
             var groups = await _context.Group.Include("GroupAssignments").ToListAsync();
 
-            var groupEditDetails = groups.Select(org => new GroupSelectedViewModel
+            var groupEditDetails = groups.ByName().Select(org => new GroupSelectedViewModel
             {
                 Name = org.Name,
                 Id = org.Id,

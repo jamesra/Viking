@@ -3,7 +3,7 @@
 
 @{
     ViewData["Title"] = "Volumes";
-    var volumesByOrg = Model.GroupBy(v => v.Parent?.Name ?? "No Organization").OrderBy(g => g.Key);
+    var volumesByOrg = Model.GroupedByOrganization();
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -55,7 +55,7 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    @foreach (var volume in orgGroup.OrderBy(v => v.Name))
+                    @foreach (var volume in orgGroup.ByName())
                     {
                         var canManageVolume = (await AuthorizationService.IsParentOrgUnitAdminAsync(User, volume));
                         <div class="col-md-6 col-lg-4 mb-3">
@@ -157,7 +157,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var item in Model.OrderBy(v => v.Parent?.Name ?? "").ThenBy(v => v.Name))
+            @foreach (var item in Model.ByOrganization())
             {
                 <tr>
                     <td>

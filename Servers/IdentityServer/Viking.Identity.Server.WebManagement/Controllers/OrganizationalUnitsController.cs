@@ -45,7 +45,10 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                     visible.Add(org);
             }
 
-            return View(visible);
+            // Tree order: each organization under its parent, indented by its depth.
+            var tree = ListOrder.Tree(visible);
+            ViewBag.Depths = tree.ToDictionary(node => node.Org.Id, node => node.Depth);
+            return View(tree.Select(node => node.Org).ToList());
         }
 
         // GET: OrganizationalUnits/Details/5
@@ -101,10 +104,10 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 .Include(g => g.MemberGroups)
                 .ToListAsync();
 
-            ViewData["Volumes"] = volumes;
-            ViewData["SegmentationServices"] = segmentationServices;
-            ViewData["ChildOrganizations"] = childOrgs;
-            ViewData["Groups"] = groups;
+            ViewData["Volumes"] = volumes.ByName().ToList();
+            ViewData["SegmentationServices"] = segmentationServices.ByName().ToList();
+            ViewData["ChildOrganizations"] = childOrgs.ByName().ToList();
+            ViewData["Groups"] = groups.ByName().ToList();
 
             return View(organizationalUnit);
         }
@@ -183,8 +186,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 return Forbid();
             }
 
-            ViewBag.ParentID = new SelectList(_context.OrgUnit.Where(ou => ou.Id != organizationalUnit.Id), "Id", "Name", organizationalUnit.ParentID);
-            ViewBag.AvailableParents = new SelectList(await GetAvailableParents(id.Value), nameof(OrganizationalUnit.Id), nameof(OrganizationalUnit.Name), organizationalUnit.Id);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.Options(await GetAvailableParents(id.Value), organizationalUnit.ParentID);
             return View(organizationalUnit);
         }
 
@@ -246,7 +248,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewBag.ParentID = new SelectList(_context.OrgUnit.Where(ou => ou.Id != organizationalUnit.Id), "Id", "Name", organizationalUnit.ParentID);
+            ViewBag.AvailableParents = OrgUnitSelectListHelper.Options(await GetAvailableParents(organizationalUnit.Id), organizationalUnit.ParentID);
             return View(organizationalUnit);
         }
 

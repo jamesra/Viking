@@ -103,7 +103,7 @@
                             var links = (Model.AnnotationServerLinks ?? new List<Viking.Identity.Models.AnnotationContextServer>())
                                 .Where(l => l.AnnotationServer != null)
                                 .OrderByDescending(l => l.IsDefault)
-                                .ThenBy(l => l.AnnotationServer.Name)
+                                .ThenBy(l => l.AnnotationServer.Name, ListOrder.Names)
                                 .ToList();
                         }
                         @if (links.Count > 0)
@@ -196,7 +196,7 @@
                     <dd class="col-sm-9">
                         @if (Model.MemberOfResourceGroups.Any())
                         {
-                            @foreach (var membership in Model.MemberOfResourceGroups.OrderBy(m => m.Group.Name))
+                            @foreach (var membership in Model.MemberOfResourceGroups.ByName(m => m.Group.Name))
                             {
                                 <a asp-controller="Groups" asp-action="Details" asp-route-id="@membership.Group.Id" class="badge bg-light text-dark text-decoration-none me-1">@membership.Group.Name</a>
                             }

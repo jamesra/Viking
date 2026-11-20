@@ -97,7 +97,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             var volumes = await _context.AnnotationContexts.Include(v => v.Parent).ToListAsync();
             var accessible = await _authorization.FilterAccessibleResourcesAsync(
                 _context, User, volumes, nameof(AnnotationContext));
-            return accessible.OrderBy(v => v.Name).ToList();
+            return accessible.ByName().ToList();
         }
 
         /// <summary>
@@ -108,7 +108,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             var services = await _context.SegmentationServices.Include(s => s.Parent).ToListAsync();
             var accessible = await _authorization.FilterAccessibleResourcesAsync(
                 _context, User, services, nameof(SegmentationService));
-            return accessible.OrderBy(s => s.Name).ToList();
+            return accessible.ByName().ToList();
         }
 
         /// <summary>
@@ -131,7 +131,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             var orgs = await _context.OrgUnit.Include(o => o.Parent).ToListAsync();
             return orgs
                 .Where(o => grantedIds.Contains(o.Id))
-                .OrderBy(o => o.Name)
+                .ByName()
                 .ToList();
         }
 
@@ -145,7 +145,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                 .Where(g => g.Id != Special.Groups.Anonymous.Id)
                 .GroupBy(g => g.Id)
                 .Select(g => g.First())
-                .OrderBy(g => g.Name)
+                .ByName()
                 .ToList();
         }
     }

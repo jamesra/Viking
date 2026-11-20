@@ -54,7 +54,7 @@ else
                 <div class="col-md-6">
                     <select id="permissionFilter" class="form-select">
                         <option value="">All Permissions</option>
-                        @foreach (var perm in Model.AccessibleAnnotationContexts.SelectMany(v => v.Permissions).Distinct().OrderBy(p => p))
+                        @foreach (var perm in ListOrder.Permissions(nameof(AnnotationContext), Model.AccessibleAnnotationContexts.SelectMany(v => v.Permissions).Distinct()))
                         {
                             <option value="@perm">@perm</option>
                         }
@@ -67,7 +67,7 @@ else
 <!-- Volumes grouped by organization (if we had org info, for now just show all) -->
     <div id="volumesContainer">
         <div class="row">
-            @foreach (var volume in Model.AccessibleAnnotationContexts.OrderBy(v => v.Name))
+            @foreach (var volume in Model.AccessibleAnnotationContexts.ByName(v => v.Name))
             {
                 <div class="col-md-6 col-lg-4 mb-3 volume-item" data-volume-name="@volume.Name.ToLower()" data-permissions="@string.Join(" ", volume.Permissions).ToLower()">
                     <div class="card card-modern card-volume h-100">
@@ -88,7 +88,7 @@ else
                             @if (volume.Permissions.Any())
                             {
                                 <div class="mb-2">
-                                    @foreach (var permission in volume.Permissions.OrderBy(p => p))
+                                    @foreach (var permission in ListOrder.Permissions(nameof(AnnotationContext), volume.Permissions))
                                     {
                                         <span class="badge bg-permission mb-1" title="Permission: @permission">
                                             <i class="bi bi-shield-check"></i> @permission
@@ -169,7 +169,7 @@ else
                 <div class="col-md-6">
                     <select id="segmentationPermissionFilter" class="form-select">
                         <option value="">All Permissions</option>
-                        @foreach (var perm in Model.AccessibleSegmentationServices.SelectMany(v => v.Permissions).Distinct().OrderBy(p => p))
+                        @foreach (var perm in ListOrder.Permissions(nameof(SegmentationService), Model.AccessibleSegmentationServices.SelectMany(v => v.Permissions).Distinct()))
                         {
                             <option value="@perm">@perm</option>
                         }
@@ -181,7 +181,7 @@ else
 
     <div id="segmentationContainer">
         <div class="row">
-            @foreach (var service in Model.AccessibleSegmentationServices.OrderBy(s => s.Name))
+            @foreach (var service in Model.AccessibleSegmentationServices.ByName(s => s.Name))
             {
                 <div class="col-md-6 col-lg-4 mb-3 segmentation-item" data-service-name="@service.Name.ToLower()" data-permissions="@string.Join(" ", service.Permissions).ToLower()">
                     <div class="card card-modern card-segmentation h-100">
@@ -196,7 +196,7 @@ else
                             @if (service.Permissions.Any())
                             {
                                 <div class="mb-2">
-                                    @foreach (var permission in service.Permissions.OrderBy(p => p))
+                                    @foreach (var permission in ListOrder.Permissions(nameof(SegmentationService), service.Permissions))
                                     {
                                         <span class="badge bg-permission mb-1" title="Permission: @permission">
                                             <i class="bi bi-shield-check"></i> @permission

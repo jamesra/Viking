@@ -46,7 +46,7 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var server in Model.OrderBy(s => s.Parent?.Name ?? "").ThenBy(s => s.Name))
+            @foreach (var server in Model.ByOrganization())
             {
                 var canManage = await AuthorizationService.IsParentOrgUnitAdminAsync(User, server);
                 <tr>
@@ -77,7 +77,7 @@ else
                         }
                     </td>
                     <td>
-                        @foreach (var volume in server.AnnotationContexts.OrderBy(v => v.Name))
+                        @foreach (var volume in server.AnnotationContexts.ByName())
                         {
                             <a asp-controller="AnnotationContexts" asp-action="Details" asp-route-id="@volume.Id" class="badge bg-success text-decoration-none me-1">@volume.Name</a>
                         }

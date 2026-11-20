@@ -61,7 +61,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                             ? perms.ToList()
                             : new List<string>()
                     })
-                    .OrderBy(v => v.Name)
+                    .ByName(v => v.Name)
                     .ToList();
             }
 
@@ -87,7 +87,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
                             ? perms.ToList()
                             : new List<string>()
                     })
-                    .OrderBy(s => s.Name)
+                    .ByName(s => s.Name)
                     .ToList();
             }
 

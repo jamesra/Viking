@@ -35,14 +35,14 @@ namespace Viking.Identity.Server.WebManagement.Controllers
         {
             //var Group = ViewData["Group"] as Group; 
 
-            List<ApplicationRole> AvailableRoles = _context.ApplicationRole.ToList();
+            List<ApplicationRole> AvailableRoles = _context.ApplicationRole.ToList().ByName(r => r.Name).ToList();
 
             var UserRolesModels = (from user in _context.ApplicationUser 
                                   select new UserRolesViewModel
                                   {
                                       Username = user.UserName,
                                       Roles = _context.UserRoles.Where(ur => ur.UserId == user.Id).Select(ur => ur.RoleId).ToList()
-                                  }).ToList();
+                                  }).ToList().ByName(m => m.Username).ToList();
 
             var listRoles = new ListUserRolesViewModel() { AvailableRoles = AvailableRoles, UsersRoles = UserRolesModels };
 
@@ -120,7 +120,7 @@ namespace Viking.Identity.Server.WebManagement.Controllers
             try
             {
                 var User = _context.ApplicationUser.FirstOrDefault(u => u.UserName == id.Username);
-                List<ApplicationRole> AvailableRoles = _context.ApplicationRole.ToList();
+                List<ApplicationRole> AvailableRoles = _context.ApplicationRole.ToList().ByName(r => r.Name).ToList();
                 // TODO: Add update logic here
                 var listUserRoles = _context.UserRoles.Where(ur => ur.UserId == User.Id).ToList();
                 
