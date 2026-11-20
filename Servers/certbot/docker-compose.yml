@@ -55,6 +55,8 @@ services:
       TLS_STAGING: ${TLS_STAGING:-0}
       TLS_KEY_TYPE: ${TLS_KEY_TYPE:-rsa}
       TLS_PFX_PASSWORD: ${TLS_PFX_PASSWORD:-}
+      # Numeric group that may read privkey.pem and cert.pfx (root:<gid> 640). Empty = 644 (renew-loop.sh).
+      TLS_KEY_GID: ${TLS_KEY_GID:-}
       TLS_MANUAL_POLL_SECONDS: ${TLS_MANUAL_POLL_SECONDS:-300}
       # Deprecated names, read by renew-loop.sh only when the TLS_* name is empty (it logs a warning).
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:-}

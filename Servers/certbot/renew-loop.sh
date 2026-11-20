@@ -107,6 +107,7 @@ TLS_RETRY_MINUTES="${TLS_RETRY_MINUTES:-10}"
 TLS_MANUAL_POLL_SECONDS="${TLS_MANUAL_POLL_SECONDS:-300}"
 TLS_KEY_TYPE="${TLS_KEY_TYPE:-rsa}"
 TLS_PFX_PASSWORD="${TLS_PFX_PASSWORD:-}"
+TLS_KEY_GID="${TLS_KEY_GID:-}"
 TLS_RELOAD_LABEL="${TLS_RELOAD_LABEL:-viking.tls-reload}"
 TLS_WEBROOT="${TLS_WEBROOT:-/var/www/certbot}"
 CF_DNS_API_CREDENTIALS_FILE="${CF_DNS_API_CREDENTIALS_FILE:-/run/secrets/viking-certs/cloudflare.ini}"
@@ -117,6 +118,11 @@ CERTS_ROOT="/certs"
 OUT_DIR="${CERTS_ROOT}/${TLS_CERT_NAME}"
 LIVE_DIR="/etc/letsencrypt/live/${TLS_CERT_NAME}"
 
+if [ -n "${TLS_KEY_GID}" ] && [[ ! "${TLS_KEY_GID}" =~ ^[0-9]+$ ]]; then
+  log "TLS_KEY_GID '${TLS_KEY_GID}' must be a numeric group id."
+  exit 2
+fi
+
 if [[ ! "${TLS_CERT_NAME}" =~ ^[A-Za-z0-9._-]+$ ]]; then
   log "TLS_CERT_NAME '${TLS_CERT_NAME}' must be a plain directory name (letters, digits, . _ -)."
   exit 2
@@ -125,6 +131,25 @@ fi
 # ---------------------------------------------------------------------------------------------------
 # Publishing
 # ---------------------------------------------------------------------------------------------------
+
+# Sets the modes of the published files in $1. The certificates are public (644). privkey.pem and cert.pfx
+# (no password unless TLS_PFX_PASSWORD) both hold the private key: with TLS_KEY_GID they are root:<gid> 640,
+# so only root and that group read them. Every non-root reader must be in the group: viking-identity (uid 1654)
+# and viking-segmentation (uid/gid 1001) add it with group_add, and a deploy user that fetches the files over
+# scp (connectomes-deploy `certs push -From`) needs it too. Without TLS_KEY_GID they stay 644 as before, because
+# those readers are not root.
+set_cert_modes() {
+  local dir="$1" f
+  chmod 644 "${dir}/fullchain.pem" "${dir}/cert.pem" "${dir}/chain.pem" 2>/dev/null || true
+  for f in privkey.pem cert.pfx; do
+    [ -f "${dir}/${f}" ] || continue
+    if [ -z "${TLS_KEY_GID}" ]; then
+      chmod 644 "${dir}/${f}" 2>/dev/null || true
+    elif ! { chown "0:${TLS_KEY_GID}" "${dir}/${f}" && chmod 640 "${dir}/${f}"; }; then
+      log "Could not set ${dir}/${f} to root:${TLS_KEY_GID} 640."
+    fi
+  done
+}
 
 # Writes cert.pfx from the PEMs in $1 (IIS imports it). 3DES/SHA1 PBE keeps it importable on older
 # Windows Server builds, which cannot read OpenSSL 3's default AES PKCS#12.
@@ -201,6 +226,7 @@ publish_lineage() {
   new_hash="$(content_hash "${LIVE_DIR}")"
   old_hash="$(cat "${OUT_DIR}/.published-sha256" 2>/dev/null || true)"
   if [ "${new_hash}" = "${old_hash}" ] && [ -f "${OUT_DIR}/cert.pfx" ] && [ "$(content_hash "${OUT_DIR}")" = "${new_hash}" ]; then
+    set_cert_modes "${OUT_DIR}"
     return 2
   fi
   tmp="$(mktemp -d "${CERTS_ROOT}/.${TLS_CERT_NAME}.tmp.XXXXXX")" || return 1
@@ -211,8 +237,7 @@ publish_lineage() {
     log "openssl could not write cert.pfx; publishing the PEM files without it."
     rm -f "${tmp}/cert.pfx"
   fi
-  # Services run as non-root users and mount /certs read-only, so the files must be world-readable.
-  chmod 644 "${tmp}"/* 2>/dev/null || true
+  set_cert_modes "${tmp}"
   for f in fullchain.pem privkey.pem cert.pem chain.pem cert.pfx; do
     if [ -f "${tmp}/${f}" ]; then mv -f "${tmp}/${f}" "${OUT_DIR}/${f}"; fi
   done
@@ -244,6 +269,7 @@ publish_manual() {
   new_hash="$(content_hash "${OUT_DIR}")"
   old_hash="$(cat "${OUT_DIR}/.published-sha256" 2>/dev/null || true)"
   if [ "${new_hash}" = "${old_hash}" ] && [ -f "${OUT_DIR}/cert.pfx" ]; then
+    set_cert_modes "${OUT_DIR}"
     return 2
   fi
   split_fullchain "${OUT_DIR}/fullchain.pem" "${OUT_DIR}"
@@ -253,7 +279,7 @@ publish_manual() {
     rm -f "${OUT_DIR}/cert.pfx.tmp"
     log "openssl could not write cert.pfx (does privkey.pem match fullchain.pem?)."
   fi
-  chmod 644 "${OUT_DIR}"/*.pem "${OUT_DIR}/cert.pfx" 2>/dev/null || true
+  set_cert_modes "${OUT_DIR}"
   chmod 755 "${CERTS_ROOT}" "${OUT_DIR}" 2>/dev/null || true
   echo "${new_hash}" > "${OUT_DIR}/.published-sha256"
   date -u +%Y-%m-%dT%H:%M:%SZ > "${OUT_DIR}/.renewed-at"

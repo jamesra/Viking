@@ -40,6 +40,10 @@ x-segmentation-common: &segmentation-common
   cap_add:
     - NET_BIND_SERVICE
   gpus: all
+  # The server runs as uid/gid 1001 and reads /tls/privkey.pem, which viking-certs makes root:TLS_KEY_GID 640
+  # when that is set. Unset, the default is the server's own group, which changes nothing.
+  group_add:
+    - "${TLS_KEY_GID:-1001}"
   labels:
     viking.tls-reload: "true"
   depends_on:

@@ -61,6 +61,10 @@ services:
       - ${STACK_RUN_DIR:?STACK_RUN_DIR must be set (stack.ps1 exports it)}/${STACK_NAME:-viking-identity}.run.env
     build: *identity-build
     image: ${VIKING_IDENTITY_IMAGE:-viking-identity:latest}
+    # The app runs as uid/gid 1654 and reads privkey.pem, which viking-certs makes root:TLS_KEY_GID 640 when
+    # that is set. Unset, the default is the app's own group, which changes nothing.
+    group_add:
+      - "${TLS_KEY_GID:-1654}"
     labels:
       viking.tls-reload: "true"
     depends_on:

@@ -18,6 +18,14 @@ Every TLS service mounts ``${DOCKER_CERTS_DIR}:/certs:ro`` and reads
 after a renewal carry the label ``viking.tls-reload: "true"``; the renewer restarts every running
 container with that label (through the Docker socket) whenever the published files change.
 
+``privkey.pem`` and ``cert.pfx`` both hold the private key. With ``TLS_KEY_GID`` (a numeric group id in
+``host.env``) the renewer publishes them as ``root:<gid>`` mode 640 on every cycle; the other files stay
+644. Every non-root reader must then be in that group: ``viking-identity`` (uid 1654) and
+``viking-segmentation`` (uid/gid 1001) join it through ``group_add``, the annotation and correction
+services, the proxy's nginx master and the renewer run as root, and a deploy user that copies the key off
+the host over scp (connectomes-deploy ``certs push -From``) needs the group itself. Without
+``TLS_KEY_GID`` both files stay 644, as before.
+
 The proxy never terminates TLS (port 443 is SNI passthrough), so it needs no certificate.
 
 Modes
