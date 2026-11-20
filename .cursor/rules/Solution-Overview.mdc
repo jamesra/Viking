@@ -17,7 +17,7 @@ alwaysApply: true
 - **Annotation** — the gRPC annotation service (`Servers/GrpcAnnotationService`, protos in gRPC_Protos). The retired WCF AnnotationService, still in production for the WCF clients, lives in Viking-Net4.8 (`Servers/AnnotationService`).
 - **Export** — Converts annotations to common file formats.
 - **OData** — Exposes annotations as OData. Proto definitions live in gRPC_Protos (see grpc-protos-folder rule).
-- **Segmentation Server** — Python-based gRPC segmentation service; separate repo/solution (e.g. SAM2-Docker).
+- **Segmentation Server** — Python-based gRPC segmentation service; lives in the Sam2Trainer repo, `SegmentationServer/` (`D:\src\git\Sam2Trainer\SegmentationServer`, <https://github.com/jamesra/Sam2SegmentationTrainer>); Viking holds only the client side.
 - **IdentityServerStandalone** — IdentityServer-based auth service.
 - **IdentityServer.WebApi** — Query service for Identity Server users and rights.
 - **IdentityServer.Management** — Site for creating accounts, assigning rights, and managing volumes.

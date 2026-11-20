@@ -23,7 +23,7 @@ To create a Slack bot for another codebase, see [create-bot.md](create-bot.md). 
 
 - Prefix: `[Viking-Server]`
 - Profile display name: `Viking` (bot); in-channel identity: `Viking-Server`
-- Scope: Viking servers and backend (Annotation, Export, OData, Identity, section-correction, SQL, Docker/TLS, segmentation service). `[Viking]` is a catch-all when others are unsure; triage and answer only if server-side.
+- Scope: Viking servers and backend (Annotation, Export, OData, Identity, section-correction, SQL, Docker/TLS, segmentation service, whose code and fixes are in Sam2Trainer `SegmentationServer/` on `master`). `[Viking]` is a catch-all when others are unsure; triage and answer only if server-side.
 
 ## First actions in a session
 

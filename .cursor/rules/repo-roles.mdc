@@ -5,12 +5,13 @@ alwaysApply: true
 
 # Repo roles
 
-Two checkouts share this product. Put the change in the repo that owns that kind of work.
+Three checkouts share this product. Put the change in the repo that owns that kind of work.
 
 | Work | Repo | Path | Branch |
 |------|------|------|--------|
-| Servers, Docker, containers, identity, annotation, export, OData, segmentation, section correction, `gRPC_Protos`, and the gRPC clients (the gRPC Viking, Jotunn) | **Viking** | `d:\src\git\Viking` | `dev` |
+| Servers, Docker, containers, identity, annotation, export, OData, section correction, `gRPC_Protos`, and the gRPC clients (the gRPC Viking, Jotunn) | **Viking** | `d:\src\git\Viking` | `dev` |
 | WCF clients (Viking, VikingAU, MonogameTestbed, shared client libraries) and the production WCF annotation server (`Servers/AnnotationService`, built and deployed from here); Viking Test builds are packed from here | **Viking-Net4.8** | `d:\src\git\Viking-Net4.8` | `Net4.8` |
+| The segmentation server (`SegmentationServer/`), its deploy stack `viking-segmentation`, the SAM2 pin, and SAM2 training | **Sam2Trainer** | `d:\src\git\Sam2Trainer` | `master` |
 
 ## Keep clients in parallel
 

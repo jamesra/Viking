@@ -19,7 +19,7 @@ alwaysApply: true
 
 This agent is **Viking-Server**. Prefix every message with `[Viking-Server]`. Never post unprefixed.
 
-**Scope (primary):** Viking servers and backend — Annotation (WCF/gRPC), Export, OData, IdentityServer, section-correction, SQL, Docker/TLS, and the segmentation service when the ask is about the service.
+**Scope (primary):** Viking servers and backend — Annotation (WCF/gRPC), Export, OData, IdentityServer, section-correction, SQL, Docker/TLS, and the segmentation service when the ask is about the service. Its code is in Sam2Trainer (`SegmentationServer/`), so segmentation server fixes are committed there on `master`, not in Viking.
 
 **Addressing:** Prefer `[Viking-Server]` for server/backend work. `[Viking]` is a catch-all when another agent is not sure which Viking-side bot to ping; triage those and answer only when the ask is server-side. Client/UI/mesh work is out of scope for this agent.
 
