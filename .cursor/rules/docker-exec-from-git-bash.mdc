@@ -1,0 +1,13 @@
+---
+description: Git Bash on Windows rewrites Linux paths in docker exec / docker run arguments; run those from PowerShell or with MSYS_NO_PATHCONV=1
+globs: "**/docker-compose*.yml,**/Dockerfile*,**/*.ps1,**/*.sh,Servers/**/scripts/**,deploy/**"
+alwaysApply: false
+---
+
+# docker exec from Git Bash
+
+- Git Bash (MSYS) turns an argument that looks like a Linux path into a Windows one:
+  `docker exec c /opt/mssql-tools18/bin/sqlcmd` runs `C:/Program Files/Git/opt/...` and fails with "no such file".
+- Run `docker exec` / `docker run` with in-container paths from the PowerShell tool, or prefix the bash command with
+  `MSYS_NO_PATHCONV=1`. Volume specs (`-v D:/x:/data`) are affected the same way.
+- Why: it cost a debugging round each time (2026-11-19, the AnnotationTest reset).

@@ -19,5 +19,6 @@ paths:
   wrong in different ways each layer (`\s` warnings, single backslashes written into JSON). Use the Edit tool, or
   build the string with forward slashes / `chr(92)`.
 - Keep a file's line endings: check with `file <path>` first; when scripting, read with `newline=''` and write the
-  same `\r\n` or `\n` back.
+  same `\r\n` or `\n` back. A multi-line `old` string in a scripted replace must use the file's own line ending, or
+  it silently fails to match on CRLF files.
 - Back up the file to the scratchpad before a scripted edit, diff it afterwards, and delete the backup.

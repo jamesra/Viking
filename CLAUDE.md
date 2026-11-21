@@ -36,6 +36,8 @@ same way.
 | `.cursor/rules/coordinate-spaces.mdc` | `Geometry`, `Annotation*`, `WebAnnotation`, `Morphology*`, views/viewmodels (mosaic vs volume vs screen) |
 | `.cursor/rules/curve-fit-link-length.mdc` | `MorphologyAlgorithms.cs`, CurveFit tests, FsCheck tests |
 | `.cursor/rules/difficult-cases.mdc` | `MorphologyMesh/**`, `MorphologyMeshTest/DifficultCases/**`, Bajaj testbed files |
+| `.cursor/rules/deploy-hosts.mdc` | Which host runs which stack (HypV1 web, build2 compute, IIS, workstation), that the dev box has no SSH to them (ask the host's session via the dispatcher), where image tags are pinned (`deploy/**`, `Servers/proxy`, `Servers/certbot`, compose files) |
+| `.cursor/rules/docker-exec-from-git-bash.mdc` | Git Bash rewrites in-container paths in `docker exec`/`run`; use PowerShell or `MSYS_NO_PATHCONV=1` (compose files, Dockerfiles, `*.ps1`, `*.sh`, server scripts) |
 | `.cursor/rules/docker-config-and-builds-location.mdc` | `docker-compose*.yml`, `Dockerfile*`, `config-template/**` (config/builds live in `D:\Docker`) |
 | `.cursor/rules/geometry-placement.mdc` | `MorphologyMesh/**`, `Clients/MonogameTestbed/**`, `ColladaIO/**` |
 | `.cursor/rules/graphics-library-choice.mdc` | MonogameTestbed, Clients/Viking, MonogameXNAGraphicsShared (XNA/Monogame) |
