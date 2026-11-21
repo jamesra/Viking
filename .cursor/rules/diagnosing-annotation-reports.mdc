@@ -1,0 +1,21 @@
+---
+description: Diagnosing a user's report about a structure, link or location (e.g. "can't link CS 30514 to GA 197700") - read the volume's OData first, then the client rule that refuses it.
+globs: Clients/Viking/WebAnnotation/ViewModel/StructureLink*.cs,Clients/Viking/WebAnnotation/ViewModel/LocationLink*.cs,Clients/Viking/WebAnnotation/UI/Commands/LinkAnnotationsCommand.cs
+alwaysApply: false
+---
+# Diagnosing annotation reports
+
+Look at the data before the code. OData is read-only and needs no login; use it for every volume a report names.
+
+- Base URL: `https://websvc.codepharm.net/<Volume>/OData/` (`RC1`, `RC2`, ...). Never write to it; it is a protected
+  production service.
+- One structure: `Structures(<id>)` (TypeID, ParentID, Label, Username, Created).
+- Its children: `Structures?$filter=ParentID eq <id>`.
+- Its links: `StructureLinks?$filter=SourceID eq <id> or TargetID eq <id>`.
+- Type names: `StructureTypes(<TypeID>)`.
+
+Link refusals (`StructureLinkViewModelBase.IsValidStructureLinkTarget`, `ViewModel/StructureLink.cs`): the client
+refuses, with no message, a link to itself, a link that already exists, and any link between a structure and one of its
+ancestors (the check walks both parent chains). The usual cause of "this one won't link" is a child created under the
+wrong parent (e.g. a glial adjacency placed from the synapse's location, so the synapse is its parent); the fix is to
+change the child's parent.
