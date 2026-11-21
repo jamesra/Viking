@@ -40,7 +40,10 @@ same way.
 | `.cursor/rules/geometry-placement.mdc` | `MorphologyMesh/**`, `Clients/MonogameTestbed/**`, `ColladaIO/**` |
 | `.cursor/rules/graphics-library-choice.mdc` | MonogameTestbed, Clients/Viking, MonogameXNAGraphicsShared (XNA/Monogame) |
 | `.cursor/rules/grpc-protos-folder.mdc` | `*.proto` (must live in gRPC_Protos) |
+| `.cursor/rules/identity-list-order.mdc` | Identity management site lists: every list ordered through `ListOrder` (organization tree, natural names, people by family name, permissions in declaration order); permission grid columns and cells share one order |
+| `.cursor/rules/editing-hand-formatted-files.mdc` | Editing JSON, scripts and config that hold Windows paths: Edit tool or line edits, never re-serialize or shell-escape through Python; keep line endings |
 | `.cursor/rules/https-only-servers.mdc` | Servers that can write (annotation, section correction, Identity, ...) are HTTPS only: compose files publish only the TLS port, test stacks use the container's self-signed certificate and clients trust it explicitly (`docker-compose*.yml`, `Dockerfile*`, `Servers/**/Program.cs`, `Servers/**/scripts`, `deploy/**`) |
+| `.cursor/rules/net48-language-features.mdc` | C# in net48/netstandard2.0 projects: no `init`/`record` (CS0518 IsExternalInit); build every target |
 | `.cursor/rules/odata-conventions.mdc` | `*OData*`, `*OpenData*` projects |
 
 ## Skills (`.cursor/skills/<name>/SKILL.md`)
@@ -56,6 +59,7 @@ Same `SKILL.md` format as Claude skills. Read the SKILL.md when the task matches
 | `mesh-difficult-cases` | Maintaining and re-checking the DifficultCases regression list |
 | `sam2-grounding` | Pointer: the segmentation server and its SAM2 skill moved to Sam2Trainer (`SegmentationServer/`) on 2026-11-20 |
 | `deploy-viking-test` | Publishing the VikingTest Velopack build and announcing in Slack #betatest |
+| `deploy-identity-server` | Rebuilding and restarting the Identity server / management site container on this workstation and checking it came back |
 | `docker-letsencrypt-sidecar` | Adding HTTPS to a container from the single `viking-certs` renewer (`/certs`, `viking.tls-reload`) |
 | `mosaic-annotation-remap` | Moving a section's annotations to a rebuilt `.mosaic` through tile coordinates (VikingAU `remap-to-tiles` / `remap-from-tiles`): checks, dry runs, report, undo |
 | `slack-ai-channel` | Posting/reading Slack #ai with the `[Viking-Server]` protocol |

@@ -1,0 +1,21 @@
+---
+description: Every list on the Identity management site uses ListOrder (organizations as a tree, names natural, people by family name, permissions in declaration order); permission grid columns and row cells share one order
+globs: "Servers/IdentityServer/**/Controllers/**,Servers/IdentityServer/**/Views/**,Servers/IdentityServer/**/Helpers/**,Servers/IdentityServer/**/Models/**,Servers/Identity.Models/**"
+alwaysApply: false
+---
+
+# Identity management site: list order
+
+The DataTables partial uses `order: []`, so the server's order is what users see. Never show a query result unordered.
+
+- Order every list with `Servers/Identity.Models/ListOrder.cs`, not ad hoc `OrderBy`:
+  - names: `ByName(...)` (natural, case-insensitive: RC2 before RC10);
+  - volumes, services, groups: `ByOrganization()`, or `GroupedByOrganization()` for grouped tables;
+  - people: `ByPerson()` (family, given, user name);
+  - permissions: `ListOrder.Permissions(typeId, ids)` or `PermissionRank` (declaration order, not alphabetical);
+  - organizations: `ListOrder.Tree` with depth, and `OrgUnitSelectListHelper.AvailableParents`/`Options` for every
+    organization dropdown (full "A / B" paths).
+- `_ResourcePermissionsGridViewPartialView` matches columns (`AvailablePermissions`) to each row's `Permissions` by
+  index: build both from the same `ListOrder.Permissions` result, or switches land under the wrong column.
+- An Edit POST that returns the view on error must refill its dropdowns.
+- To make it live, use the `deploy-identity-server` skill.
