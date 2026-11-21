@@ -1,0 +1,16 @@
+---
+description: C# in projects that target net48 or netstandard2.0 (VikingAU, Geometry, VolumeModel, most client libraries) has no IsExternalInit
+globs: Clients/**/*.cs,Geometry/**/*.cs,Geometry.Core/**/*.cs,Annotation*/**/*.cs
+alwaysApply: false
+---
+# Language features on net48 / netstandard2.0
+
+Many projects here target `net48` or `netstandard2.0` (alone or next to `net9.0`; check `<TargetFramework(s)>` in the
+`.csproj` before writing new types). Those frameworks lack `System.Runtime.CompilerServices.IsExternalInit`, so
+`init` accessors and `record` types fail the net48 build with CS0518, though the net9.0 build passes.
+
+- Use `{ get; set; }` (or a constructor) instead of `init`, and a class instead of `record`, in such projects.
+- Only `Clients/Viking/NGVV`, `Clients/Viking/WebAnnotation` and `Servers/SectionCorrection` carry an
+  `IsExternalInit.cs` polyfill; don't add another just to use `init`.
+- Collection expressions (`[]`, `[.. x]`) and other syntax-only features build fine.
+- Build every target before committing (`dotnet build <proj>` with no `-f`), not only net9.0.
